@@ -19,7 +19,7 @@
 //   node scripts/generate-palette.mjs
 // and commit the result. `scripts/check-contrast.mjs` then asserts the guarantees the grid claims.
 
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -145,32 +145,67 @@ function onColor(background, ramps) {
 // no component references a ramp step directly, so the ramp can be regenerated without touching a
 // single stylesheet. Light and dark differ only in which step each slot points at -- the grid's
 // SHAPE is identical, which is what makes a component's colour behaviour mode-independent.
+//
+// The steps are not free choices. `--lr-theme-color-<variant>-fill-<emphasis>` is an EXISTING
+// public retheming hook: `tokens.styles.ts` has always resolved the flat `--lr-color-brand` through
+// `--lr-theme-color-brand-fill-loud`, and `theme.css` has always given that hook the brand anchor
+// itself. Measured, the shipped hooks sit at OKLCH L 52-55 for light `fill-loud`, 95 for light
+// `fill-quiet`, 67-70 for dark `fill-loud` and 32 for dark `fill-quiet`.
+//
+// So `fill-loud` must land on the anchor step, not a step darker than it. Getting this wrong is not
+// cosmetic: it makes one hook name mean two different colours depending on whether a stylesheet
+// reads the flat token or the grid slot, and every component migrated onto the grid would silently
+// change colour. `emphasis` runs quiet -> normal -> loud, so lightness falls in light mode and
+// rises in dark mode; keeping that monotonic is what lets a component be written once for both.
 const SLOTS = {
   light: {
-    fill: { quiet: 95, normal: 50, loud: 40 },
+    fill: { quiet: 95, normal: 80, loud: 50 },
     border: { quiet: 80, normal: 60, loud: 40 },
   },
   dark: {
-    fill: { quiet: 20, normal: 60, loud: 70 },
-    border: { quiet: 30, normal: 50, loud: 70 },
+    fill: { quiet: 30, normal: 50, loud: 70 },
+    border: { quiet: 30, normal: 60, loud: 70 },
   },
 };
 
-function buildGrid(ramps, mode) {
+const stepName = (variant, step) => `--lr-ramp-${variant}-${String(step).padStart(2, '0')}`;
+
+/** Which ramp step `onColor` picked, so the grid can point at the ramp rather than restate a hex. */
+function onStep(background, ramps) {
+  const dark = ramps.neutral[0];
+  const light = ramps.neutral[ramps.neutral.length - 1];
+  return contrastRatio(background, dark.hex) >= contrastRatio(background, light.hex) ? dark.step : light.step;
+}
+
+/**
+ * Build the grid.
+ *
+ * `resolve` decides what a slot's fallback looks like. Inside the component stylesheet the ramp is
+ * declared on the same `:host`, so a slot points at `var(--lr-ramp-…)` -- that indirection is the
+ * whole reason the ramp exists: swap the ramp and all 45 slots move with it, with no stylesheet
+ * touched. `theme.css` is a *document* stylesheet where the ramp is not in scope, so its copy
+ * resolves to the literal hex instead. Both produce identical computed colours; only the
+ * indirection differs.
+ */
+function buildGrid(ramps, mode, { resolve = (variant, step) => `var(${stepName(variant, step)})` } = {}) {
   const stepHex = (variant, step) => ramps[variant].find((entry) => entry.step === step).hex;
   const lines = [];
   for (const variant of Object.keys(VARIANTS)) {
     for (const [emphasis, step] of Object.entries(SLOTS[mode].fill)) {
-      const hex = stepHex(variant, step);
-      lines.push(`      --lr-color-${variant}-fill-${emphasis}: var(--lr-theme-color-${variant}-fill-${emphasis}, ${hex});`);
+      lines.push(
+        `      --lr-color-${variant}-fill-${emphasis}: var(--lr-theme-color-${variant}-fill-${emphasis}, ${resolve(variant, step)});`,
+      );
     }
     for (const [emphasis, step] of Object.entries(SLOTS[mode].border)) {
-      const hex = stepHex(variant, step);
-      lines.push(`      --lr-color-${variant}-border-${emphasis}: var(--lr-theme-color-${variant}-border-${emphasis}, ${hex});`);
+      lines.push(
+        `      --lr-color-${variant}-border-${emphasis}: var(--lr-theme-color-${variant}-border-${emphasis}, ${resolve(variant, step)});`,
+      );
     }
     for (const emphasis of Object.keys(SLOTS[mode].fill)) {
       const fill = stepHex(variant, SLOTS[mode].fill[emphasis]);
-      lines.push(`      --lr-color-${variant}-on-${emphasis}: var(--lr-theme-color-${variant}-on-${emphasis}, ${onColor(fill, ramps)});`);
+      lines.push(
+        `      --lr-color-${variant}-on-${emphasis}: var(--lr-theme-color-${variant}-on-${emphasis}, ${resolve('neutral', onStep(fill, ramps))});`,
+      );
     }
     lines.push('');
   }
@@ -218,7 +253,20 @@ ${rampLines}
 ${buildGrid(ramps, 'light')}
   }
 
-  :host([data-lr-theme='dark']),
+  :host([data-lr-theme='dark']) {
+${buildGrid(ramps, 'dark')}
+  }
+
+  /* Deliberately a SEPARATE rule from the one above, not another selector in its list. A selector
+     list is not forgiving: Firefox and Safari ship no :host-context(), so one of these in the same
+     list would invalidate the whole list and take the supported :host([data-lr-theme='dark'])
+     branch down with it -- silently dropping the entire dark grid in two of the three engines.
+     Split, each engine keeps whatever it understands.
+
+     Those engines still resolve an ancestor .lr-dark correctly, just by a different route:
+     theme.css declares the mode's values as ordinary custom properties on .lr-dark, and custom
+     properties inherit through the shadow boundary. This rule is the no-theme.css convenience
+     path, not the contract. */
   :host-context(.lr-dark),
   :host-context([data-lr-theme='dark']) {
 ${buildGrid(ramps, 'dark')}
@@ -237,6 +285,50 @@ ${buildGrid(ramps, 'dark')
 
 mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, output, 'utf8');
+
+// --- the same grid, again, in theme.css ---------------------------------------------------------
+//
+// `theme.css` is optional. A consumer who never loads it must still get these exact colours, which
+// is why the component stylesheet above carries the whole grid as its own fallbacks. But a consumer
+// who DOES load it must not get different ones -- `tokens.test.ts` asserts that equality directly,
+// because a hand-maintained second copy is precisely how the two drifted apart before.
+//
+// It is also what makes an ancestor `.lr-dark` work in Firefox and Safari. Those engines ship no
+// `:host-context()`, so the shadow-scoped rule cannot see an ancestor class; these declarations are
+// ordinary custom properties on a document element, and custom properties inherit through the
+// shadow boundary in every engine.
+const themePath = join(packageDir, 'src', 'theme.css');
+const themeGrid = (mode) =>
+  buildGrid(ramps, mode, { resolve: (variant, step) => ramps[variant].find((e) => e.step === step).hex })
+    .split('\n')
+    .filter((line) => line.trim())
+    .map((line) => line.trim().replace(/^--lr-color-/, '    --lr-theme-color-').replace(/: var\([^,]+, (#[0-9a-f]{6})\);$/, ': $1;'))
+    .concat(
+      // The focus ring defaults to the brand fill, so it has to move with it. Left hand-written, it
+      // silently pinned the pre-ramp blue and made theme.css disagree with the component fallback
+      // for exactly one token -- which is the whole failure mode this block exists to prevent.
+      `    --lr-theme-color-focus: ${ramps.brand.find((e) => e.step === SLOTS[mode].fill.loud).hex};`,
+    )
+    .join('\n');
+
+// The blocks appear light-then-dark, in that order. Replace them in one global pass keyed on
+// occurrence: replacing them one at a time would re-match the block just filled and overwrite the
+// light grid with the dark one.
+const MODES = ['light', 'dark'];
+let seen = 0;
+const themeText = readFileSync(themePath, 'utf8').replace(
+  / *\/\* semantic grid: generated -- see scripts\/generate-palette\.mjs \*\/\n[\s\S]*? *\/\* semantic grid: end \*\//g,
+  (match) => {
+    const mode = MODES[seen++];
+    if (!mode) throw new Error('more semantic-grid marker pairs in theme.css than modes to fill them');
+    return match.replace(
+      /(generate-palette\.mjs \*\/\n)[\s\S]*?( *\/\* semantic grid: end)/,
+      `$1${themeGrid(mode)}\n$2`,
+    );
+  },
+);
+if (seen !== MODES.length) throw new Error(`expected ${MODES.length} semantic-grid marker pairs in theme.css, found ${seen}`);
+writeFileSync(themePath, themeText, 'utf8');
 
 const slots = Object.keys(VARIANTS).length * 9;
 console.log(

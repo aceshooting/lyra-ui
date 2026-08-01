@@ -415,17 +415,53 @@ describe('design tokens reach rendered CSS', () => {
     expect(hostStyle.getPropertyValue('--lr-avatar-group-overlap').trim()).to.equal('-8px');
   });
 
+  // Resolve a declaration through the component's own shadow scope and read back the *used* value
+  // (`rgb(...)`), the same throwaway-probe dance `<lr-file-input>`'s token tests use. Palette
+  // colours come from a generated OKLCH ramp, so a test that restates their hexes asserts the
+  // palette, not the component, and breaks on every legitimate regeneration.
+  function resolvedIn(root: ShadowRoot, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    root.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
   it('resolves --lr-avatar-group-badge-bg/-color through the tone token chain and applies them to the rendered badge (brand tier)', async () => {
     const el = (await fixture(html`
       <lr-avatar-group max="0" tone="brand"><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
     `)) as LyraAvatarGroup;
     const hostStyle = getComputedStyle(el);
-    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim()).to.equal('#ddf4ff');
-    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-color').trim()).to.equal('#0969da');
+
+    // The chain under test is `--lr-avatar-group-badge-bg` -> `--lr-color-brand-quiet` and
+    // `--lr-avatar-group-badge-color` -> `--lr-color-brand`; the tone tokens are read live so the
+    // expectation follows the palette instead of pinning one generation of it.
+    const brandQuiet = hostStyle.getPropertyValue('--lr-color-brand-quiet').trim();
+    const brand = hostStyle.getPropertyValue('--lr-color-brand').trim();
+    expect(brandQuiet, '--lr-color-brand-quiet resolves to a real colour').to.match(/^(#|rgb|color\()/);
+    expect(brand, '--lr-color-brand resolves to a real colour').to.match(/^(#|rgb|color\()/);
+    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim()).to.equal(brandQuiet);
+    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-color').trim()).to.equal(brand);
+
+    // ...and the brand tier is genuinely a different decision from the untoned default, so the two
+    // equalities above prove `:host([tone='brand'])` matched rather than passing vacuously.
+    const untoned = (await fixture(html`
+      <lr-avatar-group max="0"><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
+    `)) as LyraAvatarGroup;
+    const untonedStyle = getComputedStyle(untoned);
+    expect(brandQuiet, 'brand badge bg differs from the default tone').to.not.equal(
+      untonedStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim(),
+    );
+    expect(brand, 'brand badge color differs from the default tone').to.not.equal(
+      untonedStyle.getPropertyValue('--lr-avatar-group-badge-color').trim(),
+    );
 
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
-    expect(getComputedStyle(badge).backgroundColor).to.equal('rgb(221, 244, 255)');
-    expect(getComputedStyle(badge).color).to.equal('rgb(9, 105, 218)');
+    expect(getComputedStyle(badge).backgroundColor).to.equal(
+      resolvedIn(el.shadowRoot!, 'background-color: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    expect(getComputedStyle(badge).color).to.equal(resolvedIn(el.shadowRoot!, 'color: var(--lr-color-brand)', 'color'));
   });
 });
 

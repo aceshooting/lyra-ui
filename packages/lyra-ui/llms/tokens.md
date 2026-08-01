@@ -16,7 +16,7 @@ For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once a
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 
-## Themeable inputs (246)
+## Themeable inputs (218)
 
 | Internal token | `--lr-theme-*` input | Fallback |
 |---|---|---|
@@ -26,20 +26,6 @@ override a single element without touching the shared layer.
 | `--lr-color-text-quiet` | `--lr-theme-color-text-quiet` | `#6b7280` |
 | `--lr-color-border` | `--lr-theme-color-surface-border` | `#8a8a90` |
 | `--lr-color-border-strong` | `--lr-theme-color-border-strong` | `#4b5563` |
-| `--lr-color-brand` | `--lr-theme-color-brand-fill-loud` | `#0969da` |
-| `--lr-color-brand-quiet` | `--lr-theme-color-brand-fill-quiet` | `#ddf4ff` |
-| `--lr-color-success` | `--lr-theme-color-success-fill-loud` | `#1a7f37` |
-| `--lr-color-success-quiet` | `--lr-theme-color-success-fill-quiet` | `#dafbe1` |
-| `--lr-color-warning` | `--lr-theme-color-warning-fill-loud` | `#9a6700` |
-| `--lr-color-warning-quiet` | `--lr-theme-color-warning-fill-quiet` | `#fff8c5` |
-| `--lr-color-danger` | `--lr-theme-color-danger-fill-loud` | `#cf222e` |
-| `--lr-color-danger-quiet` | `--lr-theme-color-danger-fill-quiet` | `#ffebe9` |
-| `--lr-color-neutral` | `--lr-theme-color-neutral-fill-loud` | `#1a1a1a` |
-| `--lr-color-on-brand` | `--lr-theme-color-brand-on-loud` | `#fff` |
-| `--lr-color-on-success` | `--lr-theme-color-success-on-loud` | `#fff` |
-| `--lr-color-on-warning` | `--lr-theme-color-warning-on-loud` | `#fff` |
-| `--lr-color-on-danger` | `--lr-theme-color-danger-on-loud` | `#fff` |
-| `--lr-color-on-neutral` | `--lr-theme-color-neutral-on-loud` | `#fff` |
 | `--lr-color-overlay` | `--lr-theme-color-overlay` | `rgb(0 0 0 / 0.5)` |
 | `--lr-color-overlay-strong` | `--lr-theme-color-overlay-strong` | `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92))` |
 | `--lr-color-no-data` | `--lr-theme-color-no-data` | `rgb(128 128 128 / 25%)` |
@@ -236,20 +222,6 @@ override a single element without touching the shared layer.
 | `--lr-color-text-quiet` | `--lr-theme-color-text-quiet` | `#9aa1ac` |
 | `--lr-color-border` | `--lr-theme-color-surface-border` | `#6b6b74` |
 | `--lr-color-border-strong` | `--lr-theme-color-border-strong` | `#c4c9d1` |
-| `--lr-color-brand` | `--lr-theme-color-brand-fill-loud` | `#4ea0f0` |
-| `--lr-color-brand-quiet` | `--lr-theme-color-brand-fill-quiet` | `#163650` |
-| `--lr-color-success` | `--lr-theme-color-success-fill-loud` | `#3fb950` |
-| `--lr-color-success-quiet` | `--lr-theme-color-success-fill-quiet` | `#17411e` |
-| `--lr-color-warning` | `--lr-theme-color-warning-fill-loud` | `#d29922` |
-| `--lr-color-warning-quiet` | `--lr-theme-color-warning-fill-quiet` | `#3b2900` |
-| `--lr-color-danger` | `--lr-theme-color-danger-fill-loud` | `#fa524a` |
-| `--lr-color-danger-quiet` | `--lr-theme-color-danger-fill-quiet` | `#4c1210` |
-| `--lr-color-neutral` | `--lr-theme-color-neutral-fill-loud` | `#e5e7eb` |
-| `--lr-color-on-brand` | `--lr-theme-color-brand-on-loud` | `#111827` |
-| `--lr-color-on-success` | `--lr-theme-color-success-on-loud` | `#111827` |
-| `--lr-color-on-warning` | `--lr-theme-color-warning-on-loud` | `#111827` |
-| `--lr-color-on-danger` | `--lr-theme-color-danger-on-loud` | `#111827` |
-| `--lr-color-on-neutral` | `--lr-theme-color-neutral-on-loud` | `#111827` |
 | `--lr-color-chart-1` | `--lr-theme-color-chart-1` | `#bbff94` |
 | `--lr-color-chart-2` | `--lr-theme-color-chart-2` | `#ffbce8` |
 | `--lr-color-chart-3` | `--lr-theme-color-chart-3` | `#2bd66a` |
@@ -267,7 +239,7 @@ override a single element without touching the shared layer.
 | `--lr-graph-cat-7` | `--lr-theme-graph-cat-7` | `#79e2ef` |
 | `--lr-graph-cat-8` | `--lr-theme-graph-cat-8` | `#e4e7eb` |
 
-## Derived tokens (298)
+## Derived tokens (284)
 
 Computed from the layer above; not directly themeable.
 
@@ -279,20 +251,20 @@ Computed from the layer above; not directly themeable.
 | `--lr-color-text-quiet` | `var(--lr-theme-color-text-quiet, #6b7280)` |
 | `--lr-color-border` | `var(--lr-theme-color-surface-border, #8a8a90)` |
 | `--lr-color-border-strong` | `var(--lr-theme-color-border-strong, #4b5563)` |
-| `--lr-color-brand` | `var(--lr-theme-color-brand-fill-loud, #0969da)` |
-| `--lr-color-brand-quiet` | `var(--lr-theme-color-brand-fill-quiet, #ddf4ff)` |
-| `--lr-color-success` | `var(--lr-theme-color-success-fill-loud, #1a7f37)` |
-| `--lr-color-success-quiet` | `var(--lr-theme-color-success-fill-quiet, #dafbe1)` |
-| `--lr-color-warning` | `var(--lr-theme-color-warning-fill-loud, #9a6700)` |
-| `--lr-color-warning-quiet` | `var(--lr-theme-color-warning-fill-quiet, #fff8c5)` |
-| `--lr-color-danger` | `var(--lr-theme-color-danger-fill-loud, #cf222e)` |
-| `--lr-color-danger-quiet` | `var(--lr-theme-color-danger-fill-quiet, #ffebe9)` |
-| `--lr-color-neutral` | `var(--lr-theme-color-neutral-fill-loud, #1a1a1a)` |
-| `--lr-color-on-brand` | `var(--lr-theme-color-brand-on-loud, #fff)` |
-| `--lr-color-on-success` | `var(--lr-theme-color-success-on-loud, #fff)` |
-| `--lr-color-on-warning` | `var(--lr-theme-color-warning-on-loud, #fff)` |
-| `--lr-color-on-danger` | `var(--lr-theme-color-danger-on-loud, #fff)` |
-| `--lr-color-on-neutral` | `var(--lr-theme-color-neutral-on-loud, #fff)` |
+| `--lr-color-brand` | `var(--lr-color-brand-fill-loud)` |
+| `--lr-color-brand-quiet` | `var(--lr-color-brand-fill-quiet)` |
+| `--lr-color-success` | `var(--lr-color-success-fill-loud)` |
+| `--lr-color-success-quiet` | `var(--lr-color-success-fill-quiet)` |
+| `--lr-color-warning` | `var(--lr-color-warning-fill-loud)` |
+| `--lr-color-warning-quiet` | `var(--lr-color-warning-fill-quiet)` |
+| `--lr-color-danger` | `var(--lr-color-danger-fill-loud)` |
+| `--lr-color-danger-quiet` | `var(--lr-color-danger-fill-quiet)` |
+| `--lr-color-neutral` | `var(--lr-color-neutral-fill-loud)` |
+| `--lr-color-on-brand` | `var(--lr-color-brand-on-loud)` |
+| `--lr-color-on-success` | `var(--lr-color-success-on-loud)` |
+| `--lr-color-on-warning` | `var(--lr-color-warning-on-loud)` |
+| `--lr-color-on-danger` | `var(--lr-color-danger-on-loud)` |
+| `--lr-color-on-neutral` | `var(--lr-color-neutral-on-loud)` |
 | `--lr-color-overlay` | `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.5))` |
 | `--lr-color-overlay-strong` | `var(--lr-theme-color-overlay-strong, var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92)))` |
 | `--lr-color-no-data` | `var(--lr-theme-color-no-data, rgb(128 128 128 / 25%))` |
@@ -497,20 +469,6 @@ Computed from the layer above; not directly themeable.
 | `--lr-color-text-quiet` | `var(--lr-theme-color-text-quiet, #9aa1ac)` |
 | `--lr-color-border` | `var(--lr-theme-color-surface-border, #6b6b74)` |
 | `--lr-color-border-strong` | `var(--lr-theme-color-border-strong, #c4c9d1)` |
-| `--lr-color-brand` | `var(--lr-theme-color-brand-fill-loud, #4ea0f0)` |
-| `--lr-color-brand-quiet` | `var(--lr-theme-color-brand-fill-quiet, #163650)` |
-| `--lr-color-success` | `var(--lr-theme-color-success-fill-loud, #3fb950)` |
-| `--lr-color-success-quiet` | `var(--lr-theme-color-success-fill-quiet, #17411e)` |
-| `--lr-color-warning` | `var(--lr-theme-color-warning-fill-loud, #d29922)` |
-| `--lr-color-warning-quiet` | `var(--lr-theme-color-warning-fill-quiet, #3b2900)` |
-| `--lr-color-danger` | `var(--lr-theme-color-danger-fill-loud, #fa524a)` |
-| `--lr-color-danger-quiet` | `var(--lr-theme-color-danger-fill-quiet, #4c1210)` |
-| `--lr-color-neutral` | `var(--lr-theme-color-neutral-fill-loud, #e5e7eb)` |
-| `--lr-color-on-brand` | `var(--lr-theme-color-brand-on-loud, #111827)` |
-| `--lr-color-on-success` | `var(--lr-theme-color-success-on-loud, #111827)` |
-| `--lr-color-on-warning` | `var(--lr-theme-color-warning-on-loud, #111827)` |
-| `--lr-color-on-danger` | `var(--lr-theme-color-danger-on-loud, #111827)` |
-| `--lr-color-on-neutral` | `var(--lr-theme-color-neutral-on-loud, #111827)` |
 | `--lr-color-chart-1` | `var(--lr-theme-color-chart-1, #bbff94)` |
 | `--lr-color-chart-2` | `var(--lr-theme-color-chart-2, #ffbce8)` |
 | `--lr-color-chart-3` | `var(--lr-theme-color-chart-3, #2bd66a)` |

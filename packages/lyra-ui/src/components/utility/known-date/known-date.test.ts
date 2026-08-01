@@ -754,9 +754,16 @@ describe('invalid-border cssprop indirection', () => {
     day.dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
     await el.updateComplete;
     const field = el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;
-    // Fallback arm resolves to the same --lr-color-danger token as before the indirection
-    // (light-theme default #cf222e).
-    expect(getComputedStyle(field).borderColor).to.equal('rgb(207, 34, 46)');
+    // The invariant is that the fallback arm still resolves to --lr-color-danger -- NOT that danger
+    // is any particular hex. Resolving the token here rather than restating its value keeps this
+    // honest across a palette regeneration, which is exactly what broke the literal it replaced.
+    const probe = document.createElement('span');
+    probe.style.color = getComputedStyle(el).getPropertyValue('--lr-color-danger').trim();
+    el.shadowRoot!.append(probe);
+    const danger = getComputedStyle(probe).color;
+    probe.remove();
+    expect(danger).to.match(/^rgb/);
+    expect(getComputedStyle(field).borderColor).to.equal(danger);
   });
 });
 

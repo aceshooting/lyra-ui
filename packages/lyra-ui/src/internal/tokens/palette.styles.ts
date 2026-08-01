@@ -84,162 +84,223 @@ export const palette = css`
       --lr-ramp-neutral-90: #dcdee1;
       --lr-ramp-neutral-95: #edeef1;
 
-      --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, #e5efff);
-      --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, #035ec6);
-      --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, #034492);
-      --lr-color-brand-border-quiet: var(--lr-theme-color-brand-border-quiet, #95c0fe);
-      --lr-color-brand-border-normal: var(--lr-theme-color-brand-border-normal, #2d7de9);
-      --lr-color-brand-border-loud: var(--lr-theme-color-brand-border-loud, #034492);
-      --lr-color-brand-on-quiet: var(--lr-theme-color-brand-on-quiet, #000001);
-      --lr-color-brand-on-normal: var(--lr-theme-color-brand-on-normal, #edeef1);
-      --lr-color-brand-on-loud: var(--lr-theme-color-brand-on-loud, #edeef1);
+      --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, var(--lr-ramp-brand-95));
+      --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, var(--lr-ramp-brand-80));
+      --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, var(--lr-ramp-brand-50));
+      --lr-color-brand-border-quiet: var(--lr-theme-color-brand-border-quiet, var(--lr-ramp-brand-80));
+      --lr-color-brand-border-normal: var(--lr-theme-color-brand-border-normal, var(--lr-ramp-brand-60));
+      --lr-color-brand-border-loud: var(--lr-theme-color-brand-border-loud, var(--lr-ramp-brand-40));
+      --lr-color-brand-on-quiet: var(--lr-theme-color-brand-on-quiet, var(--lr-ramp-neutral-05));
+      --lr-color-brand-on-normal: var(--lr-theme-color-brand-on-normal, var(--lr-ramp-neutral-05));
+      --lr-color-brand-on-loud: var(--lr-theme-color-brand-on-loud, var(--lr-ramp-neutral-95));
 
-      --lr-color-success-fill-quiet: var(--lr-theme-color-success-fill-quiet, #d3fbd8);
-      --lr-color-success-fill-normal: var(--lr-theme-color-success-fill-normal, #0c7830);
-      --lr-color-success-fill-loud: var(--lr-theme-color-success-fill-loud, #00571f);
-      --lr-color-success-border-quiet: var(--lr-theme-color-success-border-quiet, #91d09a);
-      --lr-color-success-border-normal: var(--lr-theme-color-success-border-normal, #3e9550);
-      --lr-color-success-border-loud: var(--lr-theme-color-success-border-loud, #00571f);
-      --lr-color-success-on-quiet: var(--lr-theme-color-success-on-quiet, #000001);
-      --lr-color-success-on-normal: var(--lr-theme-color-success-on-normal, #edeef1);
-      --lr-color-success-on-loud: var(--lr-theme-color-success-on-loud, #edeef1);
+      --lr-color-success-fill-quiet: var(--lr-theme-color-success-fill-quiet, var(--lr-ramp-success-95));
+      --lr-color-success-fill-normal: var(--lr-theme-color-success-fill-normal, var(--lr-ramp-success-80));
+      --lr-color-success-fill-loud: var(--lr-theme-color-success-fill-loud, var(--lr-ramp-success-50));
+      --lr-color-success-border-quiet: var(--lr-theme-color-success-border-quiet, var(--lr-ramp-success-80));
+      --lr-color-success-border-normal: var(--lr-theme-color-success-border-normal, var(--lr-ramp-success-60));
+      --lr-color-success-border-loud: var(--lr-theme-color-success-border-loud, var(--lr-ramp-success-40));
+      --lr-color-success-on-quiet: var(--lr-theme-color-success-on-quiet, var(--lr-ramp-neutral-05));
+      --lr-color-success-on-normal: var(--lr-theme-color-success-on-normal, var(--lr-ramp-neutral-05));
+      --lr-color-success-on-loud: var(--lr-theme-color-success-on-loud, var(--lr-ramp-neutral-95));
 
-      --lr-color-warning-fill-quiet: var(--lr-theme-color-warning-fill-quiet, #ffebd2);
-      --lr-color-warning-fill-normal: var(--lr-theme-color-warning-fill-normal, #855905);
-      --lr-color-warning-fill-loud: var(--lr-theme-color-warning-fill-loud, #624001);
-      --lr-color-warning-border-quiet: var(--lr-theme-color-warning-border-quiet, #ddb781);
-      --lr-color-warning-border-normal: var(--lr-theme-color-warning-border-normal, #a77526);
-      --lr-color-warning-border-loud: var(--lr-theme-color-warning-border-loud, #624001);
-      --lr-color-warning-on-quiet: var(--lr-theme-color-warning-on-quiet, #000001);
-      --lr-color-warning-on-normal: var(--lr-theme-color-warning-on-normal, #edeef1);
-      --lr-color-warning-on-loud: var(--lr-theme-color-warning-on-loud, #edeef1);
+      --lr-color-warning-fill-quiet: var(--lr-theme-color-warning-fill-quiet, var(--lr-ramp-warning-95));
+      --lr-color-warning-fill-normal: var(--lr-theme-color-warning-fill-normal, var(--lr-ramp-warning-80));
+      --lr-color-warning-fill-loud: var(--lr-theme-color-warning-fill-loud, var(--lr-ramp-warning-50));
+      --lr-color-warning-border-quiet: var(--lr-theme-color-warning-border-quiet, var(--lr-ramp-warning-80));
+      --lr-color-warning-border-normal: var(--lr-theme-color-warning-border-normal, var(--lr-ramp-warning-60));
+      --lr-color-warning-border-loud: var(--lr-theme-color-warning-border-loud, var(--lr-ramp-warning-40));
+      --lr-color-warning-on-quiet: var(--lr-theme-color-warning-on-quiet, var(--lr-ramp-neutral-05));
+      --lr-color-warning-on-normal: var(--lr-theme-color-warning-on-normal, var(--lr-ramp-neutral-05));
+      --lr-color-warning-on-loud: var(--lr-theme-color-warning-on-loud, var(--lr-ramp-neutral-95));
 
-      --lr-color-danger-fill-quiet: var(--lr-theme-color-danger-fill-quiet, #ffe9e6);
-      --lr-color-danger-fill-normal: var(--lr-theme-color-danger-fill-normal, #bb0320);
-      --lr-color-danger-fill-loud: var(--lr-theme-color-danger-fill-loud, #890415);
-      --lr-color-danger-border-quiet: var(--lr-theme-color-danger-border-quiet, #ffa099);
-      --lr-color-danger-border-normal: var(--lr-theme-color-danger-border-normal, #dc3e41);
-      --lr-color-danger-border-loud: var(--lr-theme-color-danger-border-loud, #890415);
-      --lr-color-danger-on-quiet: var(--lr-theme-color-danger-on-quiet, #000001);
-      --lr-color-danger-on-normal: var(--lr-theme-color-danger-on-normal, #edeef1);
-      --lr-color-danger-on-loud: var(--lr-theme-color-danger-on-loud, #edeef1);
+      --lr-color-danger-fill-quiet: var(--lr-theme-color-danger-fill-quiet, var(--lr-ramp-danger-95));
+      --lr-color-danger-fill-normal: var(--lr-theme-color-danger-fill-normal, var(--lr-ramp-danger-80));
+      --lr-color-danger-fill-loud: var(--lr-theme-color-danger-fill-loud, var(--lr-ramp-danger-50));
+      --lr-color-danger-border-quiet: var(--lr-theme-color-danger-border-quiet, var(--lr-ramp-danger-80));
+      --lr-color-danger-border-normal: var(--lr-theme-color-danger-border-normal, var(--lr-ramp-danger-60));
+      --lr-color-danger-border-loud: var(--lr-theme-color-danger-border-loud, var(--lr-ramp-danger-40));
+      --lr-color-danger-on-quiet: var(--lr-theme-color-danger-on-quiet, var(--lr-ramp-neutral-05));
+      --lr-color-danger-on-normal: var(--lr-theme-color-danger-on-normal, var(--lr-ramp-neutral-05));
+      --lr-color-danger-on-loud: var(--lr-theme-color-danger-on-loud, var(--lr-ramp-neutral-95));
 
-      --lr-color-neutral-fill-quiet: var(--lr-theme-color-neutral-fill-quiet, #edeef1);
-      --lr-color-neutral-fill-normal: var(--lr-theme-color-neutral-fill-normal, #616368);
-      --lr-color-neutral-fill-loud: var(--lr-theme-color-neutral-fill-loud, #46484c);
-      --lr-color-neutral-border-quiet: var(--lr-theme-color-neutral-border-quiet, #bcbec1);
-      --lr-color-neutral-border-normal: var(--lr-theme-color-neutral-border-normal, #7e8085);
-      --lr-color-neutral-border-loud: var(--lr-theme-color-neutral-border-loud, #46484c);
-      --lr-color-neutral-on-quiet: var(--lr-theme-color-neutral-on-quiet, #000001);
-      --lr-color-neutral-on-normal: var(--lr-theme-color-neutral-on-normal, #edeef1);
-      --lr-color-neutral-on-loud: var(--lr-theme-color-neutral-on-loud, #edeef1);
+      --lr-color-neutral-fill-quiet: var(--lr-theme-color-neutral-fill-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-neutral-fill-normal: var(--lr-theme-color-neutral-fill-normal, var(--lr-ramp-neutral-80));
+      --lr-color-neutral-fill-loud: var(--lr-theme-color-neutral-fill-loud, var(--lr-ramp-neutral-50));
+      --lr-color-neutral-border-quiet: var(--lr-theme-color-neutral-border-quiet, var(--lr-ramp-neutral-80));
+      --lr-color-neutral-border-normal: var(--lr-theme-color-neutral-border-normal, var(--lr-ramp-neutral-60));
+      --lr-color-neutral-border-loud: var(--lr-theme-color-neutral-border-loud, var(--lr-ramp-neutral-40));
+      --lr-color-neutral-on-quiet: var(--lr-theme-color-neutral-on-quiet, var(--lr-ramp-neutral-05));
+      --lr-color-neutral-on-normal: var(--lr-theme-color-neutral-on-normal, var(--lr-ramp-neutral-05));
+      --lr-color-neutral-on-loud: var(--lr-theme-color-neutral-on-loud, var(--lr-ramp-neutral-95));
   }
 
-  :host([data-lr-theme='dark']),
+  :host([data-lr-theme='dark']) {
+      --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, var(--lr-ramp-brand-30));
+      --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, var(--lr-ramp-brand-50));
+      --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, var(--lr-ramp-brand-70));
+      --lr-color-brand-border-quiet: var(--lr-theme-color-brand-border-quiet, var(--lr-ramp-brand-30));
+      --lr-color-brand-border-normal: var(--lr-theme-color-brand-border-normal, var(--lr-ramp-brand-60));
+      --lr-color-brand-border-loud: var(--lr-theme-color-brand-border-loud, var(--lr-ramp-brand-70));
+      --lr-color-brand-on-quiet: var(--lr-theme-color-brand-on-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-brand-on-normal: var(--lr-theme-color-brand-on-normal, var(--lr-ramp-neutral-95));
+      --lr-color-brand-on-loud: var(--lr-theme-color-brand-on-loud, var(--lr-ramp-neutral-05));
+
+      --lr-color-success-fill-quiet: var(--lr-theme-color-success-fill-quiet, var(--lr-ramp-success-30));
+      --lr-color-success-fill-normal: var(--lr-theme-color-success-fill-normal, var(--lr-ramp-success-50));
+      --lr-color-success-fill-loud: var(--lr-theme-color-success-fill-loud, var(--lr-ramp-success-70));
+      --lr-color-success-border-quiet: var(--lr-theme-color-success-border-quiet, var(--lr-ramp-success-30));
+      --lr-color-success-border-normal: var(--lr-theme-color-success-border-normal, var(--lr-ramp-success-60));
+      --lr-color-success-border-loud: var(--lr-theme-color-success-border-loud, var(--lr-ramp-success-70));
+      --lr-color-success-on-quiet: var(--lr-theme-color-success-on-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-success-on-normal: var(--lr-theme-color-success-on-normal, var(--lr-ramp-neutral-95));
+      --lr-color-success-on-loud: var(--lr-theme-color-success-on-loud, var(--lr-ramp-neutral-05));
+
+      --lr-color-warning-fill-quiet: var(--lr-theme-color-warning-fill-quiet, var(--lr-ramp-warning-30));
+      --lr-color-warning-fill-normal: var(--lr-theme-color-warning-fill-normal, var(--lr-ramp-warning-50));
+      --lr-color-warning-fill-loud: var(--lr-theme-color-warning-fill-loud, var(--lr-ramp-warning-70));
+      --lr-color-warning-border-quiet: var(--lr-theme-color-warning-border-quiet, var(--lr-ramp-warning-30));
+      --lr-color-warning-border-normal: var(--lr-theme-color-warning-border-normal, var(--lr-ramp-warning-60));
+      --lr-color-warning-border-loud: var(--lr-theme-color-warning-border-loud, var(--lr-ramp-warning-70));
+      --lr-color-warning-on-quiet: var(--lr-theme-color-warning-on-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-warning-on-normal: var(--lr-theme-color-warning-on-normal, var(--lr-ramp-neutral-95));
+      --lr-color-warning-on-loud: var(--lr-theme-color-warning-on-loud, var(--lr-ramp-neutral-05));
+
+      --lr-color-danger-fill-quiet: var(--lr-theme-color-danger-fill-quiet, var(--lr-ramp-danger-30));
+      --lr-color-danger-fill-normal: var(--lr-theme-color-danger-fill-normal, var(--lr-ramp-danger-50));
+      --lr-color-danger-fill-loud: var(--lr-theme-color-danger-fill-loud, var(--lr-ramp-danger-70));
+      --lr-color-danger-border-quiet: var(--lr-theme-color-danger-border-quiet, var(--lr-ramp-danger-30));
+      --lr-color-danger-border-normal: var(--lr-theme-color-danger-border-normal, var(--lr-ramp-danger-60));
+      --lr-color-danger-border-loud: var(--lr-theme-color-danger-border-loud, var(--lr-ramp-danger-70));
+      --lr-color-danger-on-quiet: var(--lr-theme-color-danger-on-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-danger-on-normal: var(--lr-theme-color-danger-on-normal, var(--lr-ramp-neutral-95));
+      --lr-color-danger-on-loud: var(--lr-theme-color-danger-on-loud, var(--lr-ramp-neutral-05));
+
+      --lr-color-neutral-fill-quiet: var(--lr-theme-color-neutral-fill-quiet, var(--lr-ramp-neutral-30));
+      --lr-color-neutral-fill-normal: var(--lr-theme-color-neutral-fill-normal, var(--lr-ramp-neutral-50));
+      --lr-color-neutral-fill-loud: var(--lr-theme-color-neutral-fill-loud, var(--lr-ramp-neutral-70));
+      --lr-color-neutral-border-quiet: var(--lr-theme-color-neutral-border-quiet, var(--lr-ramp-neutral-30));
+      --lr-color-neutral-border-normal: var(--lr-theme-color-neutral-border-normal, var(--lr-ramp-neutral-60));
+      --lr-color-neutral-border-loud: var(--lr-theme-color-neutral-border-loud, var(--lr-ramp-neutral-70));
+      --lr-color-neutral-on-quiet: var(--lr-theme-color-neutral-on-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-neutral-on-normal: var(--lr-theme-color-neutral-on-normal, var(--lr-ramp-neutral-95));
+      --lr-color-neutral-on-loud: var(--lr-theme-color-neutral-on-loud, var(--lr-ramp-neutral-05));
+  }
+
+  /* Deliberately a SEPARATE rule from the one above, not another selector in its list. A selector
+     list is not forgiving: Firefox and Safari ship no :host-context(), so one of these in the same
+     list would invalidate the whole list and take the supported :host([data-lr-theme='dark'])
+     branch down with it -- silently dropping the entire dark grid in two of the three engines.
+     Split, each engine keeps whatever it understands.
+
+     Those engines still resolve an ancestor .lr-dark correctly, just by a different route:
+     theme.css declares the mode's values as ordinary custom properties on .lr-dark, and custom
+     properties inherit through the shadow boundary. This rule is the no-theme.css convenience
+     path, not the contract. */
   :host-context(.lr-dark),
   :host-context([data-lr-theme='dark']) {
-      --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, #001436);
-      --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, #2d7de9);
-      --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, #5b9eff);
-      --lr-color-brand-border-quiet: var(--lr-theme-color-brand-border-quiet, #002b62);
-      --lr-color-brand-border-normal: var(--lr-theme-color-brand-border-normal, #035ec6);
-      --lr-color-brand-border-loud: var(--lr-theme-color-brand-border-loud, #5b9eff);
-      --lr-color-brand-on-quiet: var(--lr-theme-color-brand-on-quiet, #edeef1);
-      --lr-color-brand-on-normal: var(--lr-theme-color-brand-on-normal, #000001);
-      --lr-color-brand-on-loud: var(--lr-theme-color-brand-on-loud, #000001);
+      --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, var(--lr-ramp-brand-30));
+      --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, var(--lr-ramp-brand-50));
+      --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, var(--lr-ramp-brand-70));
+      --lr-color-brand-border-quiet: var(--lr-theme-color-brand-border-quiet, var(--lr-ramp-brand-30));
+      --lr-color-brand-border-normal: var(--lr-theme-color-brand-border-normal, var(--lr-ramp-brand-60));
+      --lr-color-brand-border-loud: var(--lr-theme-color-brand-border-loud, var(--lr-ramp-brand-70));
+      --lr-color-brand-on-quiet: var(--lr-theme-color-brand-on-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-brand-on-normal: var(--lr-theme-color-brand-on-normal, var(--lr-ramp-neutral-95));
+      --lr-color-brand-on-loud: var(--lr-theme-color-brand-on-loud, var(--lr-ramp-neutral-05));
 
-      --lr-color-success-fill-quiet: var(--lr-theme-color-success-fill-quiet, #001d06);
-      --lr-color-success-fill-normal: var(--lr-theme-color-success-fill-normal, #3e9550);
-      --lr-color-success-fill-loud: var(--lr-theme-color-success-fill-loud, #67b374);
-      --lr-color-success-border-quiet: var(--lr-theme-color-success-border-quiet, #013912);
-      --lr-color-success-border-normal: var(--lr-theme-color-success-border-normal, #0c7830);
-      --lr-color-success-border-loud: var(--lr-theme-color-success-border-loud, #67b374);
-      --lr-color-success-on-quiet: var(--lr-theme-color-success-on-quiet, #edeef1);
-      --lr-color-success-on-normal: var(--lr-theme-color-success-on-normal, #000001);
-      --lr-color-success-on-loud: var(--lr-theme-color-success-on-loud, #000001);
+      --lr-color-success-fill-quiet: var(--lr-theme-color-success-fill-quiet, var(--lr-ramp-success-30));
+      --lr-color-success-fill-normal: var(--lr-theme-color-success-fill-normal, var(--lr-ramp-success-50));
+      --lr-color-success-fill-loud: var(--lr-theme-color-success-fill-loud, var(--lr-ramp-success-70));
+      --lr-color-success-border-quiet: var(--lr-theme-color-success-border-quiet, var(--lr-ramp-success-30));
+      --lr-color-success-border-normal: var(--lr-theme-color-success-border-normal, var(--lr-ramp-success-60));
+      --lr-color-success-border-loud: var(--lr-theme-color-success-border-loud, var(--lr-ramp-success-70));
+      --lr-color-success-on-quiet: var(--lr-theme-color-success-on-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-success-on-normal: var(--lr-theme-color-success-on-normal, var(--lr-ramp-neutral-95));
+      --lr-color-success-on-loud: var(--lr-theme-color-success-on-loud, var(--lr-ramp-neutral-05));
 
-      --lr-color-warning-fill-quiet: var(--lr-theme-color-warning-fill-quiet, #211300);
-      --lr-color-warning-fill-normal: var(--lr-theme-color-warning-fill-normal, #a77526);
-      --lr-color-warning-fill-loud: var(--lr-theme-color-warning-fill-loud, #c39554);
-      --lr-color-warning-border-quiet: var(--lr-theme-color-warning-border-quiet, #402801);
-      --lr-color-warning-border-normal: var(--lr-theme-color-warning-border-normal, #855905);
-      --lr-color-warning-border-loud: var(--lr-theme-color-warning-border-loud, #c39554);
-      --lr-color-warning-on-quiet: var(--lr-theme-color-warning-on-quiet, #edeef1);
-      --lr-color-warning-on-normal: var(--lr-theme-color-warning-on-normal, #000001);
-      --lr-color-warning-on-loud: var(--lr-theme-color-warning-on-loud, #000001);
+      --lr-color-warning-fill-quiet: var(--lr-theme-color-warning-fill-quiet, var(--lr-ramp-warning-30));
+      --lr-color-warning-fill-normal: var(--lr-theme-color-warning-fill-normal, var(--lr-ramp-warning-50));
+      --lr-color-warning-fill-loud: var(--lr-theme-color-warning-fill-loud, var(--lr-ramp-warning-70));
+      --lr-color-warning-border-quiet: var(--lr-theme-color-warning-border-quiet, var(--lr-ramp-warning-30));
+      --lr-color-warning-border-normal: var(--lr-theme-color-warning-border-normal, var(--lr-ramp-warning-60));
+      --lr-color-warning-border-loud: var(--lr-theme-color-warning-border-loud, var(--lr-ramp-warning-70));
+      --lr-color-warning-on-quiet: var(--lr-theme-color-warning-on-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-warning-on-normal: var(--lr-theme-color-warning-on-normal, var(--lr-ramp-neutral-95));
+      --lr-color-warning-on-loud: var(--lr-theme-color-warning-on-loud, var(--lr-ramp-neutral-05));
 
-      --lr-color-danger-fill-quiet: var(--lr-theme-color-danger-fill-quiet, #320003);
-      --lr-color-danger-fill-normal: var(--lr-theme-color-danger-fill-normal, #dc3e41);
-      --lr-color-danger-fill-loud: var(--lr-theme-color-danger-fill-loud, #f86b66);
-      --lr-color-danger-border-quiet: var(--lr-theme-color-danger-border-quiet, #5c010a);
-      --lr-color-danger-border-normal: var(--lr-theme-color-danger-border-normal, #bb0320);
-      --lr-color-danger-border-loud: var(--lr-theme-color-danger-border-loud, #f86b66);
-      --lr-color-danger-on-quiet: var(--lr-theme-color-danger-on-quiet, #edeef1);
-      --lr-color-danger-on-normal: var(--lr-theme-color-danger-on-normal, #000001);
-      --lr-color-danger-on-loud: var(--lr-theme-color-danger-on-loud, #000001);
+      --lr-color-danger-fill-quiet: var(--lr-theme-color-danger-fill-quiet, var(--lr-ramp-danger-30));
+      --lr-color-danger-fill-normal: var(--lr-theme-color-danger-fill-normal, var(--lr-ramp-danger-50));
+      --lr-color-danger-fill-loud: var(--lr-theme-color-danger-fill-loud, var(--lr-ramp-danger-70));
+      --lr-color-danger-border-quiet: var(--lr-theme-color-danger-border-quiet, var(--lr-ramp-danger-30));
+      --lr-color-danger-border-normal: var(--lr-theme-color-danger-border-normal, var(--lr-ramp-danger-60));
+      --lr-color-danger-border-loud: var(--lr-theme-color-danger-border-loud, var(--lr-ramp-danger-70));
+      --lr-color-danger-on-quiet: var(--lr-theme-color-danger-on-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-danger-on-normal: var(--lr-theme-color-danger-on-normal, var(--lr-ramp-neutral-95));
+      --lr-color-danger-on-loud: var(--lr-theme-color-danger-on-loud, var(--lr-ramp-neutral-05));
 
-      --lr-color-neutral-fill-quiet: var(--lr-theme-color-neutral-fill-quiet, #151619);
-      --lr-color-neutral-fill-normal: var(--lr-theme-color-neutral-fill-normal, #7e8085);
-      --lr-color-neutral-fill-loud: var(--lr-theme-color-neutral-fill-loud, #9c9ea3);
-      --lr-color-neutral-border-quiet: var(--lr-theme-color-neutral-border-quiet, #2c2e31);
-      --lr-color-neutral-border-normal: var(--lr-theme-color-neutral-border-normal, #616368);
-      --lr-color-neutral-border-loud: var(--lr-theme-color-neutral-border-loud, #9c9ea3);
-      --lr-color-neutral-on-quiet: var(--lr-theme-color-neutral-on-quiet, #edeef1);
-      --lr-color-neutral-on-normal: var(--lr-theme-color-neutral-on-normal, #000001);
-      --lr-color-neutral-on-loud: var(--lr-theme-color-neutral-on-loud, #000001);
+      --lr-color-neutral-fill-quiet: var(--lr-theme-color-neutral-fill-quiet, var(--lr-ramp-neutral-30));
+      --lr-color-neutral-fill-normal: var(--lr-theme-color-neutral-fill-normal, var(--lr-ramp-neutral-50));
+      --lr-color-neutral-fill-loud: var(--lr-theme-color-neutral-fill-loud, var(--lr-ramp-neutral-70));
+      --lr-color-neutral-border-quiet: var(--lr-theme-color-neutral-border-quiet, var(--lr-ramp-neutral-30));
+      --lr-color-neutral-border-normal: var(--lr-theme-color-neutral-border-normal, var(--lr-ramp-neutral-60));
+      --lr-color-neutral-border-loud: var(--lr-theme-color-neutral-border-loud, var(--lr-ramp-neutral-70));
+      --lr-color-neutral-on-quiet: var(--lr-theme-color-neutral-on-quiet, var(--lr-ramp-neutral-95));
+      --lr-color-neutral-on-normal: var(--lr-theme-color-neutral-on-normal, var(--lr-ramp-neutral-95));
+      --lr-color-neutral-on-loud: var(--lr-theme-color-neutral-on-loud, var(--lr-ramp-neutral-05));
   }
 
   @media (prefers-color-scheme: dark) {
     :host(:not([data-lr-theme='light'])) {
-        --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, #001436);
-        --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, #2d7de9);
-        --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, #5b9eff);
-        --lr-color-brand-border-quiet: var(--lr-theme-color-brand-border-quiet, #002b62);
-        --lr-color-brand-border-normal: var(--lr-theme-color-brand-border-normal, #035ec6);
-        --lr-color-brand-border-loud: var(--lr-theme-color-brand-border-loud, #5b9eff);
-        --lr-color-brand-on-quiet: var(--lr-theme-color-brand-on-quiet, #edeef1);
-        --lr-color-brand-on-normal: var(--lr-theme-color-brand-on-normal, #000001);
-        --lr-color-brand-on-loud: var(--lr-theme-color-brand-on-loud, #000001);
+        --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, var(--lr-ramp-brand-30));
+        --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, var(--lr-ramp-brand-50));
+        --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, var(--lr-ramp-brand-70));
+        --lr-color-brand-border-quiet: var(--lr-theme-color-brand-border-quiet, var(--lr-ramp-brand-30));
+        --lr-color-brand-border-normal: var(--lr-theme-color-brand-border-normal, var(--lr-ramp-brand-60));
+        --lr-color-brand-border-loud: var(--lr-theme-color-brand-border-loud, var(--lr-ramp-brand-70));
+        --lr-color-brand-on-quiet: var(--lr-theme-color-brand-on-quiet, var(--lr-ramp-neutral-95));
+        --lr-color-brand-on-normal: var(--lr-theme-color-brand-on-normal, var(--lr-ramp-neutral-95));
+        --lr-color-brand-on-loud: var(--lr-theme-color-brand-on-loud, var(--lr-ramp-neutral-05));
 
-        --lr-color-success-fill-quiet: var(--lr-theme-color-success-fill-quiet, #001d06);
-        --lr-color-success-fill-normal: var(--lr-theme-color-success-fill-normal, #3e9550);
-        --lr-color-success-fill-loud: var(--lr-theme-color-success-fill-loud, #67b374);
-        --lr-color-success-border-quiet: var(--lr-theme-color-success-border-quiet, #013912);
-        --lr-color-success-border-normal: var(--lr-theme-color-success-border-normal, #0c7830);
-        --lr-color-success-border-loud: var(--lr-theme-color-success-border-loud, #67b374);
-        --lr-color-success-on-quiet: var(--lr-theme-color-success-on-quiet, #edeef1);
-        --lr-color-success-on-normal: var(--lr-theme-color-success-on-normal, #000001);
-        --lr-color-success-on-loud: var(--lr-theme-color-success-on-loud, #000001);
+        --lr-color-success-fill-quiet: var(--lr-theme-color-success-fill-quiet, var(--lr-ramp-success-30));
+        --lr-color-success-fill-normal: var(--lr-theme-color-success-fill-normal, var(--lr-ramp-success-50));
+        --lr-color-success-fill-loud: var(--lr-theme-color-success-fill-loud, var(--lr-ramp-success-70));
+        --lr-color-success-border-quiet: var(--lr-theme-color-success-border-quiet, var(--lr-ramp-success-30));
+        --lr-color-success-border-normal: var(--lr-theme-color-success-border-normal, var(--lr-ramp-success-60));
+        --lr-color-success-border-loud: var(--lr-theme-color-success-border-loud, var(--lr-ramp-success-70));
+        --lr-color-success-on-quiet: var(--lr-theme-color-success-on-quiet, var(--lr-ramp-neutral-95));
+        --lr-color-success-on-normal: var(--lr-theme-color-success-on-normal, var(--lr-ramp-neutral-95));
+        --lr-color-success-on-loud: var(--lr-theme-color-success-on-loud, var(--lr-ramp-neutral-05));
 
-        --lr-color-warning-fill-quiet: var(--lr-theme-color-warning-fill-quiet, #211300);
-        --lr-color-warning-fill-normal: var(--lr-theme-color-warning-fill-normal, #a77526);
-        --lr-color-warning-fill-loud: var(--lr-theme-color-warning-fill-loud, #c39554);
-        --lr-color-warning-border-quiet: var(--lr-theme-color-warning-border-quiet, #402801);
-        --lr-color-warning-border-normal: var(--lr-theme-color-warning-border-normal, #855905);
-        --lr-color-warning-border-loud: var(--lr-theme-color-warning-border-loud, #c39554);
-        --lr-color-warning-on-quiet: var(--lr-theme-color-warning-on-quiet, #edeef1);
-        --lr-color-warning-on-normal: var(--lr-theme-color-warning-on-normal, #000001);
-        --lr-color-warning-on-loud: var(--lr-theme-color-warning-on-loud, #000001);
+        --lr-color-warning-fill-quiet: var(--lr-theme-color-warning-fill-quiet, var(--lr-ramp-warning-30));
+        --lr-color-warning-fill-normal: var(--lr-theme-color-warning-fill-normal, var(--lr-ramp-warning-50));
+        --lr-color-warning-fill-loud: var(--lr-theme-color-warning-fill-loud, var(--lr-ramp-warning-70));
+        --lr-color-warning-border-quiet: var(--lr-theme-color-warning-border-quiet, var(--lr-ramp-warning-30));
+        --lr-color-warning-border-normal: var(--lr-theme-color-warning-border-normal, var(--lr-ramp-warning-60));
+        --lr-color-warning-border-loud: var(--lr-theme-color-warning-border-loud, var(--lr-ramp-warning-70));
+        --lr-color-warning-on-quiet: var(--lr-theme-color-warning-on-quiet, var(--lr-ramp-neutral-95));
+        --lr-color-warning-on-normal: var(--lr-theme-color-warning-on-normal, var(--lr-ramp-neutral-95));
+        --lr-color-warning-on-loud: var(--lr-theme-color-warning-on-loud, var(--lr-ramp-neutral-05));
 
-        --lr-color-danger-fill-quiet: var(--lr-theme-color-danger-fill-quiet, #320003);
-        --lr-color-danger-fill-normal: var(--lr-theme-color-danger-fill-normal, #dc3e41);
-        --lr-color-danger-fill-loud: var(--lr-theme-color-danger-fill-loud, #f86b66);
-        --lr-color-danger-border-quiet: var(--lr-theme-color-danger-border-quiet, #5c010a);
-        --lr-color-danger-border-normal: var(--lr-theme-color-danger-border-normal, #bb0320);
-        --lr-color-danger-border-loud: var(--lr-theme-color-danger-border-loud, #f86b66);
-        --lr-color-danger-on-quiet: var(--lr-theme-color-danger-on-quiet, #edeef1);
-        --lr-color-danger-on-normal: var(--lr-theme-color-danger-on-normal, #000001);
-        --lr-color-danger-on-loud: var(--lr-theme-color-danger-on-loud, #000001);
+        --lr-color-danger-fill-quiet: var(--lr-theme-color-danger-fill-quiet, var(--lr-ramp-danger-30));
+        --lr-color-danger-fill-normal: var(--lr-theme-color-danger-fill-normal, var(--lr-ramp-danger-50));
+        --lr-color-danger-fill-loud: var(--lr-theme-color-danger-fill-loud, var(--lr-ramp-danger-70));
+        --lr-color-danger-border-quiet: var(--lr-theme-color-danger-border-quiet, var(--lr-ramp-danger-30));
+        --lr-color-danger-border-normal: var(--lr-theme-color-danger-border-normal, var(--lr-ramp-danger-60));
+        --lr-color-danger-border-loud: var(--lr-theme-color-danger-border-loud, var(--lr-ramp-danger-70));
+        --lr-color-danger-on-quiet: var(--lr-theme-color-danger-on-quiet, var(--lr-ramp-neutral-95));
+        --lr-color-danger-on-normal: var(--lr-theme-color-danger-on-normal, var(--lr-ramp-neutral-95));
+        --lr-color-danger-on-loud: var(--lr-theme-color-danger-on-loud, var(--lr-ramp-neutral-05));
 
-        --lr-color-neutral-fill-quiet: var(--lr-theme-color-neutral-fill-quiet, #151619);
-        --lr-color-neutral-fill-normal: var(--lr-theme-color-neutral-fill-normal, #7e8085);
-        --lr-color-neutral-fill-loud: var(--lr-theme-color-neutral-fill-loud, #9c9ea3);
-        --lr-color-neutral-border-quiet: var(--lr-theme-color-neutral-border-quiet, #2c2e31);
-        --lr-color-neutral-border-normal: var(--lr-theme-color-neutral-border-normal, #616368);
-        --lr-color-neutral-border-loud: var(--lr-theme-color-neutral-border-loud, #9c9ea3);
-        --lr-color-neutral-on-quiet: var(--lr-theme-color-neutral-on-quiet, #edeef1);
-        --lr-color-neutral-on-normal: var(--lr-theme-color-neutral-on-normal, #000001);
-        --lr-color-neutral-on-loud: var(--lr-theme-color-neutral-on-loud, #000001);
+        --lr-color-neutral-fill-quiet: var(--lr-theme-color-neutral-fill-quiet, var(--lr-ramp-neutral-30));
+        --lr-color-neutral-fill-normal: var(--lr-theme-color-neutral-fill-normal, var(--lr-ramp-neutral-50));
+        --lr-color-neutral-fill-loud: var(--lr-theme-color-neutral-fill-loud, var(--lr-ramp-neutral-70));
+        --lr-color-neutral-border-quiet: var(--lr-theme-color-neutral-border-quiet, var(--lr-ramp-neutral-30));
+        --lr-color-neutral-border-normal: var(--lr-theme-color-neutral-border-normal, var(--lr-ramp-neutral-60));
+        --lr-color-neutral-border-loud: var(--lr-theme-color-neutral-border-loud, var(--lr-ramp-neutral-70));
+        --lr-color-neutral-on-quiet: var(--lr-theme-color-neutral-on-quiet, var(--lr-ramp-neutral-95));
+        --lr-color-neutral-on-normal: var(--lr-theme-color-neutral-on-normal, var(--lr-ramp-neutral-95));
+        --lr-color-neutral-on-loud: var(--lr-theme-color-neutral-on-loud, var(--lr-ramp-neutral-05));
     }
   }
 `;

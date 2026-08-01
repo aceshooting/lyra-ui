@@ -58,21 +58,50 @@ function contrastRatio(a, b) {
 function readGrids(text) {
   const body = text.slice(text.indexOf('export const palette'));
   const blocks = body.split(/\n\s*(?=:host|@media)/);
-  const parse = (block) => {
-    const map = new Map();
-    for (const match of block.matchAll(/(--lr-(?:color|ramp)-[a-z0-9-]+):\s*var\([^,]+,\s*(#[0-9a-f]{6})\)/g)) {
-      map.set(match[1], match[2]);
-    }
-    for (const match of block.matchAll(/(--lr-ramp-[a-z0-9-]+):\s*(#[0-9a-f]{6})/g)) map.set(match[1], match[2]);
-    return map;
-  };
   // Select by SELECTOR, never by position: the split also yields the file preamble as a block, so
   // indexing shifted every grid by one and silently compared the light values against the dark
   // surface. That produced five confident, entirely fictional failures.
   const find = (predicate) => blocks.find((block) => predicate(block.trimStart())) ?? '';
+
+  // The ramp is declared once, on `:host`, and inherits into every other block.
+  const ramp = new Map();
+  for (const match of find((block) => block.startsWith(':host {')).matchAll(
+    /(--lr-ramp-[a-z0-9-]+):\s*(#[0-9a-f]{6})/g,
+  )) {
+    ramp.set(match[1], match[2]);
+  }
+
+  /**
+   * A grid slot resolves to a ramp step, not to a literal -- that indirection is the point of
+   * having a ramp at all. Follow the reference here rather than requiring a hex in the file, or
+   * this gate would quietly check zero semantic pairs the moment the grid started using the ramp
+   * (a passing run proving nothing, which is worse than a failing one).
+   */
+  const parse = (block) => {
+    const map = new Map();
+    for (const match of block.matchAll(
+      /(--lr-color-[a-z0-9-]+):\s*var\([^,]+,\s*var\((--lr-ramp-[a-z0-9-]+)\)\)/g,
+    )) {
+      const hex = ramp.get(match[2]);
+      if (!hex) throw new Error(`${match[1]} points at ${match[2]}, which the ramp does not declare`);
+      map.set(match[1], hex);
+    }
+    // Literal fallbacks are still honoured, so a hand-pinned slot stays checkable.
+    for (const match of block.matchAll(/(--lr-color-[a-z0-9-]+):\s*var\([^,]+,\s*(#[0-9a-f]{6})\)/g)) {
+      map.set(match[1], match[2]);
+    }
+    return map;
+  };
+
   const light = parse(find((block) => block.startsWith(':host {')));
-  const dark = parse(find((block) => block.startsWith(":host([data-lr-theme='dark'])")));
-  return { light, dark };
+  // `:host([data-lr-theme='dark'])` is its own rule, not one selector in a list shared with
+  // `:host-context(...)`. When it was in a list, the split above cut between the selectors and this
+  // block contained nothing but a selector line -- so the dark grid parsed EMPTY and the whole
+  // dark half of this gate silently checked nothing at all.
+  const dark = parse(find((block) => block.startsWith(":host([data-lr-theme='dark']) {")));
+  if (ramp.size === 0) throw new Error('no ramp steps parsed from the palette -- the file shape changed');
+  if (dark.size === 0) throw new Error('no dark grid parsed from the palette -- the file shape changed');
+  return { light, dark, ramp };
 }
 
 /**

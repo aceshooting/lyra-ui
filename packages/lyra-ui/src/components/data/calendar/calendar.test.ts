@@ -4,6 +4,15 @@ import type { LyraCalendar } from './calendar.js';
 import { formatISO } from '../../forms/date-picker/calendar-core.js';
 import { styles } from './calendar.styles.js';
 
+/**
+ * Resolve a design token in the same scope `calendar.styles.ts` reads it from -- the calendar host,
+ * where the palette's `:host` block declares it. A fixture (or assertion) that restates a token's
+ * literal value is asserting the palette rather than the calendar, and breaks on every legitimate
+ * regeneration of the OKLCH ramp.
+ */
+const readToken = (el: Element, name: string): string =>
+  getComputedStyle(el).getPropertyValue(name).trim();
+
 it('renders a month and emits date selections', async () => {
   const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
   expect(el.shadowRoot!.querySelectorAll('[part="day"]')).to.have.length(42);
@@ -104,8 +113,15 @@ it('is accessible with a populated month view (selection + multiple events per d
   const el = (await fixture(
     html`<lr-calendar aria-label="Schedule" view-date="2026-07-01" value="2026-07-15"></lr-calendar>`,
   )) as LyraCalendar;
+  // A month-view event marker keeps `color: var(--lr-color-on-brand)` whatever background the
+  // caller supplies, so the brand fill is the one background the palette actually guarantees a
+  // readable foreground against -- resolve it live instead of restating a hex. (The literal that
+  // used to sit here was the pre-8.0.0 brand blue; once the ramp moved --lr-color-on-brand off it,
+  // axe measured 4.47:1 against a colour the calendar no longer has anything to do with.)
+  const brand = readToken(el, '--lr-color-brand');
+  expect(brand, 'expected --lr-color-brand to resolve on the calendar host').to.match(/^(#|rgb)/);
   el.events = [
-    { date: '2026-07-15', title: 'Standup', color: '#0969da' },
+    { date: '2026-07-15', title: 'Standup', color: brand },
     { date: '2026-07-15', title: 'Review' },
     { date: '2026-07-20', title: 'Deadline' },
   ];
@@ -117,8 +133,11 @@ it('is accessible with a populated agenda view', async () => {
   const el = (await fixture(
     html`<lr-calendar aria-label="Schedule" view="agenda" view-date="2026-07-01"></lr-calendar>`,
   )) as LyraCalendar;
+  // Same rule as the month-view case above: no palette literal in a fixture. The agenda view does
+  // not currently paint `event.color` at all, so this passes either way today -- resolving the
+  // token keeps it passing the day it starts to.
   el.events = [
-    { date: '2026-07-15', title: 'Standup', color: '#0969da' },
+    { date: '2026-07-15', title: 'Standup', color: readToken(el, '--lr-color-brand') },
     { date: '2026-07-20', title: 'Deadline' },
   ];
   await el.updateComplete;

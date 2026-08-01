@@ -4,6 +4,28 @@ import type { LyraTimelineItem } from './timeline-item.js';
 import type { LyraRelativeTime } from '../../utility/format/relative-time.js';
 import { styles } from './timeline-item.styles.js';
 
+/**
+ * Resolve a design token in the same shadow scope the component's own `var()` chain resolves in.
+ * A computed custom-property value already has its `var()` references substituted, so this reads
+ * whatever the generated palette currently produces. Colour assertions below compare against this
+ * rather than restating a literal hex -- a hardcoded hex asserts the palette instead of this
+ * component, and breaks on every legitimate regeneration of the ramp.
+ */
+const resolve = (node: Element, token: string) => getComputedStyle(node).getPropertyValue(token).trim();
+
+/**
+ * Round-trip a colour string through the browser so it is serialized exactly the way a computed
+ * `background-color` / `color` is, making the two directly comparable.
+ */
+const toRgb = (color: string) => {
+  const probe = document.createElement('span');
+  probe.style.color = color;
+  document.body.appendChild(probe);
+  const rgb = getComputedStyle(probe).color;
+  probe.remove();
+  return rgb;
+};
+
 it('sets role="listitem" on the host in connectedCallback, before first render', async () => {
   const el = fixtureSync<LyraTimelineItem>(html`<lr-timeline-item>Deployed</lr-timeline-item>`);
   // connectedCallback runs synchronously on upgrade/connect, before Lit's first update microtask.
@@ -28,7 +50,12 @@ it('renders the default color-coded dot marker when the icon slot is empty', asy
   const marker = el.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
   const iconSlot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
   expect(iconSlot.assignedElements({ flatten: true })).to.have.length(0);
-  expect(getComputedStyle(marker).getPropertyValue('--lr-timeline-marker-color').trim()).to.equal('#1a7f37');
+  const success = resolve(marker, '--lr-color-success');
+  expect(success).to.not.equal('');
+  expect(resolve(marker, '--lr-timeline-marker-color')).to.equal(success);
+  // The dot is actually painted with it (background: var(--lr-timeline-marker-color)), rather than
+  // left transparent the way the [data-has-icon] branch leaves it.
+  expect(getComputedStyle(marker).backgroundColor).to.equal(toRgb(success));
 });
 
 it('shows only the slotted icon content once the icon slot is populated, at parse time and via a later slotchange', async () => {
@@ -134,22 +161,27 @@ it('variant reflects the attribute, defaults to "neutral", and drives --lr-timel
   expect(el.variant).to.equal('neutral');
   expect(el.hasAttribute('variant')).to.be.false;
   const neutralMarker = el.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
-  expect(getComputedStyle(neutralMarker).getPropertyValue('--lr-timeline-marker-color').trim()).to.equal('#6b7280');
+  // The unset/"neutral" default resolves to the quiet text tone, not to a variant tone.
+  const neutralColor = resolve(neutralMarker, '--lr-color-text-quiet');
+  expect(neutralColor).to.not.equal('');
+  expect(resolve(neutralMarker, '--lr-timeline-marker-color')).to.equal(neutralColor);
 
   const success = (await fixture(html`<lr-timeline-item variant="success">Event</lr-timeline-item>`)) as LyraTimelineItem;
   expect(success.getAttribute('variant')).to.equal('success');
-  expect(
-    getComputedStyle(success.shadowRoot!.querySelector('[part="marker"]') as HTMLElement)
-      .getPropertyValue('--lr-timeline-marker-color')
-      .trim(),
-  ).to.equal('#1a7f37');
+  const successMarker = success.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
+  const successColor = resolve(successMarker, '--lr-color-success');
+  expect(successColor).to.not.equal('');
+  expect(resolve(successMarker, '--lr-timeline-marker-color')).to.equal(successColor);
 
   const danger = (await fixture(html`<lr-timeline-item variant="danger">Event</lr-timeline-item>`)) as LyraTimelineItem;
-  expect(
-    getComputedStyle(danger.shadowRoot!.querySelector('[part="marker"]') as HTMLElement)
-      .getPropertyValue('--lr-timeline-marker-color')
-      .trim(),
-  ).to.equal('#cf222e');
+  const dangerMarker = danger.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
+  const dangerColor = resolve(dangerMarker, '--lr-color-danger');
+  expect(dangerColor).to.not.equal('');
+  expect(resolve(dangerMarker, '--lr-timeline-marker-color')).to.equal(dangerColor);
+
+  // Colour-coded: the three tones are three genuinely different colours, not one token reused --
+  // this is what a per-variant marker buys, and it survives any palette regeneration.
+  expect(new Set([neutralColor, successColor, dangerColor]).size).to.equal(3);
 });
 
 it('active reflects and drives an explicit aria-current true/false state', async () => {

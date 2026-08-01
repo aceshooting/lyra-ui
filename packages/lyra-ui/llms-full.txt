@@ -173,11 +173,82 @@ Three layers, and **which one you set decides how far the override reaches**:
 
 1. **`--lr-theme-*`** — the application input layer. Declared exactly once, at `:root` in
    `theme.css`, and never inside any component's shadow styles. Set these to retheme.
-2. **`--lr-*`** — internal tokens. Each reads one `--lr-theme-*` input with a hardcoded fallback
-   (`--lr-color-brand: var(--lr-theme-color-brand-fill-loud, #0969da)`), so every component renders
-   correctly with no theme configured.
+2. **`--lr-*`** — internal tokens. Each reads one `--lr-theme-*` input, and falls back to the
+   built-in palette when that input is unset, so every component renders correctly with no theme
+   configured. See [the colour ramp and the semantic grid](#the-colour-ramp-and-the-semantic-grid)
+   for how a colour resolves through this layer.
 3. **`--lr-<component>-*`** — per-component properties, for one element at a time. Listed in each
    component's own section.
+
+### The colour ramp and the semantic grid
+
+Colour has two layers beneath the `--lr-*` tokens you normally read.
+
+**The ramp — `--lr-ramp-<variant>-<step>`.** Five variants (`brand`, `success`, `warning`,
+`danger`, `neutral`) × eleven steps (`05 10 20 30 40 50 60 70 80 90 95`). The step number is
+approximate perceptual lightness: `-05` is nearly black, `-95` nearly white, `-50` the mid tone. The
+ramp is generated in OKLCH, so the same step number reads as the same *apparent* lightness across
+every variant — which is what makes the grid above it predictable rather than 45 separate
+decisions.
+
+**Do not reference a ramp step from application CSS.** It encodes a light-mode choice: `-50` is a
+comfortable fill on white and unreadable on a dark surface. Read the grid instead, which picks the
+right step per mode for you.
+
+**The grid — `--lr-color-<variant>-<role>-<emphasis>`.** `{brand|success|warning|danger|neutral}` ×
+`{fill|border|on}` × `{quiet|normal|loud}` = 45 slots. This is the layer to build on. Its *shape* is
+identical in light and dark; only which ramp step each slot resolves to changes, so a rule written
+against it is mode-independent for free.
+
+- `fill` — a background. `on` — text and icons that sit **on** the matching `fill`, guaranteed to
+  clear WCAG 1.4.3's 4.5:1 against it. `border` — an outline, with `normal` and `loud` guaranteed to
+  clear 1.4.11's 3:1 against the page surface.
+- `emphasis` runs `quiet → normal → loud`. Louder means more prominent, not lighter or darker: in
+  light mode it descends the ramp and in dark mode it climbs it.
+
+Those contrast guarantees are enforced at build time across both modes, not asserted by hand.
+
+The flat names are aliases into the grid, kept because they read well at the call site:
+
+```css
+--lr-color-brand      /* == --lr-color-brand-fill-loud  */
+--lr-color-brand-quiet/* == --lr-color-brand-fill-quiet */
+--lr-color-on-brand   /* == --lr-color-brand-on-loud    */
+```
+
+So the full chain for one colour is: your `--lr-theme-*` input, else the grid slot, else the ramp
+step. Retheming is unchanged — set the `--lr-theme-*` input and every name above it follows:
+
+```css
+/* Both the grid slot and the flat alias now resolve to this. */
+.invoice-panel { --lr-theme-color-brand-fill-loud: #7c3aed; }
+```
+
+To restyle wholesale rather than slot by slot, re-point the ramp instead — every slot built on that
+step moves with it:
+
+```css
+:root { --lr-ramp-brand-50: #7c3aed; }
+```
+
+### Cascade layers
+
+`theme.css` declares its layer order up front:
+
+```css
+@layer lr-base, lr-theme, lr-utilities, lr-overrides;
+```
+
+Anything you write outside a layer beats all four, whatever the source order — so a plain
+`:root { --lr-theme-color-brand-fill-loud: … }` in your own stylesheet wins even if it is loaded
+*before* `theme.css`, and needs no `!important`. `lr-utilities` and `lr-overrides` are named so an
+application can opt its own layers into a defined position relative to Lyra's:
+
+```css
+@layer lr-overrides {
+  :root { --lr-theme-color-brand-fill-loud: #7c3aed; }
+}
+```
 
 ### Where an override actually reaches
 

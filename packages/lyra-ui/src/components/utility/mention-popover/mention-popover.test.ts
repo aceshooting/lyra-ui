@@ -559,13 +559,23 @@ describe('active-option row cssprop indirection', () => {
     const el = await openWithItems();
     await el.updateComplete;
     const active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
-    // Fallback arm resolves to the same --lr-color-brand-quiet token as before the indirection
-    // (light-theme default #eef2ff-shaped brand-quiet fill).
+    // The fallback arm must resolve to the shared --lr-color-brand-quiet token, exactly as the
+    // bare token did before the indirection. Resolve that token live, in the component's own
+    // shadow scope, instead of restating a palette literal: the ramp behind --lr-color-brand-*
+    // is generated, so a hard-coded hex would be asserting the palette rather than this
+    // component and would break on every legitimate regeneration.
     const probe = document.createElement('div');
     el.shadowRoot!.appendChild(probe);
     probe.style.background = 'var(--lr-color-brand-quiet)';
-    expect(getComputedStyle(active).backgroundColor).to.equal(getComputedStyle(probe).backgroundColor);
+    const expected = getComputedStyle(probe).backgroundColor;
     probe.remove();
+    // Guard against the comparison degenerating into a tautology: were the token undefined, both
+    // the probe and the row would fall back to the transparent initial background-color and the
+    // equality below would pass while proving nothing.
+    expect(expected, '--lr-color-brand-quiet must resolve to a real opaque colour').to.match(
+      /^rgb\(\d+, \d+, \d+\)$/,
+    );
+    expect(getComputedStyle(active).backgroundColor).to.equal(expected);
   });
 });
 

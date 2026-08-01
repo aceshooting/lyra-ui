@@ -26,27 +26,27 @@ export const tokens = css`
     --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #6b7280);
     --lr-color-border: var(--lr-theme-color-surface-border, #8a8a90);
     --lr-color-border-strong: var(--lr-theme-color-border-strong, #4b5563);
-    --lr-color-brand: var(--lr-theme-color-brand-fill-loud, #0969da);
-    --lr-color-brand-quiet: var(--lr-theme-color-brand-fill-quiet, #ddf4ff);
-    --lr-color-success: var(--lr-theme-color-success-fill-loud, #1a7f37);
-    --lr-color-success-quiet: var(--lr-theme-color-success-fill-quiet, #dafbe1);
-    --lr-color-warning: var(--lr-theme-color-warning-fill-loud, #9a6700);
-    --lr-color-warning-quiet: var(--lr-theme-color-warning-fill-quiet, #fff8c5);
-    --lr-color-danger: var(--lr-theme-color-danger-fill-loud, #cf222e);
-    --lr-color-danger-quiet: var(--lr-theme-color-danger-fill-quiet, #ffebe9);
+    --lr-color-brand: var(--lr-color-brand-fill-loud);
+    --lr-color-brand-quiet: var(--lr-color-brand-fill-quiet);
+    --lr-color-success: var(--lr-color-success-fill-loud);
+    --lr-color-success-quiet: var(--lr-color-success-fill-quiet);
+    --lr-color-warning: var(--lr-color-warning-fill-loud);
+    --lr-color-warning-quiet: var(--lr-color-warning-fill-quiet);
+    --lr-color-danger: var(--lr-color-danger-fill-loud);
+    --lr-color-danger-quiet: var(--lr-color-danger-fill-quiet);
     /* A solid, high-contrast neutral fill -- distinct from --lr-color-surface (which is the
        ambient page/panel background, not a "loud" accent) and from --lr-color-text (used as a
        plain-text/outline accent, not a fill). Backs lr-button's appearance="accent" tier for
        variant="neutral", the one variant whose other tokens all resolve to ambient/plain values. */
-    --lr-color-neutral: var(--lr-theme-color-neutral-fill-loud, #1a1a1a);
+    --lr-color-neutral: var(--lr-color-neutral-fill-loud);
     /* Text/icon colors paired with each solid semantic fill. These are
        separate tokens because a theme can choose different foregrounds per
        tone, and the bright standalone dark fills require dark content. */
-    --lr-color-on-brand: var(--lr-theme-color-brand-on-loud, #fff);
-    --lr-color-on-success: var(--lr-theme-color-success-on-loud, #fff);
-    --lr-color-on-warning: var(--lr-theme-color-warning-on-loud, #fff);
-    --lr-color-on-danger: var(--lr-theme-color-danger-on-loud, #fff);
-    --lr-color-on-neutral: var(--lr-theme-color-neutral-on-loud, #fff);
+    --lr-color-on-brand: var(--lr-color-brand-on-loud);
+    --lr-color-on-success: var(--lr-color-success-on-loud);
+    --lr-color-on-warning: var(--lr-color-warning-on-loud);
+    --lr-color-on-danger: var(--lr-color-danger-on-loud);
+    --lr-color-on-neutral: var(--lr-color-neutral-on-loud);
     --lr-color-overlay: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.5));
     /* Own input, chained through --lr-theme-color-overlay for back-compat: both scrims
        previously read the same input, so defining it flattened the strong scrim's 0.92
@@ -335,20 +335,6 @@ export const tokens = css`
       --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #9aa1ac);
       --lr-color-border: var(--lr-theme-color-surface-border, #6b6b74);
       --lr-color-border-strong: var(--lr-theme-color-border-strong, #c4c9d1);
-      --lr-color-brand: var(--lr-theme-color-brand-fill-loud, #4ea0f0);
-      --lr-color-brand-quiet: var(--lr-theme-color-brand-fill-quiet, #163650);
-      --lr-color-success: var(--lr-theme-color-success-fill-loud, #3fb950);
-      --lr-color-success-quiet: var(--lr-theme-color-success-fill-quiet, #17411e);
-      --lr-color-warning: var(--lr-theme-color-warning-fill-loud, #d29922);
-      --lr-color-warning-quiet: var(--lr-theme-color-warning-fill-quiet, #3b2900);
-      --lr-color-danger: var(--lr-theme-color-danger-fill-loud, #fa524a);
-      --lr-color-danger-quiet: var(--lr-theme-color-danger-fill-quiet, #4c1210);
-      --lr-color-neutral: var(--lr-theme-color-neutral-fill-loud, #e5e7eb);
-      --lr-color-on-brand: var(--lr-theme-color-brand-on-loud, #111827);
-      --lr-color-on-success: var(--lr-theme-color-success-on-loud, #111827);
-      --lr-color-on-warning: var(--lr-theme-color-warning-on-loud, #111827);
-      --lr-color-on-danger: var(--lr-theme-color-danger-on-loud, #111827);
-      --lr-color-on-neutral: var(--lr-theme-color-neutral-on-loud, #111827);
       --lr-color-chart-1: var(--lr-theme-color-chart-1, #bbff94);
       --lr-color-chart-2: var(--lr-theme-color-chart-2, #ffbce8);
       --lr-color-chart-3: var(--lr-theme-color-chart-3, #2bd66a);

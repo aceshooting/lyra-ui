@@ -2,9 +2,10 @@ import { fixture, expect, html } from '@open-wc/testing';
 import { LitElement } from 'lit';
 import { tag } from './prefix.js';
 import { tokens } from './tokens.styles.js';
+import { palette } from './tokens/palette.styles.js';
 
 class TokenProbe extends LitElement {
-  static styles = [tokens];
+  static styles = [palette, tokens];
   render() {
     return html`<div part="probe"></div>`;
   }
@@ -17,7 +18,7 @@ customElements.define(tag('token-probe'), TokenProbe);
 // inner probe; only a --lr-theme-* input (declared nowhere in component styles) inherits
 // all the way down.
 class NestedTokenProbe extends LitElement {
-  static styles = [tokens];
+  static styles = [palette, tokens];
   render() {
     return html`<lr-token-probe></lr-token-probe>`;
   }
@@ -43,10 +44,40 @@ async function probeNestedVar(name: string, ancestorStyle = ''): Promise<string>
 
 type PaletteMode = 'light' | 'dark';
 
+/** The palette's light grid lives on `:host`, its dark grid on `:host([data-lr-theme='dark'])`. */
+function paletteBlock(mode: PaletteMode): string {
+  const text = palette.cssText;
+  const darkAt = text.indexOf(":host([data-lr-theme='dark'])");
+  expect(darkAt, 'palette must declare a dark grid block').to.be.greaterThan(-1);
+  return mode === 'light' ? text.slice(0, darkAt) : text.slice(darkAt);
+}
+
+/**
+ * The standalone value a token resolves to with no consumer theme loaded.
+ *
+ * A semantic colour no longer carries its own literal per mode: it names a grid slot, the slot
+ * names a ramp step, and the step carries the hex. Following that chain here is the point --
+ * asserting the literal directly is what let the flat token and its own grid slot drift into two
+ * different colours in the first place.
+ */
 function fallbackHex(name: string, mode: PaletteMode): string {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const bridged = tokens.cssText.match(new RegExp(`${escaped(name)}:\\s*var\\((--lr-color-[a-z0-9-]+)\\)`, 'i'));
+  if (bridged) {
+    const block = paletteBlock(mode);
+    const slot = block.match(
+      new RegExp(`${escaped(bridged[1])}:\\s*var\\([^,]+,\\s*var\\((--lr-ramp-[a-z0-9-]+)\\)\\)`, 'i'),
+    );
+    expect(slot, `${name} bridges to ${bridged[1]}, which the ${mode} grid does not declare`).to.not.equal(null);
+    // The ramp is declared once, on `:host`, and inherits into the dark block.
+    const step = palette.cssText.match(new RegExp(`${escaped(slot![1])}:\\s*(#[0-9a-f]{3,8})`, 'i'));
+    expect(step, `${slot![1]} is referenced but never declared`).to.not.equal(null);
+    return step![1];
+  }
+
   const matches = [
-    ...tokens.cssText.matchAll(new RegExp(`${escaped}:\\s*var\\([^,]+,\\s*(#[0-9a-f]{3,8})\\s*\\)`, 'gi')),
+    ...tokens.cssText.matchAll(new RegExp(`${escaped(name)}:\\s*var\\([^,]+,\\s*(#[0-9a-f]{3,8})\\s*\\)`, 'gi')),
   ];
   expect(matches.length, `${name} must define light and dark standalone fallbacks`).to.equal(2);
   return matches[mode === 'light' ? 0 : 1][1];
@@ -233,13 +264,27 @@ it('keeps every standalone dark fallback semantic pair at WCAG AA contrast', () 
   expectPaletteContrast('dark');
 });
 
-it('chains filled-content and border tokens through the matching lyra theme-input roles', () => {
-  const cssText = tokens.cssText;
-  for (const tone of ['brand', 'success', 'warning', 'danger']) {
-    expect(cssText).to.include(`--lr-color-on-${tone}: var(--lr-theme-color-${tone}-on-loud`);
+it('chains filled-content and border tokens through the matching lyra theme-input roles', async () => {
+  // Asserted on the RENDERED result, not on the stylesheet text. The chain gained a link when the
+  // semantic grid landed -- a flat token now reaches its theme input through its grid slot rather
+  // than naming it directly -- and a text assertion would have failed that purely structural change
+  // while a broken chain that still *looked* right would have passed.
+  const el = (await fixture(html`<lr-token-probe></lr-token-probe>`)) as TokenProbe;
+  const read = (name: string) => getComputedStyle(el).getPropertyValue(name).trim();
+  const cases: Array<[input: string, reaches: string]> = [
+    ['--lr-theme-color-surface-border', '--lr-color-border'],
+    ['--lr-theme-color-focus', '--lr-focus-ring-color'],
+    ...(['brand', 'success', 'warning', 'danger'] as const).map(
+      (tone) => [`--lr-theme-color-${tone}-on-loud`, `--lr-color-on-${tone}`] as [string, string],
+    ),
+  ];
+  const failures: string[] = [];
+  for (const [input, reaches] of cases) {
+    el.style.setProperty(input, 'rgb(7, 8, 9)');
+    if (read(reaches) !== 'rgb(7, 8, 9)') failures.push(`${input} does not reach ${reaches} (got ${read(reaches)})`);
+    el.style.removeProperty(input);
   }
-  expect(cssText).to.include('--lr-color-border: var(--lr-theme-color-surface-border');
-  expect(cssText).to.include('--lr-focus-ring-color: var(--lr-theme-color-focus');
+  expect(failures.join('\n')).to.equal('');
 });
 
 // --- theme.css: the standalone consumer-facing theme-input sheet ---------------------
@@ -322,7 +367,10 @@ it('declares every documented theme input in theme.css', async () => {
 it('names only tokens that tokens.styles.ts actually reads', async () => {
   const { text } = await loadThemeCss();
   const declared = [...text.matchAll(/^\s*(--lr-theme-[\w-]+):/gm)].map((match) => match[1]);
-  const unused = declared.filter((name) => !tokens.cssText.includes(`var(${name},`));
+  // Both component layers count. The semantic grid's 45 inputs are read by `palette`, not by
+  // `tokens`, so checking only the latter would report every one of them as dead.
+  const read = `${tokens.cssText}\n${palette.cssText}`;
+  const unused = declared.filter((name) => !read.includes(`var(${name},`));
   expect(unused.join('\n')).to.equal('');
 });
 

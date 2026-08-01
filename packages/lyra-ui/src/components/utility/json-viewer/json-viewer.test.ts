@@ -806,9 +806,16 @@ describe('search-match highlight cssprop indirection', () => {
     el.search = 'ada';
     await el.updateComplete;
     const match = el.shadowRoot!.querySelector('[part="value"][data-match]') as HTMLElement;
-    // Fallback arm resolves to the same --lr-color-warning-quiet token as before the indirection
-    // (light-theme default #fff8c5), unchanged from the pre-fix output.
-    expect(getComputedStyle(match).backgroundColor).to.equal('rgb(255, 248, 197)');
+    // The invariant is that the fallback arm still resolves to --lr-color-warning-quiet -- NOT that
+    // the token holds any particular hex. Resolving it here rather than restating its value keeps
+    // this honest across a palette regeneration, which is what broke the literal it replaced.
+    const probe = document.createElement('span');
+    probe.style.color = getComputedStyle(el).getPropertyValue('--lr-color-warning-quiet').trim();
+    el.shadowRoot!.append(probe);
+    const quiet = getComputedStyle(probe).color;
+    probe.remove();
+    expect(quiet).to.match(/^rgb/);
+    expect(getComputedStyle(match).backgroundColor).to.equal(quiet);
   });
 });
 
