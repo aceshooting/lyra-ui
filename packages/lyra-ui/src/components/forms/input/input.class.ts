@@ -11,6 +11,11 @@ import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/v
 import { spellcheckConverter } from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
+import {
+  dispatchNativeEvent,
+  dispatchNativeInputEvent,
+  relayNativeEvent,
+} from '../../../internal/native-event-relay.js';
 
 export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time' | 'search';
 /** Alias of the canonical six-step size ladder. The `size` property itself accepts
@@ -25,13 +30,15 @@ export type LyraInputAppearance = LyraAppearance;
 const LENGTH_CONSTRAINED_TYPES: readonly LyraInputType[] = ['text', 'password', 'email', 'search'];
 
 export interface LyraInputEventMap {
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
+  input: InputEvent;
+  change: Event;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
   'lr-clear': CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 class LyraInputBase extends LyraElement<LyraInputEventMap> {}
 
@@ -76,6 +83,8 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @event blur - Re-dispatched from the internal native `<input>`'s own `blur` — bubbling and
  *   composed (unlike the native event, which is neither).
  * @event focus - Re-dispatched from the internal native `<input>`'s own `focus`, for the same reason as `blur`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
@@ -242,7 +251,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   }
 
   override focus(options?: FocusOptions): void {
-    this.inputEl?.focus(options);
+    if (!this.effectiveDisabled) this.inputEl?.focus(options);
   }
 
   override blur(): void {
@@ -446,27 +455,29 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     }
   }
 
-  private onInput = (): void => {
+  private onInput = (event: InputEvent): void => {
     if (!this.inputEl) return;
     this.value = this.inputEl.value;
-    this.emit('input');
+    relayNativeEvent(this, event);
     this.emit('lr-input', { value: this.value });
   };
 
-  private onChange = (): void => {
+  private onChange = (event: Event): void => {
     if (!this.inputEl) return;
     this.value = this.inputEl.value;
-    this.emit('change');
+    relayNativeEvent(this, event);
     this.emit('lr-change', { value: this.value });
   };
 
-  private onFocus = (): void => {
-    this.emit('focus');
+  private onFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
-  private onBlur = (): void => {
+  private onBlur = (event: FocusEvent): void => {
     this.touched = true;
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   /**
@@ -488,9 +499,9 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     if (this.effectiveDisabled || this.readonly || this.value === '') return;
     this.value = '';
     if (this.inputEl) this.inputEl.value = '';
-    this.emit('input');
+    dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
     this.emit('lr-input', { value: this.value });
-    this.emit('change');
+    dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { value: this.value });
     this.emit('lr-clear');
     this.inputEl?.focus();

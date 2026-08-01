@@ -16,6 +16,7 @@ import type {
   LyraVariant,
 } from '../../../internal/variants.js';
 import { styles } from './button.styles.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 
 /** Alias of the library's one semantic-tone vocabulary, kept as an exported name so existing
  *  imports of `ButtonVariant` keep resolving while `internal/variants.ts` holds the only
@@ -35,6 +36,13 @@ export type ButtonFormEnctype =
   | 'text/plain';
 /** Native `formmethod` vocabulary. `'dialog'` closes an ancestor `<dialog>` instead of submitting. */
 export type ButtonFormMethod = 'get' | 'post' | 'dialog';
+
+export interface LyraButtonEventMap {
+  focus: FocusEvent;
+  blur: FocusEvent;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
+}
 
 /**
  * `<lr-button>` — a generic action-button primitive. Renders an internal native
@@ -77,6 +85,10 @@ export type ButtonFormMethod = 'get' | 'post' | 'dialog';
  * best-effort fallback.
  *
  * @customElement lr-button
+ * @event focus - Native focus relayed once from the internal button or anchor.
+ * @event blur - Native blur relayed once from the internal button or anchor.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @slot - Default slot: the button's label content.
  * @slot start - Leading icon/content, rendered before the label.
  * @slot end - Trailing icon/content, rendered after the label.
@@ -176,7 +188,7 @@ export type ButtonFormMethod = 'get' | 'post' | 'dialog';
  * `box-shadow` falls back to `none` — byte-identical to before this property existed. Set it (e.g.
  * an elevated/floating action button) without a `::part(base)` rule.
  */
-export class LyraButton extends LyraElement {
+export class LyraButton extends LyraElement<LyraButtonEventMap> {
   // `sizes` supplies the one form-control ladder (both the `s`/`m`/`l` and the `small`/`medium`/
   // `large` spellings of every tier); `variants` re-points the nine generic colour slots at the
   // active `variant`'s row of the semantic grid. Between them this component needs no per-tier and
@@ -364,7 +376,7 @@ export class LyraButton extends LyraElement {
   }
 
   override focus(options?: FocusOptions): void {
-    this.baseEl?.focus(options);
+    if (!this.effectiveDisabled && !this.loading) this.baseEl?.focus(options);
   }
 
   override blur(): void {
@@ -380,6 +392,16 @@ export class LyraButton extends LyraElement {
     } else if (this.type === 'reset') {
       this.closest('form')?.reset();
     }
+  };
+
+  private onFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
+  };
+
+  private onBlur = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   /** Whether anything about this button changes the submission itself, rather than merely
@@ -521,6 +543,8 @@ export class LyraButton extends LyraElement {
         aria-disabled=${disabled ? 'true' : nothing}
         aria-busy=${this.loading ? 'true' : 'false'}
         tabindex=${disabled ? '-1' : nothing}
+        @focus=${this.onFocus}
+        @blur=${this.onBlur}
         >${content}</a
       >`;
     }
@@ -537,6 +561,8 @@ export class LyraButton extends LyraElement {
         aria-busy=${this.loading ? 'true' : 'false'}
         ?disabled=${this.effectiveDisabled || this.loading}
         @click=${this.onClick}
+        @focus=${this.onFocus}
+        @blur=${this.onBlur}
       >
         ${content}
       </button>

@@ -45,22 +45,54 @@ if (!baseUrl) {
 }
 const start = Number(args.get('start') ?? 0);
 const endArg = args.get('end');
+const requestedConcurrency = Number(args.get('concurrency') ?? process.env.DOCS_CHECK_CONCURRENCY ?? 4);
+const concurrency = Math.min(8, Math.max(1, Number.isFinite(requestedConcurrency) ? Math.trunc(requestedConcurrency) : 4));
 
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
-const index = await page.goto(`${baseUrl}/index.json`, { waitUntil: 'domcontentloaded' });
-if (!index?.ok()) throw new Error(`Could not load ${baseUrl}/index.json (${index?.status() ?? 'no response'})`);
+const GOTO_TIMEOUT = 20_000;
+const RENDER_TIMEOUT = 20_000;
+const CLICK_TIMEOUT = 10_000;
+/** Storybook's Source block flips its own label asynchronously; re-querying sooner re-clicks it. */
+const CLICK_SETTLE_MS = 20;
+const POLL_INTERVAL_MS = 120;
+/** Consecutive idle polls that end a page: docs blocks mount progressively, well after `load`. */
+const QUIET_POLLS = 3;
+const STABILISE_BUDGET_MS = 30_000;
+const MAX_CLICKS = 80;
+/**
+ * A docs page may navigate under us at any moment — `.storybook/preview.js` reloads the preview
+ * once when a lazily imported chunk fails to resolve, and a story is free to do the same. Playwright
+ * rejects whatever call was in flight when that happens ("interrupted by another navigation",
+ * "Execution context was destroyed"), so each step is re-run against the document that won.
+ */
+const NAVIGATION_RACE =
+  /interrupted by another navigation|Execution context was destroyed|frame (?:was |got )?detached|because of a navigation/i;
+const NAVIGATION_ATTEMPTS = 4;
 
-const entries = await page.evaluate(() => fetch(new URL('index.json', location.href)).then((response) => response.json()));
-const docs = Object.values(entries.entries)
-  .filter((entry) => entry.type === 'docs')
-  .map(({ id, title }) => ({ id, title }));
-const end = endArg === undefined ? docs.length - 1 : Number(endArg);
-const selected = docs.slice(start, end + 1);
-const results = [];
+const isNavigationRace = (error) => NAVIGATION_RACE.test(String(error));
 
-for (const doc of selected) {
-  const diagnostics = { console: [], pageErrors: [], requests: [] };
+/** Re-runs `step` against the page that won a navigation race; other failures propagate untouched. */
+async function tolerateNavigation(page, step) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await step();
+    } catch (error) {
+      if (attempt >= NAVIGATION_ATTEMPTS || !isNavigationRace(error) || page.isClosed()) throw error;
+      await page.waitForLoadState('domcontentloaded', { timeout: GOTO_TIMEOUT }).catch(() => {});
+    }
+  }
+}
+
+/**
+ * Drives one docs page on a page of its own, so a late navigation can only ever disturb the doc that
+ * triggered it. Sharing a single tab across all docs let one stray reload interrupt the next doc's
+ * `goto`, whose own (still queued) navigation then interrupted the doc after it — one late reload
+ * cascaded into a run of unrelated pages, and the shared tab also mis-attributed console output to
+ * whichever doc happened to be loading when it arrived.
+ */
+async function inspectDoc(context, doc) {
+  const page = await context.newPage();
+  const diagnostics = { console: [], pageErrors: [], requests: [], navigations: [] };
+  const navigationRequests = [];
   const onConsole = (message) => {
     if (message.type() === 'warning' || message.type() === 'error') {
       diagnostics.console.push({ type: message.type(), text: message.text() });
@@ -69,47 +101,134 @@ for (const doc of selected) {
   const onPageError = (error) => diagnostics.pageErrors.push(String(error));
   const onRequestFailed = (request) =>
     diagnostics.requests.push({ url: request.url(), error: request.failure()?.errorText ?? 'unknown' });
+  const onRequest = (request) => {
+    // Only real document loads count — Storybook's own same-document history updates are not the
+    // page replacing itself, and this list is what makes a self-reload visible in the summary.
+    if (!request.isNavigationRequest()) return;
+    try {
+      if (request.frame() === page.mainFrame()) navigationRequests.push(request.url());
+    } catch {
+      // A request whose frame is already gone can't be the one we're still driving.
+    }
+  };
 
   page.on('console', onConsole);
   page.on('pageerror', onPageError);
   page.on('requestfailed', onRequestFailed);
+  page.on('request', onRequest);
 
   let clicked = 0;
-  let failure;
   try {
-    await page.goto(`${baseUrl}/iframe.html?id=${encodeURIComponent(doc.id)}&viewMode=docs`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 15_000,
-    });
-    await page.waitForTimeout(160);
-    const showCode = () => page.locator('button[role="switch"]').filter({ hasText: 'Show code' });
-    while ((await showCode().count()) > 0 && clicked < 80) {
-      await showCode().first().click({ timeout: 4_000 });
-      clicked += 1;
-      await page.waitForTimeout(20);
+    await tolerateNavigation(page, () =>
+      page.goto(`${baseUrl}/iframe.html?id=${encodeURIComponent(doc.id)}&viewMode=docs`, {
+        waitUntil: 'domcontentloaded',
+        timeout: GOTO_TIMEOUT,
+      }),
+    );
+    // Storybook only flips <body> to one of these once the preview has actually rendered (or given
+    // up). Counting before that is what let a slow page report "no Show code controls" and pass
+    // while its controls were still mounting. The locator re-resolves across a reload.
+    const renderedBody = () => page.locator('body.sb-show-main, body.sb-show-errordisplay, body.sb-show-nopreview');
+    await tolerateNavigation(page, () => renderedBody().first().waitFor({ state: 'attached', timeout: RENDER_TIMEOUT }));
+
+    const anySwitch = () => page.locator('button[role="switch"]');
+    const showCode = () => anySwitch().filter({ hasText: 'Show code' });
+    const deadline = Date.now() + STABILISE_BUDGET_MS;
+    let idlePolls = 0;
+    let previousTotal = -1;
+    while (idlePolls < QUIET_POLLS && Date.now() < deadline && clicked < MAX_CLICKS) {
+      let expanded = false;
+      while ((await tolerateNavigation(page, () => showCode().count())) > 0 && clicked < MAX_CLICKS) {
+        await tolerateNavigation(page, () => showCode().first().click({ timeout: CLICK_TIMEOUT }));
+        clicked += 1;
+        expanded = true;
+        await page.waitForTimeout(CLICK_SETTLE_MS);
+      }
+      const total = await tolerateNavigation(page, () => anySwitch().count());
+      // A page that has replaced itself is mid-render, and its tally means nothing yet: re-checking
+      // the render class every poll is what makes a self-reload cost a few more polls instead of an
+      // early, empty pass. A freshly mounted docs block changes the tally the same way, so only an
+      // unchanged, fully expanded, rendered page several polls running counts as done.
+      const rendered = (await tolerateNavigation(page, () => renderedBody().count())) > 0;
+      idlePolls = expanded || !rendered || total !== previousTotal ? 0 : idlePolls + 1;
+      previousTotal = total;
+      if (idlePolls < QUIET_POLLS) await page.waitForTimeout(POLL_INTERVAL_MS);
     }
-    const remaining = await showCode().count();
-    if (remaining > 0) failure = `${remaining} Show code control(s) remained visible`;
-    results.push({ ...doc, clicked, remaining, failure, diagnostics });
+
+    const remaining = await tolerateNavigation(page, () => showCode().count());
+    diagnostics.navigations = navigationRequests.slice(1);
+    // A page that never stops mounting controls, or one whose control never flips out of the
+    // "Show code" state and is therefore clicked forever, is as broken as one left unexpanded.
+    const failure =
+      remaining > 0
+        ? `${remaining} Show code control(s) remained visible`
+        : clicked >= MAX_CLICKS
+          ? `click cap of ${MAX_CLICKS} controls reached without the page settling`
+          : idlePolls < QUIET_POLLS
+            ? `page never settled within ${STABILISE_BUDGET_MS}ms (${clicked} control(s) clicked)`
+            : undefined;
+    return { ...doc, clicked, remaining, failure, diagnostics };
   } catch (error) {
-    results.push({ ...doc, clicked, remaining: null, failure: String(error), diagnostics });
+    diagnostics.navigations = navigationRequests.slice(1);
+    return { ...doc, clicked, remaining: null, failure: String(error), diagnostics };
   } finally {
     page.off('console', onConsole);
     page.off('pageerror', onPageError);
     page.off('requestfailed', onRequestFailed);
+    page.off('request', onRequest);
+    await page.close().catch(() => {});
   }
 }
 
+const browser = await chromium.launch({ headless: true });
+// One context for every doc: each doc still gets its own tab (its own navigation queue and session
+// storage), but they share the HTTP cache, so 282 loads don't re-fetch the same Storybook chunks.
+const context = await browser.newContext();
+const indexPage = await context.newPage();
+const index = await indexPage.goto(`${baseUrl}/index.json`, { waitUntil: 'domcontentloaded' });
+if (!index?.ok()) throw new Error(`Could not load ${baseUrl}/index.json (${index?.status() ?? 'no response'})`);
+
+const entries = await indexPage.evaluate(() =>
+  fetch(new URL('index.json', location.href)).then((response) => response.json()),
+);
+await indexPage.close();
+const docs = Object.values(entries.entries)
+  .filter((entry) => entry.type === 'docs')
+  .map(({ id, title }) => ({ id, title }));
+const end = endArg === undefined ? docs.length - 1 : Number(endArg);
+const selected = docs.slice(start, end + 1);
+const results = new Array(selected.length);
+
+const startedAt = Date.now();
+let cursor = 0;
+await Promise.all(
+  Array.from({ length: Math.min(concurrency, selected.length) }, async () => {
+    while (cursor < selected.length) {
+      const position = cursor;
+      cursor += 1;
+      results[position] = await inspectDoc(context, selected[position]);
+    }
+  }),
+);
+const elapsedMs = Date.now() - startedAt;
+
+await context.close();
 await browser.close();
 localServer?.close();
 
 const structuralFailures = results.filter((result) => result.failure);
 const diagnosticPages = results.filter(
-  (result) => result.diagnostics.console.length || result.diagnostics.pageErrors.length || result.diagnostics.requests.length,
+  (result) =>
+    result.diagnostics.console.length ||
+    result.diagnostics.pageErrors.length ||
+    result.diagnostics.requests.length ||
+    result.diagnostics.navigations.length,
 );
 const summary = {
   url: baseUrl,
   range: [start, end],
+  concurrency,
+  elapsedMs,
   pages: results.length,
   controls: results.reduce((total, result) => total + result.clicked + (result.remaining ?? 0), 0),
   clicked: results.reduce((total, result) => total + result.clicked, 0),

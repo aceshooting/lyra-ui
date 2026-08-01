@@ -7,7 +7,11 @@ export const styles = css`
     max-inline-size: 100%;
     box-sizing: border-box;
     --lr-token-input-min-input-inline-size: var(--lr-size-4rem);
-    --lr-token-input-padding: var(--lr-space-xs);
+    /* Two-value shorthand, block axis first: the INLINE half stays this component's own denser
+       ladder (see the per-tier blocks below), while the BLOCK half is taken from the shared
+       form-control ladder so it can never outgrow the height floor declared beside it. See the
+       [part='input-wrapper'] comment for why the block axis is not free to differ. */
+    --lr-token-input-padding: var(--lr-form-control-padding-block) var(--lr-space-xs);
     --lr-token-input-font-size: var(--lr-font-size-md-sm);
     --lr-token-input-token-padding: var(--lr-space-2xs) var(--lr-space-xs);
     --lr-token-input-gap: var(--lr-space-xs);
@@ -26,44 +30,59 @@ export const styles = css`
   :host([pill]) {
     --lr-token-input-radius: var(--lr-radius-pill);
   }
-  /* Padding, text size and chip padding stay this component's own ladder: its m tier is denser than
-     the shared one (0.25rem of padding and --lr-font-size-md-sm text, against the ladder's 0.75rem
-     and --lr-font-size-m), and moving onto the shared values would change the rendered row height at
-     l and xl, which this refactor is required to leave alone. Each tier matches both spellings for
-     the same reason sizes.styles.ts does -- the height ladder accepts size="small", so a row whose
-     padding silently ignored it would be worse than one that never accepted it. */
+  /* Inline padding, text size and chip padding stay this component's own ladder: its m tier is
+     denser than the shared one (0.25rem of inline padding and --lr-font-size-md-sm text, against the
+     ladder's 0.75rem and --lr-font-size-m). The BLOCK half of --lr-token-input-padding is the shared
+     ladder's --lr-form-control-padding-block at every tier instead, because that axis is the one the
+     row's height floor has to pay for -- see the [part='input-wrapper'] comment. Each tier matches
+     both spellings for the same reason sizes.styles.ts does -- the height ladder accepts
+     size="small", so a row whose padding silently ignored it would be worse than one that never
+     accepted it. */
   :host([size='2xs']) {
-    --lr-token-input-padding: var(--lr-size-0-0625rem);
+    --lr-token-input-padding: var(--lr-form-control-padding-block) var(--lr-size-0-0625rem);
     --lr-token-input-font-size: var(--lr-font-size-2xs);
     --lr-token-input-token-padding: 0 var(--lr-space-2xs);
   }
   :host([size='xs']) {
-    --lr-token-input-padding: var(--lr-size-0-125rem);
+    --lr-token-input-padding: var(--lr-form-control-padding-block) var(--lr-size-0-125rem);
     --lr-token-input-font-size: var(--lr-font-size-xs);
     --lr-token-input-token-padding: var(--lr-size-1px) var(--lr-space-2xs);
   }
   :host([size='s']),
   :host([size='small']) {
-    --lr-token-input-padding: var(--lr-space-xs);
+    --lr-token-input-padding: var(--lr-form-control-padding-block) var(--lr-space-xs);
     --lr-token-input-font-size: var(--lr-font-size-sm);
     --lr-token-input-token-padding: var(--lr-space-2xs) var(--lr-space-xs);
   }
   :host([size='l']),
   :host([size='large']) {
-    --lr-token-input-padding: var(--lr-space-m);
+    --lr-token-input-padding: var(--lr-form-control-padding-block) var(--lr-space-m);
     --lr-token-input-font-size: var(--lr-font-size-lg);
     --lr-token-input-token-padding: var(--lr-space-xs) var(--lr-space-s);
   }
   :host([size='xl']) {
-    --lr-token-input-padding: var(--lr-space-l);
+    --lr-token-input-padding: var(--lr-form-control-padding-block) var(--lr-space-l);
     --lr-token-input-font-size: var(--lr-font-size-xl);
     --lr-token-input-token-padding: var(--lr-space-s) var(--lr-space-m);
   }
   [part='form-control'] { display: grid; min-inline-size: 0; max-inline-size: 100%; gap: var(--lr-token-input-gap); }
   [part='form-control-label'] { color: var(--lr-color-text); font-weight: var(--lr-font-weight-semibold); }
+  /* min-block-size is a FLOOR, and this box is border-box, so the floor only decides the rendered
+     height while the row's own content stays under it. Its content is the draft input, whose text
+     box is line-height: normal -- a metric of whatever the ambient font family resolves to, which
+     differs between machines. That is why the block padding here comes from the shared ladder rather
+     than this component's denser inline ladder: with the ladder's block padding and the zeroed
+     input padding below, the content is <= lr-input's own content at every tier (this component's
+     per-tier font-size never exceeds the ladder's), so wherever lr-input's floor wins this row's
+     floor wins too, and the two line up in a toolbar on every machine. Widen the block padding past
+     the ladder and the font's metrics -- not the ladder -- start deciding the height. */
   [part='input-wrapper'] { display: flex; flex-wrap: wrap; min-inline-size: 0; max-inline-size: 100%; overflow-x: hidden; align-items: center; gap: var(--lr-token-input-gap); min-block-size: var(--lr-token-input-control-height, var(--lr-token-input-control-min-height)); block-size: var(--lr-token-input-control-height, auto); padding: var(--lr-token-input-padding); font-size: var(--lr-token-input-font-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-token-input-radius); background: var(--lr-color-surface); }
   [part='input-wrapper']:focus-within { border-color: var(--lr-token-input-focus-border-color, var(--lr-color-brand)); outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
-  [part='input'] { flex: 1 1 var(--lr-token-input-input-inline-size, var(--lr-size-8rem)); min-inline-size: var(--lr-token-input-min-input-inline-size); border: 0; outline: 0; background: transparent; color: var(--lr-color-text); font: inherit; }
+  /* padding-block: 0 rather than the UA's own 1px default -- same neutralisation lr-input applies
+     to its [part='input']. The wrapper above already owns this row's block padding; leaving the
+     UA's on as well spent two more pixels of the height floor's budget at every tier, which is what
+     used to push the dense tiers over their floor and hand the rendered height to the font. */
+  [part='input'] { flex: 1 1 var(--lr-token-input-input-inline-size, var(--lr-size-8rem)); min-inline-size: var(--lr-token-input-min-input-inline-size); padding-block: 0; border: 0; outline: 0; background: transparent; color: var(--lr-color-text); font: inherit; }
   [part='input']::placeholder { color: var(--lr-color-text-quiet); }
   [part='token'] { display: inline-flex; min-inline-size: 0; max-inline-size: 100%; overflow: hidden; align-items: center; gap: var(--lr-token-input-token-gap); padding: var(--lr-token-input-token-padding); border-radius: var(--lr-token-input-radius); background: var(--lr-token-input-token-bg, var(--lr-color-brand-quiet)); color: var(--lr-color-text); }
   [part='token'] > span:first-child {

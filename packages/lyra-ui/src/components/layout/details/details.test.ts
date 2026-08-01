@@ -26,7 +26,7 @@ it("renders a disclosure panel and reports its state", async () => {
 });
 
 it("closes sibling panels when multiple is false", async () => {
-  const el = await fixture(html`<lr-accordion>
+  const el = await fixture(html`<lr-accordion multiple="false">
     <lr-accordion-item open summary="One">A</lr-accordion-item>
     <lr-accordion-item summary="Two">B</lr-accordion-item>
   </lr-accordion>`);
@@ -44,7 +44,7 @@ it("closes sibling panels when multiple is false", async () => {
 });
 
 it("reconciles multiple initially-open panels when multiple is false", async () => {
-  const el = await fixture(html`<lr-accordion>
+  const el = await fixture(html`<lr-accordion multiple="false">
     <lr-accordion-item open summary="One">A</lr-accordion-item>
     <lr-accordion-item open summary="Two">B</lr-accordion-item>
   </lr-accordion>`);
@@ -68,10 +68,10 @@ it("reconciles open panels when multiple changes from true to false", async () =
 });
 
 it("reconciles accordion listener ownership when panels are appended, removed, or moved", async () => {
-  const first = await fixture(html`<lr-accordion>
+  const first = await fixture(html`<lr-accordion multiple="false">
     <lr-accordion-item open summary="One">A</lr-accordion-item>
   </lr-accordion>`);
-  const second = await fixture(html`<lr-accordion>
+  const second = await fixture(html`<lr-accordion multiple="false">
     <lr-accordion-item open summary="Other">Other</lr-accordion-item>
   </lr-accordion>`);
   const original = first.querySelector("lr-accordion-item") as LyraDetails;

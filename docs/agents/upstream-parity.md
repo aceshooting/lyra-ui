@@ -79,9 +79,10 @@ while doing something else. The vocabulary rules apply to every component, mirro
   an internal module, a migrating consumer has nothing to rename to and reimplements it by hand —
   the parity gap is real even though the code exists. When a mirrored family's implementation is
   already factored into `src/internal/`, ship the thin public element or exported helper over it
-  too, from a granular subpath, and add the mirror row. The converse also holds: `./internal/*` is a
-  published export subpath with no stability statement, so anything genuinely internal that leaks
-  into an example or a doc becomes a compatibility obligation.
+  too, from a granular subpath, and add the mirror row. Since 8.0.0 that subpath is `./utilities/*`:
+  `./internal/*` is no longer exported at all, so pointing a consumer — or a check fixture — at an
+  `internal/` specifier does not merely document an unstable path, it fails to resolve outright.
+  Reaching for `internal/` is the signal that a `src/utilities/` re-export is missing.
 
 - **Re-verify against upstream without vendoring it.** `scripts/fixtures/upstream-tags.json` is a
   names-only, version-pinned inventory. Refresh it by reading the upstream package's own published

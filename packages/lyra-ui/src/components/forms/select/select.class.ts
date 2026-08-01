@@ -17,6 +17,7 @@ import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/v
 import { LyraOption } from '../combobox/option.class.js';
 import '../combobox/option.class.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -72,11 +73,14 @@ export interface LyraSelectEventMap {
   'lr-show': CustomEvent<undefined>;
   'lr-hide': CustomEvent<undefined>;
   'lr-clear': CustomEvent<undefined>;
-  input: CustomEvent<{ value: string | string[] }>;
-  change: CustomEvent<{ value: string | string[] }>;
+  input: Event;
+  change: Event;
+  'lr-input': CustomEvent<{ value: string | string[] }>;
   'lr-change': CustomEvent<{ value: string | string[] }>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 /**
  * `<lr-select>` — a plain closed-list dropdown: a direct `<lr-*>`
@@ -149,15 +153,15 @@ export interface LyraSelectEventMap {
  *   against axe-core 4.12.1) -- the hazard is real but not automatically detectable today.
  * @slot end - Adornment after the selected-value label and before the expand icon. Same
  *   non-focusable/non-interactive-content caveat as `start`.
- * @event {CustomEvent<{ value: string | string[] }>} change - The selection changed. Deliberately
+ * @event change - A native `Event` fired when the selection changed. Deliberately
  *   unprefixed, mirroring native `<select>`'s own event name -- contrast `<lr-slider>`, which uses
  *   `lr-input`/`lr-change` for its analogous value-change pair. Which form controls mirror native
  *   unprefixed DOM event names (this one, matching `<select>`) versus which use the `lr-` prefix
  *   (`<lr-slider>`, matching `<input type="range">` via a custom name) is a deliberate per-control
- *   choice, not an incidental divergence. `detail: { value }` carries the new committed selection:
- *   a string in single mode, a `string[]` in `multiple` mode.
- * @event {CustomEvent<{ value: string | string[] }>} input - Fired alongside `change` on every
+ *   choice, not an incidental divergence. Read the new selection from `value`.
+ * @event input - A native `Event` fired alongside `change` on every
  *   selection change (native `<select>` doesn't meaningfully distinguish the two either).
+ * @event lr-input - Prefixed compatibility alias for `input`; `detail: { value }`.
  * @event {CustomEvent<{ value: string | string[] }>} lr-change - Prefixed compatibility alias
  *   fired after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s
  *   `lr-change`. Not fired for a programmatic `value` assignment.
@@ -167,6 +171,8 @@ export interface LyraSelectEventMap {
  * @event lr-hide - The listbox closed.
  * @event blur - Re-dispatched from the trigger as a bubbling, composed event.
  * @event focus - Re-dispatched from the trigger as a bubbling, composed event.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @cssstate required - Matches while `required` is set. Style with `lr-select:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
  * @cssstate valid - Matches while the control satisfies its constraints, including any
@@ -352,7 +358,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   /** Focus the internal select trigger. */
   override focus(options?: FocusOptions): void {
-    this.triggerElement?.focus(options);
+    if (!this.effectiveDisabled) this.triggerElement?.focus(options);
   }
 
   /** Blur the internal select trigger. */
@@ -365,7 +371,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    *  form-submit helper or automation script calling `.click()` on the host would silently do
    *  nothing without this forwarding override. Mirrors `<lr-button>`'s identical `click()`. */
   override click(): void {
-    this.triggerElement?.click();
+    if (!this.effectiveDisabled) this.triggerElement?.click();
   }
 
   // Hand-written accessor (mirrors the `value` accessor below, and the
@@ -835,15 +841,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     }
   }
 
-  /** Dispatches the value-change trio. `input`/`change` stay deliberately unprefixed -- this
+  /** Dispatches the native value-change pair and prefixed aliases. `input`/`change` stay deliberately unprefixed -- this
    *  control is a direct `<select>` counterpart, so its value-change events keep `<select>`'s own
    *  naming instead of the `lr-` prefix `<lr-slider>` uses for its analogous rename. See the class
-   *  doc's `change` entry for the full rule. `lr-change` is an additional prefixed alias (matching
-   *  `<lr-checkbox>`), so a consumer can subscribe to a namespaced event. All three carry
-   *  `detail: { value }`. */
+   *  doc's `change` entry for the full rule. The prefixed aliases carry `detail: { value }`. */
   private emitValueEvents(): void {
-    this.emit('input', { value: this.value });
-    this.emit('change', { value: this.value });
+    dispatchNativeEvent(this, 'input');
+    this.emit('lr-input', { value: this.value });
+    dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { value: this.value });
   }
 
@@ -905,7 +910,6 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   };
 
   private onTriggerBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
     this.touched = true;
     this.hasInteracted = true;
     this.reflectValidityStates();
@@ -914,12 +918,13 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // dismiss the listbox short of Escape -- tabbing focus away from the
     // trigger should close it too, the same as lr-combobox's input blur.
     this.hide();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   private onTriggerFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onHintSlotChange = (e: Event): void => {

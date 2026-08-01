@@ -164,14 +164,37 @@ function storyFiles(directory) {
 
 const rawColor = /#[0-9a-f]{3,8}\b|rgba?\(/gi;
 const ignoredDemoIds = new Set(['#950', '#1999']);
+// `&#10003;` (a check mark) is a numeric character reference, not a colour -- but `#10003` matches
+// the hex-colour shape exactly, so the scan has to drop the references before it looks for colours.
+// Left in, they land in the same bucket as a hand-picked hex and the only escape is to keep
+// extending `ignoredDemoIds`, which would erode the rule this check exists to enforce.
+const numericCharacterReference = /&#x?[0-9a-f]+;/gi;
+
+function rawStoryColors(source) {
+  const scannable = source.replace(numericCharacterReference, '');
+  return [...scannable.matchAll(rawColor)].map((match) => match[0]).filter((match) => !ignoredDemoIds.has(match));
+}
+
+assert.deepEqual(rawStoryColors('<span aria-hidden="true">&#10003;</span>'), []);
+assert.deepEqual(rawStoryColors('&#9888; &#8230; &#x2713;'), []);
+assert.deepEqual(rawStoryColors('color: #3366ff'), ['#3366ff']);
+assert.deepEqual(rawStoryColors('background: rgba(0, 0, 0, 0.5)'), ['rgba(']);
+assert.deepEqual(rawStoryColors('PR #950 and #1999'), []);
+// A reference and a real colour in the same file: dropping references must not swallow the colour.
+assert.deepEqual(rawStoryColors('&#10003; then color: #abc'), ['#abc']);
+
 const stories = storyFiles(join(root, 'packages/lyra-ui/src/components'));
-for (const path of stories) {
-  const source = readFileSync(path, 'utf8');
-  const matches = [...source.matchAll(rawColor)].map((match) => match[0]);
-  const colors = matches.filter((match) => !ignoredDemoIds.has(match));
-  if (colors.length) {
-    throw new Error(`${path} contains raw story colors: ${colors.join(', ')}`);
-  }
+// Every offender at once. Throwing on the first file hid the rest behind an edit-and-rerun loop,
+// which is how a single CI run can only ever reveal one of them.
+const offenders = stories
+  .map((path) => ({ path, colors: rawStoryColors(readFileSync(path, 'utf8')) }))
+  .filter((entry) => entry.colors.length);
+if (offenders.length) {
+  throw new Error(
+    `raw story colors (use a design token, or the shipped palette data, instead):\n${offenders
+      .map((entry) => `  ${entry.path}: ${entry.colors.join(', ')}`)
+      .join('\n')}`,
+  );
 }
 
 console.log(`Storybook theme configuration is valid; checked ${stories.length} story files.`);

@@ -81,15 +81,23 @@ interface OverlayEntry {
   handle: OverlayHandle;
 }
 
+interface ExternalModalSuspensionEntry {
+  root: HTMLElement;
+  active: boolean;
+  state: OverlayDocumentState;
+}
+
 interface OverlayDocumentState {
   document: Document;
   stack: OverlayEntry[];
+  externalModalSuspensions: Set<ExternalModalSuspensionEntry>;
   nextStackOrder: number;
   inerted: Map<HTMLElement, boolean>;
   pendingInertWrites: Map<HTMLElement, boolean[]>;
   observer?: MutationObserver;
   observedRoots: Set<Document | ShadowRoot>;
   inertUpdateQueued: boolean;
+  started: boolean;
   onKeyDown: (event: KeyboardEvent) => void;
 }
 
@@ -310,7 +318,8 @@ function scheduleInertUpdate(state: OverlayDocumentState): void {
 }
 
 function handleMutations(state: OverlayDocumentState, records: MutationRecord[]): void {
-  let needsInertUpdate = false;
+  const prunedExternalModal = pruneExternalModalSuspensions(state);
+  let needsInertUpdate = prunedExternalModal;
   for (let index = 0; index < records.length; index++) {
     const record = records[index];
     if (!record) continue;
@@ -343,7 +352,11 @@ function handleMutations(state: OverlayDocumentState, records: MutationRecord[])
       needsInertUpdate = true;
     }
   }
-  if (needsInertUpdate) scheduleInertUpdate(state);
+  if (needsInertUpdate) {
+    if (prunedExternalModal) applyTopmostInert(state);
+    else scheduleInertUpdate(state);
+  }
+  stopStateIfIdle(state);
 }
 
 const mutationObserverOptions: MutationObserverInit = {
@@ -361,6 +374,8 @@ function observeMutationRoot(state: OverlayDocumentState, root: Document | Shado
 }
 
 function startState(state: OverlayDocumentState): void {
+  if (state.started) return;
+  state.started = true;
   state.document.addEventListener('keydown', state.onKeyDown);
   const Observer = state.document.defaultView?.MutationObserver ?? MutationObserver;
   state.observer = new Observer((records) => handleMutations(state, records));
@@ -368,6 +383,8 @@ function startState(state: OverlayDocumentState): void {
 }
 
 function stopState(state: OverlayDocumentState): void {
+  if (!state.started) return;
+  state.started = false;
   state.document.removeEventListener('keydown', state.onKeyDown);
   state.observer?.disconnect();
   state.observer = undefined;
@@ -375,17 +392,24 @@ function stopState(state: OverlayDocumentState): void {
   state.pendingInertWrites.clear();
 }
 
+function stopStateIfIdle(state: OverlayDocumentState): void {
+  if (state.stack.length === 0 && state.externalModalSuspensions.size === 0) stopState(state);
+}
+
 function createState(doc: Document): OverlayDocumentState {
   const state = {} as OverlayDocumentState;
   state.document = doc;
   state.stack = [];
+  state.externalModalSuspensions = new Set();
   state.nextStackOrder = 0;
   state.inerted = new Map();
   state.pendingInertWrites = new Map();
   state.observedRoots = new Set();
   state.inertUpdateQueued = false;
+  state.started = false;
   state.onKeyDown = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.isComposing) return;
+    if (state.externalModalSuspensions.size > 0) return;
     const entry = state.stack[state.stack.length - 1];
     if (!entry) return;
     if (event.key === 'Escape') {
@@ -464,6 +488,17 @@ function addAllowedPath(allowed: Map<ParentNode, Set<Element>>, host: HTMLElemen
   }
 }
 
+function pruneExternalModalSuspensions(state: OverlayDocumentState): boolean {
+  let changed = false;
+  for (const entry of state.externalModalSuspensions) {
+    if (entry.root.isConnected && entry.root.ownerDocument === state.document) continue;
+    entry.active = false;
+    state.externalModalSuspensions.delete(entry);
+    changed = true;
+  }
+  return changed;
+}
+
 function applyTopmostInert(state: OverlayDocumentState): void {
   let modalIndex = -1;
   for (let index = state.stack.length - 1; index >= 0; index--) {
@@ -474,7 +509,18 @@ function applyTopmostInert(state: OverlayDocumentState): void {
     }
   }
   const desired = new Set<HTMLElement>();
-  if (modalIndex !== -1) {
+  if (state.externalModalSuspensions.size > 0) {
+    const allowed = new Map<ParentNode, Set<Element>>();
+    for (const suspension of state.externalModalSuspensions) {
+      addAllowedPath(allowed, suspension.root, state.document);
+    }
+    for (const [parent, children] of allowed) {
+      if (isShadowRoot(parent)) observeMutationRoot(state, parent);
+      for (const child of composedChildren(parent)) {
+        if (!children.has(child)) inertElement(state, child, desired);
+      }
+    }
+  } else if (modalIndex !== -1) {
     const allowed = new Map<ParentNode, Set<Element>>();
     for (const entry of state.stack.slice(modalIndex)) {
       if (entry.options.host.isConnected) addAllowedPath(allowed, entry.options.host, state.document);
@@ -503,12 +549,16 @@ function restoreStackStyle(entry: OverlayEntry): void {
 
 function updateStackStyles(state: OverlayDocumentState): void {
   state.stack.forEach((entry, index) => {
+    // WebKit can retain an existing custom property's `!important` priority when setProperty()
+    // replaces only its value. Remove the declaration first so the manager's temporary stack
+    // value wins consistently; restoreStackStyle() still reinstates the captured value/priority.
+    entry.options.host.style.removeProperty(STACK_PROPERTY);
     entry.options.host.style.setProperty(STACK_PROPERTY, String(STACK_BASE + index * STACK_STEP));
   });
 }
 
 function registerEntry(entry: OverlayEntry, state: OverlayDocumentState, preserveStackOrder = false): void {
-  if (state.stack.length === 0) startState(state);
+  startState(state);
   if (!preserveStackOrder || entry.state !== state) entry.stackOrder = state.nextStackOrder++;
   entry.state = state;
   entry.registered = true;
@@ -523,14 +573,14 @@ function unregisterEntry(entry: OverlayEntry): boolean {
   if (!entry.registered) return entry.wasTopmostOnSuspend;
   const state = entry.state;
   const index = state.stack.indexOf(entry);
-  const wasTopmost = index === state.stack.length - 1;
+  const wasTopmost = state.externalModalSuspensions.size === 0 && index === state.stack.length - 1;
   if (index !== -1) state.stack.splice(index, 1);
   entry.registered = false;
   entry.wasTopmostOnSuspend = wasTopmost;
   restoreStackStyle(entry);
   updateStackStyles(state);
   applyTopmostInert(state);
-  if (state.stack.length === 0) stopState(state);
+  stopStateIfIdle(state);
   return wasTopmost;
 }
 
@@ -592,12 +642,17 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
   entry.previousStackPriority = options.host.style.getPropertyPriority(STACK_PROPERTY);
   entry.handle = {
     focusInitial: () => {
-      if (entry.active && entry.registered && entry.state.stack[entry.state.stack.length - 1] === entry) {
+      if (
+        entry.active &&
+        entry.registered &&
+        entry.state.externalModalSuspensions.size === 0 &&
+        entry.state.stack[entry.state.stack.length - 1] === entry
+      ) {
         focusEntry(entry);
       }
     },
     focusAutofocus: () => {
-      if (!entry.active || !entry.registered) return false;
+      if (!entry.active || !entry.registered || entry.state.externalModalSuspensions.size > 0) return false;
       const panel = entry.options.panel();
       if (!panel) return false;
       const active = deepActiveElement(entry.state.document);
@@ -627,7 +682,10 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
       registerEntry(entry, state, entry.state === state);
     },
     isTopmost: () =>
-      entry.active && entry.registered && entry.state.stack[entry.state.stack.length - 1] === entry,
+      entry.active &&
+      entry.registered &&
+      entry.state.externalModalSuspensions.size === 0 &&
+      entry.state.stack[entry.state.stack.length - 1] === entry,
     isActive: () => entry.active,
     dismissBackdrop: () => {
       if (!entry.handle.isTopmost() || !entry.options.onBackdrop) return false;
@@ -639,4 +697,33 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
   hostEntries.set(options.host, entry);
   registerEntry(entry, entry.state);
   return entry.handle;
+}
+
+/**
+ * Temporarily yields Lyra's modal stack to a third-party modal rooted at `externalModal`.
+ *
+ * The returned release function is idempotent. Suspensions are scoped to the element's current
+ * document and nest independently; while at least one is active, Lyra does not route Escape or
+ * Tab and only the external modal paths remain non-inert. Disconnecting or adopting the root into
+ * another document releases its suspension automatically.
+ */
+export function suspendLyraModalsFor(externalModal: HTMLElement): () => void {
+  if (!externalModal.isConnected) return () => undefined;
+  const state = stateFor(externalModal.ownerDocument);
+  const entry: ExternalModalSuspensionEntry = {
+    root: externalModal,
+    active: true,
+    state,
+  };
+  state.externalModalSuspensions.add(entry);
+  startState(state);
+  applyTopmostInert(state);
+
+  return () => {
+    if (!entry.active) return;
+    entry.active = false;
+    entry.state.externalModalSuspensions.delete(entry);
+    applyTopmostInert(entry.state);
+    stopStateIfIdle(entry.state);
+  };
 }

@@ -5,6 +5,7 @@ import './option.js';
 import '../input/input.js';
 import '../select/select.js';
 import '../button/button.js';
+import '../token-input/token-input.js';
 import '../../layout/segmented/segmented.js';
 import type { ComboboxFilterDetail, LyraCombobox } from './combobox.js';
 import { styles } from './combobox.styles.js';
@@ -1970,12 +1971,18 @@ describe('size', () => {
     }
   });
 
-  it('renders the same laid-out trigger box at every tier as before the shared ladder', async () => {
-    // 2xs/xs are the two tiers whose CONTENT, not the floor, decides the height, so a padding or
-    // font-size drift there would show up here and nowhere else.
+  it('renders the laid-out trigger box at the ladder floor, not the ambient font metrics, at every tier', async () => {
+    // Deliberately the SAME six numbers TIER_HEIGHTS asserts as the min-block-size floor: the
+    // trigger's laid-out height must be decided by the floor at every tier, never by its own
+    // content. Content wins only if the search input's text box plus this row's block padding plus
+    // its border outgrows the floor, and that text box is `line-height: normal` -- a metric of
+    // whatever font family system-ui resolves to on the machine running the test. xs used to read
+    // 25 for exactly that reason, which made the assertion a fingerprint of one machine's installed
+    // fonts (a CI runner rendered 24) and left the trigger a pixel taller than the lr-input beside
+    // it.
     const expected: ReadonlyArray<readonly [string, number]> = [
       ['2xs', 20],
-      ['xs', 25],
+      ['xs', 24],
       ['s', 30],
       ['m', 40],
       ['l', 48],
@@ -1985,6 +1992,41 @@ describe('size', () => {
       const el = await fixture(html`<lr-combobox size=${size} label="Tags"></lr-combobox>`);
       const trigger = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
       expect(trigger.getBoundingClientRect().height, `laid-out height at size=${size}`).to.equal(px);
+    }
+  });
+
+  // The invariant sizes.styles.ts actually promises -- "a control of any of those types sits at the
+  // same height as its neighbours in a toolbar row at every tier" -- asserted as one row of real
+  // neighbours rather than five separate per-component pixel tables. Nothing used to cover it past
+  // size="s" (see the size="s" alignment test further down), which is how lr-combobox and
+  // lr-token-input drifted 1-7px off the rest of the ladder at xs/l/xl without a red test.
+  it('lays every laddered control out at the same height as its toolbar neighbours, at every tier', async () => {
+    const SELECTORS: ReadonlyArray<readonly [string, string]> = [
+      ['lr-input', 'input-wrapper'],
+      ['lr-select', 'trigger'],
+      ['lr-button', 'base'],
+      ['lr-combobox', 'combobox'],
+      ['lr-token-input', 'input-wrapper'],
+    ];
+    for (const [size, px] of TIER_HEIGHTS) {
+      const root = await fixture(html`
+        <div style="display:flex;align-items:center;">
+          <lr-input size=${size} aria-label="Input"></lr-input>
+          <lr-select size=${size} aria-label="Select"></lr-select>
+          <lr-button size=${size}>Go</lr-button>
+          <lr-combobox size=${size} aria-label="Combobox"><lr-option value="a">Apple</lr-option></lr-combobox>
+          <lr-token-input size=${size} aria-label="Tokens"></lr-token-input>
+        </div>
+      `);
+      const heights = SELECTORS.map(([tag, part]) => {
+        const box = root.querySelector(tag)!.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+        return box.getBoundingClientRect().height;
+      });
+      const labelled = SELECTORS.map(([tag], i) => `${tag}=${heights[i]}`).join(', ');
+      expect(new Set(heights).size, `size=${size} heights: ${labelled}`).to.equal(1);
+      // ...and that one height is the ladder's own floor, not whatever the ambient font happened to
+      // push every control to in unison.
+      expect(`${heights[0]}px`, `size=${size} ladder floor`).to.equal(px);
     }
   });
 

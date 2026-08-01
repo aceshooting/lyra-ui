@@ -7,6 +7,7 @@ import {
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
 import { LyraInput } from './input.class.js';
+import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
 import { styles as inputStyles } from './input.styles.js';
 import { styles as numberInputStyles } from './number-input.styles.js';
 
@@ -61,9 +62,9 @@ export class LyraNumberInput extends LyraInput {
     if (direction === 'up') this.stepUp();
     else this.stepDown();
     if (this.value !== before) {
-      this.emit('input');
+      dispatchNativeInputEvent(this, { inputType: 'insertReplacementText' });
       this.emit('lr-input', { value: this.value });
-      this.emit('change');
+      dispatchNativeEvent(this, 'change');
       this.emit('lr-change', { value: this.value });
     }
     // The buttons are not tab stops, so a click would otherwise leave focus nowhere useful --

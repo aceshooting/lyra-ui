@@ -133,7 +133,12 @@
 - **Granular, tree-shakeable exports.** Each component's `.ts` file is a side-effect-free class
   export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the barrel —
   side-effect imports for every component (registers all tags) plus named re-exports of
-  classes/types/helpers. `package.json#exports` maps `.`, `./components/*`, `./internal/*`;
+  classes/types/helpers. `package.json#exports` maps `.`, `./components/*`, `./utilities/*` — NOT
+  `./internal/*`, which 8.0.0 removed on purpose: only the curated `src/utilities/` re-exports are
+  semver-covered, and an `internal/` specifier now fails to resolve outright
+  (`ERR_PACKAGE_PATH_NOT_EXPORTED`) rather than degrading, in a consumer's code and in this repo's
+  own check fixtures alike. A helper that needs to be reachable gets a `src/utilities/` re-export,
+  not just its `src/internal/` home.
   `sideEffects` is an explicit enumerated array, not globs — every registration module listed
   individually in both compiled (`./dist/components/<name>/<name>.js`) and source
   (`./src/components/<name>/<name>.ts`) forms, alongside the barrel (`./dist/lyra.js` +

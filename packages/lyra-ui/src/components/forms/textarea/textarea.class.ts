@@ -12,6 +12,7 @@ import { spellcheckConverter } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 
 export type TextareaResize = 'none' | 'vertical' | 'horizontal' | 'both' | 'auto';
 export type TextareaWrap = 'hard' | 'soft' | 'off';
@@ -41,12 +42,14 @@ const COUNT_ANNOUNCE_DELAY_MS = 1000;
  *  `spellcheck="false"` as truthy (the attribute is present) instead of `false`. */
 
 export interface LyraTextareaEventMap {
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
+  input: InputEvent;
+  change: Event;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
 
@@ -72,6 +75,8 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @event change - Native-style composed event fired at the native `change` timing.
  * @event lr-input - Compatibility alias for `input`; `detail: { value }`.
  * @event lr-change - Compatibility alias for `change`; `detail: { value }`.
+ * @event lr-blur - Prefixed compatibility alias for the native-style `blur` relay.
+ * @event lr-focus - Prefixed compatibility alias for the native-style `focus` relay.
  * @event blur - Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and
  *   composed (unlike the native event, which is neither), so a listener above the shadow boundary
  *   can observe it.
@@ -243,7 +248,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   override focus(options?: FocusOptions): void {
-    this.textareaEl?.focus(options);
+    if (!this.effectiveDisabled) this.textareaEl?.focus(options);
   }
 
   override blur(): void {
@@ -491,29 +496,31 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     ta.style.overflowY = contentBlockSize > maxBlockSize ? 'auto' : 'hidden';
   }
 
-  private onInput = (): void => {
+  private onInput = (event: InputEvent): void => {
     if (!this.textareaEl) return;
     this.value = this.textareaEl.value;
     if (this.resize === 'auto') this.fitToContent();
     this.scheduleCountAnnouncement();
-    this.emit('input');
+    relayNativeEvent(this, event);
     this.emit('lr-input', { value: this.value });
   };
 
-  private onChange = (): void => {
+  private onChange = (event: Event): void => {
     if (!this.textareaEl) return;
     this.value = this.textareaEl.value;
-    this.emit('change');
+    relayNativeEvent(this, event);
     this.emit('lr-change', { value: this.value });
   };
 
-  private onFocus = (): void => {
-    this.emit('focus');
+  private onFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
-  private onBlur = (): void => {
+  private onBlur = (event: FocusEvent): void => {
     this.touched = true;
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   private onHintSlotChange = (e: Event): void => {

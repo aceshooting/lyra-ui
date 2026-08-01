@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { deriveSideEffects } from './generate-side-effects.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 const componentsRoot = join(packageDir, 'src', 'components');
@@ -38,6 +39,23 @@ const duplicates = pkg.sideEffects.filter((entry, index) => pkg.sideEffects.inde
 assert.deepEqual([...new Set(duplicates)], [], 'package.json#sideEffects must not contain duplicate entries');
 
 const errors = [];
+const derivedEntries = deriveSideEffects(packageDir);
+const derivedSideEffects = new Set(derivedEntries);
+
+// The generator and checker intentionally share one derivation. This catches side effects that
+// are not component registrations (locale registration modules and bare CSS assets) and prevents
+// a successful regeneration from deleting manually retained entries.
+for (const entry of derivedEntries) {
+  if (!sideEffects.has(entry)) errors.push(`package.json#sideEffects is missing "${entry}"`);
+}
+for (const entry of pkg.sideEffects) {
+  if (!derivedSideEffects.has(entry)) {
+    errors.push(`package.json#sideEffects has non-derived entry "${entry}"; update the authoritative derivation`);
+  }
+}
+if (pkg.sideEffects.some((entry, index) => entry !== derivedEntries[index])) {
+  errors.push('package.json#sideEffects must match the deterministic generated order');
+}
 
 // Every `<name>.class.ts` has a sibling `<name>.ts` that imports the class and calls
 // `defineElement()` -- that sibling is the file with the actual registration side effect. (The
@@ -125,6 +143,6 @@ if (errors.length) {
 } else {
   console.log(
     `sideEffects completeness verified: ${classFiles.length} component registration entries + root barrel, ` +
-      `${pkg.sideEffects.length} declared entries all resolve to real files`,
+      `${pkg.sideEffects.length} generated entries (including locales and CSS) all resolve to real files`,
   );
 }

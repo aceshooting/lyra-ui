@@ -6,6 +6,14 @@ import {
   syncAriaDescribedByElements,
 } from '../../../internal/aria-controls.js';
 import { styles } from './icon-button.styles.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+
+export interface LyraIconButtonEventMap {
+  focus: FocusEvent;
+  blur: FocusEvent;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
+}
 
 /** Raw SVG geometry primitives that render nothing when parsed as top-level light-DOM children
  *  with no enclosing `<svg>` of their own (the HTML parser only switches to foreign/SVG content on
@@ -68,6 +76,10 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * semantics don't cross the shadow boundary.
  *
  * @customElement lr-icon-button
+ * @event focus - Native focus relayed once from the internal button.
+ * @event blur - Native blur relayed once from the internal button.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @slot - Optional custom icon content, rendered beside (not inside) the `icon` glyph.
  * @csspart button - Native button.
  * @csspart fallback - The internal SVG-namespaced clone target for slotted bare geometry. Carries
@@ -102,7 +114,7 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))] -
  *   Complete border shorthand while pressed; falls through to the hover border when only that is set.
  */
-export class LyraIconButton extends LyraElement {
+export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   static override styles = [LyraElement.styles, styles];
   // A button is form-associated so it is discoverable through form.elements, mirroring
   // <lr-button>'s identical rationale -- see the class doc above.
@@ -171,7 +183,9 @@ export class LyraIconButton extends LyraElement {
     this.buttonEl?.click();
   }
 
-  override focus(options?: FocusOptions): void { this.buttonEl?.focus(options); }
+  override focus(options?: FocusOptions): void {
+    if (!this.effectiveDisabled) this.buttonEl?.focus(options);
+  }
   override blur(): void { this.buttonEl?.blur(); }
 
   private onClick = (): void => {
@@ -181,6 +195,16 @@ export class LyraIconButton extends LyraElement {
     } else if (this.type === 'reset') {
       this.closest('form')?.reset();
     }
+  };
+
+  private onFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
+  };
+
+  private onBlur = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   formDisabledCallback(disabled: boolean): void {
@@ -236,6 +260,8 @@ export class LyraIconButton extends LyraElement {
       aria-controls=${this.triggerControls || nothing}
       aria-describedby=${this.triggerDescribedBy || nothing}
       @click=${this.onClick}
+      @focus=${this.onFocus}
+      @blur=${this.onBlur}
     >${this.icon ? html`<lr-icon name=${this.icon}></lr-icon>` : nothing}${this.hasBareGeometry ? html`<svg part="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"></svg>` : nothing}<slot @slotchange=${this.onSlotChange}></slot></button>`;
   }
 }

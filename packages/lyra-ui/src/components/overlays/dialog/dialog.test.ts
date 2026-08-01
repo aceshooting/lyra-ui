@@ -1002,6 +1002,15 @@ describe('initial focus', () => {
   });
 });
 
+// A computed `<time>` serializes in seconds in every engine, but the NUMBER formatting is
+// engine-specific: Chromium prints one microsecond as `1e-06s` while Gecko and WebKit print
+// `0.000001s`. Parse the value and compare numerically -- an exact string comparison would pin the
+// suite to one engine, and this file runs under `test:platform` on all three.
+const cssTimeSeconds = (value: string): number => {
+  const seconds = Number.parseFloat(value);
+  return value.trim().endsWith('ms') ? seconds / 1000 : seconds;
+};
+
 describe('enter/exit animation', () => {
   it('animates the panel and the backdrop from the motion tokens on open and on close', async () => {
     const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
@@ -1052,8 +1061,13 @@ describe('enter/exit animation', () => {
     const afterShow = oneEvent(el, 'lr-after-show');
     el.show();
     await el.updateComplete;
-    // getComputedStyle serializes 0.001ms in seconds.
-    expect(getComputedStyle(panel).animationDuration).to.equal('1e-06s');
+    // 0.001ms === 1e-6s. The tolerance is five orders of magnitude below the 0.18s
+    // --lr-duration-base default, so losing the token wiring (or the animation being dropped to
+    // 0s outright) still fails here.
+    expect(
+      cssTimeSeconds(getComputedStyle(panel).animationDuration),
+      'the panel duration resolves through the overridden --lr-duration-base',
+    ).to.be.closeTo(1e-6, 1e-9);
     await afterShow;
 
     const afterHide = oneEvent(el, 'lr-after-hide');

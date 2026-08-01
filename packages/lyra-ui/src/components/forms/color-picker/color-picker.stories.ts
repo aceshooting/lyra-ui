@@ -1,7 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { GEMSTONES } from '../../../theme/gemstones-data.js';
 import type { LyraColorPickerSize, LyraColorPickerFormat } from './color-picker.js';
 import './color-picker.js';
+
+// A color picker's `value` is a color *literal* by definition -- `var(--lr-color-brand)` is not a
+// parseable color and the control would reject it -- so these demos take their colors from the
+// shipped gemstone accent palette rather than inventing hexes here, the same way
+// swatch-picker.stories.ts does. Retheming that palette retheme these demos with it.
+const ACCENT = GEMSTONES.sapphire.fill;
+const DANGER = GEMSTONES.ruby.fill;
+const SUCCESS = GEMSTONES.emerald.fill;
+/** Alpha suffix on an `#rrggbb` value, i.e. 50% -- the `opacity` demo's whole point. */
+const HALF_ALPHA = '80';
+
 const meta: Meta = { title: 'Form/Color picker', component: 'lr-color-picker', tags: ['autodocs'] };
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-color-picker label="Accent color"></lr-color-picker>` };
@@ -11,7 +23,7 @@ export const Default: StoryObj = { render: () => html`<lr-color-picker label="Ac
 export const Open: StoryObj = {
   render: () => html`
     <div style="block-size: 20rem">
-      <lr-color-picker label="Accent color" value="#3366ff" open></lr-color-picker>
+      <lr-color-picker label="Accent color" value=${ACCENT} open></lr-color-picker>
     </div>
   `,
 };
@@ -26,7 +38,7 @@ export const Formats: StoryObj = {
           (format) => html`<lr-color-picker
             label=${format.toUpperCase()}
             format=${format}
-            value="#3366ff"
+            value=${ACCENT}
           ></lr-color-picker>`,
         )}
       </div>
@@ -36,14 +48,14 @@ export const Formats: StoryObj = {
 
 /** `uppercase` serializes the same colour in upper case. */
 export const Uppercase: StoryObj = {
-  render: () => html`<lr-color-picker label="Accent color" value="#3366ff" uppercase></lr-color-picker>`,
+  render: () => html`<lr-color-picker label="Accent color" value=${ACCENT} uppercase></lr-color-picker>`,
 };
 
-/** `opacity` adds the alpha slider and an alpha-carrying value (`#rrggbbaa`, `rgba()`, ...). */
+/** `opacity` adds the alpha slider and an alpha-carrying value (`#rrggbbaa`, functional `rgba`, ...). */
 export const Opacity: StoryObj = {
   render: () => html`
     <div style="block-size: 20rem">
-      <lr-color-picker label="Overlay tint" value="#3366ff80" opacity open></lr-color-picker>
+      <lr-color-picker label="Overlay tint" value=${`${ACCENT}${HALF_ALPHA}`} opacity open></lr-color-picker>
     </div>
   `,
 };
@@ -54,8 +66,10 @@ export const Swatches: StoryObj = {
     <div style="block-size: 24rem">
       <lr-color-picker
         label="Brand palette"
-        value="#0969da"
-        swatches="#0969da; #1a7f37; #9a6700; #cf222e; #8250df; rebeccapurple"
+        value=${ACCENT}
+        swatches=${[ACCENT, SUCCESS, GEMSTONES.topaz.fill, DANGER, GEMSTONES.amethyst.fill, 'rebeccapurple'].join(
+          '; ',
+        )}
         open
       ></lr-color-picker>
     </div>
@@ -66,8 +80,8 @@ export const Swatches: StoryObj = {
 export const Placement: StoryObj = {
   render: () => html`
     <div style="display: flex; gap: 4rem; padding-block: 8rem">
-      <lr-color-picker label="Top" placement="top-start" value="#cf222e"></lr-color-picker>
-      <lr-color-picker label="Right" placement="right-start" value="#1a7f37"></lr-color-picker>
+      <lr-color-picker label="Top" placement="top-start" value=${DANGER}></lr-color-picker>
+      <lr-color-picker label="Right" placement="right-start" value=${SUCCESS}></lr-color-picker>
     </div>
   `,
 };
@@ -101,7 +115,7 @@ export const Narrow: StoryObj = {
 export const RightToLeft: StoryObj = {
   render: () => html`
     <div dir="rtl" style="block-size: 20rem">
-      <lr-color-picker label="لون التمييز" value="#3366ff" open></lr-color-picker>
+      <lr-color-picker label="لون التمييز" value=${ACCENT} open></lr-color-picker>
     </div>
   `,
 };

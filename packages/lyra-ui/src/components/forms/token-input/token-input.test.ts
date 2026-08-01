@@ -177,16 +177,22 @@ it("matches lr-input's own row height at every shared size tier when empty", asy
   }
 });
 
-// Literal pixels, not a relative comparison: adopting the shared form-control ladder moved where
-// these numbers are DECLARED, and the point of the move is that it did not move the numbers.
-it('renders the same laid-out row box at every tier as before the shared ladder', async () => {
+// Literal pixels, not a relative comparison, and deliberately the SAME six numbers the
+// min-block-size test above asserts: the row's laid-out height must be decided by the shared
+// ladder's floor at every tier, never by its own content. Content wins only if the draft input's
+// text box plus this row's block padding plus its border outgrows the floor, and that text box is
+// `line-height: normal` -- a metric of whatever font family system-ui resolves to on the machine
+// running the test. These numbers used to read 25/52/63 at xs/l/xl precisely because content was
+// winning there; that made the assertion a fingerprint of one machine's installed fonts (a CI
+// runner rendered 24 at xs) and, worse, put the row 1-7px out of line with the lr-input beside it.
+it('renders the laid-out row box at the ladder floor, not the ambient font metrics, at every tier', async () => {
   const expected: ReadonlyArray<readonly [string, number]> = [
     ['2xs', 20],
-    ['xs', 25],
+    ['xs', 24],
     ['s', 30],
     ['m', 40],
-    ['l', 52],
-    ['xl', 63],
+    ['l', 48],
+    ['xl', 56],
   ];
   for (const [size, px] of expected) {
     const el = await fixture(html`<lr-token-input size=${size}></lr-token-input>`);

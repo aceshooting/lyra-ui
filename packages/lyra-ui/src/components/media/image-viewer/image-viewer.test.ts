@@ -8,6 +8,17 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const PNG_SRC = 'https://example.test/photo.png';
 
+/** A real 1x1 PNG, for the tests that must keep the loaded frame's DOM alive across an `await`.
+ *
+ *  `PNG_SRC` never resolves, so its `<img>` eventually fires `error`, `loadState` flips to
+ *  `'error'`, and `renderBody()` swaps the whole `lr-zoomable-frame` subtree -- highlight layer
+ *  included -- for `[part='error']`. That teardown is correct behaviour, but it lands at an
+ *  unpredictable point (a DNS failure, so its timing tracks the runner's network, not the test),
+ *  and once a highlight box is detached `getComputedStyle(box).backgroundColor` reads `''` rather
+ *  than throwing. A data URI actually loads, so the frame is never torn down mid-test. */
+const LOADABLE_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
 /** Waits for the viewer's `<img>` to be committed before faking its intrinsic size.
  *
  *  The wait is the point: callers that fixture a *wrapper* element only get `elementUpdated()` on
@@ -247,7 +258,11 @@ describe('region highlights', () => {
     // with it, and did nothing at all to a white fill. A colour mix fixes both and introduces the
     // one risk worth a test: mixing from the untoned default would flatten every toned box to brand
     // the moment the pointer arrived.
-    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} .highlights=${[
+    //
+    // LOADABLE_PNG, not PNG_SRC: this is the one highlight test that samples computed style across
+    // an `await`, so it is the one that PNG_SRC's eventual load failure could tear the frame out
+    // from under (see the constant's own comment).
+    const el = (await fixture(html`<lr-image-viewer src=${LOADABLE_PNG} .highlights=${[
       { id: 'plain', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 15 } } },
       { id: 'danger', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 20, height: 15 } }, tone: 'danger' },
     ]}></lr-image-viewer>`)) as LyraImageViewer;
@@ -259,25 +274,41 @@ describe('region highlights', () => {
     expect(plainFill, 'the untoned fill is not empty').to.not.equal('');
     expect(dangerFill, 'the danger tone supplies its own fill for the mixes to read').to.not.equal(plainFill);
 
-    const target = boxes[1];
-    const rect = target.getBoundingClientRect();
+    // Re-query rather than close over `boxes[1]`, and assert the sample is a real resolved colour:
+    // getComputedStyle() on a *detached* element resolves every property to '', so a stale
+    // reference does not throw -- it silently turns "hover differs from resting" into
+    // "'' differs from a colour" (a pass for the wrong reason) and the next comparison into
+    // "'' equals ''" (a failure that names the wrong defect). Both guards below keep any future
+    // mid-test teardown loud and correctly attributed instead.
+    const readDangerFill = (label: string): string => {
+      const live = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="highlight"]')];
+      expect(live.length, `the highlight layer is still rendered (${label})`).to.equal(2);
+      const value = getComputedStyle(live[1]!).backgroundColor;
+      expect(value, `the ${label} fill resolves to a real colour`).to.not.equal('');
+      return value;
+    };
+    const rect = boxes[1]!.getBoundingClientRect();
     expect(rect.width, 'the highlight has real geometry to point at').to.be.greaterThan(0);
-    const resting = getComputedStyle(target).backgroundColor;
+    const resting = readDangerFill('resting');
     try {
       await sendMouse({
         type: 'move',
         position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
       });
-      const hovered = getComputedStyle(target).backgroundColor;
+      const hovered = readDangerFill('hover');
       expect(hovered, 'hover moves the highlight off its resting fill').to.not.equal(resting);
 
       await sendMouse({ type: 'down' });
-      const pressed = getComputedStyle(target).backgroundColor;
+      const pressed = readDangerFill('pressed');
       expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
       await sendMouse({ type: 'up' });
     } finally {
       await resetMouse();
     }
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="error"]').length,
+      'the loadable src kept the frame out of the error state for the whole test',
+    ).to.equal(0);
   });
 
   it('positions highlight boxes with physical left/top under dir="rtl" so they stay over the non-mirroring image', async () => {
@@ -667,12 +698,8 @@ describe('active-state cssprop escape hatches', () => {
     return value;
   }
 
-  // A real 1x1 PNG rather than the file's https PNG_SRC placeholder: that URL never resolves, so its
-  // `<img>` eventually fires `error`, and `renderBody()` then replaces the whole frame (highlight
-  // layer included) with `[part='error']`. A data URI actually loads, keeping the highlight boxes
-  // present deterministically instead of racing the network failure.
-  const LOADABLE_PNG =
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+  // These fixtures use the module-level LOADABLE_PNG rather than the https PNG_SRC placeholder for
+  // the reason documented there: PNG_SRC's eventual load failure replaces the frame mid-test.
 
   async function withAnnotateActive(style = ''): Promise<{ el: LyraImageViewer; toggle: HTMLElement }> {
     const wrapper = (await fixture(html`<div style=${style}><lr-image-viewer annotatable src=${LOADABLE_PNG}></lr-image-viewer></div>`)) as HTMLElement;

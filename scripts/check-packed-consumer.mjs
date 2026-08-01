@@ -47,7 +47,18 @@ const bundleEntries = {
     // behavior and accessibility contracts across the existing component set. The packed bundle
     // measured 2488.8 KiB across the same 20 output files, while the granular gzip budgets and
     // single-button canary remained green, ruling out an accidentally eager optional peer.
-    maxRawBytes: 2_800_000,
+    //
+    // Raised from 2_800_000 for 8.0.0, the first run of this check since that work landed. The
+    // barrel went from 262 to 269 registration imports, and on top of those seven new components
+    // every pre-existing one gained real implementation weight: a pressed state and relocated hover
+    // on each interactive part, setCustomValidity plus Enter-to-submit across the form-associated
+    // controls, the unified style vocabulary, and the typed global event surface. Measured 3023.0
+    // KiB raw across 19 output files with optional peers externalized. Deliberately re-baselined
+    // rather than waived, on the same evidence the earlier bumps used: this fixture externalizes
+    // the optional peers, so none of these bytes can be a peer's, and the barrel's eager static
+    // graph still reaches only `lit`, its directive subpaths and `@floating-ui/dom` -- every
+    // optional peer stays behind a dynamic `import()`. Only lyra's own aggregate weight moved.
+    maxRawBytes: 3_400_000,
   },
   // Single-component regression canary: catches a PR silently dragging something heavy into the
   // eager import graph (e.g. a `*-loader.ts`'s dynamic `import()` accidentally hoisted to a
@@ -74,9 +85,19 @@ const bundleEntries = {
   // locale/direction changes reactive in LyraElement. The isolated button remained a single
   // 31_014 B-gzip (30.3 KiB) file with no optional-peer chunk; 32_000 leaves less than 1 KiB of
   // headroom while accommodating the intentional shared-base behavior.
+  //
+  // Raised from 32_000 for 8.0.0, alongside the `core` re-baseline above and for the same reason:
+  // the growth is in the shared base layer this entry deliberately measures, not in a new
+  // dependency. Measured 39.1 KiB gzip (148.3 KiB raw) as a single output file. The canary's own
+  // question -- did something heavy reach the eager graph -- was answered directly rather than
+  // inferred: an isolated `<lr-button>` still emits ONE file with no dynamic-import chunk, and its
+  // static graph spans 14 modules whose only bare specifiers are `lit` and `lit/decorators.js`.
+  // Zero optional peers, so the delta is LyraElement's token/locale/interaction layer plus button's
+  // own class and styles. 42_000 keeps ~1.9 KiB of headroom -- still far below the gzip footprint
+  // of the smallest optional peer this canary exists to catch.
   button: {
     fixture: 'core',
-    maxGzipBytes: 32_000,
+    maxGzipBytes: 42_000,
   },
   flag: {
     fixture: 'optional',
@@ -204,7 +225,11 @@ await import('@aceshooting/lyra-ui/components/charts/chart/chart.js');
 await import('@aceshooting/lyra-ui/components/conversation/code-block/code-block.js');
 await import('@aceshooting/lyra-ui/components/retrieval/graph/graph.js');
 await import('@aceshooting/lyra-ui/components/media/map/map.js');
-const prefix = await import('@aceshooting/lyra-ui/internal/prefix.js');
+// The curated './utilities/*' subpath, not './internal/*': 'internal/' is deliberately absent
+// from the package's "exports" map (only 'utilities/' is semver-covered), so importing it here
+// would assert a contract the package does not offer -- and Node fails it with
+// ERR_PACKAGE_PATH_NOT_EXPORTED.
+const prefix = await import('@aceshooting/lyra-ui/utilities/prefix.js');
 
 if (typeof root.LyraEmpty !== 'function' || typeof granularClass.LyraEmpty !== 'function') {
   throw new Error('root and granular class imports did not expose LyraEmpty');

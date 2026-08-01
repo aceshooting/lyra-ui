@@ -1036,6 +1036,11 @@ entry point — open an issue and it can be promoted deliberately.
   slots and open shadow roots; activation preserves focus already inside but pulls outside focus in,
   and closing restores the still-connected opener. Nested closes restore into the surviving overlay
   before returning to the original trigger.
+  When a third-party modal must open above a Lyra modal, call
+  `const release = suspendLyraModalsFor(externalModal)` after its root is connected, then call
+  `release()` when it closes. The handle is idempotent, document-scoped, and nestable. While any
+  such handle is active, Lyra yields Escape/Tab ownership and keeps only the external modal paths
+  non-inert; disconnecting or adopting the external root releases its handle automatically.
 - **`announcer` → `Announcer`** — throttled live-region announcements, paired with
   `lr-live-region`.
 

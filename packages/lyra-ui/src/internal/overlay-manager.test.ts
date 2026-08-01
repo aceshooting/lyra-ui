@@ -1,5 +1,10 @@
 import { expect } from '@open-wc/testing';
-import { activateOverlay, collectFocusableElements, deepActiveElement } from './overlay-manager.js';
+import {
+  activateOverlay,
+  collectFocusableElements,
+  deepActiveElement,
+  suspendLyraModalsFor,
+} from './overlay-manager.js';
 
 function createOverlay(doc: Document, label: string) {
   const host = doc.createElement('section');
@@ -42,6 +47,148 @@ it('routes Escape only to the topmost overlay across different overlay owners', 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
   expect(dismissed).to.deep.equal(['responsive-panel', 'dialog']);
   bottomHandle.deactivate();
+});
+
+it('scopes a third-party modal above the Lyra stack until its release handle is called', () => {
+  const overlay = createOverlay(document, 'lyra-below-external');
+  const external = document.createElement('section');
+  external.dataset.overlayBackground = '';
+  external.dataset.externalModal = '';
+  document.body.append(external);
+  const dismissed: string[] = [];
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => dismissed.push('lyra'),
+  });
+
+  expect(external.inert).to.be.true;
+  const release = suspendLyraModalsFor(external);
+
+  expect(external.inert).to.be.false;
+  expect(overlay.host.inert).to.be.true;
+  expect(handle.isTopmost()).to.be.false;
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(dismissed).to.deep.equal([]);
+
+  release();
+  release();
+  expect(overlay.host.inert).to.be.false;
+  expect(external.inert).to.be.true;
+  expect(handle.isTopmost()).to.be.true;
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(dismissed).to.deep.equal(['lyra']);
+
+  handle.deactivate({ restoreFocus: false });
+  expect(external.inert).to.be.false;
+  external.remove();
+});
+
+it('nests independent external-modal suspension handles without an unbalanced release', () => {
+  const overlay = createOverlay(document, 'lyra-below-two-externals');
+  const first = document.createElement('section');
+  const second = document.createElement('section');
+  first.dataset.overlayBackground = '';
+  second.dataset.overlayBackground = '';
+  document.body.append(first, second);
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+
+  const releaseFirst = suspendLyraModalsFor(first);
+  const releaseSecond = suspendLyraModalsFor(second);
+  expect(first.inert).to.be.false;
+  expect(second.inert).to.be.false;
+  expect(overlay.host.inert).to.be.true;
+
+  releaseFirst();
+  expect(first.inert).to.be.true;
+  expect(second.inert).to.be.false;
+  expect(handle.isTopmost()).to.be.false;
+
+  releaseSecond();
+  expect(first.inert).to.be.true;
+  expect(second.inert).to.be.true;
+  expect(overlay.host.inert).to.be.false;
+  expect(handle.isTopmost()).to.be.true;
+
+  handle.deactivate({ restoreFocus: false });
+  first.remove();
+  second.remove();
+});
+
+it('preserves Lyra stack order and focus-return targets across an external modal', () => {
+  const trigger = document.createElement('button');
+  trigger.dataset.overlayBackground = '';
+  document.body.append(trigger);
+  trigger.focus();
+  const bottom = createOverlay(document, 'bottom-before-external');
+  const bottomHandle = activateOverlay({
+    host: bottom.host,
+    panel: () => bottom.panel,
+    onEscape: () => undefined,
+  });
+  bottomHandle.focusInitial();
+  bottom.last.focus();
+  const top = createOverlay(document, 'top-before-external');
+  const topHandle = activateOverlay({ host: top.host, panel: () => top.panel, onEscape: () => undefined });
+  topHandle.focusInitial();
+
+  const external = document.createElement('section');
+  external.dataset.overlayBackground = '';
+  document.body.append(external);
+  const release = suspendLyraModalsFor(external);
+  release();
+
+  expect(topHandle.isTopmost()).to.be.true;
+  topHandle.deactivate();
+  expect(deepActiveElement(document)).to.equal(bottom.last);
+  bottomHandle.deactivate();
+  expect(deepActiveElement(document)).to.equal(trigger);
+  external.remove();
+});
+
+it('automatically releases an external-modal suspension when its owner disconnects', async () => {
+  const overlay = createOverlay(document, 'lyra-after-external-disconnect');
+  const external = document.createElement('section');
+  external.dataset.overlayBackground = '';
+  document.body.append(external);
+  const dismissed: string[] = [];
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => dismissed.push('lyra'),
+  });
+  const release = suspendLyraModalsFor(external);
+
+  external.remove();
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(handle.isTopmost()).to.be.true;
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(dismissed).to.deep.equal(['lyra']);
+  expect(() => release()).to.not.throw();
+
+  handle.deactivate({ restoreFocus: false });
+});
+
+it('keeps external-modal suspension document-scoped', () => {
+  const main = createOverlay(document, 'main-document-overlay');
+  const mainHandle = activateOverlay({ host: main.host, panel: () => main.panel, onEscape: () => undefined });
+
+  const otherDocument = document.implementation.createHTMLDocument('other');
+  const other = createOverlay(otherDocument, 'other-document-overlay');
+  const external = otherDocument.createElement('section');
+  otherDocument.body.append(external);
+  const otherHandle = activateOverlay({ host: other.host, panel: () => other.panel, onEscape: () => undefined });
+  const release = suspendLyraModalsFor(external);
+
+  expect(mainHandle.isTopmost()).to.be.true;
+  expect(main.host.inert).to.be.false;
+  expect(otherHandle.isTopmost()).to.be.false;
+  expect(other.host.inert).to.be.true;
+
+  release();
+  expect(otherHandle.isTopmost()).to.be.true;
+  otherHandle.deactivate({ restoreFocus: false });
+  mainHandle.deactivate({ restoreFocus: false });
 });
 
 it('updates a return target without changing stack order or moving focus', () => {

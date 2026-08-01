@@ -3,7 +3,11 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lr-combobox-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
+    /* Two-value shorthand, block axis first. Only the INLINE half is this component's own per-tier
+       geometry; the BLOCK half is the shared ladder's --lr-form-control-padding-block at every tier,
+       because that axis is the one the trigger's height floor has to pay for -- see the
+       [part='combobox'] comment below. */
+    --lr-combobox-trigger-padding: var(--lr-form-control-padding-block) var(--lr-space-s);
     /* Height and text size come from the ONE shared form-control ladder (internal/sizes.styles.ts)
        rather than a sixth private copy of the same six values. The ladder matches both spellings of
        every tier in one selector list, so size="small" and size="s" resolve identically here with
@@ -35,32 +39,32 @@ export const styles = css`
      shared ladder accepts size="small", and a control whose tags silently ignored it would be worse
      than one that never accepted it. */
   :host([size='2xs']) {
-    --lr-combobox-trigger-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
+    --lr-combobox-trigger-padding: var(--lr-form-control-padding-block) var(--lr-space-2xs);
     --lr-combobox-tag-padding: 0 var(--lr-size-0-25rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-2xs);
     --lr-combobox-expand-size: var(--lr-size-1rem);
   }
   :host([size='xs']) {
-    --lr-combobox-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    --lr-combobox-trigger-padding: var(--lr-form-control-padding-block) var(--lr-space-xs);
     --lr-combobox-tag-padding: 0 var(--lr-size-0-25rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-2xs);
     --lr-combobox-expand-size: var(--lr-size-1rem);
   }
   :host([size='s']),
   :host([size='small']) {
-    --lr-combobox-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
+    --lr-combobox-trigger-padding: var(--lr-form-control-padding-block) var(--lr-space-xs);
     --lr-combobox-tag-padding: var(--lr-size-0-05rem) var(--lr-size-0-3125rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-xs);
     --lr-combobox-expand-size: var(--lr-size-1-25rem);
   }
   :host([size='l']),
   :host([size='large']) {
-    --lr-combobox-trigger-padding: var(--lr-space-s) var(--lr-space-m);
+    --lr-combobox-trigger-padding: var(--lr-form-control-padding-block) var(--lr-space-m);
     --lr-combobox-tag-padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-md-sm);
   }
   :host([size='xl']) {
-    --lr-combobox-trigger-padding: var(--lr-space-m) var(--lr-space-l);
+    --lr-combobox-trigger-padding: var(--lr-form-control-padding-block) var(--lr-space-l);
     --lr-combobox-tag-padding: var(--lr-size-0-25rem) var(--lr-size-0-625rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-m);
   }
@@ -84,6 +88,14 @@ export const styles = css`
     color: var(--lr-color-danger);
   }
 
+  /* min-block-size is a FLOOR on a border-box, so it only decides the rendered height while this
+     row's own content stays under it -- and that content includes the search input, whose text box
+     is line-height: normal, i.e. a metric of whatever font family the ambient stack resolves to. Two
+     machines resolve system-ui to different fonts, so any tier whose content sits at or above the
+     floor renders a different height on each of them. Keeping the block padding on the shared
+     ladder (and zeroing the input's UA block padding below) is what holds the content under the
+     floor at every tier, which is what makes this trigger line up with lr-input/lr-select/lr-button
+     in a toolbar row -- the promise sizes.styles.ts makes. */
   [part='combobox'] {
     display: flex;
     flex-wrap: wrap;
@@ -173,6 +185,11 @@ export const styles = css`
   [part='combobox-input'] {
     flex: 1 1 var(--lr-size-6ch);
     min-inline-size: var(--lr-size-4ch);
+    /* 0, not the UA's own 1px default -- same neutralisation lr-input applies to its [part='input'].
+       The trigger row above already owns this control's block padding; leaving the UA's on as well
+       spent two more pixels of the height floor's budget at every tier, which is what used to push
+       the dense tiers over their floor and hand the rendered height to the ambient font. */
+    padding-block: 0;
     border: none;
     outline: none;
     background: transparent;
