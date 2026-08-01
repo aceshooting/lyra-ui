@@ -383,7 +383,7 @@
       "name": "--lr-avatar-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` swaps it to `var(--lr-font-size-xs)` (`sm`) or `var(--lr-font-size-md)` (`lg`), so the initials track the circle instead of staying at one fixed size across every tier."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` swaps it to `var(--lr-font-size-xs)` (`small`) or `var(--lr-font-size-md)` (`large`), so the initials track the circle instead of staying at one fixed size across every tier."
       }
     },
     {
@@ -439,28 +439,63 @@
       "name": "--lr-avatar-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-size-2rem)`) — Inline and block size of the container. `size` swaps it to `var(--lr-size-1-5rem)` (`sm`) or `var(--lr-size-2-5rem)` (`lg`)."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-size-2rem)`) — Inline and block size of the container. `size` swaps it to `var(--lr-size-1-5rem)` (`small`) or `var(--lr-size-2-5rem)` (`large`)."
+      }
+    },
+    {
+      "name": "--lr-badge-attention-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-duration-ambient)`) — One cycle of the `attention` animation."
+      }
+    },
+    {
+      "name": "--lr-badge-attention-easing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-easing-emphasized)`) — Timing function of the `attention` animation."
       }
     },
     {
       "name": "--lr-badge-background",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-surface)`) — The badge's background. Each non-neutral `variant` sets it to that variant's `-quiet` tint."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-fill)`) — Explicit override for the badge's background, winning over whatever `variant` and `appearance` resolved. Left unset (the default) so it still inherits from a consumer's own ancestor rule."
       }
     },
     {
       "name": "--lr-badge-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-border)`) — The badge's border color. Each non-neutral `variant` sets it to that variant's loud color."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-stroke)`) — Explicit override for the badge's border color, on the same terms as `--lr-badge-background`."
+      }
+    },
+    {
+      "name": "--lr-badge-bounce-distance",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-size-0-1875rem)`) — Peak travel of the `attention=\"bounce\"` hop."
       }
     },
     {
       "name": "--lr-badge-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-text)`) — The badge's text color. Each non-neutral `variant` sets it to that variant's loud color."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-text)`) — Explicit override for the badge's text color, on the same terms as `--lr-badge-background`."
+      }
+    },
+    {
+      "name": "--lr-badge-edge",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-border)`) — Palette slot: the variant's border color. Each non-neutral `variant` sets it to that variant's loud color."
+      }
+    },
+    {
+      "name": "--lr-badge-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-tint)`) — Surface slot: which palette entry `appearance` routed onto the background. Set it to retune a single appearance without touching the palette."
       }
     },
     {
@@ -471,10 +506,31 @@
       }
     },
     {
+      "name": "--lr-badge-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-space-2xs)`) — Space between the `start` slot, the label, and the `end` slot."
+      }
+    },
+    {
+      "name": "--lr-badge-ink",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-text)`) — Palette slot: the variant's text color. Each non-neutral `variant` sets it to that variant's loud color."
+      }
+    },
+    {
       "name": "--lr-badge-min-height",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-size-1-25rem)`) — The badge's minimum block size. Each `size` sets it to that step's minimum block size."
+      }
+    },
+    {
+      "name": "--lr-badge-on-solid",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-on-neutral)`) — Palette slot: the text color that stays legible on `--lr-badge-solid`."
       }
     },
     {
@@ -485,10 +541,52 @@
       }
     },
     {
+      "name": "--lr-badge-pulse-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `color-mix(in srgb, currentColor 40%, transparent)`) — Color of the expanding ring drawn by `attention=\"pulse\"`."
+      }
+    },
+    {
+      "name": "--lr-badge-pulse-spread",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-size-0-25rem)`) — How far the `attention=\"pulse\"` ring expands."
+      }
+    },
+    {
       "name": "--lr-badge-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-radius-pill)`) — Corner radius of the badge surface. Does not vary by `size` tier."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-radius)`) — Corner radius of the badge surface. `pill` raises it to `var(--lr-radius-pill)`. Does not vary by `size` tier."
+      }
+    },
+    {
+      "name": "--lr-badge-solid",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-neutral)`) — Palette slot: the variant's loud fill, used by `appearance=\"accent\"`."
+      }
+    },
+    {
+      "name": "--lr-badge-stroke",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-edge)`) — Surface slot: which palette entry `appearance` routed onto the border color."
+      }
+    },
+    {
+      "name": "--lr-badge-text",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-ink)`) — Surface slot: which palette entry `appearance` routed onto the label color."
+      }
+    },
+    {
+      "name": "--lr-badge-tint",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-surface)`) — Palette slot: the variant's quiet fill. Each non-neutral `variant` sets it to that variant's `-quiet` tint."
       }
     },
     {
@@ -583,6 +681,13 @@
       }
     },
     {
+      "name": "--lr-button-caret-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-size-0-75em)`) — Font size of the `with-caret` chevron, i.e. its rendered glyph box. Relative to the button's own font size, so it follows every `size` tier without a per-tier rule."
+      }
+    },
+    {
       "name": "--lr-button-fill",
       "description": {
         "kind": "markdown",
@@ -642,7 +747,7 @@
       "name": "--lr-button-outlined-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-color-border-strong)`) — Border color of `appearance=\"outlined\"`, which overrides `--lr-button-border`."
+        "value": "**`<lr-button>`** (default: `var(--lr-color-border-strong)`) — Border color of `appearance=\"outlined\"` and `appearance=\"filled-outlined\"`, which overrides `--lr-button-border`."
       }
     },
     {
@@ -684,7 +789,7 @@
       "name": "--lr-button-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-radius)`) — Corner radius of the internal button. Does not vary by `size` tier. `appearance=\"link\"` ignores it (it renders with zero radius)."
+        "value": "**`<lr-button>`** (default: `var(--lr-radius)`) — Corner radius of the internal button. Does not vary by `size` tier. `appearance=\"link\"` ignores it (it renders with zero radius). `pill` re-assigns it to `--lr-radius-pill`."
       }
     },
     {
@@ -818,6 +923,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand)`) — Border color of the current slide's indicator dot."
+      }
+    },
+    {
+      "name": "--lr-carousel-slide-basis",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `100%`) — Flex basis of every slide in the snap track. The default gives one slide per view; a smaller value (e.g. `50%`) shows several at once while the snap positions still land on each slide's inline start."
       }
     },
     {
@@ -1213,10 +1325,52 @@
       }
     },
     {
+      "name": "--lr-color-picker-checker-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-color-border)`) — Tint of the alpha checkerboard."
+      }
+    },
+    {
+      "name": "--lr-color-picker-checker-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-0-5rem)`) — Cell size of the alpha checkerboard."
+      }
+    },
+    {
       "name": "--lr-color-picker-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-color-picker>`** (default: `var(--lr-space-xs)`) — Gap between field chrome."
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-space-xs)`) — Gap between field chrome and panel rows."
+      }
+    },
+    {
+      "name": "--lr-color-picker-grid-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-8rem)`) — Saturation/brightness grid height."
+      }
+    },
+    {
+      "name": "--lr-color-picker-grid-handle-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-1rem)`) — Diameter of the grid handle."
+      }
+    },
+    {
+      "name": "--lr-color-picker-grid-hue",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — The saturation/brightness grid's fully-saturated base hue. Rewritten on every render, like `--lr-color-picker-swatch-color`."
+      }
+    },
+    {
+      "name": "--lr-color-picker-grid-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-15rem)`) — Saturation/brightness grid width."
       }
     },
     {
@@ -1227,17 +1381,59 @@
       }
     },
     {
+      "name": "--lr-color-picker-hue-stops",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — The hue ramp's own gradient stops, shared by the hue slider in both text directions. Defaults to the six-stop sRGB hue wheel."
+      }
+    },
+    {
+      "name": "--lr-color-picker-opacity-gradient",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — The opacity slider's transparent-to-opaque ramp, built from the current colour and text direction. Rewritten on every render."
+      }
+    },
+    {
+      "name": "--lr-color-picker-palette-swatch-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-1-5rem)`) — Size of a palette swatch."
+      }
+    },
+    {
       "name": "--lr-color-picker-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-color-picker>`** (default: `var(--lr-radius)`) — Swatch corner radius."
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-radius)`) — Trigger, grid, and panel corner radius."
+      }
+    },
+    {
+      "name": "--lr-color-picker-slider-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-0-75rem)`) — Thickness of the visible hue/opacity ramp. The slider's own pointer target stays floored at 24px regardless."
+      }
+    },
+    {
+      "name": "--lr-color-picker-slider-handle-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-1-25rem)`) — Diameter of a slider handle."
+      }
+    },
+    {
+      "name": "--lr-color-picker-swatch-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — The live colour painted on the trigger, preview, slider handles, and palette swatches. Rewritten on every render, so it reports state rather than accepting configuration."
       }
     },
     {
       "name": "--lr-color-picker-swatch-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-color-picker>`** — The swatch's inline and block size, scaled by `size`."
+        "value": "**`<lr-color-picker>`** — The trigger's inline and block size, scaled by `size`."
       }
     },
     {
@@ -1710,6 +1906,20 @@
       }
     },
     {
+      "name": "--lr-dialog-backdrop-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-duration-fast)`) — Duration of the backdrop's fade."
+      }
+    },
+    {
+      "name": "--lr-dialog-backdrop-filter",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `none`) — `backdrop-filter` applied to the scrim, for a frosted-glass treatment over the page behind it."
+      }
+    },
+    {
       "name": "--lr-dialog-max-width",
       "description": {
         "kind": "markdown",
@@ -1721,6 +1931,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-color-overlay)`) — Backdrop scrim color."
+      }
+    },
+    {
+      "name": "--lr-dialog-panel-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-duration-base)`) — Duration of the panel's enter/exit animation."
+      }
+    },
+    {
+      "name": "--lr-dialog-spacing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-space-l)`) — Padding inside the body, and the inline padding of the header and footer rows."
+      }
+    },
+    {
+      "name": "--lr-dialog-spacing-block",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-space-m)`) — Block padding of the header and footer rows, which are tighter than the body by default."
       }
     },
     {
@@ -1951,14 +2182,14 @@
       "name": "--lr-drawer-enter-x",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Horizontal offset the panel animates in from for start/end drawers. Set per placement (and flipped under RTL) by the stylesheet; only read when `prefers-reduced-motion` is `no-preference`."
+        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Horizontal offset the panel slides in from, and back out to, for start/end drawers. Set per placement (and flipped under RTL) by the stylesheet."
       }
     },
     {
       "name": "--lr-drawer-enter-y",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Vertical offset the panel animates in from for top/bottom drawers. Set to `var(--lr-size-1rem)` for `bottom`; only read when `prefers-reduced-motion` is `no-preference`."
+        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Vertical offset the panel slides in from, and back out to, for top/bottom drawers. Set to `var(--lr-size-1rem)` for `bottom`."
       }
     },
     {
@@ -2732,6 +2963,34 @@
       }
     },
     {
+      "name": "--lr-icon-fixed-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `var(--lr-size-1-5rem)`) — Inline size of the box while `fixed-width` is set; the glyph keeps `--lr-icon-size` and centers inside it."
+      }
+    },
+    {
+      "name": "--lr-icon-flip-x",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1`) — Horizontal scale factor, set to `-1` by `flip`."
+      }
+    },
+    {
+      "name": "--lr-icon-flip-y",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1`) — Vertical scale factor, set to `-1` by `flip`."
+      }
+    },
+    {
+      "name": "--lr-icon-rotate",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0deg`) — Rotation applied to the box. Written inline from the `rotate` property, so set that rather than this property."
+      }
+    },
+    {
       "name": "--lr-icon-size",
       "description": {
         "kind": "markdown",
@@ -2837,6 +3096,13 @@
       }
     },
     {
+      "name": "--lr-input-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-color-border)`) — Border color of the control row, swapped per `appearance` in the same way as `--lr-input-fill`."
+      }
+    },
+    {
       "name": "--lr-input-control-height",
       "description": {
         "kind": "markdown",
@@ -2848,6 +3114,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Outer control height floor, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-input-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-color-surface)`) — Background of the control row. Swapped per `appearance`; the documented default is `appearance=\"filled-outlined\"`'s value."
       }
     },
     {
@@ -2882,7 +3155,7 @@
       "name": "--lr-input-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-radius)`) — Corner radius of the control row. Does not vary by `size` tier."
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-radius)`) — Corner radius of the control row. Does not vary by `size` tier. `pill` swaps it to `--lr-radius-pill`."
       }
     },
     {
@@ -3390,6 +3663,13 @@
       }
     },
     {
+      "name": "--lr-overlay-arrow-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-size-0-375rem)`) — Half-width of the arrow square."
+      }
+    },
+    {
       "name": "--lr-overlay-max-inline-size",
       "description": {
         "kind": "markdown",
@@ -3408,6 +3688,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-page-rail>`** (default: `var(--lr-size-24rem)`) — Block size of the virtualized rail."
+      }
+    },
+    {
+      "name": "--lr-pagination-control-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** — Resting background of every control; defaults from the `appearance` variant."
+      }
+    },
+    {
+      "name": "--lr-pagination-control-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** — Resting border color of every control; defaults from the `appearance` variant."
       }
     },
     {
@@ -3708,21 +4002,21 @@
       "name": "--lr-rating-empty-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-rating>`** (default: `var(--lr-color-border)`) — Unfilled-star color, retained during hover preview."
+        "value": "**`<lr-rating>`** (default: `var(--lr-color-border)`) — Unfilled-symbol color, retained during hover preview."
       }
     },
     {
       "name": "--lr-rating-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-rating>`** (default: `var(--lr-color-warning)`) — Filled-star color."
+        "value": "**`<lr-rating>`** (default: `var(--lr-color-warning)`) — Filled-symbol color."
       }
     },
     {
       "name": "--lr-rating-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-rating>`** (default: `var(--lr-font-size-xl)`) — Star size."
+        "value": "**`<lr-rating>`** (default: `var(--lr-font-size-xl)`) — Symbol size. Each `size` step rewrites it; the `m` default reproduces the treatment this component had before `size` existed."
       }
     },
     {
@@ -4013,6 +4307,20 @@
       }
     },
     {
+      "name": "--lr-select-tag-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** — Chip text size. Doesn't vary by `size`."
+      }
+    },
+    {
+      "name": "--lr-select-tag-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** — Padding inside a `multiple`-mode chip. Doesn't vary by `size`."
+      }
+    },
+    {
       "name": "--lr-select-trigger-height",
       "description": {
         "kind": "markdown",
@@ -4101,6 +4409,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-skeleton>`** (default: `100%`) — Inline size of the placeholder."
+      }
+    },
+    {
+      "name": "--lr-slider-track-length",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `var(--lr-size-10rem)`) — Length of the track in `orientation=\"vertical\"`; the horizontal track fills its container instead. Declared as an inline `var()` fallback (never on `:host`), so a consumer override at any ancestor wins."
       }
     },
     {
@@ -4657,6 +4972,20 @@
       }
     },
     {
+      "name": "--lr-tag-remove-hover-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tag>`** (default: `color-mix(in srgb, currentColor 16%, transparent)`) — Background of the remove button on hover."
+      }
+    },
+    {
+      "name": "--lr-tag-remove-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tag>`** (default: `var(--lr-badge-radius)`) — Corner radius of the remove button, defaulting to the tag's own corner so retuning one retunes both."
+      }
+    },
+    {
       "name": "--lr-task-list-compact-body-padding",
       "description": {
         "kind": "markdown",
@@ -4825,10 +5154,38 @@
       }
     },
     {
+      "name": "--lr-textarea-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-textarea>`** (default: `var(--lr-color-border)`) — Border color of the field, swapped per `appearance` in the same way as `--lr-textarea-fill`."
+      }
+    },
+    {
+      "name": "--lr-textarea-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-textarea>`** (default: `var(--lr-color-surface)`) — Background of the field. Swapped per `appearance`; the documented default is `appearance=\"filled-outlined\"`'s value."
+      }
+    },
+    {
+      "name": "--lr-textarea-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-textarea>`** — Font size of the native textarea, scaled by `size`."
+      }
+    },
+    {
       "name": "--lr-textarea-max-block-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-textarea>`** (default: `none`) — Maximum auto-grown block size before the textarea scrolls."
+      }
+    },
+    {
+      "name": "--lr-textarea-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-textarea>`** — Padding of the native textarea, scaled by `size`."
       }
     },
     {
@@ -5403,6 +5760,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-success)`) — Success rail dot."
+      }
+    },
+    {
+      "name": "--lr-tooltip-arrow-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tooltip>`** (default: `var(--lr-size-0-375rem)`) — Half-width of the arrow square."
       }
     },
     {

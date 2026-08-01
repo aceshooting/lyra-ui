@@ -29,7 +29,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-button` · forms/button/button.js — a generic action-button primitive.
 - `lr-icon-button` · forms/icon-button/icon-button.js — an accessible icon-only action button.
 - `lr-input` · forms/input/input.js — a single-line plain-text input primitive, the `lr-*` equivalent of a plain `wa-input`, form-associated via the `FormAssociated` mixin (sa...
-- `lr-number-input` · forms/input/number-input.js — a numeric-input alias with the complete `lr-input` form, validation, and native editing contract.
+- `lr-number-input` · forms/input/number-input.js — a numeric field with the complete `lr-input` form, validation, and native editing contract, plus its own increment/decrement stepper pair.
 - `lr-time-input` · forms/input/time-input.js — a native time-input alias with Lyra form chrome and events.
 - `lr-phone-input` · forms/phone-input/phone-input.js — a country-aware telephone field whose form value is canonical E.164.
 - `lr-time-range` · forms/time-range/time-range.js — a two-handle brush/scrubber over a numeric domain.
@@ -44,7 +44,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-checkbox-group` · forms/checkbox-group/checkbox-group.js — a form-associated group of `<lr-checkbox>` elements.
 - `lr-token-input` · forms/token-input/token-input.js — an editable, form-associated list of removable tokens.
 - `lr-code-editor` · forms/code-editor/code-editor.js — dependency-free multiline code editing surface with optional line numbers.
-- `lr-color-picker` · forms/color-picker/color-picker.js — a form-associated native color picker with label, hint and error chrome.
+- `lr-color-picker` · forms/color-picker/color-picker.js — a form-associated colour picker: a compact swatch trigger that opens a popover with a saturation/brightness grid, a hue slider, an option...
 - `lr-emoji-picker` · forms/emoji-picker/emoji-picker.js — a searchable, keyboard-navigable, form-associated emoji picker.
 - `lr-rubric-form` · forms/rubric-form/rubric-form.js — a configurable annotation rubric (LangSmith annotation-queue style): score, category, and freeform-comment keys with a submit-and-next fl...
 - `lr-locale-picker` · forms/locale-picker/locale-picker.js — a closed-list locale switcher over the library's own locale registry.
@@ -54,7 +54,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-sparkline` · data/sparkline/sparkline.js — a zero-dependency inline SVG trend chart.
 - `lr-stat` · data/stat/stat.js — a KPI/stat card.
 - `lr-table` · data/table/table.js — a sort/select-aware data table.
-- `lr-pagination` · data/pagination/pagination.js — controlled, server-friendly page navigation with an editable page jump and optional item-range summary.
+- `lr-pagination` · data/pagination/pagination.js — controlled, server-friendly page navigation: a numbered page list with elided gaps, optional first/last controls, an optional item-range...
 - `lr-gauge` · data/gauge/gauge.js — a radial, full-circle ring, or linear meter.
 - `lr-word-cloud` · data/word-cloud/word-cloud.js — a zero-dependency SVG word/tag cloud.
 - `lr-heatmap` · data/heatmap/heatmap.js — a Canvas heatmap with a DPR-aware, resize-aware redraw loop, in one of two `mode`s:
@@ -125,13 +125,13 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-kbd` · overlays/kbd/kbd.js — a small chip representing a keyboard shortcut, rendering the platform-appropriate glyph for cross-platform modifier keys (⌘ on macOS, "Ct...
 - `lr-popup` · overlays/popup/popup.js — the low-level anchored-positioning primitive.
 - `lr-popover` · overlays/overlay/popover.js — a click-triggered, light-dismiss floating surface.
-- `lr-tooltip` · overlays/overlay/tooltip.js — a localized, hover/focus tooltip for a consumer-owned trigger.
+- `lr-tooltip` · overlays/overlay/tooltip.js — a localized tooltip for a consumer-owned trigger.
 - `lr-dropdown` · overlays/overlay/dropdown.js — a menu-role popover for action lists and consumer-supplied menu content.
 - `lr-spinner` · overlays/spinner/spinner.js — an indeterminate busy indicator.
 - `lr-progress-bar` · overlays/progress/progress-bar.js — a determinate or indeterminate progress indicator.
 - `lr-progress-ring` · overlays/progress/progress-ring.js — a circular determinate or indeterminate progress indicator.
 - `lr-badge` · overlays/badge/badge.js — a compact status label.
-- `lr-tag` · overlays/badge/tag.js — a semantic alias for the compact badge treatment.
+- `lr-tag` · overlays/badge/tag.js — the compact badge treatment with tag semantics: the same `variant`/`size`/ `appearance`/`pill`/`attention` surface as `<lr-badge>`, plus...
 - `lr-callout` · overlays/callout/callout.js — an inline message surface for status, warning, and error content.
 - `lr-rating` · overlays/rating/rating.js — a keyboard-accessible star rating control.
 
@@ -147,7 +147,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-poll-status` · utility/poll-status/poll-status.js — a "next scheduled refresh" countdown with a built-in pause control: a ticking `M:SS` display counting down to the next scheduled action,...
 - `lr-mention-popover` · utility/mention-popover/mention-popover.js — a caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete inside a plain-text `<textarea>`/`<input>...
 - `lr-diff-view` · utility/diff-view/diff-view.js — a real two-string line diff (Myers/LCS-style alignment), rendered as interleaved unified-diff output -- not diff-flavored syntax highligh...
-- `lr-icon` · utility/icon/icon.js — a tiny dependency-free SVG icon primitive using a named path set.
+- `lr-icon` · utility/icon/icon.js — an SVG icon primitive.
 - `lr-visually-hidden` · utility/visually-hidden/visually-hidden.js — hides its content from sight while leaving it in the accessibility tree, so screen readers still announce it.
 - `lr-divider` · utility/divider/divider.js — a themeable semantic separator.
 - `lr-format-number` · utility/format/format-number.js — locale-aware `Intl.NumberFormat` output.
@@ -170,7 +170,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-file-icon` · media/file-icon/file-icon.js — Displays a localized, tokenized file-type badge from a MIME type.
 - `lr-media-card` · media/media-card/media-card.js — a lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message body (e.g.
 - `lr-attachment-trigger` · media/attachment-trigger/attachment-trigger.js — a compact attach affordance designed for a chat composer's leading slot (see `<lr-chat-composer>`'s own `leading` slot, which this drops...
-- `lr-avatar` · media/avatar/avatar.js — a small, fixed-size identity marker: default-slotted icon/glyph content, an image, or an initials fallback, in that priority order (which...
+- `lr-avatar` · media/avatar/avatar.js — a small, fixed-size identity marker: default-slotted icon/glyph content, an image, an `icon`-slotted fallback glyph, or an initials fallb...
 - `lr-animated-image` · media/animated-image/animated-image.js — - displays an animated GIF/APNG/WebP with a play/pause control, defaulting to a frozen first frame both at rest and automatically under `...
 - `lr-animation` · media/animation/animation.js — `<lr-animation>` declaratively animates its single slotted child through the native Web Animations API: a small curated preset catalog (`...
 - `lr-avatar-group` · media/avatar-group/avatar-group.js — stacks a set of slotted `<lr-avatar>` children into a single overlapping row (negative-margin overlap, ring border so each circle reads a...
