@@ -3,8 +3,10 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './timeline-item.styles.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import type { LyraVariant } from '../../../internal/variants.js';
 
-export type TimelineItemVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+/** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
+export type TimelineItemVariant = LyraVariant;
 
 const timelineItemVariantConverter = {
   fromAttribute(value: string | null): TimelineItemVariant {
@@ -127,8 +129,7 @@ export class LyraTimelineItem extends LyraElement {
 
   /** Tone of the marker. `'neutral'` (default) is a plain past event; `'brand'` is highlighted/
    *  informational; `'success'` is completed positively (e.g. a successful deploy); `'warning'` needs
-   *  attention; `'danger'` is a failed/error event. Same five-value set as `BadgeVariant`/
-   *  `CalloutVariant`. */
+   *  attention; `'danger'` is a failed/error event. The library-wide `LyraVariant` set. */
   @property({ reflect: true, converter: timelineItemVariantConverter }) variant: TimelineItemVariant = 'neutral';
 
   /** Marks this as the current/in-progress item (e.g. "the agent is executing this step right now"),

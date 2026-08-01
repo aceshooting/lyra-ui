@@ -44,6 +44,16 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  /* The fill hover already uses, mixed further toward --lr-color-mix-partner (the text colour), so
+     the pressed step is always deeper than the hover step whichever way the theme runs. */
+  [part='toggle']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    color: var(--lr-color-brand);
+  }
   [part='toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -113,6 +123,15 @@ export const styles = css`
   [part='resizer']:hover [part='resizer-track'] {
     background: var(--lr-color-brand);
   }
+  /* The drag itself: pointer capture keeps :active on the resizer for the whole gesture, so the
+     track stays at the deeper mix until the pointer is released. */
+  [part='resizer']:active [part='resizer-track'] {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part='resizer']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -126,9 +145,15 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     inline-size: min(var(--lr-app-rail-mobile-width), 85vw);
-    background: var(--lr-color-surface);
+    /* [part="panel"] is the mobile OVERLAY promotion of this element (see the note above the
+       [part="base"] rule) -- a modal drawer over a scrim, so it takes the modal-panel surface.
+       [part="base"], the docked rail in the page's own layout flow, deliberately keeps
+       --lr-color-surface: it is resting chrome, not an overlay. */
+    background: var(--lr-color-surface-overlay);
     padding-block-end: var(--lr-safe-area-bottom);
-    box-shadow: var(--lr-shadow);
+    /* Modal layer, lower step: an edge-anchored drawer flush with three viewport edges, matching
+       lr-drawer rather than a free-floating centered dialog. */
+    box-shadow: var(--lr-shadow-l);
     overflow-y: auto;
     /* Pin the cross axis (see [part="base"]): overflow-y alone forces overflow-x to auto. */
     overflow-x: clip;

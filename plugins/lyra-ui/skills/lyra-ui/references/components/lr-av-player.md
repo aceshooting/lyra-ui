@@ -6,7 +6,7 @@
 - **Class** `LyraAvPlayer`, also available unregistered from `@aceshooting/lyra-ui/components/media/av-player/av-player.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 15 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -85,7 +85,10 @@ srgb, var(--lr-color-danger) 35%, transparent)`) — `data-tone="danger"`; and
 `--lr-av-player-marker-neutral-bg` (default `color-mix(in srgb, var(--lr-color-text) 25%,
 transparent)`) — `data-tone="neutral"`. Each can be set on the element or on any ancestor without
 hijacking the shared `--lr-color-success`/`-warning`/`-danger`/`-brand`/`-text` tokens used
-elsewhere in the theme.
+elsewhere in the theme. `--lr-av-player-marker-fill` is the resting fill a marker actually renders,
+resolved per tone from those `-bg` knobs; its hover and pressed states are color mixes taken from
+that value, so setting it directly retints all three states of one marker at once — retint a whole
+tone through the matching `-bg` knob instead.
 
 Two further cue-state properties tint the transcript: `--lr-av-player-cue-current-bg` (default
 `var(--lr-color-brand-quiet)`) is the background of the `cue-current` row the playhead is inside,

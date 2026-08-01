@@ -11,8 +11,8 @@ export const styles = css`
        below: per the CSS overflow spec, pinning one axis to a non-'visible' value forces the
        other axis's *used* value to 'auto' too if left unset -- which can paint a thin, empty
        phantom scrollbar on a classic (non-overlay) scrollbar platform even when the steps
-       actually fit (the exact bug already found and fixed once on lr-tabs). The mask-image edge
-       fade mirrors lr-tabs'/lr-segmented's identical horizontally-scrolling-row treatment; it now
+       actually fit (the exact bug already found and fixed once on lr-tab-group). The mask-image edge
+       fade mirrors lr-tab-group'/lr-segmented's identical horizontally-scrolling-row treatment; it now
        lives in its own overflow-gated rule below, and is reset to 'none' in the vertical-axis
        rules so it can never bleed through a higher-specificity match that doesn't also redeclare
        it (CSS cascades per-property, not per-rule). */
@@ -110,6 +110,17 @@ export const styles = css`
      without needing !important (mirrors lr-attachment-trigger's identical fix). */
   :where([part="step"]):hover:where(:not([aria-disabled="true"])) {
     background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-text);
+  }
+  /* The same brand-quiet fill, mixed further toward --lr-color-mix-partner: a step being pressed
+     is a visible tier past the one the pointer is only resting on. Same :not() guard and the same
+     zeroed specificity as the hover rule above. */
+  :where([part="step"]):active:where(:not([aria-disabled="true"])) {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-color-text);
   }
   [part="step"]:focus-visible {

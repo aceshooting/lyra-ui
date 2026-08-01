@@ -31,6 +31,7 @@ export const styles = css`
   /* Mouse users get the same "this is interactive" feedback keyboard users already get from the
      focus-visible ring below -- matching dataset-viewer's cell-highlight-action hover treatment. */
   [part='cell-highlight-action']:hover, lr-virtual-list::part(cell-highlight-action):hover { background: var(--lr-color-brand-quiet); }
+  [part='cell-highlight-action']:active, lr-virtual-list::part(cell-highlight-action):active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='cell-highlight-action']:focus-visible, lr-virtual-list::part(cell-highlight-action):focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
   [part='rows'] { --lr-virtual-list-height: var(--lr-size-20rem); min-inline-size: max-content; }
   .empty-note, [part='error'] { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }

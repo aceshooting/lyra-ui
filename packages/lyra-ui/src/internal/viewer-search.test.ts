@@ -2,14 +2,28 @@ import { expect } from '@open-wc/testing';
 import { Announcer } from './announcer.js';
 import { announceSearchResult } from './viewer-search.js';
 
+/**
+ * Mirrors `resolveLyraString()` closely enough to prove which key
+ * `announceSearchResult()` reaches for: pluralized entries are CLDR-category
+ * objects reduced through `Intl.PluralRules` before interpolation. The locale
+ * is pinned to English here because the templates below are the English ones.
+ */
 function localizeStub(key: string, _fallback: string | undefined, values?: Record<string, string | number>): string {
-  const templates: Record<string, string> = {
+  const templates: Record<string, string | Record<string, string>> = {
     viewerSearchNoMatches: 'No matches',
-    viewerSearchMatchCount: '{count} match',
-    viewerSearchMatchCountPlural: '{count} matches',
+    viewerSearchMatchCount: { one: '{count} match', other: '{count} matches' },
     viewerSearchActiveMatch: 'Match {current} of {total}',
   };
-  let text = templates[key] ?? key;
+  const message = templates[key] ?? key;
+  const count = values?.count;
+  let text: string;
+  if (typeof message === 'string') {
+    text = message;
+  } else if (typeof count === 'number') {
+    text = message[new Intl.PluralRules('en').select(count)] ?? message.other!;
+  } else {
+    text = message.other!;
+  }
   for (const [k, v] of Object.entries(values ?? {})) text = text.replace(`{${k}}`, String(v));
   return text;
 }

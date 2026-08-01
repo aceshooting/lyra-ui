@@ -109,7 +109,7 @@ export const AccessibleTableFormattingAndTotals: Story = {
           position: static;
           inline-size: auto;
           block-size: auto;
-          margin-block-start: var(--lr-spacing-medium);
+          margin-block-start: var(--lr-space-m);
           overflow: visible;
           clip: auto;
           white-space: normal;

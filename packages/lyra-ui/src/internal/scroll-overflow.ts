@@ -13,7 +13,7 @@ const TOLERANCE_PX = 1;
  * `SCROLL_OVERFLOW_ATTRIBUTE` on it so styles can gate an edge affordance (the
  * `--lr-scroll-fade-size` mask) on there being something to scroll to.
  *
- * Why this exists: the four components carrying that mask (`lr-segmented`, `lr-tabs`,
+ * Why this exists: the four components carrying that mask (`lr-segmented`, `lr-tab-group`,
  * `lr-stepper`, `lr-timeline`) used to paint it unconditionally, deliberately -- "a low-cost
  * affordance for an overflowing row [that] does not need scroll-position JavaScript or observers".
  * The cost of skipping the measurement is not low, though: on a track that fits, the fade is pure

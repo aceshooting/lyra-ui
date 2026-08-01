@@ -4,8 +4,12 @@ export const styles = css`
   :host {
     display: block;
     --lr-combobox-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
-    --lr-combobox-trigger-min-height: var(--lr-size-2-5rem);
-    --lr-combobox-font-size: var(--lr-font-size-md);
+    /* Height and text size come from the ONE shared form-control ladder (internal/sizes.styles.ts)
+       rather than a sixth private copy of the same six values. The ladder matches both spellings of
+       every tier in one selector list, so size="small" and size="s" resolve identically here with
+       no per-component alias rules. */
+    --lr-combobox-trigger-min-height: var(--lr-form-control-height);
+    --lr-combobox-font-size: var(--lr-form-control-font-size);
     --lr-combobox-tag-padding: var(--lr-size-0-1rem) var(--lr-size-0-4rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-sm);
     --lr-combobox-expand-size: var(--lr-size-1-75rem);
@@ -22,43 +26,43 @@ export const styles = css`
        setting the property from anywhere (inline style, an ancestor, an outer-tree rule) pins an
        exact height. */
   }
+  :host([pill]) {
+    --lr-combobox-radius: var(--lr-radius-pill);
+  }
+  /* What remains per tier is this component's OWN geometry -- the selected-tag chip and the
+     decorative expand glyph -- which is not a form-control height/text ladder and so is not part of
+     the shared one. Each tier matches both spellings for the same reason sizes.styles.ts does: the
+     shared ladder accepts size="small", and a control whose tags silently ignored it would be worse
+     than one that never accepted it. */
   :host([size='2xs']) {
     --lr-combobox-trigger-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
-    --lr-combobox-trigger-min-height: var(--lr-size-1-25rem);
-    --lr-combobox-font-size: var(--lr-font-size-2xs);
     --lr-combobox-tag-padding: 0 var(--lr-size-0-25rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-2xs);
     --lr-combobox-expand-size: var(--lr-size-1rem);
   }
   :host([size='xs']) {
     --lr-combobox-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    --lr-combobox-trigger-min-height: var(--lr-size-1-5rem);
-    --lr-combobox-font-size: var(--lr-font-size-xs);
     --lr-combobox-tag-padding: 0 var(--lr-size-0-25rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-2xs);
     --lr-combobox-expand-size: var(--lr-size-1rem);
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-combobox-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
-    --lr-combobox-trigger-min-height: var(--lr-size-1-875rem);
-    --lr-combobox-font-size: var(--lr-font-size-sm);
     --lr-combobox-tag-padding: var(--lr-size-0-05rem) var(--lr-size-0-3125rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-xs);
     --lr-combobox-expand-size: var(--lr-size-1-25rem);
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-combobox-trigger-padding: var(--lr-space-s) var(--lr-space-m);
-    --lr-combobox-trigger-min-height: var(--lr-size-3rem);
-    --lr-combobox-font-size: var(--lr-font-size-lg);
     --lr-combobox-tag-padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-md-sm);
   }
   :host([size='xl']) {
     --lr-combobox-trigger-padding: var(--lr-space-m) var(--lr-space-l);
-    --lr-combobox-trigger-min-height: var(--lr-size-3-5rem);
-    --lr-combobox-font-size: var(--lr-font-size-xl);
     --lr-combobox-tag-padding: var(--lr-size-0-25rem) var(--lr-size-0-625rem);
-    --lr-combobox-tag-font-size: var(--lr-font-size-md);
+    --lr-combobox-tag-font-size: var(--lr-font-size-m);
   }
   [part='form-control-label'] {
     display: block;
@@ -144,7 +148,7 @@ export const styles = css`
   }
   /* Same compact-chip-remove pattern as lr-chip's [part='remove-button']: the interactive hit
      target meets the shared --lr-icon-button-size floor, while the visible glyph stays a
-     compact 1rem close icon (font-size: var(--lr-font-size-md), independent of the tag's own
+     compact 1rem close icon (font-size: var(--lr-font-size-m), independent of the tag's own
      --lr-combobox-tag-font-size, which shrinks well below that at size="xs"/"s") -- a selected
      tag is a small inline pill, so growing its whole box to 40px would visually balloon the tags
      row. The negative margin pulls the enlarged hit area back in so the *visible* tag footprint
@@ -163,7 +167,7 @@ export const styles = css`
     color: inherit;
     padding: 0;
     line-height: var(--lr-line-height-none);
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
   }
 
   [part='combobox-input'] {
@@ -220,11 +224,23 @@ export const styles = css`
   [part='clear-button']:hover {
     color: var(--lr-color-text);
   }
+  /* Pressed adds what hover cannot: hover has already spent the colour step (quiet -> full text),
+     so the press is a background pad mixed off the row's own surface. Stronger than hover by
+     construction -- --lr-color-mix-active is the larger of the two shared knobs. */
+  [part='clear-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-radius: var(--lr-radius);
+  }
   /* Mirrors <lr-chip>'s own [part='remove-button']:hover -- a currentColor-derived tint rather
      than a fixed token, since this part's rest-state color is 'inherit' (the tag's own text
      color), not a dedicated quiet token to darken. */
   [part='tag__remove-button']:hover {
     background: color-mix(in srgb, currentColor 16%, transparent);
+  }
+  /* Same currentColor idiom as the hover above (this part's rest color is the tag's inherited text
+     color, not a token), taken to the shared pressed strength -- 22% against the hover's 16%. */
+  [part='tag__remove-button']:active {
+    background: color-mix(in srgb, currentColor var(--lr-color-mix-active), transparent);
   }
   [part='clear-button']:focus-visible,
   [part='tag__remove-button']:focus-visible {
@@ -246,7 +262,8 @@ export const styles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
+    box-shadow: var(--lr-shadow-m);
     /* Closed state: invisible + slightly raised. visibility (not
        display:none) so opacity/transform can actually transition; hit-testing
        and a11y exposure stay off since this part is already position:fixed. */
@@ -295,6 +312,16 @@ export const styles = css`
   [part='option'][data-active] {
     background: var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet));
   }
+  /* Mixing the hover tint itself (not the bare token) keeps a consumer who retinted
+     --lr-combobox-option-active-bg in charge of both states: the pressed row is always their
+     colour, one shared step further toward the text colour. */
+  [part='option']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part='option'][aria-selected='true'] {
     /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset
        rendering is byte-for-byte unchanged) -- so a consumer can retheme just the selected row
@@ -338,7 +365,10 @@ export const styles = css`
     padding: 0 var(--lr-space-xs);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-text-quiet);
+    /* Full-strength text, not the quiet tone: quiet-on-quiet measured 4.25:1, under WCAG 1.4.3's
+       4.5:1. The badge already reads as secondary from its size and its tinted pill; borrowing the
+       muted text colour on top of a tinted fill was double de-emphasis that cost legibility. */
+    color: var(--lr-color-text);
     font-size: var(--lr-font-size-xs);
   }
   [part='option-overflow'],

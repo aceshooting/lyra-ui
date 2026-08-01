@@ -588,17 +588,13 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
           )}&gt;</span
         >
         ${!expanded && hasChildren
-          ? html`<span class="preview">${this.localize(
-              children.length + textNodes.length + commentNodes.length + cdataNodes.length + piNodes.length === 1
-                ? 'xmlViewerChildCount'
-                : 'xmlViewerChildCountPlural',
-              undefined,
-              {
-                count: getNumberFormat(this.effectiveLocale).format(
-                  children.length + textNodes.length + commentNodes.length + cdataNodes.length + piNodes.length,
-                ),
-              },
-            )}</span>`
+          ? html`<span class="preview">${this.localize('xmlViewerChildCount', undefined, {
+              count: getNumberFormat(this.effectiveLocale).format(
+                children.length + textNodes.length + commentNodes.length + cdataNodes.length + piNodes.length,
+              ),
+              pluralCount:
+                children.length + textNodes.length + commentNodes.length + cdataNodes.length + piNodes.length,
+            })}</span>`
           : nothing}
         ${this.renderCopyButton(() => new XMLSerializer().serializeToString(el), toggleLabel)}
       </div>

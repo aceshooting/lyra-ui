@@ -40,6 +40,12 @@ export const styles = css`
   :where([part='trigger']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
+  /* Press-and-hold is this component's entire interaction, so the pressed fill is not decoration:
+     it is the "I am registering your hold" signal, and it appears the instant the pointer goes
+     down -- before the recording state and its pulse ring have anything to show. */
+  :where([part='trigger']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   :host([data-state='recording']) [part='trigger'] {
     border-color: var(--lr-push-to-talk-recording-color, var(--lr-color-danger));
     color: var(--lr-push-to-talk-recording-color, var(--lr-color-danger));

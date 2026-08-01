@@ -466,7 +466,7 @@ describe('lr-csv-viewer', () => {
       // Per the CSS overflow spec, pinning only overflow-x to a non-'visible' value forces
       // overflow-y's used value to 'auto' too (never stays 'visible') -- risking a phantom/empty
       // vertical scrollbar from sub-pixel rounding on a grid that never actually overflows
-      // vertically (the same bug shape already fixed on lr-tabs). Pin both axes explicitly.
+      // vertically (the same bug shape already fixed on lr-tab-group). Pin both axes explicitly.
       const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
       const restore = fetchText(CSV);
       try {

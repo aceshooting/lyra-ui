@@ -8,16 +8,23 @@
 // and Angular templates never go through that type graph, so editors need these small JSON data
 // files instead -- see https://github.com/microsoft/vscode-custom-data (schema version 1.1) and
 // https://github.com/JetBrains/web-types for the formats. custom-elements.json is the single
-// source of truth this script reads from; it never re-parses TypeScript source itself, so an
-// attribute typed as an aliased union (e.g. `ButtonVariant`, not its expanded literal members)
-// only gets its type name recorded, not an enumerated value list -- the manifest doesn't carry
-// the expansion either.
+// source of truth for the components themselves. The manifest records an aliased union by NAME
+// (`ButtonVariant`), never its expansion, so ~200 attributes across ~160 aliases used to ship with
+// no enumerated values at all -- meaning no editor could offer `variant="…"` completion for any of
+// them, which is most of the library's closed string sets. `readTypeAliases()` below resolves those
+// names by scanning the source for their declarations, so the value lists are real.
+//
+// A regex, not the TypeScript API: this repo pins TypeScript 7's native compiler, which ships no
+// JavaScript compiler API at all (`ts.createProgram` and friends are simply absent), so every
+// AST-based tool is unavailable. That is workable here only because the contributor contract
+// forbids `enum` and requires these sets to be colocated exported literal unions -- a narrow,
+// uniform shape a regex reads reliably. A declaration it cannot parse is skipped, never guessed at.
 //
 // Wired into `prepack`, right after `manifest`, so these never drift from a freshly regenerated
 // custom-elements.json before publish. Also runnable directly: `node
 // scripts/generate-editor-data.mjs` (or `pnpm run generate-editor-data`) from `packages/lyra-ui/`
 // any time after `pnpm run manifest`.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -44,9 +51,60 @@ const LITERAL = `(?:'[^']*'|"[^"]*"|-?\\d+(?:\\.\\d+)?|null|undefined|true|false
 const LITERAL_UNION = new RegExp(`^\\s*${LITERAL}(?:\\s*\\|\\s*${LITERAL})*\\s*$`);
 const LITERAL_TOKEN = /'([^']*)'|"([^"]*)"|(-?\d+(?:\.\d+)?)/g;
 
+/**
+ * Every `export type Name = 'a' | 'b';` in the source tree, as `Name -> "'a' | 'b'"`.
+ *
+ * Only a declaration whose right-hand side is entirely a literal union is recorded; one that
+ * references another type, a mapped type or anything else is skipped rather than half-parsed. A
+ * name declared twice with different members is dropped entirely — an ambiguous expansion would
+ * offer an editor values that are wrong for one of the two components.
+ */
+function readTypeAliases(root) {
+  const sources = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) sources.push(full);
+    }
+  };
+  walk(root);
+
+  const aliases = new Map();
+  const ambiguous = new Set();
+  // `export type Name =` up to the terminating `;`, across line breaks.
+  const DECLARATION = /export\s+type\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*([^;]+);/g;
+  for (const file of sources) {
+    for (const match of readFileSync(file, 'utf8').matchAll(DECLARATION)) {
+      const [, name, rawBody] = match;
+      const body = rawBody.replace(/\s+/g, ' ').trim().replace(/^\|\s*/, '');
+      if (!LITERAL_UNION.test(body)) continue;
+      const existing = aliases.get(name);
+      if (existing !== undefined && existing !== body) ambiguous.add(name);
+      aliases.set(name, body);
+    }
+  }
+  for (const name of ambiguous) aliases.delete(name);
+  return { aliases, ambiguous };
+}
+
+const { aliases: TYPE_ALIASES, ambiguous: AMBIGUOUS_ALIASES } = readTypeAliases(join(packageDir, 'src'));
+
+/**
+ * Expands an attribute's `type.text` to a literal union where possible: either it already is one,
+ * or it names an alias (optionally with `| undefined`, which an attribute can't carry anyway).
+ */
+function expandTypeText(typeText) {
+  if (!typeText) return undefined;
+  if (LITERAL_UNION.test(typeText)) return typeText;
+  const bare = typeText.replace(/\s*\|\s*(?:undefined|null)\s*/g, '').trim();
+  return TYPE_ALIASES.get(bare);
+}
+
 function literalValues(typeText) {
-  if (!typeText || !LITERAL_UNION.test(typeText)) return undefined;
-  const values = [...typeText.matchAll(LITERAL_TOKEN)].map((match) => match[1] ?? match[2] ?? match[3]);
+  const expanded = expandTypeText(typeText);
+  if (!expanded) return undefined;
+  const values = [...expanded.matchAll(LITERAL_TOKEN)].map((match) => match[1] ?? match[2] ?? match[3]);
   return values.length ? values.map((name) => ({ name })) : undefined;
 }
 
@@ -65,14 +123,22 @@ function attributeDescription(attribute) {
   return text ? markdown(text) : undefined;
 }
 
-// A bare identifier-shaped `type.text` (e.g. `boolean`, `string`, `ButtonVariant`) can be recorded
-// as web-types' single-element `value.type` array; a union, lookup type, or anything else with
-// non-identifier characters is left undescribed structurally (still covered in prose by
-// `attributeDescriptionText` above) rather than guessed at.
+// web-types' `value.type` is a union expressed as an array, so a closed string set is recorded as
+// its literal members (`["'top'", "'bottom'"]`) rather than an opaque alias name — that array is
+// what WebStorm/IntelliJ turn into a completion list. An alias that expands (see `expandTypeText`)
+// is expanded here too; a bare identifier-shaped type that does not (`boolean`, `string`) is
+// recorded as itself; anything else is left undescribed structurally, still covered in prose by
+// `attributeDescriptionText` above, rather than guessed at.
 const SIMPLE_TYPE_NAME = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 function webTypesAttributeValue(attribute) {
   const text = attribute.type?.text;
-  return text && SIMPLE_TYPE_NAME.test(text) ? { type: [text] } : undefined;
+  if (!text) return undefined;
+  const expanded = expandTypeText(text);
+  if (expanded) {
+    const members = expanded.split('|').map((member) => member.trim()).filter(Boolean);
+    if (members.length) return { type: members };
+  }
+  return SIMPLE_TYPE_NAME.test(text) ? { type: [text] } : undefined;
 }
 
 function escapeTableCell(text) {

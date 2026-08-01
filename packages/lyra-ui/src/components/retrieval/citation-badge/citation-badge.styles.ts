@@ -67,6 +67,13 @@ export const styles = css`
   [part='base']:hover {
     border-color: var(--lr-citation-badge-accent);
   }
+  /* Pressed goes further than the hover border alone: the badge's own per-status fill mixed toward
+     --lr-color-mix-partner. That works for the 'default' status too, whose fill is transparent --
+     the mix simply resolves to the partner at --lr-color-mix-active alpha. */
+  [part='base']:active {
+    border-color: var(--lr-citation-badge-accent);
+    background: color-mix(in oklab, var(--lr-citation-badge-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -90,7 +97,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    box-shadow: var(--lr-shadow-m);
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-1-4);
     color: var(--lr-color-text);

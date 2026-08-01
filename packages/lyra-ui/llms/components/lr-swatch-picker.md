@@ -17,8 +17,10 @@ A single-select picker over a small, fixed set of color swatches with the WAI-AR
 `radiogroup` contract built in: `role="radiogroup"`/`role="radio"`, roving tabindex, automatic
 activation (click or arrow-key move both select immediately, like a native radio group), cyclic
 Arrow/Home/End navigation. First-party invention (no Web Awesome equivalent). Distinct from
-`lr-color-picker`'s freeform native color input — this picks exactly one of N designer-chosen
-named colors, the shape apps otherwise hand-roll as a row of round accent-color buttons.
+`lr-color-picker`, which is a freeform picker over the whole colour space — this picks exactly one
+of N designer-chosen named colors, the shape apps otherwise hand-roll as a row of round
+accent-color buttons. Its `options` are the *only* choices; a `lr-color-picker`'s `swatches` are a
+shortcut list alongside a grid, a hue ramp and a text field that can still express any colour.
 
 **Properties:**
 - `options: SwatchOption[] = []` (attribute: false) — `SwatchOption { value: string; color: string;

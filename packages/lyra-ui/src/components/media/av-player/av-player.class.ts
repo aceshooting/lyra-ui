@@ -146,6 +146,10 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   Background of a `[part="timeline-marker"][data-tone="danger"]`.
  * @cssprop [--lr-av-player-marker-neutral-bg=color-mix(in srgb, var(--lr-color-text) 25%, transparent)] -
  *   Background of a `[part="timeline-marker"][data-tone="neutral"]`.
+ * @cssprop --lr-av-player-marker-fill - The resting fill a `[part="timeline-marker"]` actually
+ *   renders, resolved per tone from the `--lr-av-player-marker-*-bg` knobs above. Its hover and
+ *   pressed states are colour mixes taken from this value, so setting it directly retints all
+ *   three at once for one marker; retint a whole tone through the `-bg` knob instead.
  * @cssprop [--lr-av-player-cue-current-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `[part="cue"]` the playhead is currently inside.
  * @cssprop [--lr-av-player-cue-active-match-color=var(--lr-color-warning)] - Outline color of the

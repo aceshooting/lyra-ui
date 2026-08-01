@@ -41,6 +41,15 @@ export const styles = css`
     background: color-mix(in srgb, var(--lr-color-brand) 85%, var(--lr-color-shadow));
   }
 
+  /* Pressed continues the hover's own axis (further toward --lr-color-shadow) rather than toward
+     --lr-color-mix-partner, matching <lr-document-preview>'s identical download button: the fill is
+     brand and the label is --lr-color-on-brand, so mixing toward the page text colour would lighten
+     the fill under a dark theme and eat the label's contrast. --lr-color-mix-active still sets the
+     amount, so the pressed step stays themeable with every other pressed state. */
+  [part='download-link']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-shadow) var(--lr-color-mix-active));
+  }
+
   [part='download-link']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

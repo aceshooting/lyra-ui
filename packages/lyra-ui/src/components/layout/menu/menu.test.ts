@@ -1,6 +1,8 @@
-import { fixture, expect, oneEvent, html } from "@open-wc/testing";
+import { fixture, expect, oneEvent, html, nextFrame, waitUntil } from "@open-wc/testing";
 import "./menu.js";
 import "./menu-item.js";
+import "./menu-label.js";
+import { styles as menuStyles } from "./menu.styles.js";
 import "../../forms/button/button.js";
 import "../../forms/icon-button/icon-button.js";
 import type { LyraMenu } from "./menu.js";
@@ -1700,3 +1702,475 @@ it("clamps the popup width through the shared popover-viewport-clamp token", asy
   await el.updateComplete;
   expect(renderedClamp(el, "[part='popup']")).to.equal("10px");
 });
+
+describe("nested submenus", () => {
+  const nested = () => html`
+    <lr-menu label="Row actions">
+      <button slot="trigger" id="trig" aria-label="Row actions">⋮</button>
+      <lr-menu-item value="rename" id="rename">Rename</lr-menu-item>
+      <lr-menu-item value="share" id="share">
+        Share
+        <lr-menu slot="submenu" id="sharemenu">
+          <lr-menu-item value="email" id="email">Email</lr-menu-item>
+          <lr-menu-item value="link" id="link">Copy link</lr-menu-item>
+        </lr-menu>
+      </lr-menu-item>
+      <lr-menu-item value="move" id="move">
+        Move
+        <lr-menu slot="submenu" id="movemenu">
+          <lr-menu-item value="up" id="up">Up</lr-menu-item>
+        </lr-menu>
+      </lr-menu-item>
+    </lr-menu>
+  `;
+
+  const own = (el: LyraMenu): LyraMenuItem[] =>
+    [...el.querySelectorAll(":scope > lr-menu-item")] as LyraMenuItem[];
+  const byId = (root: ParentNode, id: string): HTMLElement =>
+    root.querySelector(`#${id}`) as HTMLElement;
+  const sub = (el: LyraMenu, id: string): LyraMenu => byId(el, id) as LyraMenu;
+  const activeId = (): string =>
+    (document.activeElement as HTMLElement | null)?.id ?? "none";
+  const press = (target: HTMLElement, key: string): KeyboardEvent => {
+    const ev = new KeyboardEvent("keydown", {
+      key,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    target.dispatchEvent(ev);
+    return ev;
+  };
+  const hover = (target: HTMLElement): void => {
+    target.dispatchEvent(
+      new PointerEvent("pointerover", { bubbles: true, composed: true })
+    );
+  };
+  const wait = (ms: number): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+  const settle = async (...elements: LyraMenu[]): Promise<void> => {
+    for (const element of elements) await element.updateComplete;
+    await nextFrame();
+  };
+  const openMenu = async (el: LyraMenu): Promise<void> => {
+    (byId(el, "trig") as HTMLButtonElement).click();
+    await settle(el);
+  };
+  const centerX = (el: HTMLElement): number => {
+    const rect = el.getBoundingClientRect();
+    return rect.left + rect.width / 2;
+  };
+  const placedPopup = async (menu: LyraMenu): Promise<HTMLElement> => {
+    const popup = menu.shadowRoot!.querySelector(
+      '[part="popup"]'
+    ) as HTMLElement;
+    await waitUntil(() => popup.style.left !== "", "popup was never placed", {
+      timeout: 2000,
+    });
+    return popup;
+  };
+
+  it("renders a submenu parent with aria-haspopup and both aria-expanded states", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    const share = byId(el, "share");
+    expect(share.getAttribute("aria-haspopup")).to.equal("menu");
+    expect(share.getAttribute("aria-expanded")).to.equal("false");
+    expect(byId(el, "rename").hasAttribute("aria-haspopup")).to.equal(false);
+  });
+
+  it("still enumerates only its own items, skipping a sibling lr-menu-label and every nested item", async () => {
+    const el = (await fixture(html`
+      <lr-menu label="Row actions">
+        <button slot="trigger" id="trig">⋮</button>
+        <lr-menu-label>Group</lr-menu-label>
+        <lr-menu-item value="a" id="a">A</lr-menu-item>
+        <lr-menu-item value="share" id="share">
+          Share
+          <lr-menu slot="submenu" id="sharemenu">
+            <lr-menu-item value="email" id="email">Email</lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </lr-menu>
+    `)) as LyraMenu;
+    await openMenu(el);
+    // Every item the menu manages carries a tabindex; the label carries none,
+    // and a nested item's tabindex is owned by its own menu, not this one.
+    expect(el.querySelector("lr-menu-label")!.hasAttribute("tabindex")).to.equal(
+      false
+    );
+    expect(own(el).map((i) => i.value)).to.deep.equal(["a", "share"]);
+    expect(own(el).map((i) => i.tabIndex)).to.deep.equal([0, -1]);
+  });
+
+  it("ArrowRight opens the submenu and focuses its first item; ArrowLeft closes it and returns focus to the parent", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    const share = byId(el, "share");
+    share.focus();
+    const openEv = press(share, "ArrowRight");
+    expect(openEv.defaultPrevented).to.equal(true);
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(true);
+    expect(activeId()).to.equal("email");
+    expect(share.getAttribute("aria-expanded")).to.equal("true");
+
+    const closeEv = press(byId(el, "email"), "ArrowLeft");
+    expect(closeEv.defaultPrevented).to.equal(true);
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(false);
+    expect(el.open).to.equal(true);
+    expect(activeId()).to.equal("share");
+    expect(share.getAttribute("aria-expanded")).to.equal("false");
+  });
+
+  it("swaps the open/close arrow keys under dir=rtl", async () => {
+    const wrapper = (await fixture(html`
+      <div dir="rtl">${nested()}</div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-menu") as LyraMenu;
+    await openMenu(el);
+    const share = byId(el, "share");
+    share.focus();
+
+    // ArrowRight is "previous/close" under RTL: it must not open anything.
+    press(share, "ArrowRight");
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(false);
+
+    press(share, "ArrowLeft");
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(true);
+    expect(activeId()).to.equal("email");
+
+    press(byId(el, "email"), "ArrowRight");
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(false);
+    expect(el.open).to.equal(true);
+    expect(activeId()).to.equal("share");
+  });
+
+  it("Enter opens a submenu parent rather than selecting it", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    let selects = 0;
+    el.addEventListener("lr-menu-select", () => {
+      selects += 1;
+    });
+    const share = byId(el, "share");
+    share.focus();
+    press(share, "Enter");
+    await settle(el, sub(el, "sharemenu"));
+    expect(selects).to.equal(0);
+    expect(el.open).to.equal(true);
+    expect(sub(el, "sharemenu").open).to.equal(true);
+    expect(activeId()).to.equal("email");
+  });
+
+  it("Escape inside a submenu closes only that submenu", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    byId(el, "share").focus();
+    press(byId(el, "share"), "ArrowRight");
+    await settle(el, sub(el, "sharemenu"));
+
+    press(byId(el, "email"), "Escape");
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(false);
+    expect(el.open).to.equal(true);
+    expect(activeId()).to.equal("share");
+
+    // ...and a second Escape, now from the parent level, closes the whole menu.
+    press(byId(el, "share"), "Escape");
+    await settle(el);
+    expect(el.open).to.equal(false);
+    expect(activeId()).to.equal("trig");
+  });
+
+  it("keeps submenu keyboard navigation out of the parent menu's roving focus", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    byId(el, "share").focus();
+    press(byId(el, "share"), "ArrowRight");
+    await settle(el, sub(el, "sharemenu"));
+
+    press(byId(el, "email"), "ArrowDown");
+    await settle(el, sub(el, "sharemenu"));
+    expect(activeId()).to.equal("link");
+    // The outer roving target must still be the submenu parent, not "move".
+    expect(own(el).map((i) => i.tabIndex)).to.deep.equal([-1, 0, -1]);
+
+    // Type-ahead inside the submenu must not steal the outer menu's focus either.
+    press(byId(el, "email"), "e");
+    await settle(el, sub(el, "sharemenu"));
+    expect(activeId()).to.equal("email");
+  });
+
+  it("emits one consolidated lr-menu-select for a submenu selection and closes the whole chain", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    byId(el, "share").focus();
+    press(byId(el, "share"), "ArrowRight");
+    await settle(el, sub(el, "sharemenu"));
+
+    let count = 0;
+    el.addEventListener("lr-menu-select", () => {
+      count += 1;
+    });
+    setTimeout(() => (byId(el, "email") as LyraMenuItem).select());
+    const ev = (await oneEvent(el, "lr-menu-select")) as CustomEvent<{
+      value: string;
+    }>;
+    expect(ev.detail.value).to.equal("email");
+    await settle(el, sub(el, "sharemenu"));
+    expect(count).to.equal(1);
+    expect(sub(el, "sharemenu").open).to.equal(false);
+    expect(el.open).to.equal(false);
+    expect(activeId()).to.equal("trig");
+  });
+
+  it("keeps only one submenu open per level, and closes descendants when the parent closes", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    byId(el, "share").focus();
+    press(byId(el, "share"), "ArrowRight");
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(true);
+
+    byId(el, "move").focus();
+    press(byId(el, "move"), "ArrowRight");
+    await settle(el, sub(el, "sharemenu"), sub(el, "movemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(false);
+    expect(sub(el, "movemenu").open).to.equal(true);
+    expect(byId(el, "share").getAttribute("aria-expanded")).to.equal("false");
+
+    el.open = false;
+    await settle(el, sub(el, "movemenu"));
+    expect(sub(el, "movemenu").open).to.equal(false);
+    expect(byId(el, "move").getAttribute("aria-expanded")).to.equal("false");
+  });
+
+  it("opens a submenu on hover only after the intent delay", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    hover(byId(el, "share"));
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(false);
+
+    await wait(320);
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(true);
+    // Hover must not yank focus out of the parent menu.
+    expect(activeId()).to.not.equal("email");
+  });
+
+  it("tolerates a diagonal pointer path across a sibling on the way to the open submenu", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    hover(byId(el, "share"));
+    await wait(320);
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(true);
+
+    // Crossing "move" on the way to the submenu must not dismiss it...
+    hover(byId(el, "move"));
+    await wait(80);
+    hover(byId(el, "email"));
+    await wait(400);
+    await settle(el, sub(el, "sharemenu"), sub(el, "movemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(true);
+    expect(sub(el, "movemenu").open).to.equal(false);
+  });
+
+  it("closes an open submenu once the pointer settles somewhere else", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    hover(byId(el, "share"));
+    await wait(320);
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(true);
+
+    hover(byId(el, "rename"));
+    await settle(el, sub(el, "sharemenu"));
+    // Still open immediately after leaving -- that grace is the whole point.
+    expect(sub(el, "sharemenu").open).to.equal(true);
+    await wait(500);
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(false);
+  });
+
+  it("places the submenu on the inline-end side and mirrors that under dir=rtl", async () => {
+    const ltr = (await fixture(html`
+      <div style="position: fixed; inset-block-start: 8px; left: 50vw;">
+        ${nested()}
+      </div>
+    `)) as HTMLElement;
+    const el = ltr.querySelector("lr-menu") as LyraMenu;
+    await openMenu(el);
+    await placedPopup(el);
+    byId(el, "share").focus();
+    press(byId(el, "share"), "ArrowRight");
+    await settle(el, sub(el, "sharemenu"));
+    const ltrPopup = await placedPopup(sub(el, "sharemenu"));
+    expect(getComputedStyle(ltrPopup).position).to.equal("fixed");
+    expect(centerX(ltrPopup) > centerX(byId(el, "share"))).to.equal(true);
+
+    const rtl = (await fixture(html`
+      <div dir="rtl" style="position: fixed; inset-block-start: 8px; left: 50vw;">
+        ${nested()}
+      </div>
+    `)) as HTMLElement;
+    const rtlMenu = rtl.querySelector("lr-menu") as LyraMenu;
+    await openMenu(rtlMenu);
+    await placedPopup(rtlMenu);
+    byId(rtlMenu, "share").focus();
+    press(byId(rtlMenu, "share"), "ArrowLeft");
+    await settle(rtlMenu, sub(rtlMenu, "sharemenu"));
+    const rtlPopup = await placedPopup(sub(rtlMenu, "sharemenu"));
+    expect(centerX(rtlPopup) < centerX(byId(rtlMenu, "share"))).to.equal(true);
+  });
+
+  it("flips a submenu to the other side when the requested one does not fit", async () => {
+    const wrapper = (await fixture(html`
+      <div style="position: fixed; inset-block-start: 8px; left: calc(100vw - 90px);">
+        ${nested()}
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-menu") as LyraMenu;
+    await openMenu(el);
+    await placedPopup(el);
+    byId(el, "share").focus();
+    press(byId(el, "share"), "ArrowRight");
+    await settle(el, sub(el, "sharemenu"));
+    const popup = await placedPopup(sub(el, "sharemenu"));
+    // No room on the inline-end side at the viewport's right edge, so flip().
+    expect(centerX(popup) < centerX(byId(el, "share"))).to.equal(true);
+    expect(popup.getBoundingClientRect().right <= window.innerWidth + 1).to.equal(
+      true
+    );
+  });
+
+  it("keeps the submenu panel's own open/close transition token-driven, and drops it under reduced motion", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    const popup = sub(el, "sharemenu").shadowRoot!.querySelector(
+      '[part="popup"]'
+    ) as HTMLElement;
+    const transition = getComputedStyle(popup);
+    expect(transition.transitionProperty).to.contain("opacity");
+    expect(transition.transitionDuration).to.not.equal("0s");
+    const css = menuStyles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
+    expect(css).to.contain(
+      "@media (prefers-reduced-motion: reduce) { [part='popup'] { transition: none !important; } }"
+    );
+  });
+
+  it("never opens a disabled row's submenu, by keyboard or by pointer", async () => {
+    const el = (await fixture(html`
+      <lr-menu label="Row actions">
+        <button slot="trigger" id="trig">⋮</button>
+        <lr-menu-item value="a" id="a">A</lr-menu-item>
+        <lr-menu-item value="share" id="share" disabled>
+          Share
+          <lr-menu slot="submenu" id="sharemenu">
+            <lr-menu-item value="email" id="email">Email</lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </lr-menu>
+    `)) as LyraMenu;
+    await openMenu(el);
+    byId(el, "share").focus();
+    press(byId(el, "share"), "ArrowRight");
+    hover(byId(el, "share"));
+    await wait(320);
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(false);
+    expect(byId(el, "share").getAttribute("aria-expanded")).to.equal("false");
+  });
+
+  it("does not treat a pointerdown on the row that owns an open submenu as an outside click", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    byId(el, "share").focus();
+    press(byId(el, "share"), "ArrowRight");
+    await settle(el, sub(el, "sharemenu"));
+
+    byId(el, "share").dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, composed: true })
+    );
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(true);
+    expect(el.open).to.equal(true);
+
+    // ...while a pointerdown genuinely outside still closes the whole stack.
+    document.body.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, composed: true })
+    );
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(false);
+    expect(el.open).to.equal(false);
+  });
+
+  it("carries a three-level selection out as a single lr-menu-select on the outermost menu", async () => {
+    const el = (await fixture(html`
+      <lr-menu label="Row actions">
+        <button slot="trigger" id="trig">⋮</button>
+        <lr-menu-item value="share" id="share">
+          Share
+          <lr-menu slot="submenu" id="level2">
+            <lr-menu-item value="more" id="more">
+              More
+              <lr-menu slot="submenu" id="level3">
+                <lr-menu-item value="embed" id="embed">Embed code</lr-menu-item>
+              </lr-menu>
+            </lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </lr-menu>
+    `)) as LyraMenu;
+    await openMenu(el);
+    byId(el, "share").focus();
+    press(byId(el, "share"), "ArrowRight");
+    await settle(el, sub(el, "level2"));
+    expect(activeId()).to.equal("more");
+    press(byId(el, "more"), "ArrowRight");
+    await settle(el, sub(el, "level2"), sub(el, "level3"));
+    expect(activeId()).to.equal("embed");
+
+    let count = 0;
+    el.addEventListener("lr-menu-select", () => {
+      count += 1;
+    });
+    setTimeout(() => press(byId(el, "embed"), "Enter"));
+    const ev = (await oneEvent(el, "lr-menu-select")) as CustomEvent<{
+      value: string;
+    }>;
+    expect(ev.detail.value).to.equal("embed");
+    await settle(el, sub(el, "level2"), sub(el, "level3"));
+    expect(count).to.equal(1);
+    expect([
+      el.open,
+      sub(el, "level2").open,
+      sub(el, "level3").open,
+    ]).to.deep.equal([false, false, false]);
+    expect(activeId()).to.equal("trig");
+  });
+
+  it("is accessible with a submenu open", async () => {
+    const el = (await fixture(nested())) as LyraMenu;
+    await openMenu(el);
+    byId(el, "share").focus();
+    press(byId(el, "share"), "ArrowRight");
+    await settle(el, sub(el, "sharemenu"));
+    expect(sub(el, "sharemenu").open).to.equal(true);
+    const panel = sub(el, "sharemenu").shadowRoot!.querySelector(
+      '[part="popup"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(panel).visibility).to.equal("visible");
+    // Let the fade-in finish: axe folds a mid-transition opacity into its contrast maths and
+    // would report the animation rather than the rendered state.
+    await waitUntil(() => getComputedStyle(panel).opacity === "1", "submenu never faded in");
+    await expect(el).to.be.accessible();
+  });
+});
+

@@ -17,7 +17,7 @@
 A responsive navigation rail that adapts across three presentations as the *viewport* narrows (not
 this element's own inline size): `'full'` (nav items show icon + label, inline), `'icon-only'` (a
 narrower inline rail, icons only), and `'mobile'` (hidden behind a toggle button; opening it shows a
-focus-trapped floating overlay over the page). First-party invention (no Web Awesome equivalent).
+focus-trapped floating overlay over the page). First-party invention (no `wa-*`/`sl-*` counterpart).
 Breakpoints are viewport-width `matchMedia()` queries against `icon-only-breakpoint`/
 `mobile-breakpoint`, not a `ResizeObserver` on this element — presentation tracks the actual device/
 window width the way a native OS shell's navigation does, not however much horizontal space a

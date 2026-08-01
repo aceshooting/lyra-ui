@@ -53,6 +53,14 @@ call `.focus()` on `::part(handle-end)` yourself if you need the other. Without 
 host's own `focus()`/`blur()`/`click()` are no-ops, because the real control lives in the shadow
 root.
 
+`setCustomValidity(message)` is this control's **only** validation channel: every reachable range is
+intrinsically legal, so there is no constraint for it to compute. A non-empty message raises
+`customError`, becomes `validationMessage`, and blocks submission of the form it sits in; `''`
+clears it. The error survives handle moves, preset picks and a form reset, exactly like a native
+control — so a consumer re-validating a range on every `lr-input` calls this with the new message
+(or `''`) each time rather than expecting the movement itself to clear it. The message is
+caller-supplied and is used verbatim, never localized.
+
 **Slots:** none.
 
 **CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`

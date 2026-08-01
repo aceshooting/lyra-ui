@@ -44,8 +44,10 @@ of the stream arrives.
 
 **CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`)
 
-**Themeable custom properties:** `--lr-streaming-text-cursor-width` (default `0.125rem` — the
-cursor bar's inline size), `--lr-streaming-text-cursor-height` (default `1em`) — both
+**Themeable custom properties:** `--lr-streaming-text-cursor-width` (default
+`var(--lr-size-0-125rem)`, i.e. `0.125rem` — the cursor bar's inline size),
+`--lr-streaming-text-cursor-height` (default `var(--lr-size-1em)`, i.e.
+`1em`, so the bar tracks the surrounding text size) — both
 component-specific, since no shared "inline cursor bar" token exists, the same pattern
 `<lr-typing-indicator>`'s own `--lr-typing-cursor-width`/`-height` use, plus shared
 `--lr-space-xs` (cursor's `margin-inline-start`) and `--lr-transition-ambient` (blink animation

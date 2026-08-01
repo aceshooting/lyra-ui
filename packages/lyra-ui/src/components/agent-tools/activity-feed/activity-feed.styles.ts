@@ -29,6 +29,12 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
+     than hover in both light and dark themes rather than repeating it. */
+  [part='header']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='header']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
@@ -113,37 +119,37 @@ export const styles = css`
     align-items: center;
     inline-size: var(--lr-size-1em);
   }
-  [part~='tone-dot'],
-  lr-virtual-list::part(tone-dot) {
+  [part~='variant-dot'],
+  lr-virtual-list::part(variant-dot) {
     display: block;
     inline-size: var(--lr-size-0-5rem);
     block-size: var(--lr-size-0-5rem);
     border-radius: var(--lr-radius-pill);
   }
-  /* Shadow Parts forbids an attribute selector after ::part(), so the tone cannot be matched as
-     ::part(tone-dot)[data-tone='success'] -- that selector is invalid and would drop the rule
-     entirely. Each tone carries a second name in the dot's part list instead; ::part() matches
+  /* Shadow Parts forbids an attribute selector after ::part(), so the variant cannot be matched as
+     ::part(variant-dot)[data-variant='success'] -- that selector is invalid and would drop the rule
+     entirely. Each variant carries a second name in the dot's part list instead; ::part() matches
      with part~= semantics, so both names select the same element, and a consumer gains a
-     per-tone hook the [data-tone] form never offered. The [part~=] form is the plain-path twin:
-     [part='tone-dot-success'] would not match a multi-name part attribute. */
-  [part~='tone-dot-neutral'],
-  lr-virtual-list::part(tone-dot-neutral) {
+     per-variant hook the [data-variant] form never offered. The [part~=] form is the plain-path
+     twin: [part='variant-dot-success'] would not match a multi-name part attribute. */
+  [part~='variant-dot-neutral'],
+  lr-virtual-list::part(variant-dot-neutral) {
     background: var(--lr-color-text-quiet);
   }
-  [part~='tone-dot-brand'],
-  lr-virtual-list::part(tone-dot-brand) {
+  [part~='variant-dot-brand'],
+  lr-virtual-list::part(variant-dot-brand) {
     background: var(--lr-color-brand);
   }
-  [part~='tone-dot-success'],
-  lr-virtual-list::part(tone-dot-success) {
+  [part~='variant-dot-success'],
+  lr-virtual-list::part(variant-dot-success) {
     background: var(--lr-color-success);
   }
-  [part~='tone-dot-warning'],
-  lr-virtual-list::part(tone-dot-warning) {
+  [part~='variant-dot-warning'],
+  lr-virtual-list::part(variant-dot-warning) {
     background: var(--lr-color-warning);
   }
-  [part~='tone-dot-danger'],
-  lr-virtual-list::part(tone-dot-danger) {
+  [part~='variant-dot-danger'],
+  lr-virtual-list::part(variant-dot-danger) {
     background: var(--lr-color-danger);
   }
   [part='entry-text'],

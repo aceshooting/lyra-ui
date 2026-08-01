@@ -51,8 +51,10 @@ it('does not respond to Escape while closed', async () => {
   expect(fired).to.be.false;
 });
 
-it('closes on backdrop click and emits lr-lightbox-close with reason "backdrop"', async () => {
-  const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
+it('closes on backdrop click and emits lr-lightbox-close with reason "backdrop" when light-dismiss is set', async () => {
+  const el = (await fixture(
+    html`<lr-lightbox .images=${[image]} open light-dismiss></lr-lightbox>`,
+  )) as LyraLightbox;
   let detail: unknown;
   el.addEventListener('lr-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
 
@@ -63,11 +65,13 @@ it('closes on backdrop click and emits lr-lightbox-close with reason "backdrop"'
   expect(detail).to.equal('backdrop');
 });
 
-it('ignores a backdrop click when no-light-dismiss is set', async () => {
+// Opt-in, mirroring `<lr-dialog>`'s `lightDismiss`, which in turn matches `wa-dialog`.
+it('ignores a backdrop click by default', async () => {
   const el = (await fixture(
-    html`<lr-lightbox .images=${[image]} open no-light-dismiss></lr-lightbox>`,
+    html`<lr-lightbox .images=${[image]} open></lr-lightbox>`,
   )) as LyraLightbox;
 
+  expect(el.lightDismiss).to.equal(false);
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
   await el.updateComplete;
 

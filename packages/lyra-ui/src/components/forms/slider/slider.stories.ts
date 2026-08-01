@@ -145,6 +145,121 @@ export const Interactive: Story = {
   `,
 };
 
+export const Range: Story = {
+  name: 'Range (two handles)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Two independently focusable handles selecting the span between `min-value` and `max-value`. Each handle is its own `role="slider"` with a localized start/end name, and reports the sub-range its sibling leaves reachable. The handles may meet (a zero-width selection) but never cross. A range slider does not submit a value — read `minValue`/`maxValue` or the `lr-change` detail.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-slider
+      range
+      label="Price range"
+      min="0"
+      max="1000"
+      step="50"
+      min-value="200"
+      max-value="800"
+      hint="Both ends move independently; they can meet but never cross."
+      style="max-inline-size: 20rem;"
+    ></lr-slider>
+  `,
+};
+
+export const WithMarkersAndTooltip: Story = {
+  name: 'Markers and tooltip',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`with-markers` draws a tick at every `step` position; `with-tooltip` shows the live, locale-formatted value above a handle while it is focused or dragged.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-slider
+      with-markers
+      with-tooltip
+      label="Quality"
+      min="0"
+      max="10"
+      step="1"
+      value="7"
+      style="max-inline-size: 20rem;"
+    ></lr-slider>
+  `,
+};
+
+export const Vertical: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The value axis moves to the block axis, with `min` at the bottom. ArrowUp/ArrowDown become the primary keys and every handle exposes `aria-orientation="vertical"`. Set `--lr-slider-track-length` to change the track length.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; gap:2rem; align-items:flex-start;">
+      <lr-slider orientation="vertical" label="Volume" value="70" with-tooltip></lr-slider>
+      <lr-slider
+        orientation="vertical"
+        range
+        label="Band"
+        min-value="30"
+        max-value="70"
+        style="--lr-slider-track-length: 14rem;"
+      ></lr-slider>
+    </div>
+  `,
+};
+
+export const ReadOnly: Story = {
+  name: 'Read-only',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Unlike `disabled`, a read-only slider stays focusable, fully legible, and still submits its value — it just refuses every drag and keystroke, and announces `aria-readonly="true"`.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-slider
+      readonly
+      label="Sampled temperature"
+      min="0"
+      max="1"
+      step="0.1"
+      value="0.7"
+      hint="Recorded at request time; not editable."
+      style="max-inline-size: 20rem;"
+    ></lr-slider>
+  `,
+};
+
+export const RangeRightToLeft: Story = {
+  name: 'Range, right-to-left',
+  render: () => html`
+    <lr-slider
+      dir="rtl"
+      range
+      label="نطاق السعر"
+      min="0"
+      max="1000"
+      step="50"
+      min-value="200"
+      max-value="800"
+      hint="يتحرك كل طرف بشكل مستقل."
+      style="max-inline-size: 20rem;"
+    ></lr-slider>
+  `,
+};
+
 export const ProgrammaticValueAsNumber: Story = {
   name: 'Programmatic valueAsNumber',
   render: () => html`
@@ -160,6 +275,28 @@ export const ProgrammaticValueAsNumber: Story = {
       >
         Randomize
       </button>
+    </div>
+  `,
+};
+
+export const Sizes: StoryObj = {
+  name: 'Size ladder',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`size` is the library\'s shared ladder, so a `size` set here matches an `<lr-input>`, `<lr-select>` or `<lr-button>` of the same `size` in the same row. Both spellings of every tier are accepted — `s`/`m`/`l` and Web Awesome\'s `small`/`medium`/`large` — so a migration is a tag rename with no attribute rewrite.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); justify-items: start;">
+      <lr-slider size="2xs" label="Size 2xs" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="xs" label="Size xs" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="s" label="Size s" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="m" label="Size m" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="l" label="Size l" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="xl" label="Size xl" show-value style="inline-size: 18rem"></lr-slider>
     </div>
   `,
 };

@@ -26,7 +26,8 @@ export const styles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
+    box-shadow: var(--lr-shadow-m);
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
@@ -65,6 +66,17 @@ export const styles = css`
   [part='option']:hover,
   [part='option'][data-active] {
     background: var(--lr-mention-popover-option-active-bg, var(--lr-color-brand-quiet));
+  }
+  /* Mixed from the same overridable highlight the hover/active-row rule uses, so a consumer who
+     retints --lr-mention-popover-option-active-bg gets a matching pressed state for free. This also
+     serves the [part='option-description'] hover rule below, which is a descendant treatment of this
+     same row rather than a hover state of its own. */
+  [part='option']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-mention-popover-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='option'][aria-selected='true'] {
     color: var(--lr-color-brand);

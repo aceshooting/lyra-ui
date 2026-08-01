@@ -3,6 +3,7 @@ import { render } from 'lit';
 import './rubric-form.js';
 import type { LyraRubricForm, RubricKey } from './rubric-form.js';
 import { styles } from './rubric-form.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const KEYS: RubricKey[] = [
   { key: 'accuracy', type: 'score', label: 'Accuracy', min: 0, max: 5, step: 1, required: true },
@@ -680,11 +681,39 @@ describe('lr-rubric-form', () => {
     expect(ev.detail).to.deep.equal({ value: { accuracy: 5 }, itemId: 'item-1' });
   });
 
-  it('gives submit and skip a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='submit'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
-    expect(css).to.match(/\[part='skip'\]:hover[^{]*\{[^}]*background:/);
-  });
+  // Driven through the real pointer rather than the stylesheet text: a `filter: brightness()`
+  // hover (what these two buttons used to ship) also matches a "has a hover rule" text assertion
+  // while doing nothing whatsoever on a theme whose brand colour is pure white or pure black, and
+  // while dragging the button's own label along with its background. Reading the painted
+  // background back at each stage is the only assertion that can tell those apart. Colour STRINGS
+  // are compared, never elements — a DOM node as chai's actual/expected hangs the whole file.
+  for (const part of ['submit', 'skip'] as const) {
+    it(`moves ${part}'s painted background on hover, and further again while pressed`, async () => {
+      const el = (await fixture(
+        html`<lr-rubric-form .keys=${KEYS} item-id="item-1" skippable></lr-rubric-form>`,
+      )) as LyraRubricForm;
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
+      const rect = button.getBoundingClientRect();
+      const centre: [number, number] = [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ];
+      const rest = getComputedStyle(button).backgroundColor;
+      try {
+        await sendMouse({ type: 'move', position: centre });
+        const hovered = getComputedStyle(button).backgroundColor;
+        await sendMouse({ type: 'down' });
+        const pressed = getComputedStyle(button).backgroundColor;
+        await sendMouse({ type: 'up' });
+        expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(rest);
+        expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(hovered);
+        expect(pressed).to.not.equal(rest);
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
 
   describe('lifecycle: attachInternals guard', () => {
     it('degrades gracefully instead of throwing when ElementInternals is unavailable', async () => {
@@ -844,4 +873,164 @@ it('reportValidity() reveals current field errors and answers overall validity',
   el.value = { accuracy: 4 };
   await el.updateComplete;
   expect(el.reportValidity(), 'a satisfied rubric reports valid').to.be.true;
+});
+
+// `CustomStateSet` and the `:state()` selector ship separately from each other and from the rest
+// of `ElementInternals` -- these two guards are why the same block passes on WebKit, where a
+// missing `CustomStateSet` would otherwise throw on the very first assertion.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('validity custom states', () => {
+  it('publishes required/optional from the keys, and valid/invalid from the answers', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS} name="rubric"></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    // `required` is a per-key flag here, not a host property: KEYS has one required key.
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    el.value = { accuracy: 5 };
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid once the required key is answered').to.be.true;
+    expect(el.matches(':state(invalid)'), 'invalid once the required key is answered').to.be.false;
+
+    el.keys = KEYS.map((key) => ({ ...key, required: false }));
+    await el.updateComplete;
+    expect(el.matches(':state(optional)'), 'optional once no key is required').to.be.true;
+    expect(el.matches(':state(required)'), 'required once no key is required').to.be.false;
+  });
+
+  it('keeps user-valid/user-invalid off a pristine rubric until reportValidity() reveals the errors', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = (await fixture(html`
+      <form><lr-rubric-form .keys=${KEYS} name="rubric"></lr-rubric-form></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.matches(':state(invalid)'), 'invalid while pristine').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid while pristine').to.be.false;
+    expect(el.matches(':state(user-valid)'), 'user-valid while pristine').to.be.false;
+
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reporting').to.be.true;
+
+    el.value = { accuracy: 5 };
+    await el.updateComplete;
+    expect(el.matches(':state(user-valid)'), 'user-valid once satisfied').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid once satisfied').to.be.false;
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reset').to.be.false;
+    expect(el.matches(':state(user-valid)'), 'user-valid after reset').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid after reset').to.be.true;
+  });
+});
+
+describe('lr-rubric-form setCustomValidity()', () => {
+  const optionalKeys: RubricKey[] = [{ key: 'comment', type: 'comment', label: 'Comment' }];
+  const requiredKeys: RubricKey[] = [
+    { key: 'comment', type: 'comment', label: 'Comment', required: true },
+  ];
+
+  it('blocks form submission and becomes the validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-rubric-form name="rubric"></lr-rubric-form></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
+    el.keys = optionalKeys;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    form.requestSubmit();
+    expect(submits, 'an otherwise-valid rubric submits').to.equal(1);
+
+    el.setCustomValidity('This item was already annotated by someone else');
+    expect(el.validationMessage).to.equal('This item was already annotated by someone else');
+    expect(el.validity.customError, 'customError').to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(1);
+  });
+
+  it('survives an intrinsic revalidation', async () => {
+    const el = (await fixture(html`<lr-rubric-form></lr-rubric-form>`)) as LyraRubricForm;
+    el.keys = requiredKeys;
+    await el.updateComplete;
+    el.setCustomValidity('Server says no');
+    el.value = { comment: 'looks good' }; // clears valueMissing and re-runs the intrinsic recompute
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing cleared').to.be.false;
+    expect(el.validity.customError, 'custom error survives the recompute').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // Native `setCustomValidity()` is sticky: `form.reset()` restores values, never the custom
+  // error, which only another `setCustomValidity('')` clears. Matching that here.
+  it('keeps the custom error across a form reset', async () => {
+    const form = (await fixture(html`
+      <form><lr-rubric-form name="rubric"></lr-rubric-form></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
+    el.keys = optionalKeys;
+    await el.updateComplete;
+    el.setCustomValidity('Server says no');
+    form.reset();
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the rubric valid', async () => {
+    const el = (await fixture(html`<lr-rubric-form></lr-rubric-form>`)) as LyraRubricForm;
+    el.keys = requiredKeys;
+    await el.updateComplete;
+    el.setCustomValidity('Server says no');
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'custom error cleared').to.be.false;
+    expect(
+      el.validity.valueMissing,
+      'an empty custom error must not force a rubric with unanswered required keys valid',
+    ).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.not.equal('');
+    el.value = { comment: 'looks good' };
+    await el.updateComplete;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('drives the valid/invalid custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-rubric-form></lr-rubric-form>`)) as LyraRubricForm;
+    el.keys = optionalKeys;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before').to.be.true;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while a custom error is set').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
+  });
 });

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import tailwindcss from '@tailwindcss/vite';
 import { codecovVitePlugin } from '@codecov/vite-plugin';
+import { componentImportsPlugin } from './component-imports.js';
 import { createGroupedStoryIndexer } from './story-indexer.js';
 import { storyTitlePlugin } from './story-title-plugin.js';
 
@@ -66,6 +67,10 @@ const config = {
     // long-standing ID. Without the explicit legacy ID, changing only the index title makes
     // autodocs unable to associate a component page with its stories.
     viteConfig.plugins.push(storyTitlePlugin());
+    // Serves the tag -> registration-entry map every component Docs page prints under its title,
+    // read at build time from the same `llms/components/<tag>.md` files `check:llms-artifacts`
+    // resolves. See .storybook/component-imports.js.
+    viteConfig.plugins.push(componentImportsPlugin());
     viteConfig.plugins.push(tailwindcss());
     viteConfig.build = viteConfig.build ?? {};
     // Vite's default 500kB warning fires on chunks that are already correctly

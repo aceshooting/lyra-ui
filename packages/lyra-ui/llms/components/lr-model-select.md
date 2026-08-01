@@ -63,9 +63,14 @@ emitting `lr-change`.
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `open: boolean = false` (reflected)
-- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size; same `xs`–`xl` scale as
-  `<lr-select>`'s own `size`, scaling `[part="trigger"]`/`[part="combobox"]`'s padding/min-height/
-  font-size and `[part="expand-icon"]`'s box size (see the themeable custom properties below).
+- `size: LyraSize = 'm'` (reflected) — visual size on the library-wide ladder: `2xs`/`xs`/`s`/`m`/
+  `l`/`xl`, plus `small`/`medium`/`large` as accepted spellings of `s`/`m`/`l`, so markup migrated
+  from Web Awesome or Shoelace needs no attribute rewrite. It scales
+  `[part="trigger"]`/`[part="combobox"]`'s padding/min-height/font-size through the shared
+  `--lr-form-control-*` knobs, so a model select sits at the same height as the `lr-select`,
+  `lr-input` or `lr-button` beside it in a toolbar row at every tier, plus `[part="expand-icon"]`'s
+  box size (see the themeable custom properties below). The exported alias `LyraModelSelectSize`
+  names the canonical step (`LyraSizeStep`) a size resolves to.
 - `value: string` — getter/setter (hand-rolled, not the `FormAssociated` mixin); the current model id,
   `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously. A named,
   untouched model-select contributes `''` to `FormData` instead of omitting its key.
@@ -80,6 +85,16 @@ combobox `<input>`: unlike a genuine pointer click, `HTMLElement.click()` never 
 `mousedown` side effect the browser applies only to real pointer interaction), and this mode's open
 behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` handler on the input
 itself.
+
+`checkValidity()` / `reportValidity()` behave as on any form-associated control.
+`setCustomValidity(message: string)` is the standard channel for a server-side rejection ("that
+model was retired by the provider") that no client-side constraint can express: a non-empty
+`message` raises `customError` and becomes `validationMessage`, so the control fails
+`checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears it. Clearing
+restores the control's own computed validity rather than forcing it valid — a `required` picker with
+no value stays `valueMissing` — and the custom error survives every intrinsic recomputation in
+between (each `value`/`required` change) and a `form.reset()`, matching a native control. The
+message is caller-supplied content, used verbatim and never localized.
 
 **Mode switching:** `closedMode` (private) is `true` whenever `normalizedCatalog.length > 0 &&
 !allowCustom` — a non-empty `catalog` with `allowCustom` left `false` renders the closed dropdown
@@ -124,16 +139,19 @@ both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badg
 stale-value row), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
 message), `error` (the error message)
 
-**Themeable custom properties:** `--lr-model-select-trigger-padding` (default `var(--lr-space-xs)
-var(--lr-space-s)`) — `[part="trigger"]`/`[part="combobox"]`'s padding shorthand.
-`--lr-model-select-trigger-min-height` (default `var(--lr-size-2-5rem)`) — their block-size floor.
-`--lr-model-select-font-size` (default `var(--lr-font-size-md)`) — their font size.
-`--lr-model-select-expand-size` (default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s
-decorative box size (clamped against `--lr-icon-button-size` via `min()`). All four are declared on
-`:host` at these `size="m"` (the default) values and re-declared inside each
-`:host([size="xs"|"s"|"l"|"xl"])` block at that tier's own value — same xs–xl scale `<lr-select>`
-uses — so `size` is the primary lever; override the cssprop directly only to retune a single tier or
-step outside the scale entirely. `--lr-model-select-option-active-bg` (default
+**Themeable custom properties:** `--lr-model-select-trigger-padding` (default
+`var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`) —
+`[part="trigger"]`/`[part="combobox"]`'s padding shorthand.
+`--lr-model-select-trigger-min-height` (default `var(--lr-form-control-height)`) — their block-size
+floor. `--lr-model-select-font-size` (default `var(--lr-form-control-font-size)`) — their font size.
+Those three are indirections onto the shared `--lr-form-control-*` scale rather than literal values:
+the public property surface is unchanged, but the numbers come from the one ladder every other
+control sizes against, so a tier is restated in exactly one place. `--lr-model-select-expand-size`
+(default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s decorative box size (clamped against
+`--lr-icon-button-size` via `min()`); this one is a glyph box rather than a control metric, so the
+shared ladder has no equivalent and its per-tier values stay local. `size` is the primary lever;
+override a cssprop directly only to retune a single element or step outside the scale entirely.
+`--lr-model-select-option-active-bg` (default
 `var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
 declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. The
 selected row (`[part="option"][aria-selected="true"]`) has the matching set

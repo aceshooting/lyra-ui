@@ -23,6 +23,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* no-pressed-state: the viewport is a focusable scroll surface (role="group", keyboard zoom/pan),
+     not an activation target -- a pointer press on it commits nothing, so a pressed tint would
+     promise a click that never happens. Its own controls below carry the pressed states. */
   [part='viewport']:hover {
     border-color: var(--lr-color-brand);
   }
@@ -65,6 +68,11 @@ export const styles = css`
   [part='zoom-in']:hover,
   [part='reset']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='zoom-out']:active,
+  [part='zoom-in']:active,
+  [part='reset']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='zoom-out']:disabled,
   [part='zoom-in']:disabled {

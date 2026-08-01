@@ -104,30 +104,55 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
 ## `lr-copy-button`
 
 A standalone icon-only copy-to-clipboard button for a plain text `value` — swaps its icon to a
-checkmark for ~1.5s on activation. Takes no positioning opinion of its own; a consumer
-wraps/positions the host element (e.g. absolutely positioned in the corner of a `wa-textarea` or a
-read-only output field). Unlike `lr-code-block`'s or `lr-json-viewer`'s own built-in copy
-buttons, this has no code/JSON content model to adopt just to reuse the copy affordance.
+checkmark for ~1.5s once the clipboard write resolves, or to a distinct failure glyph if it doesn't.
+Takes no positioning opinion of its own; a consumer wraps/positions the host element (e.g.
+absolutely positioned in the corner of an `lr-textarea` or a read-only output field). Unlike
+`lr-code-block`'s or `lr-json-viewer`'s own built-in copy buttons, this has no code/JSON content
+model to adopt just to reuse the copy affordance.
 
 **Properties:**
 - `value: string = ''` — the plain text to copy.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
-  Copy/Copied accessible name without changing the icon
+  Copy/Copied/Copy-failed accessible name without changing the icon
 - `disabled: boolean = false` (reflected)
 - `feedbackDuration: number = 1500` (attribute `feedback-duration`) — milliseconds before the
-  copied checkmark returns to the copy icon; finite values are clamped at zero
+  confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to
+  `1500` rather than leaving the state stuck; a negative one clamps to `0`
 
-**Methods:** `focus(options?)` and `blur()` forward to the native button.
+**Methods:** `focus(options?)`, `blur()` and `click()` forward to the native button.
 
-**Events:** `lr-copy` (`detail: { text: string }`) — fires on activation, always with the current
-`value`, regardless of whether the OS clipboard write actually succeeded (same convention as
-`lr-code-block`'s/`lr-json-viewer`'s own copy buttons).
+**Events:**
+- `lr-copy` (`detail: { text: string }`) — fires on every activation with the current `value`,
+  before the clipboard write is attempted and regardless of its outcome (same convention as
+  `lr-code-block`'s/`lr-json-viewer`'s own copy buttons)
+- `lr-copy-error` (`detail: { text: string; reason: LyraCopyErrorReason; error: unknown }`) — the
+  clipboard write failed. `reason` is `'unsupported'` (no Clipboard API in this context — an
+  insecure origin, or an older browser), `'denied'` (the browser refused: a `NotAllowedError`/
+  `SecurityError`, typically a denied permission or an unfocused document) or `'failed'` (anything
+  else the platform reported). Under `'denied'`/`'failed'` `error` is the platform error itself,
+  unwrapped (a `DOMException` for a real rejection); under `'unsupported'` no write was attempted,
+  so `error` is a component-created `Error` named `ClipboardUnsupportedError`
 
 **Slots:** none.
 
-**CSS parts:** `base` — the button itself.
+**CSS parts:**
+- `base` — the button itself, in every state.
+- `base-success` — added to the button's part list while the confirmation shows
+  (`part="base base-success"`), so `::part(base)` rules keep applying alongside it.
+- `base-error` — the same, while the failure state shows (`part="base base-error"`). It only sets
+  `color: var(--lr-color-danger)`, deliberately after the hover rule, so hovering a failed button
+  still lights its background without repainting the failure colour away.
+- `copy-icon`, `success-icon`, `error-icon` — the resting, confirmation and failure glyphs. Exactly
+  one is rendered at a time; all three are `aria-hidden`.
+- `feedback` — the visually hidden `role="status"` region that announces the outcome. Empty at rest,
+  so nothing is announced before a real outcome.
 
-**Themeable custom properties:** shared tokens only.
+State lives in the part *name*: style the failure with `::part(base-error)`. `::part(base)[…]` and
+`::part(base) .child` are invalid CSS and silently never match.
+
+**Themeable custom properties:** shared tokens only — `--lr-icon-button-size` (the minimum hit
+area), `--lr-color-text-quiet`/`--lr-color-text` (resting and hover ink), `--lr-color-danger` (the
+failure ink) and `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.
 
@@ -135,16 +160,48 @@ buttons, this has no code/JSON content model to adopt just to reuse the copy aff
 <lr-copy-button value="npm install @aceshooting/lyra-ui"></lr-copy-button>
 ```
 
+Handling the failure path — the button already shows and announces it, so a listener is only needed
+for an application-level fallback:
+
+```html
+<lr-copy-button id="copy" value="npm install @aceshooting/lyra-ui"></lr-copy-button>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.js';
+
+  const button = document.getElementById('copy');
+  button.addEventListener('lr-copy', () => trackCopyAttempt()); // your own instrumentation
+  button.addEventListener('lr-copy-error', (event) => {
+    // event.detail.reason is 'unsupported' | 'denied' | 'failed'
+    if (event.detail.reason === 'unsupported') selectTextForManualCopy(event.detail.text);
+  });
+</script>
+```
+
+`LyraCopyErrorReason` is exported alongside the class for TypeScript consumers:
+
+```ts
+import type { LyraCopyErrorReason } from '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js';
+```
+
 **Known gotchas:**
-- best-effort clipboard write: `navigator.clipboard` is absent in insecure contexts/older browsers,
-  and some engines throw synchronously rather than rejecting — either way `lr-copy` still fires
-  with the intended text so a consumer can always show its own confirmation/fallback UI.
-- Changing `value` clears any in-progress "Copied" feedback immediately, so the confirmation can
-  never describe stale text.
-
-**Additional API surface:**
-
-- `click()` — Activates the native button, matching the host focus/blur forwarding contract.
+- **Changed in 8.0.0:** the button used to enter the "Copied" confirmation on activation whether or
+  not the clipboard write succeeded. It now waits for `navigator.clipboard.writeText()` to settle: a
+  rejection renders the failure glyph instead, announces the localized failure text through the
+  `feedback` region, and emits `lr-copy-error`. `lr-copy` still fires for every activation, so
+  existing wiring keeps working — but code that treated `lr-copy` as proof the text reached the
+  clipboard must now pair it with `lr-copy-error` to tell the two outcomes apart.
+- `navigator.clipboard` is absent in insecure contexts/older browsers, and some engines throw
+  synchronously rather than rejecting. Both arrive at the same failure path (`unsupported` for the
+  missing API, `denied`/`failed` for a real rejection) — there is no silent success left.
+- Changing `value`, or disconnecting, clears any in-progress confirmation/failure immediately, and a
+  write that settles *after* that change is discarded: no stale glyph, and no late `lr-copy-error`
+  describing text the button no longer shows.
+- The failure is signalled on four channels — a different glyph, a different accessible name, the
+  live-region announcement, and only then colour — so it survives a monochrome or high-contrast
+  rendering.
+- Copy affordance strings are localizable: `copy` (`'Copy'`), `copied` (`'Copied!'`) and
+  `copyFailed` (`'Copy failed'`), overridable per instance through `.strings` or app-wide through
+  `registerLyraLocale()` (see `llms/shared.md`).
 
 ---
 
@@ -711,30 +768,160 @@ consumer can compute or unit-test the same alignment without instantiating the e
 
 ## `lr-icon`
 
-Dependency-free SVG path icon: no icon font, no sprite sheet, no network fetch. Pairs with
-`lr-icon-button` (see `llms/components/lr-icon-button.md`).
+SVG icon primitive. Left alone it is dependency-free and offline: a built-in path, no icon font, no
+sprite sheet, no network access at all. **New in 8.0.0**, it can also resolve a name through a
+registered icon library, or fetch a single SVG document from `src` — those paths do hit the network,
+and every byte they return is capped, sanitized, and rendered only if the whole pipeline succeeds.
+Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
 
 **Properties:**
 - `name: string = ''` — a built-in glyph: `add`, `check`, `close`, `search`, `menu`,
   `chevron-left`, `chevron-right`, `chevron-down`, `calendar`, `command`, `trash`. An unknown name
-  renders nothing (no error, no fallback glyph).
+  renders nothing (no error, no fallback glyph). With a registered `library`, this is instead the
+  name handed to that library's resolver.
 - `path: string = ''` — raw SVG path data for a glyph the built-in set doesn't cover. Takes
   precedence over `name`.
 - `label: string = ''` — accessible name. Left empty (the default) the SVG is `aria-hidden="true"`,
-  which is what you want whenever adjacent text already names the control.
+  which is what you want whenever adjacent text already names the control. A host `aria-label` wins
+  over it, and either one is applied to a fetched icon too.
+- `library: string = ''` (reflected) — name of a library registered with `registerIconLibrary()`.
+  Empty (the default) means the built-in glyph set. An **unregistered** name also falls back to the
+  built-in set instead of erroring, which is what lets registration happen after first render.
+- `src: string = ''` — URL of a single SVG document to fetch. It applies only when no registered
+  library owns the icon: no `library` set, an unregistered one, or an empty `name`. Once a
+  registered library does own the name it decides alone — a resolver that returns `''` or throws
+  does **not** fall back to `src`.
+- `rotate?: number` (reflected) — clockwise rotation in degrees, applied to the icon box. Unset (the
+  default) there is no `transform` at all, so an ordinary icon never becomes a containing block; a
+  non-finite value leaves the icon unrotated.
+- `flip?: 'horizontal' | 'vertical' | 'both'` (reflected, type `LyraIconFlip`) — mirrors the icon
+  about the vertical, horizontal, or both axes. Unset by default.
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon *box* to
+  `--lr-icon-fixed-width` while the glyph keeps `--lr-icon-size` and centres inside it, so a column
+  of differently-shaped icons lines its labels up.
+
+**Events:**
+- `lr-load` (`detail: { src: string }`) — a remote icon finished loading and is in the DOM. Also
+  fires for a valid-but-empty document, which is not a failure. Never fires for a built-in glyph.
+- `lr-error` (`detail: { src: string; error: unknown }`) — a remote icon could not be resolved,
+  fetched, size-capped, sanitized, or parsed as an SVG document. `src` is the URL that was attempted
+  (or the icon name, when a library resolver itself threw).
 
 **Slots:** (default) — custom SVG geometry, rendered only when neither `path` nor a known `name`
-resolves. Slotted nodes are cloned into the component-owned `<svg>` (Chromium does not paint SVG
+resolves **and** no remote source is configured; a fetched document is never merged with slotted
+nodes. Slotted nodes are cloned into the component-owned `<svg>` (Chromium does not paint SVG
 geometry distributed through a slot that sits inside an SVG), so pass plain `<path>`/`<circle>`/
 `<g>` elements, not a whole `<svg>`. Attribute and descendant mutations to assigned geometry are
 mirrored live while connected; observation stops on detach and a reconnect synchronizes the latest
 source tree.
 
-**CSS parts:** `svg`
+**CSS parts:**
+- `svg` — the rendered SVG, whether built-in or fetched.
+- `error` — the visually hidden `role="alert"` shown when a remote icon fails. It carries a
+  localized message (`iconLoadError`, `iconTooLarge`, or `iconSanitizerMissing`), never the raw
+  platform error, and re-localizes when the locale changes.
+- `empty` — the `aria-hidden` marker rendered when a remote icon resolved to an empty but valid
+  document.
 
-**Themeable custom properties:** `--lr-icon-size` (default `--lr-size-1-25rem`) sets both
-dimensions. Stroke color is `currentColor` and the host is `color: inherit`, so color comes from
-the surrounding text with no configuration.
+**Themeable custom properties:**
+- `--lr-icon-size` (default `--lr-size-1-25rem`) — sets both dimensions of the glyph. Stroke color
+  is `currentColor` and the host is `color: inherit`, so color comes from the surrounding text with
+  no configuration.
+- `--lr-icon-fixed-width` (default `--lr-size-1-5rem`) — inline size of the box while `fixed-width`
+  is set.
+- `--lr-icon-rotate` (default `0deg`), `--lr-icon-flip-x` and `--lr-icon-flip-y` (default `1` each) —
+  the transform inputs. `--lr-icon-rotate` is written inline from the `rotate` property and the flip
+  factors are set to `-1` by `flip`, so set those properties rather than these tokens.
+
+**Optional peer deps:** `dompurify` — needed **only** for `library`/`src` fetching, never for the
+built-in glyphs. It is imported lazily on the first remote load; if it can't be loaded the icon
+fails closed (nothing rendered, localized alert, `lr-error`) rather than injecting unsanitized
+markup.
+
+### Registering an icon library
+
+A library is a pure name-to-URL function plus an optional mutator, registered once at application
+start. The component keeps every security-relevant step: the resolved URL still goes through the
+fetch allowlist, the response is still byte-capped, and the markup is still sanitized — a resolver
+cannot widen what an icon is allowed to render.
+
+```ts
+import '@aceshooting/lyra-ui/components/utility/icon/icon.js'; // registers <lr-icon>
+import {
+  registerIconLibrary,
+  unregisterIconLibrary,
+  getIconLibrary,
+} from '@aceshooting/lyra-ui/components/utility/icon/icon-library.js';
+
+registerIconLibrary('material', {
+  // Called synchronously with the icon's `name`; must return a URL string, never a promise.
+  resolver: (name) => `https://cdn.example.com/material/${name}.svg`,
+  // Optional. Runs on the already-sanitized, component-owned <svg> before it is rendered —
+  // recolouring, adding a viewBox, stripping a hardcoded width/height. It must not reintroduce
+  // markup from an untrusted source, and a throwing mutator fails the load.
+  mutator: (svg) => {
+    svg.setAttribute('fill', 'currentColor');
+    svg.removeAttribute('width');
+    svg.removeAttribute('height');
+  },
+});
+
+getIconLibrary('material')?.resolver('star'); // 'https://cdn.example.com/material/star.svg'
+unregisterIconLibrary('material'); // icons using it revert to the built-in glyph set
+```
+
+```html
+<lr-icon library="material" name="star" label="Favourite"></lr-icon>
+<lr-icon library="material" name="delete" fixed-width></lr-icon>
+```
+
+Types: `LyraIconLibraryResolver = (name: string) => string`, `LyraIconLibraryMutator = (svg:
+SVGElement) => void`, and `LyraIconLibraryOptions = { resolver; mutator? }` are exported from the
+same module.
+
+**Known gotchas:**
+- Registration order doesn't matter. `registerIconLibrary()` re-resolves every currently rendered
+  `<lr-icon>` using that name, so icons can be on the page first; re-registering the same name with
+  a different resolver re-resolves them again, and `unregisterIconLibrary()` reverts them to the
+  built-in glyph. While a remote icon resolves, nothing is drawn — the box already holds its size,
+  and a placeholder glyph would be a flash of the wrong icon.
+- A resolver returning an empty string (an unknown name) leaves the built-in render in place and
+  fetches nothing. A resolver that *throws* is a failure: localized alert plus `lr-error`.
+- Remote loading is fail-closed by construction: the URL must pass the shared fetch allowlist
+  (`http:`, `https:`, `blob:`, `data:`, and relative URLs — a `javascript:` URL is never fetched),
+  the response is capped at 1 MiB before any parser sees it, and DOMPurify's SVG profile runs
+  unconditionally, sanitizing straight to DOM nodes rather than to a re-parsed string. A response
+  that isn't an SVG document is rejected, and its text never reaches the DOM.
+- A superseded load can never paint over a newer one, and a detached icon holds no half-finished
+  remote state — reconnecting re-resolves from scratch.
+- `rotate`/`flip` are physical, not direction-relative: `flip="horizontal"` produces the same
+  mirrored artwork in LTR and RTL. A glyph that must follow reading direction is mirrored by the
+  wrapping part of the component that owns it; a second, direction-driven flip here would silently
+  cancel that one out.
+
+## `lr-visually-hidden`
+
+Hides its slotted content from sight while leaving it in the accessibility tree, so a screen reader
+still announces it. Uses the clip-rect technique (`position: absolute` in a 1px box with
+`clip-path: inset(50%)`), never `display: none` or `visibility: hidden` — either of those would
+remove the content from the accessibility tree along with the viewport, which is the whole failure
+mode this element exists to avoid.
+
+`:host(:focus-within)` restores the element to normal flow, so anything focusable inside becomes
+visible the moment a keyboard user reaches it. That is what makes it usable for a skip link.
+
+**Properties:** none. **Events:** none. **Slots:** default (the content to hide).
+**CSS parts:** none — the host itself is the box. **Themeable custom properties:** none.
+
+```html
+<lr-visually-hidden><a href="#main">Skip to main content</a></lr-visually-hidden>
+```
+
+Every declaration is `!important`, deliberately: the element's contract is that the content is
+hidden, and a consumer stylesheet that accidentally set `position: static` on it would silently
+expose the text. Use the `:focus-within` escape hatch rather than overriding the base rules.
+
+---
 
 ## `lr-divider`
 
@@ -866,7 +1053,12 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
 - `min: string = ''`, `max: string = ''` — inclusive `YYYY-MM-DD` bounds, surfaced as
   `rangeUnderflow`/`rangeOverflow`
 - `readonly: boolean = false` (reflected) — also suspends all validity flags
-- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — control density on the library's
+  shared six-step ladder, scaling each field's height floor, padding, font size and corner radius
+  together so a birthdate field lines up with the `lr-input`/`lr-date-input` beside it at the same
+  declared size. `'small'`/`'medium'`/`'large'` are accepted as exact synonyms of `'s'`/`'m'`/`'l'`,
+  so migrating from an upstream that spells them that way needs no attribute rewrite. Every tier
+  resolves to at least the 24px pointer-target floor, so even `'2xs'` stays usable
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`)
 - `locale: string = ''` — BCP-47 override for field order and per-field label sampling only
   (redeclared non-reflecting over the base `locale`, like `lr-date-input`)
@@ -899,10 +1091,16 @@ block, repeated three times, `data-field="day"|"month"|"year"`), `field-input` (
 small per-field text label), `hint`, `error` (`role="alert"`).
 
 **Themeable custom properties:** `--lr-known-date-field-padding-block`,
-`--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size`,
-`--lr-known-date-field-min-height` (all four rewritten by
-each `:host([size])` rule; `m` defaults `--lr-space-s`/`--lr-space-s`/`--lr-font-size-md-sm`/
-`--lr-size-2-5rem`), `--lr-known-date-field-height`,
+`--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size` and
+`--lr-known-date-field-min-height` all read the shared control ladder rather than a hand-kept copy
+of the scale — respectively `--lr-form-control-padding-block`, `--lr-form-control-padding-inline`,
+`--lr-form-control-font-size`, and `max(var(--lr-form-control-height), var(--lr-size-24px))`, each
+of which the ladder re-points per `size` tier. That is what keeps the three fields the same height
+as an `<lr-input>`/`<lr-date-input>` in the same form row at every tier; the
+`--lr-known-date-field-*` names are unchanged and are still the documented override point. The
+min-height resolves to 24px at `2xs`/`xs` (WCAG 2.2 SC 2.5.8's pointer-target floor, above the
+ladder's own 1.25rem/1.5rem there), 1.875rem at `s`, 2.5rem at `m`, 3rem at `l`, 3.5rem at `xl`.
+Also `--lr-known-date-field-height`,
 `--lr-known-date-field-gap` (default `--lr-space-s` — gap between the three field blocks),
 `--lr-known-date-day-field-width` / `--lr-known-date-month-field-width` (default `--lr-size-3-5em`)
 and `--lr-known-date-year-field-width` (default `--lr-size-5em`) — the per-field input widths, not
@@ -914,9 +1112,10 @@ without repainting every other component that reads the same shared danger token
 The two height knobs work as a pair on `[part='field-input']`, the same way
 `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input` expose theirs:
 
-- `--lr-known-date-field-min-height` is a **floor**, re-assigned per `size` tier. Every tier's
-  default sits below the field's own padding/font-driven height, so raising it is what makes it
-  visible; lowering it changes nothing.
+- `--lr-known-date-field-min-height` is a **floor**, re-pointed per `size` tier through the shared
+  ladder. At the small tiers it exceeds the field's own padding/font-driven height and is what
+  actually pins the rendered box — that is how `2xs`/`xs` keep a 24px pointer target; at `l`/`xl`
+  the content height already clears it, so it is inert there and only raising it changes anything.
 - `--lr-known-date-field-height` pins an **exact** height (both floors and caps), so the three
   inputs can line up with a neighbouring control of a known height. It is **undeclared by
   default** — the field grows to fit its content. Never set it to `auto`: `auto` is a valid
@@ -1029,7 +1228,7 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 - `spotlightPadding: number = 4` (attribute `spotlight-padding`) — extra px between the target's box
   and the cutout/ring; overridable per step
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — a deliberate inversion of
-  `lr-dialog`'s `noLightDismiss`: a backdrop click does **nothing** by default so a stray click
+  `lr-dialog`'s `lightDismiss`: a backdrop click does **nothing** by default so a stray click
   can't discard onboarding progress. Set it to make a backdrop click `end('skip')`
 - `showProgress: boolean = true` (attribute `show-progress`) — renders the "Step X of Y" text + dots
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,

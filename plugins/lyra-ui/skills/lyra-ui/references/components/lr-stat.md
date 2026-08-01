@@ -6,7 +6,7 @@
 - **Class** `LyraStat`, also available unregistered from `@aceshooting/lyra-ui/components/data/stat/stat.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 14 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -14,6 +14,11 @@
 ## `lr-stat`
 
 KPI/stat card — value + unit + label + optional icon/trend/caption.
+
+**Renamed in 8.0.0 — breaking:** `appearance` is now `frame`. Library-wide, `appearance` means only
+"how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";
+this property was always the second. There is no alias — `appearance` on `<lr-stat>` is an unknown
+attribute now, so a stat left on `appearance="plain"` silently renders full card chrome again.
 
 **Properties:**
 - `label: string = ''`
@@ -23,7 +28,10 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
   URL schemes keep the stat non-interactive
 - `target?: string` — forwarded to the anchor while `href` is active; a nonempty target derives
   `rel="noopener noreferrer"` rather than exposing a separately settable `rel`
-- `variant: 'neutral'|'success'|'warning'|'danger' = 'neutral'` (reflected)
+- `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'neutral'` (reflected) — the library's
+  one semantic-tone vocabulary, tinting `[part="value"]`. **`brand` is new in 8.0.0**, so a stat
+  whose headline is the primary metric no longer has to borrow `emphasis` (which is a card-chrome
+  accent) to read as branded
 - `trend: number = NaN` (a `NaN` sentinel hides the trend pill entirely — set an actual number to
   show it)
 - `caption: string = ''`
@@ -50,8 +58,8 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
   hides `[part="unit"]`, for rendering a loading/status message in place of a numeric value
 - `compact: boolean = false` (reflected) — tighter card padding; same convention as `lr-empty`'s and
   `lr-widget`'s `compact`
-- `appearance: 'card'|'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
+- `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
+  vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
   parent; `'plain'` removes the border, background, padding, corner radius **and** the
   `block-size: 100%` stretch, so the stat can sit inline in prose, a toolbar, or a table cell.
   `plain` wins over `compact` when both are set (there is no padding left to tighten), and it drops
@@ -87,11 +95,12 @@ transparent)`) — text/background of `[part="trend"]` when its polarity (per `g
 (default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
 counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
 so retinting the trend pill doesn't also recolor the value, and vice versa.
+`--lr-stat-value-brand-color` (default `var(--lr-color-brand)`),
 `--lr-stat-value-success-color` (default `var(--lr-color-success)`),
 `--lr-stat-value-warning-color` (default `var(--lr-color-warning)`), and
 `--lr-stat-value-danger-color` (default `var(--lr-color-danger)`) independently color the headline
 value for each non-neutral `variant`. `--lr-color-brand` still drives `emphasis`'s accent edge and
-value tint.
+its own value tint.
 
 **Optional peer deps:** none.
 

@@ -86,7 +86,7 @@ export const Interactive: Story = {
 };
 
 export const DensityAndChrome: Story = {
-  name: 'compact + appearance="plain"',
+  name: 'compact + frame="plain"',
   render: () => html`
     <div style="display:grid; gap:1rem; max-width: 28rem;">
       <lr-source-card source-id="d1" title="annual_report.pdf" page="12">
@@ -98,10 +98,10 @@ export const DensityAndChrome: Story = {
       <div
         style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.5rem; display:grid; gap:0.5rem;"
       >
-        <lr-source-card appearance="plain" compact source-id="d3" title="meeting_notes.txt">
+        <lr-source-card frame="plain" compact source-id="d3" title="meeting_notes.txt">
           <span slot="excerpt">Team agreed to revisit the roadmap next quarter.</span>
         </lr-source-card>
-        <lr-source-card appearance="plain" compact source-id="d4" title="spec.pdf" page="4">
+        <lr-source-card frame="plain" compact source-id="d4" title="spec.pdf" page="4">
           <span slot="excerpt">The retrieval pipeline chunks at 512 tokens with 64 of overlap.</span>
         </lr-source-card>
       </div>

@@ -3,6 +3,7 @@ import './attachment-chip.js';
 import type { LyraAttachmentChip } from './attachment-chip.js';
 import { formatFileSize } from './attachment-chip.js';
 import { styles } from './attachment-chip.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function makeFile(name: string, type: string, sizeBytes = 1): File {
   return new File([new Uint8Array(sizeBytes)], name, { type, lastModified: 1700000000000 });
@@ -41,7 +42,7 @@ it('defaults to status="pending", removable=true, and empty independent props', 
   expect(el.getAttribute('status')).to.equal('pending');
   expect(el.removable).to.be.true;
   expect(el.name).to.equal('');
-  expect(el.size).to.equal(0);
+  expect(el.bytes).to.equal(0);
   expect(el.mimeType).to.equal('');
   expect(el.thumbnailSrc).to.equal('');
   expect(el.previewSrc).to.equal('');
@@ -141,7 +142,7 @@ it('reflects status changes onto the host attribute', async () => {
   expect(el.getAttribute('status')).to.equal('error');
 });
 
-describe('independent name/size/mime-type props', () => {
+describe('independent name/bytes/mime-type props', () => {
   it('renders the given name, falling back to "Untitled file" when unset', async () => {
     const withName = (await fixture(
       html`<lr-attachment-chip name="report.pdf"></lr-attachment-chip>`,
@@ -160,27 +161,27 @@ describe('independent name/size/mime-type props', () => {
     expect(name.getAttribute('title')).to.equal('a-very-long-quarterly-financial-summary-2026.pdf');
   });
 
-  it('formats size via formatFileSize and hides the part entirely for a 0/unset size', async () => {
+  it('formats bytes via formatFileSize and hides the part entirely for a 0/unset byte count', async () => {
     const noSize = (await fixture(html`<lr-attachment-chip name="a.txt"></lr-attachment-chip>`)) as LyraAttachmentChip;
     const sizePart = noSize.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
     expect(sizePart.hidden).to.be.true;
 
     const withSize = (await fixture(
-      html`<lr-attachment-chip name="a.txt" size="2415919"></lr-attachment-chip>`,
+      html`<lr-attachment-chip name="a.txt" bytes="2415919"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const sizePart2 = withSize.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
     expect(sizePart2.hidden).to.be.false;
     expect(sizePart2.textContent).to.equal('2.3 MB');
   });
 
-  it('treats a negative or NaN size the same as 0/unset -- hides the size part instead of rendering "NaN B"/a negative size', async () => {
+  it('treats a negative or NaN bytes value the same as 0/unset -- hides the size part instead of rendering "NaN B"/a negative size', async () => {
     const negative = (await fixture(
-      html`<lr-attachment-chip name="a.txt" .size=${-5}></lr-attachment-chip>`,
+      html`<lr-attachment-chip name="a.txt" .bytes=${-5}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     expect((negative.shadowRoot!.querySelector('[part="size"]') as HTMLElement).hidden).to.be.true;
 
     const nan = (await fixture(
-      html`<lr-attachment-chip name="a.txt" .size=${NaN}></lr-attachment-chip>`,
+      html`<lr-attachment-chip name="a.txt" .bytes=${NaN}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     expect((nan.shadowRoot!.querySelector('[part="size"]') as HTMLElement).hidden).to.be.true;
   });
@@ -203,10 +204,10 @@ describe('independent name/size/mime-type props', () => {
 });
 
 describe('the file property', () => {
-  it('derives name, size and mime type from file, taking precedence over the independent props', async () => {
+  it('derives name, byte count and mime type from file, taking precedence over the independent props', async () => {
     const file = makeFile('photo.png', 'image/png', 2048);
     const el = (await fixture(
-      html`<lr-attachment-chip name="ignored.txt" size="1" mime-type="text/plain" .file=${file}></lr-attachment-chip>`,
+      html`<lr-attachment-chip name="ignored.txt" bytes="1" mime-type="text/plain" .file=${file}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     expect(el.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('photo.png');
     expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2.0 KB');
@@ -497,6 +498,31 @@ describe('remove affordance', () => {
     )) as LyraAttachmentChip;
     expect(el.removable).to.be.false;
     expect(el.shadowRoot!.querySelectorAll('[part="remove-button"]').length).to.equal(0);
+  });
+
+  it('tints the remove button on hover and deepens it while pressed', async () => {
+    // The pressed mix is written from the button's own `transparent` fill, which is the one
+    // color-mix() shape that can silently resolve to nothing at all. Read the rendered colour.
+    const el = (await fixture(html`<lr-attachment-chip name="a.txt"></lr-attachment-chip>`)) as LyraAttachmentChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    const resting = getComputedStyle(btn).backgroundColor;
+    const rect = btn.getBoundingClientRect();
+    expect(rect.width, 'the remove button has real geometry to point at').to.be.greaterThan(0);
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      const hovered = getComputedStyle(btn).backgroundColor;
+      expect(hovered, 'hover tints the transparent button').to.not.equal(resting);
+
+      await sendMouse({ type: 'down' });
+      const pressed = getComputedStyle(btn).backgroundColor;
+      expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('has an aria-label of "Remove {filename}"', async () => {
@@ -821,7 +847,7 @@ describe('file-size unit localization', () => {
       <lr-attachment-chip
         lang="ar-EG"
         name="report.pdf"
-        size="2415919"
+        bytes="2415919"
         status="uploading"
         progress="42"
       ></lr-attachment-chip>
@@ -841,7 +867,7 @@ it('is accessible in a populated uploading state with numeric progress', async (
     <lr-attachment-chip
       id="att-3"
       name="dataset.csv"
-      size="9830400"
+      bytes="9830400"
       mime-type="text/csv"
       status="uploading"
       progress="58"
@@ -852,7 +878,7 @@ it('is accessible in a populated uploading state with numeric progress', async (
 
 it('is accessible in a populated error state with a retry button', async () => {
   const el = (await fixture(html`
-    <lr-attachment-chip id="att-4" name="invoice.pdf" size="102400" mime-type="application/pdf" status="error"></lr-attachment-chip>
+    <lr-attachment-chip id="att-4" name="invoice.pdf" bytes="102400" mime-type="application/pdf" status="error"></lr-attachment-chip>
   `)) as LyraAttachmentChip;
   await expect(el).to.be.accessible();
 });

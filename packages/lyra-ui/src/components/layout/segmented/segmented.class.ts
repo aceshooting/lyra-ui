@@ -2,6 +2,8 @@ import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
+import { sizes } from "../../../internal/sizes.styles.js";
+import type { LyraSize, LyraSizeStep } from "../../../internal/variants.js";
 import { isRtl } from "../../../internal/rtl.js";
 import { prefersReducedMotion } from "../../../internal/motion.js";
 import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
@@ -18,7 +20,11 @@ export interface SegmentedItem {
   disabled?: boolean;
 }
 
-export type LyraSegmentedSize = "2xs" | "xs" | "s" | "m" | "l" | "xl";
+/** The canonical six-step ladder, re-exported under this component's historical name so existing
+ *  imports keep working while there is exactly one definition of the union. New code should use
+ *  {@linkcode LyraSizeStep} -- or {@linkcode LyraSize}, which `size` accepts, and which also covers
+ *  the `small`/`medium`/`large` spellings. */
+export type LyraSegmentedSize = LyraSizeStep;
 
 export interface LyraSegmentedEventMap {
   "lr-change": CustomEvent<{ value: string }>;
@@ -30,8 +36,8 @@ export interface LyraSegmentedEventMap {
  * arrow-key move both select immediately, like a native radio group), cyclic Arrow/Home/End
  * navigation among non-disabled items. First-party invention --
  * "choose exactly one of N labeled options, rendered as a button row" is ubiquitous
- * settings/filter-panel UI. Supports the same `2xs`-`xl` compact-form-control `size` scale as
- * `<lr-select>`/`<lr-combobox>`/`<lr-input>`, so it can sit flush beside those controls in a
+ * settings/filter-panel UI. Supports the library's shared `size` ladder, the same one
+ * `<lr-select>`/`<lr-combobox>`/`<lr-input>` use, so it can sit flush beside those controls in a
  * toolbar at a matching height.
  *
  * @customElement lr-segmented
@@ -48,11 +54,11 @@ export interface LyraSegmentedEventMap {
  * @csspart segment-label - The segment's label text.
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of the fade at each horizontal scroll edge. The
  *   fade is applied only while the track actually overflows, so a row that fits is never dimmed.
- * @cssprop [--lr-segmented-track-min-height=var(--lr-size-2-5rem)] - Minimum height of the `base`
- *   track. Re-set per `size` (`2xs` through `xl`); the `2.5rem` (40px) default applies at the
- *   unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared default-tier
- *   floor. Because it is declared on `:host` per tier, override it on the element itself, not on
- *   an ancestor.
+ * @cssprop [--lr-segmented-track-min-height=var(--lr-form-control-height)] - Minimum height of the
+ *   `base` track, taken from the `size` tier's shared control height; the `2.5rem` (40px) default
+ *   applies at the unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared
+ *   default-tier floor. Because it is declared on `:host`, override it on the element itself, not
+ *   on an ancestor.
  * @cssprop [--lr-segmented-track-height] - Exact height of the `base` track, pinning it at every
  *   `size` tier (sets both `block-size` and `min-block-size`) so the row can sit flush beside a
  *   hard-sized toolbar control. **Genuinely unset by default** — while unset each tier keeps its
@@ -68,16 +74,16 @@ export interface LyraSegmentedEventMap {
  * @cssprop [--lr-segmented-hover-color=var(--lr-color-text)] - Text color of a hovered segment that
  *   is neither checked nor disabled. Independent of the selected-state props above — recoloring the
  *   checked pill leaves this untouched.
- * @cssprop [--lr-segmented-segment-padding=var(--lr-size-0-125rem) var(--lr-space-s)] - Each
- *   segment's padding. Re-set per `size`; this default applies at the unset/`m` size.
- * @cssprop [--lr-segmented-font-size=var(--lr-font-size-sm)] - Each segment's font size. Re-set per
- *   `size`; this default applies at the unset/`m` size.
+ * @cssprop [--lr-segmented-segment-padding=var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)] -
+ *   Each segment's padding, taken from the `size` tier's shared control padding.
+ * @cssprop [--lr-segmented-font-size=var(--lr-form-control-font-size)] - Each segment's font size,
+ *   taken from the `size` tier's shared control font size.
  * @cssprop [--lr-segmented-track-gap=var(--lr-size-0-125rem)] - Gap between segments.
  * @cssprop [--lr-segmented-track-radius=var(--lr-radius)] - Track corner radius.
  * @cssprop [--lr-segmented-track-padding=var(--lr-size-0-125rem)] - Track inset padding.
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   /** The button row's items. */
   @property({ attribute: false }) items: SegmentedItem[] = [];
@@ -90,11 +96,12 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
    *  The resolved name is set on the `role="radiogroup"` element. */
   @property() label = "";
 
-  /** Visual size — same `2xs`-`xl` scale as `<lr-select>`/`<lr-combobox>` (`s` through `xl`)
-   *  and `<lr-input>` (`2xs`). Reflects as the `size` attribute. The default `m` tier is
-   *  identical to this component's pre-`size` rendering, so leaving it unset never changes
-   *  output. */
-  @property({ reflect: true }) size: LyraSegmentedSize = "m";
+  /** Visual size, on the library's shared ladder — the same `--lr-form-control-*` scale
+   *  `<lr-input>`/`<lr-select>`/`<lr-combobox>`/`<lr-button>` use, so a row of mixed controls at one
+   *  `size` lines up. Accepts both spellings of every tier: `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web
+   *  Awesome's `small`/`medium`/`large`, so migrating either way is a tag rename. Reflects as the
+   *  `size` attribute. */
+  @property({ reflect: true }) size: LyraSize = "m";
 
   @state() private selectedItem?: SegmentedItem;
 

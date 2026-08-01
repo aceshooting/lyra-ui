@@ -24,8 +24,18 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* A background wash on the canvas box rather than filter: brightness(). A filter applies to the
+     element's own painted output, so it re-tinted every drawn node, link and label the renderer had
+     just computed -- and multiplied nothing at all on a pure-white or pure-black one. The canvas is
+     cleared to transparent wherever nothing is drawn, so a background tints only the empty plot
+     area and leaves the drawn scene exactly as rendered.
+
+     no-pressed-state: this canvas is the surface d3-zoom binds its pan/drag to, so a pressed wash
+     would sit under the whole graph for the entire duration of a pan and dim the very data the user
+     is dragging into view; a press here also lands on a painted node, which is not a DOM element and
+     cannot carry :active at all. The hover tint alone confirms the surface is live. */
   [part='canvas']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   [part='tooltip'] {
     position: absolute;
@@ -47,7 +57,7 @@ export const styles = css`
     border: var(--lr-size-1px) solid var(--lr-color-border);
     z-index: var(--lr-layer-content);
     transform: translate(var(--lr-size-6px), calc(-100% - var(--lr-size-6px)));
-    max-inline-size: min(calc(100% - var(--lr-size-12px)), calc(100vw - var(--lr-size-12px)));
+    max-inline-size: min(calc(100% - var(--lr-size-0-75rem)), calc(100vw - var(--lr-size-0-75rem)));
     overflow-wrap: anywhere;
     white-space: normal;
   }
@@ -77,12 +87,18 @@ export const styles = css`
     stroke-linejoin: round;
     pointer-events: all;
   }
-  /* filter:brightness rather than a fixed background/stroke swap -- like lr-span-waterfall's
-     identical per-item [part='bar']:hover, this part's own color is per-instance/data-driven
-     (--lr-link-color, --lr-node-fill, --lr-graph-hull-fill), so a single hardcoded hover color
-     can't work across every value it might take. */
+  /* This part's own color is per-instance/data-driven (--lr-link-color, --lr-node-fill,
+     --lr-graph-hull-fill), so a single hardcoded hover color can't work across every value it might
+     take -- but neither could filter: brightness(), which multiplies every channel and so lightens a
+     dark stroke, darkens nothing at all on a pure-white or pure-black one, and (being a filter)
+     re-tinted the arrowhead marker painted from the same stroke. Mixing the very same custom
+     property toward --lr-color-mix-partner keeps the per-instance color and always moves, in the
+     direction the surface actually needs. */
   [part='link']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    stroke: color-mix(in oklab, var(--lr-link-color, var(--lr-color-border)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='link']:active {
+    stroke: color-mix(in oklab, var(--lr-link-color, var(--lr-color-border)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='arrowhead'] {
     fill: context-stroke;
@@ -105,7 +121,10 @@ export const styles = css`
     cursor: pointer;
   }
   [part='node']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    fill: color-mix(in oklab, var(--lr-node-fill, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='node']:active {
+    fill: color-mix(in oklab, var(--lr-node-fill, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='node']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -183,7 +202,12 @@ export const styles = css`
     cursor: pointer;
   }
   [part='hull']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    fill: color-mix(in oklab, var(--lr-graph-hull-fill, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    stroke: color-mix(in oklab, var(--lr-graph-hull-fill, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='hull']:active {
+    fill: color-mix(in oklab, var(--lr-graph-hull-fill, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    stroke: color-mix(in oklab, var(--lr-graph-hull-fill, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='hull']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

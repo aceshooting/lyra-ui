@@ -194,6 +194,236 @@ it('restores a string state synchronously without emitting a user event', async 
   expect(ctl.checkValidity()).to.be.true;
 });
 
+describe('setCustomValidity()', () => {
+  it('marks the control invalid with a `customError` flag carrying the supplied message', async () => {
+    const form = await fixture<HTMLFormElement>(html`<form><lr-demo-ctl name="x"></lr-demo-ctl></form>`);
+    const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl;
+    expect(ctl.checkValidity()).to.be.true;
+
+    ctl.setCustomValidity('That username is already taken.');
+
+    expect(ctl.validity.customError).to.be.true;
+    expect(ctl.validity.valid).to.be.false;
+    expect(ctl.validationMessage).to.equal('That username is already taken.');
+    expect(ctl.checkValidity()).to.be.false;
+    expect(form.checkValidity()).to.be.false;
+    expect((ctl as unknown as HTMLElement).matches(':invalid')).to.be.true;
+  });
+
+  it("clears on '' by restoring the control's own computed validity, never by forcing it valid", async () => {
+    const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+    // Intrinsically invalid to begin with: required and empty.
+    expect(ctl.validity.valueMissing).to.be.true;
+
+    ctl.setCustomValidity('Rejected by the server.');
+    expect(ctl.validity.customError).to.be.true;
+    expect(ctl.validationMessage).to.equal('Rejected by the server.');
+
+    ctl.setCustomValidity('');
+    expect(ctl.validity.customError).to.be.false;
+    // The intrinsic violation must come back, message and all -- not a blanket "valid".
+    expect(ctl.validity.valueMissing).to.be.true;
+    expect(ctl.validity.valid).to.be.false;
+    expect(ctl.validationMessage).to.equal('This field is required.');
+    expect(ctl.checkValidity()).to.be.false;
+
+    ctl.value = 'filled in';
+    expect(ctl.validity.valid).to.be.true;
+    expect(ctl.validationMessage).to.equal('');
+  });
+
+  it('survives every intrinsic validity recomputation until explicitly cleared', async () => {
+    const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+    ctl.setCustomValidity('Rejected by the server.');
+
+    // Each of these drives `updateValidity()` -> `[SET_ANCHORED_VALIDITY](flags, message)`, which
+    // must layer the custom error back on top instead of overwriting it.
+    ctl.value = 'filled in';
+    expect(ctl.validity.customError).to.be.true;
+    expect(ctl.validationMessage).to.equal('Rejected by the server.');
+
+    ctl.required = false;
+    expect(ctl.validity.customError).to.be.true;
+
+    ctl.value = 'changed again';
+    expect(ctl.validity.customError).to.be.true;
+    expect(ctl.checkValidity()).to.be.false;
+
+    ctl.setCustomValidity('');
+    expect(ctl.validity.valid).to.be.true;
+    expect(ctl.validationMessage).to.equal('');
+  });
+
+  it('stacks on top of an intrinsic violation, with the custom message winning', async () => {
+    const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+    ctl.setCustomValidity('Rejected by the server.');
+    expect(ctl.validity.valueMissing).to.be.true;
+    expect(ctl.validity.customError).to.be.true;
+    expect(ctl.validationMessage).to.equal('Rejected by the server.');
+  });
+
+  it('survives a form reset, exactly like a native control', async () => {
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-demo-ctl name="x" value="start"></lr-demo-ctl></form>`,
+    );
+    const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl;
+    ctl.setCustomValidity('Rejected by the server.');
+    ctl.value = 'edited';
+    form.reset();
+    expect(ctl.value).to.equal('start');
+    expect(ctl.validity.customError).to.be.true;
+    expect(ctl.validationMessage).to.equal('Rejected by the server.');
+  });
+
+  it("changes nothing while never called, and an '' call is a no-op", async () => {
+    const ctl = (await fixture(html`<lr-demo-ctl></lr-demo-ctl>`)) as unknown as Ctl;
+    expect(ctl.validity.customError).to.be.false;
+    expect(ctl.validity.valid).to.be.true;
+    ctl.setCustomValidity('');
+    expect(ctl.validity.customError).to.be.false;
+    expect(ctl.validity.valid).to.be.true;
+    expect(ctl.validationMessage).to.equal('');
+    expect(ctl.checkValidity()).to.be.true;
+  });
+
+  it('reaches a real component that recomputes validity from a native input on every change (lr-textarea)', async () => {
+    const el = await fixture<LyraTextarea>(html`<lr-textarea name="notes" minlength="5"></lr-textarea>`);
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    // `lr-textarea`'s own `updateValidity()` override calls `[SET_ANCHORED_VALIDITY]` several
+    // times per change; none of those may drop the consumer's custom error.
+    el.value = 'ok';
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validity.tooShort).to.be.true;
+    expect(el.validationMessage).to.equal('Rejected by the server.');
+
+    el.value = 'long enough';
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    el.setCustomValidity('');
+    expect(el.validity.valid).to.be.true;
+    expect(el.checkValidity()).to.be.true;
+    expect(el.validationMessage).to.equal('');
+  });
+});
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126. The mixin
+// no-ops where it is missing, so these assertions are skipped rather than failed on an older engine.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+
+describe('validity custom states', () => {
+  it('exposes required/optional and valid/invalid, kept in sync with validity', async function () {
+    if (!supportsCustomStates) this.skip();
+    const ctl = (await fixture(html`<lr-demo-ctl></lr-demo-ctl>`)) as unknown as Ctl;
+    expect(ctl.internals.states.has('optional')).to.be.true;
+    expect(ctl.internals.states.has('required')).to.be.false;
+    expect(ctl.internals.states.has('valid')).to.be.true;
+    expect(ctl.internals.states.has('invalid')).to.be.false;
+
+    ctl.required = true;
+    expect(ctl.internals.states.has('required')).to.be.true;
+    expect(ctl.internals.states.has('optional')).to.be.false;
+    expect(ctl.internals.states.has('invalid')).to.be.true;
+    expect(ctl.internals.states.has('valid')).to.be.false;
+
+    ctl.value = 'filled in';
+    expect(ctl.internals.states.has('valid')).to.be.true;
+    expect(ctl.internals.states.has('invalid')).to.be.false;
+  });
+
+  it('withholds user-valid/user-invalid until the user has actually interacted', async function () {
+    if (!supportsCustomStates) this.skip();
+    const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+    const host = ctl as unknown as HTMLElement;
+    expect(ctl.internals.states.has('invalid')).to.be.true;
+    expect(ctl.internals.states.has('user-invalid')).to.be.false;
+    expect(ctl.internals.states.has('user-valid')).to.be.false;
+
+    host.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    expect(ctl.internals.states.has('user-invalid')).to.be.true;
+    expect(ctl.internals.states.has('user-valid')).to.be.false;
+
+    ctl.value = 'filled in';
+    expect(ctl.internals.states.has('user-valid')).to.be.true;
+    expect(ctl.internals.states.has('user-invalid')).to.be.false;
+  });
+
+  it('counts a reportValidity() call — what a submit attempt runs — as interaction', async function () {
+    if (!supportsCustomStates) this.skip();
+    const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+    expect(ctl.internals.states.has('user-invalid')).to.be.false;
+    ctl.reportValidity();
+    expect(ctl.internals.states.has('user-invalid')).to.be.true;
+  });
+
+  it('goes pristine again after a form reset', async function () {
+    if (!supportsCustomStates) this.skip();
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-demo-ctl name="x" required></lr-demo-ctl></form>`,
+    );
+    const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl;
+    (ctl as unknown as HTMLElement).dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    expect(ctl.internals.states.has('user-invalid')).to.be.true;
+    form.reset();
+    expect(ctl.internals.states.has('user-invalid')).to.be.false;
+    expect(ctl.internals.states.has('invalid')).to.be.true;
+  });
+
+  it('treats a blur (focusout) as interaction, like native :user-invalid', async function () {
+    if (!supportsCustomStates) this.skip();
+    const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+    const host = ctl as unknown as HTMLElement;
+    expect(ctl.internals.states.has('user-invalid')).to.be.false;
+    host.dispatchEvent(new Event('focusout', { bubbles: true, composed: true }));
+    expect(ctl.internals.states.has('user-invalid')).to.be.true;
+  });
+
+  it('reflects a custom error in the invalid state and matches :state() in CSS', async function () {
+    if (!supportsCustomStates) this.skip();
+    const ctl = (await fixture(html`<lr-demo-ctl></lr-demo-ctl>`)) as unknown as Ctl;
+    const host = ctl as unknown as HTMLElement;
+    ctl.setCustomValidity('Rejected by the server.');
+    expect(ctl.internals.states.has('invalid')).to.be.true;
+    expect(ctl.internals.states.has('valid')).to.be.false;
+
+    let supportsStateSelector = true;
+    try {
+      document.createElement('div').matches(':state(x)');
+    } catch {
+      supportsStateSelector = false;
+    }
+    if (supportsStateSelector) {
+      expect(host.matches(':state(invalid)')).to.be.true;
+      expect(host.matches(':state(optional)')).to.be.true;
+    }
+
+    ctl.setCustomValidity('');
+    expect(ctl.internals.states.has('valid')).to.be.true;
+  });
+
+  it('keeps a real component in sync too (lr-textarea)', async function () {
+    if (!supportsCustomStates) this.skip();
+    const el = await fixture<LyraTextarea>(html`<lr-textarea required name="notes"></lr-textarea>`);
+    expect(el.internals.states.has('required')).to.be.true;
+    expect(el.internals.states.has('invalid')).to.be.true;
+    el.value = 'filled in';
+    await el.updateComplete;
+    expect(el.internals.states.has('valid')).to.be.true;
+    expect(el.internals.states.has('invalid')).to.be.false;
+  });
+});
+
 // `createFallbackInternals()` (the hand-rolled, inert `ElementInternals` substitute defined in
 // this file) only ever runs when `this.attachInternals()` is missing, returns falsy, or throws --
 // never in this repo's real Chromium test environment, where `attachInternals()` is natively
@@ -253,13 +483,19 @@ describe('fallback ElementInternals when attachInternals() is unavailable', () =
       expect(el.internals.labels.length).to.equal(0);
       expect(el.form).to.equal(null);
       expect(el.labels.length).to.equal(0);
-      // `states` (the CustomStateSet substitute) is a documented no-op -- safe to call, never
-      // reflects anything back.
+      // `states` (the CustomStateSet substitute) is a real Set-backed store: it can't drive CSS
+      // `:state()` matching in an environment with no ElementInternals, but every component that
+      // reads its own states back (`internals.states.has(...)`) behaves identically to a browser.
       expect(el.internals.states.has('checked')).to.be.false;
       expect(() => {
         el.internals.states.add('checked');
       }).to.not.throw();
-      expect(el.internals.states.delete('checked')).to.be.false;
+      expect(el.internals.states.has('checked')).to.be.true;
+      expect(el.internals.states.delete('checked')).to.be.true;
+      expect(el.internals.states.has('checked')).to.be.false;
+      // The mixin's own validity states are maintained through the fallback as well.
+      expect(el.internals.states.has('required')).to.be.true;
+      expect(el.internals.states.has('valid')).to.be.true;
     } finally {
       proto.attachInternals = original;
     }
@@ -294,6 +530,36 @@ describe('fallback ElementInternals when attachInternals() is unavailable', () =
       expect(el.internals.labels.length).to.equal(0);
       expect(el.form).to.equal(null);
       expect(el.labels.length).to.equal(0);
+    } finally {
+      proto.attachInternals = original;
+    }
+  });
+
+  it('threads setCustomValidity() through the fallback with the same layering as a real ElementInternals', async () => {
+    const proto = LyraTextarea.prototype as unknown as { attachInternals: () => ElementInternals };
+    const original = proto.attachInternals;
+    proto.attachInternals = () => {
+      throw new DOMException('attachInternals is not supported', 'NotSupportedError');
+    };
+    try {
+      const el = await fixture<LyraTextarea>(html`<lr-textarea required name="notes"></lr-textarea>`);
+      el.setCustomValidity('Rejected by the server.');
+      expect(el.validity.customError).to.be.true;
+      expect(el.validity.valueMissing).to.be.true;
+      expect(el.validationMessage).to.equal('Rejected by the server.');
+      expect(el.checkValidity()).to.be.false;
+
+      el.value = 'filled in';
+      await el.updateComplete;
+      expect(el.validity.customError).to.be.true;
+      expect(el.checkValidity()).to.be.false;
+
+      el.setCustomValidity('');
+      expect(el.validity.customError).to.be.false;
+      expect(el.checkValidity()).to.be.true;
+      expect(el.validationMessage).to.equal('');
+      expect(el.internals.states.has('valid')).to.be.true;
+      expect(el.internals.states.has('invalid')).to.be.false;
     } finally {
       proto.attachInternals = original;
     }

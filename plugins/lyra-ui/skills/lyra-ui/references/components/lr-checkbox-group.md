@@ -6,7 +6,7 @@
 - **Class** `LyraCheckboxGroup`, also available unregistered from `@aceshooting/lyra-ui/components/forms/checkbox-group/checkbox-group.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -16,13 +16,28 @@
 A form-associated collection of `<lr-checkbox>` children. Its `value` is a `string[]`; each
 selected value is submitted under `name` and `required` requires at least one selection.
 
-**Properties:** `label`, `hint`, `errorText`, `value`, `name`, `required`, `disabled`, and
-`accessibleLabel` (`aria-label`). **Slots:** default checkboxes, `label`, `hint`, `error`.
+**Properties:** `label`, `hint`, `errorText`, `value`, `name`, `required`, `disabled`,
+`accessibleLabel` (`aria-label`), and `size: LyraSize = 'm'` (reflected) — the size of the group's
+**own** chrome, on the shared ladder and accepting both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
+`small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
+options, and deliberately does **not** resize the `<lr-checkbox>` children: each carries its own
+`size`, so a group can hold options at mixed sizes and an explicitly-sized option is never silently
+overridden by its container. Set the same `size` on the children to scale the whole group.
+**Slots:** default checkboxes, `label`, `hint`, `error`.
 **Events:** a user toggle emits exactly one group-owned `input`, then `change`, then `lr-change`;
 all three carry `{ value: string[] }`. The owned child's corresponding events are consumed at the
 group boundary, so an ancestor does not receive a second, differently shaped sequence.
 Programmatic child/property synchronization is silent.
+**Methods:** `setCustomValidity(message)` sets or clears a consumer-supplied error ("that
+combination of topics is not available"): a non-empty message raises `customError` and blocks
+submission, `''` restores the group's own computed validity so a required group with nothing checked
+goes back to `valueMissing`. It survives every child toggle, slot change and form reset.
 **CSS parts:** `form-control`, `form-control-label`, `options`, `hint`, `error`.
+**Themeable custom properties:** `--lr-checkbox-group-row-gap` (default
+`calc(var(--lr-form-control-height) * 0.1)`), the vertical gap between the group's label, options
+and messages, and `--lr-checkbox-group-option-gap` (default
+`calc(var(--lr-form-control-height) * 0.2)`), the gap between adjacent options — both scaled by
+`size` through the shared control ladder.
 
 **`value` is a read-out of child state, not an input.** The children are the single source of
 truth. An internal sync recomputes `value` from them and reassigns it on every child toggle,

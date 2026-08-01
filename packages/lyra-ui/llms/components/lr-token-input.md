@@ -22,7 +22,11 @@ input), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCo
 (attribute `autocorrect`) — all three native text-entry hints are forwarded to both the draft input
 and the inline token editor — `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected —
 same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
-tiers; the remove button's hit area stays fixed at `40px` across all sizes), `allowDuplicates`
+tiers, and both `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` are accepted; the remove
+button's hit area stays fixed at `40px` across all sizes), `pill` (reflected, default `false` —
+rounds the token row's corners to a full pill by re-assigning `--lr-token-input-radius` to
+`--lr-radius-pill`; the chips share that knob with the row, so they round with it),
+`allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
 **Slots:** `label`, `hint`, `error`.
@@ -38,7 +42,10 @@ token's text, doubling as the roving-focus edit trigger — rendered only while 
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
 glyph), `input`, `hint`, `error`. `focus()`, `blur()`, and `click()` forward to the internal text
-input.
+input. `setCustomValidity(message)` carries a rejection no client-side constraint can express
+("that tag is reserved"): a non-empty message raises `customError` and blocks submission, `''`
+restores the control's own computed validity so a `required` control with no tokens goes back to
+`valueMissing`. It survives every token add, removal and edit, and a `form.reset()`.
 
 **`editable` — editing a token in place.** Off by default, in which case the token row renders
 exactly as it does without the feature and stays non-focusable. Turn it on and each token becomes a

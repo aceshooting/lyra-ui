@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './span-waterfall.js';
 import type { LyraSpanWaterfall } from './span-waterfall.js';
 import type { LyraSpan } from '../trace-tree/span.js';
-import { styles } from './span-waterfall.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const SPANS: LyraSpan[] = [
   { id: 'root', name: 'Plan trip', kind: 'agent', startMs: 0, endMs: 400, status: 'success' },
@@ -87,9 +87,34 @@ describe('lr-span-waterfall', () => {
     expect(ev.detail).to.deep.equal({ id: 'llm' });
   });
 
-  it('gives bar a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='bar'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
+  it('tints bar on hover, and further again while pressed', async () => {
+    const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`)) as LyraSpanWaterfall;
+    await el.updateComplete;
+    const bar = el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement;
+    const rect = bar.getBoundingClientRect();
+    const centre: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    // The tint lives on a ::after veil rather than the bar's own background, because a bar's fill is
+    // one of five different things (four solid tones, a striped gradient, a transparent dashed box)
+    // and no single background declaration tints all of them.
+    const veil = (): string => getComputedStyle(bar, '::after').backgroundColor;
+    const rest = veil();
+    try {
+      await sendMouse({ type: 'move', position: centre });
+      const hovered = veil();
+      await sendMouse({ type: 'down' });
+      const pressed = veil();
+      await sendMouse({ type: 'up' });
+      expect(hovered, 'hover must move the veil off its resting colour').to.not.equal(rest);
+      expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(
+        hovered,
+      );
+      expect(pressed).to.not.equal(rest);
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('moves roving tabindex among bars with ArrowDown/ArrowUp', async () => {

@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './token-input.js';
+import '../button/button.js';
 import type { LyraTokenInput } from './token-input.js';
 import { styles } from './token-input.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -174,6 +175,57 @@ it("matches lr-input's own row height at every shared size tier when empty", asy
     const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
     expect(getComputedStyle(wrapper).minBlockSize, `size=${size}`).to.equal(px);
   }
+});
+
+// Literal pixels, not a relative comparison: adopting the shared form-control ladder moved where
+// these numbers are DECLARED, and the point of the move is that it did not move the numbers.
+it('renders the same laid-out row box at every tier as before the shared ladder', async () => {
+  const expected: ReadonlyArray<readonly [string, number]> = [
+    ['2xs', 20],
+    ['xs', 25],
+    ['s', 30],
+    ['m', 40],
+    ['l', 52],
+    ['xl', 63],
+  ];
+  for (const [size, px] of expected) {
+    const el = await fixture(html`<lr-token-input size=${size}></lr-token-input>`);
+    const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    expect(wrapper.getBoundingClientRect().height, `laid-out height at size=${size}`).to.equal(px);
+  }
+});
+
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  for (const [alias, step] of pairs) {
+    const aliasEl = await fixture(html`<lr-token-input size=${alias}></lr-token-input>`);
+    const stepEl = await fixture(html`<lr-token-input size=${step}></lr-token-input>`);
+    const row = (el: Element) => el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    expect(getComputedStyle(row(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
+      getComputedStyle(row(stepEl)).minBlockSize,
+    );
+    expect(row(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
+      row(stepEl).getBoundingClientRect().height,
+    );
+  }
+});
+
+it('rounds the token row and its tokens to a pill without a ::part() rule', async () => {
+  const plain = (await fixture(html`<lr-token-input .value=${['alpha']}></lr-token-input>`)) as LyraTokenInput;
+  const pill = (await fixture(html`<lr-token-input pill .value=${['alpha']}></lr-token-input>`)) as LyraTokenInput;
+  const radius = (el: LyraTokenInput, part: string) =>
+    getComputedStyle(el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement).borderStartStartRadius;
+  expect(pill.pill).to.be.true;
+  expect(Number.parseFloat(radius(pill, 'input-wrapper'))).to.be.greaterThan(
+    Number.parseFloat(radius(plain, 'input-wrapper')),
+  );
+  expect(Number.parseFloat(radius(pill, 'token'))).to.be.greaterThan(
+    Number.parseFloat(radius(plain, 'token')),
+  );
 });
 
 it('scales token-chip padding with the token-input size tier', async () => {
@@ -1048,5 +1100,276 @@ describe('ElementInternals fallback', () => {
         expect(el.value).to.deep.equal(['gamma']);
       },
     );
+  });
+});
+
+// `CustomStateSet` and the `:state()` selector ship separately from each other and from the rest
+// of `ElementInternals` -- these two guards are why the same block passes on WebKit, where a
+// missing `CustomStateSet` would otherwise throw on the very first assertion.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('validity custom states', () => {
+  it('publishes required/optional and valid/invalid from the first update', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-token-input required name="tags"></lr-token-input>`)) as LyraTokenInput;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    el.value = ['alpha'];
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid once a token exists').to.be.true;
+    expect(el.matches(':state(invalid)'), 'invalid once a token exists').to.be.false;
+
+    el.required = false;
+    await el.updateComplete;
+    expect(el.matches(':state(optional)'), 'optional after clearing required').to.be.true;
+    expect(el.matches(':state(required)'), 'required after clearing required').to.be.false;
+  });
+
+  it('keeps user-valid/user-invalid off a pristine control and turns them on at first interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-token-input required name="tags"></lr-token-input>`)) as LyraTokenInput;
+    await el.updateComplete;
+    expect(el.matches(':state(invalid)'), 'invalid while pristine').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid while pristine').to.be.false;
+    expect(el.matches(':state(user-valid)'), 'user-valid while pristine').to.be.false;
+
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after blur').to.be.true;
+
+    el.value = ['alpha'];
+    await el.updateComplete;
+    expect(el.matches(':state(user-valid)'), 'user-valid once satisfied').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid once satisfied').to.be.false;
+  });
+
+  it('counts a reportValidity() call as interaction, and a form reset as going pristine again', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = (await fixture(
+      html`<form><lr-token-input required name="tags"></lr-token-input></form>`,
+    )) as HTMLFormElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid before reporting').to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reporting').to.be.true;
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reset').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid after reset').to.be.true;
+  });
+});
+
+describe('lr-token-input setCustomValidity()', () => {
+  it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-token-input name="tags" label="Tags"></lr-token-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+    await el.updateComplete;
+    let submits = 0;
+    // Registered before any requestSubmit() below, so a successful submission can never navigate
+    // the test page.
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+    expect(el.checkValidity(), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('That tag is reserved.');
+    expect(el.validity.customError).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('That tag is reserved.');
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(0);
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validationMessage).to.equal('');
+    form.requestSubmit();
+    expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('keeps a custom error through an intrinsic revalidation', async () => {
+    const el = (await fixture(html`<lr-token-input required label="Tags"></lr-token-input>`)) as LyraTokenInput;
+    await el.updateComplete;
+    el.setCustomValidity('Rejected by the server.');
+
+    // Adding a token re-runs syncValidity(), the traffic that would otherwise wipe the custom
+    // error out on every edit.
+    el.value = ['alpha'];
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'the intrinsic error cleared').to.be.false;
+    expect(el.validity.customError, 'the custom error survived the recomputation').to.be.true;
+    expect(el.validationMessage).to.equal('Rejected by the server.');
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('keeps a custom error across a form reset, matching native setCustomValidity semantics', async () => {
+    // Native `form.reset()` restores value and pristine-ness but never clears a consumer-set
+    // custom error -- only another `setCustomValidity('')` does. This control matches.
+    const form = (await fixture(html`
+      <form><lr-token-input name="tags" label="Tags"></lr-token-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+    await el.updateComplete;
+    el.value = ['alpha'];
+    el.setCustomValidity('That list was already submitted.');
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.value.length, 'the reset emptied the token list').to.equal(0);
+    expect(el.validity.customError, 'the custom error outlives the reset').to.be.true;
+    expect(el.validationMessage).to.equal('That list was already submitted.');
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`<lr-token-input required label="Tags"></lr-token-input>`)) as LyraTokenInput;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'required and empty to begin with').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validity.valueMissing, 'an empty required control is still missing a value').to.be.true;
+    expect(el.checkValidity(), 'clearing must not force the control valid').to.be.false;
+    expect(el.validationMessage.length, 'the intrinsic message is republished').to.be.greaterThan(0);
+  });
+
+  it('publishes the custom error through the validity custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-token-input label="Tags"></lr-token-input>`)) as LyraTokenInput;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.matches(':state(invalid)'), 'invalid synchronously, not on the next Lit update').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    expect(el.matches(':state(user-invalid)'), 'still pristine until the user has a turn').to.be.false;
+
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)'), 'a reported validation counts as interaction').to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)')).to.be.true;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+  });
+});
+
+describe('lr-token-input implicit form submission', () => {
+  const draftInput = (el: LyraTokenInput): HTMLInputElement =>
+    el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  const enterOn = (el: LyraTokenInput, init: KeyboardEventInit = {}) =>
+    draftInput(el).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
+    );
+  async function typeDraft(el: LyraTokenInput, text: string): Promise<void> {
+    const input = draftInput(el);
+    input.value = text;
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    await el.updateComplete;
+  }
+
+  it('submits the ancestor form when Enter is pressed with an empty draft', async () => {
+    const form = (await fixture(html`
+      <form><lr-token-input name="tags" label="Tags"></lr-token-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el);
+    expect(submits).to.equal(1);
+  });
+
+  it('commits the draft instead of submitting while there is one to commit', async () => {
+    const form = (await fixture(html`
+      <form><lr-token-input name="tags" label="Tags"></lr-token-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    await typeDraft(el, 'alpha');
+    enterOn(el);
+    await el.updateComplete;
+    expect(el.value.join(','), 'the draft became a token').to.equal('alpha');
+    expect(submits, 'committing a token is not implicit submission').to.equal(0);
+
+    // The draft is empty again, so the next Enter is a submission.
+    enterOn(el);
+    expect(submits).to.equal(1);
+  });
+
+  it('submits through an lr-button submitter, which requestSubmit() itself would reject', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-token-input name="tags" label="Tags"></lr-token-input>
+        <lr-button type="submit" name="action" value="save">Go</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+    await el.updateComplete;
+    let submits = 0;
+    let submitterName = '';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+      submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
+    });
+    enterOn(el);
+    expect(submits).to.equal(1);
+    expect(submitterName, 'the lr-button was the submitter').to.equal('action');
+  });
+
+  it('never submits on a held modifier, during IME composition, or after a veto', async () => {
+    const form = (await fixture(html`
+      <form><lr-token-input name="tags" label="Tags"></lr-token-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el, { shiftKey: true });
+    enterOn(el, { ctrlKey: true });
+    enterOn(el, { altKey: true });
+    enterOn(el, { metaKey: true });
+    enterOn(el, { isComposing: true });
+    expect(submits).to.equal(0);
+
+    // Capture on the host runs before the internal input's own listener.
+    const veto = (e: Event): void => e.preventDefault();
+    el.addEventListener('keydown', veto, true);
+    enterOn(el);
+    el.removeEventListener('keydown', veto, true);
+    expect(submits).to.equal(0);
+
+    enterOn(el);
+    expect(submits, 'a bare Enter still submits').to.equal(1);
   });
 });

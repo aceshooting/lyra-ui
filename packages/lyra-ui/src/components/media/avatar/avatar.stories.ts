@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A small, fixed-size identity marker: default-slotted icon/glyph content, an image, or an initials fallback, in that priority order. Purely presentational — a consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a user-menu affordance.',
+          'A small, fixed-size identity marker: default-slotted icon/glyph content, an image, an `icon`-slotted fallback glyph, or an initials fallback, in that priority order. Purely presentational — a consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a user-menu affordance.',
       },
     },
   },
@@ -31,18 +31,18 @@ export const IconOnly: Story = {
     docs: {
       description: {
         story:
-          'Default-slotted content (an inline SVG here) takes priority over both `src` and `initials` — useful for a chat UI distinguishing an "AI" avatar from a "user" avatar by role glyph rather than a photo or initials. Set `alt` alongside the icon for an accessible name, since the glyph itself is treated as decorative.',
+          'Default-slotted content (an inline SVG here) takes priority over `image`, the `icon` slot, and `initials` — useful for a chat UI distinguishing an "AI" avatar from a "user" avatar by role glyph rather than a photo or initials. Set `alt` alongside the icon for an accessible name, since the glyph itself is treated as decorative.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
-      <lr-avatar tone="brand" alt="AI assistant">
+      <lr-avatar variant="brand" alt="AI assistant">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4L12 2z"></path>
         </svg>
       </lr-avatar>
-      <lr-avatar tone="neutral" alt="You">
+      <lr-avatar variant="neutral" alt="You">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
@@ -56,7 +56,7 @@ export const WithImage: Story = {
   name: 'With an image',
   render: () => html`
     <lr-avatar
-      src=${IMAGE_SRC}
+      image=${IMAGE_SRC}
       alt="A. Bee"
       initials="AB"
     ></lr-avatar>
@@ -75,7 +75,7 @@ export const AccessibleNameOverride: Story = {
   },
   render: () => html`
     <lr-avatar
-      src=${IMAGE_SRC}
+      image=${IMAGE_SRC}
       alt="Profile photo"
       aria-label="Signed in as A. Bee"
       initials="AB"
@@ -84,8 +84,27 @@ export const AccessibleNameOverride: Story = {
 };
 
 export const Sizes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`size` runs the library-wide six-step ladder, `2xs` through `xl` (top row). `small`/`medium`/`large` are the accepted Web Awesome / Shoelace spellings of `s`/`m`/`l`, and this component\'s older `sm`/`md`/`lg` shorthands still resolve to the same three tiers (bottom row), so existing markup keeps its sizing.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
+      <lr-avatar initials="XS" size="2xs"></lr-avatar>
+      <lr-avatar initials="XS" size="xs"></lr-avatar>
+      <lr-avatar initials="SM" size="s"></lr-avatar>
+      <lr-avatar initials="MD" size="m"></lr-avatar>
+      <lr-avatar initials="LG" size="l"></lr-avatar>
+      <lr-avatar initials="XL" size="xl"></lr-avatar>
+    </div>
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.75rem;">
+      <lr-avatar initials="SM" size="small"></lr-avatar>
+      <lr-avatar initials="MD" size="medium"></lr-avatar>
+      <lr-avatar initials="LG" size="large"></lr-avatar>
       <lr-avatar initials="SM" size="sm"></lr-avatar>
       <lr-avatar initials="MD" size="md"></lr-avatar>
       <lr-avatar initials="LG" size="lg"></lr-avatar>
@@ -94,22 +113,72 @@ export const Sizes: Story = {
 };
 
 export const Shapes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`circle` (the default) uses the pill radius, `rounded` the shared `--lr-radius`, and `square` no corner radius at all.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
       <lr-avatar initials="AB" shape="circle"></lr-avatar>
+      <lr-avatar initials="AB" shape="rounded"></lr-avatar>
       <lr-avatar initials="AB" shape="square"></lr-avatar>
     </div>
   `,
 };
 
-export const Tones: Story = {
+export const IconSlotFallback: Story = {
+  name: 'Fallback glyph (slot="icon")',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Content in the `icon` slot stands in for the `initials` text: it renders only when no default-slot glyph is present and no image loads. The left avatar has no image at all; the right one has an unreachable image URL and falls through to the same glyph.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
-      <lr-avatar initials="NE" tone="neutral"></lr-avatar>
-      <lr-avatar initials="BR" tone="brand"></lr-avatar>
-      <lr-avatar initials="SU" tone="success"></lr-avatar>
-      <lr-avatar initials="WA" tone="warning"></lr-avatar>
-      <lr-avatar initials="DA" tone="danger"></lr-avatar>
+      <lr-avatar alt="Unassigned">
+        <svg slot="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </lr-avatar>
+      <lr-avatar alt="Unassigned" variant="brand" image="https://example.invalid/nonexistent.png">
+        <svg slot="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </lr-avatar>
+    </div>
+  `,
+};
+
+export const LazyLoading: Story = {
+  name: 'Deferred image request (loading="lazy")',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The native `<img loading>` attribute is forwarded verbatim. `lazy` defers the request until the avatar approaches the viewport — worth setting for avatars far down a long list, never for one above the fold.',
+      },
+    },
+  },
+  render: () => html`<lr-avatar image=${IMAGE_SRC} alt="A. Bee" initials="AB" loading="lazy"></lr-avatar>`,
+};
+
+export const Variants: Story = {
+  render: () => html`
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <lr-avatar initials="NE" variant="neutral"></lr-avatar>
+      <lr-avatar initials="BR" variant="brand"></lr-avatar>
+      <lr-avatar initials="SU" variant="success"></lr-avatar>
+      <lr-avatar initials="WA" variant="warning"></lr-avatar>
+      <lr-avatar initials="DA" variant="danger"></lr-avatar>
     </div>
   `,
 };
@@ -120,17 +189,22 @@ export const ImageFallback: Story = {
     docs: {
       description: {
         story:
-          'A broken/unreachable `src` falls back to the `initials` text instead of showing a broken-image icon.',
+          'A broken/unreachable `image` falls back to the `icon` slot, or to the `initials` text, instead of showing a broken-image icon — and fires `lr-error` with the URL that failed.',
       },
     },
   },
   render: () => html`
     <lr-avatar
-      src="https://example.invalid/nonexistent.png"
+      image="https://example.invalid/nonexistent.png"
       alt="A. Bee"
       initials="AB"
-      tone="brand"
+      variant="brand"
+      @lr-error=${(e: CustomEvent<{ image: string }>) => {
+        const out = document.getElementById('avatar-error-log');
+        if (out) out.textContent = `lr-error: ${e.detail.image}`;
+      }}
     ></lr-avatar>
+    <p id="avatar-error-log" style="font-family: monospace; margin-top: 0.5rem;">(no event yet)</p>
   `,
 };
 
@@ -140,16 +214,16 @@ export const InitialsFontSize: Story = {
     docs: {
       description: {
         story:
-          'The initials fallback scales with `size` through `--lr-avatar-font-size` (`sm` → `--lr-font-size-xs`, `md` → `--lr-font-size-sm`, `lg` → `--lr-font-size-md`). Set the property directly to override any tier — useful for single-character initials, which can carry a larger glyph than a two-character pair in the same circle.',
+          'The initials fallback scales with `size` through `--lr-avatar-font-size` (`s`/`small` → `--lr-font-size-xs`, `m`/`medium` → `--lr-font-size-sm`, `l`/`large` → `--lr-font-size-m`). Set the property directly to override any tier — useful for single-character initials, which can carry a larger glyph than a two-character pair in the same circle.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
-      <lr-avatar initials="AB" size="sm"></lr-avatar>
-      <lr-avatar initials="AB" size="md"></lr-avatar>
-      <lr-avatar initials="AB" size="lg"></lr-avatar>
-      <lr-avatar initials="A" tone="brand" style="--lr-avatar-font-size: 1.25rem;"></lr-avatar>
+      <lr-avatar initials="AB" size="small"></lr-avatar>
+      <lr-avatar initials="AB" size="medium"></lr-avatar>
+      <lr-avatar initials="AB" size="large"></lr-avatar>
+      <lr-avatar initials="A" variant="brand" style="--lr-avatar-font-size: 1.25rem;"></lr-avatar>
     </div>
   `,
 };

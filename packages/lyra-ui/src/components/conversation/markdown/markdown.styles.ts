@@ -22,7 +22,7 @@ export const styles = css`
        non-'visible' value forces the browser to resolve the other to 'auto' too (never
        'visible') -- left implicit, a sub-pixel content/box mismatch on the block axis can trip a
        spurious, non-interactive vertical scrollbar even though nothing here needs one. Mirrors
-       lr-tabs's tablist fix (overflow-x: auto; overflow-y: hidden) for the identical bug. */
+       lr-tab-group's tablist fix (overflow-x: auto; overflow-y: hidden) for the identical bug. */
     overflow-block: hidden;
     overflow-wrap: anywhere;
   }

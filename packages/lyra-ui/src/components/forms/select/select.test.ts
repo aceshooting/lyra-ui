@@ -5,6 +5,7 @@ import '../combobox/option.js';
 import type { LyraSelect } from './select.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './select.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const basic = () => html`
   <lr-select>
@@ -1063,12 +1064,16 @@ describe('trigger gap/radius cssprops', () => {
     expect(cs.borderRadius).to.equal('3px');
   });
 
-  it('declares --lr-select-gap/--lr-select-radius on :host and consumes them once on [part="trigger"]', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/:host \{[^}]*--lr-select-gap: var\(--lr-space-xs\);/);
-    expect(css).to.match(/:host \{[^}]*--lr-select-radius: var\(--lr-radius\);/);
-    expect(css).to.include('gap: var(--lr-select-gap);');
-    expect(css).to.include('border-radius: var(--lr-select-radius);');
+  it('keeps the trigger gap constant across tiers while the radius follows the shared ladder', async () => {
+    const triggerOf = (host: LyraSelect) => host.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+    const mEl = (await fixture(basic())) as LyraSelect;
+    const xsEl = (await fixture(html`<lr-select size="xs"></lr-select>`)) as LyraSelect;
+    // The trigger's adornment gap is deliberately outside the ladder -- it never varied by tier.
+    expect(getComputedStyle(triggerOf(mEl)).gap).to.equal('4px');
+    expect(getComputedStyle(triggerOf(xsEl)).gap).to.equal('4px');
+    // The radius does vary: a 6px corner on a 24px-tall trigger reads as a lozenge.
+    expect(getComputedStyle(triggerOf(mEl)).borderTopLeftRadius).to.equal('6px');
+    expect(getComputedStyle(triggerOf(xsEl)).borderTopLeftRadius).to.equal('2px');
   });
 });
 
@@ -1110,7 +1115,7 @@ it('pins overflow-x explicitly alongside the listbox\'s overflow-y, so the unset
   // Per the CSS overflow spec, pinning one axis to a non-'visible' value forces the other axis's
   // used value to 'auto' too -- an implicit overflow-x: auto here risks a phantom horizontal
   // scrollbar even though this listbox only ever scrolls vertically. Same class of bug already
-  // fixed on lr-tabs' tablist (overflow-x: auto; overflow-y: hidden;), just the opposite axis.
+  // fixed on lr-tab-group' tablist (overflow-x: auto; overflow-y: hidden;), just the opposite axis.
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='listbox'\]\s*\{[^}]*overflow-y:\s*auto;\s*overflow-x:\s*hidden;/);
 });
@@ -1761,4 +1766,781 @@ describe('ElementInternals fallback (lr-select)', () => {
       },
     );
   });
+});
+
+
+// -- Multi-select, tags, clear, placement, appearance -----------------------
+
+const multi = () => html`
+  <lr-select multiple>
+    <lr-option value="a">Apple</lr-option>
+    <lr-option value="b">Banana</lr-option>
+    <lr-option value="c">Cherry</lr-option>
+  </lr-select>
+`;
+
+/** Every rendered tag, including the "+N" overflow chip (which carries both part names). */
+function tags(el: LyraSelect): HTMLElement[] {
+  return [...el.shadowRoot!.querySelectorAll('[part~="tag"]')] as HTMLElement[];
+}
+
+function overflowTag(el: LyraSelect): HTMLElement | null {
+  return el.shadowRoot!.querySelector('[part~="tag-overflow"]');
+}
+
+function clearButton(el: LyraSelect): HTMLButtonElement | null {
+  return el.shadowRoot!.querySelector('[part="clear-button"]');
+}
+
+/** Resolve a token expression inside the component's own shadow scope, so a computed
+ *  `rgb(...)` can be compared against a `var(--lr-*)` declaration like-for-like. */
+function resolved(el: LyraSelect, property: string, declaration: string): string {
+  const probe = document.createElement('span');
+  probe.setAttribute('style', `${property}: ${declaration}`);
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).getPropertyValue(property);
+  probe.remove();
+  return value;
+}
+
+describe('multiple', () => {
+  it('exposes an array value and keeps the listbox open while picking several options', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    expect(el.multiple).to.be.true;
+    expect(el.value).to.deep.equal([]);
+
+    el.open = true;
+    await el.updateComplete;
+    rows(el)[0].click();
+    await el.updateComplete;
+    expect(el.open, 'the listbox stays open in multiple mode').to.be.true;
+    rows(el)[2].click();
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['a', 'c']);
+    expect([...rows(el)].map((row) => row.getAttribute('aria-selected'))).to.deep.equal([
+      'true',
+      'false',
+      'true',
+    ]);
+  });
+
+  it('toggles a already-selected row back off and emits the new array', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a', 'b'];
+    el.open = true;
+    await el.updateComplete;
+
+    const detail: unknown[] = [];
+    el.addEventListener('change', (e) => detail.push((e as CustomEvent).detail));
+    rows(el)[0].click();
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['b']);
+    expect(detail).to.deep.equal([{ value: ['b'] }]);
+  });
+
+  it('renders one tag per selected option instead of a single label', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+    expect(tags(el).map((tag) => tag.textContent!.trim())).to.deep.equal(['Apple', 'Banana']);
+  });
+
+  it('marks the listbox as multi-selectable, rendering both ARIA states', async () => {
+    const single = (await fixture(basic())) as LyraSelect;
+    expect(single.shadowRoot!.querySelector('[part="listbox"]')!.getAttribute('aria-multiselectable')).to.equal('false');
+    const el = (await fixture(multi())) as LyraSelect;
+    expect(el.shadowRoot!.querySelector('[part="listbox"]')!.getAttribute('aria-multiselectable')).to.equal('true');
+  });
+
+  it('submits every selected value under the control name', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-select name="fruit" multiple>
+          <lr-option value="a">Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+        </lr-select>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-select') as LyraSelect;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['a', 'b']);
+  });
+
+  it('contributes no form entry at all while unnamed', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-select multiple>
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-select') as LyraSelect;
+    el.value = ['a'];
+    await el.updateComplete;
+    expect([...new FormData(form).keys()]).to.deep.equal([]);
+  });
+
+  it('restores a multiple selection from persisted state, and a plain string in single mode', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.formStateRestoreCallback('["a","c"]', 'restore');
+    expect(el.value).to.deep.equal(['a', 'c']);
+    expect(() => el.formStateRestoreCallback('{"not":"an array"}', 'restore')).to.not.throw();
+    expect(el.value).to.deep.equal([]);
+
+    const single = (await fixture(basic())) as LyraSelect;
+    single.formStateRestoreCallback('b', 'restore');
+    expect(single.value).to.equal('b');
+  });
+
+  it('stays invalid while required and empty, and validates once anything is selected', async () => {
+    const el = (await fixture(html`
+      <lr-select multiple required>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    expect(el.validity.valueMissing).to.be.true;
+    el.value = ['a'];
+    expect(el.validity.valueMissing).to.be.false;
+  });
+
+  it('seeds every declaratively-selected option and restores them all on form.reset()', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-select name="fruit" multiple>
+          <lr-option value="a" selected>Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+          <lr-option value="c" selected>Cherry</lr-option>
+        </lr-select>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-select') as LyraSelect;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a', 'c']);
+
+    el.value = ['b'];
+    form.reset();
+    expect(el.value).to.deep.equal(['a', 'c']);
+  });
+
+  it('removes the last selected value with Backspace on the trigger', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+    let changes = 0;
+    el.addEventListener('change', () => changes++);
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a']);
+    expect(changes).to.equal(1);
+  });
+
+  it('never removes an already-selected option through closed-state type-ahead', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a'];
+    await el.updateComplete;
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a']);
+
+    // Let the ~500ms type-ahead buffer lapse, so the next keystroke starts a fresh search
+    // instead of extending this one into 'ab'.
+    await aTimeout(600);
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'B', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a', 'b']);
+  });
+
+  it('is accessible with tags rendered and the listbox open', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.label = 'Fruit';
+    el.value = ['a', 'b'];
+    el.open = true;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('max-options-visible', () => {
+  const many = async (): Promise<LyraSelect> =>
+    (await fixture(html`
+      <lr-select multiple>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+        <lr-option value="d">Date</lr-option>
+        <lr-option value="e">Elderberry</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+
+  it('defaults to three tags and collapses the rest behind a "+N" indicator', async () => {
+    const el = await many();
+    expect(el.maxOptionsVisible).to.equal(3);
+    el.strings = { selectSelectedOverflow: '+{n} more' };
+    el.value = ['a', 'b', 'c', 'd', 'e'];
+    await el.updateComplete;
+
+    expect(tags(el).length).to.equal(4);
+    expect(overflowTag(el)!.textContent!.trim()).to.equal('+2 more');
+  });
+
+  it('shows every tag with no indicator when set to 0', async () => {
+    const el = await many();
+    el.maxOptionsVisible = 0;
+    el.value = ['a', 'b', 'c', 'd', 'e'];
+    await el.updateComplete;
+    expect(tags(el).length).to.equal(5);
+    expect(overflowTag(el)).to.equal(null);
+  });
+
+  it('falls back to three for a non-finite attribute value', async () => {
+    const el = await many();
+    el.setAttribute('max-options-visible', 'not-a-number');
+    await el.updateComplete;
+    expect(el.maxOptionsVisible).to.equal(3);
+  });
+
+  it('formats the hidden count with the effective locale', async () => {
+    const el = await many();
+    el.locale = 'ar-EG';
+    el.strings = { selectSelectedOverflow: '+{n}' };
+    el.value = ['a', 'b', 'c', 'd', 'e'];
+    await el.updateComplete;
+    expect(overflowTag(el)!.textContent!.trim()).to.equal(`+${new Intl.NumberFormat('ar-EG').format(2)}`);
+  });
+});
+
+describe('with-clear', () => {
+  it('renders no clear button until there is something to clear', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    await el.updateComplete;
+    expect(clearButton(el)).to.equal(null);
+
+    el.value = 'b';
+    await el.updateComplete;
+    expect(clearButton(el)).to.not.equal(null);
+  });
+
+  it('stays absent while unset, even with a value', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.value = 'b';
+    await el.updateComplete;
+    expect(clearButton(el)).to.equal(null);
+  });
+
+  it('clears the selection and announces it once', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    el.value = 'b';
+    await el.updateComplete;
+
+    const seen: string[] = [];
+    for (const type of ['input', 'change', 'lr-change', 'lr-clear']) {
+      el.addEventListener(type, () => seen.push(type));
+    }
+    clearButton(el)!.click();
+    await el.updateComplete;
+
+    expect(el.value).to.equal('');
+    expect(seen).to.deep.equal(['input', 'change', 'lr-change', 'lr-clear']);
+    expect(clearButton(el)).to.equal(null);
+  });
+
+  it('clears every value at once in multiple mode', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.withClear = true;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+    clearButton(el)!.click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal([]);
+  });
+
+  it('does not open the listbox when the clear button is pressed', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    el.value = 'b';
+    await el.updateComplete;
+    clearButton(el)!.click();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+
+  it('carries a localized accessible name and the shared icon-button hit-area floor', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    el.value = 'b';
+    el.strings = { clear: 'Alles löschen' };
+    await el.updateComplete;
+
+    const button = clearButton(el)!;
+    expect(button.getAttribute('aria-label')).to.equal('Alles löschen');
+    const box = button.getBoundingClientRect();
+    expect(box.width).to.be.at.least(40);
+    expect(box.height).to.be.at.least(40);
+  });
+
+  it('disables the clear button alongside the rest of the control', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    el.value = 'b';
+    el.disabled = true;
+    await el.updateComplete;
+    expect(clearButton(el)!.disabled).to.be.true;
+  });
+
+  it('reserves an inline-end band on the trigger so its content never runs under the button', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const base = getComputedStyle(trigger(el)).paddingInlineEnd;
+    el.withClear = true;
+    el.value = 'b';
+    await el.updateComplete;
+    expect(getComputedStyle(trigger(el)).paddingInlineEnd).to.equal('40px');
+    expect(base).to.not.equal('40px');
+  });
+
+  it('moves the clear button to the trailing edge under RTL', async () => {
+    const ltr = (await fixture(basic())) as LyraSelect;
+    ltr.withClear = true;
+    ltr.value = 'b';
+    await ltr.updateComplete;
+    const ltrTrigger = trigger(ltr).getBoundingClientRect();
+    expect(clearButton(ltr)!.getBoundingClientRect().right).to.be.closeTo(ltrTrigger.right, 2);
+
+    const wrapper = await fixture(html`
+      <div dir="rtl">
+        <lr-select with-clear>
+          <lr-option value="a">Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+        </lr-select>
+      </div>
+    `);
+    const rtl = wrapper.querySelector('lr-select') as LyraSelect;
+    rtl.value = 'b';
+    await rtl.updateComplete;
+    const rtlTrigger = trigger(rtl).getBoundingClientRect();
+    expect(clearButton(rtl)!.getBoundingClientRect().left).to.be.closeTo(rtlTrigger.left, 2);
+  });
+
+  it('gives the clear button a :hover rule alongside its :focus-visible ring', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='clear-button'\]:hover\s*\{[^}]*color:/);
+    expect(css).to.match(/\[part='clear-button'\]:focus-visible\s*\{[^}]*outline:/);
+  });
+
+  it('is accessible with the clear button rendered', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.label = 'Fruit';
+    el.withClear = true;
+    el.value = 'b';
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('getTag', () => {
+  it('renders a consumer-supplied chip per selected option, with its index', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.getTag = (option, index) => html`<span class="custom" data-index=${index}>${option.label.toUpperCase()}</span>`;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+
+    const custom = [...el.shadowRoot!.querySelectorAll('.custom')] as HTMLElement[];
+    expect(custom.map((node) => node.textContent)).to.deep.equal(['APPLE', 'BANANA']);
+    expect(custom.map((node) => node.dataset['index'])).to.deep.equal(['0', '1']);
+    expect(el.shadowRoot!.querySelector('[part="tag-label"]')).to.equal(null);
+  });
+
+  it('renders a returned string as text, never as markup', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.getTag = () => '<b>bold</b>';
+    el.value = ['a'];
+    await el.updateComplete;
+    const container = el.shadowRoot!.querySelector('[part="tags"]') as HTMLElement;
+    expect(container.querySelector('b')).to.equal(null);
+    expect(container.textContent).to.contain('<b>bold</b>');
+  });
+
+  it('still collapses past max-options-visible', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.getTag = (option) => option.value;
+    el.maxOptionsVisible = 1;
+    el.strings = { selectSelectedOverflow: '+{n}' };
+    el.value = ['a', 'b', 'c'];
+    await el.updateComplete;
+    expect(overflowTag(el)!.textContent!.trim()).to.equal('+2');
+  });
+});
+
+describe('placement', () => {
+  it('defaults to bottom-start and reflects', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    expect(el.placement).to.equal('bottom-start');
+    await el.updateComplete;
+    expect(el.getAttribute('placement')).to.equal('bottom-start');
+  });
+
+  it('positions the listbox above the trigger when asked to', async () => {
+    const wrapper = await fixture(html`
+      <div style="padding-block-start: 320px;">
+        <lr-select placement="top-start">
+          <lr-option value="a">Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+        </lr-select>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-select') as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(60);
+
+    const listbox = el.shadowRoot!.querySelector('[part="listbox"]')!.getBoundingClientRect();
+    const anchor = trigger(el).getBoundingClientRect();
+    expect(listbox.bottom).to.be.at.most(anchor.top + 1);
+  });
+});
+
+describe('appearance and pill', () => {
+  it('defaults to outlined and reflects the attribute', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    expect(el.appearance).to.equal('outlined');
+    await el.updateComplete;
+    expect(el.getAttribute('appearance')).to.equal('outlined');
+  });
+
+  it('fills the trigger for filled and filled-outlined, keeping the border only for the latter', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const raised = resolved(el, 'background-color', 'var(--lr-color-surface-raised)');
+    const border = resolved(el, 'color', 'var(--lr-color-border)');
+
+    el.appearance = 'filled';
+    await el.updateComplete;
+    expect(getComputedStyle(trigger(el)).backgroundColor).to.equal(raised);
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal('rgba(0, 0, 0, 0)');
+
+    el.appearance = 'filled-outlined';
+    await el.updateComplete;
+    expect(getComputedStyle(trigger(el)).backgroundColor).to.equal(raised);
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal(border);
+  });
+
+  it('drops both the fill and the border for plain', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.appearance = 'plain';
+    await el.updateComplete;
+    const cs = getComputedStyle(trigger(el));
+    expect(cs.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(cs.borderTopColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('paints accent with the loud brand fill and its on-brand text color', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const brand = resolved(el, 'background-color', 'var(--lr-color-brand)');
+    const onBrand = resolved(el, 'color', 'var(--lr-color-on-brand)');
+    el.appearance = 'accent';
+    await el.updateComplete;
+    const cs = getComputedStyle(trigger(el));
+    expect(cs.backgroundColor).to.equal(brand);
+    expect(cs.color).to.equal(onBrand);
+  });
+
+  it('rounds the trigger fully with pill, through the same radius property', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.pill = true;
+    await el.updateComplete;
+    expect(getComputedStyle(trigger(el)).borderRadius).to.equal('999px');
+    expect(el.getAttribute('pill')).to.equal('');
+  });
+
+  it('is accessible in every appearance', async () => {
+    for (const appearance of ['accent', 'filled', 'outlined', 'filled-outlined', 'plain'] as const) {
+      const el = (await fixture(basic())) as LyraSelect;
+      el.label = 'Fruit';
+      el.appearance = appearance;
+      await el.updateComplete;
+      await expect(el).to.be.accessible();
+    }
+  });
+});
+
+describe('lr-select clear-button spelling parity', () => {
+  // Mirror of the lr-input parity test: `with-clear` is Web Awesome's spelling and `clearable`
+  // Shoelace's, so a select that honours only one silently loses the control for half the
+  // migrations the README promises are mechanical.
+  it('renders the clear button for either upstream spelling', async () => {
+    for (const attribute of ['with-clear', 'clearable']) {
+      const el = (await fixture(basic())) as LyraSelect;
+      el.setAttribute(attribute, '');
+      el.value = 'b';
+      await el.updateComplete;
+      expect(clearButton(el), attribute).to.not.equal(null);
+    }
+  });
+
+  it('leaves the clear button absent when neither spelling is set', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.value = 'b';
+    await el.updateComplete;
+    expect(clearButton(el)).to.equal(null);
+  });
+});
+
+describe('lr-select — the shared size ladder', () => {
+  const trigger = (el: LyraSelect) => el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  const height = (el: LyraSelect) => trigger(el).getBoundingClientRect().height;
+
+  it('renders the Web Awesome size spellings at the same geometry as the canonical steps', async () => {
+    for (const [alias, step] of [['small', 's'], ['medium', 'm'], ['large', 'l']] as const) {
+      const aliasEl = (await fixture(html`<lr-select size=${alias}></lr-select>`)) as LyraSelect;
+      const stepEl = (await fixture(html`<lr-select size=${step}></lr-select>`)) as LyraSelect;
+      expect(height(aliasEl), `size=${alias} height`).to.equal(height(stepEl));
+      expect(getComputedStyle(trigger(aliasEl)).fontSize, `size=${alias} font-size`).to.equal(
+        getComputedStyle(trigger(stepEl)).fontSize,
+      );
+      expect(getComputedStyle(trigger(aliasEl)).paddingTop, `size=${alias} padding-block`).to.equal(
+        getComputedStyle(trigger(stepEl)).paddingTop,
+      );
+    }
+  });
+
+  it('sits at the shared form-control height at every tier', async () => {
+    const expected: Record<string, number> = { '2xs': 20, xs: 24, s: 30, m: 40, l: 48, xl: 56 };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-select size=${size}></lr-select>`)) as LyraSelect;
+      expect(height(el), `size=${size}`).to.equal(px);
+    }
+  });
+});
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
+// where either is missing -- an unguarded assertion fails on WebKit rather than skipping.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('lr-select validity custom states', () => {
+  const required = () => html`
+    <lr-select required>
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+    </lr-select>
+  `;
+
+  it('publishes required/optional and valid/invalid from the first render', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(required())) as LyraSelect;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    const optional = (await fixture(basic())) as LyraSelect;
+    await optional.updateComplete;
+    expect(optional.matches(':state(optional)')).to.be.true;
+    expect(optional.matches(':state(valid)')).to.be.true;
+  });
+
+  it('withholds user-valid/user-invalid until the user has actually interacted', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(required())) as LyraSelect;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'pristine required must not read as an error').to.be
+      .false;
+
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)'), 'a submit attempt counts as interaction').to.be.true;
+
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)')).to.be.true;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+  });
+
+  it('goes pristine again after a form reset', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <lr-select name="fruit" required>
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
+      </form>
+    `);
+    const el = form.querySelector('lr-select') as LyraSelect;
+    await el.updateComplete;
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)')).to.be.true;
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'reset returns the control to pristine').to.be.false;
+    expect(el.matches(':state(invalid)')).to.be.true;
+  });
+});
+
+describe('lr-select setCustomValidity()', () => {
+  const inForm = () => html`
+    <form>
+      <lr-select name="fruit">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    </form>
+  `;
+
+  it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
+    const form = (await fixture(inForm())) as HTMLFormElement;
+    const el = form.querySelector('lr-select') as LyraSelect;
+    await el.updateComplete;
+    let submits = 0;
+    // Registered before any requestSubmit() below, so a successful submission can never navigate
+    // the test page.
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+    expect(el.checkValidity(), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('That fruit is out of stock.');
+    expect(el.validity.customError).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('That fruit is out of stock.');
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(0);
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validationMessage).to.equal('');
+    form.requestSubmit();
+    expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('keeps a custom error through an intrinsic revalidation', async () => {
+    const el = (await fixture(html`
+      <lr-select required><lr-option value="a">Apple</lr-option></lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    el.setCustomValidity('Rejected by the server.');
+
+    // Selecting a value re-runs updateValidity(), the traffic that would otherwise wipe the
+    // custom error out on every interaction.
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'the intrinsic error cleared').to.be.false;
+    expect(el.validity.customError, 'the custom error survived the recomputation').to.be.true;
+    expect(el.validationMessage).to.equal('Rejected by the server.');
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('keeps a custom error across a form reset, matching native setCustomValidity semantics', async () => {
+    // Native `form.reset()` restores value and pristine-ness but never clears a consumer-set
+    // custom error -- only another `setCustomValidity('')` does. This control matches.
+    const form = (await fixture(html`
+      <form>
+        <lr-select name="fruit">
+          <lr-option value="a" selected>Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+        </lr-select>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-select') as LyraSelect;
+    await el.updateComplete;
+    el.value = 'b';
+    el.setCustomValidity('Already chosen by this order.');
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.value, 'the reset restored the declarative default').to.equal('a');
+    expect(el.validity.customError, 'the custom error outlives the reset').to.be.true;
+    expect(el.validationMessage).to.equal('Already chosen by this order.');
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`
+      <lr-select required><lr-option value="a">Apple</lr-option></lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'required and unselected to begin with').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validity.valueMissing, 'an unselected required control is still missing a value').to.be.true;
+    expect(el.checkValidity(), 'clearing must not force the control valid').to.be.false;
+    expect(el.validationMessage.length, 'the intrinsic message is republished').to.be.greaterThan(0);
+  });
+
+  it('publishes the custom error through the validity custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(basic())) as LyraSelect;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.matches(':state(invalid)'), 'invalid synchronously, not on the next Lit update').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    expect(el.matches(':state(user-invalid)'), 'still pristine until the user has a turn').to.be.false;
+
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)'), 'a reported validation counts as interaction').to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)')).to.be.true;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+  });
+});
+
+describe('lr-select hover and press feedback', () => {
+  const centerOf = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  // --lr-transition-fast is zeroed on each fixture: the trigger transitions its background, so
+  // reading getComputedStyle one frame after the pointer arrives would otherwise catch the
+  // INTERPOLATED colour -- still the resting one at t=0 -- and report a working hover as broken.
+  for (const appearance of ['outlined', 'filled', 'accent'] as const) {
+    it(`presses an appearance="${appearance}" trigger deeper than it hovers it`, async () => {
+      const el = (await fixture(html`
+        <lr-select appearance=${appearance} style="--lr-transition-fast: 0s">
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
+      `)) as LyraSelect;
+      await el.updateComplete;
+      const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+      const resting = getComputedStyle(trigger).backgroundColor;
+      try {
+        await sendMouse({ type: 'move', position: centerOf(trigger) });
+        const hovered = getComputedStyle(trigger).backgroundColor;
+        expect(hovered, `${appearance} hover vs resting`).to.not.equal(resting);
+        await sendMouse({ type: 'down' });
+        expect(getComputedStyle(trigger).backgroundColor, `${appearance} pressed vs hovered`).to.not.equal(
+          hovered,
+        );
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    });
+  }
 });

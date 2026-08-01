@@ -108,25 +108,25 @@ it('renders only title + member count + drill button in compact mode -- no summa
   expect(el.shadowRoot!.querySelector('[part="drill-button"]')).to.exist;
 });
 
-it('defaults to appearance="card", keeping the bordered chrome', async () => {
+it('defaults to frame="card", keeping the bordered chrome', async () => {
   const el = (await fixture(html`<lr-community-card></lr-community-card>`)) as LyraCommunityCard;
   el.community = community;
   await el.updateComplete;
-  expect(el.appearance).to.equal('card');
-  expect(el.getAttribute('appearance')).to.equal('card');
+  expect(el.frame).to.equal('card');
+  expect(el.getAttribute('frame')).to.equal('card');
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const chrome = getComputedStyle(base);
   expect(chrome.borderTopWidth).to.not.equal('0px');
   expect(chrome.paddingTop).to.not.equal('0px');
 });
 
-it('drops border, background, and padding under appearance="plain" -- the same nested-card escape hatch as its sibling lr-entity-card', async () => {
+it('drops border, background, and padding under frame="plain" -- the same nested-card escape hatch as its sibling lr-entity-card', async () => {
   const el = (await fixture(
-    html`<lr-community-card appearance="plain"></lr-community-card>`,
+    html`<lr-community-card frame="plain"></lr-community-card>`,
   )) as LyraCommunityCard;
   el.community = community;
   await el.updateComplete;
-  expect(el.getAttribute('appearance')).to.equal('plain');
+  expect(el.getAttribute('frame')).to.equal('plain');
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const chrome = getComputedStyle(base);
   expect(chrome.borderTopWidth).to.equal('0px');

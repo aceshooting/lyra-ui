@@ -13,8 +13,11 @@
 
 ## `lr-carousel-item`
 
-Optional semantic wrapper for one slide in `<lr-carousel>`. The carousel also accepts arbitrary
-slotted elements, so this element is useful when a migration needs the explicit item tag.
+Optional semantic wrapper for one slide in `<lr-carousel>`. Mirrors `wa-carousel-item` /
+`sl-carousel-item`. The carousel also accepts arbitrary slotted elements, so this element is useful
+when a migration needs the explicit item tag — and it is the one slide shape whose contract lets the
+carousel generate group semantics and a localized "Slide N of M" name for it (see `<lr-carousel>`
+above). An explicit `role`, `aria-roledescription` or `aria-label` you set yourself always wins.
 
 **Slots:** default slide content.
 

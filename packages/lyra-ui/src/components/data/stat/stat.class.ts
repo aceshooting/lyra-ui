@@ -6,11 +6,15 @@ import { nextId, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
 import { styles } from './stat.styles.js';
 
-export type StatVariant = 'neutral' | 'success' | 'warning' | 'danger';
+/** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
+export type StatVariant = LyraVariant;
 export type StatGoodDirection = 'up' | 'down';
-export type StatAppearance = 'card' | 'plain';
+/** The shared container treatment, now spelled `frame` on this component (it was never a fill).
+ *  Kept as a local name so existing type imports keep resolving. */
+export type StatAppearance = LyraFrame;
 export type StatOrientation = 'vertical' | 'horizontal';
 export interface StatRow {
   label: string;
@@ -60,6 +64,8 @@ export interface StatRow {
  *   reads the shared `--lr-color-danger` token directly.
  * @cssprop [--lr-stat-trend-bad-bg=color-mix(in srgb, var(--lr-color-danger) 8%, transparent)] -
  *   Background of the trend pill when its polarity is "bad".
+ * @cssprop [--lr-stat-value-brand-color=var(--lr-color-brand)] - Headline value color for the
+ *   `brand` variant.
  * @cssprop [--lr-stat-value-success-color=var(--lr-color-success)] - Headline value color for the
  *   `success` variant.
  * @cssprop [--lr-stat-value-warning-color=var(--lr-color-warning)] - Headline value color for the
@@ -123,15 +129,20 @@ export class LyraStat extends LyraElement {
   @property({ type: Boolean, reflect: true }) prose = false;
   /** Tighter padding for constrained spaces — same convention as `lr-empty`'s `compact`. */
   @property({ type: Boolean, reflect: true }) compact = false;
-  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
-   *  bordered, filled, padded box that stretches to fill its parent; `'plain'` removes the border,
-   *  background, padding, corner radius and the `block-size: 100%` stretch so the stat can sit
-   *  inline in prose, a toolbar or a table cell. `plain` wins over `compact` when both are set
+  /** Container treatment — the shared `frame` vocabulary, not a fill. `'card'` (the default) keeps
+   *  the bordered, filled, padded box that stretches to fill its parent; `'plain'` removes the
+   *  border, background, padding, corner radius and the `block-size: 100%` stretch so the stat can
+   *  sit inline in prose, a toolbar or a table cell. `plain` wins over `compact` when both are set
    *  (nothing left to tighten), and it also drops `emphasis`'s accent edge — that edge is card
    *  chrome — while `emphasis`'s brand value tint still applies. A `plain` stat with a safe `href`
    *  swaps the card's border-color/lift hover affordance (invisible with no border) for an
-   *  underline on `[part='value']`; the `:focus-visible` ring is unchanged. */
-  @property({ reflect: true }) appearance: StatAppearance = 'card';
+   *  underline on `[part='value']`; the `:focus-visible` ring is unchanged.
+   *
+   *  This was `appearance` before 8.0.0, where `appearance` meant two unrelated things across the
+   *  library; it now means "how a control fills itself" everywhere, and the container treatment it
+   *  used to double as is `frame`. A clean rename with no alias: `appearance` on `<lr-stat>` is
+   *  simply an unknown attribute now. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
   /** Layout axis. `'vertical'` (the default) stacks label, value, trend, sub and caption.
    *  `'horizontal'` lays label, value+unit, trend, sub and caption out on a single wrapping
    *  baseline row; `[part='spark']` and `[part='rows']` have no sensible place on a text baseline

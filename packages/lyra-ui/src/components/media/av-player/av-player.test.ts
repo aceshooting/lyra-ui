@@ -3,6 +3,7 @@ import './av-player.js';
 import '../../layout/virtual-list/virtual-list.js';
 import type { LyraAvPlayer, LyraAvCue } from './av-player.js';
 import { styles } from './av-player.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const MP3_SRC = 'https://example.test/podcast.mp3';
 const MP4_SRC = 'https://example.test/clip.mp4';
@@ -1082,6 +1083,55 @@ describe('active-state cssprop escape hatches', () => {
     expect(markers.length).to.equal(2);
     expect(getComputedStyle(markers[0]).backgroundColor, 'the untoned marker reads --lr-av-player-marker-bg').to.equal('rgb(10, 20, 30)');
     expect(getComputedStyle(markers[1]).backgroundColor, 'the success-toned marker reads --lr-av-player-marker-success-bg').to.equal('rgb(40, 50, 60)');
+  });
+
+  it('mixes a timeline marker hover and pressed fill from its own tone, and makes pressed the stronger step', async () => {
+    // The interaction states used to be a brightness filter, which needed no knowledge of the fill
+    // and so could not be got wrong per tone. A colour mix can be: written against the untoned
+    // default it would flatten every toned marker to brand the moment the pointer arrived. Hence
+    // the two halves below -- each marker mixes from ITS OWN resting fill, and pressed is a further
+    // step rather than a repeat of hover.
+    const wrapper = (await fixture(html`<div>
+      <lr-av-player
+        src=${MP3_SRC}
+        .highlights=${[
+          { id: 'h1', anchor: { kind: 'time-range', start: 5 } },
+          { id: 'h2', anchor: { kind: 'time-range', start: 60 }, tone: 'danger' },
+        ]}
+      ></lr-av-player>
+    </div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const markers = [...el.shadowRoot!.querySelectorAll('[part="timeline-marker"]')] as HTMLElement[];
+    expect(markers.length).to.equal(2);
+
+    const plainFill = getComputedStyle(markers[0]).getPropertyValue('--lr-av-player-marker-fill').trim();
+    const dangerFill = getComputedStyle(markers[1]).getPropertyValue('--lr-av-player-marker-fill').trim();
+    expect(plainFill, 'the untoned fill is not empty').to.not.equal('');
+    expect(dangerFill, 'the danger tone supplies its own fill for the mixes to read').to.not.equal(plainFill);
+
+    const target = markers[1];
+    const rect = target.getBoundingClientRect();
+    expect(rect.width, 'the marker has real geometry to point at').to.be.greaterThan(0);
+    const resting = getComputedStyle(target).backgroundColor;
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      const hovered = getComputedStyle(target).backgroundColor;
+      expect(hovered, 'hover moves the marker off its resting fill').to.not.equal(resting);
+
+      await sendMouse({ type: 'down' });
+      const pressed = getComputedStyle(target).backgroundColor;
+      expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('--lr-av-player-cue-current-bg retints the current transcript cue', async () => {

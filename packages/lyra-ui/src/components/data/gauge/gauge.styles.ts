@@ -27,7 +27,7 @@ export const styles = css`
     transition: stroke-dashoffset var(--lr-transition-base);
   }
   [part='value'] {
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
     font-weight: var(--lr-font-weight-bold);
     text-anchor: middle;
     fill: var(--lr-color-text);

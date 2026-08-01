@@ -1,0 +1,152 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Guides/Events" />
+
+# Events
+
+Components communicate outward with plain `CustomEvent`s. There is no callback prop, no emitter
+object and no subscription API — you add a listener, exactly as you would to a `<button>`.
+
+```js
+document.querySelector('lr-table').addEventListener('lr-sort', (event) => {
+  console.log(event.detail.key); // the column key the user sorted by
+});
+```
+
+## The contract
+
+Every event a component dispatches goes through one internal helper, so the contract is uniform:
+
+| Property | Value | Why |
+| --- | --- | --- |
+| `bubbles` | `true` | So a delegating ancestor can listen once for a whole subtree. |
+| `composed` | `true` | So it escapes the shadow root at all — without this, nothing outside the component would ever see it. |
+| `cancelable` | `false` **by default** | A notification is not a veto point. |
+| `detail` | the payload | Always on `event.detail`, never on ad-hoc event properties. |
+
+Library events carry the `lr-` prefix (`lr-change`, `lr-select`, `lr-sort`, `lr-show`, …). The
+exceptions are deliberate: some form controls also emit the **native** names of the element they
+stand in for — `input`, `change`, `focus`, `blur` — because renaming those would break every form
+handler a migrating codebase already has. `<lr-select>` fires `change` like a native `<select>`;
+`<lr-slider>` uses `lr-input` / `lr-change` for the same pair instead. Which control does which is a
+per-control decision, stated on each component's own page.
+
+`focus` and `blur` are re-dispatched rather than forwarded, because native focus events neither
+bubble nor cross a shadow boundary — the event you receive on the host is a new one carrying the
+same meaning.
+
+**Never assume a native DOM event name works** on a component that does not document one. And
+`preventDefault()` on a non-cancelable event does nothing at all — silently.
+
+## Cancelable events are real veto points
+
+An event is `cancelable` only where the component genuinely branches on `defaultPrevented` and
+abandons the operation. Cancelling one of those is a supported way to take over:
+
+```js
+// Take over exporting instead of letting the component download a file.
+exportButton.addEventListener('lr-export', (event) => {
+  event.preventDefault();
+  sendToServer(event.detail.format);
+});
+
+// Refuse to close a dialog while the form is dirty.
+dialog.addEventListener('lr-hide', (event) => {
+  if (isDirty) event.preventDefault();
+});
+```
+
+Veto points exist where an operation is worth intercepting — `lr-export` on `<lr-export-button>`,
+`lr-show` / `lr-hide` on `<lr-dialog>`, `<lr-details>`, `<lr-tooltip>` and `<lr-popover>`,
+`lr-remove` on `<lr-tag>` and `<lr-token-input>`, the approve/deny pair on
+`<lr-tool-approval-dialog>`. Each component's own page says which of its events are cancelable;
+everything else is a notification that has already happened.
+
+## Listening from a framework
+
+Dashed custom events are not React-style `onSomething` props:
+
+```jsx
+html`<lr-table @lr-sort=${onSort}></lr-table>`     // Lit
+<lr-table @lr-sort="onSort" />                      // Vue
+<lr-table (lr-sort)="onSort($event)"></lr-table>    // Angular
+<lr-table on:lr-sort={onSort} />                    // Svelte
+tableRef.current.addEventListener('lr-sort', onSort); // React
+```
+
+Because events bubble and are composed, delegating on a container works too — one listener on a
+form wrapper sees `lr-change` from every control inside it.
+
+## The typed-event surface
+
+### Per component
+
+Every component with events exports a `Lyra<Name>EventMap`, and the base class declares a typed
+`addEventListener` overload against it — so `event.detail` is inferred with no cast:
+
+```ts
+import { LyraTable } from '@aceshooting/lyra-ui/components/data/table/table.class.js';
+
+const table = document.querySelector('lr-table') as LyraTable<Invoice>;
+table.addEventListener('lr-sort', (event) => event.detail.key); // typed
+```
+
+Row- and item-carrying components are generic over their data type (`LyraTable<T>`,
+`LyraTableEventMap<T>`, …), so annotating the element keeps the payloads typed all the way through.
+
+### Globally
+
+The moment you listen on something that is *not* a typed element handle — a delegating ancestor
+`<div>`, `document`, `window`, an untyped `HTMLElement` — TypeScript has no element type to key off
+and hands you a bare `Event`. One import fixes every one of those at once:
+
+```ts
+import '@aceshooting/lyra-ui/events';
+```
+
+```ts
+document.addEventListener('lr-sort', (event) => {
+  event.detail.key; // typed, with no cast and no element reference
+});
+```
+
+That module is **types only**. It compiles to `export {}`, costs zero runtime bytes, and imports no
+component — put it in a `.d.ts` or anywhere in your type graph and forget about it. It works by
+augmenting the DOM's `GlobalEventHandlersEventMap`, which `HTMLElementEventMap`, `DocumentEventMap`,
+`WindowEventMap` and `SVGElementEventMap` all extend, so a single augmentation types
+`element.addEventListener`, `document.addEventListener` and `window.addEventListener` alike.
+
+`LyraGlobalEventMap` is exported too, if you want to build your own helper on top of it:
+
+```ts
+import type { LyraGlobalEventMap } from '@aceshooting/lyra-ui/events';
+
+function on<K extends keyof LyraGlobalEventMap>(
+  target: EventTarget,
+  type: K,
+  listener: (event: LyraGlobalEventMap[K]) => void,
+): void {
+  target.addEventListener(type, listener as EventListener);
+}
+```
+
+Two things to know about the global map:
+
+- **An element handle still wins.** A lyra element resolves its own event map first, so
+  `tabGroup.addEventListener('lr-tab-show', …)` is typed by `LyraTabGroupEventMap` and is unaffected
+  by the global augmentation. The global map is the fallback for the untyped cases above.
+- **Shared event names resolve to a union.** One name can be dispatched by several components with
+  different payloads (`lr-zoom-change` comes from four viewers), so the global entry is the *union*
+  of their entries and exposes only what they share. For one component's exact detail, index its own
+  map — `LyraImageViewerEventMap['lr-zoom-change']`.
+
+The native-named events some form controls re-emit (`blur`, `change`, `focus`, `input`) are
+intentionally **absent** from the global map: they already exist in the DOM's own event maps with
+their standard types, and redeclaring them globally would either conflict with or widen a built-in.
+Those stay typed through the component's own map.
+
+## Where to go next
+
+- [Forms](?path=/docs/guides-forms--docs) — the form-control event and validation contract.
+- [Getting started](?path=/docs/guides-getting-started--docs) — imports, subpaths and framework
+  integration.

@@ -78,6 +78,19 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
 
+  /* Held down, the control scrolls repeatedly, so the press is the long-lived state here rather
+     than an instant -- the deeper mix of the same brand-quiet fill marks it for its duration. */
+  [part="control"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+
+  /* no-pressed-state: the viewport is a scroll port, not a target -- pressing it activates
+     nothing, and :active matches the ancestors of whatever was pressed, so clicking any slotted
+     item would flash this outline around the whole strip. */
   [part="viewport"]:hover {
     outline: var(--lr-border-width-thin) solid var(--lr-color-border);
     outline-offset: var(--lr-focus-ring-offset);

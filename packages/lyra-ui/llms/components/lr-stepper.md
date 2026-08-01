@@ -14,7 +14,7 @@
 ## `lr-stepper`
 
 Ordered multi-step wizard/form navigation: an index/label per step, `current`/`completed`/`disabled`/
-`error` state, and click-to-jump. First-party invention (no Web Awesome equivalent). Fully
+`error` state, and click-to-jump. First-party invention (no `wa-*`/`sl-*` counterpart). Fully
 data-driven and controlled, like `lr-table`'s `columns`/`rows` — it never mutates `steps` itself; a
 click, or Enter/Space on a non-disabled step, fires a non-cancelable `lr-step-select`, and the host
 decides whether/how `steps` changes in response.
@@ -138,5 +138,7 @@ each falls back to the token its rule used before. Otherwise shared tokens —
   navigation remain available independently of those semantics.
 - Left/Right (horizontal) and Up/Down (vertical) are mutually exclusive per `orientation` — there's
   no single set of keys that works in both.
+
+
 
 ---

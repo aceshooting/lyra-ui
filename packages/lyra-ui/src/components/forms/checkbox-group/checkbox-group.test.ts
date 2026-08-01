@@ -637,3 +637,222 @@ describe('ElementInternals fallback', () => {
     });
   });
 });
+
+describe('size', () => {
+  async function group(size: string): Promise<LyraCheckboxGroup> {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="pick" label="Pick some" size=${size}>
+        <lr-checkbox value="a">Alpha</lr-checkbox>
+        <lr-checkbox value="b">Bravo</lr-checkbox>
+        <lr-checkbox value="c">Charlie</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('defaults to the "m" tier and reflects it', async () => {
+    const el = (await fixture(html`<lr-checkbox-group name="pick" label="Pick"></lr-checkbox-group>`)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+  });
+
+  it('grows the rendered group box from size="s" to size="l"', async () => {
+    const small = await group('s');
+    const large = await group('l');
+    const smallOptions = (small.shadowRoot!.querySelector('[part="options"]') as HTMLElement).getBoundingClientRect();
+    const largeOptions = (large.shadowRoot!.querySelector('[part="options"]') as HTMLElement).getBoundingClientRect();
+    expect(largeOptions.height).to.be.greaterThan(smallOptions.height);
+    expect(large.getBoundingClientRect().height).to.be.greaterThan(small.getBoundingClientRect().height);
+  });
+
+  it('renders "small"/"large" at the same geometry as "s"/"l"', async () => {
+    const s = await group('s');
+    const small = await group('small');
+    const l = await group('l');
+    const large = await group('large');
+    expect(small.getBoundingClientRect().height).to.be.closeTo(s.getBoundingClientRect().height, 0.5);
+    expect(large.getBoundingClientRect().height).to.be.closeTo(l.getBoundingClientRect().height, 0.5);
+  });
+
+  it('leaves an explicitly-sized option alone', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="pick" label="Pick some" size="l">
+        <lr-checkbox value="a" size="s">Alpha</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    const box = el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    const standalone = (await fixture(html`<lr-checkbox size="s">Alpha</lr-checkbox>`)) as HTMLElement;
+    const standaloneBox = standalone.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    expect(box.getBoundingClientRect().width).to.be.closeTo(
+      standaloneBox.getBoundingClientRect().width,
+      0.5,
+    );
+  });
+
+  it('is accessible at a non-default tier', async () => {
+    const el = await group('l');
+    await expect(el).to.be.accessible();
+  });
+});
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
+// where either is missing -- an unguarded assertion fails on WebKit rather than skipping.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('lr-checkbox-group validity custom states', () => {
+  const requiredGroup = () => html`
+    <lr-checkbox-group name="topics" required label="Topics">
+      <lr-checkbox value="a">A</lr-checkbox>
+      <lr-checkbox value="b">B</lr-checkbox>
+    </lr-checkbox-group>
+  `;
+
+  it('publishes required/optional and valid/invalid from the first render', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(requiredGroup())) as LyraCheckboxGroup;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+  });
+
+  it('withholds user-valid/user-invalid until a child checkbox is actually toggled', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(requiredGroup())) as LyraCheckboxGroup;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'pristine required must not read as an error').to.be
+      .false;
+
+    const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+    box.click();
+    await el.updateComplete;
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)'), 'user-valid after a real toggle').to.be.true;
+  });
+
+  it('counts a reportValidity() call -- what a submit attempt runs -- as interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(requiredGroup())) as LyraCheckboxGroup;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)')).to.be.true;
+  });
+});
+
+describe('lr-checkbox-group setCustomValidity()', () => {
+  it('blocks form submission and becomes the validationMessage', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-checkbox-group name="topics" label="Topics">
+          <lr-checkbox value="a" checked>A</lr-checkbox>
+        </lr-checkbox-group>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    form.requestSubmit();
+    expect(submits, 'an otherwise-valid group submits').to.equal(1);
+
+    el.setCustomValidity('Pick at least one supported topic');
+    expect(el.validationMessage).to.equal('Pick at least one supported topic');
+    expect(el.validity.customError, 'customError').to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(1);
+  });
+
+  it('survives an intrinsic revalidation', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="topics" required label="Topics">
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    el.setCustomValidity('Server says no');
+    (el.querySelector('lr-checkbox') as LyraCheckbox).click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a']);
+    expect(el.validity.valueMissing, 'valueMissing cleared').to.be.false;
+    expect(el.validity.customError, 'custom error survives the recompute').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // Native `setCustomValidity()` is sticky: `form.reset()` restores values, never the custom
+  // error, which only another `setCustomValidity('')` clears. Matching that here.
+  it('keeps the custom error across a form reset', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-checkbox-group name="topics" label="Topics">
+          <lr-checkbox value="a">A</lr-checkbox>
+        </lr-checkbox-group>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+    el.setCustomValidity('Server says no');
+    form.reset();
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the group valid', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="topics" required label="Topics">
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    el.setCustomValidity('Server says no');
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'custom error cleared').to.be.false;
+    expect(
+      el.validity.valueMissing,
+      'an empty custom error must not force a still-empty required group valid',
+    ).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.not.equal('');
+    (el.querySelector('lr-checkbox') as LyraCheckbox).click();
+    await el.updateComplete;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('drives the valid/invalid custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`
+      <lr-checkbox-group name="topics" label="Topics">
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before').to.be.true;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while a custom error is set').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
+  });
+});

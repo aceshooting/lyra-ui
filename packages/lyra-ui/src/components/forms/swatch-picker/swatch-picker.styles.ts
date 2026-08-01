@@ -37,6 +37,11 @@ export const styles = css`
     --lr-swatch-picker-fill-size: var(--lr-size-1-5rem);
     --lr-swatch-picker-gap: var(--lr-space-xs);
   }
+  /* A swatch is a square tap target in a wrapping grid, not a form-control row, so this is the
+     component's own ladder rather than the shared --lr-form-control-height one: the two agree from
+     m upwards, but the shared 2xs/xs steps (20/24px) would put a swatch at or under the WCAG 2.5.8
+     minimum with no margin. It still matches both spellings of every tier, the same way
+     internal/sizes.styles.ts does, so size="small" is honoured here too. */
   :host([size='2xs']) {
     --lr-swatch-picker-hit-size: var(--lr-size-1-5rem);
     --lr-swatch-picker-fill-size: var(--lr-size-0-75rem);
@@ -45,11 +50,13 @@ export const styles = css`
     --lr-swatch-picker-hit-size: var(--lr-size-1-75rem);
     --lr-swatch-picker-fill-size: var(--lr-size-1rem);
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-swatch-picker-hit-size: var(--lr-size-2rem);
     --lr-swatch-picker-fill-size: var(--lr-size-1-25rem);
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-swatch-picker-hit-size: var(--lr-size-3rem);
     --lr-swatch-picker-fill-size: var(--lr-size-1-75rem);
   }
@@ -127,6 +134,17 @@ export const styles = css`
   [part='swatch'][aria-checked='true'] [part='swatch-fill'],
   [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
     transform: scale(1.2);
+  }
+  /* The pressed state is expressed as scale, not as a colour mix, because this part's fill IS the
+     option's colour -- tinting it would misreport the value the swatch exists to show. Pressing
+     pushes the raised swatch back down past its resting size, so the press reads as a physical
+     depress against the hover lift rather than as a second, slightly-larger lift.
+     Deliberately placed AFTER the aria-checked rule above: the two selectors are the same
+     specificity (0,3,0), so ordering is the only thing that lets the already-selected swatch --
+     the one most likely to be pressed again -- show any pressed feedback at all. */
+  [part='swatch']:active [part='swatch-fill'],
+  [part='swatch']:active [part='swatch-icon'] {
+    transform: scale(0.95);
   }
   [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
     box-shadow: 0 0 var(--lr-swatch-picker-selected-blur) var(--lr-border-width-thick) var(--lr-swatch-picker-selected-color);

@@ -15,13 +15,13 @@ import type {
   LyraProvenancePanelEventMap,
 } from '../provenance-panel/provenance-panel.class.js';
 import type { StatVariant, StatRow } from '../../data/stat/stat.class.js';
-import type { LyraTabsEventMap } from '../../layout/tabs/tabs.class.js';
+import type { LyraTabGroupEventMap } from '../../layout/tab-group/tab-group.class.js';
 import '../entity-card/entity-card.class.js';
 import '../neighbor-list/neighbor-list.class.js';
 import '../chunk-inspector/chunk-inspector.class.js';
 import '../provenance-panel/provenance-panel.class.js';
 import '../../data/stat/stat.class.js';
-import '../../layout/tabs/tabs.class.js';
+import '../../layout/tab-group/tab-group.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './entity-dossier.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -32,8 +32,8 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
  *  below without any mapping. */
 type NodeTypeStyle = { id: string; label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' };
 
-/** The three tab ids this component renders -- also `lr-tabs`' own `slot`/`tabId` values, so a
- *  `lr-tabs-change` listener can switch on these literally. */
+/** The three tab ids this component renders -- also `lr-tab-group`' own `slot`/`tabId` values, so a
+ *  `lr-tab-show` listener can switch on these literally. */
 export type LyraEntityDossierTab = 'relationships' | 'chunks' | 'provenance';
 
 /**
@@ -58,17 +58,17 @@ export interface LyraEntityDossierEventMap
   extends LyraNeighborListEventMap,
     LyraChunkInspectorEventMap,
     LyraProvenancePanelEventMap,
-    Omit<LyraTabsEventMap, 'lr-tabs-change'> {
-  'lr-tabs-change': CustomEvent<{ tabId: LyraEntityDossierTab }>;
+    Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
+  'lr-tab-show': CustomEvent<{ tabId: LyraEntityDossierTab }>;
 }
 
 /**
  * `<lr-entity-dossier>` — a full entity detail surface: a persistent header (`lr-entity-card` plus
- * an optional confidence `lr-stat`) above a `lr-tabs` strip for Relationships (`lr-neighbor-list`),
+ * an optional confidence `lr-stat`) above a `lr-tab-group` strip for Relationships (`lr-neighbor-list`),
  * Supporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout —
  * it never fetches, ranks, or mutates graph/document state, and never re-renders what any of those
  * five composed components already render themselves; every one of their own events (`
- * lr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-expand`, `lr-toggle`, `lr-tabs-change`)
+ * lr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-expand`, `lr-toggle`, `lr-tab-show`)
  * bubbles through unmodified (`composed: true` crosses this component's own shadow boundary with no
  * re-dispatch needed).
  *
@@ -86,9 +86,9 @@ export interface LyraEntityDossierEventMap
  *
  * This component emits no events of its own. Its EventMap and `@event` documentation name the
  * composed events that bubble through so host listeners remain typed and discoverable;
- * `lr-tabs-change` carries `detail: { tabId: LyraEntityDossierTab }`. This is the same "pure
+ * `lr-tab-show` carries `detail: { tabId: LyraEntityDossierTab }`. This is the same "pure
  * projection + event conduit" convention `lr-provenance-panel` and `lr-spreadsheet-viewer`'s
- * internal `lr-tabs` already establish.
+ * internal `lr-tab-group` already establish.
  *
  * @customElement lr-entity-dossier
  * @event lr-entity-activate - Surfaced unchanged from the embedded entity card or neighbor list.
@@ -101,13 +101,13 @@ export interface LyraEntityDossierEventMap
  *   `detail: { id, expanded }`.
  * @event lr-toggle - Surfaced unchanged from the embedded provenance panel.
  *   `detail: { section, expanded }`.
- * @event lr-tabs-change - Surfaced unchanged from the embedded tabs.
+ * @event lr-tab-show - Surfaced unchanged from the embedded tabs.
  *   `detail: { tabId }`.
  * @csspart base - The root wrapper, or the empty state's wrapper when `entity` is `null`.
  * @csspart header - The wrapper around the entity summary and the confidence stat.
  * @csspart entity-card - The nested `lr-entity-card`.
  * @csspart confidence - The nested confidence `lr-stat`, only rendered when `confidence` is set.
- * @csspart tabs - The nested `lr-tabs` strip.
+ * @csspart tabs - The nested `lr-tab-group` strip.
  * @csspart neighbor-list - The nested `lr-neighbor-list`, inside the Relationships tab.
  * @csspart chunk-inspector - The nested `lr-chunk-inspector`, inside the Supporting chunks tab.
  * @csspart provenance-panel - The nested `lr-provenance-panel`, inside the Provenance tab.
@@ -144,11 +144,11 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   @property({ attribute: false }) thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 };
   /** Forwarded to `lr-provenance-panel`'s own `provenance`. */
   @property({ attribute: false }) provenance: LyraProvenance | null = null;
-  /** Accessible name forwarded to the internal `lr-tabs` strip. Unset, the tab strip renders
-   *  without an `aria-label` (matching `lr-tabs`' own unset-default behavior). */
+  /** Accessible name forwarded to the internal `lr-tab-group` strip. Unset, the tab strip renders
+   *  without an `aria-label` (matching `lr-tab-group`' own unset-default behavior). */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  /** Which tab is active -- internal, not a controlled public property: `lr-tabs` already owns
+  /** Which tab is active -- internal, not a controlled public property: `lr-tab-group` already owns
    *  this state, and a one-way `.active=${...}` binding driven by a *stale* public property here
    *  would fight the user's own click the next time this component re-renders for an unrelated
    *  reason (see `lr-spreadsheet-viewer`'s identical `activeSheetIndex` pattern). */
@@ -188,7 +188,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
               ></lr-stat>`
             : nothing}
         </div>
-        <lr-tabs part="tabs" aria-label=${this.accessibleLabel || nothing} .active=${this.activeTab} @lr-tabs-change=${this.onTabsChange}>
+        <lr-tab-group part="tabs" aria-label=${this.accessibleLabel || nothing} .active=${this.activeTab} @lr-tab-show=${this.onTabsChange}>
           <div slot="relationships" label=${this.localize('neighborListLabel')}>
             <lr-neighbor-list
               part="neighbor-list"
@@ -203,7 +203,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
           <div slot="provenance" label=${this.localize('provenancePanelLabel')}>
             <lr-provenance-panel part="provenance-panel" .provenance=${this.provenance} .types=${this.types} .thresholds=${this.thresholds}></lr-provenance-panel>
           </div>
-        </lr-tabs>
+        </lr-tab-group>
       </div>
     `;
   }

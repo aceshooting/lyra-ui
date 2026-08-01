@@ -5,12 +5,15 @@ import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import {
   getRegisteredLyraLocales,
   subscribeLyraLocaleRegistry,
   setLyraLocale,
 } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
@@ -82,8 +85,9 @@ interface NormalizedLocaleEntry {
   country?: string;
 }
 
-/** Visual size, same `2xs`–`xl` scale as `<lr-select>`'s `size`. */
-export type LyraLocalePickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraLocalePickerSize = LyraSizeStep;
 
 export interface LyraLocalePickerEventMap {
   'lr-change': CustomEvent<{ value: string; previousValue: string }>;
@@ -145,11 +149,14 @@ export interface LyraLocalePickerEventMap {
  * @csspart hint - The hint message.
  * @csspart error - The error message.
  * @cssprop --lr-locale-picker-trigger-padding - Trigger padding shorthand, scaled by `size`.
- * @cssprop --lr-locale-picker-trigger-min-height - Trigger block-size floor, scaled by `size`.
+ * @cssprop [--lr-locale-picker-trigger-min-height=var(--lr-form-control-height)] - Trigger
+ *   block-size floor. Reads the shared form-control height ladder, so retuning
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.
  * @cssprop --lr-locale-picker-trigger-height - Exact trigger height. Unset by default (a floor
  *   only via `-trigger-min-height`); set a length to both floor and cap the trigger, e.g. to
  *   pixel-match a sibling field in the same toolbar row.
- * @cssprop --lr-locale-picker-font-size - Trigger font size, scaled by `size`.
+ * @cssprop [--lr-locale-picker-font-size=var(--lr-form-control-font-size)] - Trigger font size,
+ *   from the shared form-control size ladder.
  * @cssprop --lr-locale-picker-expand-size - Decorative expand-icon box size, scaled by `size`.
  * @cssprop [--lr-locale-picker-gap=var(--lr-space-xs)] - Trigger and option child gap.
  * @cssprop [--lr-locale-picker-radius=var(--lr-radius)] - Trigger/listbox/option corner radius.
@@ -159,10 +166,19 @@ export interface LyraLocalePickerEventMap {
  * @cssprop [--lr-locale-picker-option-selected-color=var(--lr-color-brand)] - Selected option text.
  * @cssprop [--lr-locale-picker-option-active-bg=var(--lr-color-brand-quiet)] - Background of a
  *   hovered or keyboard-active option row.
+ * @cssstate required - Matches while `required` is set.
+ * @cssstate optional - Matches while `required` is not set (the complement of `required`).
+ * @cssstate valid - Matches while the control satisfies its constraints.
+ * @cssstate invalid - Matches while it does not — including a pristine required picker with
+ *   nothing committed, exactly like native `:invalid`.
+ * @cssstate user-valid - `valid`, but only after the user has interacted (blurred the trigger, or
+ *   been through a `reportValidity()`/submit attempt).
+ * @cssstate user-invalid - `invalid`, but only after that same interaction — a required picker
+ *   nobody has touched yet is invalid without being styled as an error.
  */
 export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -186,8 +202,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `2xs`–`xl` scale as `lr-select`'s `size`. */
-  @property({ reflect: true }) size: LyraLocalePickerSize = 'm';
+  /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-select`. The Web Awesome /
+   *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
+   *  tag rename with no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   @state() private activeIndex = -1;
   @state() private touched = false;
@@ -356,9 +374,25 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     } else {
       this.validityController.setValidity({});
     }
+    this.syncCustomStates();
+  }
+
+  /**
+   * Publishes the six validity custom states (`:state(required)`/`optional`, `valid`/`invalid`,
+   * `user-valid`/`user-invalid`). Shared implementation in `internal/custom-states.ts`: this
+   * component drives `ElementInternals` directly rather than through the `FormAssociated` mixin,
+   * so it calls the helper itself instead of inheriting the call. `touched` is its own interaction
+   * flag (set when the trigger blurs), which is what keeps the `user-*` pair off a pristine
+   * control the way native `:user-invalid` does.
+   */
+  private syncCustomStates(): void {
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
   }
 
   formResetCallback(): void {
+    // Pristine again, so the `user-*` states stop matching even though a required picker is
+    // immediately invalid once more. The `value` write below re-runs updateValidity() (and
+    // therefore syncCustomStates()) with this flag already cleared.
     this.touched = false;
     this.value = this._defaultValue;
   }
@@ -377,7 +411,37 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    // Reporting is what a submit attempt does, and a failed submit is precisely when native
+    // `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
+    // `FormAssociated` mixin.
+    this.touched = true;
+    this.syncCustomStates();
     return this.internals.reportValidity();
+  }
+
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("that locale is not enabled for your account") that no client-side constraint can
+   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
+   * control fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`
+   * clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a required
+   * picker with nothing committed stays `valueMissing`. The custom error also survives every
+   * intrinsic recomputation in between (each `value`/`required` change re-runs `updateValidity()`)
+   * and a form reset, exactly like a native control — only another `setCustomValidity('')` clears
+   * it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncCustomStates();
+    // `updated()`'s own `data-invalid` branch only runs for a `touched`/`required`/`value` change,
+    // none of which this is, so the styling hook is written here directly; the `requestUpdate()`
+    // re-renders `aria-invalid`, which reads the same freshly-moved `internals.validity`.
+    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    this.requestUpdate();
   }
 
   /** `locales` normalized to `{ tag, label }[]`: an explicit non-empty catalog wins outright
@@ -463,6 +527,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private onTriggerBlur = (event: FocusEvent): void => {
     event.stopPropagation();
     this.touched = true;
+    // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
+    // leaves, the same instant native `:user-invalid` starts matching.
+    this.syncCustomStates();
     this.hide();
     this.emit('blur');
   };

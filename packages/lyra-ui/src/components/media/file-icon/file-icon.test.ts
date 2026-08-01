@@ -51,7 +51,7 @@ describe('lr-file-icon', () => {
   });
 
   it('shows a formatted size and folds it into the accessible name', async () => {
-    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label" size="2415919"></lr-file-icon>`);
+    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label" bytes="2415919"></lr-file-icon>`);
     expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2.3 MB');
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF (2.3 MB)');
   });
@@ -63,7 +63,7 @@ describe('lr-file-icon', () => {
         label="Visible file label"
         mime-type="application/pdf"
         variant="label"
-        size="2415919"
+        bytes="2415919"
       ></lr-file-icon>
     `);
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
@@ -73,22 +73,35 @@ describe('lr-file-icon', () => {
 
   it('formats the size number with the effective locale', async () => {
     const el = await fixture(html`
-      <lr-file-icon lang="ar-EG" mime-type="application/pdf" variant="label" size="2415919"></lr-file-icon>
+      <lr-file-icon lang="ar-EG" mime-type="application/pdf" variant="label" bytes="2415919"></lr-file-icon>
     `);
     expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.contain('٢٫٣');
   });
 
-  it('renders no size part when size is unset', async () => {
+  it('renders no size part when bytes is unset', async () => {
     const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label"></lr-file-icon>`);
     expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
   });
 
-  it('renders no "NaN B" size part when size is set to an invalid value', async () => {
+  it('exposes no `size` property, and a stale size="2415919" renders nothing', async () => {
+    // `size` named a byte count here while naming a tier on the shared size ladder everywhere else
+    // in the library. The rename is not aliased, so a stale attribute must be inert rather than
+    // half-working.
     const el = (await fixture(
-      html`<lr-file-icon mime-type="application/pdf" variant="label" size="not-a-number"></lr-file-icon>`,
+      html`<lr-file-icon mime-type="application/pdf" variant="label" size="2415919"></lr-file-icon>`,
     )) as LyraFileIcon;
-    expect(Number.isNaN(el.size)).to.be.true;
+    expect('size' in el, 'size is gone from the instance').to.be.false;
+    expect(el.bytes).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
+  });
+
+  it('renders no "NaN B" size part when bytes is set to an invalid value', async () => {
+    const el = (await fixture(
+      html`<lr-file-icon mime-type="application/pdf" variant="label" bytes="not-a-number"></lr-file-icon>`,
+    )) as LyraFileIcon;
+    expect(Number.isNaN(el.bytes)).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
   });
@@ -109,7 +122,7 @@ describe('lr-file-icon', () => {
 
   it('hides the complete label badge subtree from accessibility APIs when decorative', async () => {
     const el = await fixture(html`
-      <lr-file-icon mime-type="application/pdf" variant="label" size="2415919" decorative></lr-file-icon>
+      <lr-file-icon mime-type="application/pdf" variant="label" bytes="2415919" decorative></lr-file-icon>
     `);
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-hidden')).to.equal('true');
@@ -126,7 +139,7 @@ describe('lr-file-icon', () => {
           mime-type="application/pdf"
           variant="label"
           label=${'Document'.repeat(200)}
-          size="2415919"
+          bytes="2415919"
         ></lr-file-icon>
       </div>
     `)) as HTMLElement;

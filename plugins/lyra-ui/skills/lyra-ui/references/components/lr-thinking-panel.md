@@ -40,8 +40,9 @@ jump-to-latest action of its own.
 
 **CSS parts:** `base`, `header`, `label`, `duration`, `toggle`, `body`
 
-**Themeable custom properties:** `--lr-thinking-panel-max-block-size` (default `16rem` —
-consumer-overridable cap on how tall `[part="body"]` grows before it scrolls internally; not
+**Themeable custom properties:** `--lr-thinking-panel-max-block-size` (default
+`var(--lr-size-16rem)`, i.e. `16rem` — consumer-overridable cap on how tall `[part="body"]` grows
+before it scrolls internally; not
 exposed as a component property since it's a pure layout knob, not something a template branches
 on), and `--lr-thinking-panel-pending-color` (default `var(--lr-color-brand)`) — the live-mode
 pending duration/toggle accent without changing the shared brand token. Plus shared

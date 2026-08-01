@@ -1,3 +1,33 @@
+import { getPluralRules } from './intl-cache.js';
+
+/**
+ * The CLDR plural categories `Intl.PluralRules.prototype.select()` can return.
+ * A language uses only the subset its grammar needs — English and German use
+ * `one`/`other`, Russian `one`/`few`/`many`/`other`, Arabic all six, Japanese
+ * and Chinese only `other`.
+ */
+export type LyraPluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
+
+/**
+ * A count-dependent message, authored as one string per plural category the
+ * language needs. `other` is mandatory: it is the terminal step of the
+ * category fallback chain, so every selection is guaranteed to resolve to a
+ * real string.
+ *
+ * Selection is driven by `values.count` (or `values.pluralCount` when `count`
+ * carries a pre-formatted, locale-grouped string) run through
+ * `new Intl.PluralRules(effectiveLocale).select(count)`.
+ */
+export type LyraPluralMessage = Partial<Record<Exclude<LyraPluralCategory, 'other'>, string>> & {
+  other: string;
+};
+
+/**
+ * Either a plain message — the shape the overwhelming majority of keys use and
+ * the only shape that existed before 8.0.0 — or a pluralized one.
+ */
+export type LyraMessage = string | LyraPluralMessage;
+
 /**
  * The message keys used by Lyra's built-in labels. Applications can register
  * additional keys as well; components may use a component-specific key when
@@ -20,7 +50,6 @@ export type LyraMessageKey =
   | 'noColumns'
   | 'loadMore'
   | 'viewerSearchMatchCount'
-  | 'viewerSearchMatchCountPlural'
   | 'viewerSearchNoMatches'
   | 'viewerSearchActiveMatch'
   | 'viewerHighlightLabel'
@@ -140,7 +169,6 @@ export type LyraMessageKey =
   | 'diffViewOldLabel'
   | 'diffViewNewLabel'
   | 'diffViewHiddenLines'
-  | 'diffViewHiddenLinesPlural'
   | 'diffViewTooLarge'
   | 'jsonArray'
   | 'jsonObject'
@@ -149,9 +177,7 @@ export type LyraMessageKey =
   | 'jsonExpandLabel'
   | 'jsonCollapseLabel'
   | 'jsonItemCount'
-  | 'jsonItemCountPlural'
   | 'jsonKeyCount'
-  | 'jsonKeyCountPlural'
   | 'jsonViewerLimit'
   | 'untitledSource'
   | 'sourcePageSuffix'
@@ -439,7 +465,6 @@ export type LyraMessageKey =
   | 'deleteConversation'
   | 'searchThreads'
   | 'threadListMatchAnnounce'
-  | 'threadListMatchAnnouncePlural'
   | 'threadListEmpty'
   | 'agentWorkspaceLabel'
   | 'agentWorkspaceConversation'
@@ -555,6 +580,31 @@ export type LyraMessageKey =
   | 'valueMustBeSerializable'
   | 'valueInvalid'
   | 'phoneInputIncomplete'
+  | 'otpInputIncomplete'
+  | 'otpInputLabel'
+  | 'numberInputIncrease'
+  | 'numberInputDecrease'
+  | 'textareaCharacterCount'
+  | 'textareaCharactersRemaining'
+  | 'copyFailed'
+  | 'colorPickerSaturationBrightness'
+  | 'colorPickerSaturationBrightnessValue'
+  | 'colorPickerHue'
+  | 'colorPickerHueValue'
+  | 'colorPickerOpacity'
+  | 'colorPickerOpacityValue'
+  | 'colorPickerValueField'
+  | 'colorPickerToggleFormat'
+  | 'colorPickerEyeDropper'
+  | 'colorPickerSwatches'
+  | 'colorPickerSwatch'
+  | 'colorPickerCurrentValue'
+  | 'selectSelectedOverflow'
+  | 'iconLoadError'
+  | 'iconTooLarge'
+  | 'iconSanitizerMissing'
+  | 'paginationFirstPage'
+  | 'paginationLastPage'
   | 'accessibleLabelSeparator'
   | 'durationMilliseconds'
   | 'durationSeconds'
@@ -566,7 +616,6 @@ export type LyraMessageKey =
   | 'toolSelectNoneAvailable'
   | 'toolSelectSummary'
   | 'toolCount'
-  | 'toolCountPlural'
   | 'otherCategory'
   | 'widgetFullscreenPanel'
   | 'widgetViewGroup'
@@ -641,7 +690,6 @@ export type LyraMessageKey =
   | 'pageRailLabel'
   | 'pageRailPage'
   | 'pageRailPageHighlighted'
-  | 'pageRailPageHighlightedPlural'
   | 'spreadsheetViewerUnavailable'
   | 'csvViewerUnavailable'
   | 'csvViewerLabel'
@@ -802,7 +850,6 @@ export type LyraMessageKey =
   | 'xmlViewerParseError'
   | 'xmlViewerTooManyNodes'
   | 'xmlViewerChildCount'
-  | 'xmlViewerChildCountPlural'
   | 'xmlViewerCopyDocument'
   | 'xmlViewerCopyNode'
   | 'xmlViewerExpandNode'
@@ -819,7 +866,6 @@ export type LyraMessageKey =
   | 'geojsonViewLabel'
   | 'geojsonViewInvalid'
   | 'geojsonViewFeatureCount'
-  | 'geojsonViewFeatureCountPlural'
   | 'geojsonViewMissingMapLibrary'
   | 'mindMapLabel'
   | 'mindMapTopicStatus'
@@ -878,7 +924,6 @@ export type LyraMessageKey =
   | 'nodePaletteEmpty'
   | 'nodePaletteDragHint'
   | 'nodePaletteResultCount'
-  | 'nodePaletteResultCountPlural'
   | 'retrievalResultsSelectRow'
   | 'pathStripLabel'
   | 'pathNodeStatus'
@@ -1152,7 +1197,6 @@ export type LyraMessageKey =
   | 'knowledgeBaseDocumentCount'
   | 'knowledgeBaseRowActionsLabel'
   | 'knowledgeBaseEmptyDescription'
-  | 'ingestionChunkCountPlural'
   | 'ingestionChunkCount'
   | 'ingestionItemProgressLabel'
   | 'ingestionEmbeddedOfTotal'
@@ -1194,9 +1238,10 @@ export type LyraMessageKey =
   | 'moveDown'
   | 'reorderItemMoved';
 
-export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
+export type LyraLocaleStrings = Partial<Record<LyraMessageKey, LyraMessage>> &
+  Record<string, LyraMessage | undefined>;
 
-const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
+const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   noData: 'No data',
   graphLegendLabel: 'Graph legend',
   legendTypeShown: '{label} shown',
@@ -1212,8 +1257,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   sequenceStripCategoryCount: '{label}: {count}',
   noColumns: 'No columns configured',
   loadMore: 'Load more',
-  viewerSearchMatchCount: '{count} match',
-  viewerSearchMatchCountPlural: '{count} matches',
+  viewerSearchMatchCount: { one: '{count} match', other: '{count} matches' },
   viewerSearchNoMatches: 'No matches',
   viewerSearchActiveMatch: 'Match {current} of {total}',
   viewerHighlightLabel: 'Highlight',
@@ -1332,8 +1376,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   copyDiff: 'Copy diff',
   diffViewOldLabel: 'Original',
   diffViewNewLabel: 'Modified',
-  diffViewHiddenLines: '{count} unchanged line',
-  diffViewHiddenLinesPlural: '{count} unchanged lines',
+  diffViewHiddenLines: { one: '{count} unchanged line', other: '{count} unchanged lines' },
   diffViewTooLarge: 'Diff is too large to display.',
   jsonArray: 'array',
   jsonObject: 'object',
@@ -1341,10 +1384,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   jsonCopyLabel: 'Copy {label}',
   jsonExpandLabel: 'Expand {label}',
   jsonCollapseLabel: 'Collapse {label}',
-  jsonItemCount: '{count} item',
-  jsonItemCountPlural: '{count} items',
-  jsonKeyCount: '{count} key',
-  jsonKeyCountPlural: '{count} keys',
+  jsonItemCount: { one: '{count} item', other: '{count} items' },
+  jsonKeyCount: { one: '{count} key', other: '{count} keys' },
   jsonViewerLimit: 'Only the first {count} JSON nodes and {depth} nesting levels are shown and searched.',
   untitledSource: 'Untitled source',
   sourcePageSuffix: '{base} — p. {page}',
@@ -1639,8 +1680,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   unarchiveConversation: 'Unarchive conversation',
   deleteConversation: 'Delete conversation',
   searchThreads: 'Search conversations',
-  threadListMatchAnnounce: '{count} conversation found',
-  threadListMatchAnnouncePlural: '{count} conversations found',
+  threadListMatchAnnounce: { one: '{count} conversation found', other: '{count} conversations found' },
   threadListEmpty: 'No conversations yet',
   agentWorkspaceLabel: 'Agent workspace',
   agentWorkspaceConversation: 'Conversation',
@@ -1756,6 +1796,31 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   valueMustBeSerializable: 'Value must be JSON-serializable.',
   valueInvalid: 'The value is invalid.',
   phoneInputIncomplete: 'This phone number is incomplete.',
+  otpInputIncomplete: 'Enter all {total} characters.',
+  otpInputLabel: 'Verification code',
+  numberInputIncrease: 'Increase',
+  numberInputDecrease: 'Decrease',
+  textareaCharacterCount: { one: '{count} character', other: '{count} characters' },
+  textareaCharactersRemaining: { one: '{count} character remaining', other: '{count} characters remaining' },
+  copyFailed: 'Copy failed',
+  colorPickerSaturationBrightness: 'Saturation and brightness',
+  colorPickerSaturationBrightnessValue: 'Saturation {saturation}%, brightness {brightness}%',
+  colorPickerHue: 'Hue',
+  colorPickerHueValue: '{hue} degrees',
+  colorPickerOpacity: 'Opacity',
+  colorPickerOpacityValue: '{opacity}% opaque',
+  colorPickerValueField: 'Color value',
+  colorPickerToggleFormat: 'Toggle color format',
+  colorPickerEyeDropper: 'Select a color from the screen',
+  colorPickerSwatches: 'Color swatches',
+  colorPickerSwatch: 'Select {color}',
+  colorPickerCurrentValue: 'Current color: {color}',
+  selectSelectedOverflow: '+{n} more',
+  iconLoadError: 'The icon failed to load.',
+  iconTooLarge: 'The icon file is too large to display.',
+  iconSanitizerMissing: 'This icon needs the optional "dompurify" package installed to render safely.',
+  paginationFirstPage: 'First page',
+  paginationLastPage: 'Last page',
   accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
@@ -1766,8 +1831,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   noMatchesQuery: 'No tools match "{query}".',
   toolSelectNoneAvailable: 'No tools available.',
   toolSelectSummary: '{selected} of {total} tools enabled',
-  toolCount: '{count} tool',
-  toolCountPlural: '{count} tools',
+  toolCount: { one: '{count} tool', other: '{count} tools' },
   otherCategory: 'Other',
   widgetFullscreenPanel: 'Fullscreen panel',
   widgetViewGroup: 'Panel view',
@@ -1841,8 +1905,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   highlightOfTotal: 'Highlight {index} of {total}',
   pageRailLabel: 'Page thumbnails',
   pageRailPage: 'Page {page}',
-  pageRailPageHighlighted: 'Page {page}, {count} highlighted passage',
-  pageRailPageHighlightedPlural: 'Page {page}, {count} highlighted passages',
+  pageRailPageHighlighted: { one: 'Page {page}, {count} highlighted passage', other: 'Page {page}, {count} highlighted passages' },
   skipToContent: 'Skip to content',
   tourSkip: 'Skip',
   tourDone: 'Done',
@@ -1998,8 +2061,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   xmlViewerLabel: 'XML viewer',
   xmlViewerParseError: 'This document could not be parsed as XML.',
   xmlViewerTooManyNodes: 'This document has too many nodes to display.',
-  xmlViewerChildCount: '{count} child',
-  xmlViewerChildCountPlural: '{count} children',
+  xmlViewerChildCount: { one: '{count} child', other: '{count} children' },
   xmlViewerCopyDocument: 'Copy XML to clipboard',
   xmlViewerCopyNode: 'Copy {name}',
   xmlViewerExpandNode: 'Expand {name}',
@@ -2015,8 +2077,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   resultFieldLabel: '{label}:',
   geojsonViewLabel: 'Map',
   geojsonViewInvalid: 'This file is not valid GeoJSON.',
-  geojsonViewFeatureCount: '{count} feature',
-  geojsonViewFeatureCountPlural: '{count} features',
+  geojsonViewFeatureCount: { one: '{count} feature', other: '{count} features' },
   geojsonViewMissingMapLibrary: 'Install the optional maplibre-gl peer to render this file on a map. Showing the raw GeoJSON instead.',
   mindMapLabel: 'Mind map',
   mindMapTopicStatus: '{label}, level {level}, {count} subtopics',
@@ -2075,8 +2136,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   nodePalettePlaceholder: 'Search nodes…',
   nodePaletteEmpty: 'No matching nodes.',
   nodePaletteDragHint: 'Drag to the canvas, or press Enter to place',
-  nodePaletteResultCount: '{count} item',
-  nodePaletteResultCountPlural: '{count} items',
+  nodePaletteResultCount: { one: '{count} item', other: '{count} items' },
   retrievalResultsSelectRow: 'Select {label}',
   pathStripLabel: 'Path',
   pathNodeStatus: '{label}, node {position} of {total}',
@@ -2350,8 +2410,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   knowledgeBaseDocumentCount: '{count} indexed',
   knowledgeBaseRowActionsLabel: 'Actions for {name}',
   knowledgeBaseEmptyDescription: 'Add a source to start indexing content.',
-  ingestionChunkCountPlural: '{count} chunks',
-  ingestionChunkCount: '{count} chunk',
+  ingestionChunkCount: { one: '{count} chunk', other: '{count} chunks' },
   ingestionItemProgressLabel: '{name} — {stage}',
   ingestionEmbeddedOfTotal: '{embedded} of {total} chunks embedded',
   ingestionAttemptCount: 'Attempt {count}',
@@ -2545,9 +2604,100 @@ export function resolveLyraDirection(host: Element): 'ltr' | 'rtl' {
 }
 
 /**
+ * Where each plural category looks when a catalog does not author it, always
+ * terminating at the mandatory `other`.
+ *
+ * The widening steps are grammatical neighbours, not arbitrary: `two` is a
+ * special case carved out of the small-number bucket that `few` covers
+ * (Arabic, Slovenian, Welsh), and `few`/`many` are the adjacent
+ * larger-magnitude buckets in the Slavic languages that have both. A catalog
+ * that authors only `few` therefore reads better for `many` than the fully
+ * generic `other` (which in Russian is reserved for fractional counts).
+ */
+const PLURAL_CATEGORY_FALLBACKS: Record<LyraPluralCategory, readonly LyraPluralCategory[]> = {
+  zero: ['zero', 'other'],
+  one: ['one', 'other'],
+  two: ['two', 'few', 'many', 'other'],
+  few: ['few', 'many', 'other'],
+  many: ['many', 'few', 'other'],
+  other: ['other'],
+};
+
+function isPluralMessage(message: LyraMessage): message is LyraPluralMessage {
+  return typeof message === 'object';
+}
+
+/**
+ * The number that drives plural selection. `count` is the documented spelling
+ * and the one every built-in message interpolates; `pluralCount` exists for
+ * the call sites that must show a locale-grouped, pre-formatted `{count}`
+ * (`Intl.NumberFormat` output is a string, and `'1,024'` cannot select a
+ * category). A non-finite or absent value selects `other`.
+ */
+function pluralSelector(values: Record<string, string | number>): number | undefined {
+  const raw = values['pluralCount'] ?? values['count'];
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : undefined;
+}
+
+/**
+ * The first tag in the locale's own resolution chain that `Intl.PluralRules`
+ * accepts. An inherited `lang` is arbitrary author-supplied text and
+ * `Intl.PluralRules` throws a `RangeError` on anything that is not a
+ * structurally valid language tag (`lang="x-test"`, `lang="en_US"`,
+ * `lang=""`), which would otherwise turn a stray attribute into a render-time
+ * exception. Walking `localeCandidates()` reuses the exact chain message
+ * lookup already uses — full tag, base language, then `'en'` — so plural
+ * selection and message selection can never disagree about which locale is in
+ * force. Memoized because a rejected tag throws on every construction.
+ */
+const pluralLocaleCache = new Map<string, string | undefined>();
+const MAX_PLURAL_LOCALE_ENTRIES = 64;
+
+function pluralLocale(locale: string): string | undefined {
+  const cached = pluralLocaleCache.get(locale);
+  if (cached !== undefined || pluralLocaleCache.has(locale)) return cached;
+  let resolved: string | undefined;
+  for (const candidate of localeCandidates(locale)) {
+    try {
+      getPluralRules(candidate);
+      resolved = candidate;
+      break;
+    } catch {
+      // Structurally invalid tag — try the next, less specific candidate.
+    }
+  }
+  if (pluralLocaleCache.size >= MAX_PLURAL_LOCALE_ENTRIES) pluralLocaleCache.clear();
+  pluralLocaleCache.set(locale, resolved);
+  return resolved;
+}
+
+/**
+ * Picks one category's string out of a pluralized message. Selection always
+ * uses the host's effective locale, even when the message itself came from the
+ * built-in English defaults — an unregistered locale then widens through
+ * {@link PLURAL_CATEGORY_FALLBACKS} to a category English does author.
+ */
+function selectPluralMessage(message: LyraPluralMessage, locale: string, count: number | undefined): string {
+  if (count === undefined) return message.other;
+  const tag = pluralLocale(locale);
+  if (tag === undefined) return message.other;
+  const category = getPluralRules(tag).select(count) as LyraPluralCategory;
+  for (const candidate of PLURAL_CATEGORY_FALLBACKS[category] ?? PLURAL_CATEGORY_FALLBACKS.other) {
+    const text = message[candidate];
+    if (text !== undefined) return text;
+  }
+  return message.other;
+}
+
+/**
  * Resolve a message for a component. An explicit per-component override wins,
  * followed by a non-empty component property fallback, registered locale
  * messages, and finally the built-in English message.
+ *
+ * A resolved message may be a plain string (unchanged behaviour) or a
+ * {@link LyraPluralMessage}; the latter is reduced to one string by
+ * `Intl.PluralRules` before interpolation, so the return type stays `string`
+ * and every caller's contract is untouched.
  */
 export function resolveLyraString(
   host: Element,
@@ -2557,9 +2707,11 @@ export function resolveLyraString(
   values?: Record<string, string | number>,
 ): string {
   const own = overrides?.[key];
-  let message = own ?? fallback;
+  let message: LyraMessage | undefined = own ?? fallback;
+  let locale: string | undefined;
   if (message === undefined) {
-    for (const candidate of localeCandidates(resolveLyraLocale(host))) {
+    locale = resolveLyraLocale(host);
+    for (const candidate of localeCandidates(locale)) {
       const registered = locales.get(candidate)?.[key];
       if (registered !== undefined) {
         message = registered;
@@ -2568,8 +2720,15 @@ export function resolveLyraString(
     }
   }
   message ??= DEFAULT_STRINGS[key as LyraMessageKey] ?? key;
-  if (!values) return message;
-  return message.replace(/\{(\w+)\}/g, (_match, name: string) => String(values[name] ?? `{${name}}`));
+  let text: string;
+  if (isPluralMessage(message)) {
+    locale ??= resolveLyraLocale(host);
+    text = selectPluralMessage(message, locale, values ? pluralSelector(values) : undefined);
+  } else {
+    text = message;
+  }
+  if (!values) return text;
+  return text.replace(/\{(\w+)\}/g, (_match, name: string) => String(values[name] ?? `{${name}}`));
 }
 
 /**

@@ -79,6 +79,14 @@ export const styles = css`
     outline: var(--lr-size-1px) solid var(--lr-heatmap-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Neither the canvas nor a cell has a background of its own to tint -- the fill under the pointer
+     is painted into the bitmap from the consumer's data -- so the pointer feedback is carried by the
+     outline, and the pressed step is the ring thickening from a hairline to the full focus-ring
+     width. */
+  [part='canvas']:active {
+    outline: var(--lr-focus-ring-width) solid var(--lr-heatmap-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='cells'] {
     position: absolute;
     inset: 0;
@@ -102,6 +110,10 @@ export const styles = css`
     outline: var(--lr-size-1px) solid var(--lr-heatmap-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='cell']:active {
+    outline: var(--lr-focus-ring-width) solid var(--lr-heatmap-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='cell']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-heatmap-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -120,7 +132,7 @@ export const styles = css`
     color: var(--lr-heatmap-tooltip-text);
     font-size: var(--lr-font-size-xs);
     white-space: nowrap;
-    box-shadow: var(--lr-shadow);
+    box-shadow: var(--lr-shadow-m);
     pointer-events: none;
     z-index: var(--lr-layer-content);
   }

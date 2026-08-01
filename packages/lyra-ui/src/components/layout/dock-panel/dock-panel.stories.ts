@@ -22,7 +22,7 @@ export const DockedEnd: Story = {
   render: () => html`
     <div style="position: relative; height: 20rem; border: 1px solid var(--lr-color-border); display: flex;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
-      <lr-dock-panel edge="end" size="280px" min-size="180px" max-size="480px">
+      <lr-dock-panel edge="end" extent="280px" min-extent="180px" max-extent="480px">
         <div style="padding: 1rem;">
           <strong>Docked to the end edge</strong>
           <p>Drag the left edge (in LTR) to resize, or focus it and press ArrowLeft/ArrowRight.</p>
@@ -35,7 +35,7 @@ export const DockedEnd: Story = {
 export const DockedStart: Story = {
   render: () => html`
     <div style="position: relative; height: 20rem; border: 1px solid var(--lr-color-border); display: flex;">
-      <lr-dock-panel edge="start" size="240px" min-size="160px" max-size="400px">
+      <lr-dock-panel edge="start" extent="240px" min-extent="160px" max-extent="400px">
         <div style="padding: 1rem;">
           <strong>Docked to the start edge</strong>
           <p>Drag the right edge (in LTR) to resize.</p>
@@ -50,7 +50,7 @@ export const CollapsibleSidebar: Story = {
   render: () => html`
     <div style="position: relative; height: 20rem; border: 1px solid var(--lr-color-border); display: flex;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
-      <lr-dock-panel edge="end" size="280px" collapsible>
+      <lr-dock-panel edge="end" extent="280px" collapsible>
         <div style="padding: 1rem;">
           <strong>Collapsible</strong>
           <p>The chevron button collapses this panel to a persistent rail without losing its
@@ -65,7 +65,7 @@ export const DockedBottom: Story = {
   render: () => html`
     <div style="position: relative; height: 20rem; border: 1px solid var(--lr-color-border); display: flex; flex-direction: column;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
-      <lr-dock-panel edge="bottom" size="140px" min-size="80px" max-size="320px" collapsible>
+      <lr-dock-panel edge="bottom" extent="140px" min-extent="80px" max-extent="320px" collapsible>
         <div style="padding: 1rem;">
           <strong>Docked to the bottom edge</strong>
           <p>Drag the top edge, or use ArrowUp/ArrowDown while the handle is focused.</p>
@@ -79,7 +79,7 @@ export const RtlDockedEnd: Story = {
   render: () => html`
     <div dir="rtl" style="position: relative; height: 20rem; border: 1px solid var(--lr-color-border); display: flex;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
-      <lr-dock-panel edge="end" size="280px" min-size="180px" max-size="480px">
+      <lr-dock-panel edge="end" extent="280px" min-extent="180px" max-extent="480px">
         <div style="padding: 1rem;">
           <strong>RTL, docked to the end edge</strong>
           <p>"end" now renders on the physical left; the draggable inner edge and arrow-key
@@ -94,7 +94,7 @@ export const NotResizable: Story = {
   render: () => html`
     <div style="position: relative; height: 12rem; border: 1px solid var(--lr-color-border); display: flex;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
-      <lr-dock-panel edge="end" size="220px" .resizable=${false} collapsible>
+      <lr-dock-panel edge="end" extent="220px" .resizable=${false} collapsible>
         <div style="padding: 1rem;">Fixed-size panel — no drag handle renders at all.</div>
       </lr-dock-panel>
     </div>

@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A standalone icon-only copy-to-clipboard affordance for a plain text `value`, with no positioning opinion of its own -- the consumer places it (e.g. absolutely positioned in the corner of a textarea or read-only output field). Swaps its icon to a checkmark for ~1.5s on activation.',
+          'A standalone icon-only copy-to-clipboard affordance for a plain text `value`, with no positioning opinion of its own -- the consumer places it (e.g. absolutely positioned in the corner of a textarea or read-only output field). Swaps its icon to a checkmark for ~1.5s once the clipboard write resolves, or to a failure glyph (plus `lr-copy-error`) when the write is refused.',
       },
     },
   },
@@ -58,7 +58,46 @@ export const Interactive: Story = {
         const out = document.getElementById('copy-button-log');
         if (out) out.textContent = `lr-copy: ${e.detail.text}`;
       }}
+      @lr-copy-error=${(e: CustomEvent<{ text: string; reason: string }>) => {
+        const out = document.getElementById('copy-button-log');
+        if (out) out.textContent = `lr-copy-error: ${e.detail.reason}`;
+      }}
     ></lr-copy-button>
     <p id="copy-button-log" style="font-family: monospace; margin-top: 0.5rem;">(no event yet)</p>
+  `,
+};
+
+export const CopyFailure: Story = {
+  name: 'Clipboard write refused',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A clipboard write can be refused — an insecure origin with no Clipboard API at all (`reason: "unsupported"`), a denied permission or an unfocused document (`reason: "denied"`), or any other platform failure (`reason: "failed"`). The button then shows its failure glyph instead of the checkmark, announces the outcome through a visually hidden `role="status"` region, and emits `lr-copy-error`. This story swaps in a clipboard that always rejects so the state is reachable in the docs.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-copy-button
+      value="this write will be refused"
+      feedback-duration="4000"
+      @pointerdown=${() => {
+        // Installed on pointerdown (before the button's own click handler reads it) and put back
+        // on the next macrotask, so the rest of the docs page keeps the real clipboard.
+        const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+        Object.defineProperty(navigator, 'clipboard', {
+          value: { writeText: () => Promise.reject(new DOMException('Denied', 'NotAllowedError')) },
+          configurable: true,
+        });
+        setTimeout(() => {
+          if (original) Object.defineProperty(navigator, 'clipboard', original);
+        }, 0);
+      }}
+      @lr-copy-error=${(e: CustomEvent<{ reason: string }>) => {
+        const out = document.getElementById('copy-button-error-log');
+        if (out) out.textContent = `lr-copy-error: ${e.detail.reason}`;
+      }}
+    ></lr-copy-button>
+    <p id="copy-button-error-log" style="font-family: monospace; margin-top: 0.5rem;">(no event yet)</p>
   `,
 };

@@ -31,7 +31,7 @@ changes the component library version without installing a supported SheetJS rel
 | `d3-force` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-selection` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-zoom` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `dompurify` | `^3.4.12` | `lr-docx-viewer`, `lr-email-viewer`, `lr-html-viewer`, `lr-include`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-svg-viewer` |
+| `dompurify` | `^3.4.12` | `lr-docx-viewer`, `lr-email-viewer`, `lr-html-viewer`, `lr-icon`, `lr-include`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-svg-viewer` |
 | `emoji-picker-element-data` | `^1.8.0` | `lr-emoji-picker` |
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |

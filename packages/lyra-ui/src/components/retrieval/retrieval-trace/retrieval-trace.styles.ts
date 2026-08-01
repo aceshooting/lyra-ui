@@ -52,6 +52,9 @@ export const styles = css`
   [part='evidence-toggle']:hover {
     background: var(--lr-color-surface-raised);
   }
+  [part='evidence-toggle']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='evidence-toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));

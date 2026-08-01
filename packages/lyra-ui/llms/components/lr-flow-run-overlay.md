@@ -25,10 +25,12 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
 - `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
   complete" strip, keeping only the decoration push
 - `label: string = ''` — accessible name for the summary strip
-- `appearance: 'card'|'plain' = 'card'` (reflected) — `'plain'` removes the border, background,
-  shadow, padding and radius, so a summary strip dropped straight into a host toolbar that already
-  draws its own frame does not double it. `'card'` is the standalone floating-strip presentation and
-  is unchanged.
+- `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
+  vocabulary. `'plain'` removes the border, background, shadow, padding and radius, so a summary
+  strip dropped straight into a host toolbar that already draws its own frame does not double it.
+  `'card'` is the standalone floating-strip presentation and is unchanged. **Renamed from
+  `appearance` in 8.0.0**, with no alias — the type is still exported as
+  `FlowRunOverlayAppearance` so existing type imports keep resolving.
 
 **Events:** none dispatched directly.
 

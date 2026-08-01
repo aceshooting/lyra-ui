@@ -26,7 +26,7 @@ export const styles = css`
   }
   [part='set-heading'] {
     margin: 0 0 var(--lr-space-s);
-    font-size: var(--lr-font-size-base);
+    font-size: var(--lr-font-size-m);
   }
   [part='chunks'] {
     display: flex;
@@ -55,6 +55,9 @@ export const styles = css`
   }
   [part~='chunk']:hover {
     background: var(--lr-color-surface-raised);
+  }
+  [part~='chunk']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part~='chunk']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -33,16 +33,22 @@ export const styles = css`
        brush-only case renders byte-for-byte the same as before. */
     --lr-time-range-size-scale: 1;
   }
+  /* This control has no form-control row to floor: size scales a brush track, its handles and the
+     preset chips together, so the tier resolves to one multiplier rather than to the shared
+     --lr-form-control-height ladder. It still matches both spellings of every tier, the same way
+     internal/sizes.styles.ts does, so size="small" is honoured here too. */
   :host([size='2xs']) {
     --lr-time-range-size-scale: 0.5;
   }
   :host([size='xs']) {
     --lr-time-range-size-scale: 0.6;
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-time-range-size-scale: 0.75;
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-time-range-size-scale: 1.2;
   }
   :host([size='xl']) {
@@ -81,6 +87,14 @@ export const styles = css`
      lr-attachment-trigger's identical :where() fix for this exact selector shape. */
   :where([part='preset-button']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
+  }
+  /* Pressed goes further than the hover's edge change: the button's own surface fill mixes toward
+     --lr-color-mix-partner (which follows the text colour), so it darkens on a light theme and
+     lightens on a dark one. Same :where() wrapping as the hover rule above, for the same
+     specificity reason, and gated on :not(:disabled) so a disabled preset stays inert. */
+  :where([part='preset-button']):active:where(:not(:disabled)) {
+    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='preset-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -131,7 +145,8 @@ export const styles = css`
     border-radius: 50%;
     background: var(--lr-color-brand);
     border: var(--lr-border-width-medium) solid var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Resting chrome, not an overlay: a knob riding on its own track, matching lr-slider's thumb. */
+    box-shadow: var(--lr-shadow-s);
     transform: translateX(-50%);
     cursor: grab;
     touch-action: none;
@@ -214,7 +229,17 @@ export const styles = css`
      gated via :host(:not(:disabled)) the same way lr-checkbox's/lr-radio's [part='base']:hover
      rules are, since a disabled handle must not still brighten on hover. */
   :host(:not(:disabled)) [part^='handle']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  /* Pressed = the grab itself, which is the only feedback a drag has before the value starts
+     moving: the knob mixes a full step further toward the text colour and the cursor closes.
+     Both states mix the fill instead of running filter: brightness() over the handle -- the filter
+     applied to the whole subtree, so it also washed out the surface-coloured ring and the shadow
+     that separate the knob from its own track, and it did nothing at all on a theme whose brand
+     colour is pure white or pure black. */
+  :host(:not(:disabled)) [part^='handle']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    cursor: grabbing;
   }
   /* :host(:disabled), not :host([disabled]) -- this is a form-associated custom element
      (static formAssociated = true), so the UA computes its disabled state (and therefore

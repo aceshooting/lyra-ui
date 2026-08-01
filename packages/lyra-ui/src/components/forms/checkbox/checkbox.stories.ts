@@ -51,7 +51,7 @@ export const ExternalDescription: Story = {
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.25rem; align-items:flex-start;">
       <lr-checkbox aria-describedby="maintenance-description">Enable advanced mode</lr-checkbox>
-      <p id="maintenance-description" style="margin:0; color:var(--lr-color-text-muted); font-size:var(--lr-font-size-sm);">
+      <p id="maintenance-description" style="margin:0; color:var(--lr-color-text-quiet); font-size:var(--lr-font-size-sm);">
         This option is unavailable during scheduled maintenance.
       </p>
     </div>
@@ -142,7 +142,7 @@ export const LabelIndent: Story = {
     docs: {
       description: {
         story:
-          '`--lr-checkbox-label-indent` publishes the distance from the control\'s start edge to the start of the label — the box floor (`min(--lr-icon-button-size, 1.75rem)`) plus the label gap (`--lr-space-s`). The same value drives the real gap, so the two can never drift. Because custom properties inherit down and not sideways, a **sibling** node in your own tree cannot read it off the checkbox: give the wrapper the same formula (from the `--lr-theme-*` tokens you control) and both stay aligned, as the second block shows.',
+          '`--lr-checkbox-label-indent` publishes the distance from the control\'s start edge to the start of the label — the box floor (`--lr-checkbox-box-size`, which tracks `size`) plus the label gap (`--lr-space-s`). The same value drives the real gap, so the two can never drift. Because custom properties inherit down and not sideways, a **sibling** node in your own tree cannot read it off the checkbox: give the wrapper the same formula (from the `--lr-theme-*` tokens you control) and both stay aligned, as the second block shows.',
       },
     },
   },
@@ -153,22 +153,44 @@ export const LabelIndent: Story = {
         <!-- Read off the checkbox itself: works because this <p> is a descendant of nothing --
              it is positioned by a padding copied from the element's own published value. -->
         <p
-          style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-checkbox-label-indent, 2.25rem); color: var(--lr-color-text-muted); font-size: var(--lr-font-size-sm);"
+          style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-checkbox-label-indent, 2.25rem); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
         >
           One email each morning summarizing the previous day.
         </p>
       </div>
       <div
-        style="--indent: calc(min(var(--lr-theme-icon-button-size, 2.5rem), 1.75rem) + var(--lr-theme-space-s, 0.5rem));"
+        style="--indent: calc(min(var(--lr-theme-icon-button-size, 2.5rem), calc(var(--lr-theme-form-control-height-m, 2.5rem) * 0.7)) + var(--lr-theme-space-s, 0.5rem));"
       >
         <lr-checkbox value="weekly">Weekly roundup</lr-checkbox>
         <p
-          style="margin: 0.25rem 0 0; padding-inline-start: var(--indent); color: var(--lr-color-text-muted); font-size: var(--lr-font-size-sm);"
+          style="margin: 0.25rem 0 0; padding-inline-start: var(--indent); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
         >
           Computed from the theme bridge tokens, so it survives a retheme without reading into the
           checkbox's shadow root.
         </p>
       </div>
+    </div>
+  `,
+};
+
+export const Sizes: StoryObj = {
+  name: 'Size ladder',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`size` is the library\'s shared ladder, so a `size` set here matches an `<lr-input>`, `<lr-select>` or `<lr-button>` of the same `size` in the same row. Both spellings of every tier are accepted — `s`/`m`/`l` and Web Awesome\'s `small`/`medium`/`large` — so a migration is a tag rename with no attribute rewrite.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); justify-items: start;">
+      <lr-checkbox size="2xs">Size 2xs</lr-checkbox>
+      <lr-checkbox size="xs">Size xs</lr-checkbox>
+      <lr-checkbox size="s">Size s</lr-checkbox>
+      <lr-checkbox size="m">Size m</lr-checkbox>
+      <lr-checkbox size="l">Size l</lr-checkbox>
+      <lr-checkbox size="xl">Size xl</lr-checkbox>
     </div>
   `,
 };

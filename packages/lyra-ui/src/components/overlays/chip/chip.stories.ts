@@ -20,14 +20,32 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-export const Tones: Story = {
+export const Variants: Story = {
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-      <lr-chip tone="neutral">Neutral</lr-chip>
-      <lr-chip tone="brand">Brand</lr-chip>
-      <lr-chip tone="success">Success</lr-chip>
-      <lr-chip tone="warning">Warning</lr-chip>
-      <lr-chip tone="danger">Danger</lr-chip>
+      <lr-chip variant="neutral">Neutral</lr-chip>
+      <lr-chip variant="brand">Brand</lr-chip>
+      <lr-chip variant="success">Success</lr-chip>
+      <lr-chip variant="warning">Warning</lr-chip>
+      <lr-chip variant="danger">Danger</lr-chip>
+    </div>
+  `,
+};
+
+export const Pill: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The chip is a rounded rectangle by default and only takes fully-rounded ends with `pill`, the same opt-in `<lr-badge>` and `<lr-tag>` use.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+      <lr-chip variant="brand">Rounded rectangle</lr-chip>
+      <lr-chip variant="brand" pill>Pill</lr-chip>
+      <lr-chip variant="brand" pill removable>Pill, removable</lr-chip>
     </div>
   `,
 };
@@ -45,9 +63,9 @@ export const Sizes: Story = {
 export const Removable: Story = {
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-      <lr-chip tone="neutral" removable>engineering</lr-chip>
-      <lr-chip tone="brand" removable>customer-facing</lr-chip>
-      <lr-chip tone="danger" removable>overdue</lr-chip>
+      <lr-chip variant="neutral" removable>engineering</lr-chip>
+      <lr-chip variant="brand" removable>customer-facing</lr-chip>
+      <lr-chip variant="danger" removable>overdue</lr-chip>
     </div>
   `,
 };
@@ -56,15 +74,15 @@ export const WithIcon: Story = {
   name: 'With a leading icon/dot',
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-      <lr-chip tone="success">
+      <lr-chip variant="success">
         <span slot="icon" style="display:inline-block; inline-size:0.5em; block-size:0.5em; border-radius:50%; background:currentColor;"></span>
         Online
       </lr-chip>
-      <lr-chip tone="warning" removable>
+      <lr-chip variant="warning" removable>
         <span slot="icon" style="display:inline-block; inline-size:0.5em; block-size:0.5em; border-radius:50%; background:currentColor;"></span>
         Degraded
       </lr-chip>
-      <lr-chip tone="neutral">
+      <lr-chip variant="neutral">
         <svg slot="icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2 2 7l10 5 10-5-10-5Z" />
           <path d="M2 17l10 5 10-5" />
@@ -89,9 +107,9 @@ export const ActiveFilterScope: Story = {
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
       <span style="font-size:0.8125rem; color:var(--lr-color-text-quiet);">Filters:</span>
-      <lr-chip tone="brand" removable value="status:open">status: open</lr-chip>
-      <lr-chip tone="brand" removable value="assignee:me">assignee: me</lr-chip>
-      <lr-chip tone="brand" removable value="priority:high">priority: high</lr-chip>
+      <lr-chip variant="brand" removable value="status:open">status: open</lr-chip>
+      <lr-chip variant="brand" removable value="assignee:me">assignee: me</lr-chip>
+      <lr-chip variant="brand" removable value="priority:high">priority: high</lr-chip>
     </div>
   `,
 };
@@ -100,7 +118,7 @@ export const LongLabelTruncates: Story = {
   name: 'Long label truncates inside a constrained width',
   render: () => html`
     <div style="max-width:10rem;">
-      <lr-chip tone="neutral" removable>a-very-long-tag-name-that-does-not-fit</lr-chip>
+      <lr-chip variant="neutral" removable>a-very-long-tag-name-that-does-not-fit</lr-chip>
     </div>
   `,
 };
@@ -109,7 +127,7 @@ export const Events: Story = {
   render: () => html`
     <div>
       <lr-chip
-        tone="danger"
+        variant="danger"
         removable
         value="tag-9"
         @lr-remove=${(e: CustomEvent<{ value?: string }>) => {
@@ -140,8 +158,8 @@ export const ToggleSelection: Story = {
     };
     return html`
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-        <lr-chip tone="brand" selected value="series-a" @lr-chip-select=${log}>Series A</lr-chip>
-        <lr-chip tone="brand" toggleable value="category:beta" @lr-chip-select=${log}>Category: Beta</lr-chip>
+        <lr-chip variant="brand" selected value="series-a" @lr-chip-select=${log}>Series A</lr-chip>
+        <lr-chip variant="brand" toggleable value="category:beta" @lr-chip-select=${log}>Category: Beta</lr-chip>
       </div>
       <p id="chip-toggle-log" style="font-family: monospace; margin-top: 0.5rem;">
         No event fired yet. Click a chip, then click it again -- it stays clickable both ways.

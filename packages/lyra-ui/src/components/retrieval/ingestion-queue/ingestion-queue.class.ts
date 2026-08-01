@@ -4,7 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { getListFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { closeIcon } from '../../../internal/icons.js';
 import type { CancelEventDetail, DocumentRef, RetryEventDetail } from '../../../ai/types.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
@@ -245,11 +245,10 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   private chunkCountText(count: number): string {
     const safeCount = finiteCount(count);
-    const plural = getPluralRules(this.effectiveLocale).select(safeCount) !== 'one';
-    const formatted = getNumberFormat(this.effectiveLocale).format(safeCount);
-    return plural
-      ? this.localize('ingestionChunkCountPlural', undefined, { count: formatted })
-      : this.localize('ingestionChunkCount', undefined, { count: formatted });
+    return this.localize('ingestionChunkCount', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(safeCount),
+      pluralCount: safeCount,
+    });
   }
 
   private normalizedAttempts(item: IngestionQueueItem): number {

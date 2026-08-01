@@ -1,4 +1,4 @@
-import { fixture, expect, html } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent } from "@open-wc/testing";
 import { LitElement, type PropertyValues } from "lit";
 import "./details.js";
 import "./accordion.js";
@@ -299,4 +299,227 @@ it("gives lr-accordion its own stylesheet instead of reusing details.styles.ts w
   expect(css).to.not.include("border-block-end");
   expect(css).to.not.include("[part='summary']");
   expect(css).to.not.include("[part='content']");
+});
+
+describe("unified show/hide lifecycle", () => {
+  it("emits lr-show, then lr-toggle, then lr-after-show when opening", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More">Content</lr-details>`
+    )) as LyraDetails;
+    const order: string[] = [];
+    let openWhenShowFired: boolean | undefined;
+    el.addEventListener("lr-show", () => {
+      order.push("lr-show");
+      openWhenShowFired = el.open;
+    });
+    el.addEventListener("lr-toggle", () => order.push("lr-toggle"));
+    el.addEventListener("lr-after-show", () => order.push("lr-after-show"));
+
+    const afterShow = oneEvent(el, "lr-after-show");
+    el.show();
+    expect(el.open).to.be.true;
+    await afterShow;
+
+    expect(order).to.deep.equal(["lr-show", "lr-toggle", "lr-after-show"]);
+    expect(openWhenShowFired).to.be.false;
+  });
+
+  it("emits lr-hide, then lr-toggle, then lr-after-hide when closing", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More" open>Content</lr-details>`
+    )) as LyraDetails;
+    await el.updateComplete;
+    const order: string[] = [];
+    el.addEventListener("lr-hide", () => order.push("lr-hide"));
+    el.addEventListener("lr-toggle", () => order.push("lr-toggle"));
+    el.addEventListener("lr-after-hide", () => order.push("lr-after-hide"));
+
+    const afterHide = oneEvent(el, "lr-after-hide");
+    el.hide();
+    expect(el.open).to.be.false;
+    await afterHide;
+
+    expect(order).to.deep.equal(["lr-hide", "lr-toggle", "lr-after-hide"]);
+  });
+
+  it("honours a vetoed lr-show from the summary click, leaving the native details closed", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More">Content</lr-details>`
+    )) as LyraDetails;
+    const base = el.shadowRoot!.querySelector(
+      '[part="base"]'
+    ) as HTMLDetailsElement;
+    const summary = el.shadowRoot!.querySelector(
+      '[part="summary"]'
+    ) as HTMLElement;
+    let toggles = 0;
+    el.addEventListener("lr-toggle", () => toggles++);
+    el.addEventListener("lr-show", (event) => (event as Event).preventDefault());
+
+    summary.click();
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+    expect(base.open, "a vetoed open must not leave the native panel expanded").to
+      .be.false;
+    expect(el.hasAttribute("open")).to.be.false;
+    expect(toggles).to.equal(0);
+  });
+
+  it("honours a vetoed lr-hide from the summary click", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More" open>Content</lr-details>`
+    )) as LyraDetails;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector(
+      '[part="base"]'
+    ) as HTMLDetailsElement;
+    const summary = el.shadowRoot!.querySelector(
+      '[part="summary"]'
+    ) as HTMLElement;
+    el.addEventListener("lr-hide", (event) => (event as Event).preventDefault());
+
+    summary.click();
+    await el.updateComplete;
+
+    expect(el.open).to.be.true;
+    expect(base.open).to.be.true;
+    expect(el.hasAttribute("open")).to.be.true;
+  });
+
+  it("toggles from the summary click through the lifecycle when nothing vetoes", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More">Content</lr-details>`
+    )) as LyraDetails;
+    const base = el.shadowRoot!.querySelector(
+      '[part="base"]'
+    ) as HTMLDetailsElement;
+    const summary = el.shadowRoot!.querySelector(
+      '[part="summary"]'
+    ) as HTMLElement;
+    let toggles = 0;
+    el.addEventListener("lr-toggle", () => toggles++);
+
+    summary.click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    expect(base.open).to.be.true;
+
+    summary.click();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(base.open).to.be.false;
+    expect(toggles, "exactly one lr-toggle per real state change").to.equal(2);
+  });
+
+  it("assigning open drives the same lifecycle, and initially-open markup emits nothing", async () => {
+    let fired = 0;
+    const initiallyOpen = (await fixture(
+      html`<lr-details summary="More" open>Content</lr-details>`
+    )) as LyraDetails;
+    for (const name of ["lr-show", "lr-after-show", "lr-hide", "lr-after-hide", "lr-toggle"]) {
+      initiallyOpen.addEventListener(name, () => fired++);
+    }
+    await initiallyOpen.updateComplete;
+    expect(fired).to.equal(0);
+
+    const el = (await fixture(
+      html`<lr-details summary="More">Content</lr-details>`
+    )) as LyraDetails;
+    const shown = oneEvent(el, "lr-show");
+    el.open = true;
+    await shown;
+    expect(el.open).to.be.true;
+
+    const hidden = oneEvent(el, "lr-hide");
+    el.open = false;
+    await hidden;
+    expect(el.open).to.be.false;
+  });
+
+  it("lr-after-show and lr-after-hide are not cancelable", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More">Content</lr-details>`
+    )) as LyraDetails;
+    const shown = oneEvent(el, "lr-after-show");
+    el.show();
+    expect((await shown).cancelable).to.be.false;
+    const hidden = oneEvent(el, "lr-after-hide");
+    el.hide();
+    expect((await hidden).cancelable).to.be.false;
+  });
+
+  it("never opens through show() while disabled", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More" disabled>Content</lr-details>`
+    )) as LyraDetails;
+    let fired = 0;
+    el.addEventListener("lr-show", () => fired++);
+    el.show();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(fired).to.equal(0);
+  });
+});
+
+// -- size --------------------------------------------------------------------
+
+describe("size", () => {
+  const summaryOf = (el: LyraDetails): CSSStyleDeclaration =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement);
+  const contentOf = (el: LyraDetails): CSSStyleDeclaration =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="content"]') as HTMLElement);
+
+  const render = async (size?: string): Promise<LyraDetails> =>
+    (await fixture(
+      size === undefined
+        ? html`<lr-details summary="More">Content</lr-details>`
+        : html`<lr-details summary="More" size=${size}>Content</lr-details>`
+    )) as LyraDetails;
+
+  it("defaults to \"m\", and the unset default renders identically to the explicit tier", async () => {
+    const unset = await render();
+    const explicit = await render("m");
+    expect(unset.size).to.equal("m");
+    expect(unset.getAttribute("size")).to.equal("m");
+    expect(summaryOf(unset).paddingBlockStart).to.equal(summaryOf(explicit).paddingBlockStart);
+    expect(summaryOf(unset).fontSize).to.equal(summaryOf(explicit).fontSize);
+  });
+
+  it("grows the rendered summary rhythm and font size monotonically across the ladder", async () => {
+    const measured: { padding: number; font: number; content: number }[] = [];
+    for (const size of ["2xs", "xs", "s", "m", "l", "xl"] as const) {
+      const el = await render(size);
+      measured.push({
+        padding: Number.parseFloat(summaryOf(el).paddingBlockStart),
+        font: Number.parseFloat(summaryOf(el).fontSize),
+        content: Number.parseFloat(contentOf(el).paddingBlockEnd),
+      });
+    }
+    for (let i = 1; i < measured.length; i++) {
+      expect(measured[i]!.padding, `summary padding tier ${i}`).to.be.at.least(measured[i - 1]!.padding);
+      expect(measured[i]!.font, `summary font tier ${i}`).to.be.at.least(measured[i - 1]!.font);
+      expect(measured[i]!.content, `content padding tier ${i}`).to.be.at.least(measured[i - 1]!.content);
+    }
+    expect(measured.at(-1)!.padding, "xl padding beats 2xs").to.be.greaterThan(measured[0]!.padding);
+    expect(measured.at(-1)!.font, "xl font beats 2xs").to.be.greaterThan(measured[0]!.font);
+  });
+
+  it("accepts the Web Awesome size spellings as exact synonyms of the step names", async () => {
+    for (const [step, alias] of [["s", "small"], ["m", "medium"], ["l", "large"]] as const) {
+      const stepped = summaryOf(await render(step));
+      const aliased = summaryOf(await render(alias));
+      expect(aliased.paddingBlockStart, `${alias} padding`).to.equal(stepped.paddingBlockStart);
+      expect(aliased.fontSize, `${alias} font`).to.equal(stepped.fontSize);
+    }
+  });
+
+  it("stays accessible and keyboard-operable at the smallest tier", async () => {
+    const el = await render("2xs");
+    await expect(el).to.be.accessible();
+    const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+    summary.click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+  });
 });

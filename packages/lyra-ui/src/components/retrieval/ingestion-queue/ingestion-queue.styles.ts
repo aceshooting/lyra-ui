@@ -120,10 +120,24 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
+  /* Pressed keeps the hover's retinted border and label and adds the fill the hover has none of --
+     the button's own --lr-color-surface base mixed toward --lr-color-mix-partner. */
+  [part='retry-button']:active,
+  lr-virtual-list::part(retry-button):active {
+    border-color: var(--lr-color-brand);
+    color: var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='cancel-button']:hover,
   lr-virtual-list::part(cancel-button):hover {
     border-color: var(--lr-color-danger);
     color: var(--lr-color-danger);
+  }
+  [part='cancel-button']:active,
+  lr-virtual-list::part(cancel-button):active {
+    border-color: var(--lr-color-danger);
+    color: var(--lr-color-danger);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='retry-button']:focus-visible,
   lr-virtual-list::part(retry-button):focus-visible,

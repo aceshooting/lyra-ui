@@ -7,6 +7,7 @@ import {
   resolveValidityAnchor,
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './tool-param-form.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import '../../forms/select/select.class.js';
@@ -176,6 +177,19 @@ export interface LyraToolParamFormEventMap {
  * @csspart unsupported - The fallback note rendered in place of a control for
  * a property whose `type` is outside this renderer's scope.
  * @csspart empty - The message shown when `schema.properties` has no entries.
+ * @cssstate required - The schema declares at least one required property. Requiredness is
+ * per-property here (the value is an object), so this is the whole-control reading: "this form
+ * demands something of the user".
+ * @cssstate optional - The schema declares no required property.
+ * @cssstate valid - Every field currently satisfies the supported schema subset, whether or not the
+ * user has touched anything.
+ * @cssstate invalid - At least one field, or the schema shape itself, is currently in error.
+ * @cssstate user-valid - `valid`, and the user has interacted (edited a field, left one, or a
+ * `reportValidity()` call — which is what a submit attempt runs).
+ * @cssstate user-invalid - `invalid`, and the user has interacted. A pristine required field is
+ * invalid but deliberately does not match this, so a consumer's `:state(user-invalid)` styling
+ * cannot paint the form red before the user has typed anything. A form reset makes it pristine
+ * again.
  */
 export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   static formAssociated = true;
@@ -217,6 +231,13 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   // "changes" from it, so mounting with an unmet required field still
   // announces `valid:false` once up front.
   private lastValidityKey: string | undefined;
+  // Gates the `user-valid`/`user-invalid` custom states only. Deliberately
+  // separate from `touchedFields`: that set is per-field and is also filled
+  // wholesale by `reportValidity()` *when there are errors*, so a
+  // `reportValidity()` that passes would leave it empty and a valid form
+  // could never reach `user-valid`. This flag answers the different
+  // question "has the user done anything at all here yet".
+  private hasInteracted = false;
 
   constructor() {
     super();
@@ -506,6 +527,10 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
    * mirroring a native `<form>`'s `reportValidity()`.
    */
   reportValidity(): boolean {
+    // A reportValidity() call is what a submit attempt runs, so it counts as interaction for the
+    // `user-valid`/`user-invalid` states — set before syncFormState(), which is what republishes
+    // them.
+    this.hasInteracted = true;
     this.syncFormState();
     if (Object.keys(this._errors).length > 0) {
       this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
@@ -522,7 +547,32 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return valid;
   }
 
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a rejection the
+   * schema cannot express ("the tool rejected these arguments"). A non-empty `message` raises
+   * `customError` and becomes `validationMessage`, so the form fails `checkValidity()`, blocks
+   * submission, and matches `:state(invalid)`; `''` clears it.
+   *
+   * Two layers, not one: this control already raises `customError` intrinsically for a malformed
+   * schema or an unsupported field type, and `setCustomValidity('')` clears only the consumer's own
+   * layer — a still-malformed schema stays invalid, with its own message restored. Clearing
+   * likewise never forces a form with an unmet `required` property valid, and the consumer's error
+   * survives every intrinsic recomputation in between (each field edit re-runs `syncFormState()`)
+   * and a `form.reset()`, matching a native control.
+   *
+   * Whole-control state: the message is deliberately not added to `errors`, which is keyed by the
+   * schema property a message belongs to. It is caller-supplied content, so it is used verbatim and
+   * never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncValidityCustomStates();
+  }
+
   formResetCallback(): void {
+    // Cleared before the `value` assignment below, whose setter is what republishes the custom
+    // states — a reset form is pristine again, so `user-valid`/`user-invalid` must drop off it.
+    this.hasInteracted = false;
     this.value = {};
     this.touchedFields = new Set();
     this.showFormError = false;
@@ -583,6 +633,24 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       const firstMessage = Object.values(this._errors)[0] ?? this._formError;
       this.validityController.setValidity(this._validityFlags, firstMessage);
     }
+    this.syncValidityCustomStates();
+  }
+
+  /**
+   * Republishes the six `:state()` validity hooks — see `internal/custom-states.ts`. Called from
+   * `syncInternals()` (so every validity recomputation carries them) and from `markTouched()` (the
+   * one interaction that changes the answer without touching validity).
+   *
+   * `required` here means "the schema declares at least one required property", which is the only
+   * whole-control reading available: this control's value is an object, so requiredness is per
+   * property, and a consumer styling `lr-tool-param-form:state(required)` is asking "does this form
+   * demand anything of the user".
+   */
+  private syncValidityCustomStates(): void {
+    syncValidityStates(this.internals, {
+      required: this.requiredKeys.length > 0,
+      hasInteracted: this.hasInteracted,
+    });
   }
 
   private syncFormState(): void {
@@ -635,11 +703,17 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   private setFieldValue(key: string, val: unknown): void {
     if (this.effectiveDisabled) return;
+    // Set before the `value` assignment, whose setter republishes the custom states.
+    this.hasInteracted = true;
     this.value = { ...this.value, [key]: val };
     this.emit('lr-input', { value: this.effectiveValue });
   }
 
   private markTouched(key: string): void {
+    // Visiting a field is interaction even if the user changed nothing, so this runs before the
+    // early return below — and republishes explicitly, since nothing here touches validity.
+    this.hasInteracted = true;
+    this.syncValidityCustomStates();
     if (this.touchedFields.has(key)) return;
     this.touchedFields = new Set(this.touchedFields).add(key);
   }

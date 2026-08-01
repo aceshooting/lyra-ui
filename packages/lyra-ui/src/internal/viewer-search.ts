@@ -28,9 +28,7 @@ export function announceSearchResult(
   }
   if (activeIndex < 0) {
     announcer.announce(
-      localize(matchCount === 1 ? 'viewerSearchMatchCount' : 'viewerSearchMatchCountPlural', undefined, {
-        count: matchCount,
-      }),
+      localize('viewerSearchMatchCount', undefined, { count: matchCount }),
     );
     return;
   }

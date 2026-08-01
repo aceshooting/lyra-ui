@@ -19,6 +19,13 @@ import { activeElementIn } from '../../../internal/active-element.js';
 /** The kind of value a `QueryBuilderField` holds — drives which existing sibling control
  *  (`lr-input`/`lr-select`/`lr-date-input`/`lr-combobox`) renders for a condition row's value
  *  cell, and which `QueryBuilderOperator`s are offered by default. */
+/** `<lr-select>`'s `value` widened to `string | string[]` when it gained `multiple`. Every select
+ *  this component renders is single-select, so narrow at the boundary rather than threading a
+ *  union through the condition model. */
+function selectValue(el: LyraSelect): string {
+  return Array.isArray(el.value) ? (el.value[0] ?? '') : el.value;
+}
+
 export type QueryBuilderFieldType = 'string' | 'number' | 'boolean' | 'date' | 'enum';
 
 /** A comparison a condition row can apply. `gt`/`gte`/`lt`/`lte` are shared by `number` and
@@ -485,7 +492,7 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
           ?disabled=${this.disabled}
           @change=${(event: Event) =>
             this.consumeChildEvent(event, () =>
-              this.setConditionField(condition.id, (event.target as LyraSelect).value),
+              this.setConditionField(condition.id, selectValue(event.target as LyraSelect)),
             )}
         >
           ${this._fields.map((f) => html`<lr-option value=${f.name}>${f.label ?? f.name}</lr-option>`)}

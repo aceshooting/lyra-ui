@@ -117,6 +117,9 @@ export const styles = css`
   [part='load-more']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='load-more']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='load-more']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

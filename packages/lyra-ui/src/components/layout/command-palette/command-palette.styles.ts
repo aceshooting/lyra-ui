@@ -32,8 +32,12 @@ export const styles = css`
     overflow: hidden;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Modal-panel surface, not the page surface -- in dark mode the two would be the same
+       near-black and the palette would read as a scrim with a floating list on it. */
+    background: var(--lr-color-surface-overlay);
+    /* Modal layer, top step: the palette floats free on all four edges over its own scrim,
+       exactly like a centered lr-dialog. */
+    box-shadow: var(--lr-shadow-xl);
     color: var(--lr-color-text);
   }
   [part="search"] {
@@ -116,6 +120,16 @@ export const styles = css`
     background: var(
       --lr-command-palette-active-bg,
       var(--lr-color-brand-quiet)
+    );
+  }
+  /* Same fill as hover (including a consumer's own --lr-command-palette-active-bg), mixed further
+     toward --lr-color-mix-partner so the press reads as a deeper step of the same highlight. Kept
+     at the hover rule's own zeroed specificity for the same reason it was zeroed. */
+  :where([part="command"]):active:where(:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
   /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any

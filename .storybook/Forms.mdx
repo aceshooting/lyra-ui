@@ -1,0 +1,222 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Guides/Forms" />
+
+# Forms
+
+Lyra's form controls are **form-associated custom elements**. They are not `<input>` wrappers with a
+hidden mirror field — they participate in a native `<form>` directly, through `ElementInternals`.
+Submission, reset, validity, `:invalid`, fieldset disabling and the browser's own validation bubble
+all work on them without any adapter code.
+
+```html
+<form>
+  <lr-input name="email" type="email" label="Email" required></lr-input>
+  <lr-select name="plan" label="Plan" required>
+    <lr-option value="free">Free</lr-option>
+    <lr-option value="pro">Pro</lr-option>
+  </lr-select>
+  <lr-button type="submit">Subscribe</lr-button>
+</form>
+```
+
+```js
+new FormData(form).get('email'); // the control's own value, no wiring
+```
+
+## What form association gives you
+
+Every value-carrying form control shares the same members. They are not repeated on individual
+component pages, so this is the list:
+
+| Member | Kind | Notes |
+| --- | --- | --- |
+| `name` | property + attribute | The `FormData` key. |
+| `value` | property + attribute | The submission value. |
+| `disabled` | property + reflected attribute | The control's **own** disabled state only. |
+| `required` | property + reflected attribute | Drives `valueMissing`. |
+| `form` | readonly | The owning `<form>`, or `null`. |
+| `labels` | readonly | `NodeList` of associated `<label>` elements. |
+| `validity` | readonly | A real `ValidityState`. |
+| `validationMessage` | readonly | The message the browser would show. |
+| `willValidate` | readonly | Whether the control participates in validation. |
+| `effectiveDisabled` | readonly | Own `disabled` **or** an ancestor `<fieldset disabled>`. |
+| `checkValidity()` | method | Validates silently, returns a boolean. |
+| `reportValidity()` | method | Validates and shows the browser's UI. |
+| `setCustomValidity(message)` | method | See below. |
+
+Three behaviours are worth knowing because they differ from the naive expectation:
+
+- **A control is in `FormData` from construction.** The shared form-associated base calls
+  `internals.setFormValue('')` in its constructor, so an untouched field is present as `""` rather
+  than absent — matching native `<input>`. Server code that distinguishes "empty" from "missing"
+  sees the same shape a plain form would produce.
+- **Read `effectiveDisabled`, not `disabled`, for the merged state.** `disabled` always reflects
+  only what *you* set, exactly as a native `<input>`'s own `disabled` property does; an ancestor
+  `<fieldset disabled>` is tracked separately so the control's own state survives the fieldset being
+  re-enabled. Style with `:host(:disabled)` semantics in mind: only `:disabled` tracks the cascaded
+  case.
+- **Reset restores the `value` *content attribute*.** `form.reset()` puts back whatever the markup
+  declared (native `defaultValue` semantics). Assigning the `.value` property never redefines that
+  default — only `setAttribute('value', …)` or the declarative markup does.
+
+## Validation
+
+Constraints are real, not decorative. `required` with an empty value raises `valueMissing` on every
+`value`/`required` change and once on connect, so `checkValidity()`, `reportValidity()`, `:invalid`
+and a submit attempt all agree.
+
+Validation is also **anchored**: the shared base passes `setValidity()` the first focusable element
+inside the shadow root, re-resolved after each render. Without an anchor the browser cannot focus a
+non-focusable custom-element host when native validation UI tries to reveal the offending control,
+and a failed submit would scroll nowhere.
+
+### `setCustomValidity()`
+
+The standard channel for an error no client-side constraint can express — a server rejecting an
+address, a code already redeemed:
+
+```js
+const email = form.querySelector('lr-input[name="email"]');
+
+email.setCustomValidity('That email is already registered.');
+form.reportValidity();          // false, and the browser reveals the field
+
+email.setCustomValidity('');    // clears it
+```
+
+- A non-empty message raises `customError`, becomes `validationMessage`, fails `checkValidity()` and
+  blocks submission.
+- The custom error **survives** every intrinsic recomputation in between — each `value` change
+  re-runs the built-in constraints without touching it — and survives a form reset. Only another
+  `setCustomValidity('')` clears it, exactly like a native control.
+- Clearing restores the control's own computed validity rather than forcing it valid: a
+  required-and-empty field whose custom error you cleared is still `valueMissing`.
+- **The message is used verbatim and never localized.** It is your content, so pass a string you
+  have already translated. Built-in messages go through the locale runtime instead — see
+  [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs).
+
+### Styling validity: the six `:state()` hooks
+
+Every form-associated control publishes the same six CSS custom states, so you can style validation
+from outside without reaching into a shadow root:
+
+| State | Matches while |
+| --- | --- |
+| `:state(required)` | `required` is set |
+| `:state(optional)` | `required` is not set — the complement |
+| `:state(valid)` | the control satisfies its constraints, including any `setCustomValidity()` error |
+| `:state(invalid)` | it does not — from the very first render |
+| `:state(user-valid)` | `valid`, **and** the user has interacted |
+| `:state(user-invalid)` | `invalid`, **and** the user has interacted |
+
+```css
+lr-input:state(user-invalid)::part(input-wrapper) {
+  border-color: var(--lr-color-danger-border-loud);
+}
+```
+
+**Style errors with `user-invalid`, not `invalid`.** A pristine required field is genuinely invalid,
+but colouring it red before the user has done anything is hostile. "Interacted" means an
+`input`/`change` on the control, a blur, or a `reportValidity()` call — which is what a submit
+attempt runs, so a failed submit is exactly when the `user-*` states start matching. A form reset
+makes the control pristine again and the `user-*` states stop matching.
+
+All six are published by every control that carries a value, whether it uses the shared mixin or
+drives `ElementInternals` itself. That uniformity is the point: a stylesheet written against
+`:state(user-invalid)` cannot work on one control and silently do nothing on another.
+(`<lr-button>` and `<lr-icon-button>` are form-associated only so `type="submit"` / `type="reset"`
+works; they carry no validated value and publish no validity states.)
+
+## Enter to submit
+
+A native `<input>` submits its form owner when the user presses Enter. The inputs these components
+render live in a shadow tree and have no form owner at all — only the host participates in the
+light-DOM `<form>` — so the platform can never run implicit submission for them. The text controls
+implement it themselves, following the platform's own rules rather than an approximation:
+
+- **Modifiers disqualify the keystroke.** Ctrl / Cmd / Alt / Shift + Enter is an application
+  shortcut (send-and-keep-open, insert-newline), never implicit submission.
+- **An IME composition Enter is not a submit.** Enter commits the highlighted candidate in Japanese,
+  Chinese and Korean input; submitting there throws away the word being typed.
+- **A vetoed keydown stays vetoed.** If a listener above already called `preventDefault()` — an
+  autocomplete panel committing a selection, your own shortcut — nothing is submitted.
+- **The form's default button is resolved, not skipped**, so `SubmitEvent.submitter` keeps its
+  `name`/`value` entry and any `formaction` / `formmethod` / `formnovalidate` override.
+- **Submission runs `requestSubmit()`, never `submit()`**, so interactive constraint validation runs
+  and an invalid field blocks the submit exactly as a real button click would.
+- **A form with no submit button submits only from a single field**, matching the platform's rule
+  for fields that block implicit submission.
+
+Four controls deliberately do **not** wire it, because Enter already means something there:
+`<lr-textarea>` and `<lr-code-editor>` insert a newline; `<lr-select>` opens its listbox and then
+commits the active option, per the ARIA combobox pattern; `<lr-date-picker>` selects the focused day.
+
+`<lr-button type="submit">` and `<lr-button type="reset">` need the same treatment for the same
+reason: on a custom element the `type` attribute alone does nothing, so the button is itself
+form-associated and calls `requestSubmit()` / `reset()` on its owning form.
+
+## The shared label / hint / error chrome
+
+Form controls ship the same opt-in field frame, so a form built from several different controls
+lines up without per-control CSS. Each piece exists as a property, a matching named slot for rich
+content, and a CSS part:
+
+| Property | Slot | Part |
+| --- | --- | --- |
+| `label` | `label` | `form-control-label` |
+| `hint` | `hint` | `hint` |
+| `errorText` (`error-text`) | `error` | `error` |
+
+The whole frame is wrapped in `part="form-control"`.
+
+```html
+<lr-input
+  label="API key"
+  hint="Found under Settings → Developers."
+  error-text="That key has been revoked."
+></lr-input>
+
+<lr-input label="API key">
+  <span slot="hint">Found under <a href="/settings">Settings</a>.</span>
+</lr-input>
+```
+
+The control wires `aria-describedby` to whichever of hint and error is present. Where the control
+owns a single field, the rendered `<label>` carries a real `for`/`id` pair, so clicking the label
+focuses it; grouped controls name their group with a `<legend>` or an `aria-labelledby` target
+instead, which is what their role requires.
+
+**A host `aria-label` wins over any computed internal accessible name.** If you need the accessible
+name to differ from the visible label, set `aria-label` on the element itself.
+
+A control that ships without this chrome documents the omission in its own reference — a bare
+primitive where `label` is an accessible-name override rather than visible text is a deliberate
+choice, not a gap.
+
+## Testing form controls outside a browser
+
+happy-dom implements no `ElementInternals` at all, so a form control running in a Vitest + happy-dom
+suite has no real form participation to observe. The package ships a shim for that environment:
+
+```ts
+// vitest setup file, before any component import
+import { installHappyDomFormAssociatedShims } from '@aceshooting/lyra-ui/testing';
+
+installHappyDomFormAssociatedShims();
+```
+
+It patches `HTMLElement.prototype.attachInternals` — the exact lookup a component's constructor
+resolves through — with a stub covering what the components actually call: `setFormValue()`,
+`setValidity()`, `checkValidity()`, `reportValidity()`, plus readonly `form`, `labels`, `validity`,
+`validationMessage` and `willValidate`. It is a no-op wherever `attachInternals` already exists (any
+real browser) or where there is no DOM at all, so it is safe to call unconditionally from a shared
+setup file that spans several test environments.
+
+This package's own tests run in real browsers via `@web/test-runner` and never call it.
+
+## Where to go next
+
+- [Events](?path=/docs/guides-events--docs) — the event contract, and the typed listener surface.
+- [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs) — translating built-in
+  validation and status strings.

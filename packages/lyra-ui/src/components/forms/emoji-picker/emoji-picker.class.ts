@@ -4,6 +4,7 @@ import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { nextId } from '../../../internal/a11y.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './emoji-picker.styles.js';
 import { loadEmojiDataCached } from './emoji-data-loader.js';
 // Data types live in ./emoji-types.js (extracted to break a type-only import cycle with
@@ -44,7 +45,9 @@ function probePixels(probe: HTMLElement, fallback: number, allowZero = false): n
   return px > 0 || allowZero ? px : fallback;
 }
 
-export type LyraEmojiPickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraEmojiPickerSize = LyraSizeStep;
 
 export interface LyraEmojiPickerEventMap {
   input: CustomEvent<undefined>;
@@ -157,8 +160,10 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
 
   /** Visual size — scales the emoji grid item box proportionally, floored at 24px
-   *  (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale. */
-  @property({ reflect: true }) size: LyraEmojiPickerSize = 'm';
+   *  (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale. The Web Awesome / Shoelace spellings
+   *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
+   *  attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Visible label content, rendered above the search/grid. Empty (the default) renders no label
    *  chrome at all -- see the class doc above for the full label/hint/error contract. */

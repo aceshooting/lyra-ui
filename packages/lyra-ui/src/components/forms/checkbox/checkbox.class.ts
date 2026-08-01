@@ -2,7 +2,10 @@ import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type P
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox.styles.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
@@ -126,26 +129,42 @@ export interface LyraCheckboxEventMap {
  * `detail: { checked }`. Not fired for a programmatic `.checked` assignment.
  * @event focus - Re-dispatched from the internal control as a bubbling, composed event.
  * @event blur - Re-dispatched from the internal control as a bubbling, composed event.
+ * @cssstate required - Matches while `required` is set. Style with `lr-checkbox:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: a toggle, a blur, or a
+ * `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required checkbox is genuinely invalid, but colouring it red
+ * before the user has done anything is hostile.
  * @csspart base - The whole interactive control (`role="checkbox"`); wraps the box and label.
  * @csspart box - The small square that shows the checkmark/indeterminate dash.
  * @csspart checkmark - The checkmark (or indeterminate dash) glyph inside the box.
  * @csspart label - The wrapper around the default slot.
- * @cssprop [--lr-checkbox-label-indent=calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))] -
+ * @cssprop [--lr-checkbox-label-indent=calc(var(--lr-checkbox-box-size) + var(--lr-space-s))] -
  * The inline distance from the control's start edge to the start of the label text, i.e. the box's
- * own floor plus the gap next to it. Published so a consumer composing per-option hint text under
- * the label can align it without re-deriving that formula from the shadow styles, and used as the
- * source of the real gap so the two cannot drift. Setting it on the element (or on `lr-checkbox` in
- * your own stylesheet) moves the label; because custom properties inherit down and not sideways, it
- * is *not* readable from a sibling node in your tree — align a sibling by computing the same formula
- * from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control.
+ * own floor plus the gap next to it — so it tracks `size` along with the box. Published so a
+ * consumer composing per-option hint text under the label can align it without re-deriving that
+ * formula from the shadow styles, and used as the source of the real gap so the two cannot drift.
+ * Setting it on the element (or on `lr-checkbox` in your own stylesheet) moves the label; because
+ * custom properties inherit down and not sideways, it is *not* readable from a sibling node in your
+ * tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size`,
+ * `--lr-theme-form-control-height-*` and `--lr-theme-space-s`, which you control.
  * @cssprop [--lr-checkbox-checked-bg=var(--lr-color-brand)] - Background of `[part='box']` while
  * `checked` or `indeterminate`. Retint just this control's checked fill without touching the shared
  * `--lr-color-brand` token every other component also reads.
  * @cssprop [--lr-checkbox-checked-border=var(--lr-color-brand)] - Border color of `[part='box']`
  * while `checked` or `indeterminate`.
+ * @cssprop [--lr-checkbox-box-size=min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))] -
+ * Edge length of `[part='box']`. Derived from the `size` tier's shared control height, so the box
+ * lines up with an `<lr-input>`/`<lr-select>`/`<lr-button>` of the same `size`; set it to pin the box
+ * independently of the tier.
  */
 export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
   static formAssociated = true;
 
   static override properties = {
@@ -154,8 +173,19 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
+    size: { reflect: true },
     value: { noAccessor: true },
   };
+
+  /**
+   * Control size, on the library's shared ladder. Accepts both spellings of every tier —
+   * `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating either way
+   * is a tag rename. Scales the box and its checkmark off the same `--lr-form-control-*` values
+   * `<lr-input>`/`<lr-select>`/`<lr-button>` use, so controls of one `size` line up in a row. The
+   * slotted label keeps the library's standard control-label type size at every tier; restyle it
+   * through `::part(label)` if you want it to track the control.
+   */
+  size: LyraSize = 'm';
 
   // Visual-only mixed state, matching native `<input type="checkbox">`
   // semantics: it does not affect `checked`'s own value, and a user
@@ -172,6 +202,12 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // reflection below so validity styling never flashes on first render,
   // mirroring `<lr-combobox>`/`<lr-select>`'s identical `touched` field.
   @state() private touched = false;
+  /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
+   *  `user-invalid` custom states. Deliberately separate from `touched` (which drives the visible
+   *  `data-invalid`/`aria-invalid` pair and is set on blur alone): a toggle is an interaction the
+   *  instant it happens, and `reportValidity()` — what a submit attempt runs — counts as one too,
+   *  exactly as it does for native `:user-invalid`. Not `@state`: nothing in `render()` reads it. */
+  private hasInteracted = false;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -370,6 +406,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // `syncFormState()`/setter shape.
   private reflectInvalid(): void {
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.hasInteracted });
   }
 
   private syncFormState(): void {
@@ -384,6 +421,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   formResetCallback(): void {
     this.checked = this._defaultChecked;
     this.touched = false;
+    this.hasInteracted = false;
     this.reflectInvalid();
   }
   formStateRestoreCallback(
@@ -412,7 +450,33 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
+    // point, so it counts as interaction for the `user-*` custom states. `checkValidity()`
+    // deliberately does not: it is the silent query.
+    this.hasInteracted = true;
+    this.reflectInvalid();
     return this.internals.reportValidity();
+  }
+
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("those terms have been superseded") that no client-side constraint can express. A
+   * non-empty `message` raises `customError` and becomes `validationMessage`, so the control fails
+   * `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''` clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * required-and-unchecked checkbox whose custom error is cleared stays `valueMissing`. The custom
+   * error also survives every intrinsic recomputation in between (each toggle re-runs
+   * `updateValidity()`) and a form reset, exactly like a native control — only another
+   * `setCustomValidity('')` clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.reflectInvalid();
+    // `aria-invalid` is rendered from `internals.validity`, which the call above just moved.
+    this.requestUpdate();
   }
 
   /** Activates the internal checkbox control (toggling it), mirroring `<lr-button>`'s host
@@ -434,6 +498,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   private toggle(): void {
     if (this.effectiveDisabled) return;
+    this.hasInteracted = true;
     this.checked = !this.checked;
     this.indeterminate = false;
     this.emit('input');
@@ -472,6 +537,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   private onBlur = (): void => {
     this.touched = true;
+    this.hasInteracted = true;
     this.reflectInvalid();
     this.emit('blur');
   };

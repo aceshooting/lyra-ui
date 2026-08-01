@@ -6,7 +6,11 @@ import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
+import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './combobox.styles.js';
 import { LyraOption } from './option.class.js';
 import './option.class.js';
@@ -50,7 +54,9 @@ function createNoopInternals(): ElementInternals {
 }
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
-export type LyraComboboxSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraComboboxSize = LyraSizeStep;
 
 export interface ComboboxSourceRow {
   value: string;
@@ -103,6 +109,10 @@ export interface LyraComboboxEventMap {
  *
  * Options are `<lr-option value>` children. Emits native-style `change`/`input`
  * (like Web Awesome) plus `lr-show`/`lr-hide`/`lr-clear`.
+ * Enter commits the highlighted option while the listbox has one; with nothing highlighted it
+ * performs the implicit form submission a native text field would (see
+ * `internal/submit-on-enter.ts` — the internal input is in a shadow root and has no form owner, so
+ * the platform can never do it here).
  * Standard size tiers share their outer control height with sibling Lyra controls; the decorative
  * expand icon scales inside that allocation without creating an independent action target.
  *
@@ -159,7 +169,9 @@ export interface LyraComboboxEventMap {
  * @csspart error - The error message.
  * @csspart hint - The hint message.
  * @cssprop --lr-combobox-trigger-padding - Padding inside the input container.
- * @cssprop --lr-combobox-trigger-min-height - Minimum input-container block size, scaled by `size`.
+ * @cssprop [--lr-combobox-trigger-min-height=var(--lr-form-control-height)] - Minimum
+ *   input-container block size. Reads the shared form-control height ladder, so retuning
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.
  * @cssprop --lr-combobox-trigger-height - Exact input-container height. Unset by default, which
  *   leaves `--lr-combobox-trigger-min-height` as a floor only; set it to a length to both floor and
  *   cap the row (e.g. to pixel-match `<lr-input>`/`<lr-select>` in the same toolbar). Because it is
@@ -167,7 +179,8 @@ export interface LyraComboboxEventMap {
  *   well as inline on the element. Intended for a single-row combobox: in `multiple` mode a tag row
  *   long enough to wrap overflows the pinned box visibly (nothing is clipped or made unreachable),
  *   so leave it unset there.
- * @cssprop --lr-combobox-font-size - Input text size.
+ * @cssprop [--lr-combobox-font-size=var(--lr-form-control-font-size)] - Input text size, from the
+ *   shared form-control size ladder.
  * @cssprop --lr-combobox-tag-padding - Selected-tag padding.
  * @cssprop --lr-combobox-tag-font-size - Selected-tag text size.
  * @cssprop --lr-combobox-expand-size - Decorative expand-icon box size, scaled by `size`.
@@ -175,7 +188,8 @@ export interface LyraComboboxEventMap {
  *   and filter input inside the trigger row. Unlike the size knobs above it does not vary by
  *   `size` tier. Override it to retune without a `::part(combobox)` rule.
  * @cssprop [--lr-combobox-radius=var(--lr-radius)] - Corner radius of the trigger row
- *   (`[part='combobox']`). Does not vary by `size` tier.
+ *   (`[part='combobox']`). Does not vary by `size` tier; the `pill` attribute swaps it for
+ *   `--lr-radius-pill`.
  * @cssprop [--lr-combobox-option-active-bg=var(--lr-color-brand-quiet)] - Background of a hovered
  *   or keyboard-active option row.
  * @cssprop [--lr-combobox-option-selected-bg=transparent] - Background of the currently-selected
@@ -186,10 +200,20 @@ export interface LyraComboboxEventMap {
  *   selected option row.
  * @cssprop [--lr-combobox-option-selected-font-weight=var(--lr-font-weight-semibold)] - Font
  *   weight of the selected option row.
+ * @cssstate required - Matches while `required` is set, so a consumer can mark the field without
+ *   duplicating that flag in their own markup.
+ * @cssstate optional - Matches while `required` is not set (the complement of `required`).
+ * @cssstate valid - Matches while the control satisfies its constraints.
+ * @cssstate invalid - Matches while it does not — including a pristine required-and-empty
+ *   combobox, exactly like native `:invalid`.
+ * @cssstate user-valid - `valid`, but only after the user has interacted (blurred the filter
+ *   input, committed a selection, or been through a `reportValidity()`/submit attempt).
+ * @cssstate user-invalid - `invalid`, but only after that same interaction — a required combobox
+ *   nobody has touched yet is invalid without being styled as an error.
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     multiple: { type: Boolean, reflect: true, noAccessor: true },
@@ -207,16 +231,24 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `2xs`–`xl` scale as `lr-select`'s `size`. */
-  @property({ reflect: true }) size: LyraComboboxSize = 'm';
+  /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`/`lr-select`. The
+   *  Web Awesome / Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a
+   *  migration is a tag rename with no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Rounds the trigger row's corners to a full pill, mirroring `lr-input`'s own `pill`. It is a
+   *  single override of `--lr-combobox-radius`, so a consumer setting that property directly still
+   *  wins for a bespoke shape. */
+  @property({ type: Boolean, reflect: true }) pill = false;
   /** Show a clear button while the combobox has something to clear on either axis: a committed
    *  selection, or visible filter text (the open listbox in single-select, any time in `multiple`
    *  mode — a closed single-select shows the selected label, not the query, so a stale query alone
    *  never surfaces the button). Clearing a selection emits `input`/`change`/`lr-clear`; clearing
    *  filter text emits `lr-filter` with an empty `value`; each fires only for the axis that
-   *  actually changed. Mirrors `wa-combobox`'s public name. */
+   *  actually changed. Named after Shoelace's `clearable`; Web Awesome spells the same idea
+   *  `with-clear`, which is accepted as an alias so either migration keeps working. */
   @property({ type: Boolean, reflect: true }) clearable = false;
-  /** @deprecated Use `clearable`. Retained as a compatibility alias. */
+  /** Web Awesome's spelling of {@link clearable}, accepted so a mechanical `wa-` → `lr-` rename
+   *  does not silently drop the clear button. Prefer `clearable` in new code. */
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   /** Native editing-assistance attributes forwarded to the wrapped input. */
   @property() autocomplete = 'off';
@@ -616,6 +648,21 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     } else {
       this.validityController.setValidity({});
     }
+    this.syncCustomStates();
+  }
+
+  /**
+   * Publishes the six validity custom states (`:state(required)`/`optional`, `valid`/`invalid`,
+   * `user-valid`/`user-invalid`). The implementation is shared with every other form-associated
+   * control in the library — see `internal/custom-states.ts`; this component drives
+   * `ElementInternals` directly rather than through the `FormAssociated` mixin (its value is a
+   * `string[]` in `multiple` mode, which that string-value mixin cannot carry), so it calls the
+   * helper itself. `touched` is this component's own interaction flag, already set by the filter
+   * input's blur, so the `user-*` pair stays off a pristine control the way native
+   * `:user-invalid` does.
+   */
+  private syncCustomStates(): void {
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
   }
 
   private syncFormValue(): void {
@@ -647,6 +694,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   }
 
   formResetCallback(): void {
+    // A reset form is pristine again, so the `user-*` states stop matching even though a required
+    // combobox is immediately invalid once more. The `value` write below re-runs updateValidity()
+    // (and therefore syncCustomStates()) with this flag already cleared.
     this.touched = false;
     this.value = [...this._defaultSelected];
     this.query = '';
@@ -682,7 +732,31 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    // Reporting is what a submit attempt does, and a failed submit is precisely when native
+    // `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
+    // `FormAssociated` mixin.
+    this.touched = true;
+    this.syncCustomStates();
     return this.internals.reportValidity();
+  }
+
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a rejection no
+   * client-side constraint can express ("that option is no longer available"). A non-empty
+   * `message` raises `customError` and becomes `validationMessage`, so the control fails
+   * `checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * `required` combobox with nothing chosen stays `valueMissing`. The custom error also survives
+   * every intrinsic recomputation in between (each selection/`required` change re-runs
+   * `updateValidity()`) and a `form.reset()` — matching a native control, where only another
+   * `setCustomValidity('')` clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncCustomStates();
   }
 
   override disconnectedCallback(): void {
@@ -1035,6 +1109,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   private onInputBlur = (): void => {
     this.touched = true;
+    // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
+    // leaves, the same instant native `:user-invalid` starts matching.
+    this.syncCustomStates();
     // A mouse click outside the element is already handled by
     // onDocPointer/hide(), but that leaves keyboard users with no way to
     // dismiss the listbox short of Escape -- tabbing focus away from the
@@ -1087,7 +1164,13 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         if (this.open && this.activeIndex >= 0 && activeRow) {
           e.preventDefault();
           this.pickRow(activeRow);
+          break;
         }
+        // Nothing highlighted to commit, so the keystroke means what it means in any other text
+        // field: implicit submission of the ancestor form. The internal input lives in a shadow
+        // root and has no form owner, so the platform can never do it here.
+        if (this.effectiveDisabled) break;
+        submitOnEnter(this, e);
         break;
       }
       case 'Escape':

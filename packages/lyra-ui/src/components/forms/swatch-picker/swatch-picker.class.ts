@@ -5,6 +5,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { gemstoneGlyph, type GemstoneKey } from '../../../theme/gemstones.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './swatch-picker.styles.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 
@@ -24,7 +25,9 @@ export interface SwatchOption {
   gemstone?: GemstoneKey;
 }
 
-export type LyraSwatchPickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraSwatchPickerSize = LyraSizeStep;
 export type LyraSwatchPickerMode = 'swatch' | 'gemstone';
 
 export interface LyraSwatchPickerEventMap {
@@ -84,8 +87,10 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   @property() value: string | null = null;
 
   /** Visual size — scales the swatch hit-area and fill diameter proportionally, hit-area
-   *  floored at 24px (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale. */
-  @property({ reflect: true }) size: LyraSwatchPickerSize = 'm';
+   *  floored at 24px (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale. The Web Awesome / Shoelace spellings
+   *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
+   *  attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Visual treatment. `swatch` preserves the plain-circle default; `gemstone` renders the shared
    * gemstone glyph for options with a `gemstone` key and enables its glow/shine recipe. */

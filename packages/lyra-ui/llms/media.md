@@ -20,13 +20,13 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 - `variant?: 'compact' | 'standard' | 'detailed'` (attribute `variant`, not reflected — picks a
   fidelity tier for the ~65 codes whose source art embeds a coat of arms/seal/emblem; every other
   code resolves to the same file regardless of `variant`. `'compact'` = a tiny WebP raster for
-  icon-scale use (menus, language pickers, ~12–28px); `'standard'` (the effective default, when both
-  `variant` and `detailed` are unset) = the icon-optimized vector for card/row sizes (~28–96px);
-  `'detailed'` = the pristine full-fidelity vector for hero-scale display. Takes precedence over the
-  deprecated `detailed` below. No effect when `src` is set.)
-- `detailed: boolean = false` (reflected — **deprecated: use `variant="detailed"` instead**. Kept as
-  an alias for one minor cycle — when `variant` is left unset, `detailed` still maps to the detailed
-  tier — scheduled for removal in the next major. No effect when `src` is set.)
+  icon-scale use (menus, language pickers, ~12–28px); `'standard'` (the effective default, when
+  `variant` is unset) = the icon-optimized vector for card/row sizes (~28–96px); `'detailed'` = the
+  pristine full-fidelity vector for hero-scale display. No effect when `src` is set.)
+
+**Removed in 8.0.0:** the boolean `detailed` attribute. `variant="detailed"` selects the same tier.
+A leftover `detailed` is now an unknown attribute — it renders the `standard` tier silently, so
+rewrite it rather than leaving it in place.
 
 **Events:** none.
 
@@ -148,10 +148,7 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   icon-optimized vector for card/row sizes, ~65% smaller on average than the pristine source for the
   65 affected codes with no visible fidelity loss at that scale; `"detailed"` — the pristine
   full-fidelity vector, for hero-scale display where the extra illustrative detail is actually
-  visible. The other 184 codes resolve to the same file regardless of `variant` — a safe no-op. The
-  older boolean `detailed` attribute predates `variant` and is now **deprecated**
-  (`variant="detailed"` is the replacement); left unset, `variant` falls back to honoring `detailed`
-  for one more minor version before removal.
+  visible. The other 184 codes resolve to the same file regardless of `variant` — a safe no-op.
 
 **Additional API surface:**
 
@@ -687,12 +684,19 @@ spreadsheet, presentation, code, archive, image, audio, and video formats. An ex
 type wins; filename extension fallback is used only for an empty or `application/octet-stream`
 MIME type. Unknown values return a generic file result.
 
-**Properties:** `mimeType` (attribute `mime-type`), `name`, `size` (bytes; `0` renders no size),
-`label`, `decorative`, and `variant: 'icon' | 'label'`. A host `aria-label` wins over the computed
-localized file-type/size name. `decorative` changes the semantic owner to presentation and renders
+**Properties:** `mimeType` (attribute `mime-type`), `name`, `bytes` (file size **in bytes**, shown
+next to the label in `variant="label"` mode; `0`, the default, renders no size), `label`,
+`decorative`, and `variant: 'icon' | 'label'`. A host `aria-label` wins over the computed localized
+file-type/size name. `decorative` changes the semantic owner to presentation and renders
 `aria-hidden="true"` explicitly.
 
-**CSS parts:** `base`, `icon`, `label`, and `size`.
+**Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size`. Everywhere else in this
+library `size` names a tier on the shared size ladder, and a numeric byte count answering to the
+same property name is a collision a consumer only discovers at runtime. A leftover `size="245000"`
+is an unknown attribute now: `bytes` stays `0` and the badge silently renders without a size.
+
+**CSS parts:** `base`, `icon`, `label`, and `size` (the part keeps its name — it is the rendered
+size *text*, and renaming a part would break shipped `::part()` rules for no gain).
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
 format badge's inline and block size).
@@ -701,7 +705,7 @@ format badge's inline and block size).
 `getFileTypeMetadata()`, and `registerFileTypeMetadata()` for application-specific mappings.
 
 ```html
-<lr-file-icon mime-type="application/pdf" variant="label"></lr-file-icon>
+<lr-file-icon mime-type="application/pdf" variant="label" bytes="245000"></lr-file-icon>
 ```
 
 ## `lr-media-card`
@@ -730,11 +734,17 @@ final.
   shadow root) — same contract as `<lr-document-preview>`'s identically-named prop. Values that do
   not parse as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   the stylesheet token in control.
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring
-  `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled
-  box. `'plain'` removes `[part="base"]`'s border, background, padding, and corner radius, so a
-  card inside a dense chat transcript (or any container already drawing its own separation between
-  attachments) doesn't double the frame.
+- `frame: 'card' | 'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
+  vocabulary. `'card'` (the default) keeps the bordered, filled box. `'plain'` removes
+  `[part="base"]`'s border, background, padding, and corner radius, so a card inside a dense chat
+  transcript (or any container already drawing its own separation between attachments) doesn't
+  double the frame.
+
+**Renamed in 8.0.0 — breaking:** this was `appearance`. Library-wide, `appearance` now means only
+"how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";
+this property was always the second. There is no alias — `appearance` on `<lr-media-card>` is simply
+an unknown attribute now, so a card left on `appearance="plain"` silently renders the full card
+chrome again.
 
 **Events:** `lr-open` (`detail: { src: string; filename: string }`, cancelable) — fired when the
 card (or, for `kind="video"`, its separate `open-button`) is activated. `detail.src` is whichever
@@ -757,7 +767,7 @@ an `<a>` or `<span>` for the file-chip fallback depending on href safety), `medi
 `<video>`), `file-icon`, `filename` (file-chip fallback only), `open-button` (video only — see
 below).
 
-**Themeable custom properties:** `--lr-media-card-max-height` (default `20rem` — caps `[part="media"]`'s
+**Themeable custom properties:** `--lr-media-card-max-height` (default `var(--lr-size-20rem)` — caps `[part="media"]`'s
 block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as
 `<lr-document-preview>`'s identical `--lr-document-preview-max-height`; override per-instance via
 the `max-height` attribute instead of this property directly). Plus shared tokens
@@ -896,66 +906,118 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 
 ## `lr-avatar`
 
-A small, fixed-size identity marker: default-slotted icon/glyph content, an image, or a fallback of
-initials text — in that priority order, whichever is set takes over from the next. First-party
-invention (no Web Awesome equivalent) — purely presentational, with no built-in interactivity; wrap
-it in a `<button>`/`<lr-menu>` trigger for a user-menu affordance.
+A small, fixed-size identity marker: default-slotted icon/glyph content, an image, an
+`icon`-slotted fallback glyph, or a fallback of initials text — in that priority order, whichever is
+set takes over from the next. Mirrors `wa-avatar` / `sl-avatar` (`image`, `initials`, `loading`,
+`shape`, the `icon` slot, the image-load error event) and adds this library's shared `size` and
+`variant` vocabulary. Purely presentational, with no built-in interactivity; wrap it in a
+`<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
 **Properties:**
-- `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no slotted icon
-  and no image is set, or the image fails to load.
-- `src?: string` — image URL; takes priority over `initials` when set and loads successfully (but
-  never over slotted icon content), falling back to `initials` on a load error.
-- `alt: string = ''` — image alt text; set alongside `src` for accessibility, and also the source of
-  the accessible name for the icon-slot and initials cases (the glyph is `aria-hidden`, and the
+- `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no glyph and no
+  image is set, or the image fails to load and no `icon` slot content is provided.
+- `image?: string` — image URL; takes priority over the `icon` slot and `initials` when set and
+  loads successfully (but never over default-slotted glyph content), falling back to them on a load
+  error. **Renamed from `src` in 8.0.0** to match `wa-avatar`: a mechanical `wa-` → `lr-` rename
+  used to leave the property unset, so a migrated avatar silently dropped its photo and rendered
+  initials instead.
+- `alt: string = ''` — image alt text; set alongside `image` for accessibility, and also the source
+  of the accessible name for the glyph and initials cases (the glyph is `aria-hidden`, and the
   initials text is hidden from AT once `alt` supplies a name, so `[part="base"]` carries
   `role="img"` + that name instead).
 - host `aria-label` — overrides `alt` as the image/fallback accessible name without changing the
   visible initials or image
-- `size: 'sm' | 'md' | 'lg' = 'md'` (reflected).
-- `shape: 'circle' | 'square' = 'circle'` (reflected).
-- `tone: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) — recolors
-  the initials-fallback background/text, mirroring `lr-chip`'s `tone` vocabulary; `neutral` (the
-  default) reads as a plain, unaccented circle.
+- `loading: 'eager' | 'lazy' = 'eager'` (new in 8.0.0) — passthrough to the rendered `<img>`'s
+  native `loading` attribute. `'lazy'` defers the request until the avatar approaches the viewport,
+  which is worth setting for avatars far down a long list and never for one above the fold. It only
+  reaches the DOM while the image tier is the one rendering; the default matches the native default,
+  so an avatar that never sets it behaves exactly as it did before the property existed.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg'
+  = 'medium'` (reflected) — the library's shared six-step ladder, in either the `s`/`m`/`l` or the
+  `small`/`medium`/`large` spelling, plus this component's own older `sm`/`md`/`lg` shorthands.
+  Every one of the six tiers renders a distinct diameter — 1rem (`2xs`), 1.25rem (`xs`), 1.5rem
+  (`s`/`small`/`sm`), 2rem (`m`/`medium`/`md`, the default), 2.5rem (`l`/`large`/`lg`, which matches
+  `--lr-icon-button-size`), 3rem (`xl`) — and the initials font size steps alongside it. The three
+  spellings of a tier render identically, and the attribute reflects back whichever one was set
+  (`size="lg"` stays `"lg"`). **8.0.0 widened this from `sm`/`md`/`lg` to the full shared ladder**
+  and made `medium` the default.
+- `shape: 'circle' | 'rounded' | 'square' = 'circle'` (reflected) — three distinct corner radii:
+  `circle` (the pill radius), `rounded` (the shared `--lr-radius`), `square` (no radius at all).
+  **`rounded` is new in 8.0.0.**
+- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
+  recolors the initials-fallback background/text on the library's one semantic-tone vocabulary;
+  `neutral` (the default) reads as a plain, unaccented circle. **Renamed from `tone` in 8.0.0**,
+  with no alias: `tone="brand"` is an unknown attribute now and renders the neutral circle.
 
-**Events:** none.
+**Events:** `lr-error` (`detail: { image: string }`, new in 8.0.0) — the image failed to load;
+`detail.image` carries the URL that failed, so a consumer can retry or report it. Bubbling,
+composed, non-cancelable, and purely informational: by the time it fires the avatar has already
+fallen back to the `icon` slot or the initials on its own. It never fires for an avatar with no
+`image` set, and fires once more for each replacement `image` that also fails.
 
 **Slots:** default slot — icon/glyph content (e.g. an inline SVG or non-whitespace text/emoji),
 shown in place of the image and initials, e.g. to mark a chat avatar as "AI" vs. "user" with a role
-glyph. Takes priority over both `src` and `initials`. The glyph is treated as decorative
-(`aria-hidden`) — set `alt` alongside it for an accessible name.
+glyph. Takes priority over `image`, the `icon` slot, and `initials`. `icon` (new in 8.0.0) — a
+fallback glyph shown only when there is no default-slotted content and no loadable `image`; that is
+the role `wa-avatar`'s `icon` slot fills, a stand-in for the `initials` text rather than an override
+of the photo. Content in either slot is treated as decorative (`aria-hidden`) — set `alt` alongside
+it for an accessible name.
 
-**CSS parts:** `base` (the outer circle/square container), `icon` (wrapper around the slotted
-icon/glyph, only shown while the slot has assigned content), `image` (the `<img>`, only rendered
-while `src` is set, hasn't failed to load, and no icon is slotted), `initials` (the fallback
-initials text, rendered whenever neither `icon` nor `image` is).
+**CSS parts:** `base` (the outer circle/rounded/square container), `icon` (wrapper around whichever
+glyph slot is currently winning the fallback order — both slots stay mounted so their `slotchange`
+handlers keep firing, so this wrapper carries the native `hidden` attribute whenever no glyph is the
+winning tier: with neither slot filled, and equally while a loadable `image` is showing over
+icon-slot content), `image` (the `<img>`, only rendered while `image` is set, hasn't failed to load, and no
+default-slot glyph is provided), `initials` (the initials text, only rendered once every glyph and
+image tier ahead of it in the priority order has been ruled out).
 
-**Themeable custom properties:** `--lr-avatar-size` (default `var(--lr-size-2rem)`, swapped to
-`var(--lr-size-1-5rem)`/`var(--lr-size-2-5rem)` per `size="sm"`/`"lg"`), `--lr-avatar-bg` (default
-`var(--lr-color-border)`, swapped per non-neutral `tone` to that tone's `-quiet` fill; there is no
-`--lr-color-surface-alt` token in this library, despite what older copies of this page claimed),
-`--lr-avatar-color` (default `var(--lr-color-text)`, swapped per non-neutral `tone` to that tone's
-loud color), `--lr-avatar-font-size` (default
-`var(--lr-font-size-sm)`) — the font size of the initials fallback, and of any `em`-sized slotted
-glyph. `size` swaps it per tier too (`var(--lr-font-size-xs)` at `sm`, `var(--lr-font-size-md)` at
-`lg`), so the initials track the circle instead of staying one fixed size across every tier;
-override it on the element for a size the built-in scale doesn't cover. Plus shared tokens
-`--lr-radius`/`-pill`, `--lr-font-size-sm`, `--lr-font-weight-semibold`.
+**Themeable custom properties:** `--lr-avatar-size` (default `var(--lr-size-2rem)`, stepped across
+the ladder from `var(--lr-size-1rem)` at `2xs` to `var(--lr-size-3rem)` at `xl` — every spelling of
+a tier selects the same declarations), `--lr-avatar-bg` (default `var(--lr-color-border)`, swapped
+per non-neutral `variant` to that variant's `-quiet` fill; there is no `--lr-color-surface-alt`
+token in this library, despite what older copies of this page claimed), `--lr-avatar-color`
+(default `var(--lr-color-text)`, swapped per non-neutral `variant` to that variant's loud color),
+`--lr-avatar-font-size` (default `var(--lr-font-size-sm)`) — the font size of the initials fallback,
+and of any `em`-sized slotted glyph. `size` steps it alongside the diameter (`--lr-font-size-2xs` at
+`2xs`/`xs`, `--lr-font-size-xs` at `s`, `--lr-font-size-m` at `l`, `--lr-font-size-lg` at `xl`), so
+the initials track the circle instead of staying one fixed size across every tier; override it on
+the element for a size the built-in scale doesn't cover. Plus shared tokens `--lr-radius`/`-pill`,
+`--lr-font-weight-semibold`.
+
+The variant colors are deliberately **not** the library's generic quiet-fill/on-quiet-text pairing:
+an avatar's initials *are* the accent, so they read in the variant's own loud color on that
+variant's quiet tint.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-avatar initials="JS" tone="brand"></lr-avatar>
-<lr-avatar src="/users/42/photo.jpg" alt="Jane Smith" size="lg"></lr-avatar>
+<lr-avatar initials="JS" variant="brand"></lr-avatar>
+<lr-avatar image="/users/42/photo.jpg" alt="Jane Smith" size="large" shape="rounded"></lr-avatar>
 <lr-avatar alt="Assistant"><svg viewBox="0 0 24 24"><!-- role glyph --></svg></lr-avatar>
+
+<!-- Far down a long list: defer the request, fall back to a glyph, and report a broken URL. -->
+<lr-avatar
+  image="/users/7/photo.jpg"
+  alt="Ada Lovelace"
+  loading="lazy"
+  @lr-error=${(e) => reportBrokenAvatar(e.detail.image)}
+>
+  <svg slot="icon" viewBox="0 0 24 24"><!-- fallback glyph --></svg>
+</lr-avatar>
 ```
 
 **Known gotchas:**
-- an image load failure falls back to `initials` automatically. Changing `src` clears the failure
-  state so the replacement URL gets its own load attempt, including when a later transition returns
-  to a URL that failed previously.
-- when `alt` or host `aria-label` supplies a name, the base preserves that name through the
-  initials fallback while hiding duplicate initials text from assistive technology.
+- a leftover `src="…"` from a pre-8.0.0 avatar is now inert: nothing errors, the attribute is simply
+  not observed, and the avatar renders the `icon` slot or the initials as though no image were set.
+  Grep migrated markup for `<lr-avatar` carrying `src`, and rename it to `image`. A leftover
+  `tone="…"` fails the same silent way — rename it to `variant`.
+- an image load failure falls back to the `icon` slot when it has content, otherwise to `initials`.
+  Changing `image` clears the failure state so the replacement URL gets its own load attempt,
+  including when a later transition returns to a URL that failed previously.
+- when `alt` or host `aria-label` supplies a name, the base preserves that name through the glyph
+  and initials fallbacks while hiding duplicate initials text from assistive technology.
+- the `icon` slot yields to a loadable `image`; the default slot does not. Put a role glyph that
+  must always win in the default slot, and a stand-in for a missing photo in `slot="icon"`.
 
 ---
 
@@ -1092,10 +1154,15 @@ excess into a localized "+N" badge. Composed over `<lr-avatar>` via plain light-
 - `max?: number` — how many assigned children stay visible before the rest collapse behind the
   badge. Unset (the default) means no limit. Any assigned value is sanitized to a finite,
   non-negative integer. Flattened slot-forwarded children count the same as direct children.
-- `size: AvatarSize = 'md'` (reflected) — `'sm' | 'md' | 'lg'`, reused from `<lr-avatar>`.
-- `shape: AvatarShape = 'circle'` (reflected) — `'circle' | 'square'`.
-- `tone: AvatarTone = 'neutral'` (reflected) — `'neutral' | 'brand' | 'success' | 'warning' |
-  'danger'`; recolors the overflow badge only.
+- `size: AvatarSize = 'medium'` (reflected) — reused verbatim from `<lr-avatar>`'s own union (the
+  shared six-step ladder in either spelling, plus the `sm`/`md`/`lg` shorthands) and defaulting to
+  the same `'medium'` tier, so a group and the avatars inside it read as one vocabulary. Every tier
+  drives the same badge-size/overlap/badge-font-size swap the avatars get.
+- `shape: AvatarShape = 'circle'` (reflected) — `'circle' | 'rounded' | 'square'`, also reused from
+  `<lr-avatar>`; it shapes the overflow badge only.
+- `variant: AvatarVariant = 'neutral'` (reflected) — `'neutral' | 'brand' | 'success' | 'warning' |
+  'danger'`; recolors the overflow badge only. **Renamed from `tone` in 8.0.0** alongside
+  `<lr-avatar>`'s, with no alias.
 - `label: string = ''` — the group's `role="group"` accessible name. A host-level `aria-label` wins
   if both are set; with neither, no `aria-label` is rendered.
 
@@ -1111,21 +1178,22 @@ intended usage). Children past `max` have their native `hidden` attribute set.
 `overflow-badge` (the "+N" `<button>`; only rendered while `max` is actively overflowing).
 
 **Themeable custom properties:** `--lr-avatar-group-avatar-size` (default `var(--lr-size-2rem)`,
-swapped to `1.5rem`/`2.5rem` per `size`), `--lr-avatar-group-overlap` (default
+stepped across the same six tiers as `<lr-avatar>`'s `--lr-avatar-size`, from `var(--lr-size-1rem)`
+at `2xs` to `var(--lr-size-3rem)` at `xl`), `--lr-avatar-group-overlap` (default
 `var(--lr-size-neg-6px)`, swapped per `size`; a logical `margin-inline-start`, so it auto-mirrors
 under `dir="rtl"` — setting `0` or a positive length turns the stack into normal spacing),
 `--lr-avatar-group-ring-color` (default `var(--lr-color-surface)`),
 `--lr-avatar-group-ring-width` (default `var(--lr-border-width-medium)`),
-`--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, swapped per `tone`),
-`--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, swapped per `tone`),
+`--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, swapped per `variant`),
+`--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, swapped per `variant`),
 `--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-sm)`) — the font size of the "+N"
-badge label. `size` swaps it per tier (`var(--lr-font-size-xs)` at `sm`, `var(--lr-font-size-md)` at
-`lg`), matching `<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars it
-caps read at the same optical weight; override it alongside `--lr-avatar-font-size` on the avatars
-themselves when tuning a custom tier.
+badge label. `size` steps it per tier alongside the badge diameter, matching `<lr-avatar>`'s own
+`--lr-avatar-font-size` scale so the badge and the avatars it caps read at the same optical weight;
+override it alongside `--lr-avatar-font-size` on the avatars themselves when tuning a custom tier.
 
-The overflow badge keeps a 40×40px minimum activation target at `sm`, `md`, and `lg`; this does not
-change the visible avatar circles themselves.
+The overflow badge keeps a `--lr-icon-button-size` (2.5rem) minimum activation target at every tier,
+including the ones whose avatar circles are smaller than that; this does not change the visible
+avatar circles themselves.
 
 **Optional peer deps:** none.
 
@@ -1139,10 +1207,10 @@ change the visible avatar circles themselves.
 ```
 
 **Known gotchas:**
-- `size`/`shape`/`tone` do **not** cascade onto slotted avatars — they only drive this component's
-  own ring, overlap, and badge. Each `<lr-avatar>`'s own `--lr-avatar-size` lives in its own
-  shadow-scoped `:host` block and unconditionally overrides an inherited value, so set a matching
-  `size`/`shape` on both the group and every child.
+- `size`/`shape`/`variant` do **not** cascade onto slotted avatars — they only drive this
+  component's own ring, overlap, and badge. Each `<lr-avatar>`'s own `--lr-avatar-size` lives in its
+  own shadow-scoped `:host` block and unconditionally overrides an inherited value, so set a
+  matching `size`/`shape` on both the group and every child.
 - the row never wraps (`flex-wrap` stays `nowrap`) — wrapping an overlapping stack breaks the
   visual.
 - avatars are non-interactive, so there is no roving tabindex / arrow-key handling; the badge is the
@@ -1163,7 +1231,7 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `index: number = 0` (reflected) — clamped defensively for rendering and silently re-synced (no
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
-- `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — opts out of backdrop dismissal.
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
   The independent `[part="live-region"]` announcement remains active when the counter is hidden.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/
@@ -1275,8 +1343,12 @@ carries. Highlight tone styling is exposed through `--lr-image-viewer-highlight-
 `--lr-image-viewer-highlight-warning-border`, `--lr-image-viewer-highlight-warning-bg`,
 `--lr-image-viewer-highlight-danger-border`, `--lr-image-viewer-highlight-danger-bg`,
 `--lr-image-viewer-highlight-neutral-border`, and `--lr-image-viewer-highlight-neutral-bg`
-properties. These properties are declared as inline `var()` fallbacks at the point of use rather
-than on `:host`, so each can be set on the element *or on any ancestor*:
+properties. `--lr-image-viewer-highlight-fill` is the resting fill a `[part='highlight']` actually
+renders, resolved per tone from the `-bg` knobs above; its hover and pressed states are color mixes
+taken from that value, so setting it directly retints all three states of one highlight at once —
+retint a whole tone through the matching `-bg` knob instead. These properties are declared as inline
+`var()` fallbacks at the point of use rather than on `:host`, so each can be set on the element *or
+on any ancestor*:
 `::part(highlight)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — which previously left overriding the library-wide
 `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever, repainting every other
@@ -1356,7 +1428,10 @@ srgb, var(--lr-color-danger) 35%, transparent)`) — `data-tone="danger"`; and
 `--lr-av-player-marker-neutral-bg` (default `color-mix(in srgb, var(--lr-color-text) 25%,
 transparent)`) — `data-tone="neutral"`. Each can be set on the element or on any ancestor without
 hijacking the shared `--lr-color-success`/`-warning`/`-danger`/`-brand`/`-text` tokens used
-elsewhere in the theme.
+elsewhere in the theme. `--lr-av-player-marker-fill` is the resting fill a marker actually renders,
+resolved per tone from those `-bg` knobs; its hover and pressed states are color mixes taken from
+that value, so setting it directly retints all three states of one marker at once — retint a whole
+tone through the matching `-bg` knob instead.
 
 Two further cue-state properties tint the transcript: `--lr-av-player-cue-current-bg` (default
 `var(--lr-color-brand-quiet)`) is the background of the `cue-current` row the playhead is inside,

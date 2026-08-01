@@ -19,12 +19,19 @@ spreadsheet, presentation, code, archive, image, audio, and video formats. An ex
 type wins; filename extension fallback is used only for an empty or `application/octet-stream`
 MIME type. Unknown values return a generic file result.
 
-**Properties:** `mimeType` (attribute `mime-type`), `name`, `size` (bytes; `0` renders no size),
-`label`, `decorative`, and `variant: 'icon' | 'label'`. A host `aria-label` wins over the computed
-localized file-type/size name. `decorative` changes the semantic owner to presentation and renders
+**Properties:** `mimeType` (attribute `mime-type`), `name`, `bytes` (file size **in bytes**, shown
+next to the label in `variant="label"` mode; `0`, the default, renders no size), `label`,
+`decorative`, and `variant: 'icon' | 'label'`. A host `aria-label` wins over the computed localized
+file-type/size name. `decorative` changes the semantic owner to presentation and renders
 `aria-hidden="true"` explicitly.
 
-**CSS parts:** `base`, `icon`, `label`, and `size`.
+**Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size`. Everywhere else in this
+library `size` names a tier on the shared size ladder, and a numeric byte count answering to the
+same property name is a collision a consumer only discovers at runtime. A leftover `size="245000"`
+is an unknown attribute now: `bytes` stays `0` and the badge silently renders without a size.
+
+**CSS parts:** `base`, `icon`, `label`, and `size` (the part keeps its name — it is the rendered
+size *text*, and renaming a part would break shipped `::part()` rules for no gain).
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
 format badge's inline and block size).
@@ -33,5 +40,5 @@ format badge's inline and block size).
 `getFileTypeMetadata()`, and `registerFileTypeMetadata()` for application-specific mappings.
 
 ```html
-<lr-file-icon mime-type="application/pdf" variant="label"></lr-file-icon>
+<lr-file-icon mime-type="application/pdf" variant="label" bytes="245000"></lr-file-icon>
 ```

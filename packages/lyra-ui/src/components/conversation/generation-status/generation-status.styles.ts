@@ -75,6 +75,14 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
+  /* Hover recolors the chrome only; the press additionally fills the disc, mixing its resting
+     surface toward the text color so the pressed state escalates the hover one instead of
+     replacing it with an unrelated color. */
+  [part='stop-button']:active {
+    border-color: var(--lr-color-brand);
+    color: var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='stop-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

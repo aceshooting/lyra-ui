@@ -50,10 +50,14 @@ export const styles = css`
     flex-direction: column;
     inline-size: min(var(--lr-size-48rem), 100%);
     max-block-size: 100%;
-    background: var(--lr-color-surface);
+    /* Modal-panel surface, not the page surface -- in dark mode the two resolve to the same
+       near-black and the dialog reads as a scrim with floating text instead of a panel. */
+    background: var(--lr-color-surface-overlay);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Modal layer, top step: a centered, scrimmed dialog floating free on all four edges --
+       the same role as lr-dialog, so the same elevation. */
+    box-shadow: var(--lr-shadow-xl);
     overflow: hidden;
     transition:
       inline-size var(--lr-transition-base),
@@ -154,6 +158,13 @@ export const styles = css`
   [part='close-button']:hover {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
+  }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
+     than hover in both light and dark themes rather than repeating it. */
+  [part='maximize-button']:active,
+  [part='close-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='maximize-button']:focus-visible,
   [part='close-button']:focus-visible {

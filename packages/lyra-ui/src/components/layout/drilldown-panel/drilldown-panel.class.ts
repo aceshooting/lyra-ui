@@ -7,7 +7,7 @@ import type { LyraEntity } from '../../retrieval/entity-card/entity-card.class.j
 import { styles } from './drilldown-panel.styles.js';
 import '../breadcrumb/breadcrumb.class.js';
 import '../breadcrumb/breadcrumb-item.class.js';
-import '../tabs/tabs.class.js';
+import '../tab-group/tab-group.class.js';
 import '../../viewers/document-preview/document-preview.class.js';
 import '../../retrieval/entity-card/entity-card.class.js';
 import '../../retrieval/source-card/source-card.class.js';
@@ -66,7 +66,7 @@ export interface LyraDrilldownPanelEventMap {
 }
 
 /** One resolved tab/category ready to render, or (when only one category has content) the sole
- *  category rendered directly with no `lr-tabs` chrome around it. */
+ *  category rendered directly with no `lr-tab-group` chrome around it. */
 interface DrilldownCategory {
   key: 'evidence' | 'documents' | 'entities' | 'runs';
   label: string;
@@ -79,7 +79,7 @@ interface DrilldownCategory {
  * content itself, only a breadcrumb trail (`lr-breadcrumb`) over `path` plus, for whichever
  * categories the current (last) node actually has content for, the one existing primitive that
  * already renders that content type (`lr-source-card` for evidence, `lr-document-preview` for
- * documents, `lr-entity-card` for entities) -- wrapped in an `lr-tabs` strip only when more than one
+ * documents, `lr-entity-card` for entities) -- wrapped in an `lr-tab-group` strip only when more than one
  * category has content, so a single-category node renders that category directly with no tab
  * chrome.
  *
@@ -111,10 +111,10 @@ interface DrilldownCategory {
  * @csspart breadcrumb-item - One nested `lr-breadcrumb-item`.
  * @csspart breadcrumb-button - The clickable label of a non-current breadcrumb step.
  * @csspart content - The wrapper around the current node's category content (or an empty state).
- * @csspart tabs - The nested `lr-tabs` strip, only rendered when the current node has content in
+ * @csspart tabs - The nested `lr-tab-group` strip, only rendered when the current node has content in
  *   more than one category.
  * @csspart category - The wrapper around one category's rendered items — used both as the sole
- *   direct child of `content` (single-category node) and inside each `lr-tabs` panel (multi-category
+ *   direct child of `content` (single-category node) and inside each `lr-tab-group` panel (multi-category
  *   node).
  * @csspart evidence-item - One nested `lr-source-card`.
  * @csspart document-item - One nested `lr-document-preview`.
@@ -139,15 +139,15 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   @property({ type: Boolean, attribute: 'show-focus-button', converter: trueDefaultBooleanConverter })
   showFocusButton = true;
 
-  /** Accessible name forwarded to the internal `lr-tabs` strip (only rendered while the current
+  /** Accessible name forwarded to the internal `lr-tab-group` strip (only rendered while the current
    *  node has more than one populated category). Unset, the tab strip renders without an
-   *  `aria-label`, matching `lr-tabs`' own unset-default behavior. */
+   *  `aria-label`, matching `lr-tab-group`' own unset-default behavior. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   // Tracked in JS, not via CSS `:empty` (a `[part]` always contains a literal `<slot>` child
   // regardless of assigned content, so `:empty` never matches) -- same presence-tracking
   // convention as `<lr-source-card>`'s `hasFullSlot`/`hasExcerptSlot`. Recomputed from the light
-  // DOM directly (not from `slotchange`) via a `MutationObserver`, the same technique `<lr-tabs>`
+  // DOM directly (not from `slotchange`) via a `MutationObserver`, the same technique `<lr-tab-group>`
   // uses for its own child-driven tab set: unlike `<lr-document-preview>`'s `unsupported` slot
   // (whose containing branch is already reachable independently of slot occupancy, so slotchange
   // alone suffices), whether the `runs` slot even gets rendered here depends on this state itself
@@ -299,13 +299,13 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
       return html`<div part="category" role="region" aria-label=${only.label}>${only.content}</div>`;
     }
     return html`
-      <lr-tabs part="tabs" aria-label=${this.accessibleLabel || nothing}>
+      <lr-tab-group part="tabs" aria-label=${this.accessibleLabel || nothing}>
         ${repeat(
           categories,
           (category) => category.key,
           (category) => html`<div slot=${category.key} label=${category.label} part="category">${category.content}</div>`,
         )}
-      </lr-tabs>
+      </lr-tab-group>
     `;
   }
 

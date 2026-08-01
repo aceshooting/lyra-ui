@@ -39,6 +39,13 @@ export const styles = css`
   [part='rect-target']:hover + [part='rect'] {
     outline-width: var(--lr-border-width-medium);
   }
+  /* Pressed keeps the thickened outline (a keyboard activation never sets :hover, so the rule has
+     to restate it) and adds a deepened fill on top, so the press is a stronger signal than the
+     hover rather than the same one. */
+  [part='rect-target']:active + [part='rect'] {
+    outline-width: var(--lr-border-width-medium);
+    background: color-mix(in oklab, var(--_lr-highlight-layer-background), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='rect']:where([data-tone='success']) {
     --_lr-highlight-layer-background: var(
       --lr-highlight-layer-success-background,
@@ -108,6 +115,9 @@ export const styles = css`
   }
   [part='highlight-action']:hover {
     background: var(--lr-color-surface-raised);
+  }
+  [part='highlight-action']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='highlight-action']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

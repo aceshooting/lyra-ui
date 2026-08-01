@@ -153,14 +153,14 @@ describe('lr-stack-trace chrome', () => {
     };
   };
 
-  it('defaults to appearance="card", rendering identically to that value restated', async () => {
+  it('defaults to frame="card", rendering identically to that value restated', async () => {
     const implicit = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
     const explicit = (await fixture(
-      html`<lr-stack-trace appearance="card" .trace=${trace}></lr-stack-trace>`,
+      html`<lr-stack-trace frame="card" .trace=${trace}></lr-stack-trace>`,
     )) as LyraStackTrace;
 
-    expect(implicit.appearance).to.equal('card');
-    expect(implicit.getAttribute('appearance')).to.equal('card');
+    expect(implicit.frame).to.equal('card');
+    expect(implicit.getAttribute('frame')).to.equal('card');
     expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
 
     const chrome = baseChrome(implicit);
@@ -170,11 +170,11 @@ describe('lr-stack-trace chrome', () => {
     expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('drops border, background, padding and radius under appearance="plain"', async () => {
+  it('drops border, background, padding and radius under frame="plain"', async () => {
     const el = (await fixture(
-      html`<lr-stack-trace appearance="plain" .trace=${trace}></lr-stack-trace>`,
+      html`<lr-stack-trace frame="plain" .trace=${trace}></lr-stack-trace>`,
     )) as LyraStackTrace;
-    expect(el.getAttribute('appearance')).to.equal('plain');
+    expect(el.getAttribute('frame')).to.equal('plain');
     const chrome = baseChrome(el);
     expect(chrome.borderTopWidth).to.equal('0px');
     expect(chrome.borderTopLeftRadius).to.equal('0px');
@@ -185,7 +185,7 @@ describe('lr-stack-trace chrome', () => {
 
   it('keeps the max-height scroll cap working under plain', async () => {
     const el = (await fixture(
-      html`<lr-stack-trace appearance="plain" max-height="3rem" .trace=${trace}></lr-stack-trace>`,
+      html`<lr-stack-trace frame="plain" max-height="3rem" .trace=${trace}></lr-stack-trace>`,
     )) as LyraStackTrace;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const s = getComputedStyle(base);
@@ -196,7 +196,7 @@ describe('lr-stack-trace chrome', () => {
 
   it('keeps the copy button and frame buttons visibly interactive under plain (their chrome is their own)', async () => {
     const el = (await fixture(
-      html`<lr-stack-trace appearance="plain" .trace=${trace}></lr-stack-trace>`,
+      html`<lr-stack-trace frame="plain" .trace=${trace}></lr-stack-trace>`,
     )) as LyraStackTrace;
     const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
     expect(copy).to.exist;
@@ -214,9 +214,9 @@ describe('lr-stack-trace chrome', () => {
     expect(css).to.match(/\[part='internal-toggle'\]:hover/);
   });
 
-  it('is accessible with a parsed trace under appearance="plain"', async () => {
+  it('is accessible with a parsed trace under frame="plain"', async () => {
     const el = (await fixture(
-      html`<lr-stack-trace appearance="plain" .trace=${trace}></lr-stack-trace>`,
+      html`<lr-stack-trace frame="plain" .trace=${trace}></lr-stack-trace>`,
     )) as LyraStackTrace;
     await el.updateComplete;
     await expect(el).to.be.accessible();

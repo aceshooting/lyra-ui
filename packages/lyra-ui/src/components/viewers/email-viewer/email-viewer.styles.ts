@@ -52,7 +52,8 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     cursor: pointer;
   }
-  [part='attachment-button']:hover { background: color-mix(in srgb, var(--lr-color-brand-quiet) 80%, var(--lr-color-text)); }
+  [part='attachment-button']:hover { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover)); }
+  [part='attachment-button']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='attachment-button']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='attachment-name'] {
     min-inline-size: 0;
@@ -76,6 +77,7 @@ export const styles = css`
     cursor: pointer;
   }
   [part='quote-toggle']:hover { background: var(--lr-color-brand-quiet); }
+  [part='quote-toggle']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='quote-toggle']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='quoted'] { margin-block-start: var(--lr-space-xs); color: var(--lr-color-text-quiet); }
   .empty-note { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }

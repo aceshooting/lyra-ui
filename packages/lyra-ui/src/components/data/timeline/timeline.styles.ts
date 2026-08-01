@@ -41,7 +41,7 @@ export const styles = css`
   }
   :host([orientation='horizontal']) [part='base'] {
     flex-direction: row;
-    /* Mirrors <lr-tabs>'s identical horizontal-overflow handling -- a horizontal timeline
+    /* Mirrors <lr-tab-group>'s identical horizontal-overflow handling -- a horizontal timeline
        becomes a horizontally-scrollable strip rather than breaking layout. overflow-y is pinned
        explicitly alongside overflow-x: per the CSS overflow spec, leaving one axis unset once the
        other is non-'visible' forces its used value to 'auto' too, which can show a phantom/empty

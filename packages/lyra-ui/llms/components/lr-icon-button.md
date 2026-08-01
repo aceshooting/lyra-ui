@@ -6,7 +6,7 @@
 - **Class** `LyraIconButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/icon-button/icon-button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 2 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -74,14 +74,28 @@ that several other components size their icon-only controls against), so overrid
 above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-radius`) is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
-counterpart to it. `--lr-icon-button-background` (default `transparent`) tints the
-`[part='button']` background, `--lr-icon-button-background-hover` (default `--lr-color-surface`)
-its hover-state background, `--lr-icon-button-color` (default `inherit`) its icon/text color,
-`--lr-icon-button-color-hover` (default `var(--lr-icon-button-color, inherit)`) its hover-state
-foreground, and `--lr-icon-button-border` (default `0`) the complete native-button border
-shorthand. `--lr-icon-button-border-hover` (default
-`var(--lr-icon-button-border, 0)`) replaces that complete shorthand on hover. These are the same
-per-component indirection `lr-button`'s
+counterpart to it.
+
+The rest come in resting/hover/pressed triples, each falling through to the next-quieter state so
+setting only one still behaves:
+
+- `--lr-icon-button-background` (default `transparent`),
+  `--lr-icon-button-background-hover` (default `color-mix(in oklab, var(--lr-color-surface),
+  var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) and
+  `--lr-icon-button-background-active` (the same mix at the stronger `--lr-color-mix-active` share,
+  so a press reads as more than a hover) — the `[part='button']` background in each state. The
+  hover fallback used to be `--lr-color-surface` itself, i.e. the page background, so hovering an
+  icon button on a default page changed nothing at all.
+- `--lr-icon-button-color` (default `inherit`), `--lr-icon-button-color-hover` (default
+  `var(--lr-icon-button-color, inherit)`) and `--lr-icon-button-color-active` (default
+  `var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))`) — the icon/text colour.
+- `--lr-icon-button-border` (default `0`), `--lr-icon-button-border-hover` (default
+  `var(--lr-icon-button-border, 0)`) and `--lr-icon-button-border-active` (default
+  `var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))`) — the *complete* native
+  border shorthand, replaced wholesale in each state rather than merged.
+
+These are the same per-component indirection `lr-button`'s
 `--lr-button-fill`/`--lr-button-on-fill` provide, letting a single button be bordered and tinted
-without a `::part(button)` rule. Left unset, each falls back to the original value, so rendering is
-unchanged.
+without a `::part(button)` rule. All nine are undeclared by default and read as inline `var()`
+fallbacks, so setting only the resting value carries through hover and press, and setting none of
+them leaves rendering unchanged.

@@ -1154,3 +1154,271 @@ it('suppresses raw composed select/checkbox changes and emits only aggregate lr-
   expect(rawChanges).to.equal(0);
   expect(aggregate).to.equal(2);
 });
+
+describe('validity custom states', () => {
+  // Guarded exactly like internal/form-associated.test.ts's own pair: not every engine ships
+  // CustomStateSet, and not every engine that does also parses the :state() selector, so an
+  // unguarded assertion here would fail on WebKit rather than report a real defect.
+  const supportsCustomStates = ((): boolean => {
+    try {
+      return typeof CustomStateSet === 'function';
+    } catch {
+      return false;
+    }
+  })();
+  const supportsStateSelector = ((): boolean => {
+    try {
+      document.createElement('div').matches(':state(x)');
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  const states = (el: LyraToolParamForm): CustomStateSet =>
+    (el as unknown as { internals: ElementInternals }).internals.states;
+
+  it('publishes required/optional and valid/invalid, kept in sync with the schema', async function () {
+    if (!supportsCustomStates) this.skip();
+    const optionalSchema: ToolParamFormSchema = { type: 'object', properties: { city: { type: 'string' } } };
+    const el = (await fixture(
+      html`<lr-tool-param-form .schema=${optionalSchema}></lr-tool-param-form>`,
+    )) as LyraToolParamForm;
+    await el.updateComplete;
+    expect(states(el).has('optional')).to.be.true;
+    expect(states(el).has('required')).to.be.false;
+    expect(states(el).has('valid')).to.be.true;
+    expect(states(el).has('invalid')).to.be.false;
+
+    el.schema = basicSchema;
+    await el.updateComplete;
+    expect(states(el).has('required')).to.be.true;
+    expect(states(el).has('optional')).to.be.false;
+    expect(states(el).has('invalid')).to.be.true;
+    expect(states(el).has('valid')).to.be.false;
+
+    el.value = { city: 'Paris' };
+    await el.updateComplete;
+    expect(states(el).has('valid')).to.be.true;
+    expect(states(el).has('invalid')).to.be.false;
+  });
+
+  it('withholds user-valid/user-invalid until the user has actually interacted', async function () {
+    if (!supportsCustomStates) this.skip();
+    const el = (await fixture(
+      html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`,
+    )) as LyraToolParamForm;
+    await el.updateComplete;
+    expect(states(el).has('invalid')).to.be.true;
+    expect(states(el).has('user-invalid'), 'pristine required field must not style itself red').to.be.false;
+    expect(states(el).has('user-valid')).to.be.false;
+
+    // A focusout on a field is interaction even when nothing was typed.
+    field(el, 'city').dispatchEvent(new Event('focusout', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(states(el).has('user-invalid')).to.be.true;
+    expect(states(el).has('user-valid')).to.be.false;
+
+    const input = field(el, 'city').querySelector('input')!;
+    input.value = 'Paris';
+    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(states(el).has('user-valid')).to.be.true;
+    expect(states(el).has('user-invalid')).to.be.false;
+  });
+
+  it('counts a reportValidity() call — what a submit attempt runs — as interaction', async function () {
+    if (!supportsCustomStates) this.skip();
+    const el = (await fixture(
+      html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`,
+    )) as LyraToolParamForm;
+    await el.updateComplete;
+    expect(states(el).has('user-invalid')).to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(states(el).has('user-invalid')).to.be.true;
+  });
+
+  it('goes pristine again after a form reset', async function () {
+    if (!supportsCustomStates) this.skip();
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-tool-param-form name="args" .schema=${basicSchema}></lr-tool-param-form></form>`,
+    );
+    const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+    await el.updateComplete;
+    el.reportValidity();
+    expect(states(el).has('user-invalid')).to.be.true;
+    form.reset();
+    await el.updateComplete;
+    expect(states(el).has('invalid'), 'still invalid — reset cleared the value, not the requirement').to.be
+      .true;
+    expect(states(el).has('user-invalid'), 'but pristine again, so nothing should be painted red').to.be
+      .false;
+  });
+
+  it('matches the states through a :state() selector, not just the CustomStateSet', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`,
+    )) as LyraToolParamForm;
+    await el.updateComplete;
+    const host = el as unknown as HTMLElement;
+    expect(host.matches(':state(required)')).to.be.true;
+    expect(host.matches(':state(invalid)')).to.be.true;
+    expect(host.matches(':state(user-invalid)')).to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(host.matches(':state(user-invalid)')).to.be.true;
+  });
+});
+
+describe('setCustomValidity()', () => {
+  // Guarded exactly like the validity-custom-states suite above (and internal/form-associated.test.ts):
+  // not every engine ships CustomStateSet, and not every engine that does also parses `:state()`.
+  const supportsCustomStates = ((): boolean => {
+    try {
+      return typeof CustomStateSet === 'function';
+    } catch {
+      return false;
+    }
+  })();
+  const supportsStateSelector = ((): boolean => {
+    try {
+      document.createElement('div').matches(':state(x)');
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  const optionalSchema: ToolParamFormSchema = {
+    type: 'object',
+    properties: { city: { type: 'string' } },
+  };
+
+  it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-tool-param-form name="args" .schema=${optionalSchema}></lr-tool-param-form></form>`,
+    );
+    const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+    await el.updateComplete;
+    let submits = 0;
+    // Registered before any requestSubmit() below, so a successful submission can never navigate
+    // the test page.
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+    expect(el.checkValidity(), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('The tool rejected these arguments.');
+    expect(el.validity.customError).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('The tool rejected these arguments.');
+    expect(form.checkValidity()).to.be.false;
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(0);
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validationMessage).to.equal('');
+    form.requestSubmit();
+    expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('keeps a custom error through an intrinsic revalidation', async () => {
+    const el = (await fixture(
+      html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`,
+    )) as LyraToolParamForm;
+    await el.updateComplete;
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    // Filling the required field re-runs syncFormState() -- the traffic that would otherwise wipe
+    // the consumer's error out on every keystroke.
+    el.value = { city: 'Paris' };
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'the intrinsic error cleared').to.be.false;
+    expect(el.validity.customError, 'the custom error survived the recomputation').to.be.true;
+    expect(el.validationMessage).to.equal('Rejected by the server.');
+    expect(el.checkValidity(), 'checkValidity() re-syncs and must not drop it either').to.be.false;
+  });
+
+  it('keeps a custom error across a form reset, matching native setCustomValidity semantics', async () => {
+    // Native `form.reset()` restores a control's value and pristine-ness, but never clears a
+    // consumer-set custom error -- only another `setCustomValidity('')` does. This control matches.
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-tool-param-form name="args" .schema=${optionalSchema}></lr-tool-param-form></form>`,
+    );
+    const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+    el.value = { city: 'Paris' };
+    await el.updateComplete;
+    el.setCustomValidity('That city is outside the tool’s coverage.');
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.value, 'the reset cleared the value').to.deep.equal({});
+    expect(el.validity.customError, 'the custom error outlives the reset').to.be.true;
+    expect(el.validationMessage).to.equal('That city is outside the tool’s coverage.');
+  });
+
+  it('restores the computed validity when a custom error is cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(
+      html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`,
+    )) as LyraToolParamForm;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'the required `city` is unset to begin with').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validity.valueMissing, 'the required field is still unset').to.be.true;
+    expect(el.checkValidity(), 'clearing the custom error must not force the control valid').to.be.false;
+    expect(el.validationMessage.length, 'the intrinsic message is republished').to.be.greaterThan(0);
+  });
+
+  it('does not clear the schema-shape customError this control raises on its own', async () => {
+    // This control raises `customError` intrinsically too (a malformed schema, an unsupported field
+    // type). A consumer's `setCustomValidity('')` must clear only the consumer's own layer.
+    const el = (await fixture(
+      html`<lr-tool-param-form .schema=${{ type: 'array' } as unknown as ToolParamFormSchema}></lr-tool-param-form>`,
+    )) as LyraToolParamForm;
+    await el.updateComplete;
+    expect(el.validity.customError, 'the malformed schema is itself a customError').to.be.true;
+    const schemaMessage = el.validationMessage;
+    expect(schemaMessage.length).to.be.greaterThan(0);
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validationMessage, 'the consumer error takes over the message').to.equal('Rejected by the server.');
+
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'the schema shape is still wrong').to.be.true;
+    expect(el.validationMessage, 'the intrinsic schema message comes back').to.equal(schemaMessage);
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('publishes a custom error through the validity custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-tool-param-form .schema=${optionalSchema}></lr-tool-param-form>`,
+    )) as LyraToolParamForm;
+    await el.updateComplete;
+    const host = el as unknown as HTMLElement;
+    expect(host.matches(':state(valid)'), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(host.matches(':state(invalid)'), 'synchronously, not on the next Lit update').to.be.true;
+    expect(host.matches(':state(valid)')).to.be.false;
+    expect(host.matches(':state(user-invalid)'), 'still pristine until the user has a turn').to.be.false;
+
+    el.reportValidity();
+    expect(host.matches(':state(user-invalid)'), 'a reported validation counts as interaction').to.be.true;
+
+    el.setCustomValidity('');
+    expect(host.matches(':state(valid)')).to.be.true;
+    expect(host.matches(':state(user-valid)')).to.be.true;
+    expect(host.matches(':state(user-invalid)')).to.be.false;
+  });
+});

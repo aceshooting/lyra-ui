@@ -6,7 +6,7 @@ import type {
   GraphQueryTypeOption,
   GraphQuerySavedItem,
 } from './graph-query-builder.js';
-import { styles } from './graph-query-builder.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const RELATIONSHIP_OPTIONS: GraphQueryTypeOption[] = [
   { value: 'works_for', label: 'Works for' },
@@ -682,11 +682,37 @@ describe('lr-graph-query-builder', () => {
     expect(maxHopsSelect.errorText).to.not.equal('');
   });
 
-  it('gives run-button and save-button a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='run-button'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
-    expect(css).to.match(/\[part='save-button'\]:hover[^{]*\{[^}]*background:/);
-  });
+  // Asserted through getComputedStyle on a really hovered/pressed element rather than by grepping
+  // the stylesheet: the previous version of this test matched `filter: brightness` in the CSS text,
+  // which kept passing while proving nothing about what the button actually renders.
+  for (const part of ['run-button', 'save-button'] as const) {
+    it(`renders a hover fill on ${part}, and a pressed fill distinct from both`, async () => {
+      const el = (await fixture(
+        html`<lr-graph-query-builder></lr-graph-query-builder>`,
+      )) as LyraGraphQueryBuilder;
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      button.scrollIntoView();
+      const resting = getComputedStyle(button).backgroundColor;
+      const rect = button.getBoundingClientRect();
+      const position: [number, number] = [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ];
+      try {
+        await sendMouse({ type: 'move', position });
+        const hovered = getComputedStyle(button).backgroundColor;
+        expect(hovered, 'hovered fill must differ from the resting one').to.not.equal(resting);
+        await sendMouse({ type: 'down' });
+        const pressed = getComputedStyle(button).backgroundColor;
+        expect(pressed, 'pressed fill must differ from the hovered one').to.not.equal(hovered);
+        expect(pressed, 'pressed fill must differ from the resting one').to.not.equal(resting);
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    });
+  }
 
   it('names the role="group" region with the localized default when unset', async () => {
     const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
@@ -754,5 +780,249 @@ describe('lifecycle: attachInternals guard', () => {
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }
+  });
+});
+
+describe('validity custom states', () => {
+  // Guarded exactly like internal/form-associated.test.ts's own pair: not every engine ships
+  // CustomStateSet, and not every engine that does also parses the :state() selector, so an
+  // unguarded assertion here would fail on WebKit rather than report a real defect.
+  const supportsCustomStates = ((): boolean => {
+    try {
+      return typeof CustomStateSet === 'function';
+    } catch {
+      return false;
+    }
+  })();
+  const supportsStateSelector = ((): boolean => {
+    try {
+      document.createElement('div').matches(':state(x)');
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  const states = (el: LyraGraphQueryBuilder): CustomStateSet =>
+    (el as unknown as { internals: ElementInternals }).internals.states;
+
+  const startInput = (el: LyraGraphQueryBuilder): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="start-input"]') as HTMLElement;
+
+  it('publishes required/optional and valid/invalid, kept in sync with validity', async function () {
+    if (!supportsCustomStates) this.skip();
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    // This control's one constraint never lifts, so `required` is unconditional -- see the class
+    // doc's @cssstate block.
+    expect(states(el).has('required')).to.be.true;
+    expect(states(el).has('optional')).to.be.false;
+    expect(states(el).has('invalid'), 'an empty query has no start anchor').to.be.true;
+    expect(states(el).has('valid')).to.be.false;
+
+    el.value = query({ startId: 'node-1' });
+    await el.updateComplete;
+    expect(states(el).has('valid')).to.be.true;
+    expect(states(el).has('invalid')).to.be.false;
+
+    el.value = query({ startId: 'node-1', minHops: 3, maxHops: 1 });
+    await el.updateComplete;
+    expect(states(el).has('invalid'), 'minHops > maxHops is the other constraint').to.be.true;
+    expect(states(el).has('valid')).to.be.false;
+  });
+
+  it('withholds user-valid/user-invalid until the user has actually interacted', async function () {
+    if (!supportsCustomStates) this.skip();
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    expect(states(el).has('invalid')).to.be.true;
+    expect(states(el).has('user-invalid'), 'a pristine query must not style itself red').to.be.false;
+    expect(states(el).has('user-valid')).to.be.false;
+
+    // Leaving the start field is interaction even when nothing was typed.
+    startInput(el).dispatchEvent(new Event('blur'));
+    await el.updateComplete;
+    expect(states(el).has('user-invalid')).to.be.true;
+    expect(states(el).has('user-valid')).to.be.false;
+
+    startInput(el).dispatchEvent(
+      new CustomEvent('lr-input', { detail: { value: 'node-1' }, bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+    expect(states(el).has('user-valid')).to.be.true;
+    expect(states(el).has('user-invalid')).to.be.false;
+  });
+
+  it('does not count a programmatic value assignment as interaction', async function () {
+    if (!supportsCustomStates) this.skip();
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    el.value = query({ startId: 'node-1', minHops: 3, maxHops: 1 });
+    await el.updateComplete;
+    expect(states(el).has('invalid')).to.be.true;
+    expect(states(el).has('user-invalid'), 'the host set the value, not the user').to.be.false;
+  });
+
+  it('counts a reportValidity() call — what the Run button runs — as interaction', async function () {
+    if (!supportsCustomStates) this.skip();
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    expect(states(el).has('user-invalid')).to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(states(el).has('user-invalid')).to.be.true;
+  });
+
+  it('goes pristine again after a form reset', async function () {
+    if (!supportsCustomStates) this.skip();
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-graph-query-builder name="q"></lr-graph-query-builder></form>`,
+    );
+    const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    el.reportValidity();
+    expect(states(el).has('user-invalid')).to.be.true;
+    form.reset();
+    await el.updateComplete;
+    expect(states(el).has('invalid'), 'still invalid — reset cleared the value, not the constraint').to.be
+      .true;
+    expect(states(el).has('user-invalid'), 'but pristine again, so nothing should be painted red').to.be
+      .false;
+  });
+
+  it('matches the states through a :state() selector, not just the CustomStateSet', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const host = el as unknown as HTMLElement;
+    expect(host.matches(':state(required)')).to.be.true;
+    expect(host.matches(':state(optional)')).to.be.false;
+    expect(host.matches(':state(invalid)')).to.be.true;
+    expect(host.matches(':state(user-invalid)')).to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(host.matches(':state(user-invalid)')).to.be.true;
+  });
+});
+
+describe('setCustomValidity()', () => {
+  // Guarded exactly like the validity-custom-states suite above (and internal/form-associated.test.ts):
+  // not every engine ships CustomStateSet, and not every engine that does also parses `:state()`.
+  const supportsCustomStates = ((): boolean => {
+    try {
+      return typeof CustomStateSet === 'function';
+    } catch {
+      return false;
+    }
+  })();
+  const supportsStateSelector = ((): boolean => {
+    try {
+      document.createElement('div').matches(':state(x)');
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-graph-query-builder name="q"></lr-graph-query-builder></form>`,
+    );
+    const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    el.value = query({ startId: 'node-1' });
+    await el.updateComplete;
+    let submits = 0;
+    // Registered before any requestSubmit() below, so a successful submission can never navigate
+    // the test page.
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+    expect(el.checkValidity(), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('No graph is loaded for that tenant.');
+    expect(el.validity.customError).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('No graph is loaded for that tenant.');
+    expect(form.checkValidity()).to.be.false;
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(0);
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validationMessage).to.equal('');
+    form.requestSubmit();
+    expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('keeps a custom error through an intrinsic revalidation', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    // Every value assignment re-runs syncFormState() -- the traffic that would otherwise wipe the
+    // consumer's error out on each edit.
+    el.value = query({ startId: 'node-1' });
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'the intrinsic error cleared').to.be.false;
+    expect(el.validity.customError, 'the custom error survived the recomputation').to.be.true;
+    expect(el.validationMessage).to.equal('Rejected by the server.');
+    expect(el.checkValidity(), 'checkValidity() re-syncs and must not drop it either').to.be.false;
+  });
+
+  it('keeps a custom error across a form reset, matching native setCustomValidity semantics', async () => {
+    // Native `form.reset()` restores a control's value and pristine-ness, but never clears a
+    // consumer-set custom error -- only another `setCustomValidity('')` does. This control matches.
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-graph-query-builder name="q"></lr-graph-query-builder></form>`,
+    );
+    const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    el.value = query({ startId: 'node-1' });
+    await el.updateComplete;
+    el.setCustomValidity('That query is not permitted here.');
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.value.startId, 'the reset cleared the query').to.equal('');
+    expect(el.validity.customError, 'the custom error outlives the reset').to.be.true;
+    expect(el.validationMessage).to.equal('That query is not permitted here.');
+  });
+
+  it('restores the computed validity when a custom error is cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'an empty query has no start anchor to begin with').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validity.valueMissing, 'the empty query is still missing its start anchor').to.be.true;
+    expect(el.checkValidity(), 'clearing the custom error must not force the control valid').to.be.false;
+    expect(el.validationMessage.length, 'the intrinsic message is republished').to.be.greaterThan(0);
+  });
+
+  it('publishes a custom error through the validity custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    el.value = query({ startId: 'node-1' });
+    await el.updateComplete;
+    const host = el as unknown as HTMLElement;
+    expect(host.matches(':state(valid)'), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(host.matches(':state(invalid)'), 'synchronously, not on the next Lit update').to.be.true;
+    expect(host.matches(':state(valid)')).to.be.false;
+    expect(host.matches(':state(user-invalid)'), 'still pristine until the user has a turn').to.be.false;
+
+    el.reportValidity();
+    expect(host.matches(':state(user-invalid)'), 'a reported validation counts as interaction').to.be.true;
+
+    el.setCustomValidity('');
+    expect(host.matches(':state(valid)')).to.be.true;
+    expect(host.matches(':state(user-valid)')).to.be.true;
+    expect(host.matches(':state(user-invalid)')).to.be.false;
   });
 });

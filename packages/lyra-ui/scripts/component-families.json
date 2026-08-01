@@ -50,7 +50,7 @@
     "source-card": "retrieval", "source-list": "retrieval", "source-picker": "retrieval",
 
     "button": "forms", "checkbox": "forms", "checkbox-group": "forms", "code-editor": "forms",
-    "color-picker": "forms", "combobox": "forms", "date-picker": "forms", "emoji-picker": "forms",
+    "color-picker": "forms", "otp-input": "forms", "combobox": "forms", "date-picker": "forms", "emoji-picker": "forms",
     "icon-button": "forms", "input": "forms", "locale-picker": "forms", "phone-input": "forms", "radio": "forms",
     "rubric-form": "forms", "select": "forms", "slider": "forms", "swatch-picker": "forms",
     "switch": "forms", "textarea": "forms", "time-range": "forms", "token-input": "forms",
@@ -69,11 +69,11 @@
     "dashboard-grid": "layout", "details": "layout", "dock-panel": "layout",
     "drilldown-panel": "layout", "filter-bar": "layout", "menu": "layout",
     "reorder-list": "layout", "responsive-panel": "layout", "scroller": "layout", "segmented": "layout", "split": "layout",
-    "stepper": "layout", "tabs": "layout", "virtual-list": "layout", "widget": "layout",
+    "stepper": "layout", "tab-group": "layout", "virtual-list": "layout", "widget": "layout",
 
     "badge": "overlays", "callout": "overlays", "chip": "overlays", "dialog": "overlays",
     "drawer": "overlays", "empty": "overlays", "kbd": "overlays", "overlay": "overlays",
-    "progress": "overlays", "rating": "overlays", "skeleton": "overlays", "spinner": "overlays",
+    "popup": "overlays", "progress": "overlays", "rating": "overlays", "skeleton": "overlays", "spinner": "overlays",
     "toast": "overlays",
 
     "archive-viewer": "viewers", "calendar-viewer": "viewers", "contact-viewer": "viewers",
@@ -96,6 +96,6 @@
     "intersection-observer": "utility", "json-viewer": "utility", "known-date": "utility",
     "live-region": "utility", "mention-popover": "utility", "mutation-observer": "utility",
     "poll-status": "utility", "random-content": "utility", "resize-observer": "utility",
-    "tour": "utility"
+    "tour": "utility", "visually-hidden": "utility"
   }
 }

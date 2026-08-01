@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './input.js';
+import '../button/button.js';
 import type { LyraInput } from './input.class.js';
 import { styles } from './input.styles.js';
 
@@ -192,7 +193,9 @@ describe('lr-input', () => {
 
   describe('type="password"', () => {
     it('renders a password-toggle button that flips the native input type and passwordVisible', async () => {
-      const el = (await fixture(html`<lr-input type="password" label="Password"></lr-input>`)) as LyraInput;
+      const el = (await fixture(
+        html`<lr-input type="password" password-toggle label="Password"></lr-input>`,
+      )) as LyraInput;
       const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
       const toggle = el.shadowRoot!.querySelector('[part="password-toggle"]') as HTMLButtonElement;
       expect(input.type).to.equal('password');
@@ -207,8 +210,8 @@ describe('lr-input', () => {
     });
 
     it('omits the password-toggle button for every other type', async () => {
-      const el = (await fixture(html`<lr-input type="email"></lr-input>`)) as LyraInput;
-      expect(el.shadowRoot!.querySelector('[part="password-toggle"]')).to.be.null;
+      const el = (await fixture(html`<lr-input type="email" password-toggle></lr-input>`)) as LyraInput;
+      expect(el.shadowRoot!.querySelectorAll('[part="password-toggle"]').length).to.equal(0);
     });
   });
 
@@ -222,7 +225,7 @@ describe('lr-input', () => {
       expect(el.type).to.equal('search');
       const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
       expect(input.type).to.equal('search');
-      expect(el.shadowRoot!.querySelector('[part="password-toggle"]')).to.be.null;
+      expect(el.shadowRoot!.querySelectorAll('[part="password-toggle"]').length).to.equal(0);
     });
 
     it('supports typing and emits lr-input like every other plain-text type', async () => {
@@ -468,7 +471,7 @@ describe('lr-input', () => {
     });
 
     it('localizes the password-toggle button labels', async () => {
-      const el = (await fixture(html`<lr-input type="password"></lr-input>`)) as LyraInput;
+      const el = (await fixture(html`<lr-input type="password" password-toggle></lr-input>`)) as LyraInput;
       el.strings = { showPassword: 'Afficher', hidePassword: 'Masquer' };
       await el.updateComplete;
       const toggle = el.shadowRoot!.querySelector('[part="password-toggle"]') as HTMLButtonElement;
@@ -599,8 +602,9 @@ describe('lr-input', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('is accessible as type="password"', async () => {
-    const el = await fixture(html`<lr-input type="password" label="Password"></lr-input>`);
+  it('is accessible as type="password" with the toggle rendered', async () => {
+    const el = await fixture(html`<lr-input type="password" password-toggle label="Password"></lr-input>`);
+    expect(el.shadowRoot!.querySelectorAll('[part="password-toggle"]').length).to.equal(1);
     await expect(el).to.be.accessible();
   });
 
@@ -609,25 +613,30 @@ describe('lr-input', () => {
     expect(css).to.match(/\[part='password-toggle'\]:hover\s*\{[^}]+\}/);
   });
 
-  it('resets native appearance unconditionally for search/number, and restyles (not suppresses) the time picker indicator', () => {
+  it('resets native appearance unconditionally for search, and restyles (not suppresses) the time picker indicator', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     // Previously gated behind :host([clearable]) -- the common non-clearable case kept the glyph.
     expect(css).to.match(/\[part='input'\]\[type='search'\]::-webkit-search-cancel-button/);
     expect(css).to.not.match(
       /:host\(\[clearable\]\) \[part='input'\]\[type='search'\]::-webkit-search-cancel-button/,
     );
-    expect(css).to.match(/\[part='input'\]\[type='number'\]\s*\{[^}]*appearance:\s*textfield/);
-    expect(css).to.match(/\[part='input'\]\[type='number'\]::-webkit-outer-spin-button/);
     expect(css).to.match(
       /\[part='input'\]\[type='time'\]::-webkit-calendar-picker-indicator\s*\{[^}]*cursor:\s*pointer/,
     );
   });
 
-  it('supports size="2xs": tighter padding/font-size than xs, no min-block-size floor (matches xs\'s own contract)', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(
-      /:host\(\[size='2xs'\]\)\s*\{[^}]*--lr-input-padding-block:\s*var\(--lr-size-0-0625rem\);[^}]*--lr-input-padding-inline:\s*var\(--lr-space-2xs\);[^}]*--lr-input-font-size:\s*var\(--lr-font-size-2xs\);/,
+  it('supports size="2xs": tighter padding/font-size than xs, and the ladder\'s tightest floor', async () => {
+    const el = (await fixture(html`<lr-input size="2xs" aria-label="Name"></lr-input>`)) as LyraInput;
+    const xsEl = (await fixture(html`<lr-input size="xs" aria-label="Name"></lr-input>`)) as LyraInput;
+    const field = (host: LyraInput) => host.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+    const row = (host: LyraInput) => host.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    expect(parseFloat(getComputedStyle(field(el)).fontSize)).to.be.lessThan(
+      parseFloat(getComputedStyle(field(xsEl)).fontSize),
     );
+    expect(parseFloat(getComputedStyle(row(el)).paddingInlineStart)).to.be.lessThan(
+      parseFloat(getComputedStyle(row(xsEl)).paddingInlineStart),
+    );
+    expect(getComputedStyle(row(el)).minBlockSize).to.equal('20px');
   });
 
   it('reflects size="2xs" as a host attribute', async () => {
@@ -682,12 +691,17 @@ describe('lr-input', () => {
       expect(cs.borderRadius).to.equal('3px');
     });
 
-    it('declares --lr-input-gap/--lr-input-radius on :host and consumes them once on [part="input-wrapper"]', () => {
-      const css = styles.cssText.replace(/\s+/g, ' ');
-      expect(css).to.match(/:host \{[^}]*--lr-input-gap: var\(--lr-space-xs\);/);
-      expect(css).to.match(/:host \{[^}]*--lr-input-radius: var\(--lr-radius\);/);
-      expect(css).to.match(/\[part='input-wrapper'\] \{[^}]*gap: var\(--lr-input-gap\);/);
-      expect(css).to.match(/\[part='input-wrapper'\] \{[^}]*border-radius: var\(--lr-input-radius\);/);
+    it('keeps the gap constant across tiers while the radius follows the shared ladder', async () => {
+      const wrapperOf = (host: LyraInput) =>
+        host.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+      const mEl = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
+      const xsEl = (await fixture(html`<lr-input size="xs" aria-label="Name"></lr-input>`)) as LyraInput;
+      // The adornment gap is deliberately outside the ladder -- it never varied by tier.
+      expect(getComputedStyle(wrapperOf(mEl)).gap).to.equal('4px');
+      expect(getComputedStyle(wrapperOf(xsEl)).gap).to.equal('4px');
+      // The radius does vary: a 6px corner on a 24px-tall control reads as a lozenge.
+      expect(getComputedStyle(wrapperOf(mEl)).borderTopLeftRadius).to.equal('6px');
+      expect(getComputedStyle(wrapperOf(xsEl)).borderTopLeftRadius).to.equal('2px');
     });
   });
 });
@@ -753,4 +767,453 @@ it('tracks slotted hint and error content through slotchange', async () => {
   await el.updateComplete;
   expect(flags.hasHintSlot).to.be.false;
   expect(flags.hasErrorSlot).to.be.false;
+});
+
+// -- 8.0 surface: appearance / pill / spin buttons / picker + step methods ---
+
+describe('lr-input appearance', () => {
+  const wrapper = (el: LyraInput) => el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  const TRANSPARENT = 'rgba(0, 0, 0, 0)';
+
+  it('defaults to appearance="filled-outlined" and reflects it', async () => {
+    const el = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
+    expect(el.appearance).to.equal('filled-outlined');
+    expect(el.getAttribute('appearance')).to.equal('filled-outlined');
+  });
+
+  it('keeps the committed fill + border rendering at the default appearance', async () => {
+    const el = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
+    const cs = getComputedStyle(wrapper(el));
+    expect(cs.backgroundColor).to.not.equal(TRANSPARENT);
+    expect(cs.borderTopColor).to.not.equal(TRANSPARENT);
+  });
+
+  it('renders "outlined" with no fill and "filled" with no border colour', async () => {
+    const outlined = (await fixture(html`<lr-input appearance="outlined" aria-label="a"></lr-input>`)) as LyraInput;
+    const filled = (await fixture(html`<lr-input appearance="filled" aria-label="b"></lr-input>`)) as LyraInput;
+    expect(getComputedStyle(wrapper(outlined)).backgroundColor).to.equal(TRANSPARENT);
+    expect(getComputedStyle(wrapper(outlined)).borderTopColor).to.not.equal(TRANSPARENT);
+    expect(getComputedStyle(wrapper(filled)).borderTopColor).to.equal(TRANSPARENT);
+    expect(getComputedStyle(wrapper(filled)).backgroundColor).to.not.equal(TRANSPARENT);
+  });
+
+  it('renders "plain" with neither fill nor border, and "accent" tinted away from "outlined"', async () => {
+    const plain = (await fixture(html`<lr-input appearance="plain" aria-label="a"></lr-input>`)) as LyraInput;
+    const accent = (await fixture(html`<lr-input appearance="accent" aria-label="b"></lr-input>`)) as LyraInput;
+    const outlined = (await fixture(html`<lr-input appearance="outlined" aria-label="c"></lr-input>`)) as LyraInput;
+    expect(getComputedStyle(wrapper(plain)).backgroundColor).to.equal(TRANSPARENT);
+    expect(getComputedStyle(wrapper(plain)).borderTopColor).to.equal(TRANSPARENT);
+    expect(getComputedStyle(wrapper(accent)).borderTopColor).to.not.equal(
+      getComputedStyle(wrapper(outlined)).borderTopColor,
+    );
+    expect(getComputedStyle(wrapper(accent)).backgroundColor).to.not.equal(TRANSPARENT);
+  });
+
+  it('exposes --lr-input-fill/--lr-input-border-color as retheme knobs without a ::part() rule', async () => {
+    const el = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
+    el.style.setProperty('--lr-input-fill', 'rgb(1, 2, 3)');
+    el.style.setProperty('--lr-input-border-color', 'rgb(4, 5, 6)');
+    await el.updateComplete;
+    const cs = getComputedStyle(wrapper(el));
+    expect(cs.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(cs.borderTopColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('draws a pill-shaped control row when pill is set, and the default radius otherwise', async () => {
+    const plainEl = (await fixture(html`<lr-input aria-label="a"></lr-input>`)) as LyraInput;
+    const pillEl = (await fixture(html`<lr-input pill aria-label="b"></lr-input>`)) as LyraInput;
+    expect(plainEl.pill).to.be.false;
+    expect(pillEl.pill).to.be.true;
+    expect(pillEl.getAttribute('pill')).to.equal('');
+    expect(getComputedStyle(wrapper(plainEl)).borderRadius).to.equal('6px');
+    expect(getComputedStyle(wrapper(pillEl)).borderRadius).to.equal('999px');
+  });
+});
+
+describe('lr-input without-spin-buttons', () => {
+  const nativeOf = (el: LyraInput) => el.shadowRoot!.querySelector('input') as HTMLInputElement;
+
+  it('leaves the browser spin buttons in place by default', async () => {
+    const el = (await fixture(html`<lr-input type="number" aria-label="Qty"></lr-input>`)) as LyraInput;
+    expect(el.withoutSpinButtons).to.be.false;
+    expect(getComputedStyle(nativeOf(el)).appearance).to.not.equal('textfield');
+  });
+
+  it('suppresses them when without-spin-buttons is set', async () => {
+    const el = (await fixture(
+      html`<lr-input type="number" without-spin-buttons aria-label="Qty"></lr-input>`,
+    )) as LyraInput;
+    expect(el.withoutSpinButtons).to.be.true;
+    expect(getComputedStyle(nativeOf(el)).appearance).to.equal('textfield');
+  });
+});
+
+describe('lr-input password-toggle opt-in', () => {
+  it('renders no toggle for type="password" until password-toggle is set', async () => {
+    const el = (await fixture(html`<lr-input type="password" label="Password"></lr-input>`)) as LyraInput;
+    expect(el.passwordToggle).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="password-toggle"]').length).to.equal(0);
+  });
+
+  it('renders the toggle once opted in, and it still flips the native type', async () => {
+    const el = (await fixture(
+      html`<lr-input type="password" password-toggle label="Password"></lr-input>`,
+    )) as LyraInput;
+    const toggle = el.shadowRoot!.querySelector('[part="password-toggle"]') as HTMLButtonElement;
+    expect(el.shadowRoot!.querySelectorAll('[part="password-toggle"]').length).to.equal(1);
+    toggle.click();
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('input') as HTMLInputElement).type).to.equal('text');
+  });
+
+  it('never renders the toggle for a non-password type even when opted in', async () => {
+    const el = (await fixture(html`<lr-input type="email" password-toggle></lr-input>`)) as LyraInput;
+    expect(el.shadowRoot!.querySelectorAll('[part="password-toggle"]').length).to.equal(0);
+  });
+});
+
+describe('lr-input autofocus', () => {
+  it('omits the native autofocus attribute by default and forwards it when set', async () => {
+    const plainEl = (await fixture(html`<lr-input aria-label="a"></lr-input>`)) as LyraInput;
+    expect(plainEl.autofocus).to.be.false;
+    expect((plainEl.shadowRoot!.querySelector('input') as HTMLInputElement).hasAttribute('autofocus')).to.be.false;
+
+    const el = (await fixture(html`<lr-input autofocus aria-label="b"></lr-input>`)) as LyraInput;
+    expect(el.autofocus).to.be.true;
+    expect((el.shadowRoot!.querySelector('input') as HTMLInputElement).hasAttribute('autofocus')).to.be.true;
+  });
+});
+
+describe('lr-input showPicker() / stepUp() / stepDown()', () => {
+  it('delegates showPicker() to the native input', async () => {
+    const el = (await fixture(html`<lr-input type="time" aria-label="Start"></lr-input>`)) as LyraInput;
+    const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    let calls = 0;
+    (native as unknown as { showPicker: () => void }).showPicker = () => { calls += 1; };
+    el.showPicker();
+    expect(calls).to.equal(1);
+  });
+
+  it('never throws without user activation, while disabled, or for a type with no picker', async () => {
+    const el = (await fixture(html`<lr-input aria-label="a"></lr-input>`)) as LyraInput;
+    el.showPicker();
+    const disabled = (await fixture(html`<lr-input type="time" disabled aria-label="b"></lr-input>`)) as LyraInput;
+    let calls = 0;
+    const native = disabled.shadowRoot!.querySelector('input') as HTMLInputElement;
+    (native as unknown as { showPicker: () => void }).showPicker = () => { calls += 1; };
+    disabled.showPicker();
+    expect(calls).to.equal(0);
+  });
+
+  it('steps the value by `step` and keeps the component value in sync', async () => {
+    const el = (await fixture(
+      html`<lr-input type="number" value="4" min="0" max="10" step="2" aria-label="Qty"></lr-input>`,
+    )) as LyraInput;
+    el.stepUp();
+    expect(el.value).to.equal('6');
+    el.stepUp(2);
+    expect(el.value).to.equal('10');
+    el.stepDown();
+    expect(el.value).to.equal('8');
+    expect((el.shadowRoot!.querySelector('input') as HTMLInputElement).value).to.equal('8');
+  });
+
+  it('clamps at the declared bounds and stays silent (no input/change events)', async () => {
+    const el = (await fixture(
+      html`<lr-input type="number" value="9" min="0" max="10" step="1" aria-label="Qty"></lr-input>`,
+    )) as LyraInput;
+    const seen: string[] = [];
+    el.addEventListener('input', () => seen.push('input'));
+    el.addEventListener('change', () => seen.push('change'));
+    el.stepUp(5);
+    expect(el.value).to.equal('10');
+    expect(seen).to.deep.equal([]);
+  });
+
+  it('is inert while disabled or readonly, and for a non-steppable type', async () => {
+    const disabled = (await fixture(
+      html`<lr-input type="number" value="1" disabled aria-label="a"></lr-input>`,
+    )) as LyraInput;
+    disabled.stepUp();
+    expect(disabled.value).to.equal('1');
+
+    const readonlyEl = (await fixture(
+      html`<lr-input type="number" value="1" readonly aria-label="b"></lr-input>`,
+    )) as LyraInput;
+    readonlyEl.stepUp();
+    expect(readonlyEl.value).to.equal('1');
+
+    const text = (await fixture(html`<lr-input value="abc" aria-label="c"></lr-input>`)) as LyraInput;
+    text.stepUp();
+    expect(text.value).to.equal('abc');
+  });
+});
+
+describe('lr-input setCustomValidity()', () => {
+  // Inherited from the `FormAssociated` mixin, but exercised here too: this component overrides
+  // `updateValidity()` to bridge the internal native input's own ValidityState, which is a
+  // different write path than the mixin's default and could have dropped the custom layer.
+  it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-input name="q" value="hi" aria-label="Query"></lr-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-input') as LyraInput;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    expect(el.checkValidity(), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('That name is taken.');
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('That name is taken.');
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(0);
+
+    el.setCustomValidity('');
+    form.requestSubmit();
+    expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('survives the native-validity bridge re-running, and a form reset', async () => {
+    const form = (await fixture(html`
+      <form><lr-input name="q" value="a" aria-label="Query"></lr-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-input') as LyraInput;
+    el.setCustomValidity('Rejected by the server.');
+
+    el.value = 'abc';
+    await el.updateComplete;
+    expect(el.validity.customError, 'the custom error survived updateValidity()').to.be.true;
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.value, 'the reset restored the declarative default').to.equal('a');
+    expect(el.validity.customError, 'the custom error outlives the reset').to.be.true;
+    expect(el.validationMessage).to.equal('Rejected by the server.');
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`<lr-input required aria-label="Query"></lr-input>`)) as LyraInput;
+    expect(el.validity.valueMissing, 'required and empty to begin with').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validity.valueMissing, 'an empty required field is still missing a value').to.be.true;
+    expect(el.checkValidity(), 'clearing must not force the control valid').to.be.false;
+    expect(el.validationMessage.length, 'the intrinsic message is republished').to.be.greaterThan(0);
+  });
+});
+
+describe('lr-input implicit form submission', () => {
+  const enterOn = (el: LyraInput, init: KeyboardEventInit = {}) =>
+    (el.shadowRoot!.querySelector('input') as HTMLInputElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
+    );
+
+  it('submits the ancestor form when Enter is pressed in the field', async () => {
+    const form = (await fixture(html`
+      <form><lr-input name="q" value="hi" aria-label="Query"></lr-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-input') as LyraInput;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el);
+    expect(submits).to.equal(1);
+  });
+
+  it('runs the form\'s constraint validation, so an invalid required field blocks submission', async () => {
+    const form = (await fixture(html`
+      <form><lr-input name="q" required aria-label="Query"></lr-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-input') as LyraInput;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el);
+    expect(submits).to.equal(0);
+    expect(el.validity.valueMissing).to.be.true;
+  });
+
+  it('never submits while disabled or readonly', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-input id="d" name="a" value="x" disabled aria-label="a"></lr-input>
+        <lr-input id="r" name="b" value="x" readonly aria-label="b"></lr-input>
+      </form>
+    `)) as HTMLFormElement;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(form.querySelector('#d') as LyraInput);
+    enterOn(form.querySelector('#r') as LyraInput);
+    expect(submits).to.equal(0);
+  });
+
+  it('never submits on an IME composition Enter, nor when the keydown was already defaultPrevented', async () => {
+    const form = (await fixture(html`
+      <form><lr-input name="q" value="hi" aria-label="Query"></lr-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-input') as LyraInput;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el, { isComposing: true });
+    expect(submits).to.equal(0);
+
+    // Capture on the host runs before the internal input's own listener.
+    const veto = (e: Event): void => e.preventDefault();
+    el.addEventListener('keydown', veto, true);
+    enterOn(el);
+    el.removeEventListener('keydown', veto, true);
+    expect(submits).to.equal(0);
+
+    enterOn(el);
+    expect(submits).to.equal(1);
+  });
+
+  it('submits through an lr-button submitter, which requestSubmit() itself would reject', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-input name="q" value="hi" aria-label="Query"></lr-input>
+        <lr-button id="go" type="submit" name="action" value="save">Go</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    let submits = 0;
+    let submitterName = '';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+      // lr-button routes its own submission through a transient named native submitter, so the
+      // name proves the button was activated rather than the form being submitted behind it.
+      submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
+    });
+    enterOn(form.querySelector('lr-input') as LyraInput);
+    expect(submits).to.equal(1);
+    expect(submitterName, 'the lr-button was the submitter').to.equal('action');
+  });
+
+  it('names the form\'s first enabled native submit button as SubmitEvent.submitter', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-input name="q" value="hi" aria-label="Query"></lr-input>
+        <button type="submit" id="off" disabled>Off</button>
+        <button type="submit" id="go">Go</button>
+      </form>
+    `)) as HTMLFormElement;
+    let submitterId = '';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitterId = ((e as SubmitEvent).submitter as HTMLElement | null)?.id ?? '';
+    });
+    enterOn(form.querySelector('lr-input') as LyraInput);
+    expect(submitterId).to.equal('go');
+  });
+
+  it('never submits on a modifier-held Enter', async () => {
+    const form = (await fixture(html`
+      <form><lr-input name="q" value="hi" aria-label="Query"></lr-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-input') as LyraInput;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el, { shiftKey: true });
+    enterOn(el, { ctrlKey: true });
+    enterOn(el, { altKey: true });
+    enterOn(el, { metaKey: true });
+    expect(submits).to.equal(0);
+    enterOn(el);
+    expect(submits, 'a bare Enter still submits').to.equal(1);
+  });
+
+  it('leaves a form-less input alone and ignores non-Enter keys', async () => {
+    const el = (await fixture(html`<lr-input value="hi" aria-label="Query"></lr-input>`)) as LyraInput;
+    enterOn(el);
+    const form = (await fixture(html`
+      <form><lr-input name="q" value="hi" aria-label="Query"></lr-input></form>
+    `)) as HTMLFormElement;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    (form.querySelector('lr-input') as LyraInput).shadowRoot!
+      .querySelector('input')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, composed: true, cancelable: true }));
+    expect(submits).to.equal(0);
+  });
+});
+
+describe('lr-input unset-regression for the 8.0 opt-ins', () => {
+  it('renders the committed control row when appearance/pill/password-toggle/without-spin-buttons/autofocus are left alone', async () => {
+    const el = (await fixture(html`<lr-input value="abc" aria-label="Name"></lr-input>`)) as LyraInput;
+    const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    expect(el.shadowRoot!.querySelectorAll('[part="password-toggle"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="stepper-up"]').length).to.equal(0);
+    expect(native.hasAttribute('autofocus')).to.be.false;
+    expect(native.hasAttribute('data-without-spin-buttons')).to.be.false;
+    const cs = getComputedStyle(wrapper);
+    expect(cs.borderTopWidth).to.equal('1px');
+    expect(cs.borderRadius).to.equal('6px');
+    expect(cs.minBlockSize).to.equal('40px');
+    // The control row is the only element between the wrapper and the end adornment, exactly as
+    // before renderControls() existed.
+    expect(wrapper.querySelectorAll('button').length).to.equal(0);
+  });
+});
+
+describe('lr-input clear-button spelling parity', () => {
+  // Web Awesome spells this `with-clear`, Shoelace `clearable`. Accepting only one of the two
+  // makes a mechanical `wa-` -> `lr-` rename drop the clear button with no error at all, which is
+  // the exact failure mode the migration table exists to prevent.
+  it('renders the clear button for either upstream spelling', async () => {
+    for (const markup of [
+      html`<lr-input type="search" clearable value="query" aria-label="Search"></lr-input>`,
+      html`<lr-input type="search" with-clear value="query" aria-label="Search"></lr-input>`,
+    ]) {
+      const el = (await fixture(markup)) as LyraInput;
+      expect(el.shadowRoot!.querySelector('[part="clear-button"]'), el.outerHTML).to.exist;
+    }
+  });
+
+  it('leaves the clear button absent when neither spelling is set', async () => {
+    const el = (await fixture(
+      html`<lr-input type="search" value="query" aria-label="Search"></lr-input>`,
+    )) as LyraInput;
+    expect(el.shadowRoot!.querySelector('[part="clear-button"]')).to.not.exist;
+  });
+});
+
+describe('lr-input — the shared size ladder', () => {
+  const wrapper = (el: LyraInput) =>
+    el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  const height = (el: LyraInput) => wrapper(el).getBoundingClientRect().height;
+
+  // The same guarantee lr-button makes: a migrating consumer's `size="small"` must land on the
+  // `s` tier's geometry exactly, not merely parse.
+  it('renders the Web Awesome size spellings at the same geometry as the canonical steps', async () => {
+    for (const [alias, step] of [['small', 's'], ['medium', 'm'], ['large', 'l']] as const) {
+      const aliasEl = (await fixture(
+        html`<lr-input size=${alias} aria-label="Name"></lr-input>`,
+      )) as LyraInput;
+      const stepEl = (await fixture(
+        html`<lr-input size=${step} aria-label="Name"></lr-input>`,
+      )) as LyraInput;
+      expect(height(aliasEl), `size=${alias} height`).to.equal(height(stepEl));
+      const aliasInput = aliasEl.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+      const stepInput = stepEl.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+      expect(getComputedStyle(aliasInput).fontSize, `size=${alias} font-size`).to.equal(
+        getComputedStyle(stepInput).fontSize,
+      );
+      expect(getComputedStyle(aliasInput).paddingTop, `size=${alias} padding-block`).to.equal(
+        getComputedStyle(stepInput).paddingTop,
+      );
+    }
+  });
+
+  // The ladder's whole promise: an input and a button of the same tier sit at the same height in
+  // a toolbar row. Before 8.0.0 the l and xl tiers overshot their own floor by 2px and 5px.
+  it('sits at the shared form-control height at every tier', async () => {
+    const expected: Record<string, number> = { '2xs': 20, xs: 24, s: 30, m: 40, l: 48, xl: 56 };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-input size=${size} aria-label="Name"></lr-input>`)) as LyraInput;
+      expect(height(el), `size=${size}`).to.equal(px);
+    }
+  });
 });

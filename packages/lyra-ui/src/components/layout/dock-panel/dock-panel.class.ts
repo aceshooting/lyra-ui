@@ -13,7 +13,8 @@ import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
 export type DockPanelEdge = "start" | "end" | "top" | "bottom";
 
 export interface DockPanelResizeDetail {
-  size: string;
+  /** The panel's new extent along its resize axis, always as a `px` CSS length string. */
+  extent: string;
 }
 export interface DockPanelCollapseChangeDetail {
   collapsed: boolean;
@@ -33,9 +34,9 @@ const LENGTH_RE =
 /**
  * Resolves an arbitrary CSS length (`px`, `rem`, `em`, `vw`, `vh`, `%`, or a
  * bare/unitless number treated as `px`) to a live pixel value, without a DOM
- * probe measurement -- `min-size`/`max-size` are pure constraints that are
- * never themselves rendered anywhere, so there's nothing to measure; the
- * *current* `size` is instead always read back from the host's own
+ * probe measurement -- `min-extent`/`max-extent` are pure constraints that
+ * are never themselves rendered anywhere, so there's nothing to measure; the
+ * *current* `extent` is instead always read back from the host's own
  * `getBoundingClientRect()` (see `currentSizePx()`), which handles any unit
  * for free since the browser already resolved it during layout. Returns
  * `undefined` for an empty/unparseable string.
@@ -96,11 +97,11 @@ interface DragState {
  * (pointerdown captures the pointer on the handle, pointermove computes a
  * new size, pointerup/pointercancel/lostpointercapture all release it) but
  * for a single draggable edge instead of N-1 dividers between N panels, and
- * reasons in raw pixels throughout rather than percent -- `size` is a CSS
+ * reasons in raw pixels throughout rather than percent -- `extent` is a CSS
  * length, and pointer movement is naturally pixels, so there's no percent
  * domain to convert through here. Every resize (drag step, drag release, or
- * keyboard step) always commits `size` as a `px` string regardless of what
- * unit `size`/`min-size`/`max-size` were originally expressed in -- a drag
+ * keyboard step) always commits `extent` as a `px` string regardless of what
+ * unit `extent`/`min-extent`/`max-extent` were originally expressed in -- a drag
  * inherently produces a pixel-precise result, so re-expressing it in the
  * caller's original unit (e.g. back into `rem`) would just be lossy
  * re-derivation for no benefit.
@@ -109,12 +110,12 @@ interface DragState {
  * small persistent "rail" width/height (`--lr-dock-panel-collapsed-size`,
  * default `var(--lr-icon-button-size)`) rather than collapsing to zero --
  * a zero-size collapsed panel would have nowhere left to host the toggle
- * button that re-expands it. `size` itself is left untouched while
+ * button that re-expands it. `extent` itself is left untouched while
  * collapsed, so re-expanding restores exactly what it was.
  *
  * @customElement lr-dock-panel
  * @slot - The panel's own content.
- * @event lr-resize - `detail: { size }` (a `px` CSS length string), fired on every drag step,
+ * @event lr-resize - `detail: { extent }` (a `px` CSS length string), fired on every drag step,
  *   drag release, and keyboard step.
  * @event lr-collapse-change - `detail: { collapsed }`, fired whenever the collapse toggle changes
  *   `collapsed`.
@@ -131,14 +132,19 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) edge: DockPanelEdge = "end";
-  /** The current docked size along the resize axis, as a CSS length (e.g. `"320px"`). */
-  @property() size = "280px";
+  /** The current docked extent along the resize axis, as a CSS length (e.g. `"320px"`).
+   *
+   *  Spelled `extent`, not `size`: everywhere else in the library `size` names a tier on the
+   *  shared six-step ladder (`internal/variants.ts`'s `LyraSize`), and this is an arbitrary CSS
+   *  length instead. A clean rename with no alias -- `size`/`min-size`/`max-size` on
+   *  `<lr-dock-panel>` are simply unknown attributes now. */
+  @property() extent = "280px";
   /** Minimum resize bound, as a CSS length. */
-  @property({ attribute: "min-size" }) minSize = "160px";
+  @property({ attribute: "min-extent" }) minExtent = "160px";
   /** Maximum resize bound, as a CSS length. Empty means "no explicit cap" -- the live extent of
    *  the containing element is used instead, so the panel still can't be dragged wider/taller than
    *  its container. */
-  @property({ attribute: "max-size" }) maxSize = "";
+  @property({ attribute: "max-extent" }) maxExtent = "";
   @property({ type: Boolean, reflect: true }) collapsible = false;
   @property({ type: Boolean, reflect: true }) collapsed = false;
   /** When `false`, no drag handle renders at all and the panel is a fixed size. */
@@ -151,7 +157,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   private drag: DragState | null = null;
   private readonly contentId = nextId("dock-panel-content");
-  // Keeps aria-valuemax/aria-valuenow (and the %/max-size fallback they're
+  // Keeps aria-valuemax/aria-valuenow (and the %/max-extent fallback they're
   // derived from) live against a *passive* container resize -- window
   // resize, a sibling collapsing, a media query -- none of which touch any
   // reactive property here, so without this they'd otherwise only refresh
@@ -200,7 +206,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       this.endDrag();
     }
     if (
-      changed.has("size") ||
+      changed.has("extent") ||
       changed.has("collapsed") ||
       changed.has("edge")
     ) {
@@ -229,7 +235,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   private applyHostSize(): void {
     const value = this.collapsed
       ? "var(--lr-dock-panel-collapsed-size)"
-      : this.size;
+      : this.extent;
     if (this.axis === "inline") {
       this.style.inlineSize = value;
       this.style.blockSize = "";
@@ -240,7 +246,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   }
 
   /** Live pixel size of the containing block along the resize axis, used both to resolve a `%`
-   *  `min-size`/`max-size` and as the `max-size` fallback when unset. Falls back to the viewport
+   *  `min-extent`/`max-extent` and as the `max-extent` fallback when unset. Falls back to the viewport
    *  when there's no parent element (e.g. not yet connected). */
   private containerPx(): number {
     const parent = this.parentElement;
@@ -253,19 +259,19 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const containerPx = this.containerPx();
     const minPx = Math.max(
       0,
-      parseLengthPx(this.minSize, containerPx, this) ?? 0
+      parseLengthPx(this.minExtent, containerPx, this) ?? 0
     );
     const maxPx = Math.max(
       minPx,
-      parseLengthPx(this.maxSize, containerPx, this) ?? containerPx
+      parseLengthPx(this.maxExtent, containerPx, this) ?? containerPx
     );
     return { minPx, maxPx };
   }
 
   /** The panel's own current rendered size (px) along the resize axis, read straight off the
-   *  live box -- this is what lets `size` be expressed in any CSS unit and still drag/step
+   *  live box -- this is what lets `extent` be expressed in any CSS unit and still drag/step
    *  correctly from wherever it actually rendered, with no separate unit-conversion path for the
-   *  "current" value (only `min-size`/`max-size`, which are never themselves rendered, need
+   *  "current" value (only `min-extent`/`max-extent`, which are never themselves rendered, need
    *  `parseLengthPx`). */
   private currentSizePx(): number {
     const rect = this.getBoundingClientRect();
@@ -275,14 +281,14 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   private applySize(px: number): void {
     const { minPx, maxPx } = this.resolveBoundsPx();
     const clamped = Math.min(Math.max(px, minPx), maxPx);
-    this.size = `${Math.round(clamped)}px`;
+    this.extent = `${Math.round(clamped)}px`;
     // Apply the new host size synchronously instead of waiting for Lit's
     // (microtask-batched) update cycle to reach willUpdate: currentSizePx()
     // measures the *live* box, so back-to-back steps (rapid keyboard repeat,
     // or another pointermove before a paint) must each see the size the
     // previous step just committed, not a stale pre-update box.
     this.applyHostSize();
-    this.emit<DockPanelResizeDetail>("lr-resize", { size: this.size });
+    this.emit<DockPanelResizeDetail>("lr-resize", { extent: this.extent });
   }
 
   private onPointerDown = (e: PointerEvent): void => {

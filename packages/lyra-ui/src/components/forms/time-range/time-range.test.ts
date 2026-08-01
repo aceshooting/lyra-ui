@@ -4,6 +4,7 @@ import './time-range.js';
 import type { LyraTimeRange } from './time-range.js';
 import { styles } from './time-range.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('reflects start/end as the range fill width', async () => {
   const el = (await fixture(
@@ -533,9 +534,38 @@ it('dims with opacity/not-allowed cursor when disabled purely via an ancestor fi
   expect(getComputedStyle(startHandle).cursor).to.equal('not-allowed');
 });
 
-it('gives the drag handles hover feedback matching the keyboard focus-visible cue', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part\^='handle'\]:hover\s*\{[^}]*filter:/);
+// Driven through the real pointer rather than the stylesheet text: the `filter: brightness()`
+// this used to assert also satisfies a "there is a hover rule" text match while doing nothing
+// whatsoever on a theme whose brand colour is pure white or pure black, and while washing out the
+// surface-coloured ring that separates the knob from its own track. Reading the painted fill back
+// at each stage is the only assertion that can tell those apart. Colour STRINGS are compared,
+// never elements — a DOM node as chai's actual/expected hangs the whole file.
+it('moves a drag handle’s painted fill on hover, and further again while it is grabbed', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  await el.updateComplete;
+  const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const rect = handle.getBoundingClientRect();
+  const centre: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  const rest = getComputedStyle(handle).backgroundColor;
+  try {
+    await sendMouse({ type: 'move', position: centre });
+    const hovered = getComputedStyle(handle).backgroundColor;
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(handle).backgroundColor;
+    const grabbedCursor = getComputedStyle(handle).cursor;
+    await sendMouse({ type: 'up' });
+    expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(rest);
+    expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(hovered);
+    expect(pressed).to.not.equal(rest);
+    expect(grabbedCursor, 'a grabbed handle shows the closed-hand cursor').to.equal('grabbing');
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe('preset-button hover specificity', () => {
@@ -1435,6 +1465,22 @@ it('scales the drag-handle hit-area proportionally, floored at 24px', async () =
   }
 });
 
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  const hit = async (size: string): Promise<string> => {
+    const el = await fixture(html`<lr-time-range size=${size}></lr-time-range>`);
+    const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    return getComputedStyle(handle, '::before').inlineSize;
+  };
+  for (const [alias, step] of pairs) {
+    expect(await hit(alias), `handle hit-area for ${alias}`).to.equal(await hit(step));
+  }
+});
+
 it('exposes independent handle, hit-area, track, and base size hooks', async () => {
   const el = (await fixture(html`
     <lr-time-range
@@ -1538,4 +1584,138 @@ it('keeps endpoint hit geometry inside a 320px allocation', async () => {
   expect(el.scrollWidth).to.be.at.most(320);
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+});
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
+// where either is missing -- an unguarded assertion fails on WebKit rather than skipping.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('lr-time-range setCustomValidity()', () => {
+  it('blocks form submission and becomes the validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-time-range min="0" max="100" start="20" end="80"></lr-time-range></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    form.requestSubmit();
+    expect(submits, 'an otherwise-valid range submits').to.equal(1);
+
+    el.setCustomValidity('That window overlaps an existing booking');
+    expect(el.validationMessage).to.equal('That window overlaps an existing booking');
+    expect(el.validity.customError, 'customError').to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(1);
+  });
+
+  it('survives an intrinsic revalidation', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    el.setCustomValidity('Server says no');
+    el.start = 30;
+    await el.updateComplete;
+    expect(el.validity.customError, 'custom error survives a value change').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // Native `setCustomValidity()` is sticky: `form.reset()` restores values, never the custom
+  // error, which only another `setCustomValidity('')` clears. Matching that here.
+  it('keeps the custom error across a form reset', async () => {
+    const form = (await fixture(html`
+      <form><lr-time-range min="0" max="100" start="20" end="80"></lr-time-range></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    el.setCustomValidity('Server says no');
+    form.reset();
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // This control has no intrinsic constraints of its own (no `required`, no submitted value), so
+  // "restore the computed validity" resolves to valid here -- the point being that clearing
+  // republishes what the control itself computes rather than latching either answer.
+  it('restores the computed validity when cleared', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    el.setCustomValidity('Server says no');
+    expect(el.checkValidity()).to.be.false;
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'custom error cleared').to.be.false;
+    expect(el.checkValidity()).to.be.true;
+    expect(el.validationMessage).to.equal('');
+  });
+
+  it('drives the valid/invalid custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before').to.be.true;
+    expect(el.matches(':state(optional)'), 'no required constraint of its own').to.be.true;
+    expect(el.matches(':state(required)')).to.be.false;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while a custom error is set').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
+  });
+
+  it('withholds user-invalid until the user has actually moved a handle', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    await el.updateComplete;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)')).to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'pristine control must not read as an error').to.be
+      .false;
+
+    const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(el.start, 'the arrow key moved the handle').to.equal(21);
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after a real interaction').to.be.true;
+  });
+});
+
+it('treats a blur as interaction for the user-* validity states', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  await el.updateComplete;
+  el.setCustomValidity('Server says no');
+  expect(el.matches(':state(user-invalid)'), 'pristine').to.be.false;
+
+  const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  handle.focus();
+  handle.blur();
+  expect(el.matches(':state(user-invalid)'), 'focusout is the observable blur signal').to.be.true;
+  expect(el.start, 'blur alone must not move a handle').to.equal(20);
 });

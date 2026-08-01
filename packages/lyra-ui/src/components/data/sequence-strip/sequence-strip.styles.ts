@@ -19,6 +19,10 @@ export const styles = css`
     align-items: flex-end;
     justify-content: center;
   }
+  /* no-pressed-state: a cell is a role="listitem" span with no activation of any kind -- it takes a
+     roving tabindex and reacts to pointerenter/focus purely to move the tooltip, and there is no
+     click handler and no lr-* event behind it. Nothing happens on press, so a pressed treatment
+     would be promising an action the strip does not have. */
   [part='cell']:hover,
   [part='cell']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -51,7 +55,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-xs);
     white-space: nowrap;
-    box-shadow: var(--lr-shadow);
+    box-shadow: var(--lr-shadow-m);
     pointer-events: none;
     z-index: var(--lr-layer-content);
   }

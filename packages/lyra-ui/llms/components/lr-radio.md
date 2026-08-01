@@ -6,7 +6,7 @@
 - **Class** `LyraRadio`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,6 +21,24 @@ An empty `name` is canonicalized to an omitted attribute rather than reappearing
 `effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
 `blur()`, and `click()` forward to the internal radio control.
 
+- `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
+  `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the indicator off the same
+  values `lr-input`/`lr-select`/`lr-button` read, so controls of one `size` line up in a row. The
+  slotted label keeps the standard control-label type size at every tier — restyle it through
+  `::part(label)` to make it track the control.
+- `pill: boolean = false` (reflected) — rounds the control's own chrome into a pill instead of the
+  shared control radius. A plain `<lr-radio>`'s indicator is a circle at every setting, so this is
+  visible on `<lr-radio-button>`, which inherits this class and renders rectangular chrome; it is
+  declared here so both tags carry one property with one meaning.
+
+`setCustomValidity(message)` sets or clears a consumer-supplied error ("that plan is no longer
+available"): a non-empty message raises `customError` and blocks submission, `''` restores the
+control's own computed validity so a required-and-unselected radio goes back to `valueMissing`. It
+survives every selection, every group-driven `required` change, and a form reset. It lives on the
+radio rather than on `<lr-radio-group>` because the group is not itself form-associated — it
+designates one member as the group's validity owner, and that radio is what participates in the
+owning form.
+
 **Events:** native-style composed `input` and `change`. A standalone radio also emits `lr-change`
 with `{ checked, value }`. An owned radio suppresses that child alias at its source; its group emits
 the sole aggregate `lr-change` described below, so capture and bubble listeners cannot observe two
@@ -31,13 +49,25 @@ bubbling, composed host events.
 
 **CSS parts:** `base`, `circle`, `dot`, `label`.
 
-**Themeable custom properties:** `--lr-radio-label-indent` — the inline distance from the control's
-start edge to the start of the label text, i.e. the circle's own floor plus the gap beside it,
-defaulting to `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`. The rendered
-gap is derived from it, so the advertised value and the real offset cannot drift; setting it on the
-element (or on `lr-radio` in your own stylesheet) moves the label. Exactly the same knob, defaults,
-purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` — see `lr-checkbox` above
-for the formula to align a sibling hint element.
+**Themeable custom properties:**
+
+- `--lr-radio-circle-size` (default `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height)
+  * 0.7))`; `1.75rem` at the default `m` tier) — the edge length of `[part='circle']`, derived from
+  the active `size` tier's shared control height so a radio lines up with an
+  `lr-input`/`lr-select`/`lr-button` of the same `size`.
+- `--lr-radio-dot-size` (default `min(calc(var(--lr-radio-circle-size) * 0.5),
+  calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge length of `[part='dot']`,
+  capped at half the circle so it can never outgrow its ring, whatever is done to either the ladder
+  or the `--lr-icon-button-size` cap.
+- `--lr-radio-radius` (default `--lr-radius-pill`) — the corner radius of the control's own chrome.
+  A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at
+  the shared control radius and `pill` swaps it back to a pill.
+- `--lr-radio-label-indent` (default `calc(var(--lr-radio-circle-size) + var(--lr-space-s))`) — the
+  inline distance from the control's start edge to the start of the label text, i.e. the circle plus
+  the gap beside it. The rendered gap is derived from it, so the advertised value and the real offset
+  cannot drift; setting it on the element (or on `lr-radio` in your own stylesheet) moves the label.
+  Exactly the same knob, purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` —
+  see `lr-checkbox` above for the formula to align a sibling hint element.
 
 `--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
 (default `var(--lr-color-brand)`) recolor `[part='circle']`'s border and `[part='dot']`'s background

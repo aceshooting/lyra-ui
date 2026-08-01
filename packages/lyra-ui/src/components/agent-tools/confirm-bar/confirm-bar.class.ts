@@ -1,6 +1,7 @@
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraVariant } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization.js';
 import '../../layout/details/details.class.js';
@@ -11,7 +12,15 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { styles } from './confirm-bar.styles.js';
 
 export type ConfirmBarDecision = 'approved' | 'denied' | null;
-export type ConfirmBarTone = 'neutral' | 'danger';
+
+/** A genuine two-member subset of the shared `LyraVariant` vocabulary: a confirmation is either
+ *  routine or destructive, and `brand`/`success`/`warning` have no meaning for a proposal awaiting
+ *  a yes/no. Spelled as an `Extract` of the shared union rather than a re-declared literal pair so
+ *  the two can never drift apart. */
+export type ConfirmBarVariant = Extract<LyraVariant, 'neutral' | 'danger'>;
+
+/** Retained name for the union above. */
+export type ConfirmBarTone = ConfirmBarVariant;
 
 export interface LyraConfirmBarEventMap {
   'lr-approve': CustomEvent<{ args: unknown }>;
@@ -66,7 +75,11 @@ function deniedIcon(): SVGTemplateResult {
  * matters); no blocking/modality guarantee (a user can scroll past); no decision persistence or
  * "remember choice" logic (the `footer` slot + host own that).
  *
- * Deny/Approve are `<lr-button>`s (`variant="neutral"`/`"brand"`, `"danger"` under `tone="danger"`),
+ * Deny/Approve are `<lr-button>`s. Deny is `variant="neutral" appearance="outlined"` and Approve is
+ * `variant="brand"` (`"danger"` under `variant="danger"`) at lr-button's default `appearance="accent"`,
+ * so the destructive-or-primary action is the loud one and the safe action recedes. Both appearances
+ * are stated rather than inherited: a bar whose look depends on another component's default changes
+ * silently when that default does.
  * re-exporting `lr-button`'s own `base`/`label`/`start`/`end`/`spinner` parts under
  * `{deny,approve}-button-{base,label,start,end,spinner}` so `--lr-button-*` theming and a consumer's
  * existing `lr-button` style fragments reach them like every other button in an app. An
@@ -149,7 +162,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   @property({ reflect: true }) pending: ConfirmBarDecision = null;
 
   /** Token-mapped emphasis for destructive proposals. */
-  @property({ reflect: true }) tone: ConfirmBarTone = 'neutral';
+  @property({ reflect: true }) variant: ConfirmBarVariant = 'neutral';
 
   /** Collapses the bar from a full card (bordered, padded, `display: block` surface) to a single
    *  inline row with no chrome of its own, for a confirmation that has to live inside an existing
@@ -251,6 +264,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
                 <lr-button
                   part="deny-button"
                   variant="neutral"
+                  appearance="outlined"
                   type="button"
                   ?loading=${this.pending === 'denied'}
                   ?disabled=${this.pending === 'approved'}
@@ -259,7 +273,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
                 >${this.localize('deny')}</lr-button>
                 <lr-button
                   part="approve-button"
-                  variant=${this.tone === 'danger' ? 'danger' : 'brand'}
+                  variant=${this.variant === 'danger' ? 'danger' : 'brand'}
                   type="button"
                   ?loading=${this.pending === 'approved'}
                   ?disabled=${this.pending === 'denied'}

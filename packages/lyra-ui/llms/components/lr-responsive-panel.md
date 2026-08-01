@@ -15,7 +15,7 @@
 
 The same slotted content either docked inline in the page's normal layout flow (desktop) or
 presented as a full-screen/bottom-sheet overlay (mobile), depending on viewport width. First-party
-invention (no Web Awesome equivalent). Typical uses: a settings panel or a conversation-history
+invention (no `wa-*`/`sl-*` counterpart). Typical uses: a settings panel or a conversation-history
 sidebar that's a permanent docked pane on a wide screen but a modal on a phone.
 
 **Properties:**

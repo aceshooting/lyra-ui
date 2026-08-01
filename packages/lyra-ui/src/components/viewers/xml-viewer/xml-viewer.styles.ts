@@ -121,6 +121,10 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  [part='toggle']:not([hidden]):active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-brand);
+  }
   [part='toggle']:focus-visible,
   [part='copy-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -138,6 +142,12 @@ export const styles = css`
   }
   [part='copy-button']:hover {
     background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
+  }
+  /* Also the pressed state the row-reveal rule below needs: that rule only fades the button in, so
+     the acknowledgement of the click itself lives here. */
+  [part='copy-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     color: var(--lr-color-brand);
   }
   .row [part='copy-button'] {

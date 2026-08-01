@@ -45,6 +45,26 @@ export const styles = css`
   :host([interactive]) [part="base"]:hover {
     border-color: var(--lr-color-brand);
   }
+  /* Pressed keeps the hover border and adds a tint of the whole tile, so it reads as a step past
+     hover rather than a different colour of the same step. The tint is a background-IMAGE layer,
+     not a background colour: the appearance variants own background-color (filled and
+     filled-outlined set brand-quiet), and a colour here would replace theirs instead of deepening
+     it, so a filled card would flash back to plain surface on mousedown. */
+  :host([interactive]) [part="base"]:active {
+    border-color: var(--lr-color-brand);
+    background-image: linear-gradient(
+      color-mix(
+        in oklab,
+        transparent,
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      ),
+      color-mix(
+        in oklab,
+        transparent,
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+  }
   [part="activation-button"] {
     position: absolute;
     inset: 0;

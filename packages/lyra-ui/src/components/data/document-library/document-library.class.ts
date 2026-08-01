@@ -332,7 +332,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   private renderFreshnessCell(document: LibraryDocument): TemplateResult | typeof nothing {
     if (!document.freshness) return nothing;
-    return html`<lr-chip tone=${FRESHNESS_TONE[document.freshness]}>${this.freshnessLabel(document.freshness)}</lr-chip>`;
+    return html`<lr-chip variant=${FRESHNESS_TONE[document.freshness]}>${this.freshnessLabel(document.freshness)}</lr-chip>`;
   }
 
   private renderUpdatedCell(document: LibraryDocument): string {

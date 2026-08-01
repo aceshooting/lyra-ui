@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -202,6 +203,20 @@ export interface LyraGraphQueryBuilderEventMap {
  * @csspart saved-item - One saved query's row.
  * @csspart saved-load-button - A saved query row's Load button.
  * @csspart saved-delete-button - A saved query row's delete button.
+ * @cssstate required - Always matches. This control's one constraint is unconditional — a query
+ * with no start anchor is not runnable — so it always demands something of the user, which is what
+ * `lr-graph-query-builder:state(required)` asks.
+ * @cssstate optional - Never matches, for the same reason: the complement of `required`.
+ * @cssstate valid - Matches while the query satisfies both constraints (a non-empty `startId` and
+ * `minHops <= maxHops`), whether or not the user has touched anything.
+ * @cssstate invalid - Matches while it does not — from the very first render, before any
+ * interaction, since an empty query has no start anchor.
+ * @cssstate user-valid - `valid`, and the user has interacted: an edit to any field, a blur of the
+ * start-entity input, or a `reportValidity()` call (which is what the Run button runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. A pristine empty query is
+ * invalid but deliberately does not match this, so a consumer's `:state(user-invalid)` styling
+ * cannot paint the form red before the user has typed anything. A form reset makes it pristine
+ * again.
  */
 export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEventMap> {
   static formAssociated = true;
@@ -248,6 +263,9 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   private _name = '';
   private _value: GraphQuery = EMPTY_VALUE;
   private _disabled = false;
+  // Drives the user-valid/user-invalid pair: an empty required query is invalid from the first
+  // render, but styling it red before the user has done anything is hostile.
+  private hasInteracted = false;
   // Guards lr-validity-change so it only fires on an actual change -- `undefined` guarantees the
   // first computed state always "changes" from it, mirroring lr-rubric-form's identical guard.
   private lastValidityKey: string | undefined;
@@ -386,6 +404,20 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
       const message = Object.values(errors)[0] ?? '';
       this.validityController.setValidity(flags, message);
     }
+    this.syncValidityCustomStates();
+  }
+
+  /**
+   * Republishes the six `:state()` validity hooks — see `internal/custom-states.ts`. Called from
+   * `syncFormState()` (so every validity recomputation carries them) and from `markTouched()`, the
+   * one interaction that changes the answer without touching validity.
+   *
+   * `required` is unconditional: this control has no `required` property to key off because its one
+   * constraint never lifts — `computeValidation()` always raises `valueMissing` for an empty
+   * `startId`, since a path query with no anchor is not runnable.
+   */
+  private syncValidityCustomStates(): void {
+    syncValidityStates(this.internals, { required: true, hasInteracted: this.hasInteracted });
   }
 
   /** Resynchronizes validity without revealing inline errors. */
@@ -397,6 +429,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   /** Reveals every current field error and returns overall validity -- the hook Run calls before
    *  acting, mirroring a native `<form>`'s `reportValidity()`. */
   reportValidity(): boolean {
+    // A reportValidity() call is what a submit attempt (here, the Run button) runs, so it counts as
+    // interaction for the user-valid/user-invalid pair — set before syncFormState(), which is what
+    // republishes them.
+    this.hasInteracted = true;
     this.syncFormState();
     if (Object.keys(this._errors).length > 0) {
       this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
@@ -404,7 +440,31 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     return this.internals.reportValidity();
   }
 
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("no graph is loaded for that tenant") that neither of this control's own two
+   * constraints can express. A non-empty `message` raises `customError` and becomes
+   * `validationMessage`, so the builder fails `checkValidity()`, blocks submission, and matches
+   * `:state(invalid)`; `''` clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a query
+   * with no `startId` stays `valueMissing`. The custom error also survives every intrinsic
+   * recomputation in between (each field edit re-runs `syncFormState()`) and a `form.reset()` —
+   * matching a native control, where only another `setCustomValidity('')` clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here. It is
+   * whole-control state and deliberately does not land in `errors`, which is keyed by the csspart
+   * of the field a message belongs to.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncValidityCustomStates();
+  }
+
   formResetCallback(): void {
+    // Cleared before the `value` assignment below, whose setter is what republishes the custom
+    // states — a reset control is pristine again, so user-valid/user-invalid must drop off it.
+    this.hasInteracted = false;
     this.value = EMPTY_VALUE;
     this.touchedFields = new Set();
     this.saveName = '';
@@ -430,6 +490,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   private setValue(next: GraphQuery): void {
     if (this.effectiveDisabled) return;
+    // Set before the `value` assignment, whose setter republishes the custom states.
+    this.hasInteracted = true;
     this.value = next;
     this.emit('lr-input', { value: { ...this._value } });
   }
@@ -450,6 +512,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   }
 
   private markTouched(part: string): void {
+    // Leaving a field is interaction even if the user changed nothing, so this runs before the
+    // early return below — and republishes explicitly, since nothing here touches validity.
+    this.hasInteracted = true;
+    this.syncValidityCustomStates();
     if (this.touchedFields.has(part)) return;
     this.touchedFields = new Set(this.touchedFields).add(part);
   }
@@ -543,7 +609,9 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
           @change=${(e: Event) => {
             e.stopPropagation();
             const el = e.target as LyraSelect;
-            add(el.value);
+            // `value` widened to `string | string[]` when `<lr-select>` gained `multiple`; this
+            // picker is single-select, so take the first entry rather than stringifying an array.
+            add(Array.isArray(el.value) ? (el.value[0] ?? '') : el.value);
             el.value = '';
           }}
         >

@@ -120,6 +120,10 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
 
+  [part='highlight-action']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+
   [part='highlight-action']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -148,26 +152,54 @@ export const styles = css`
     background-color: var(--lr-docx-viewer-highlight-active-background, var(--lr-color-brand-quiet));
     text-decoration: underline;
   }
+  /* Each tone resolves into one private carrier so the hover/active rules below have a single base
+     to mix from -- a tone-specific background declared directly is invisible to a generic
+     mark[data-lr-highlight-tone]:hover rule. Same shape as lr-highlight-layer's
+     --_lr-highlight-layer-background. */
   [part='content'] mark[data-lr-highlight-tone] {
-    background: var(--lr-docx-viewer-highlight-accent-background, var(--lr-color-brand-quiet));
+    --_lr-docx-viewer-highlight-background: var(
+      --lr-docx-viewer-highlight-accent-background,
+      var(--lr-color-brand-quiet)
+    );
+    background: var(--_lr-docx-viewer-highlight-background);
     color: inherit;
     border-radius: calc(var(--lr-radius) * 0.5);
     cursor: pointer;
   }
+  /* A mark wraps document TEXT, and brightness() applies to the whole subtree -- it recoloured the
+     quoted words along with their highlight. It is also a channel multiply, so it did nothing at
+     all to a highlight themed pure white or pure black and moved every other one in whichever
+     direction its own colour happened to sit. Mixing the tone's own background toward
+     --lr-color-mix-partner (which follows the text colour) leaves the text alone and always moves. */
   [part='content'] mark[data-lr-highlight-tone]:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--_lr-docx-viewer-highlight-background), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='content'] mark[data-lr-highlight-tone]:active {
+    background: color-mix(in oklab, var(--_lr-docx-viewer-highlight-background), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='content'] mark[data-lr-highlight-tone='success'] {
-    background: var(--lr-docx-viewer-highlight-success-background, var(--lr-color-success-quiet));
+    --_lr-docx-viewer-highlight-background: var(
+      --lr-docx-viewer-highlight-success-background,
+      var(--lr-color-success-quiet)
+    );
   }
   [part='content'] mark[data-lr-highlight-tone='warning'] {
-    background: var(--lr-docx-viewer-highlight-warning-background, var(--lr-color-warning-quiet));
+    --_lr-docx-viewer-highlight-background: var(
+      --lr-docx-viewer-highlight-warning-background,
+      var(--lr-color-warning-quiet)
+    );
   }
   [part='content'] mark[data-lr-highlight-tone='danger'] {
-    background: var(--lr-docx-viewer-highlight-danger-background, var(--lr-color-danger-quiet));
+    --_lr-docx-viewer-highlight-background: var(
+      --lr-docx-viewer-highlight-danger-background,
+      var(--lr-color-danger-quiet)
+    );
   }
   [part='content'] mark[data-lr-highlight-tone='neutral'] {
-    background: var(--lr-docx-viewer-highlight-neutral-background, var(--lr-color-surface));
+    --_lr-docx-viewer-highlight-background: var(
+      --lr-docx-viewer-highlight-neutral-background,
+      var(--lr-color-surface)
+    );
   }
   [part='content'] mark[data-lr-highlight-name='lr-highlight-active'] {
     outline: var(--lr-border-width-thin) solid var(--lr-docx-viewer-highlight-active-outline, var(--lr-color-brand));

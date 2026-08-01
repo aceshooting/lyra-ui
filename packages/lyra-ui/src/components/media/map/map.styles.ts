@@ -49,7 +49,9 @@ export const styles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Overlay step: the legend is a floating cluster pinned over the tiles, so it reads as a layer
+       above the map rather than a panel resting beside it. */
+    box-shadow: var(--lr-shadow-m);
     font-size: var(--lr-font-size-xs);
   }
   .legend-row {

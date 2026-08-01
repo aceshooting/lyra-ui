@@ -47,7 +47,7 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * its (always-present) header row included -- matching how a spreadsheet app itself labels `A1`.
  * The target sheet resolves from the anchor's own `sheet` field (falling back to a `Sheet!`-prefixed
  * `range`, then the currently active sheet when neither is set); `scrollToAnchor()` switches
- * `<lr-tabs>`'s `active` tab first when the resolved sheet isn't already active, then scrolls the
+ * `<lr-tab-group>`'s `active` tab first when the resolved sheet isn't already active, then scrolls the
  * addressed row into view via the virtualized list's `active-id`, then scrolls the first addressed
  * column horizontally into view. `highlights` paint a structural `part="cell-highlight"` cell
  * wrapping a focusable native `part="cell-highlight-action"` button, recomputed per row inside
@@ -66,7 +66,7 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
  * @csspart base - The root wrapper.
- * @csspart tabs - The sheet-switching `<lr-tabs>`, rendered only for a multi-sheet workbook.
+ * @csspart tabs - The sheet-switching `<lr-tab-group>`, rendered only for a multi-sheet workbook.
  * @csspart sheet - The wrapper around one sheet's header row and virtualized body.
  * @csspart rows - The virtualized row list.
  * @csspart header-row - A sheet's header row.
@@ -92,7 +92,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
 
   @state() private fetchState: SpreadsheetState = { kind: 'idle' };
-  /** Index into `fetchState.sheets` of the sheet currently shown -- bound to `<lr-tabs>`'s own
+  /** Index into `fetchState.sheets` of the sheet currently shown -- bound to `<lr-tab-group>`'s own
    *  `active` (as `sheet-${index}`), and switched by `scrollToAnchor()`/search navigation whenever
    *  a match lives on a different sheet. */
   @state() private activeSheetIndex = 0;
@@ -298,7 +298,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   private renderLoaded(sheets: SpreadsheetSheet[]): TemplateResult {
     if (!sheets.length) return html`<p class="empty-note">${this.localize('noData')}</p>`;
     if (sheets.length === 1) return this.renderSheet(sheets[0]!, 0);
-    return html`<lr-tabs part="tabs" .active=${`sheet-${this.activeSheetIndex}`} @lr-tabs-change=${this.onTabsChange}>${sheets.map((sheet, index) => html`<div slot=${`sheet-${index}`} label=${sheet.name}>${this.renderSheet(sheet, index)}</div>`)}</lr-tabs>`;
+    return html`<lr-tab-group part="tabs" .active=${`sheet-${this.activeSheetIndex}`} @lr-tab-show=${this.onTabsChange}>${sheets.map((sheet, index) => html`<div slot=${`sheet-${index}`} label=${sheet.name}>${this.renderSheet(sheet, index)}</div>`)}</lr-tab-group>`;
   }
 
   private onTabsChange = (e: CustomEvent<{ tabId: string }>): void => {

@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './drilldown-panel.js';
 import type { LyraDrilldownPanel, DrilldownNode } from './drilldown-panel.js';
 import type { LyraEntity } from '../../retrieval/entity-card/entity-card.js';
-import type { LyraTabs } from '../tabs/tabs.js';
+import type { LyraTabGroup } from '../tab-group/tab-group.js';
 import type { LyraSourceCard } from '../../retrieval/source-card/source-card.js';
 import type { LyraDocumentPreview } from '../../viewers/document-preview/document-preview.js';
 import type { LyraEntityCard } from '../../retrieval/entity-card/entity-card.js';
@@ -85,20 +85,20 @@ it('fires lr-drilldown-navigate with the step\'s id/index when a non-current bre
   expect(el.path).to.deep.equal([nodeWithEvidenceOnly, nodeWithAllCategories]);
 });
 
-it('renders a single category directly with no lr-tabs chrome when only one category has content', async () => {
+it('renders a single category directly with no lr-tab-group chrome when only one category has content', async () => {
   const el = (await fixture(html`<lr-drilldown-panel></lr-drilldown-panel>`)) as LyraDrilldownPanel;
   el.path = [nodeWithEvidenceOnly];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-tabs')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.not.exist;
   const category = el.shadowRoot!.querySelector('[part="category"]');
   expect(category).to.exist;
   expect(category!.getAttribute('aria-label')).to.equal('Sources');
   expect(category!.querySelector('lr-source-card')).to.exist;
 });
 
-it('wraps content in lr-tabs, labelled Sources/Documents/Entities, when the current node spans multiple categories', async () => {
+it('wraps content in lr-tab-group, labelled Sources/Documents/Entities, when the current node spans multiple categories', async () => {
   const el = await populated();
-  const tabs = el.shadowRoot!.querySelector('lr-tabs') as LyraTabs;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   expect(tabs).to.exist;
   await tabs.updateComplete;
   const labels = [...tabs.shadowRoot!.querySelectorAll('[part="tab"]')].map((b) => b.textContent!.trim());
@@ -154,7 +154,7 @@ it('shows the Agent runs tab only once content is projected into the runs slot, 
   const el = (await fixture(html`<lr-drilldown-panel></lr-drilldown-panel>`)) as LyraDrilldownPanel;
   el.path = [nodeWithEvidenceOnly];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-tabs')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.not.exist;
 
   const runContent = document.createElement('div');
   runContent.setAttribute('slot', 'runs');
@@ -164,7 +164,7 @@ it('shows the Agent runs tab only once content is projected into the runs slot, 
   await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
 
-  const tabs = el.shadowRoot!.querySelector('lr-tabs') as LyraTabs;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   expect(tabs).to.exist;
   await tabs.updateComplete;
   const labels = [...tabs.shadowRoot!.querySelectorAll('[part="tab"]')].map((b) => b.textContent!.trim());
@@ -182,24 +182,24 @@ it('detects a slot="runs" attribute toggled on an already-connected child, not j
   el.appendChild(runContent); // connected, but not slotted into "runs" yet
   await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-tabs')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.not.exist;
 
   runContent.setAttribute('slot', 'runs'); // toggled on an already-connected child
   await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
 
-  const tabs = el.shadowRoot!.querySelector('lr-tabs') as LyraTabs;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   expect(tabs).to.exist;
   await tabs.updateComplete;
   const labels = [...tabs.shadowRoot!.querySelectorAll('[part="tab"]')].map((b) => b.textContent!.trim());
   expect(labels).to.include('Agent runs');
 });
 
-it('forwards a host aria-label to the internal lr-tabs strip', async () => {
+it('forwards a host aria-label to the internal lr-tab-group strip', async () => {
   const el = (await fixture(html`<lr-drilldown-panel aria-label="Related content"></lr-drilldown-panel>`)) as LyraDrilldownPanel;
   el.path = [nodeWithAllCategories];
   await el.updateComplete;
-  const tabs = el.shadowRoot!.querySelector('lr-tabs')!;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group')!;
   expect(tabs.getAttribute('aria-label')).to.equal('Related content');
 });
 
@@ -208,7 +208,7 @@ it('honors a .strings override of a component-local key (drilldownDocuments) on 
   el.strings = { drilldownDocuments: 'Fichiers' };
   el.path = [nodeWithAllCategories];
   await el.updateComplete;
-  const tabs = el.shadowRoot!.querySelector('lr-tabs') as LyraTabs;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   await tabs.updateComplete;
   const labels = [...tabs.shadowRoot!.querySelectorAll('[part="tab"]')].map((b) => b.textContent!.trim());
   expect(labels).to.include('Fichiers');
@@ -228,7 +228,7 @@ it('survives disconnect + reconnect and keeps tracking the runs slot afterward',
   el.appendChild(runContent);
   await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
-  const tabs = el.shadowRoot!.querySelector('lr-tabs') as LyraTabs;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   await tabs.updateComplete;
   const labels = [...tabs.shadowRoot!.querySelectorAll('[part="tab"]')].map((b) => b.textContent!.trim());
   expect(labels).to.include('Agent runs');
@@ -246,7 +246,7 @@ it('can shrink to a 320px allocation with a multi-category tabbed node', async (
 
   expect(getComputedStyle(el).minInlineSize).to.equal('0px');
   expect(el.getBoundingClientRect().width).to.be.at.most(320);
-  expect(el.shadowRoot!.querySelector('lr-tabs')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.exist;
 });
 
 it('renders correctly under dir="rtl"', async () => {
@@ -254,7 +254,7 @@ it('renders correctly under dir="rtl"', async () => {
   const el = wrapper.querySelector('lr-drilldown-panel') as LyraDrilldownPanel;
   el.path = [nodeWithEvidenceOnly, nodeWithAllCategories];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-tabs')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.exist;
   await expect(el).to.be.accessible();
 });
 

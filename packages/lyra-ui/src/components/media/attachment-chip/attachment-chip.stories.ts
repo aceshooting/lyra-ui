@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A compact chip representing one file queued for (or already part of) a chat message — a composer’s pre-send attachment tray, or a sent message’s `attachments` slot. Populate it either with a real `file` (auto-derives name/size/mime-type/thumbnail) or with the independent `name`/`size`/`mime-type`/`thumbnail-src` props when reconstructing from server-persisted metadata.',
+          'A compact chip representing one file queued for (or already part of) a chat message — a composer’s pre-send attachment tray, or a sent message’s `attachments` slot. Populate it either with a real `file` (auto-derives name/size/mime-type/thumbnail) or with the independent `name`/`bytes`/`mime-type`/`thumbnail-src` props when reconstructing from server-persisted metadata.',
       },
     },
   },
@@ -40,32 +40,32 @@ export const Statuses: Story = {
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:40rem;">
         <lr-attachment-chip
           name="quarterly-report.pdf"
-          size="248300"
+          bytes="248300"
           mime-type="application/pdf"
           status="pending"
         ></lr-attachment-chip>
         <lr-attachment-chip
           name="roof-photo.jpg"
-          size="2415919"
+          bytes="2415919"
           mime-type="image/jpeg"
           status="uploading"
           progress="42"
         ></lr-attachment-chip>
         <lr-attachment-chip
           name="dataset.csv"
-          size="9830400"
+          bytes="9830400"
           mime-type="text/csv"
           status="uploading"
         ></lr-attachment-chip>
         <lr-attachment-chip
           name="invoice.pdf"
-          size="102400"
+          bytes="102400"
           mime-type="application/pdf"
           status="error"
         ></lr-attachment-chip>
         <lr-attachment-chip
           name="notes.txt"
-          size="512"
+          bytes="512"
           mime-type="text/plain"
           status="done"
         ></lr-attachment-chip>
@@ -80,7 +80,7 @@ export const FromRealFile: Story = {
     docs: {
       description: {
         story:
-          'Setting `.file` (an actual `File`, e.g. from `<lr-file-input>`’s `lr-files` event) auto-derives the filename, size, MIME type and — for images — a lazily-created object-URL thumbnail. No `name`/`size`/`mime-type`/`thumbnail-src` attributes are set on either chip below; everything shown comes from the `File` itself.',
+          'Setting `.file` (an actual `File`, e.g. from `<lr-file-input>`’s `lr-files` event) auto-derives the filename, size, MIME type and — for images — a lazily-created object-URL thumbnail. No `name`/`bytes`/`mime-type`/`thumbnail-src` attributes are set on either chip below; everything shown comes from the `File` itself.',
       },
     },
   },
@@ -116,14 +116,14 @@ export const FromServerMetadata: Story = {
     docs: {
       description: {
         story:
-          'After a page reload there is no real `File` object any more — only whatever metadata the server persisted. The independent `name`/`size`/`mime-type`/`thumbnail-src` props cover exactly that case.',
+          'After a page reload there is no real `File` object any more — only whatever metadata the server persisted. The independent `name`/`bytes`/`mime-type`/`thumbnail-src` props cover exactly that case.',
       },
     },
   },
   render: () => html`
     <lr-attachment-chip
       name="site-photo.png"
-      size="184320"
+      bytes="184320"
       mime-type="image/png"
       thumbnail-src="data:image/png;base64,${PNG_1X1_RED_BASE64}"
       status="done"
@@ -136,7 +136,7 @@ export const UploadingNumericProgress: Story = {
   render: () => html`
     <lr-attachment-chip
       name="large-export.zip"
-      size="52428800"
+      bytes="52428800"
       mime-type="application/zip"
       status="uploading"
       progress="67"
@@ -149,7 +149,7 @@ export const UploadingIndeterminate: Story = {
   render: () => html`
     <lr-attachment-chip
       name="large-export.zip"
-      size="52428800"
+      bytes="52428800"
       mime-type="application/zip"
       status="uploading"
     ></lr-attachment-chip>
@@ -161,7 +161,7 @@ export const ErrorWithRetry: Story = {
   render: () => html`
     <lr-attachment-chip
       name="invoice.pdf"
-      size="102400"
+      bytes="102400"
       mime-type="application/pdf"
       status="error"
     ></lr-attachment-chip>
@@ -173,7 +173,7 @@ export const NotRemovable: Story = {
   render: () => html`
     <lr-attachment-chip
       name="roof-photo.jpg"
-      size="2415919"
+      bytes="2415919"
       mime-type="image/jpeg"
       status="done"
       .removable=${false}
@@ -233,7 +233,7 @@ export const LongFilenameTruncates: Story = {
     <div style="max-width:14rem;">
       <lr-attachment-chip
         name="quarterly-financial-summary-2026-region-emea.pdf"
-        size="1048576"
+        bytes="1048576"
         mime-type="application/pdf"
         status="pending"
       ></lr-attachment-chip>
@@ -253,10 +253,10 @@ export const ComposerTray: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:32rem; padding:0.5rem; border:1px dashed var(--lr-color-border); border-radius:0.5rem;">
-      <lr-attachment-chip name="roof-photo.jpg" size="2415919" mime-type="image/jpeg" status="done"></lr-attachment-chip>
-      <lr-attachment-chip name="dataset.csv" size="9830400" mime-type="text/csv" status="uploading" progress="58"></lr-attachment-chip>
-      <lr-attachment-chip name="invoice.pdf" size="102400" mime-type="application/pdf" status="error"></lr-attachment-chip>
-      <lr-attachment-chip name="notes.txt" size="512" mime-type="text/plain" status="pending"></lr-attachment-chip>
+      <lr-attachment-chip name="roof-photo.jpg" bytes="2415919" mime-type="image/jpeg" status="done"></lr-attachment-chip>
+      <lr-attachment-chip name="dataset.csv" bytes="9830400" mime-type="text/csv" status="uploading" progress="58"></lr-attachment-chip>
+      <lr-attachment-chip name="invoice.pdf" bytes="102400" mime-type="application/pdf" status="error"></lr-attachment-chip>
+      <lr-attachment-chip name="notes.txt" bytes="512" mime-type="text/plain" status="pending"></lr-attachment-chip>
     </div>
   `,
 };
@@ -267,7 +267,7 @@ export const Events: Story = {
       <lr-attachment-chip
         id="att-9"
         name="invoice.pdf"
-        size="102400"
+        bytes="102400"
         mime-type="application/pdf"
         status="error"
         @lr-remove=${(e: CustomEvent<{ id: string }>) => {

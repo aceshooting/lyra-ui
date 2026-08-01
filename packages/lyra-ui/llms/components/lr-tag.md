@@ -6,7 +6,7 @@
 - **Class** `LyraTag`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/badge/tag.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 1 part, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-badge` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -14,23 +14,132 @@
 
 ## `lr-badge` and `lr-tag`
 
-Compact status labels. Both expose `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger'`
-and `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — the same visual-density scale
-`<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
-dimensions. `lr-tag` inherits `size` unchanged from `lr-badge` rather than redeclaring it.
-The two tags share the same visual contract; `lr-tag` is a semantic alias for migration-friendly
-markup.
+Compact status labels. `LyraTag` extends `LyraBadge`, so the two share one visual contract; `lr-tag`
+adds tag semantics and an optional remove affordance.
 
-**Slots:** default content. **CSS parts:** `base`.
+**Visual break in 8.0.0 — a badge is no longer a pill by default.** Both components used to render
+fully-rounded ends unconditionally. `--lr-badge-radius` now defaults to `var(--lr-radius)` (a rounded
+rectangle) and the pill treatment moved behind the new opt-in `pill` boolean. Existing markup keeps
+its corner radius only if you add `pill`, or set `--lr-badge-radius: var(--lr-radius-pill)` once at
+the app level.
 
-**Themeable custom properties:** `--lr-badge-background`, `--lr-badge-color`, `--lr-badge-border`
-— the trio each `:host([variant])` rule rewrites (`neutral` defaults to
-`--lr-color-surface`/`-text`/`-border`; the other four to the matching `*-quiet` fill with the loud
-color for text and border). Set one directly on the element for a tint outside the five variants.
-`--lr-badge-font-size` (default `var(--lr-font-size-sm)`), `--lr-badge-padding-inline` (default
-`var(--lr-space-s)`), and `--lr-badge-min-height` (default `var(--lr-size-1-25rem)`) — the density
-trio each `:host([size])` rule rewrites to that step's font size, inline padding, and minimum block
-size; the `m` defaults above exactly reproduce the pre-`size` fixed badge treatment.
-`--lr-badge-radius` (default `--lr-radius-pill`) is `[part='base']`'s corner radius, retunable
-without a `::part(base)` rule and, unlike the density trio, does not vary by `size` — the same
-`--lr-button-radius` pattern; `lr-tag` inherits it unchanged, the same as `size`.
+**Properties** (all of them declared by `lr-badge` and inherited unchanged by `lr-tag`, except
+`withRemove`):
+- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) — the
+  semantic palette
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — the same visual-density scale
+  `<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
+  dimensions
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
+  (reflected) — **new in 8.0.0.** The second visual axis: `variant` picks the palette, `appearance`
+  decides how much of it lands on the fill, the border and the text. `filled-outlined` (the default)
+  is quiet tint + loud border + loud text, i.e. exactly the pre-8.0.0 treatment; `filled` drops the
+  border, `outlined` drops the fill, `accent` fills solidly with on-loud text, and `plain` drops both
+  fill and border while keeping the label color. The border-less appearances use a `transparent`
+  border rather than `none`, so switching appearance never changes the badge's layout box.
+- `pill: boolean = false` (reflected) — **new in 8.0.0.** Fully-rounded ends instead of the default
+  rounded rectangle; see the visual break above. Since it defaults to `false`, `pill="false"` is not
+  a way to switch it off — remove the attribute, or assign `.pill = false`.
+- `attention: 'none' | 'pulse' | 'bounce' = 'none'` (reflected) — **new in 8.0.0.** An opt-in,
+  infinitely-looping attention animation for a badge that has to be noticed: `pulse` draws an
+  expanding ring, `bounce` hops the surface vertically (block-direction, so it needs no RTL
+  mirroring). Both stop outright — not merely shorten — under `prefers-reduced-motion: reduce`.
+- `withRemove: boolean = false` (attribute `with-remove`, reflected) — **`lr-tag` only, new in
+  8.0.0.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
+  present on the markup.
+
+**Events:** `lr-remove` — cancelable, no detail, bubbles and composes. Emitted by `lr-tag` only (a
+badge emits nothing at all) when the remove button is activated by click or by Enter/Space while
+focused; it is a real native `<button>`, so both come for free. Only rendered, and therefore only
+fired, while `withRemove` is set, and the event's `target` is the tag itself.
+
+Unlike `<lr-chip>` — a deliberately controlled component that only ever *announces* a remove request
+— a removable `lr-tag` removes **itself** from the DOM on activation. `lr-remove` is the veto point
+for that: call `preventDefault()` to keep the tag mounted and own the removal from your own state.
+
+**Slots:** default (the label), `start` (content before the label, typically an icon) and `end`
+(content after it) — both new in 8.0.0. Each wrapper collapses entirely (`display: none`, so no
+stray gap) while its slot is empty, and is seeded from the light-DOM children before the first
+render so declarative content never flashes hidden for a frame. Mark purely decorative slotted
+content `aria-hidden`.
+
+**CSS parts:** `base` (the badge/tag surface), `start` and `end` (the slot wrappers, hidden entirely
+while empty), `content` (the wrapper around the default slot — this is the part that truncates with
+an ellipsis, deliberately not `base`, so the tag's oversized remove hit target can overhang the
+compact surface without being clipped), and `remove-button` (`lr-tag` only, rendered only while
+`withRemove`).
+
+**Themeable custom properties.** Three layers, so a consumer can retune one without restating the
+others. All of them are declared by `lr-badge` and reach `lr-tag` unchanged.
+
+*Overrides* — undeclared by default, so they still inherit from a consumer's own ancestor rule, and
+win over whatever `variant`/`appearance` resolved: `--lr-badge-background` (falls back to
+`--lr-badge-fill`), `--lr-badge-border` (falls back to `--lr-badge-stroke`), `--lr-badge-color`
+(falls back to `--lr-badge-text`).
+
+*Palette — what `variant` chooses* (new in 8.0.0): `--lr-badge-tint` (default
+`var(--lr-color-surface)`, the quiet fill; each non-neutral variant sets it to
+`var(--lr-color-fill-quiet)`, which the shared variants sheet has already re-pointed at that
+variant's row of the semantic grid), `--lr-badge-solid` (default `var(--lr-color-fill-loud)`, the
+loud fill used by `appearance="accent"`), `--lr-badge-edge` (default `var(--lr-color-border)`, the
+border color), `--lr-badge-ink` (default `var(--lr-color-text)`, the text color) and
+`--lr-badge-on-solid` (default `var(--lr-color-on-loud)`, the text color that stays legible on
+`--lr-badge-solid`). Neutral is the only variant whose border and text colors differ, which is why
+`-edge` and `-ink` are separate slots rather than one loud color.
+
+*Surface — what `appearance` routes onto the box* (new in 8.0.0): `--lr-badge-fill` (default
+`var(--lr-badge-tint)`), `--lr-badge-stroke` (default `var(--lr-badge-edge)`) and `--lr-badge-text`
+(default `var(--lr-badge-ink)`). Set one of these to retune a single appearance without touching the
+palette.
+
+*Density and shape:* `--lr-badge-font-size` (default `var(--lr-font-size-sm)`),
+`--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
+`var(--lr-size-1-25rem)`) — the trio each `:host([size])` rule rewrites to that step's font size,
+inline padding and minimum block size; the `m` defaults above exactly reproduce the pre-`size` fixed
+badge treatment. `--lr-badge-gap` (default `var(--lr-space-2xs)`, new in 8.0.0) is the space between
+the `start` slot, the label and the `end` slot — it collapses on its own when a wrapper is empty,
+because the empty wrapper is `display: none` rather than zero-width. `--lr-badge-radius` (default
+`var(--lr-radius)`; `pill` raises it to `var(--lr-radius-pill)`) is `[part='base']`'s corner radius,
+retunable without a `::part(base)` rule and, unlike the density trio, does not vary by `size` — the
+same `--lr-button-radius` pattern.
+
+*Attention* (all new in 8.0.0): `--lr-badge-attention-duration` (default
+`var(--lr-duration-ambient)` — one cycle of the animation), `--lr-badge-attention-easing` (default
+`var(--lr-easing-emphasized)` — kept a separate token from the duration so the `animation` shorthand
+expands to exactly one timing function), `--lr-badge-pulse-color` (default
+`color-mix(in srgb, currentColor 40%, transparent)` — the expanding ring's color),
+`--lr-badge-pulse-spread` (default `var(--lr-size-0-25rem)` — how far the ring expands) and
+`--lr-badge-bounce-distance` (default `var(--lr-size-0-1875rem)` — the hop's peak travel).
+
+*`lr-tag`'s own two* (new in 8.0.0): `--lr-tag-remove-radius` (default `var(--lr-badge-radius)`, so
+retuning the tag's corner retunes the remove button's with it) and
+`--lr-tag-remove-hover-background` (default `color-mix(in srgb, currentColor 16%, transparent)` —
+the remove button's `:hover` fill).
+
+**Known gotchas:**
+- The remove button's hit target meets the shared `--lr-icon-button-size` minimum in both axes while
+  the visible glyph stays compact; the extra growth is pulled back with a matching negative margin
+  on every side, so the enlarged hit area overhangs the pill's padding instead of inflating the
+  row's layout box.
+- Its accessible name is computed from the default slot's own text ("Remove {label}", localized;
+  bare "Remove" for a label-less tag) and re-derived live when that text changes. Text inside the
+  decorative `start`/`end` slots never leaks into it, and a host `aria-label` wins outright.
+- `appearance` and `variant` are orthogonal: `appearance="plain"` on `variant="danger"` still reads
+  as danger, because the palette is chosen before the surface routing.
+
+```html
+<lr-badge variant="success" appearance="accent" pill size="s">
+  <svg slot="start" aria-hidden="true" width="12" height="12"><!-- icon --></svg>
+  Live
+</lr-badge>
+
+<lr-tag variant="brand" appearance="outlined" with-remove>Design</lr-tag>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/overlays/badge/badge.js';
+  import '@aceshooting/lyra-ui/components/overlays/badge/tag.js';
+
+  document.querySelector('lr-tag').addEventListener('lr-remove', (e) => {
+    e.preventDefault(); // keep it mounted; drive removal from your own state instead
+  });
+</script>
+```

@@ -27,10 +27,10 @@ export const styles = css`
   }
   /* MUST stay after :host([compact]): both selectors are :host([x]) [part='base'], i.e. equal
      specificity, so source order alone decides which padding/gap wins when a run is both compact
-     and plain. plain is the stronger statement ("no chrome at all"), so it goes last. The built-in
+     and frame="plain". plain is the stronger statement ("no chrome at all"), so it goes last. The built-in
      Cancel/Retry buttons keep their own border/background -- that chrome is theirs, not the card's,
      so a chrome-less run still has a visible interactive affordance. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -173,6 +173,14 @@ export const styles = css`
   [part='retry-button']:hover {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
+  }
+  /* Both hovers recolour the border and label only, which leaves the pressed step nothing to
+     deepen -- so pressed tints the button's own surface fill toward --lr-color-mix-partner (which
+     follows the text colour) instead. The :hover border/label colours still apply underneath while
+     the pointer is down, so Cancel stays danger-toned and Retry stays brand-toned when pressed. */
+  [part='cancel-button']:active,
+  [part='retry-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='cancel-button']:focus-visible,
   [part='retry-button']:focus-visible {

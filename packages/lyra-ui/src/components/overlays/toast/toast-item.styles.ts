@@ -7,20 +7,22 @@ export const styles = css`
     --lr-toast-show-duration: var(--lr-transition-base, 180ms ease-out);
     --lr-toast-hide-duration: var(--lr-transition-base, 180ms ease-out);
     --lr-toast-padding: var(--lr-space-m);
-    --lr-toast-font-size: var(--lr-font-size-md);
+    --lr-toast-font-size: var(--lr-font-size-m);
     --lr-toast-accent-color: var(--lr-color-border);
   }
-  :host([variant='brand']) {
-    --lr-toast-accent-color: var(--lr-color-brand);
+  /* One rule for all four non-neutral variants, in place of the four one-declaration blocks that
+     stood here: the shared variants sheet has already re-pointed --lr-color-fill-* at the active
+     variant's row of the semantic grid, so the toast reads a generic slot and never names a
+     variant. Neutral is excluded rather than mapped, so it keeps the plain --lr-color-border
+     accent declared on :host above -- an ordinary informational toast must not read as a grey
+     status bar. Matching [variant] as well as :not([variant='neutral']) keeps a host that has not
+     yet reflected its default attribute on that same neutral value. */
+  :host([variant]:not([variant='neutral'])) {
+    --lr-toast-accent-color: var(--lr-color-fill-loud);
   }
-  :host([variant='success']) {
-    --lr-toast-accent-color: var(--lr-color-success);
-  }
-  :host([variant='warning']) {
-    --lr-toast-accent-color: var(--lr-color-warning);
-  }
-  :host([variant='danger']) {
-    --lr-toast-accent-color: var(--lr-color-danger);
+  :host([size='2xs']) {
+    --lr-toast-padding: var(--lr-space-2xs);
+    --lr-toast-font-size: var(--lr-font-size-2xs);
   }
   :host([size='xs']) {
     --lr-toast-padding: var(--lr-space-xs);
@@ -32,7 +34,7 @@ export const styles = css`
   }
   :host([size='m']) {
     --lr-toast-padding: var(--lr-space-m);
-    --lr-toast-font-size: var(--lr-font-size-md);
+    --lr-toast-font-size: var(--lr-font-size-m);
   }
   :host([size='l']) {
     --lr-toast-padding: var(--lr-space-l);
@@ -52,11 +54,16 @@ export const styles = css`
     padding: var(--lr-toast-padding);
     padding-inline-start: calc(var(--lr-toast-padding) + var(--lr-toast-accent-width));
     font-size: var(--lr-toast-font-size);
-    background: var(--lr-color-surface);
+    /* Modal-layer surface: a toast floats over arbitrary page content at the toast layer, so it
+       must not share the page surface token -- in dark mode both resolve to the same near-black
+       and the toast loses its edges against whatever it covers. */
+    background: var(--lr-color-surface-overlay);
     color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Modal layer, but a small unscrimmed float rather than a page-blocking panel -- the lower of
+       the two modal steps. */
+    box-shadow: var(--lr-shadow-l);
     opacity: 0;
     transform: translateY(var(--lr-size-neg-8px));
     transition:
@@ -146,6 +153,16 @@ export const styles = css`
   }
   [part='close-button']:hover:not([aria-disabled='true']) {
     color: var(--lr-color-text);
+  }
+  /* Pressed adds the fill the hover deliberately withholds: the resting button is background:none,
+     so mixing that transparent base toward --lr-color-mix-partner lands the partner colour at the
+     active share -- a scrim that darkens on a light toast and lightens on a dark one, following
+     the text colour either way. The ink change is restated because keyboard activation raises
+     :active with no :hover, and the disabled guard is carried over so a dismiss-blocked toast
+     stays visibly inert under a click. */
+  [part='close-button']:active:not([aria-disabled='true']) {
+    color: var(--lr-color-text);
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='close-button'][aria-disabled='true'] {
     opacity: var(--lr-opacity-disabled);

@@ -372,8 +372,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
             aria-hidden="true"
             >${formattedCount}</span
           ><span class="sr-only"
-            >${this.localize(group.tools.length === 1 ? 'toolCount' : 'toolCountPlural', undefined, {
+            >${this.localize('toolCount', undefined, {
               count: formattedCount,
+              pluralCount: group.tools.length,
             })}</span
           >
         </h3>

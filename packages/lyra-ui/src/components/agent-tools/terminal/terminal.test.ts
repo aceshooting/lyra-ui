@@ -1,7 +1,7 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
-import { styles } from './terminal.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-terminal', () => {
   it('defaults to follow=true, wrap=true, copyable=true, maxScrollback=5000', async () => {
@@ -753,7 +753,7 @@ describe('lr-terminal', () => {
     const inverse = byText('inverse');
     // \x1b[41m set an explicit background (red); inverse swaps it into `color`, and the unset
     // foreground's own fallback var into `background-color`.
-    expect(inverse.style.color).to.equal('var(--lr-terminal-color-red)');
+    expect(inverse.style.color).to.equal('var(--lr-terminal-bg-red)');
     expect(inverse.style.backgroundColor).to.equal('var(--lr-color-text)');
   });
 
@@ -798,12 +798,51 @@ describe('lr-terminal', () => {
     }
   });
 
-  it('gives copy-button, download-button, and jump-to-latest a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='copy-button'\]:hover/);
-    expect(css).to.match(/\[part='download-button'\]:hover/);
-    expect(css).to.match(/\[part='jump-to-latest'\]:hover/);
-  });
+  for (const part of ['copy-button', 'download-button', 'jump-to-latest']) {
+    it(`tints ${part} on hover, and further again while pressed`, async () => {
+      const el = (await fixture(html`<lr-terminal downloadable></lr-terminal>`)) as LyraTerminal;
+      // jump-to-latest only renders once the viewport has stopped following the tail. `follow` is
+      // set only after the virtual list's own initial visible-range events have settled: those
+      // re-derive `follow` from whether the last line is on screen, so an earlier assignment gets
+      // silently undone a few milliseconds later and the pill disappears mid-test.
+      el.write('a\nb\nc');
+      await el.updateComplete;
+      await aTimeout(100);
+      el.follow = false;
+      await el.updateComplete;
+      // Re-queried on every read rather than captured once: this component re-renders while the
+      // pointer commands are in flight (each is a real round-trip through the test runner), and a
+      // getComputedStyle() call against a node Lit has already swapped out returns '' for every
+      // property -- which reads as "hover did nothing" instead of failing honestly.
+      const button = (): HTMLButtonElement =>
+        el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
+      expect(button(), `${part} must be rendered for this fixture`).to.exist;
+      // sendMouse positions are window coordinates, so a target below the fold is simply
+      // unreachable — the pointer lands on nothing and the test reports "hover did nothing". The
+      // jump-to-latest pill sits at the far bottom of a 20rem viewport and hits exactly that.
+      button().scrollIntoView({ block: 'center' });
+      const rect = button().getBoundingClientRect();
+      const centre: [number, number] = [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ];
+      const rest = getComputedStyle(button()).backgroundColor;
+      try {
+        await sendMouse({ type: 'move', position: centre });
+        const hovered = getComputedStyle(button()).backgroundColor;
+        await sendMouse({ type: 'down' });
+        const pressed = getComputedStyle(button()).backgroundColor;
+        await sendMouse({ type: 'up' });
+        expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(rest);
+        expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(
+          hovered,
+        );
+        expect(pressed).to.not.equal(rest);
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
 });
 
 it('searchNext/searchPrevious resolve a boolean, matching the shared viewer search contract', async () => {

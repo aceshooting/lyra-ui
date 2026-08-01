@@ -33,10 +33,14 @@ export const styles = css`
     flex-direction: column;
     inline-size: min(var(--lr-size-30rem), 100%);
     block-size: min(var(--lr-size-38rem), 100%);
-    background: var(--lr-color-surface);
+    /* Modal-panel surface, not the page surface -- in dark mode the two resolve to the same
+       near-black and the dialog reads as a scrim with floating text instead of a panel. */
+    background: var(--lr-color-surface-overlay);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Modal layer, top step: a centered, scrimmed dialog floating free on all four edges --
+       the same role as lr-dialog, so the same elevation. */
+    box-shadow: var(--lr-shadow-xl);
     overflow: hidden;
   }
   [part='header'] {
@@ -44,7 +48,7 @@ export const styles = css`
   }
   [part='title'] {
     margin: 0;
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='subtitle'] {
@@ -73,6 +77,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* no-pressed-state: a search field is a caret target, not a push target -- pointer-down places an
+     insertion point and hands the affordance to :focus-visible, so a pressed tint would flash for
+     one frame and then be contradicted by the focus ring. */
   :where([part='search-input']):hover {
     border-color: var(--lr-color-brand);
   }

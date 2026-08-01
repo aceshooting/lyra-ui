@@ -22,9 +22,20 @@ export const styles = css`
     border-color: var(--lr-agent-eval-dashboard-active-border, var(--lr-color-brand));
     background: var(--lr-agent-eval-dashboard-active-background, var(--lr-color-brand-quiet));
   }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
+     than hover in both light and dark themes. It must stay after the [aria-pressed='true'] rule: the
+     two selectors are both (0,2,0), so source order alone decides whether pressing an
+     already-selected metric shows any feedback at all. */
+  [part='metric']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='runs'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }
   [part='run'] { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--lr-space-xs); align-items: center; padding-block: var(--lr-space-xs); border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border); inline-size: 100%; background: transparent; color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer; }
   [part='run']:hover { background: var(--lr-color-surface-raised); }
+  [part='run']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='run']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='run-label'] { min-inline-size: 0; overflow-wrap: anywhere; }
   [part='run-meta'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-2xs); align-items: center; justify-content: flex-end; }

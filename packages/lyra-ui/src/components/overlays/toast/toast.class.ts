@@ -36,7 +36,7 @@ export interface ToastCreateOptions {
  *   item, auto-swapped per its `variant`. Read by `<lr-toast-item>`, so set it on the item.
  * @cssprop [--lr-toast-padding=var(--lr-space-m)] - Padding of a slotted item, auto-swapped per its
  *   `size`. Read by `<lr-toast-item>`, so set it on the item.
- * @cssprop [--lr-toast-font-size=var(--lr-font-size-md)] - Font size of a slotted item,
+ * @cssprop [--lr-toast-font-size=var(--lr-font-size-m)] - Font size of a slotted item,
  *   auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.
  * @cssprop [--lr-toast-show-duration=var(--lr-transition-base, 180ms ease-out)] - Show transition
  *   of a slotted item. Read by `<lr-toast-item>`, so set it on the item.

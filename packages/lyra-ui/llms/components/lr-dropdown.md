@@ -6,7 +6,7 @@
 - **Class** `LyraDropdown`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/overlay/dropdown.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 3 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -16,12 +16,22 @@
 A menu-role popover for consumer-supplied action content. Compose `lr-menu` when full roving
 menu-item behavior is needed.
 
-**Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
+**Properties:** `open`, `placement` (default `bottom-start`), `distance` (default `4`), `skidding`
+(default `0`), `for`, `arrow` (default `false`), `arrow-placement` (default `anchor`),
+`arrow-padding` (default `0`), `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
 `popupRole` is seeded to `'menu'` in the constructor — that is the only difference from `lr-popover`,
-whose whole surface (including `showAt()`) is inherited unchanged.
-Its trigger therefore uses the same public-host `aria-controls` target and Lyra-button
-element-reference forwarding described above.
-**Events:** `lr-show`, `lr-hide` — inherited from `lr-popover`; neither fires for the initial render.
-**Slots:** `trigger`, default menu content. **CSS parts:** `trigger`, `popup`, `content`.
+whose whole surface (including `show()`, `hide()`, `showAt()` and the arrow/skidding/`for` knobs
+added in 8.0.0) is inherited unchanged. Its trigger therefore uses the same public-host
+`aria-controls` target and Lyra-button element-reference forwarding described above, and its popup's
+accessible name falls back to the localized "Menu" rather than "Popover".
+
+**Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` —
+inherited from `lr-popover` with identical timing and veto rules; none fires for the initial render.
+The two `lr-after-*` events are new in 8.0.0, and the two pre-events became cancelable and
+before-the-fact in 8.0.0 — see `lr-popover` above.
+
+**Slots:** `trigger`, default menu content. **CSS parts:** `trigger`, `popup`, `content`, and
+`arrow` (rendered only when `arrow` is set, carrying the resolved side as a second part token).
 **Themeable custom properties:** `--lr-overlay-max-inline-size` (default `--lr-size-20rem` —
-maximum inline size of the popup).
+maximum inline size of the popup) and `--lr-overlay-arrow-size` (default `--lr-size-0-375rem` —
+half the arrow square's width).

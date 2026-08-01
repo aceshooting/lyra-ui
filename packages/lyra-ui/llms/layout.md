@@ -240,7 +240,7 @@ the visually-adjacent panel).
 ## `lr-widget`
 
 A titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
-First-party invention (no Web Awesome equivalent). Fullscreen promotes the same host element in
+First-party invention (no `wa-*`/`sl-*` counterpart). Fullscreen promotes the same host element in
 place (a CSS state, not a clone/portal), so slotted content (a chart, a running simulation, scroll
 position) survives the transition.
 
@@ -368,9 +368,12 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
 
 ## `lr-carousel`
 
-Accessible carousel for arbitrary slotted slide elements. It shows one assigned element at a time,
-adds slide semantics and localized position labels, and provides keyboard, button, and indicator
-navigation.
+Accessible carousel for arbitrary slotted slide elements. Mirrors `wa-carousel` / `sl-carousel`. It
+shows one assigned element at a time and provides keyboard, button, and indicator navigation. Slide
+semantics (`role="group"`, a localized "slide" role description, and a localized "Slide N of M"
+label) are added only to `<lr-carousel-item>` children — an arbitrary slotted element keeps its own
+native or authored semantics untouched, and an explicit `role`/`aria-label` on an
+`<lr-carousel-item>` wins over the generated one.
 
 **Properties:**
 - `index: number = 0` (attribute `index`, reflected) — active slide index
@@ -384,10 +387,35 @@ navigation.
 **Methods:** `next()`, `previous()`, and `goTo(index)` update the active index and emit
 `lr-slide-change` (`detail: { index }`).
 
-**Events:** `lr-slide-change` (`detail: { index }`) — emitted after the active slide changes.
+**Events:** `lr-slide-change` (`detail: { index }`) — emitted after the active slide changes,
+whether from a button, a key, an indicator, autoplay, or the user swiping the track to rest on
+another slide.
+
+**Touch, swipe, and scroll snapping (new in 8.0.0).** The slides live in a native scroll-snap
+track, so touch swiping, trackpad panning, momentum, and rubber-banding all come from the platform
+rather than a synthetic pointer-drag. `viewport` is the real scroll port (`overflow-x: auto`,
+`overflow-y: hidden`, `scroll-snap-type: inline mandatory`, `overscroll-behavior-inline: contain`,
+native scrollbar hidden), and every assigned slide is one snap area (`scroll-snap-align: start`).
+Scrolling to a slide by hand is therefore a first-class way to change the active slide: once the
+scroller comes to rest — on `scrollend` where the engine implements it, otherwise after a short
+quiet period — the resting slide is adopted, `index` updates, and `lr-slide-change` fires exactly
+once for the whole gesture rather than once per slide the finger flicked past. Correspondingly, a
+programmatic change (a control, a key, `goTo()`, or writing `index`) scrolls the track to that
+slide instead of swapping it in place. The first alignment after mount is instant, so an `index`
+set in markup does not read as the carousel sliding into place on load, and under
+`prefers-reduced-motion` every alignment is instant. Every slide other than the one at `index`
+keeps its box — the track needs something to scroll between — but stays `inert` with
+`aria-hidden="true"`, so a link two slides away is never reachable by Tab while it is scrolled out
+of view. (An author's own `inert`/`aria-hidden` on the active slide is preserved rather than
+cleared.) Nothing sets
+`scroll-snap-stop: always`, so `goTo()`, Home, and End travel all the way to their target instead
+of stopping at the first slide they cross. Positions are measured from rectangles rather than
+`scrollLeft`, which keeps the whole mechanism correct under RTL, where the inline start is the
+right edge and the scroll offset itself is negative.
 
 **CSS parts:** `base` (the `role="region"` landmark), `viewport` (the keyboard-focusable slide
-viewport), `track`, `controls`, `previous-button`, `next-button`, `previous-glyph`/`next-glyph` (the
+viewport, and the scroll-snap scroll port), `track` (the slotted-slide wrapper, laid out as the
+inline snap track), `controls`, `previous-button`, `next-button`, `previous-glyph`/`next-glyph` (the
 chevron inside each, mirrored under RTL), `indicators`, `indicator` (one indicator's hit target,
 sized to the shared minimum tappable size), and `indicator-dot` (the compact visible dot inside it).
 
@@ -400,6 +428,12 @@ ancestor; unset, each falls back to the token the rule used before. This shape i
 current indicator addressable at all — `::part(indicator)[aria-current='true']` is invalid CSS, so
 hijacking a library-wide color token was previously the only lever.
 
+`--lr-carousel-slide-basis` (default `100%`, new in 8.0.0) — the flex basis of every slide in the
+snap track. The default gives one slide per view; a smaller value shows several at once while the
+snap positions still land on each slide's inline start. Note that the inertness above is keyed to
+`index`, not to visibility: in a multi-per-view layout the neighbouring slides are on screen but
+still `inert`/`aria-hidden`, so reserve it for slides whose content is not interactive.
+
 ```html
 <lr-carousel aria-label="Screenshots">
   <img alt="Dashboard overview" src="overview.png">
@@ -407,12 +441,25 @@ hijacking a library-wide color token was previously the only lever.
 </lr-carousel>
 ```
 
+```html
+<!-- Three slides per view, snapping one slide at a time. -->
+<lr-carousel aria-label="Projects" style="--lr-carousel-slide-basis: 33.333%">
+  <lr-card>Solar</lr-card>
+  <lr-card>Wind</lr-card>
+  <lr-card>Battery</lr-card>
+  <lr-card>Hydro</lr-card>
+</lr-carousel>
+```
+
 ---
 
 ## `lr-carousel-item`
 
-Optional semantic wrapper for one slide in `<lr-carousel>`. The carousel also accepts arbitrary
-slotted elements, so this element is useful when a migration needs the explicit item tag.
+Optional semantic wrapper for one slide in `<lr-carousel>`. Mirrors `wa-carousel-item` /
+`sl-carousel-item`. The carousel also accepts arbitrary slotted elements, so this element is useful
+when a migration needs the explicit item tag — and it is the one slide shape whose contract lets the
+carousel generate group semantics and a localized "Slide N of M" name for it (see `<lr-carousel>`
+above). An explicit `role`, `aria-roledescription` or `aria-label` you set yourself always wins.
 
 **Slots:** default slide content.
 
@@ -492,17 +539,39 @@ orientation's minimum block size, ignored while horizontal.
 
 ---
 
-## `lr-tabs`
+## `lr-tab-group`
 
-A tab strip whose panels are direct light-DOM children, each carrying `slot="<id>"` (the panel's
-stable id) and `label="<text>"` (the tab button's text). One named `<slot>` is rendered per distinct
-`slot` name found among the current children — a child with no `label`, or a name with no matching
-child, simply never produces a tab. Implements the WAI-ARIA APG tabs pattern with automatic
-activation: Left/Right (swapped under RTL) move focus *and* selection together, Home/End jump to the
-first/last enabled tab, and a roving `tabindex` follows whichever tab is currently selected.
+A tab strip. Mirrors `wa-tab-group` / `sl-tab-group`.
+
+**Renamed in 8.0.0.** This element used to be `<lr-tabs>`. The tag is now `<lr-tab-group>`, its
+single `lr-tabs-change` event is now the `lr-tab-hide` → `lr-tab-show` pair below, and every
+`--lr-tabs-*` custom property is now spelled `--lr-tab-group-*` (`--lr-tabs-selected-color` →
+`--lr-tab-group-selected-color`, and so on). Neither old spelling survives as an alias, and all
+three fail silently: `<lr-tabs>` is an unknown element that renders its children unstyled,
+`lr-tabs-change` never fires, and a `--lr-tabs-*` declaration is inert. Rename all three in the same
+change. The rename is what lets `<lr-tab>` and `<lr-tab-panel>` (below) exist as a family, which is
+what makes migrating from either upstream a pure tag rename.
+
+**Two child models are accepted**, and a group is read as one or the other — never a mix.
+
+*Element model* (`<lr-tab panel="x">` + `<lr-tab-panel name="x">`) mirrors both upstreams, so that
+markup renames mechanically. The group assigns the `slot` attributes itself; you never write them.
+Each `<lr-tab>`'s content is projected into the real `role="tab"` button, so a tab can carry an icon
+or a badge while the button's accessible name stays exactly that content's text. A group containing
+any `<lr-tab>` child is read purely as this model.
+
+*Attribute model* — this library's own original shape, fully supported: panels are direct light-DOM
+children carrying `slot="<id>"` (the panel's stable id) and `label="<text>"` (the tab button's text).
+One named `<slot>` is rendered per distinct `slot` name found among the current children; a child
+with no `label`, or a name with no matching child, simply never produces a tab.
+
+Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, Left/Right (swapped
+under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection together; with
+`activation="manual"` they move focus only and Enter/Space commits. Home/End jump to the first/last
+enabled tab, and a roving `tabindex` follows the focused tab.
 
 A tab button's *visible* content can carry a leading icon without ever changing its *accessible
-name* (always exactly `label`'s text): give a tab an extra direct-child sibling of `<lr-tabs>`
+name* (always exactly `label`'s text): give a tab an extra direct-child sibling of `<lr-tab-group>`
 carrying `slot="<id>-icon"` (that sibling's own content — inline SVG, emoji span, a custom icon
 element, anything — is entirely up to the consumer). It renders ahead of the label inside that tab's
 button, wrapped in an `aria-hidden="true"` `[part="tab-icon"]` so it's excluded from accessible-name
@@ -516,26 +585,85 @@ wrapper at all, so existing text-only tabs are unaffected.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
   `role="tablist"` strip; attribute-reflects from a host-level `aria-label`. Unset, the tablist
   renders without an `aria-label` (there is no localized default name).
+- `placement: 'top' | 'bottom' | 'start' | 'end' = 'top'` (attribute `placement`, reflected) — which
+  edge the strip sits on. `start`/`end` are *logical*, so they mirror under RTL with no `:dir()`
+  rule of your own; either turns the tablist vertical, which sets `aria-orientation="vertical"` and
+  switches the navigation keys to Up/Down per the APG.
+- `activation: 'auto' | 'manual' = 'auto'` (reflected) — `auto` moves selection with focus; `manual`
+  moves focus only and waits for Enter or Space. Use `manual` whenever revealing a panel is
+  expensive: automatic activation would reveal every panel the user arrows past. Under `manual` the
+  roving `tabindex="0"` sits on the *focused* tab, which may differ from the selected one.
+- `withoutScrollControls: boolean = false` (reflected, attribute `without-scroll-controls`) and
+  `noScrollControls: boolean = false` (reflected, attribute `no-scroll-controls`) — the same opt-out
+  under Web Awesome's spelling and Shoelace's. Both are read, either one suppresses the overflow
+  scroll controls described below, and neither is deprecated: a consumer arriving from either
+  upstream finds their own attribute working. Left unset, an overflowing horizontal strip gets the
+  controls.
 
-**Events:** `lr-tabs-change` (`detail: { tabId: string }`) — fired when the active tab changes via
-click or keyboard. Not fired when `active` self-corrects to a valid tab (initial default, or a tab
-disappearing/becoming disabled underneath the current selection).
+**Overflow and scrolling.** The tablist is a native scroll container (`overflow-x: auto`) — there is
+no scroll listener and no scroll-position state anywhere in this component. A horizontal row that
+does not fit additionally gets **two scroll-control buttons flanking it inside `[part="nav"]`**,
+mirroring both upstreams, plus a fade at each edge. Both affordances are gated on the same
+measurement of the tablist's real overflow, so a row that fits is never flanked by two dead buttons
+and never dimmed. The controls are rendered only for a horizontal `placement`: a `start`/`end` strip
+scrolls in the block direction, which these controls do not address (the same restriction both
+upstreams apply), and the edge fade is switched off there too because it measures the inline axis.
+One press travels 80% of the visible row — short of a full viewport on purpose, so something that
+was on screen before the press is still on screen after it — smoothly, or instantly under
+`prefers-reduced-motion`. Under RTL the whole row mirrors and the step direction inverts with it.
 
-**Slots:** default — direct children with `slot="<id>" label="<text>"` (and optionally `disabled`);
-one becomes each tab's panel. `<id>-icon` — optional sibling direct child supplying a tab's leading
-icon content; excluded from the tab button's accessible name.
+The controls are `aria-hidden="true"` and `tabindex="-1"`: a pointer affordance only, matching
+upstream. The strip is already fully keyboard-scrollable without them — the roving `tabindex` puts
+every tab one arrow key away and focusing a tab scrolls it into view — so two extra tab stops in the
+middle of the strip would buy no capability. They still carry a localized `aria-label`, so the name
+is there for automation and for a consumer that chooses to expose them. Pressing one does not move
+focus off the tab the user was on.
 
-**CSS parts:** `base` (root wrapper around the tablist and panels), `tablist` (the `role="tablist"`
-row of tab buttons), `tab` (a single tab button), `tab-icon` (the optional leading-icon wrapper
-inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling), `panel` (a
-single `role="tabpanel"` wrapper, one per tab, hidden unless active)
+**Events:**
+- `lr-tab-show` (`detail: { tabId: string }`) — a tab became active via click or keyboard. Not fired
+  when `active` self-corrects to a valid tab (initial default, or a tab disappearing/becoming
+  disabled underneath the current selection).
+- `lr-tab-hide` (`detail: { tabId: string }`) — the outgoing tab, emitted immediately *before* the
+  matching `lr-tab-show`, so a listener that tears down the old panel always runs before the one
+  that builds the new one. Not fired when there was no previous selection.
 
-**Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the static
-mask fade at each horizontal scroll edge of the tablist. `--lr-tabs-selected-color` (default
+**Slots:** default — either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with
+`slot="<id>" label="<text>"` (and optionally `disabled`), one becoming each tab's panel. `<id>-icon`
+— optional sibling direct child supplying a tab's leading icon content, in the attribute model only;
+excluded from the tab button's accessible name.
+
+```html
+<!-- element model: renames straight across from wa-/sl- -->
+<lr-tab-group placement="start" activation="manual">
+  <lr-tab panel="general">General</lr-tab>
+  <lr-tab panel="danger" disabled>Danger zone</lr-tab>
+  <lr-tab-panel name="general">General settings</lr-tab-panel>
+  <lr-tab-panel name="danger">Danger zone</lr-tab-panel>
+</lr-tab-group>
+```
+
+**CSS parts:** `base` (root wrapper around the tablist and panels), `nav` (the row wrapping the
+tablist together with the two overflow scroll controls; mirrors the upstream part of the same name),
+`tablist` (the `role="tablist"` row of tab buttons, and the scroll container), `scroll-button`
+(shared by both overflow controls), `scroll-button-start` and `scroll-button-end` (the individual
+controls that scroll the tabs toward their inline start and end — under RTL "start" is the
+right-hand one), `scroll-button-glyph` (the chevron wrapper inside a control; this wrapper is what
+mirrors under RTL, never the icon), `tab` (a single tab button), `tab-icon` (the optional
+leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon`
+sibling), `panel` (a single `role="tabpanel"` wrapper, one per tab, hidden unless active).
+The two controls exist in the DOM whenever the group can have them at all (horizontal `placement`,
+no opt-out) and are taken out of layout while the tablist is not overflowing — the qualifier that
+hides them is wrapped in `:where()`, so a consumer's own `::part(scroll-button)` rule outranks it
+without `!important`.
+
+**Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
+at each inline scroll edge of the tablist, painted only while the tablist actually overflows and
+only for a horizontal `placement`. `--lr-tab-group-selected-color` (default
 `var(--lr-color-brand)`) — text color of the selected tab, scoped to `[aria-selected='true']` only,
-so it never repaints a hovered unselected tab. `--lr-tabs-indicator-color` (default
-`var(--lr-color-brand)`) — the selected tab's underline, themeable independently of its text color.
-`--lr-tabs-hover-color` (default `var(--lr-color-text)`) — text color of a hovered, non-disabled
+so it never repaints a hovered unselected tab. `--lr-tab-group-indicator-color` (default
+`var(--lr-color-brand)`) — the selected tab's indicator rule, themeable independently of its text
+color (an underline on a `top`/`bottom` strip, an inline edge on a vertical one).
+`--lr-tab-group-hover-color` (default `var(--lr-color-text)`) — text color of a hovered, non-disabled
 tab, independent of the two selected-state hooks. All three are declared as inline `var()` fallbacks
 at the point of use rather than on `:host`, so each can be set on the element *or on any ancestor* —
 the pattern exists because `::part(tab)[aria-selected='true']` is invalid CSS (Shadow Parts forbids
@@ -549,12 +677,12 @@ before, so rendering is unchanged. Otherwise shared tokens —
 **Optional peer deps:** none.
 
 ```html
-<lr-tabs active="general">
+<lr-tab-group active="general">
   <div slot="general" label="General">General settings…</div>
   <div slot="advanced" label="Advanced" disabled>Advanced settings…</div>
-</lr-tabs>
+</lr-tab-group>
 <script type="module">
-  document.querySelector('lr-tabs').addEventListener('lr-tabs-change', (e) => console.log(e.detail.tabId));
+  document.querySelector('lr-tab-group').addEventListener('lr-tab-show', (e) => console.log(e.detail.tabId));
 </script>
 ```
 
@@ -567,15 +695,20 @@ before, so rendering is unchanged. Otherwise shared tokens —
 - If two children share the same `slot` name, the *first* one wins for the tab button's label
   (matches native slot assignment: both would render into the one panel, but only one label can back
   the button).
-- Left/Right are swapped under RTL (read via `internal/rtl.ts`'s `isRtl()`); Up/Down are not used —
-  this is a horizontal strip only.
+- The navigation keys follow `placement`, not the writing mode: a `top`/`bottom` strip uses
+  Left/Right (swapped under RTL via `internal/rtl.ts`'s `isRtl()`), and a `start`/`end` strip uses
+  Up/Down with no RTL swap, because block flow does not reverse. Only one pair is live at a time —
+  there is no set of keys that works for both placements.
+- The two overflow controls are `aria-hidden`, so an automated check that looks for a *focusable*
+  "scroll tabs" button will not find one. Assert on `[part~="scroll-button"]` (and on the tablist's
+  `scrollLeft` moving) instead.
 
 ---
 
 ## `lr-stepper`
 
 Ordered multi-step wizard/form navigation: an index/label per step, `current`/`completed`/`disabled`/
-`error` state, and click-to-jump. First-party invention (no Web Awesome equivalent). Fully
+`error` state, and click-to-jump. First-party invention (no `wa-*`/`sl-*` counterpart). Fully
 data-driven and controlled, like `lr-table`'s `columns`/`rows` — it never mutates `steps` itself; a
 click, or Enter/Space on a non-disabled step, fires a non-cancelable `lr-step-select`, and the host
 decides whether/how `steps` changes in response.
@@ -699,6 +832,52 @@ each falls back to the token its rule used before. Otherwise shared tokens —
   navigation remain available independently of those semantics.
 - Left/Right (horizontal) and Up/Down (vertical) are mutually exclusive per `orientation` — there's
   no single set of keys that works in both.
+
+
+
+---
+
+## `lr-tab`
+
+One tab in a `<lr-tab-group>`'s strip. Mirrors `wa-tab` / `sl-tab`.
+
+A **declarative descriptor, not the interactive control**: the group renders the real `role="tab"`
+button and projects this element's content into it, so the whole ARIA and roving-tabindex contract
+stays in one place. The host is `display: contents`, contributing no box of its own inside that
+button.
+
+**Properties:** `panel: string = ''` (reflected) — the `name` of the `<lr-tab-panel>` this tab
+reveals; `disabled: boolean = false` (reflected) — removes the tab from keyboard navigation and
+prevents activation.
+
+**Events:** none — the owning group emits `lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's
+visible content). **CSS parts:** none; style the group's `tab` part instead.
+
+**Themeable custom properties:** none of its own, and the group's are not settable here. The button
+this tab is projected into lives in `<lr-tab-group>`'s shadow root, so it inherits
+`--lr-tab-group-selected-color`, `--lr-tab-group-indicator-color` and `--lr-tab-group-hover-color`
+from the group host or an ancestor of it. Declaring one on the `<lr-tab>` itself does nothing: this
+element is *inside* that button in the flattened tree, and inheritance only runs the other way.
+
+The group writes this element's `slot` attribute itself. A tab with no `panel` still gets a stable
+synthetic name from its position, so an unpaired tab renders a button with an empty panel rather
+than silently disappearing.
+
+---
+
+## `lr-tab-panel`
+
+The content revealed by the `<lr-tab>` whose `panel` matches this element's `name`. Mirrors
+`wa-tab-panel` / `sl-tab-panel`.
+
+Deliberately carries **no `role="tabpanel"` of its own**: the group renders the `role="tabpanel"`
+wrapper this element is projected into, and a second nested tabpanel role would leave the panel
+announced twice. Show/hide is the group's job too — this element is always present in the DOM.
+
+**Properties:** `name: string = ''` (reflected) — matches the `panel` of the `<lr-tab>` that reveals
+it. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** none; style the
+group's `panel` part instead. **Themeable custom properties:** none.
+---
 
 ---
 
@@ -830,7 +1009,7 @@ between the move buttons and the row content.
 A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 `role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation (click or arrow-key move
 both select immediately, like a native radio group), cyclic Arrow/Home/End navigation among
-non-disabled items. First-party invention (no Web Awesome equivalent) — "choose exactly one of N
+non-disabled items. First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
 labeled options, rendered as a button row" is ubiquitous settings/filter-panel UI.
 
 **Properties:**
@@ -840,9 +1019,14 @@ labeled options, rendered as a button row" is ubiquitous settings/filter-panel U
 - `value: string = ''` — the currently selected item's `value`.
 - `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
   host-level `aria-label` is used as a fallback.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size, matching
-  `lr-select`/`lr-combobox`'s `xs`-`xl` scale plus `lr-input`'s `2xs` tier. `m` (the default) is
-  unchanged from this component's pre-`size` rendering.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) —
+  visual size on the library's **shared** ladder, the same `--lr-form-control-*` scale
+  `lr-input`/`lr-select`/`lr-combobox`/`lr-button` resolve, so a row of mixed controls set to one
+  `size` lines up at a matching height. Both spellings of every tier are accepted (`s`/`small`,
+  `m`/`medium`, `l`/`large`), so migrating from either upstream is a tag rename with no attribute
+  rewrite. Before 8.0.0 this component carried its own six-tier scale that had drifted from that
+  one; `m` is still the default, but the tiers now resolve to the shared control heights, paddings
+  and font sizes rather than to this component's former private values.
 
 **Events:** `lr-change` (`detail: { value }`) — fired when the selected value changes via click or
 keyboard.
@@ -861,11 +1045,14 @@ keyboard.
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each horizontal scroll edge of the track, painted only while the track actually overflows (a row
-that fits is never dimmed). `--lr-segmented-track-min-height`,
-`--lr-segmented-segment-padding`, and `--lr-segmented-font-size` are the three knobs `size` swaps
-(`m` defaults: `auto`, `var(--lr-size-0-125rem) var(--lr-space-s)`, `var(--lr-font-size-sm)`) —
-override them on the host for a size tier the scale doesn't cover, since a `:host([size])` rule
-wins over the `:host` default.
+that fits is never dimmed). `--lr-segmented-track-min-height` (default
+`var(--lr-form-control-height)`), `--lr-segmented-segment-padding` (default
+`var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`), and
+`--lr-segmented-font-size` (default `var(--lr-form-control-font-size)`) are the three knobs the
+`size` tier moves — each points at the shared ladder rather than carrying a per-tier value of its
+own, so retuning one tier for this component alone is a one-line override instead of a fork. All
+three are declared on `:host`, so set them on the element itself for a density the ladder doesn't
+cover; an ancestor rule is shadowed.
 
 `--lr-segmented-track-height` pins the `base` track's exact height at every `size` tier (it sets
 both `block-size` and `min-block-size`), for a row that has to sit flush beside a hard-sized toolbar
@@ -873,15 +1060,18 @@ control. It is **genuinely undeclared by default** — not `auto` — and that i
 exact-height hatch only works as an undeclared sentinel, because `auto` is itself a valid value that
 would always win and would silently turn every tier's `--lr-segmented-track-min-height` floor into
 dead code. While it is unset, each tier keeps its own floor and the track grows with its content.
-The compact `2xs` track has a 24px minimum block size, and every `2xs`/`xs` segment retains at least
-a 24×24px activation target even when its label is very short.
+The floor at the two compact tiers is the ladder's own (20px at `2xs`, 24px at `xs`), but every
+`2xs`/`xs` *segment* separately carries a 24×24px minimum box, so the tappable target holds even
+when a label is a single character and the track ends up taller than its nominal floor.
 
 `--lr-segmented-selected-bg` (default `var(--lr-color-surface)`), `--lr-segmented-selected-color`
 (default `var(--lr-color-text)`), `--lr-segmented-selected-font-weight` (default
-`var(--lr-font-weight-semibold)`) and `--lr-segmented-selected-shadow` (default `var(--lr-shadow)`)
-style the checked segment's pill; `--lr-segmented-hover-color` (default `var(--lr-color-text)`)
-styles a hovered segment that is neither checked nor disabled, independently of the four above — so
-recoloring the checked pill never bleeds onto hover. All five are inline `var()` fallbacks at the
+`var(--lr-font-weight-semibold)`) and `--lr-segmented-selected-shadow` (default
+`var(--lr-shadow-xs)` — the shallowest step in the elevation scale, since the checked segment is a
+thumb lifted a hair off its own track) style the checked segment's pill;
+`--lr-segmented-hover-color` (default `var(--lr-color-text)`) styles a hovered segment that is
+neither checked nor disabled, independently of the four above — so recoloring the checked pill never
+bleeds onto hover. All five are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so each can be set on the element *or on any
 ancestor*; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
@@ -890,8 +1080,9 @@ after `::part()` — which previously left hijacking the library-wide
 repainting every other element that read them.
 
 Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
-`-text-quiet`, `--lr-radius`, `--lr-font-weight-semibold`, `--lr-space-s`, `--lr-shadow`,
-`--lr-opacity-disabled`, `--lr-focus-ring-*`.
+`-text-quiet`, `--lr-radius`, `--lr-font-weight-semibold`, `--lr-shadow-xs`,
+`--lr-opacity-disabled`, `--lr-focus-ring-*`, and the `--lr-form-control-*` knobs the `size` tier
+resolves.
 
 **Optional peer deps:** none.
 
@@ -933,7 +1124,7 @@ A generic windowed/virtualized list host. Renders only the items within the curr
 multi-thousand-row chat-history sidebar (or a long message thread) stays cheap to scroll. Content is
 entirely caller-supplied: `renderItem(item, index)` returns whatever `lit-html` value should represent
 that row, and `keyFunction(item, index)` gives it a stable identity for DOM reconciliation. First-party
-invention (no Web Awesome equivalent).
+invention (no `wa-*`/`sl-*` counterpart).
 
 **Properties:**
 - `items: unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via
@@ -1159,7 +1350,7 @@ history sidebar); it is not the right approach for a hundred-thousand-row list w
 A responsive navigation rail that adapts across three presentations as the *viewport* narrows (not
 this element's own inline size): `'full'` (nav items show icon + label, inline), `'icon-only'` (a
 narrower inline rail, icons only), and `'mobile'` (hidden behind a toggle button; opening it shows a
-focus-trapped floating overlay over the page). First-party invention (no Web Awesome equivalent).
+focus-trapped floating overlay over the page). First-party invention (no `wa-*`/`sl-*` counterpart).
 Breakpoints are viewport-width `matchMedia()` queries against `icon-only-breakpoint`/
 `mobile-breakpoint`, not a `ResizeObserver` on this element — presentation tracks the actual device/
 window width the way a native OS shell's navigation does, not however much horizontal space a
@@ -1391,7 +1582,7 @@ them. Unset, each falls back to the token its rule used before.
 
 The same slotted content either docked inline in the page's normal layout flow (desktop) or
 presented as a full-screen/bottom-sheet overlay (mobile), depending on viewport width. First-party
-invention (no Web Awesome equivalent). Typical uses: a settings panel or a conversation-history
+invention (no `wa-*`/`sl-*` counterpart). Typical uses: a settings panel or a conversation-history
 sidebar that's a permanent docked pane on a wide screen but a modal on a phone.
 
 **Properties:**
@@ -1492,12 +1683,45 @@ window.
 
 ---
 
+## `lr-menu-label`
+
+A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl-menu-label`.
+
+The host takes `role="presentation"` on connect (a `role="menu"` may only contain menu-item roles,
+so a heading with a generic role would make the menu's own children invalid) — unless the consumer
+already set a `role`, which is left alone. `<lr-menu>` enumerates its items by `instanceof
+LyraMenuItem`, so a label is never enrolled in the roving tabindex and can never become a focus
+stop; nothing on `<lr-menu>` has to know this element exists.
+
+To announce a *named group* rather than a caption, wrap the labelled items in an element with
+`role="group"` and give it a matching `aria-label`. `aria-labelledby` pointing at this element's
+internals would not resolve — idrefs do not cross a shadow boundary.
+
+**Properties:** none. **Events:** none. **Slots:** default (the heading text).
+**CSS parts:** `base` (the heading row).
+
+**Themeable custom properties:** shared tokens only — `--lr-color-text-quiet`, `--lr-font-size-sm`,
+`--lr-font-weight-semibold`, `--lr-space-xs`/`--lr-space-s`.
+
+```html
+<lr-menu>
+  <lr-menu-label>Recently used</lr-menu-label>
+  <lr-menu-item value="open">Open…</lr-menu-item>
+</lr-menu>
+```
+
+---
+
 ## `lr-menu` / `lr-menu-item`
 
 An anchored dropdown built around a consumer-supplied trigger element (typically an icon button)
-assigned to the `trigger` slot. First-party invention (no Web Awesome equivalent) — a close, drop-
-in-shaped replacement for reaching outside this library for a third-party dropdown to build a gear
-menu, an avatar menu, or a history row's overflow menu. Uses the WAI-ARIA "menu button" pattern —
+assigned to the `trigger` slot. It is not a first-party invention: the pair mirrors `sl-menu` /
+`sl-menu-item`, and `<lr-dropdown-item>` below is the `wa-dropdown-item`-compatible name for the
+same item element. (Web Awesome's own popup counterpart, `wa-dropdown`, maps to `<lr-dropdown>` in
+the overlays family — reach for that when the popup holds arbitrary content rather than menu-item
+rows.) Either way it is a close, drop-in-shaped replacement for reaching outside this library for a
+third-party dropdown to build a gear menu, an avatar menu, or a history row's overflow menu. Uses
+the WAI-ARIA "menu button" pattern —
 `role="menu"`/`role="menuitem"` with real roving DOM focus moving between actual focusable
 `<lr-menu-item>` rows — deliberately not a `role="listbox"`/`aria-activedescendant` shape (that's
 `<lr-select>`'s pattern instead).
@@ -1521,9 +1745,20 @@ menu, an avatar menu, or a history row's overflow menu. Uses the WAI-ARIA "menu 
   rendered inside `[part="list"]`; item activation remains scoped to actual menu items. It has no
   bearing on the `header`/`footer` slots, which sit outside the `role="menu"` list and always close
   on Escape — so a menu that keeps its composed controls there never needs this property
+- `anchor: HTMLElement | null = null` (property only — an element reference has no attribute form;
+  new in 8.0.0) — positions the popup against this element instead of the `trigger` slot's assigned
+  element, and, when no `trigger` element is slotted, becomes the element
+  `hide({ focusTrigger: true })` returns focus to (a slotted trigger still wins for focus). An
+  `<lr-menu-item>` sets it to itself on the menu assigned to its `submenu` slot, which is what turns
+  that instance into a submenu: the anchor also switches the default placement from below the
+  trigger to beside the anchoring row, and keeps a pointerdown on that row from reading as an
+  outside click. Set it by hand to anchor a menu to a trigger this component cannot slot — a canvas
+  hit region, a table cell
 
-**Methods:** `show(focus: 'first' | 'last' = 'first')` opens the menu and moves roving focus to the
-first (or, with `'last'`, the last) non-disabled item; a no-op when already open.
+**Methods:** `show(focus: 'first' | 'last' | 'none' = 'first')` opens the menu and moves roving focus
+to the first (or, with `'last'`, the last) non-disabled item; `'none'` opens without moving DOM focus
+at all, which is what pointer-driven opening needs. On an already-open menu it applies the focus
+target and nothing else, so an arrow key can step into a submenu the pointer opened a moment earlier.
 `hide(options?: { focusTrigger?: boolean })` closes it; a no-op when already closed. They are the
 imperative pair for the cases the slotted trigger can't express — a "Done"/"Apply" button *inside*
 the menu, a keyboard shortcut, a parent restoring UI state — without hand-reproducing the
@@ -1541,7 +1776,11 @@ close branch precisely so teardown — disconnecting an open menu — can't stea
 that renders `open` true from the start), `lr-hide` (same first-render guard, opposite
 transition), `lr-menu-select` (`detail: { value }` — a consolidated re-fire of the activated
 `<lr-menu-item>`'s own `lr-menu-item-select`; always followed by the menu closing and focus
-returning to the trigger)
+returning to the trigger). A selection made inside a submenu arrives as this same
+`lr-menu-select` on the outermost menu — one consolidated event for the whole tree, never a
+separate nested-selection name — and closes the whole chain behind it. A submenu's own
+`lr-show`/`lr-hide` deliberately stop at the row that owns it, so they are never mistaken for this
+menu opening or closing; listen on the nested `<lr-menu>` element itself for those.
 
 **Slots:** `trigger` (the consumer's own trigger element — first assigned element wins if several
 are assigned; enhanced imperatively with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`
@@ -1583,12 +1822,20 @@ wrapping the default slot), `footer` (wrapper around the `footer` slot, below th
 
 Not meaningful standalone — it exists purely as `<lr-menu>`'s light-DOM child, the same
 relationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`. `role="menuitem"` and the
-roving `tabindex` both live on the host element itself (mirroring `<lr-tree-node>`), not an
+roving `tabindex` both live on the host element itself (mirroring `<lr-tree-item>`), not an
 internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tabIndex`.
 
 **Properties:**
 - `value: string = ''` — an id/value echoed back in the parent `<lr-menu>`'s `lr-menu-select`
   detail
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected, new
+  in 8.0.0) — row density on the library's shared size ladder, the same one `<lr-input>`/
+  `<lr-select>`/`<lr-button>` use, so a menu sitting under a compact toolbar can match it. It scales
+  the row's height, inline/block padding, font size and corner radius together; both spellings of
+  every tier are accepted. Every tier still floors the row at the shared 24px pointer-target
+  minimum, so even `2xs` stays tappable. The size lives on the **item**, not on `<lr-menu>`, so a
+  single compact row inside an otherwise default menu needs no wrapper — and, conversely, sizing a
+  whole menu means setting it on every item
 - `disabled: boolean = false` (reflected — disables selection and excludes this item from
   `<lr-menu>`'s roving-tabindex navigation entirely)
 - `destructive: boolean = false` (reflected — tints the row with `--lr-color-danger`, for a
@@ -1599,28 +1846,52 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
   renders and behaves exactly as before this option existed.
 - `checked: boolean = false` (reflected) — whether a `type="checkbox"` item is checked; meaningless
   (ignored) for `type="normal"`
+- `hasSubmenu: boolean` (read-only, new in 8.0.0) — whether an `<lr-menu>` is currently assigned to
+  this item's `submenu` slot, making the row a submenu parent
+- `submenuOpen: boolean` (read-only, new in 8.0.0) — whether that submenu is open right now. It
+  tracks the panel's own state however it changed: the parent menu's keyboard or pointer handling, a
+  dismissal, an ancestor closing, or a direct `panel.open = false`. Transient, like every other
+  open-state in this library — it resets to `false` when the item is disconnected
 
 **Methods:** `select(): void` — fires `lr-menu-item-select` (no-op while `disabled`). Called
 internally by this element's own click handler and by `<lr-menu>`'s Enter/Space keydown handling
 of the roving-focused item; also the cleanest way for a consumer/test to trigger selection
 programmatically instead of clicking the shadow-DOM `[part="base"]` element (see the gotcha below).
-For `type="checkbox"`, also toggles `checked` and fires `lr-menu-item-change` first.
+For `type="checkbox"`, also toggles `checked` and fires `lr-menu-item-change` first. On a submenu
+parent it opens the submenu instead and fires neither event — see below.
+
+`openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): void` and `closeSubmenu(): void` (both new
+in 8.0.0) drive the assigned panel. `openSubmenu()` is a no-op without a `submenu` slot or while
+`disabled`; it uses the same focus vocabulary as `<lr-menu>`'s own `show()` — `'first'` for keyboard
+activation, `'none'` for pointer intent, which must not pull focus out from under the keyboard.
+Re-opening an already-open submenu still applies the focus target, so the into-submenu arrow key
+moves into a submenu the pointer opened a moment earlier. `closeSubmenu()` closes the panel and,
+through it, everything below it; it leaves focus alone, because the caller that moved focus knows
+where it belongs. The parent `<lr-menu>` owns the interaction policy (arrow keys, pointer intent,
+one-submenu-per-level) and drives it through exactly these two methods, so calling them by hand
+behaves identically.
 
 **Events:** `lr-menu-item-select` (no detail payload — `this.emit('lr-menu-item-select')` is
 called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or
 when the parent `<lr-menu>`'s own Enter/Space keydown handling calls `select()` on the currently
-roving-focused item), `lr-menu-item-change` (`detail: { value, checked }` — fired when a
+roving-focused item; never fired by a submenu parent, which is a disclosure rather than an action),
+`lr-menu-item-change` (`detail: { value, checked }` — fired when a
 `type="checkbox"` item is activated and its `checked` state toggled, in addition to — never instead
-of — `lr-menu-item-select`; never fired for `type="normal"`),
+of — `lr-menu-item-select`; never fired for `type="normal"`, and never fired by a submenu parent,
+whose activation opens the panel instead of toggling `checked`),
 `lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
 state changes so the parent menu can repair its roving-tabindex state immediately)
 
-**Slots:** default (the item's label content), `icon` (optional leading icon)
+**Slots:** default (the item's label content), `icon` (optional leading icon), `submenu` (new in
+8.0.0 — a nested `<lr-menu>` that opens beside this row, turning it into a submenu parent; anything
+else assigned here renders but gets no submenu semantics)
 
 **CSS parts:** `base` (the row — `role` lives on the host, not this part), `icon` (wrapper around
 the `icon` slot; not rendered/hidden entirely while the slot is empty), `label` (wrapper around the
 default slot), `checkmark` (the checkmark glyph shown when a `type="checkbox"` item is `checked`;
-not rendered at all for `type="normal"`)
+not rendered at all for `type="normal"`), `submenu-icon` (wrapper around the chevron shown on a
+submenu parent; not rendered at all without a `submenu` slot, and mirrored under RTL through this
+wrapper rather than by swapping the glyph)
 
 **Themeable custom properties:** shared tokens only (`--lr-radius`, `--lr-focus-ring-width`,
 `--lr-focus-ring-color`, `--lr-space-xs`, `--lr-space-s`, `--lr-color-brand-quiet`,
@@ -1630,11 +1901,15 @@ not rendered at all for `type="normal"`)
 
 ### `lr-dropdown-item`
 
-Compatibility naming alias for `<lr-menu-item>`. It is a subclass of the same implementation,
-so `value`, `disabled`, `destructive`, `type`, `checked`, `select()`, checkbox events, and menu
-roving focus behave identically.
+Compatibility naming alias for `<lr-menu-item>`, mirroring `wa-dropdown-item`. It is a subclass of
+the same implementation, so `value`, `size` (including the `small`/`medium`/`large` spellings),
+`disabled`, `destructive`, `type`, `checked`, `select()`, `hasSubmenu`/`submenuOpen`,
+`openSubmenu()`/`closeSubmenu()`, checkbox events, and menu roving focus behave identically.
 
-**Slots:** default label content and optional `icon`.
+**Slots:** default label content, optional `icon`, and `submenu` — the same nested-`<lr-menu>` slot
+`<lr-menu-item>` documents above.
+
+**CSS parts:** identical to `<lr-menu-item>`'s, including `submenu-icon`.
 
 ```html
 <lr-menu>
@@ -1683,6 +1958,71 @@ keystroke) — mirrors `<lr-select>`'s identical listbox type-ahead. A click out
 and the open popup also closes it, but deliberately does *not* refocus the trigger — the outside
 click itself already moved focus somewhere the user chose.
 
+### Nested submenus (new in 8.0.0)
+
+The markup shape is one slot assignment: put an `<lr-menu>` inside an `<lr-menu-item>` with
+`slot="submenu"`. That nested menu needs no `trigger` slot — the row is its trigger, and the row
+sets itself as the nested menu's `anchor`, which is what switches the placement from below a trigger
+to beside the row. Nesting is unbounded; a three-level chain works the same way.
+
+```html
+<lr-menu label="Row actions">
+  <button slot="trigger" aria-label="More actions">⋮</button>
+  <lr-menu-item value="rename">Rename</lr-menu-item>
+  <lr-menu-item value="share">
+    Share
+    <lr-menu slot="submenu">
+      <lr-menu-item value="email">Email</lr-menu-item>
+      <lr-menu-item value="link">Copy link</lr-menu-item>
+    </lr-menu>
+  </lr-menu-item>
+</lr-menu>
+<script type="module">
+  // One consolidated event for the whole tree, submenu selections included.
+  document
+    .querySelector('lr-menu')
+    .addEventListener('lr-menu-select', (e) => console.log(e.detail.value));
+</script>
+```
+
+**Semantics.** A row with a `submenu` slot gains `aria-haspopup="menu"` and an `aria-expanded` that
+renders `"true"` *and* `"false"` — never omitted, since the attribute is part of the role's state.
+The chevron renders in `[part="submenu-icon"]`. Because such a row is a disclosure rather than an
+action, activating it opens the submenu and fires no `lr-menu-item-select`; activating one also
+never toggles `checked` or fires `lr-menu-item-change`, so `type="checkbox"` still renders
+`role="menuitemcheckbox"` (and a checkmark for a `checked` row) but nothing ever moves that state. The submenu's `role="menu"` is named from the row's own label text, and so is the row
+itself — otherwise name-from-content would walk into the open submenu and announce "Share Email Copy
+link". A host `aria-label` on the row, or a `label`/`aria-label` on the nested `<lr-menu>`, wins over
+both computed names.
+
+**Keyboard.** The into-submenu and back-out keys are inline-direction moves, so **both swap under
+RTL**: ArrowRight opens the submenu and focuses its first item under LTR while ArrowLeft closes it
+and returns focus to the parent row, and under `dir="rtl"` those two keys trade places exactly —
+ArrowRight then opens nothing at all on a submenu parent. Enter/Space open a submenu parent too,
+landing on the same first item. The back-out key acts only in a menu that has an `anchor` — a
+submenu always does; an ordinary trigger-slotted menu does not, and there the key is left untouched
+for the browser's own handling. Escape inside a submenu closes only that submenu and
+returns focus to its parent row — the innermost open menu is the one holding focus, so it handles
+the key and every ancestor declines; a second Escape then closes the level above it. ArrowUp/
+ArrowDown, Home/End and type-ahead inside a submenu stay inside that submenu and never disturb the
+outer menu's roving highlight. A selection anywhere in the chain closes every level and returns
+focus to the outermost trigger.
+
+**Pointer.** Hovering a submenu parent opens its submenu after a short intent delay (150 ms), so
+sweeping the cursor down a list opens nothing; leaving closes it after a deliberately longer one
+(300 ms), which is the tolerance that lets the cursor cut diagonally across the rows in between on
+its way to the panel — and, because the close delay outlasts the open delay, crossing a *sibling*
+submenu parent in transit neither dismisses the open submenu nor opens the sibling's. Hover never
+moves focus — the pointer opens a submenu, it does not claim the keyboard. A pointerdown on the row
+that owns an open submenu is not treated as an outside click. In a test, wait past both delays with
+real timers rather than stubbing them.
+
+**Placement and lifecycle.** A submenu prefers the inline-end side of its row, mirrored under RTL
+and flipped to the other side by the positioner when the preferred one would overflow. At most one
+submenu per level is open at a time — moving the roving highlight or the pointer to another row
+closes what the previous one had open — and closing a menu closes everything below it. A disabled
+row never opens its submenu, by keyboard or by pointer.
+
 **Known gotchas:**
 - A supporting browser reports `trigger.shadowRoot`'s focused control
   `getAttribute('aria-controls') === ''` after the element-reference relationship is assigned.
@@ -1715,13 +2055,22 @@ click itself already moved focus somewhere the user chose.
   `[part]:empty` rule can never match a part that contains a slot, since Chromium counts the
   whitespace-only text nodes Lit leaves there.
 - Only Escape and a committed selection refocus the trigger on close; a click outside does not.
+- A submenu's own `lr-show`/`lr-hide` stop at the `<lr-menu-item>` that owns it and never reach the
+  ancestor menu, where a listener would read them as *that* menu opening or closing. Add the
+  listener to the nested `<lr-menu>` element itself.
+- There is no nested-selection event. A selection made in a submenu surfaces only as the outermost
+  menu's `lr-menu-select`; listening for a second, deeper name will never fire.
+- `submenuOpen` is transient state, not persisted: disconnecting an `<lr-menu-item>` (a drag-and-drop
+  reparent, a list re-render) resets it to `false`, so a reconnect never comes back already expanded.
+- The `submenu` slot only confers submenu semantics on an `<lr-menu>`; anything else assigned to it
+  still renders, but the row gets no `aria-haspopup`, no chevron, and no `openSubmenu()` behavior.
 
 ---
 
 ## `lr-dock-panel`
 
 A single panel docked to one edge of whatever contains it, resizable by dragging its inner edge.
-First-party invention (no Web Awesome equivalent). Unlike `lr-split` (which owns and lays out N
+First-party invention (no `wa-*`/`sl-*` counterpart). Unlike `lr-split` (which owns and lays out N
 sibling panels, and requires restructuring a layout so every panel becomes its direct child), this is
 one self-contained element you drop next to your existing content — typically as an absolutely-
 positioned child of a `position: relative` parent, or as a flex item alongside a main-content sibling.
@@ -1735,9 +2084,9 @@ docked case.
 - `edge: 'start' | 'end' | 'top' | 'bottom' = 'end'` (reflected) — which edge of the panel's own
   container it's docked to. `start`/`end` are logical-inline (mirror left/right depending on writing
   direction); `top`/`bottom` are block-direction and unaffected by RTL.
-- `size: string = '280px'` — the current docked size along the resize axis, as a CSS length.
-- `minSize: string = '160px'` (attribute `min-size`) — minimum resize bound, as a CSS length.
-- `maxSize: string = ''` (attribute `max-size`) — maximum resize bound. Empty means "no explicit
+- `extent: string = '280px'` — the current docked size along the resize axis, as a CSS length.
+- `minExtent: string = '160px'` (attribute `min-extent`) — minimum resize bound, as a CSS length.
+- `maxExtent: string = ''` (attribute `max-extent`) — maximum resize bound. Empty means "no explicit
   cap": the live extent of the containing element is used instead (falling back to the viewport if
   there's no parent, e.g. not yet connected), so the panel still can't be dragged wider/taller than
   its container.
@@ -1749,17 +2098,26 @@ docked case.
   boolean-attribute binding (`?resizable=${false}`) only removes the attribute and cannot override
   a true-defaulting property.
 
+**Renamed in 8.0.0: `size`/`min-size`/`max-size` are now `extent`/`min-extent`/`max-extent`**, and
+`lr-resize`'s detail key moved with them (`{ size }` → `{ extent }`). Everywhere else in the library
+`size` names a tier on the shared six-step ladder; here it was an arbitrary CSS length, which is the
+collision the rename resolves. It is a clean rename with no alias, and it fails quietly in both
+directions: `size="320px"` is now an unknown attribute the browser ignores, so the panel silently
+renders at the `280px` default, and `event.detail.size` reads `undefined`. Rename the attributes and
+the detail key in the same change.
+
 **Exported helper:** `parseLengthPx(length: string, containerPx: number, fontSizeEl: Element =
 document.documentElement): number | undefined` — resolves an arbitrary CSS length (`px`, `rem`, `em`,
 `vw`, `vh`, `%`, or a bare/unitless number treated as `px`) to a live pixel value without a DOM-probe
-measurement, since `min-size`/`max-size` are pure constraints that are never themselves rendered
+measurement, since `min-extent`/`max-extent` are pure constraints that are never themselves rendered
 anywhere. `rem` resolves against the document root's font size; `em` resolves against `fontSizeEl`'s
 own computed font size; `%` resolves against `containerPx`. Returns `undefined` for an
-empty/unparseable string. Used internally to resolve `min-size`/`max-size`; the panel's *current* size
-is instead always read back live from `getBoundingClientRect()`, which handles any unit for free.
+empty/unparseable string. Used internally to resolve `min-extent`/`max-extent`; the panel's
+*current* extent is instead always read back live from `getBoundingClientRect()`, which handles any
+unit for free.
 
 **Events:**
-- `lr-resize` — `detail: { size }` (a `px` CSS length string), fired on every drag step, drag
+- `lr-resize` — `detail: { extent }` (a `px` CSS length string), fired on every drag step, drag
   release, and keyboard step.
 - `lr-collapse-change` — `detail: { collapsed }`, fired whenever the collapse toggle flips
   `collapsed`.
@@ -1784,11 +2142,11 @@ the re-expand toggle); component-specific since collapse never zeroes the box. P
 <div style="position: relative; block-size: 100vh;">
   <lr-dock-panel
     edge="end"
-    size="320px"
-    min-size="200px"
-    max-size="480px"
+    extent="320px"
+    min-extent="200px"
+    max-extent="480px"
     collapsible
-    @lr-resize=${(e) => console.log(e.detail.size)}
+    @lr-resize=${(e) => console.log(e.detail.extent)}
     @lr-collapse-change=${(e) => console.log(e.detail.collapsed)}
   >
     <div>Sidebar content — a chat thread list, an inspector, anything.</div>
@@ -1801,12 +2159,12 @@ pointer on the handle; `pointermove` computes a new size; `pointerup`/`pointerca
 `lostpointercapture` all release it, since a drag can end without a clean `pointerup`) but reasons in
 raw pixels throughout rather than percent. Every resize — drag step, drag release, or a keyboard step
 (<kbd>ArrowLeft</kbd>/<kbd>ArrowRight</kbd> for the inline axis, <kbd>ArrowUp</kbd>/<kbd>ArrowDown</kbd>
-for the block axis, 16px per step) — always commits `size` as a rounded `px` string regardless of
-what unit `size`/`min-size`/`max-size` were originally expressed in.
+for the block axis, 16px per step) — always commits `extent` as a rounded `px` string regardless of
+what unit `extent`/`min-extent`/`max-extent` were originally expressed in.
 
 **Known gotchas:**
 - `collapsed` doesn't zero the panel's box — it shrinks to the persistent rail size
-  (`--lr-dock-panel-collapsed-size`). `size` itself is left untouched while collapsed, so
+  (`--lr-dock-panel-collapsed-size`). `extent` itself is left untouched while collapsed, so
   re-expanding restores exactly what it was.
 - `handle` only renders while `resizable && !collapsed`; `collapse-toggle` only renders while
   `collapsible` — a panel with both `false` renders neither control, just fixed-size slotted content.
@@ -1833,10 +2191,15 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   `'plain'` has no border or background at all.
 - `interactive: boolean = false` (reflected) — opt-in clickable-tile behavior: the hover/focus-visible
   treatment (border-color shift, `cursor: pointer`) plus, when `href` is **not** also set, real
-  activation semantics — `[part='base']` becomes focusable (`tabindex="0"`), responds to
-  Enter/Space, and emits `lr-card-activate`. With `href` set, the root is already a real `<a>`, so
-  native navigation *is* the activation and `lr-card-activate` never fires. `false` (the default)
-  reproduces a plain static card: no `tabindex`, no listeners, no events.
+  activation semantics. Those come from a real native `<button part="activation-button">` stretched
+  across the card, not from making `[part='base']` itself focusable: it is the keyboard tab stop,
+  it answers Enter and Space natively, and activating it emits `lr-card-activate`. With `href` set,
+  the root is already a real `<a>`, so native navigation *is* the activation, no activation button
+  renders, and `lr-card-activate` never fires. `false` (the default) reproduces a plain static card:
+  no button, no listeners, no events.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — the accessible name of that
+  activation button. Left unset it falls back to the card's own text content, so a text card is
+  named without extra markup; set it explicitly for a card whose content is an image or a chart.
 - `href?: string` — when set, the card's root renders as a real `<a href=...>` instead of a `<div>`,
   for a whole-card link (e.g. a wide CTA tile). Unset (the default) renders a plain `<div>`.
 - `target?: string` — native anchor target, applied only while `href` resolves to a link. Setting it
@@ -1845,8 +2208,8 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   can't forget it and leave the opened page holding a `window.opener` back-reference
   (reverse-tabnabbing). Unset (the default) emits neither `target` nor `rel`.
 
-**Events:** `lr-card-activate` (no detail) — the whole card was activated, by click or by
-Enter/Space while `[part='base']` has focus. Only fired while `interactive` is set **without**
+**Events:** `lr-card-activate` (no detail) — the whole card was activated, by a click anywhere on it
+or by Enter/Space on `[part='activation-button']`. Only fired while `interactive` is set **without**
 `href`. Never fired for an interaction that originated in a slotted control, so a card can keep its
 own action buttons (see the gotchas below).
 
@@ -1854,11 +2217,14 @@ own action buttons (see the gotchas below).
 (media content, e.g. an image, rendered above the header), `footer` (footer content, rendered below
 the body), `actions` (small header controls, rendered alongside the header content).
 
-**CSS parts:** `base` (the outer container — a `<div>`, or an `<a>` when `href` is set), `media`
-(wrapper around the `media` slot, hidden entirely when empty), `header` (wrapper around the `header`
-slot and `actions`, hidden entirely when both are empty), `actions` (wrapper around the `actions`
-slot, hidden entirely when empty), `body` (wrapper around the default slot), `footer` (wrapper around
-the `footer` slot, hidden entirely when empty).
+**CSS parts:** `base` (the outer container — a `<div>`, or an `<a>` when `href` is set),
+`activation-button` (the native whole-card action, rendered only while `interactive` without `href`;
+it is absolutely positioned across the card, `pointer-events: none` so it never intercepts a click
+meant for slotted content, and it owns the card's `:focus-visible` ring), `media` (wrapper around
+the `media` slot, hidden entirely when empty), `header` (wrapper around the `header` slot and
+`actions`, hidden entirely when both are empty), `actions` (wrapper around the `actions` slot,
+hidden entirely when empty), `body` (wrapper around the default slot), `footer` (wrapper around the
+`footer` slot, hidden entirely when empty).
 
 **Themeable custom properties:** shared tokens only — `--lr-color-border`/`-surface`/`-brand`/
 `-brand-quiet`, `--lr-radius`, `--lr-space-s`/`-m`, `--lr-transition-fast`,
@@ -1882,15 +2248,16 @@ the `footer` slot, hidden entirely when empty).
 - slot-presence (`header`/`media`/`footer`/`actions`) is tracked in JS, not via CSS `:empty` (a
   `[part]` wrapper always contains a literal `<slot>` child, so `:empty` never matches) — the same
   pattern `lr-empty`/`lr-widget` use.
-- **an `interactive` card without `href` deliberately carries no `role="button"`.** A card is a
-  *container* — it routinely holds slotted buttons and links — and `role="button"` around focusable
-  descendants is the `nested-interactive` accessibility violation this library's own a11y gate
-  enforces. (`lr-chip`'s `toggleable` mode *can* carry `role="button"` because it forbids focusable
-  children outright.) The consequence is that the card is announced as a plain focusable region, so
-  give it your own `aria-label` when the content doesn't already name it.
-- because there is no `role="button"` to disambiguate, "did the user aim at the card or at a control
-  inside it?" is answered at event time: the composed path from the original target up to
-  `[part='base']` is walked, and `lr-card-activate` is suppressed if anything along the way is
+- **`[part='base']` itself deliberately carries no `role="button"` and is not focusable.** A card is
+  a *container* — it routinely holds slotted buttons and links — and `role="button"` around
+  focusable descendants is the `nested-interactive` accessibility violation this library's own a11y
+  gate enforces. (`lr-chip`'s `toggleable` mode *can* carry `role="button"` because it forbids
+  focusable children outright.) The whole-card action is therefore a *sibling* of the slotted
+  content — `[part='activation-button']` — so the actionable roles are never nested inside one
+  another, and the card still announces as a real button rather than as an unnamed focusable region.
+- because the base element carries no `role="button"` to disambiguate, "did the user aim at the card
+  or at a control inside it?" is answered at event time: the composed path from the original target
+  up to `[part='base']` is walked, and `lr-card-activate` is suppressed if anything along the way is
   itself a control (a link, `button`, `input`, `select`, `textarea`, `label`, `summary`,
   `contenteditable`, anything carrying a `tabindex` other than `-1`, or an ARIA widget role such as
   `button`/`link`/`checkbox`/`switch`/`radio`/`menuitem`/`option`/`tab`/`textbox`/`slider`/
@@ -1898,11 +2265,8 @@ the `footer` slot, hidden entirely when empty).
   path is what makes this work through a slotted component's own shadow root — a click on
   `<lr-button>` retargets to the host, but its composed path still contains the internal native
   `<button>`.
-
-**Additional API surface:**
-
-- `accessibleLabel` — Host `aria-label` forwarded to the native no-href activation button. Type: `string | null`.
-- `part="activation-button"` — The native whole-card action, rendered while `interactive` without `href`. It is a sibling of slotted controls, so actionable descendants are never nested inside another actionable role.
+- a click whose composed path starts on `[part='activation-button']` skips that walk entirely and
+  always activates — it *is* the whole-card action, so there is nothing to disambiguate.
 
 ---
 
@@ -1965,14 +2329,77 @@ that token, so rendering is unchanged.
 
 ## `lr-details`, `lr-accordion`, and `lr-accordion-item`
 
-`lr-details` is a native-semantics disclosure panel. `lr-accordion` coordinates slotted
-details panels and closes siblings unless `multiple` is true. `lr-accordion-item` is an
-accordion-compatible alias.
+`lr-details` is a native-semantics disclosure panel; it mirrors `wa-details` / `sl-details`.
+`lr-accordion` coordinates slotted details panels and closes siblings unless `multiple` is true,
+mirroring `wa-accordion`. `lr-accordion-item` is the `wa-accordion-item`-compatible alias — the same
+class under a second tag name, so every property, method, event, slot and part documented for
+`lr-details` applies to it verbatim.
 
-**Properties:** `open`, `disabled`, and `summary` on details/items; `multiple` on accordion.
-**Events:** `lr-toggle` with `{ open }` from details/items. **Slots:** `summary` and default
-content on details/items; default panels on accordion. **CSS parts:** `base`, `summary`, `content`
-on details/items; `base` on accordion.
+**Properties:** `open: boolean = false` (reflected), `disabled: boolean = false` (reflected),
+`summary: string = ''`, and `size` on details/items; `multiple: boolean = false` (reflected) on
+accordion.
+
+`size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected, new
+in 8.0.0) is the library's shared size ladder, so a disclosure scales with the controls around it
+instead of being the one fixed-density element in a compact panel. Both spellings of every tier are
+accepted — `s`/`small`, `m`/`medium`, `l`/`large` — so markup migrated from either upstream needs no
+attribute rewrite. `m` is the default and reproduces the disclosure this component had before `size`
+existed. The tier drives two custom properties (below) rather than any `::part()` rule, so a tier
+the ladder doesn't cover is a two-line override rather than a fork.
+
+**Methods (details/items, new in 8.0.0):** `show()` expands the panel; `hide()` collapses it. Each
+is a no-op when the panel is already in that state, and `show()` is additionally a no-op while
+`disabled`. Assigning `open` runs the identical sequence, as does clicking or keyboard-activating
+the summary, so the property, the reflected attribute and the two methods can never disagree.
+
+**Events:** `lr-show` and `lr-hide` (no detail payload, so `event.detail` is `null`; both
+**cancelable** — calling
+`preventDefault()` leaves the panel exactly where it was, including for a summary click, which is
+intercepted so a vetoed open cannot flash the panel expanded first), then `lr-toggle`
+(`detail: { open }` — the one event that reports which way the panel went), then `lr-after-show` or
+`lr-after-hide` (also no detail payload, never cancelable) once the panel has rendered and its marker
+transition has finished. The full order is `lr-show` → `lr-toggle` → `lr-after-show` when opening,
+and `lr-hide` → `lr-toggle` → `lr-after-hide` when closing. Markup that renders `open` from the
+start emits none of them, and a transition interrupted by the opposite one drops its own pending
+after-event rather than announcing a state the panel has already left.
+
+Only `lr-toggle` existed before 8.0.0; the four lifecycle events are new, and are the same
+`show`/`hide` vocabulary the overlays family uses. `lr-toggle` is kept alongside them because it is
+what an enclosing `lr-accordion` listens to in order to close a newly-opened panel's siblings.
+
+**Slots:** `summary` and default content on details/items; default panels on accordion. A
+`slot="summary"` child takes priority over the `summary` property; with neither set, the summary
+shows the localized `"Details"` fallback.
+
+**CSS parts:** `base` (the native `<details>`), `summary` (the summary control), `content` (the
+panel body) on details/items; `base` on accordion.
+
+**Themeable custom properties:** `--lr-details-font-size` (default
+`var(--lr-form-control-font-size)`) — the text size of both the summary and the panel.
+`--lr-details-spacing` (default `var(--lr-form-control-padding-inline)`) — the block rhythm: the
+summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads
+evenly. Each `size` tier sets both from the shared ladder, and both are declared on `:host`, so an
+override has to target the element itself — an ancestor rule is shadowed. Note that the spacing knob
+deliberately reads the ladder's *inline*-padding value: a stacked panel wants generous block rhythm,
+whereas the ladder's own block padding exists to fit text inside a fixed control height and would
+collapse the summary row. Otherwise shared tokens — the disclosure marker animates through
+`--lr-transition-fast`, which the token layer flattens under `prefers-reduced-motion`, so the
+`lr-after-*` events still settle promptly in that branch.
+
+```html
+<lr-details summary="Advanced options">Panel content</lr-details>
+<script type="module">
+  const panel = document.querySelector('lr-details');
+  let ready = false;
+  // Cancelable: veto the open until some precondition is met.
+  panel.addEventListener('lr-show', (e) => {
+    if (!ready) e.preventDefault();
+  });
+  panel.addEventListener('lr-after-show', () => panel.querySelector('input')?.focus());
+  ready = true;
+  panel.show();
+</script>
+```
 
 ## `lr-breadcrumb` and `lr-breadcrumb-item`
 
@@ -2043,7 +2470,7 @@ or agent runs. It renders a breadcrumb path and delegates category content to ex
 
 **Properties:** `path: DrilldownNode[] = []` and `types: NodeTypeStyle[] = []` (both attribute:
 false), `accessibleLabel: string | null = null` (attribute `aria-label` — names the nested
-`lr-tabs`; unset renders no `aria-label` at all, matching `lr-tabs`' own default),
+`lr-tab-group`; unset renders no `aria-label` at all, matching `lr-tab-group`' own default),
 `communityLabel: string = ''` (attribute `community-label`), `showFocusButton: boolean = true`
 (attribute `show-focus-button`). **Events:**
 `lr-drilldown-navigate` (`detail: { id, index }`). **Slots:** `runs`. **CSS parts:** `base`,

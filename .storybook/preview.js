@@ -1,5 +1,6 @@
 import { setCustomElementsManifest } from '@storybook/web-components';
 import { LyraDocsContainer } from './docs-container.js';
+import { LyraDocsPage } from './docs-page.js';
 import { publicStorybookManifest } from './storybook-manifest.js';
 import { applyLyraTheme } from './story-theme.js';
 // Docs/story authoring only — lr-* components' shadow DOM never sees this.
@@ -127,6 +128,10 @@ const preview = {
     },
     docs: {
       container: LyraDocsContainer,
+      // Storybook's default DocsPage plus the component's granular import path. Applies to
+      // autodocs pages only -- an MDX entry's `page` is always its own compiled content (see
+      // MdxDocsRender), so the guide pages under `.storybook/*.mdx` are unaffected.
+      page: LyraDocsPage,
       toc: { headingSelector: 'h2, h3' },
     },
     // @storybook/addon-a11y's afterEach hook otherwise auto-runs axe-core on

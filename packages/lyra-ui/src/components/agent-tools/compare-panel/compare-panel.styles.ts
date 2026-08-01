@@ -77,6 +77,14 @@ export const styles = css`
   [part='vote-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
+     than hover in both light and dark themes rather than repeating it. Placed before the selected
+     rule deliberately: once a vote is cast, the selected treatment is the state worth showing, and
+     the button's own :hover already answers the pointer. */
+  [part='vote-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='vote-button']:where([data-selected]) {
     background: var(--lr-compare-panel-selected-background, var(--lr-color-brand-quiet));
     border-color: var(--lr-compare-panel-selected-border-color, var(--lr-color-brand));

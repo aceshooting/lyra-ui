@@ -43,6 +43,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
+  /* no-pressed-state: each pane is a role="region" scroll container with tabindex="0" for keyboard
+     scrolling -- it has no activation behaviour, so the strengthened border marks which pane the
+     wheel/keys will scroll, and there is nothing for a mousedown to acknowledge. */
   [part='pane-old']:hover,
   [part='pane-new']:hover {
     border-color: var(--lr-color-border-strong);

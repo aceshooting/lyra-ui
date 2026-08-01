@@ -28,7 +28,7 @@ export const styles = css`
      specificity, so source order alone decides which padding/gap wins when a card is both compact
      and plain. plain is the stronger statement ("no chrome at all"), so it goes last. The header's
      focus button and type badge draw their own chrome and stay visible either way. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -43,7 +43,7 @@ export const styles = css`
   [part='title'] {
     flex: 1 1 auto;
     min-inline-size: 0;
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
     font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }

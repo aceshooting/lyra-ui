@@ -52,6 +52,9 @@ export const styles = css`
   [part='cell-highlight-action']:hover, lr-virtual-list::part(cell-highlight-action):hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='cell-highlight-action']:active, lr-virtual-list::part(cell-highlight-action):active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='cell-highlight-action']:focus-visible, lr-virtual-list::part(cell-highlight-action):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);

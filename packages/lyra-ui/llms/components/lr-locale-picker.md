@@ -51,7 +51,11 @@ active locale untouched, so a host can persist the choice first and apply it lat
 re-dispatched from the internal trigger as bubbling, composed events.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` — all forward to the internal trigger
-button, same convention as `lr-select`'s identical trio.
+button, same convention as `lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
+a consumer-supplied error ("that locale is not enabled for your account"): a non-empty message
+raises `customError` and blocks submission, `''` restores the picker's own computed validity so a
+required picker with nothing committed goes back to `valueMissing`. It survives every
+`value`/`required` change and a form reset.
 
 **Slots:** `label`, `hint`, `error`.
 

@@ -28,7 +28,7 @@ export const styles = css`
   }
   /* 'plain' removes the chrome entirely rather than just tightening it -- see the class doc for
      why it wins over compact when both are set. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -40,7 +40,7 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  :host([appearance='plain']) [part='header'] {
+  :host([frame='plain']) [part='header'] {
     border-block-end: 0;
   }
   [part='header'][hidden] {

@@ -59,7 +59,16 @@ export const styles = css`
   :host(:hover) [part='base'] {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }
-  /* Placed after the :hover rule (equal selector specificity) so an
+  /* Pressed. Note the two very different selectors here: :host(:active) is the transient
+     pointer/keyboard press, :host([active]) below is "this is the open session". The press tint is
+     the hover tint escalated to --lr-color-mix-active, mixed toward --lr-color-mix-partner (which
+     tracks the text color) so it moves in the right direction on a light and a dark surface alike.
+     [part='base'] is a plain wrapper div, but :active propagates from the pressed [part='option']
+     inside it up through the host, so the whole row answers a press the way it answers hover. */
+  :host(:active) [part='base'] {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  /* Placed after the :hover and :active rules (equal selector specificity) so an
      active-and-hovered row keeps the stronger active tint instead of the
      two backgrounds visually competing. */
   :host([active]) [part='base'] {
@@ -192,6 +201,10 @@ export const styles = css`
   }
   [part='rename-button']:hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+    color: var(--lr-color-text);
+  }
+  [part='rename-button']:active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
     color: var(--lr-color-text);
   }
   [part='rename-button']:focus-visible {

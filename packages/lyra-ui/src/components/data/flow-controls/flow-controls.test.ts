@@ -230,7 +230,7 @@ it('forwards a live host aria-label to the semantic group', async () => {
   expect(base.getAttribute('aria-label')).to.equal('Canvas controls');
 });
 
-describe('appearance', () => {
+describe('frame', () => {
   const baseOf = (el: LyraFlowControls): HTMLElement => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
   const baseChrome = (el: LyraFlowControls) => {
@@ -248,12 +248,12 @@ describe('appearance', () => {
     };
   };
 
-  it('defaults to appearance="card", rendering identically to that value restated', async () => {
+  it('defaults to frame="card", rendering identically to that value restated', async () => {
     const implicit = (await fixture(html`<lr-flow-controls></lr-flow-controls>`)) as LyraFlowControls;
-    const explicit = (await fixture(html`<lr-flow-controls appearance="card"></lr-flow-controls>`)) as LyraFlowControls;
+    const explicit = (await fixture(html`<lr-flow-controls frame="card"></lr-flow-controls>`)) as LyraFlowControls;
 
-    expect(implicit.appearance).to.equal('card');
-    expect(implicit.getAttribute('appearance')).to.equal('card');
+    expect(implicit.frame).to.equal('card');
+    expect(implicit.getAttribute('frame')).to.equal('card');
     expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
 
     const chrome = baseChrome(implicit);
@@ -264,9 +264,9 @@ describe('appearance', () => {
     expect(chrome.boxShadow).to.not.equal('none');
   });
 
-  it('drops border, background, shadow, padding and radius under appearance="plain"', async () => {
-    const el = (await fixture(html`<lr-flow-controls appearance="plain"></lr-flow-controls>`)) as LyraFlowControls;
-    expect(el.getAttribute('appearance')).to.equal('plain');
+  it('drops border, background, shadow, padding and radius under frame="plain"', async () => {
+    const el = (await fixture(html`<lr-flow-controls frame="plain"></lr-flow-controls>`)) as LyraFlowControls;
+    expect(el.getAttribute('frame')).to.equal('plain');
     const chrome = baseChrome(el);
     expect(chrome.borderTopWidth).to.equal('0px');
     expect(chrome.borderTopLeftRadius).to.equal('0px');
@@ -279,7 +279,7 @@ describe('appearance', () => {
   });
 
   it('keeps every button at the shared minimum hit area under plain', async () => {
-    const el = (await fixture(html`<lr-flow-controls appearance="plain"></lr-flow-controls>`)) as LyraFlowControls;
+    const el = (await fixture(html`<lr-flow-controls frame="plain"></lr-flow-controls>`)) as LyraFlowControls;
     for (const part of ['zoom-in', 'zoom-out', 'fit', 'lock']) {
       const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
       expect(getComputedStyle(button).minInlineSize).to.equal('40px');
@@ -288,11 +288,11 @@ describe('appearance', () => {
   });
 
   it('still lays the cluster out per orientation under plain', async () => {
-    const vertical = (await fixture(html`<lr-flow-controls appearance="plain"></lr-flow-controls>`)) as LyraFlowControls;
+    const vertical = (await fixture(html`<lr-flow-controls frame="plain"></lr-flow-controls>`)) as LyraFlowControls;
     expect(getComputedStyle(baseOf(vertical)).flexDirection).to.equal('column');
 
     const horizontal = (await fixture(
-      html`<lr-flow-controls appearance="plain" orientation="horizontal"></lr-flow-controls>`,
+      html`<lr-flow-controls frame="plain" orientation="horizontal"></lr-flow-controls>`,
     )) as LyraFlowControls;
     expect(getComputedStyle(baseOf(horizontal)).flexDirection).to.equal('row');
   });
@@ -300,7 +300,7 @@ describe('appearance', () => {
   it('keeps each button focus ring visible under plain, with no card surface behind it', async () => {
     const wrapper = (await fixture(html`
       <lr-flow-canvas>
-        <lr-flow-controls slot="bottom-start" appearance="plain"></lr-flow-controls>
+        <lr-flow-controls slot="bottom-start" frame="plain"></lr-flow-controls>
       </lr-flow-canvas>
     `)) as LyraFlowCanvas;
     wrapper.nodes = nodes;
@@ -319,10 +319,10 @@ describe('appearance', () => {
     expect(focused.outlineOffset).to.equal('2px'); // --lr-focus-ring-offset
   });
 
-  it('is accessible under appearance="plain" with a resolved canvas', async () => {
+  it('is accessible under frame="plain" with a resolved canvas', async () => {
     const wrapper = (await fixture(html`
       <lr-flow-canvas>
-        <lr-flow-controls slot="bottom-start" appearance="plain"></lr-flow-controls>
+        <lr-flow-controls slot="bottom-start" frame="plain"></lr-flow-controls>
       </lr-flow-canvas>
     `)) as LyraFlowCanvas;
     wrapper.nodes = nodes;

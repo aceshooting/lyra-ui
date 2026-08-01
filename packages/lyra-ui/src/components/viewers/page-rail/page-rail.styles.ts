@@ -34,16 +34,24 @@ export const styles = css`
   lr-virtual-list::part(page):hover {
     background: var(--lr-color-surface-raised);
   }
+  lr-virtual-list::part(page):active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   lr-virtual-list::part(page):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* The :hover arm keeps the current row tinted while it is hovered: it matches the specificity of
-     the ::part(page):hover rule above and comes later, so the current page stays identifiable
-     under the pointer instead of reverting to the generic hover surface. */
-  lr-virtual-list::part(page-current),
+  lr-virtual-list::part(page-current) {
+    background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet));
+  }
+  /* Split out from the resting rule rather than folded into its selector list: it has to match the
+     specificity of the ::part(page):hover rule above and come later, or the current page reverts to
+     the generic hover surface under the pointer and stops being identifiable. */
   lr-virtual-list::part(page-current):hover {
     background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet));
+  }
+  lr-virtual-list::part(page-current):active {
+    background: color-mix(in oklab, var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   lr-virtual-list::part(thumbnail) {
     position: relative;

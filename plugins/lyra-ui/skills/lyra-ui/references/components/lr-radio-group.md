@@ -6,7 +6,7 @@
 - **Class** `LyraRadioGroup`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio-group.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -16,8 +16,14 @@
 A labeled, keyboard-navigable group of `lr-radio` controls. Arrow keys, Home, and End move
 focus; arrow navigation selects the next enabled radio.
 
-**Properties:** `label`, `hint`, `errorText` (`error-text`), `name`, `required`, `disabled`, and
-`aria-label` (through `accessibleLabel`).
+**Properties:** `label`, `hint`, `errorText` (`error-text`), `name`, `required`, `disabled`,
+`aria-label` (through `accessibleLabel`), and `size: LyraSize = 'm'` (reflected) — the size of the
+group's **own** chrome, on the shared ladder and accepting both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
+`small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
+options off the same values the controls themselves use. It deliberately does **not** resize the
+`<lr-radio>`/`<lr-radio-button>` children: each carries its own `size`, so a group can hold options
+at mixed sizes and an explicitly-sized option is never silently overridden by its container. Set the
+same `size` on the children to scale the whole group.
 
 **Events:** exactly one group-owned `lr-change` with `{ value, radio }` per owned selection,
 including keyboard activation. The selected child does not emit its standalone alias. Ownership is
@@ -27,3 +33,7 @@ routes the event to the new group without waiting for a mutation-observer turn.
 **Slots:** default radios, `label`, `hint`, `error`.
 
 **CSS parts:** `base`, `label`, `hint`, `error`.
+
+**Themeable custom properties:** `--lr-radio-group-row-gap` (default
+`calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
+options and its messages, scaled by `size` through the shared control ladder.

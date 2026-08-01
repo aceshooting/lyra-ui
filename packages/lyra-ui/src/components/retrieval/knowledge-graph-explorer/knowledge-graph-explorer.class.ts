@@ -574,8 +574,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
               <div class="sr-only" role="status" aria-live="polite">
                 ${matches.length === 0
                   ? this.localize('viewerSearchNoMatches')
-                  : this.localize(matches.length === 1 ? 'viewerSearchMatchCount' : 'viewerSearchMatchCountPlural', undefined, {
+                  : this.localize('viewerSearchMatchCount', undefined, {
                       count: getNumberFormat(this.effectiveLocale).format(matches.length),
+                      pluralCount: matches.length,
                     })}
               </div>
             `

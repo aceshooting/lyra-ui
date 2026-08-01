@@ -1,10 +1,13 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { AnchoredPopoverController } from '../../../internal/anchored-popover-controller.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './model-select.styles.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
 import {
@@ -14,8 +17,10 @@ import {
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
 
-/** Visual size, same `xs`-`xl` scale as `<lr-select>`'s `size`. */
-export type LyraModelSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+/** The canonical step a `size` resolves to — an alias of the shared {@linkcode LyraSizeStep}, so
+ *  there is one definition of the ladder. The public `size` property accepts {@linkcode LyraSize},
+ *  i.e. this plus the `small`/`medium`/`large` spellings. */
+export type LyraModelSelectSize = LyraSizeStep;
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -111,6 +116,17 @@ export interface LyraModelSelectEventMap {
  *   for the same reason as `blur`.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
+ * @cssstate required - Matches while `required` is set. Style with `lr-model-select:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: a blur of the
+ * trigger/combobox, or a `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required picker is genuinely invalid, but colouring it red
+ * before the user has done anything is hostile.
  * @csspart form-control-label - The `<label>` element (only rendered — and only contributes to the
  *   accessible name — once `label` is non-empty).
  * @csspart trigger - The trigger button (closed-dropdown mode's positioning anchor).
@@ -125,9 +141,9 @@ export interface LyraModelSelectEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
- * @cssprop [--lr-model-select-trigger-padding=var(--lr-space-xs) var(--lr-space-s)] - Trigger/combobox padding shorthand, scaled by `size`.
- * @cssprop [--lr-model-select-trigger-min-height=var(--lr-size-2-5rem)] - Trigger/combobox block-size floor, scaled by `size`.
- * @cssprop [--lr-model-select-font-size=var(--lr-font-size-md)] - Trigger/combobox font size, scaled by `size`.
+ * @cssprop [--lr-model-select-trigger-padding=var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)] - Trigger/combobox padding shorthand, scaled by `size` off the shared control ladder.
+ * @cssprop [--lr-model-select-trigger-min-height=var(--lr-form-control-height)] - Trigger/combobox block-size floor, scaled by `size` off the shared control ladder.
+ * @cssprop [--lr-model-select-font-size=var(--lr-form-control-font-size)] - Trigger/combobox font size, scaled by `size` off the shared control ladder.
  * @cssprop [--lr-model-select-expand-size=var(--lr-size-1-75rem)] - Decorative expand-icon box size, scaled by `size`.
  * @cssprop [--lr-model-select-option-active-bg=var(--lr-color-brand-quiet)] - Background of a hovered or keyboard-active option row.
  * @cssprop [--lr-model-select-option-selected-bg=transparent] - Background of the currently-selected option row. Not declared on `:host`; retheme without hijacking `--lr-color-brand`.
@@ -137,7 +153,9 @@ export interface LyraModelSelectEventMap {
  */
 export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  // `sizes` before `styles`: the shared sheet declares the --lr-form-control-* knobs per tier, and
+  // this component's own :host block points its --lr-model-select-* surface at them.
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -187,8 +205,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `xs`–`xl` scale as `lr-select`'s `size`. */
-  @property({ reflect: true }) size: LyraModelSelectSize = 'm';
+  /** Visual size, on the library-wide six-step ladder (`2xs`–`xl`). `small`/`medium`/`large` are
+   *  accepted spellings of `s`/`m`/`l` and render identically, so markup migrated from Web Awesome
+   *  or Shoelace needs no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   @state() private activeIndex = -1;
   // Free-text mode's live input text. Only meaningful while `open` — the
@@ -383,6 +403,17 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     } else {
       this.validityController.setValidity({});
     }
+    this.publishValidityStates();
+  }
+
+  /** Republishes the six validity custom states. Driven from every place validity or interaction
+   *  can move -- {@linkcode updateValidity}, `reportValidity()`, and `updated()` for `touched` --
+   *  because this control drives `ElementInternals` directly rather than through the
+   *  `FormAssociated` mixin, which does this for the controls that do use it. `touched` is the
+   *  interaction flag: it flips on the trigger's/input's first blur, and on a `reportValidity()`
+   *  call, which is what a submit attempt runs. */
+  private publishValidityStates(): void {
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
   }
 
   formResetCallback(): void {
@@ -404,7 +435,33 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    // A reportValidity() call is what a submit attempt runs, and it is the moment native controls
+    // start matching :user-invalid -- so it counts as interaction here too. `touched` also gates
+    // the data-invalid/aria-invalid reflection, which is the point: after a rejected submit the
+    // control should read as invalid, not stay pristine.
+    this.touched = true;
+    this.publishValidityStates();
     return this.internals.reportValidity();
+  }
+
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("that model was retired by the provider") that no client-side constraint can
+   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
+   * control fails `checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears
+   * it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * `required` picker with no value stays `valueMissing`. The custom error also survives every
+   * intrinsic recomputation in between (each `value`/`required` change re-runs `updateValidity()`)
+   * and a `form.reset()` — matching a native control, where only another `setCustomValidity('')`
+   * clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.publishValidityStates();
   }
 
   /** `catalog`, normalized to `{ id, label }[]` regardless of the plain-string-array shorthand. */
@@ -472,6 +529,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     if (changed.has('required') || changed.has('touched') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
+    // Unconditional, unlike the data-invalid reflection above: it also has to run on the FIRST
+    // update, so a control that is never touched still publishes `optional`/`valid` (or
+    // `required`/`invalid`) for a consumer's :state() rule to match from the moment it mounts.
+    this.publishValidityStates();
     this.suppressControlBlur = false;
   }
 

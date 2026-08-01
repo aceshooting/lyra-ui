@@ -1,0 +1,279 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Guides/Theming" />
+
+# Theming
+
+Every visual value in the library resolves through a CSS custom property. There is no theme
+provider, no JavaScript configuration object and no build step — you set custom properties, and the
+components follow.
+
+The whole system is three layers deep, and **which layer you set decides how far your override
+reaches**. That is the one thing worth understanding before anything else on this page.
+
+## The three token layers
+
+| Layer | Name shape | Who sets it | How far it reaches |
+| --- | --- | --- | --- |
+| 1 — theme inputs | `--lr-theme-*` | You | Everywhere below it, through every nested shadow root |
+| 2 — internal tokens | `--lr-*` | The library | The element it is set on, and its direct `lr-*` children |
+| 3 — component knobs | `--lr-<component>-*` | You, per element | That one component |
+
+**Layer 1 is the application input layer.** Each `--lr-theme-*` property is declared exactly once,
+at `:root` in `theme.css`, and never inside any component's shadow styles. Set these to retheme.
+
+**Layer 2 is what the components actually read.** Each `--lr-*` token reads one `--lr-theme-*` input
+and falls back to a built-in value when that input is unset — which is why an unthemed component
+dropped onto a blank page still renders correctly.
+
+**Layer 3 is per-element trim.** `--lr-select-trigger-min-height`, `--lr-chart-grid-color` and their
+siblings are listed in each component's own page, and are meant for one element at a time.
+
+```css
+/* Layer 1 — retheme the product. */
+:root { --lr-theme-color-brand-fill-loud: #7c3aed; }
+
+/* Layer 3 — trim one element. */
+.compact-picker { --lr-select-trigger-min-height: 2rem; }
+```
+
+## Colour: the ramp and the semantic grid
+
+Colour has two layers beneath the `--lr-*` tokens you normally read.
+
+### The ramp — `--lr-ramp-<variant>-<step>`
+
+Five variants (`brand`, `success`, `warning`, `danger`, `neutral`) times eleven steps
+(`05 10 20 30 40 50 60 70 80 90 95`). The step number is approximate perceptual lightness: `-05` is
+nearly black, `-95` nearly white, `-50` the mid tone. The ramp is generated in OKLCH, so the same
+step number reads as the same *apparent* lightness across every variant.
+
+**Do not reference a ramp step from application CSS.** A step encodes a light-mode choice: `-50` is
+a comfortable fill on white and unreadable on a dark surface. Read the grid instead, which picks the
+right step per mode for you.
+
+### The grid — `--lr-color-<variant>-<role>-<emphasis>`
+
+`brand | success | warning | danger | neutral` times `fill | border | on` times
+`quiet | normal | loud` — 45 slots, and the layer to build on. Its *shape* is identical in light and
+dark; only which ramp step each slot resolves to changes, so a rule written against it is
+mode-independent for free.
+
+- `fill` is a background. `on` is text and icons that sit **on** the matching `fill`, guaranteed to
+  clear WCAG 1.4.3's 4.5:1 against it. `border` is an outline, with `normal` and `loud` guaranteed
+  to clear 1.4.11's 3:1 against the page surface.
+- `emphasis` runs `quiet` to `normal` to `loud`. Louder means more prominent, not lighter or darker:
+  in light mode it descends the ramp, in dark mode it climbs it.
+
+Those contrast guarantees are checked across both modes at build time, not asserted by hand.
+
+The flat names are aliases into the grid, kept because they read well at the call site:
+
+```css
+--lr-color-brand       /* == --lr-color-brand-fill-loud  */
+--lr-color-brand-quiet /* == --lr-color-brand-fill-quiet */
+--lr-color-on-brand    /* == --lr-color-brand-on-loud    */
+```
+
+So the full chain for one colour is: your `--lr-theme-*` input, else the grid slot, else the ramp
+step. To move one slot, set its input — the grid slot and every flat alias above it follow:
+
+```css
+.invoice-panel { --lr-theme-color-brand-fill-loud: #7c3aed; }
+```
+
+The ramp itself has **no** `--lr-theme-*` hook, and each step is declared on every `lr-*` element's
+own `:host` — so a ramp override written at `:root` is shadowed at the first component it meets and
+changes nothing. Retheme through the `--lr-theme-*` inputs; see
+[Where an override actually reaches](#where-an-override-actually-reaches) for why.
+
+<a href="./llms/tokens.md" target="_blank" rel="noreferrer">`llms/tokens.md`</a> is the generated
+catalog of every token, its `--lr-theme-*` input and its fallback. Read it rather than guessing a
+token name.
+
+## Light and dark
+
+```css
+@import '@aceshooting/lyra-ui/theme.css';
+```
+
+With `theme.css` imported, switch modes by putting `class="lr-light"` / `class="lr-dark"` (or
+`data-lr-theme="light"` / `"dark"`) on any ancestor. Each block also sets `color-scheme`, so native
+form controls, scrollbars and the canvas background follow.
+
+Without `theme.css`, no real `--lr-theme-*` value is set and the token layer's own
+`prefers-color-scheme: dark` fallback applies instead, re-pointing the built-in defaults at a dark
+palette. That fallback is *only* reachable where no theme input is set — it never fights a value
+you supplied.
+
+### Flipping the mode from JavaScript
+
+`@aceshooting/lyra-ui/theme.js` is a zero-dependency runtime for persisting and applying the choice.
+It imports no components and has no side effects on import, so it can run before the component graph
+loads:
+
+```ts
+import { setLyraTheme, getLyraTheme } from '@aceshooting/lyra-ui/theme.js';
+
+setLyraTheme({ mode: 'dark' });               // omitted fields keep their current value
+setLyraTheme({ accent: '#7c3aed' });          // mode stays 'dark'
+getLyraTheme();                               // → { mode: 'dark', accent: '#7c3aed' }
+setLyraTheme({ mode: 'auto', accent: null }); // clears the override and the accent
+```
+
+`setLyraTheme()` persists to `localStorage['lyra-theme']`, applies to `document.documentElement`,
+and dispatches `lr-theme-change` on `window`. It never throws: where `localStorage` is unavailable
+it degrades to apply-without-persist.
+
+Two things surprise people here:
+
+- **`mode: 'auto'` means "no override", not "follow the OS".** With `theme.css` imported, its
+  `:root` block sets the full light palette unconditionally, so `'auto'` renders light whatever the
+  OS says. To follow the OS, resolve `matchMedia('(prefers-color-scheme: dark)')` yourself and pass
+  a concrete `'light'` / `'dark'`.
+- **`accent` is a hook for your CSS, not a token the library reads.** It is written to
+  `--lr-theme-accent` on the root element; no component consumes it. Point the real inputs at it,
+  writing one rule per mode so each arm's fallback carries that mode's own value.
+
+For a no-flash boot, `lyraThemeBootstrap` is a self-contained IIFE **string** meant to be inlined
+into a `<script>` in `<head>` before any stylesheet, so the persisted theme lands on the root
+element before first paint.
+
+## Cascade layers, and the unlayered-wins rule
+
+`theme.css` declares its layer order up front:
+
+```css
+@layer lr-base, lr-theme, lr-utilities, lr-overrides;
+```
+
+The tokens themselves sit in `lr-theme`. The point is not where they sit relative to each other — it
+is that **any unlayered declaration beats every layered one**, whatever its specificity and whatever
+the source order. So your plain `:root { --lr-theme-color-brand-fill-loud: … }` wins even when your
+stylesheet loads *before* `theme.css`, and needs no `!important`.
+
+That matters because before layering, the theme was unlayered at `:root` — the same specificity as
+your own `:root` rule — and which one won came down to whichever the bundler happened to emit last.
+
+`lr-base` is reserved for a future element-level reset. `lr-utilities` and `lr-overrides` are named
+so an application can opt its own layers into a defined position relative to Lyra's, rather than
+inventing one:
+
+```css
+@layer lr-overrides {
+  :root { --lr-theme-color-brand-fill-loud: #7c3aed; }
+}
+```
+
+## Where an override actually reaches
+
+**A `--lr-*` token is declared on every `lr-*` element's `:host`.** So a `--lr-*` value you set on
+an ancestor is re-declared — and lost — at the first `lr-*` element between that ancestor and the
+component you meant to style. It never reaches anything nested inside another component.
+
+**`--lr-theme-*` inputs are declared only once**, at `:root`, and never inside a component's shadow
+styles, so they inherit normally through every nested shadow root. **Setting a `--lr-theme-*` input
+on a wrapper element is the supported way to retheme one subtree.**
+
+```css
+/* Reaches everything in the subtree, however deeply nested. */
+.invoice-panel { --lr-theme-color-brand-fill-loud: #7c3aed; }
+
+/* Reaches direct lr-* children only — shadowed at the first nested lr-* host. */
+.invoice-panel { --lr-color-brand: #7c3aed; }
+```
+
+Layer 3 is the exception that proves the rule: a handful of `--lr-<component>-*` escape hatches are
+deliberately left **undeclared** by their component and read only through a `var()` fallback at the
+point of use, precisely so a value set on an ancestor is not shadowed. Each one says so on its own
+component page; assume shadowing for anything that doesn't.
+
+**Diagnostic.** If an override has no effect on a nested component, check which layer you set before
+assuming the component is at fault. An override that works on a standalone control and stops working
+once you nest that control inside another component is this rule, not a bug. And note that a dead
+`--lr-*` declaration is byte-identical to a working one in the stylesheet — nothing reports it —
+so verify with `getComputedStyle` on the real element, and perturb the value deliberately to confirm
+the check actually bites.
+
+## Elevation
+
+One shadow token used to serve every surface, so a tooltip, a slider thumb and a full-screen dialog
+all cast the same shadow and elevation carried no information. There are five steps now:
+
+| Token | Typical use |
+| --- | --- |
+| `--lr-shadow-xs` | The shallowest resting chrome — a segmented control's selected thumb |
+| `--lr-shadow-s` | Resting cards and knobs: a stat tile, a slider thumb |
+| `--lr-shadow-m` | Anchored surfaces: menus, popovers, tooltips, listboxes |
+| `--lr-shadow-l` | Drawers, toasts, side panels, the app rail |
+| `--lr-shadow-xl` | Modal dialogs, the command palette, full-screen surfaces |
+
+`--lr-shadow` remains as an alias of the mid step, `--lr-shadow-m`.
+
+The shadow **colour** is tokenized too, as `--lr-shadow-color` — and it holds a space-separated RGB
+channel triple (default `0 0 0`), not a colour value, because each step consumes it as
+`rgb(var(--lr-shadow-color) / <alpha>)`. Setting it to `#000` or `black` breaks every step at once.
+
+Dark mode raises each step's alpha roughly threefold. Elevation is a luminance difference, and a
+12%-alpha black shadow against a near-black surface is not one.
+
+## Interaction states are a colour mix
+
+Hover and active states mix the resting fill toward a partner colour rather than running a
+`filter: brightness()` over it. Three knobs drive every one of them:
+
+| Token | Default | What it does |
+| --- | --- | --- |
+| `--lr-color-mix-hover` | `12%` | How far a hover moves from the resting fill |
+| `--lr-color-mix-active` | `22%` | How far an active/pressed state moves |
+| `--lr-color-mix-partner` | `var(--lr-color-text)` | What both states mix *toward* |
+
+```css
+/* What a component's own stylesheet does with them: mix the fill it actually
+   paints toward the partner, by the hover percentage. */
+--lr-button-hover-background: color-mix(
+  in oklab,
+  var(--lr-button-hover-base),
+  var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+);
+```
+
+Because the partner follows the text colour, the direction is automatic: on a light surface the text
+is dark so a hover darkens, and on a dark surface the same declaration lightens. `brightness()`
+never had that property — it multiplies every channel, does nothing at all to a pure white or pure
+black fill, and, because `filter` applies to descendants, drags the control's text and icons along
+with its background.
+
+All three chain through theme inputs (`--lr-theme-color-mix-hover`, `--lr-theme-color-mix-active`,
+`--lr-theme-color-mix-partner`), so a theme can flatten or exaggerate every interaction in the
+library at once without touching a component.
+
+`--lr-hover-brightness` still exists so an older theme that set it keeps rendering, but no component
+reads it any more.
+
+## Tokens with a contract attached
+
+- **`--lr-theme-icon-button-size`** (default `2.5rem`) backs `--lr-icon-button-size`, the tappable
+  box of **every** icon-only control in the library — `<lr-icon-button>` itself, and the
+  expand/clear/toggle affordances inside `<lr-date-input>`, `<lr-combobox>`, `<lr-input>` and
+  `<lr-select>`. It is a *floor*, not a fixed size, and the default leaves headroom. Keep the
+  resolved value at or above 24px (WCAG 2.2 SC 2.5.8); lowering it shrinks every affordance at once.
+- **Form-control geometry is one shared ladder.** `--lr-form-control-height`,
+  `--lr-form-control-font-size`, `--lr-form-control-padding-inline`,
+  `--lr-form-control-padding-block`, `--lr-form-control-gap` and `--lr-form-control-radius` are
+  re-assigned per `size` step (`2xs`, `xs`, `s`, `m`, `l`, `xl`, with `small`/`medium`/`large`
+  matching the same tiers), which is what makes an `<lr-button size="s">` exactly as tall as an
+  `<lr-input size="s">`. The six heights chain through `--lr-theme-form-control-height-*`, so an
+  application can compact the whole control scale from one place.
+- **`--lr-focus-ring-width` / `--lr-focus-ring-color` / `--lr-focus-ring-offset`** are what every
+  `:focus-visible` rule in the library references. Change the ring once, everywhere.
+- **Motion splits duration from easing.** `--lr-duration-fast|base|ambient` and
+  `--lr-easing-standard|emphasized|linear` are separate axes; the compound `--lr-transition-*`
+  tokens exist for `transition:` shorthands. Use the split pair inside `animation:`, which names its
+  own timing function.
+
+## Where to go next
+
+- [Getting started](?path=/docs/guides-getting-started--docs) — install, imports, and the subpath map.
+- [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs) — translating built-in
+  strings and mirroring layout.

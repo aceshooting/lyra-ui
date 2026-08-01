@@ -342,8 +342,7 @@ it('localizes the whole filtered-result announcement and formats its count with 
       lang="ar-u-nu-arab"
       .items=${items}
       .strings=${{
-        nodePaletteResultCount: '{count} نتيجة',
-        nodePaletteResultCountPlural: '{count} نتائج',
+        nodePaletteResultCount: { one: '{count} نتيجة', other: '{count} نتائج' },
       }}
     ></lr-node-palette>
   `)) as LyraNodePalette;

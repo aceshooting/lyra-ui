@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraSelect, LyraSelectSize } from './select.js';
+import type { LyraSelect, LyraSelectAppearance, LyraSelectSize } from './select.js';
+import type { LyraOption } from '../combobox/option.class.js';
 
 const meta: Meta = {
   title: 'Select',
@@ -76,7 +77,10 @@ export const RichRows: Story = {
   `,
 };
 
-/** `size` spans the same `xs`–`xl` scale as `lr-toast-item`, default `m`. */
+/**
+ * `size` walks the library's one form-control ladder, shared with `<lr-button>`/`<lr-input>`/
+ * `<lr-textarea>`, so same-tier controls are the same height in a toolbar row. Default `m`.
+ */
 export const Sizes: Story = {
   render: () => {
     const sizes: LyraSelectSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
@@ -93,6 +97,23 @@ export const Sizes: Story = {
       </div>
     `;
   },
+};
+
+/** The `small`/`medium`/`large` spellings render exactly what `s`/`m`/`l` render. */
+export const SizeSpellings: Story = {
+  name: 'Both size spellings',
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+      ${['s', 'small', 'm', 'medium', 'l', 'large'].map(
+        (size) => html`
+          <lr-select size=${size} placeholder=${`size="${size}"`}>
+            <lr-option value="a">Apple</lr-option>
+            <lr-option value="b">Banana</lr-option>
+          </lr-select>
+        `,
+      )}
+    </div>
+  `,
 };
 
 export const Disabled: Story = {
@@ -162,5 +183,101 @@ export const RequiredWithValidation: Story = {
       </lr-select>
       <button type="submit">Submit</button>
     </form>
+  `,
+};
+
+/**
+ * `multiple` turns the value into a `string[]` and renders one chip per selection. Picking a
+ * selected row toggles it back off; Backspace on the trigger drops the last one. The chips are
+ * deliberately non-interactive — the trigger is a real `<button>`, so a nested remove button
+ * would be invalid (and unreachable) interactive-content nesting.
+ */
+export const Multiple: Story = {
+  render: () => html`
+    <lr-select label="Fruit" multiple placeholder="Pick any" style="max-width: 22rem">
+      <lr-option value="a" selected>Apple</lr-option>
+      <lr-option value="b" selected>Banana</lr-option>
+      <lr-option value="c">Cherry</lr-option>
+      <lr-option value="d">Date</lr-option>
+    </lr-select>
+  `,
+};
+
+/** Past `max-options-visible` chips, the rest collapse behind a localized "+N" chip. */
+export const MaxOptionsVisible: Story = {
+  render: () => html`
+    <lr-select label="Fruit" multiple max-options-visible="2" style="max-width: 22rem">
+      <lr-option value="a" selected>Apple</lr-option>
+      <lr-option value="b" selected>Banana</lr-option>
+      <lr-option value="c" selected>Cherry</lr-option>
+      <lr-option value="d" selected>Date</lr-option>
+    </lr-select>
+  `,
+};
+
+/** `getTag` replaces a chip entirely, so the consumer owns its markup and parts. */
+export const CustomTags: Story = {
+  render: () => html`
+    <lr-select
+      label="Fruit"
+      multiple
+      style="max-width: 22rem"
+      .getTag=${(option: LyraOption, index: number) =>
+        html`<span part="tag" style="text-transform: uppercase">${index + 1}. ${option.label}</span>`}
+    >
+      <lr-option value="a" selected>Apple</lr-option>
+      <lr-option value="b" selected>Banana</lr-option>
+      <lr-option value="c">Cherry</lr-option>
+    </lr-select>
+  `,
+};
+
+/** `with-clear` adds a button that empties the selection and fires `lr-clear`. */
+export const WithClear: Story = {
+  render: () => html`
+    <lr-select label="Fruit" with-clear style="max-width: 20rem">
+      <lr-option value="a" selected>Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+    </lr-select>
+  `,
+};
+
+/** `appearance` retunes the trigger surface; `pill` rounds its corners. */
+export const Appearances: Story = {
+  render: () => {
+    const appearances: LyraSelectAppearance[] = [
+      'accent',
+      'filled',
+      'outlined',
+      'filled-outlined',
+      'plain',
+    ];
+    return html`
+      <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+        ${appearances.map(
+          (appearance) => html`
+            <lr-select appearance=${appearance} placeholder=${appearance}>
+              <lr-option value="a">Apple</lr-option>
+              <lr-option value="b">Banana</lr-option>
+            </lr-select>
+          `,
+        )}
+        <lr-select pill placeholder="pill">
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
+      </div>
+    `;
+  },
+};
+
+/** `placement` picks the preferred side; `flip`/`shift` still keep the listbox in view. */
+export const Placement: Story = {
+  render: () => html`
+    <div style="padding-block-start: 12rem">
+      <lr-select label="Fruit" placement="top-start" open style="max-width: 20rem">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    </div>
   `,
 };

@@ -229,11 +229,11 @@ it('localizes the default "Tasks" label via .strings while a customized label re
   expect(custom.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Plan');
 });
 
-describe('compact / appearance escape hatches', () => {
-  it('defaults to compact=false, appearance="card"', async () => {
+describe('compact / frame escape hatches', () => {
+  it('defaults to compact=false, frame="card"', async () => {
     const el = (await fixture(html`<lr-task-list></lr-task-list>`)) as LyraTaskList;
     expect(el.compact).to.be.false;
-    expect(el.appearance).to.equal('card');
+    expect(el.frame).to.equal('card');
     expect(el.hasAttribute('compact')).to.be.false;
   });
 
@@ -273,17 +273,43 @@ describe('compact / appearance escape hatches', () => {
     expect(getComputedStyle(header).gap).to.equal('7px');
   });
 
-  it('appearance="plain" removes [part="base"]\'s border and background', async () => {
+  it('frame="plain" removes [part="base"]\'s border and background', async () => {
     const cardEl = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
     const cardBase = cardEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(cardBase).borderTopStyle).to.equal('solid');
 
     const plainEl = (await fixture(
-      html`<lr-task-list .items=${items} appearance="plain"></lr-task-list>`,
+      html`<lr-task-list .items=${items} frame="plain"></lr-task-list>`,
     )) as LyraTaskList;
     const plainBase = plainEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(plainBase).borderTopStyle).to.equal('none');
     expect(getComputedStyle(plainBase).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('frame="card" keeps the border and background, and reassigning frame re-renders the chrome', async () => {
+    const el = (await fixture(html`<lr-task-list .items=${items} frame="card"></lr-task-list>`)) as LyraTaskList;
+    const baseEl = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(baseEl).borderTopStyle).to.equal('solid');
+    expect(getComputedStyle(baseEl).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+
+    el.frame = 'plain';
+    await el.updateComplete;
+    expect(el.getAttribute('frame')).to.equal('plain');
+    expect(getComputedStyle(baseEl).borderTopStyle).to.equal('none');
+
+    el.frame = 'card';
+    await el.updateComplete;
+    expect(getComputedStyle(baseEl).borderTopStyle).to.equal('solid');
+  });
+
+  it('gives the superseded `appearance` attribute no effect at all -- the rename left no alias', async () => {
+    const el = (await fixture(
+      html`<lr-task-list .items=${items} appearance="plain"></lr-task-list>`,
+    )) as LyraTaskList;
+    expect(el.frame).to.equal('card');
+    const baseEl = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(baseEl).borderTopStyle).to.equal('solid');
+    expect(getComputedStyle(baseEl).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
   });
 });
 

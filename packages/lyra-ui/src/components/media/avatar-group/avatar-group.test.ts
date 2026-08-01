@@ -49,7 +49,7 @@ it('sanitizes a NaN/negative max to a finite non-negative integer instead of poi
   expect(el.max).to.be.undefined; // explicitly unsetting still means "no limit"
 });
 
-it('defaults max to undefined, size to md, shape to circle, tone to neutral -- no overflow badge, every avatar visible', async () => {
+it('defaults max to undefined, size to medium, shape to circle, variant to neutral -- no overflow badge, every avatar visible', async () => {
   const el = (await fixture(html`
     <lr-avatar-group>
       <lr-avatar initials="AB"></lr-avatar>
@@ -57,23 +57,55 @@ it('defaults max to undefined, size to md, shape to circle, tone to neutral -- n
     </lr-avatar-group>
   `)) as LyraAvatarGroup;
   expect(el.max).to.be.undefined;
-  expect(el.size).to.equal('md');
+  expect(el.size).to.equal('medium');
   expect(el.shape).to.equal('circle');
-  expect(el.tone).to.equal('neutral');
+  expect(el.variant).to.equal('neutral');
   expect(el.shadowRoot!.querySelector('[part="overflow-badge"]')).to.not.exist;
   const avatars = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
   expect(avatars.every((a) => !a.hidden)).to.be.true;
 });
 
-it('reflects size/shape/tone as attributes for CSS selectors', async () => {
+it('spells its default size the same way lr-avatar does, and renders the same diameter', async () => {
+  // The two components used to default to different spellings of the same tier ('md' here,
+  // 'medium' on lr-avatar). They read as two vocabularies, and a consumer reasoning from one
+  // default to the other got the wrong answer -- so assert the *rendered* diameter as well as the
+  // spelling, since only the former is what the stack actually looks like.
+  const group = (await fixture(html`
+    <lr-avatar-group><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const standalone = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as HTMLElement;
+  await group.updateComplete;
+
+  const grouped = group.querySelector('lr-avatar') as HTMLElement;
+  const diameterOf = (avatar: HTMLElement): string =>
+    getComputedStyle((avatar as HTMLElement & { shadowRoot: ShadowRoot }).shadowRoot.querySelector('[part="base"]') as HTMLElement)
+      .inlineSize;
+
+  expect(group.size, 'the group defaults to the canonical medium spelling').to.equal('medium');
+  expect(diameterOf(grouped), 'a default avatar inside a default group matches a standalone one').to.equal(
+    diameterOf(standalone),
+  );
+  // ...and the group's own badge box tracks that same tier, so a "+N" circle can't be a
+  // different size from the avatars it caps.
+  expect(getComputedStyle(group).getPropertyValue('--lr-avatar-group-avatar-size').trim()).to.equal(
+    getComputedStyle(standalone).getPropertyValue('--lr-avatar-size').trim(),
+  );
+});
+
+it('reflects size/shape/variant as attributes for CSS selectors', async () => {
   const el = (await fixture(html`
-    <lr-avatar-group size="lg" shape="square" tone="brand">
+    <lr-avatar-group size="lg" shape="square" variant="brand">
       <lr-avatar></lr-avatar>
     </lr-avatar-group>
   `)) as LyraAvatarGroup;
   expect(el.getAttribute('size')).to.equal('lg');
   expect(el.getAttribute('shape')).to.equal('square');
-  expect(el.getAttribute('tone')).to.equal('brand');
+  expect(el.getAttribute('variant')).to.equal('brand');
+});
+
+it('exposes no `tone` property at all — `variant` replaced it outright, with no alias', async () => {
+  const el = (await fixture(html`<lr-avatar-group><lr-avatar></lr-avatar></lr-avatar-group>`)) as LyraAvatarGroup;
+  expect('tone' in el, 'tone is gone from the instance').to.be.false;
 });
 
 it('shows every avatar with no badge when max is greater than or equal to the child count', async () => {
@@ -415,17 +447,61 @@ describe('design tokens reach rendered CSS', () => {
     expect(hostStyle.getPropertyValue('--lr-avatar-group-overlap').trim()).to.equal('-8px');
   });
 
-  it('resolves --lr-avatar-group-badge-bg/-color through the tone token chain and applies them to the rendered badge (brand tier)', async () => {
+  // Resolve a declaration through the component's own shadow scope and read back the *used* value
+  // (`rgb(...)`), the same throwaway-probe dance `<lr-file-input>`'s token tests use. Palette
+  // colours come from a generated OKLCH ramp, so a test that restates their hexes asserts the
+  // palette, not the component, and breaks on every legitimate regeneration.
+  function resolvedIn(root: ShadowRoot, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    root.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it('resolves --lr-avatar-group-badge-bg/-color through the variant token chain and applies them to the rendered badge (brand tier)', async () => {
     const el = (await fixture(html`
-      <lr-avatar-group max="0" tone="brand"><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
+      <lr-avatar-group max="0" variant="brand"><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
     `)) as LyraAvatarGroup;
     const hostStyle = getComputedStyle(el);
-    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim()).to.equal('#ddf4ff');
-    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-color').trim()).to.equal('#0969da');
+
+    // The chain under test is `--lr-avatar-group-badge-bg` -> `--lr-color-brand-quiet` and
+    // `--lr-avatar-group-badge-color` -> `--lr-color-brand`; the variant tokens are read live so
+    // the expectation follows the palette instead of pinning one generation of it.
+    const brandQuiet = hostStyle.getPropertyValue('--lr-color-brand-quiet').trim();
+    const brand = hostStyle.getPropertyValue('--lr-color-brand').trim();
+    expect(brandQuiet, '--lr-color-brand-quiet resolves to a real colour').to.match(/^(#|rgb|color\()/);
+    expect(brand, '--lr-color-brand resolves to a real colour').to.match(/^(#|rgb|color\()/);
+    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim()).to.equal(brandQuiet);
+    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-color').trim()).to.equal(brand);
+
+    // ...and the brand tier is genuinely a different decision from the neutral default, so the two
+    // equalities above prove `:host([variant='brand'])` matched rather than passing vacuously.
+    const neutral = (await fixture(html`
+      <lr-avatar-group max="0"><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
+    `)) as LyraAvatarGroup;
+    const neutralStyle = getComputedStyle(neutral);
+    expect(brandQuiet, 'brand badge bg differs from the default variant').to.not.equal(
+      neutralStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim(),
+    );
+    expect(brand, 'brand badge color differs from the default variant').to.not.equal(
+      neutralStyle.getPropertyValue('--lr-avatar-group-badge-color').trim(),
+    );
+    // A stale `tone="brand"` must no longer reach the badge at all -- the rename is not aliased.
+    const stale = (await fixture(html`
+      <lr-avatar-group max="0" tone="brand"><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
+    `)) as LyraAvatarGroup;
+    expect(
+      getComputedStyle(stale).getPropertyValue('--lr-avatar-group-badge-bg').trim(),
+      'tone="brand" no longer recolors the badge',
+    ).to.equal(neutralStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim());
 
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
-    expect(getComputedStyle(badge).backgroundColor).to.equal('rgb(221, 244, 255)');
-    expect(getComputedStyle(badge).color).to.equal('rgb(9, 105, 218)');
+    expect(getComputedStyle(badge).backgroundColor).to.equal(
+      resolvedIn(el.shadowRoot!, 'background-color: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    expect(getComputedStyle(badge).color).to.equal(resolvedIn(el.shadowRoot!, 'color: var(--lr-color-brand)', 'color'));
   });
 });
 
@@ -452,7 +528,7 @@ it('is accessible', async () => {
   const el = (await fixture(html`
     <lr-avatar-group label="Team members">
       <lr-avatar initials="AB"></lr-avatar>
-      <lr-avatar initials="CD" tone="brand"></lr-avatar>
+      <lr-avatar initials="CD" variant="brand"></lr-avatar>
     </lr-avatar-group>
   `)) as LyraAvatarGroup;
   await expect(el).to.be.accessible();
@@ -495,9 +571,11 @@ describe('per-size overflow-badge font-size', () => {
     expect(lg, 'lg > md').to.be.greaterThan(md);
   });
 
-  it('leaves the default (md) tier byte-identical to today', async () => {
+  it('leaves the default (medium) tier byte-identical to today', async () => {
     expect(await renderedBadgeFontSize()).to.equal(13);
     expect(await renderedBadgeFontSize('md')).to.equal(13);
+    expect(await renderedBadgeFontSize('medium')).to.equal(13);
+    expect(await renderedBadgeFontSize('m')).to.equal(13);
   });
 
   it('lets a consumer override --lr-avatar-group-badge-font-size at any tier', async () => {

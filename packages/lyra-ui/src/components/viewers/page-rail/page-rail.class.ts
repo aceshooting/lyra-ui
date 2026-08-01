@@ -402,9 +402,10 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     const name =
       count === 0
         ? this.localize('pageRailPage', undefined, { page: numberFormat.format(number) })
-        : this.localize(count === 1 ? 'pageRailPageHighlighted' : 'pageRailPageHighlightedPlural', undefined, {
+        : this.localize('pageRailPageHighlighted', undefined, {
             page: numberFormat.format(number),
             count: numberFormat.format(count),
+            pluralCount: count,
           });
     const shownTones = tones.slice(0, 3);
     const overflow = tones.length - shownTones.length;

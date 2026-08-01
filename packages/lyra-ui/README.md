@@ -27,7 +27,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 268 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 275 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -94,11 +94,27 @@ type-directed composition), use the matching `.class.js` entry, such as
 custom-element registry.
 
 ```html
-<lr-combobox label="Fruit" with-clear>
+<lr-combobox label="Fruit" clearable>
   <lr-option value="a">Apple</lr-option>
   <lr-option value="b">Banana</lr-option>
 </lr-combobox>
 ```
+
+Each of the eleven families also has an entry point that registers every element in it —
+`@aceshooting/lyra-ui/components/forms`, `.../components/overlays`, and so on for `agent-tools`,
+`charts`, `conversation`, `data`, `layout`, `media`, `retrieval`, `utility` and `viewers`:
+
+```js
+import '@aceshooting/lyra-ui/components/forms';                 // every form control
+import '@aceshooting/lyra-ui/components/forms/input/input.js';  // just <lr-input>
+```
+
+A family entry point is **side-effectful by design**: importing it registers every tag in that
+family, the same way the root barrel registers all of them — including the peer-gated tags the root
+barrel leaves out (see below), whose optional peers still load lazily, on first use. Reach for one
+when you genuinely use most of a family and want a single import; reach for the granular path — which
+is what every example in these docs uses — when you don't, because a barrel cannot be tree-shaken
+down to the two elements you actually render.
 
 …or pull the whole library:
 
@@ -159,13 +175,143 @@ Claude the same reference as a skill, plus `/lyra-ui:migrate-from-wa`,
 **Contributing to this repo itself?** See [`../../AGENTS.md`](../../AGENTS.md) instead — that's a
 contributor guide for agents working *on* lyra-ui, not the same document as the above.
 
+## Upgrading from 7.x
+
+8.0.0 removes accidents rather than adding surface: property names that meant two different things,
+colors that were only ever solved for light mode, and mirrored attributes whose polarity or default
+had drifted from the upstream they claim to mirror. Almost every break below is a find-and-replace,
+and where a default flips it flips to the upstream one — an attribute renamed into its own negation
+is the most expensive mistake available here, because the renamed markup parses cleanly and every
+instance that doesn't carry it silently adopts the opposite behavior.
+
+### Tag renames
+
+| 7.x | 8.0.0 | Also |
+|---|---|---|
+| `<lr-tabs>` | `<lr-tab-group>` | The `lr-tabs-change` event splits into `lr-tab-hide` (outgoing tab) then `lr-tab-show` (incoming), and `--lr-tabs-*` custom properties become `--lr-tab-group-*`. The group now also accepts `<lr-tab>` / `<lr-tab-panel>` children; the library's own `slot`/`label` panel shape still works unchanged. |
+| `<lr-tree-node>` | `<lr-tree-item>` | |
+
+Neither old name is registered as an alias. A tag that silently keeps working under its old name is
+how a rename looks finished while half of it is inert.
+
+### Attribute and property renames
+
+Each row is a mechanical rewrite in your own markup or CSS. Three of them also change what happens
+when the attribute is *absent*, so grep for the tag as well as for the old attribute.
+
+| 7.x | 8.0.0 | What to check |
+|---|---|---|
+| `<lr-dialog no-light-dismiss>` | `<lr-dialog light-dismiss>` | Polarity un-inverted, so the default flips: a backdrop click no longer dismisses a dialog unless you opt in. `<lr-drawer>` inherits this. |
+| `<lr-pagination hide-summary>` | `<lr-pagination with-summary>` | Same flip: the localized "showing X–Y of Z" row is now opt-in. |
+| `<lr-pagination total-items>` | `<lr-pagination total>` | Leaving `total` unset renders the empty state, so a missed rename is visible rather than silent. |
+| `<lr-avatar src>` | `<lr-avatar image>` | |
+| `<lr-drawer placement>` | default `start` → `end` | A drawer with no `placement` now enters from the logical end edge; write `placement="start"` to keep the old side. |
+| `<lr-slider>` `::part(fill)` | `::part(indicator)` | Rename the selector in your own CSS; the old part name matches nothing and fails silently. |
+| `<lr-flag detailed>` | `<lr-flag variant="detailed">` | The deprecated boolean is gone. |
+| `<lr-attachment-chip size>`, `<lr-file-icon size>` | `bytes` | These were byte counts wearing the name of the size ladder. |
+| `<lr-dock-panel size>` / `min-size` / `max-size` | `extent` / `min-extent` / `max-extent` | Same reason: a CSS length along the docked axis, not a size step. |
+
+`<lr-combobox>`'s `with-clear` is no longer marked deprecated. Both upstream spellings of the clear
+button — `with-clear` and `clearable` — are now first-class on `<lr-input>`, `<lr-select>` and
+`<lr-combobox>` alike, so there is nothing to rewrite in either direction.
+
+### One styling vocabulary
+
+`variant`, `tone` and `kind` used to mean the same thing on different components, and `appearance`
+meant two unrelated things. There is now one name per concept, library-wide.
+
+- **`tone` → `variant`** on `<lr-avatar>`, `<lr-avatar-group>`, `<lr-chip>` and `<lr-confirm-bar>`,
+  and on `<lr-activity-feed>`'s entry objects — along with its `tone-dot*` CSS parts, now
+  `variant-dot*`. No alias for any of them.
+- **`appearance="card|plain"` → `frame="card|plain"`** on the thirteen container components that had
+  it (`<lr-stat>`, `<lr-agent-run>`, `<lr-task-list>`, `<lr-result-card>`, `<lr-commit-card>`,
+  `<lr-stack-trace>`, `<lr-entity-card>`, `<lr-source-card>`, `<lr-community-card>`,
+  `<lr-media-card>`, `<lr-chat-composer>`, `<lr-flow-controls>`, `<lr-flow-run-overlay>`).
+  `appearance` now means how a control fills itself and nothing else:
+  `accent | filled | outlined | filled-outlined | plain`.
+- **`<lr-button>`'s default `appearance` is now `accent`**, and `filled` is a genuinely quieter tier.
+  The two used to render identically for every variant except neutral.
+- **`size` accepts both ladders everywhere** — this library's `2xs|xs|s|m|l|xl` and the upstream
+  `small|medium|large` — so a migrated `size="small"` needs no rewrite.
+- **`<lr-badge>`, `<lr-tag>` and `<lr-chip>` are no longer unconditionally pill-shaped.** They
+  default to a rounded rectangle; add `pill` for the old fully-rounded ends.
+
+### Tokens and theming
+
+- **`theme.css` now declares cascade layers**: `@layer lr-base, lr-theme, lr-utilities, lr-overrides`,
+  with the tokens in `lr-theme`. Any *unlayered* declaration of yours now beats every Lyra one
+  regardless of specificity or load order, so a plain `:root { --lr-theme-… }` override always wins
+  with no `!important`. If you already wrap your overrides in your own `@layer`, they now sort
+  relative to `lr-theme` rather than losing to an unlayered `:root` — name your layer in an
+  `@layer` statement after importing `theme.css`, or move those rules out of a layer entirely.
+- **`--lr-font-size-md` is removed**; use `--lr-font-size-m`. The two were the same value under two
+  names, which is why `<lr-button>` rendered `size="m"` and `size="l"` at identical text sizes.
+- **Compound motion tokens are split into duration and easing** (`--lr-duration-*` +
+  `--lr-easing-*`). The compound `--lr-transition-*` tokens still resolve, composed from the two.
+- **Shadows are five tiered steps** (`--lr-shadow-xs` … `--lr-shadow-xl`), declared per mode with
+  much heavier dark-mode alphas, because a single near-black step against a near-black surface is not
+  a luminance difference at all. `--lr-shadow` still resolves (to the `m` step) and a theme that set
+  `--lr-theme-shadow-color` keeps working; a theme that overrode `--lr-shadow` directly should move to
+  the step it meant.
+- **Hover and press are a color mix, not `filter: brightness()`** — tune them library-wide with
+  `--lr-color-mix-hover` / `--lr-color-mix-active` against `--lr-color-mix-partner`.
+  `--lr-hover-brightness` still resolves but no component reads it.
+- **New `--lr-color-surface-overlay`** for modal panels (the page surface in light mode, lighter than
+  the page in dark), a **new `--lr-terminal-bg-*` set** for ANSI background colors, and a new
+  `--lr-form-control-*` tier (`height`, `font-size`, `padding-inline`, `padding-block`, `gap`,
+  `radius`) — one ladder shared by every control, retuned per `size` step.
+- Colors moved where the generated ramp put them, including the brand seed. Restoring the old hex
+  values by hand would reintroduce the contrast failures the ramp exists to prevent.
+- The value-named `--lr-size-<value>` tokens are unchanged and still resolve, but the family is
+  frozen: existing entries may disappear as call sites find a semantic home, and none will be added.
+  Don't build new theming on them — reach for `--lr-space-*`, `--lr-radius*`, `--lr-font-size-*` or
+  `--lr-form-control-*` instead.
+
+### Localization
+
+**Pluralized messages are now CLDR category objects** selected through `Intl.PluralRules`, replacing
+the paired `<key>` + `<key>Plural` convention. A catalog passed to `registerLyraLocale()`, or a
+per-instance `.strings`, that used the old pair must be rewritten — with that locale's real
+categories, which for Russian is four and for Arabic six:
+
+```ts
+// 7.x
+registerLyraLocale('en', { toolCount: '{count} tool', toolCountPlural: '{count} tools' });
+
+// 8.0.0
+registerLyraLocale('en', { toolCount: { one: '{count} tool', other: '{count} tools' } });
+```
+
+Eight translation catalogs now ship as side-effect-only modules, so a common locale no longer needs a
+hand-written catalog at all:
+
+```js
+import '@aceshooting/lyra-ui/translations/fr.js'; // also ar, de, es, ja, pt-BR, ru, zh-CN
+```
+
+### Packaging
+
+- **`@aceshooting/lyra-ui/internal/*` is no longer a published subpath.** The supported helpers moved
+  to `@aceshooting/lyra-ui/utilities/*` (one module per helper, or the whole set from
+  `@aceshooting/lyra-ui/utilities`), which now also carries `FormAssociated` and `groupByRecency` —
+  previously reachable only through the side-effectful root barrel. Rewrite
+  `@aceshooting/lyra-ui/internal/positioner.js` as `@aceshooting/lyra-ui/utilities/positioner.js`,
+  and likewise for `a11y`, `announcer`, `icons`, `layered-layout`, `lyra-element`,
+  `overlay-manager`, `prefix` and `scroll-lock`. Anything else that lived under `internal/` was never
+  a public API and has no replacement subpath.
+
 ## Migrating from Web Awesome or Shoelace
 
 For a component marked with a `wa-*` counterpart in the "Mirrors" column, Lyra keeps the documented
 public vocabulary where practical: attributes, slots, events, CSS parts, and custom properties use
 the same names under the `lr-` prefix. This makes many migrations a predictable import and tag-name
-change, while the component notes remain authoritative for intentional differences. For example,
-Lyra's combobox uses `with-clear`, while Web Awesome's equivalent uses `clearable`.
+change, while the component notes remain authoritative for intentional differences.
+
+Where the two upstreams disagree on a name for the same thing, Lyra accepts both spellings rather
+than forcing a rewrite. The clear button is the clearest case: Web Awesome spells it `with-clear`,
+Shoelace spells it `clearable`, and `<lr-input>`, `<lr-select>` and `<lr-combobox>` each honour both.
+Neither spelling is deprecated, and neither needs rewriting in either direction — whichever one your
+markup already carries keeps working.
 
 ```
 <wa-combobox value="x" multiple with-clear>  →  <lr-combobox value="x" multiple with-clear>
@@ -187,10 +333,9 @@ node packages/lyra-ui/scripts/migrate-wa.mjs path/to/your/src             # appl
 It only rewrites a tag or import that this page documents a `lr-*`/`@aceshooting/lyra-ui`
 equivalent for — a component's `— (extra)` row (no Web Awesome/Shoelace counterpart) and any
 `wa-*`/`sl-*` text that isn't an actual tag usage (comments, unrelated identifiers) are left alone.
-It does not rewrite attribute-name differences (e.g. Web Awesome's `clearable` vs. Lyra's
-`with-clear`) or deep import subpaths (`.../dist/components/button/button.js`, since Lyra's own
-subpath layout doesn't mirror Shoelace's or Web Awesome's) — those are flagged instead, and still
-need the component notes below.
+It does not rewrite attribute names or deep import subpaths
+(`.../dist/components/button/button.js`, since Lyra's own subpath layout doesn't mirror Shoelace's
+or Web Awesome's) — those are flagged instead, and still need the component notes below.
 
 Shoelace is now a historical predecessor to Web Awesome, but its component vocabulary remains
 familiar to many teams. Lyra provides a conceptual migration path rather than claiming a drop-in
@@ -202,7 +347,7 @@ familiar to many teams. Lyra provides a conceptual migration path rather than cl
 | `<sl-input>` / `<sl-textarea>` | `<lr-input>` / `<lr-textarea>` | Preserve the native editing and form contract; review label/error markup. |
 | `<sl-select>` / `<sl-option>` | `<lr-select>` / `<lr-option>` | Review option and value events. |
 | `<sl-dialog>` / `<sl-drawer>` | `<lr-dialog>` / `<lr-drawer>` | Review close reasons, focus behavior, and slots. |
-| `<sl-card>` / `<sl-badge>` / `<sl-callout>` | `<lr-card>` / `<lr-badge>` / `<lr-callout>` | Review appearance tokens and dismiss events. |
+| `<sl-card>` / `<sl-badge>` / `<sl-alert>` | `<lr-card>` / `<lr-badge>` / `<lr-callout>` | Review appearance tokens and dismiss events. |
 | `<sl-spinner>` / `<sl-progress-bar>` | `<lr-spinner>` / `<lr-progress-bar>` | Built-in status copy is localized through Lyra's runtime. |
 
 For either migration, update the package import, replace the custom-element prefix, run the
@@ -251,8 +396,12 @@ Applications can override any `--lr-theme-*` input directly:
 }
 ```
 
-See `internal/tokens.styles.ts` for the complete shared token list. Component-specific `--lr-*`
-custom properties remain available for local overrides.
+`theme.css` declares `@layer lr-base, lr-theme, lr-utilities, lr-overrides` and puts its own tokens
+in `lr-theme`, so an *unlayered* rule of yours — like the `:root` block above — wins over every Lyra
+declaration regardless of specificity or which stylesheet the bundler emitted first. The three other
+layer names are there so an application can opt its own layers into a defined position rather than
+inventing one. See [`llms/tokens.md`](./llms/tokens.md) for the complete shared token list.
+Component-specific `--lr-*` custom properties remain available for local overrides.
 
 **Frontend quality guarantees.** Every component is designed as a native custom element and tested
 for the contract that applies to its shape: semantic roles and accessible names inside shadow DOM,
@@ -378,7 +527,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 268 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 275 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -386,24 +535,26 @@ API details.
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
-| `<lr-combobox>` + `<lr-option>` | `wa-combobox` | Filterable single/multi select, form-associated; `xs`–`xl` sizing; async rich rows and retained selection payloads via `source`/`selectedRows`; virtual scrolling with `max-render` |
-| `<lr-select>` | `wa-select` | Closed-list single-select, button trigger (not a text input, no filtering); form-associated, shares `<lr-option>` with `lr-combobox` |
+| `<lr-combobox>` + `<lr-option>` | `wa-combobox` / `wa-option` / `sl-option` | Filterable single/multi select, form-associated; `xs`–`xl` sizing; async rich rows and retained selection payloads via `source`/`selectedRows`; virtual scrolling with `max-render` |
+| `<lr-select>` | `wa-select` / `sl-select` | Closed-list single-select, button trigger (not a text input, no filtering); form-associated, shares `<lr-option>` with `lr-combobox` |
 | `<lr-date-picker>` | `wa-date-picker` | Inline calendar, single + range |
 | `<lr-date-input>` | `wa-date-input` | Date field + calendar popover, form-associated |
 | `<lr-phone-input>` | — (extra) | Country-aware telephone field with canonical E.164 form values; numbering metadata is supplied through an optional adapter |
 | `<lr-toast>` + `<lr-toast-item>` + `toast()` | `wa-toast` / `wa-toast-item` | Stacking notifications |
 | `<lr-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
-| `<lr-textarea>` | `wa-textarea` | Form-associated multiline field with label/hint/error chrome, auto-resize, native editing passthrough, and caret APIs |
-| `<lr-input>` | `wa-input` | Form-associated single-line field (`text`/`password`/`email`/`number`) with label/hint/error chrome and a built-in password-visibility toggle |
+| `<lr-textarea>` | `wa-textarea` / `sl-textarea` | Form-associated multiline field with label/hint/error chrome, auto-resize, native editing passthrough, and caret APIs |
+| `<lr-input>` | `wa-input` / `sl-input` | Form-associated single-line field (`text`/`password`/`email`/`number`) with label/hint/error chrome and a built-in password-visibility toggle |
 | `<lr-number-input>` + `<lr-time-input>` | `wa-number-input` / `wa-time-input` | Native number/time aliases retaining Lyra form and event contracts |
-| `<lr-color-picker>` | `wa-color-picker` | Form-associated native color picker with label/hint chrome |
-| `<lr-checkbox-group>` | — (extra) | Form-associated group of checkboxes with array values and group validation |
+| `<lr-color-picker>` | `wa-color-picker` / `sl-color-picker` | Form-associated native color picker with label/hint chrome |
+| `<lr-checkbox-group>` | `wa-checkbox-group` | Form-associated group of checkboxes with array values and group validation |
 | `<lr-token-input>` | — (extra) | Editable, removable form-associated token list |
-| `<lr-icon>` + `<lr-icon-button>` | — (extra) | Dependency-free SVG icons and accessible icon-only actions |
-| `<lr-button>` | `wa-button` | Generic action-button primitive (`variant`/`appearance`/`size`/`loading`), owns `type="submit"`/`"reset"` via the closest ancestor `<form>` |
-| `<lr-radio>` + `<lr-radio-group>` | `wa-radio` / `wa-radio-group` | Form-associated single-choice controls with roving arrow-key navigation and group validation |
-| `<lr-spinner>` | `wa-spinner` | Localized indeterminate busy indicator with reduced-motion support |
-| `<lr-progress-bar>` + `<lr-progress-ring>` | `wa-progress-bar` / `wa-progress-ring` | Determinate or indeterminate progress indicators |
+| `<lr-icon>` + `<lr-icon-button>` | `wa-icon` / `sl-icon` / `sl-icon-button` | Dependency-free SVG icons and accessible icon-only actions |
+| `<lr-button>` | `wa-button` / `sl-button` | Generic action-button primitive (`variant`/`appearance`/`size`/`loading`), owns `type="submit"`/`"reset"` via the closest ancestor `<form>` |
+| `<lr-radio>` + `<lr-radio-group>` | `wa-radio` / `wa-radio-group` / `sl-radio` / `sl-radio-group` | Form-associated single-choice controls with roving arrow-key navigation and group validation |
+| `<lr-radio-button>` | `sl-radio-button` | The same single-choice control rendered as a button; a `LyraRadio` subclass, so a `<lr-radio-group>` accepts either tag and consecutive siblings collapse into one segmented control |
+| `<lr-otp-input>` | `wa-otp-input` | Form-associated one-time-code field — presentational segments over one real input, so paste, SMS autofill and mobile keyboards work natively and the control stays one tab stop |
+| `<lr-spinner>` | `wa-spinner` / `sl-spinner` | Localized indeterminate busy indicator with reduced-motion support |
+| `<lr-progress-bar>` + `<lr-progress-ring>` | `wa-progress-bar` / `wa-progress-ring` / `sl-progress-bar` / `sl-progress-ring` | Determinate or indeterminate progress indicators |
 | `<lr-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
 | `<lr-locale-picker>` | — (extra) | Closed-list locale switcher over the library's own locale registry (`getRegisteredLyraLocales()`) or an explicit `locales` catalog; selecting a row calls `setLyraLocale()` unless `lr-change` is cancelled |
 
@@ -411,14 +562,14 @@ API details.
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
-| `<lr-animated-image>` | — (extra) | Animated image playback with a captured still frame and reduced-motion support |
-| `<lr-animation>` | — (extra) | Web Animations API wrapper for declarative preset or custom animations |
+| `<lr-animated-image>` | `wa-animated-image` / `sl-animated-image` | Animated image playback with a captured still frame and reduced-motion support |
+| `<lr-animation>` | `wa-animation` / `sl-animation` | Web Animations API wrapper for declarative preset or custom animations |
 | `<lr-avatar-group>` | — (extra) | Responsive avatar grouping with a localized overflow indicator |
-| `<lr-include>` | — (extra) | Loads sanitized HTML or text content from a URL |
-| `<lr-known-date>` | — (extra) | Form-associated date entry control with separate day, month, and year fields |
+| `<lr-include>` | `wa-include` / `sl-include` | Loads sanitized HTML or text content from a URL |
+| `<lr-known-date>` | `wa-known-date` | Form-associated date entry control with separate day, month, and year fields |
 | `<lr-lightbox>` | — (extra) | Full-screen modal image viewer with navigation and pan/zoom |
-| `<lr-qr-code>` | — (extra) | Canvas QR renderer; needs the optional peer `qrcode` |
-| `<lr-random-content>` | — (extra) | Random, unique, or sequential slotted-content selection with autoplay |
+| `<lr-qr-code>` | `wa-qr-code` / `sl-qr-code` | Canvas QR renderer; needs the optional peer `qrcode` |
+| `<lr-random-content>` | `wa-random-content` | Random, unique, or sequential slotted-content selection with autoplay |
 | `<lr-timeline>` + `<lr-timeline-item>` | — (extra) | Vertical or horizontal chronological event layout |
 | `<lr-tour>` | — (extra) | Anchored onboarding tour with spotlight, keyboard navigation, and focus management |
 
@@ -427,24 +578,24 @@ API details.
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
 | `<lr-empty>` | — (extra) | Generic empty/no-data state |
-| `<lr-skeleton>` | — (extra) | Loading placeholder (pulse/sheen) |
+| `<lr-skeleton>` | `wa-skeleton` / `sl-skeleton` | Loading placeholder (pulse/sheen) |
 | `<lr-scroller>` | `wa-scroller` | Responsive overflow surface with optional navigation controls |
-| `<lr-resize-observer>` | `wa-resize-observer` | Lifecycle-managed ResizeObserver for slotted elements |
+| `<lr-resize-observer>` | `wa-resize-observer` / `sl-resize-observer` | Lifecycle-managed ResizeObserver for slotted elements |
 | `<lr-intersection-observer>` | `wa-intersection-observer` | Lifecycle-managed IntersectionObserver for slotted elements |
-| `<lr-mutation-observer>` | `wa-mutation-observer` | Lifecycle-managed MutationObserver for slotted elements |
+| `<lr-mutation-observer>` | `wa-mutation-observer` / `sl-mutation-observer` | Lifecycle-managed MutationObserver for slotted elements |
 | `<lr-stat>` | — (extra) | KPI/stat card with trend pill and an optional breakdown row list; either can carry an `exactValue` shown as a hover/focus tooltip alongside the rounded/formatted display value |
-| `<lr-table>` | — (extra) | Sort/select-aware data table with optional controlled filtering, client/server-friendly pagination, loading state, consumer-owned inline editing, expandable rows, sticky columns, and responsive `priority` columns |
-| `<lr-pagination>` | — (extra) | Controlled previous/next and validated page-jump navigation with a localized range summary, loading/empty states, RTL icons, and container-responsive stacking |
+| `<lr-table>` | `wa-data-grid` | Sort/select-aware data table with optional controlled filtering, client/server-friendly pagination, loading state, consumer-owned inline editing, expandable rows, sticky columns, and responsive `priority` columns |
+| `<lr-pagination>` | `wa-pagination` | Controlled previous/next and validated page-jump navigation with a localized range summary, loading/empty states, RTL icons, and container-responsive stacking |
 | `<lr-gauge>` | — (extra) | Radial, full-circle ring, or linear meter with a per-instance fill token |
 | `<lr-export-button>` | — (extra) | Injection-safe CSV/JSON downloads plus event-handled custom format descriptors and controlled busy state |
-| `<lr-copy-button>` | — (extra) | Standalone icon-only copy-to-clipboard button for a plain text value, no positioning opinion |
-| `<lr-split>` | — (extra) | Resizable panel layout; one pane can opt into responsive `collapse` (`"start"`/`"end"`) to a fixed-width rail, then a floating overlay card, as the split's container narrows |
+| `<lr-copy-button>` | `wa-copy-button` / `sl-copy-button` | Standalone icon-only copy-to-clipboard button for a plain text value, no positioning opinion |
+| `<lr-split>` | `wa-split-panel` / `sl-split-panel` | Resizable panel layout; one pane can opt into responsive `collapse` (`"start"`/`"end"`) to a fixed-width rail, then a floating overlay card, as the split's container narrows |
 | `<lr-widget>` | — (extra) | Card shell with collapsible header, fullscreen, and customizable chrome |
 | `<lr-word-cloud>` | — (extra) | Zero-dependency SVG word/tag cloud, spiral-placed by weight |
-| `<lr-badge>` + `<lr-tag>` | `wa-badge` / `wa-tag` | Compact semantic status labels |
-| `<lr-callout>` | `wa-callout` | Dismissible inline status, warning, and error message surface |
-| `<lr-divider>` | `wa-divider` | Horizontal or vertical semantic separator |
-| `<lr-rating>` | `wa-rating` | Keyboard-accessible star rating slider |
+| `<lr-badge>` + `<lr-tag>` | `wa-badge` / `wa-tag` / `sl-badge` / `sl-tag` | Compact semantic status labels |
+| `<lr-callout>` | `wa-callout` / `sl-alert` | Dismissible inline status, warning, and error message surface |
+| `<lr-divider>` | `wa-divider` / `sl-divider` | Horizontal or vertical semantic separator |
+| `<lr-rating>` | `wa-rating` / `sl-rating` | Keyboard-accessible star rating slider |
 
 **Temporal & graph**
 
@@ -455,7 +606,7 @@ API details.
 | `<lr-heatmap>` | — (extra) | DPR-aware Canvas heatmap with matrix and calendar (`mode="calendar"`) layouts, `fit-to-width` responsive scaling |
 | `<lr-sequence-strip>` | — (extra) | Compact, one-thin-cell-per-item strip visualizing a sequence of categorical states with an optional secondary per-cell marker — pure CSS/flex, no chart.js/SVG/canvas; a glanceable aggregate (`role="img"`) sized/named consistently with the sparkline/heatmap family, not a `role="list"` of separately-operable cells |
 | `<lr-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag, directed/styled relationship links, and rich accessible metadata — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
-| `<lr-tree>` + `<lr-tree-node>` | — (extra) | Expand/collapse hierarchy with structured icon/label/description/badge rows, optional richer accessible labels, and APG tree keyboard navigation |
+| `<lr-tree>` + `<lr-tree-item>` | `wa-tree` / `wa-tree-item` / `sl-tree` / `sl-tree-item` | Expand/collapse hierarchy with structured icon/label/description/badge rows, optional richer accessible labels, and APG tree keyboard navigation |
 
 **Flow canvas — workflow & DAG diagramming**
 
@@ -484,7 +635,7 @@ API details.
 | `<lr-mind-map>` | — (extra) | Radial expandable topic tree (NotebookLM-style mind map) — zero-dependency SVG with a closed-form radial layout; hierarchy only, no cross-links, force simulation, communities, or edge labels (that's `lr-graph`) |
 | `<lr-knowledge-graph-explorer>` | — (extra) | Orchestration-level surface for exploring a knowledge graph — the `lr-graph` canvas plus entity search, type filters, neighborhood expansion, pinned nodes, path finding between pins, and a details overlay; composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-list`, `lr-path-strip`, and `lr-popover.showAt()` rather than re-implementing graph rendering itself |
 | `<lr-graph-query-builder>` | — (extra) | Editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph — start/end entity anchors, relationship-type and node-type pickers with a removable active-filter chip display, a traversal direction, a min/max hop range, validation, and a host-persisted saved-query list; a serializable query model for GraphRAG workflows |
-| `<lr-entity-dossier>` | — (extra) | Full entity detail surface — a persistent header (`lr-entity-card` plus a confidence `lr-stat`) above an `lr-tabs` strip for Relationships (`lr-neighbor-list`), Supporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`); pure layout, never fetches or mutates graph/document state |
+| `<lr-entity-dossier>` | — (extra) | Full entity detail surface — a persistent header (`lr-entity-card` plus a confidence `lr-stat`) above an `lr-tab-group` strip for Relationships (`lr-neighbor-list`), Supporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`); pure layout, never fetches or mutates graph/document state |
 | `<lr-embedding-explorer>` | — (extra) | Accessible SVG projection of host-provided embedding points with cluster coloring, filtering, roving keyboard focus, and `lr-point-select`; it never computes embeddings or owns dimensionality reduction |
 
 **Retrieval & grounding**
@@ -534,7 +685,7 @@ API details.
 | `<lr-dashboard-grid>` | — (extra) | Responsive, keyboard-accessible widget grid — positions `layout` entries on a CSS Grid, composing `lr-widget` + `lr-widget-renderer` for each cell's default content, with drag/resize/collision handled as controlled events; readonly (viewer) by default, opt into editor gestures via `cells-draggable`/`cells-resizable` |
 | `<lr-filter-bar>` | — (extra) | Row of dashboard filters declared by the host (`filters`) rather than invented by this component — each composes an existing Lyra input (`lr-select`/`lr-combobox`/`lr-date-input`), plus a removable `lr-chip-group` summary and a reset button; controlled, emits a single `lr-input` carrying the full resulting value |
 | `<lr-query-builder>` | — (extra) | Composable structured-query builder for tabular/dashboard data — a flat list of field/operator/value condition rows combined with one AND/OR combinator; fully controlled, distinct from `lr-graph-query-builder`'s typed graph/path queries |
-| `<lr-drilldown-panel>` | — (extra) | Controlled navigation from a chart/table datum to its related evidence, documents, entities, or agent runs — a breadcrumb trail (`lr-breadcrumb`) over `path` plus, per category the current node has content for, the matching existing primitive (`lr-source-card`, `lr-document-preview`, `lr-entity-card`), wrapped in `lr-tabs` only when more than one category applies |
+| `<lr-drilldown-panel>` | — (extra) | Controlled navigation from a chart/table datum to its related evidence, documents, entities, or agent runs — a breadcrumb trail (`lr-breadcrumb`) over `path` plus, per category the current node has content for, the matching existing primitive (`lr-source-card`, `lr-document-preview`, `lr-entity-card`), wrapped in `lr-tab-group` only when more than one category applies |
 
 **Evaluation**
 
@@ -549,14 +700,15 @@ API details.
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
-| `<lr-popover>` + `<lr-tooltip>` + `<lr-dropdown>` | `wa-popover` / `wa-tooltip` / `wa-dropdown` | Floating UI-positioned, RTL-aware overlay primitives with light dismiss and trigger ARIA wiring |
+| `<lr-popover>` + `<lr-tooltip>` + `<lr-dropdown>` | `wa-popover` / `wa-tooltip` / `wa-dropdown` / `sl-tooltip` / `sl-dropdown` | Floating UI-positioned, RTL-aware overlay primitives with light dismiss and trigger ARIA wiring |
+| `<lr-popup>` | `wa-popup` / `sl-popup` | The low-level anchored-positioning primitive the three above are built on — placement, flip/shift, arrow and virtual anchoring, with no dismiss, focus or ARIA policy of its own |
 
 **Charts**
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
 | `<lr-chart>` | `wa-chart` | Core Chart.js wrapper (`Series`-based, plus raw `config` passthrough) with bounded `appendData()` streaming and `exportData('csv'|'png')` — needs the optional peer deps `chart.js`, `chartjs-plugin-zoom` |
-| `<lr-bar-chart>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-doughnut-chart>`, `<lr-scatter-chart>`, `<lr-bubble-chart>`, `<lr-radar-chart>`, `<lr-polar-area-chart>` | `wa-chart` | Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>` |
+| `<lr-bar-chart>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-doughnut-chart>`, `<lr-scatter-chart>`, `<lr-bubble-chart>`, `<lr-radar-chart>`, `<lr-polar-area-chart>` | `wa-bar-chart` / `wa-line-chart` / `wa-pie-chart` / `wa-doughnut-chart` / `wa-scatter-chart` / `wa-bubble-chart` / `wa-radar-chart` / `wa-polar-area-chart` | Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>` |
 | `<lr-box-plot>` | — (extra) | Box-and-whisker chart from precomputed five-number summaries — needs `chart.js`, `chartjs-plugin-zoom`, and `@sgratzl/chartjs-chart-boxplot` |
 | `<lr-histogram>` | — (extra) | Bins raw values (`binValues()`) and renders a bar chart — same optional peer deps as `<lr-chart>` |
 | `<lr-lite-chart>` | — (extra) | Dependency-free bar/line chart (plain SVG/DOM) with bounded `appendData()` streaming and `exportData('csv'|'svg')` — **no optional peer deps**, for projects that forbid a charting dependency outright |
@@ -566,7 +718,7 @@ API details.
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
 | `<lr-map>` | — (extra) | maplibre-gl wrapper with declarative legend, choropleth GeoJSON layer, and point markers (via `markers` property), plus a raw `map` escape hatch — needs the optional peer `maplibre-gl` (see Install above). Defaults to OpenStreetMap's demo tiles when `mapStyle` is unset — **production apps must supply their own `mapStyle`** (see Install above / Known limitations) |
-| `<lr-file-input>` | — (extra) | Drag-drop + click-to-browse file dropzone, emits raw `File[]` (no CSV/XLSX parsing — that's host-specific) |
+| `<lr-file-input>` | `wa-file-input` | Drag-drop + click-to-browse file dropzone, emits raw `File[]` (no CSV/XLSX parsing — that's host-specific) |
 
 **Conversation & Agent UI — chat/agent product building blocks**
 
@@ -596,7 +748,7 @@ each one-liner below.
 | `<lr-stream-status>` | — (extra) | Compact transport-health indicator (`idle`/`connecting`/`streaming`/`stalled`) with heartbeat-aware stall detection via `recordActivity()` |
 | `<lr-checkpoint>` | — (extra) | Inline conversation restore-point marker between messages; its Restore affordance confirms inline, then hands the host a `lr-restore` event — persists and restores nothing itself |
 | `<lr-handoff-divider>` | — (extra) | Labeled separator marking control transfer between agents in a transcript ("Transferred to Research Agent"), with an optional agent avatar; purely presentational, announced once via an internal `<lr-live-region>` on connect |
-| `<lr-markdown>` | — (extra) | Sanitized Markdown → HTML (GFM tables, fenced code, links); lazy-loads the optional peers `marked` + `dompurify` |
+| `<lr-markdown>` | `wa-markdown` | Sanitized Markdown → HTML (GFM tables, fenced code, links); lazy-loads the optional peers `marked` + `dompurify` |
 | `<lr-code-block>` | — (extra) | Fenced code display with a copy button, optional line numbers, lazy-loaded `shiki` grammars, and built-in GreyCat/GCL highlighting |
 | `<lr-artifact-panel>` | — (extra) | Shell around one agent-generated artifact — title/kind header, preview↔code toggle, version navigation with restore, a streaming indicator, and built-in copy/download actions; renders none of the artifact itself, content is slotted |
 | `<lr-live-region>` | — (extra) | Throttled/coalesced ARIA live-region announcer for streaming UIs, built on the reusable internal `Announcer` engine |
@@ -608,7 +760,7 @@ each one-liner below.
 | `<lr-mention-popover>` | — (extra) | Caret-anchored `@`-mention/`/`-command autocomplete popover for a host-owned `<textarea>`/`<input>`; never takes DOM focus itself |
 | `<lr-tool-call-chip>` | — (extra) | Compact inline pill for one tool/function call mid-conversation; status-aware glyph/color, optional hover/focus detail tooltip |
 | `<lr-tool-result-view>` + `registerToolRenderer()` | — (extra) | Dispatches a tool call's result to a host-registered renderer (by tool name or shape `matches()`), falling back to `<lr-json-viewer>` |
-| `<lr-tool-result-dialog>` | — (extra) | Full tool-call detail overlay: status/duration header plus a consumer-assembled `body` slot (typically a `<lr-tabs>` of Input/Preview/JSON/Raw) |
+| `<lr-tool-result-dialog>` | — (extra) | Full tool-call detail overlay: status/duration header plus a consumer-assembled `body` slot (typically a `<lr-tab-group>` of Input/Preview/JSON/Raw) |
 | `<lr-tool-approval-dialog>` | — (extra) | Human-in-the-loop approve/deny gate for one proposed tool call, with an optional inline JSON argument editor before approving |
 | `<lr-confirm-bar>` | — (extra) | Inline, non-modal approve/deny block for one proposed action — the in-flow sibling of `<lr-tool-approval-dialog>` for confirmations that shouldn't hijack focus; same `lr-approve`/`lr-deny` event shapes and localization keys as the dialog |
 | `<lr-tool-param-form>` | — (extra) | Renders one form control per property of a flat JSON Schema object, for ad hoc tool invocation or approval-time argument editing |
@@ -630,25 +782,27 @@ each one-liner below.
 | `<lr-audio-visualizer>` | — (extra) | Presentational canvas-drawn voice-activity visualization (bars or waveform), the LiveKit-BarVisualizer counterpart — driven by a `MediaStream`, a numeric `level` (e.g. from `<lr-push-to-talk>`'s `lr-level`), or `state` alone for ambient animation |
 | `<lr-push-to-talk>` | — (extra) | Mic capture button owning the full `getUserMedia` + `MediaRecorder` lifecycle (permission, recording, optional chunked streaming, teardown) — native browser APIs only, no SDK; `mode="hold"` (press-and-hold) or `mode="toggle"` |
 | `<lr-transcript-feed>` | — (extra) | Live captions for an in-progress voice session — speaker-grouped entries, interim-vs-final styling with in-place `id`-keyed upgrades, and the same stick-to-bottom `follow`/`lr-follow-change` contract `lr-terminal` uses |
-| `<lr-slider>` | — (extra) | Numeric range control (e.g. an LLM "temperature" setting), form-associated, mirrors native `<input type="range">` semantics |
+| `<lr-slider>` | `wa-slider` / `sl-range` | Numeric range control (e.g. an LLM "temperature" setting), form-associated, mirrors native `<input type="range">` semantics |
 | `<lr-context-meter>` | — (extra) | Segmented bar/ring occupancy meter for a token budget or context window, split across labeled categories |
 | `<lr-usage-badge>` | — (extra) | Compact, static resource strip for one message or run — tokens in/out, cost, latency, with a hover/focus tooltip breakdown; purely formatting, renders nothing at all when every segment is unset |
-| `<lr-dialog>` + `confirm()` | — (extra) | General-purpose modal/overlay (focus-trapped, Escape/backdrop-dismissible, scroll-locking, dialog stacking); `confirm()` is a promise-based `window.confirm()` replacement built on it |
-| `<lr-drawer>` | — (extra) | Modal panel anchored to the logical start/end edge or top/bottom, sharing dialog focus, dismissal, stacking, and scroll-lock behavior |
-| `<lr-carousel>` | `wa-carousel` | Accessible slotted-slide carousel with keyboard navigation, indicators, looping, and reduced-motion-aware autoplay |
-| `<lr-carousel-item>` | `wa-carousel-item` | Optional semantic slide wrapper for carousel content |
-| `<lr-button-group>` | `wa-button-group` | Responsive semantic grouping for related action controls |
+| `<lr-dialog>` + `confirm()` | `wa-dialog` / `sl-dialog` | General-purpose modal/overlay (focus-trapped, Escape/backdrop-dismissible, scroll-locking, dialog stacking); `confirm()` is a promise-based `window.confirm()` replacement built on it |
+| `<lr-drawer>` | `wa-drawer` / `sl-drawer` | Modal panel anchored to the logical start/end edge or top/bottom, sharing dialog focus, dismissal, stacking, and scroll-lock behavior |
+| `<lr-carousel>` | `wa-carousel` / `sl-carousel` | Accessible slotted-slide carousel with keyboard navigation, indicators, looping, and reduced-motion-aware autoplay |
+| `<lr-carousel-item>` | `wa-carousel-item` / `sl-carousel-item` | Optional semantic slide wrapper for carousel content |
+| `<lr-button-group>` | `wa-button-group` / `sl-button-group` | Responsive semantic grouping for related action controls |
 | `<lr-control-group>` | — (extra) | Responsive layout wrapper for a row of mixed form controls and action buttons, centered rather than stretched (unlike `<lr-button-group>`) |
 | `<lr-reorder-list>` + `<lr-reorder-item>` | — (extra) | Generic flat-list reorder primitive: per-row move-up/move-down buttons plus a Ctrl/Cmd+Arrow keyboard shortcut, emitting the full new order on every move |
-| `<lr-image-comparer>` | `wa-image-comparer` | Before/after slotted surfaces with a keyboard-accessible range divider |
+| `<lr-image-comparer>` | `wa-comparison` / `sl-image-comparer` | Before/after slotted surfaces with a keyboard-accessible range divider |
 | `<lr-zoomable-frame>` | `wa-zoomable-frame` | Bounded zoom and scrollable panning for slotted content or an image source |
-| `<lr-tabs>` | — (extra) | Tab strip over direct light-DOM panels; WAI-ARIA APG automatic-activation keyboard pattern |
-| `<lr-checkbox>` | — (extra) | Boolean form control, `role="checkbox"` with a visual/`indeterminate` mixed state |
-| `<lr-switch>` | — (extra) | Boolean toggle-switch form control, `role="switch"` on/off semantics |
-| `<lr-menu>` + `<lr-menu-item>` | — (extra) | Anchored dropdown menu around a consumer-supplied trigger; WAI-ARIA "menu button" pattern with real roving focus (not a listbox) |
+| `<lr-tab-group>` + `<lr-tab>` + `<lr-tab-panel>` | `wa-tab-group` / `wa-tab` / `wa-tab-panel` / `sl-tab-group` / `sl-tab` / `sl-tab-panel` | Tab strip with `placement` (logical `start`/`end` turn it vertical) and `activation="auto"`/`"manual"`; accepts the upstream `<lr-tab>`/`<lr-tab-panel>` child pairs or this library's own `slot`/`label` panel-attribute shape |
+| `<lr-checkbox>` | `wa-checkbox` / `sl-checkbox` | Boolean form control, `role="checkbox"` with a visual/`indeterminate` mixed state |
+| `<lr-switch>` | `wa-switch` / `sl-switch` | Boolean toggle-switch form control, `role="switch"` on/off semantics |
+| `<lr-menu>` + `<lr-menu-item>` | `sl-menu` / `sl-menu-item` | Anchored dropdown menu around a consumer-supplied trigger; WAI-ARIA "menu button" pattern with real roving focus (not a listbox) |
+| `<lr-menu-label>` | `sl-menu-label` | Non-interactive section heading inside `<lr-menu>`; `role="presentation"`, never a focus stop |
 | `<lr-dropdown-item>` | `wa-dropdown-item` | Drop-in naming alias for `<lr-menu-item>`, including checkbox items and roving focus |
 | `<lr-chip>` + `<lr-chip-group>` | — (extra) | Content-agnostic label pill (tag/filter/scope indicator) and a flex-wrap group with a "+N" overflow indicator |
 | `<lr-kbd>` | — (extra) | Keyboard-shortcut chip; renders platform-appropriate glyphs (⌘ vs. Ctrl) from a single `"mod+k"`-style `keys` string |
+| `<lr-visually-hidden>` | `sl-visually-hidden` | Hides content from sight while leaving it in the accessibility tree; reveals itself while focus is inside, which is what makes it usable for skip links |
 | `<lr-result-card>` + `<lr-result-field>` | — (extra) | Small bordered card + label/value row shell, for giving custom `lr-tool-result-view` renderers a consistent look with no bespoke box |
 | `<lr-document-preview>` | — (extra) | Format-dispatching document/attachment viewer (`text/*`/JSON inline, `image/*` inline, else a download fallback) plus a host-driven async-conversion status shell |
 | `<lr-document-viewer>` | — (extra) | Dialog-hosted, format-dispatching full document viewer with a pluggable renderer registry |
@@ -674,8 +828,8 @@ each one-liner below.
 | `<lr-pptx-viewer>` | — (extra) | Best-effort client-side `.pptx` viewer with a persistent fidelity notice |
 | `<lr-file-icon>` | — (extra) | Tokenized, localized file-format badge with MIME and filename fallback metadata |
 | `<lr-media-card>` | — (extra) | Lightweight inline preview for one already-sent image/video/file attachment inside a rendered chat message |
-| `<lr-avatar>` | — (extra) | Small, fixed-size identity marker — image, or an initials fallback with `lr-chip`-style tone recoloring |
-| `<lr-card>` | — (extra) | Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lr-*>` counterpart to `wa-card` |
+| `<lr-avatar>` | `wa-avatar` / `sl-avatar` | Small, fixed-size identity marker — image, or an initials fallback with `lr-chip`-style tone recoloring |
+| `<lr-card>` | `wa-card` / `sl-card` | Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lr-*>` counterpart to `wa-card` |
 | `<lr-stepper>` | — (extra) | Ordered multi-step wizard navigation — label + index, current/completed/locked/error state, click-to-jump, data-driven and controlled |
 | `<lr-segmented>` | — (extra) | Single-select text/icon button row with the WAI-ARIA APG `radiogroup` contract built in (roving tabindex, automatic activation) |
 | `<lr-swatch-picker>` | — (extra) | Single-select picker over a fixed set of color swatches — `radiogroup` semantics (roving tabindex, automatic activation), themeable selection ring |
@@ -695,9 +849,9 @@ each one-liner below.
 | `<lr-compare-panel>` | — (extra) | Side-by-side A/B output comparison with a winner vote (LMSYS-arena / LangSmith-pairwise style) — two slotted panes, a vote bar, synchronized reading |
 | `<lr-rubric-form>` | — (extra) | Configurable annotation rubric (LangSmith annotation-queue style) — score/category/comment keys with a submit-and-next flow; each key routes to an existing sibling control (`<lr-segmented>`/`<lr-slider>`, `<lr-select>`/`<lr-checkbox-group>`, `<lr-textarea>`) |
 | `<lr-calendar>` | — (extra) | Responsive month calendar with event markers and agenda mode |
-| `<lr-details>` + `<lr-accordion>` + `<lr-accordion-item>` | `wa-details` / `wa-accordion` | Native disclosure and coordinated accordion panels |
-| `<lr-breadcrumb>` + `<lr-breadcrumb-item>` | `wa-breadcrumb` | Responsive navigation trail |
-| `<lr-format-number>` + `<lr-format-date>` + `<lr-format-bytes>` + `<lr-relative-time>` | `wa-format-*` / `wa-relative-time` | Locale-aware formatting primitives |
+| `<lr-details>` + `<lr-accordion>` + `<lr-accordion-item>` | `wa-details` / `wa-accordion` / `wa-accordion-item` / `sl-details` | Native disclosure and coordinated accordion panels |
+| `<lr-breadcrumb>` + `<lr-breadcrumb-item>` | `wa-breadcrumb` / `wa-breadcrumb-item` / `sl-breadcrumb` / `sl-breadcrumb-item` | Responsive navigation trail |
+| `<lr-format-number>` + `<lr-format-date>` + `<lr-format-bytes>` + `<lr-relative-time>` | `wa-format-*` / `wa-relative-time` / `sl-format-*` / `sl-relative-time` | Locale-aware formatting primitives |
 | `<lr-markdown-core>` | — (extra) | Build-lean `lr-markdown` variant for a consumer whose `languages` map already covers every language it renders — never references shiki's full ~200-language table |
 
 ### Citation → document recipe

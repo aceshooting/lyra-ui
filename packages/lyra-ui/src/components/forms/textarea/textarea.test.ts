@@ -700,3 +700,259 @@ describe('blur/focus bubbling', () => {
     expect(ev.composed).to.be.true;
   });
 });
+
+// -- 8.0 surface: size / appearance / with-count / wrappers / scrollPosition -
+
+describe('lr-textarea size', () => {
+  const fieldOf = (el: LyraTextarea) => el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+  it('defaults to size "m" and reflects the attribute', async () => {
+    const el = await fixture<LyraTextarea>(html`<lr-textarea aria-label="Notes"></lr-textarea>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    const sized = await fixture<LyraTextarea>(html`<lr-textarea size="s" aria-label="Notes"></lr-textarea>`);
+    expect(sized.size).to.equal('s');
+    expect(sized.getAttribute('size')).to.equal('s');
+  });
+
+  it('leaves the committed padding/font-size untouched at the default tier and tightens them at "xs"', async () => {
+    const mEl = await fixture<LyraTextarea>(html`<lr-textarea aria-label="a"></lr-textarea>`);
+    const xsEl = await fixture<LyraTextarea>(html`<lr-textarea size="xs" aria-label="b"></lr-textarea>`);
+    const m = getComputedStyle(fieldOf(mEl));
+    const xs = getComputedStyle(fieldOf(xsEl));
+    // The default tier's values now come from the shared form-control ladder rather than this
+    // component's own copy of the scale, so they match lr-input's `m` tier exactly.
+    expect(m.paddingTop).to.equal('12px');
+    expect(m.fontSize).to.equal('16px');
+    expect(parseFloat(xs.paddingTop)).to.be.below(parseFloat(m.paddingTop));
+    expect(parseFloat(xs.fontSize)).to.be.below(parseFloat(m.fontSize));
+  });
+});
+
+describe('lr-textarea appearance', () => {
+  const fieldOf = (el: LyraTextarea) => el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  const TRANSPARENT = 'rgba(0, 0, 0, 0)';
+
+  it('defaults to "filled-outlined", reflected, keeping the committed fill + border', async () => {
+    const el = await fixture<LyraTextarea>(html`<lr-textarea aria-label="Notes"></lr-textarea>`);
+    expect(el.appearance).to.equal('filled-outlined');
+    expect(el.getAttribute('appearance')).to.equal('filled-outlined');
+    const cs = getComputedStyle(fieldOf(el));
+    expect(cs.backgroundColor).to.not.equal(TRANSPARENT);
+    expect(cs.borderTopColor).to.not.equal(TRANSPARENT);
+  });
+
+  it('renders each other appearance distinctly', async () => {
+    const outlined = await fixture<LyraTextarea>(html`<lr-textarea appearance="outlined" aria-label="a"></lr-textarea>`);
+    const filled = await fixture<LyraTextarea>(html`<lr-textarea appearance="filled" aria-label="b"></lr-textarea>`);
+    const plain = await fixture<LyraTextarea>(html`<lr-textarea appearance="plain" aria-label="c"></lr-textarea>`);
+    const accent = await fixture<LyraTextarea>(html`<lr-textarea appearance="accent" aria-label="d"></lr-textarea>`);
+    expect(getComputedStyle(fieldOf(outlined)).backgroundColor).to.equal(TRANSPARENT);
+    expect(getComputedStyle(fieldOf(filled)).borderTopColor).to.equal(TRANSPARENT);
+    expect(getComputedStyle(fieldOf(plain)).backgroundColor).to.equal(TRANSPARENT);
+    expect(getComputedStyle(fieldOf(plain)).borderTopColor).to.equal(TRANSPARENT);
+    expect(getComputedStyle(fieldOf(accent)).borderTopColor).to.not.equal(
+      getComputedStyle(fieldOf(outlined)).borderTopColor,
+    );
+  });
+
+  it('exposes --lr-textarea-fill/--lr-textarea-border-color without a ::part() rule', async () => {
+    const el = await fixture<LyraTextarea>(html`<lr-textarea aria-label="Notes"></lr-textarea>`);
+    el.style.setProperty('--lr-textarea-fill', 'rgb(1, 2, 3)');
+    el.style.setProperty('--lr-textarea-border-color', 'rgb(4, 5, 6)');
+    await el.updateComplete;
+    const cs = getComputedStyle(fieldOf(el));
+    expect(cs.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(cs.borderTopColor).to.equal('rgb(4, 5, 6)');
+  });
+});
+
+describe('lr-textarea wrapper parts', () => {
+  it('wraps the native textarea in a textarea-wrapper part', async () => {
+    const el = await fixture<LyraTextarea>(html`<lr-textarea aria-label="Notes"></lr-textarea>`);
+    const wrapper = el.shadowRoot!.querySelector('[part="textarea-wrapper"]') as HTMLElement;
+    expect(el.shadowRoot!.querySelectorAll('[part="textarea-wrapper"]').length).to.equal(1);
+    expect(wrapper.querySelectorAll('textarea').length).to.equal(1);
+  });
+
+  it('keeps the footer part out of the layout until with-count is set', async () => {
+    const el = await fixture<LyraTextarea>(html`<lr-textarea aria-label="Notes"></lr-textarea>`);
+    const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+    expect(el.shadowRoot!.querySelectorAll('[part="footer"]').length).to.equal(1);
+    expect(getComputedStyle(footer).display).to.equal('none');
+    el.withCount = true;
+    await el.updateComplete;
+    expect(getComputedStyle(footer).display).to.not.equal('none');
+  });
+});
+
+describe('lr-textarea with-count', () => {
+  const countOf = (el: LyraTextarea) => el.shadowRoot!.querySelector('[part="count"]') as HTMLElement;
+
+  it('renders no count element by default', async () => {
+    const el = await fixture<LyraTextarea>(html`<lr-textarea value="abc" aria-label="Notes"></lr-textarea>`);
+    expect(el.withCount).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="count"]').length).to.equal(0);
+  });
+
+  it('counts characters, and switches to a remaining-characters readout under maxlength', async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea with-count value="abcd" aria-label="Notes"></lr-textarea>`,
+    );
+    expect(el.getAttribute('with-count')).to.equal('');
+    el.strings = {
+      textareaCharacterCount: { one: '{count} caractère', other: '{count} caractères' },
+      textareaCharactersRemaining: { one: '{count} restant', other: '{count} restants' },
+    };
+    await el.updateComplete;
+    expect(countOf(el).textContent!.trim()).to.equal('4 caractères');
+
+    el.maxlength = 10;
+    await el.updateComplete;
+    expect(countOf(el).textContent!.trim()).to.equal('6 restants');
+
+    el.value = 'abcdefghi';
+    await el.updateComplete;
+    expect(countOf(el).textContent!.trim()).to.equal('1 restant');
+  });
+
+  it('never reports a negative remaining count for a script-assigned over-length value', async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea with-count maxlength="3" aria-label="Notes"></lr-textarea>`,
+    );
+    el.strings = { textareaCharactersRemaining: '{count} left' };
+    el.value = 'abcdef';
+    await el.updateComplete;
+    expect(countOf(el).textContent!.trim()).to.equal('0 left');
+  });
+
+  it('ignores an unparseable maxlength attribute rather than rendering NaN', async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea with-count value="ab" maxlength="oops" aria-label="Notes"></lr-textarea>`,
+    );
+    el.strings = { textareaCharacterCount: '{count} chars' };
+    await el.updateComplete;
+    expect(countOf(el).textContent!.trim()).to.equal('2 chars');
+  });
+
+  it('keeps the visible count out of the accessibility tree and announces it politely', async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea with-count value="ab" aria-label="Notes"></lr-textarea>`,
+    );
+    expect(countOf(el).getAttribute('aria-hidden')).to.equal('true');
+    const live = el.shadowRoot!.querySelector('[aria-live="polite"]') as HTMLElement;
+    expect(el.shadowRoot!.querySelectorAll('[aria-live="polite"]').length).to.equal(1);
+    expect(live.textContent!.trim()).to.equal('');
+  });
+
+  it('is accessible with the count rendered', async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea with-count maxlength="20" value="ab" label="Notes"></lr-textarea>`,
+    );
+    expect(el.shadowRoot!.querySelectorAll('[part="count"]').length).to.equal(1);
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-textarea resize="horizontal"', () => {
+  it('forwards the horizontal resize mode to the native textarea', async () => {
+    const el = await fixture<LyraTextarea>(html`<lr-textarea aria-label="Notes"></lr-textarea>`);
+    el.resize = 'horizontal';
+    await el.updateComplete;
+    const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    expect(textarea.style.resize).to.equal('horizontal');
+    expect(getComputedStyle(textarea).resize).to.equal('horizontal');
+  });
+});
+
+describe('lr-textarea scrollPosition()', () => {
+  it('reads back the native scroll offsets and writes each axis independently', async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea rows="2" value="a\nb\nc\nd\ne\nf\ng\nh\ni\nj" aria-label="Notes"></lr-textarea>`,
+    );
+    const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    expect(el.scrollPosition()).to.deep.equal({ top: 0, left: 0 });
+    el.scrollPosition({ top: 12 });
+    expect(textarea.scrollTop).to.equal(12);
+    expect(el.scrollPosition()!.top).to.equal(12);
+    el.scrollPosition({ left: 0 });
+    expect(el.scrollPosition()!.left).to.equal(0);
+    expect(el.scrollPosition({ top: 4 })).to.equal(undefined);
+    expect(textarea.scrollTop).to.equal(4);
+  });
+});
+
+describe('lr-textarea with-count live announcement', () => {
+  it('republishes the count to the polite live region once typing pauses', async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea with-count aria-label="Notes"></lr-textarea>`,
+    );
+    el.strings = { textareaCharacterCount: '{count} chars' };
+    await el.updateComplete;
+    const live = el.shadowRoot!.querySelector('[aria-live="polite"]') as HTMLElement;
+    const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.value = 'abc';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    // Still silent immediately after the keystroke -- announcing per character would talk over
+    // the character just typed.
+    expect(live.textContent!.trim()).to.equal('');
+    await new Promise((resolve) => setTimeout(resolve, 1400));
+    await el.updateComplete;
+    expect(live.textContent!.trim()).to.equal('3 chars');
+  });
+});
+
+describe('lr-textarea unset-regression for the 8.0 opt-ins', () => {
+  it('renders the committed DOM and field styling when size/appearance/with-count are left alone', async () => {
+    const el = await fixture<LyraTextarea>(html`<lr-textarea value="abc" aria-label="Notes"></lr-textarea>`);
+    const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    expect(el.shadowRoot!.querySelectorAll('[part="count"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[aria-live]').length).to.equal(0);
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement).display).to.equal('none');
+    const cs = getComputedStyle(textarea);
+    expect(cs.paddingTop).to.equal('12px');
+    expect(cs.fontSize).to.equal('16px');
+    expect(cs.borderTopWidth).to.equal('1px');
+    expect(textarea.style.resize).to.equal('vertical');
+  });
+});
+
+describe('lr-textarea — the shared size ladder and pill', () => {
+  const field = (el: LyraTextarea) => el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+  it('renders the Web Awesome size spellings at the same geometry as the canonical steps', async () => {
+    for (const [alias, step] of [['small', 's'], ['medium', 'm'], ['large', 'l']] as const) {
+      const aliasEl = await fixture<LyraTextarea>(
+        html`<lr-textarea size=${alias} aria-label="Notes"></lr-textarea>`,
+      );
+      const stepEl = await fixture<LyraTextarea>(
+        html`<lr-textarea size=${step} aria-label="Notes"></lr-textarea>`,
+      );
+      expect(getComputedStyle(field(aliasEl)).fontSize, `size=${alias} font-size`).to.equal(
+        getComputedStyle(field(stepEl)).fontSize,
+      );
+      expect(getComputedStyle(field(aliasEl)).paddingTop, `size=${alias} padding`).to.equal(
+        getComputedStyle(field(stepEl)).paddingTop,
+      );
+    }
+  });
+
+  it('rounds the field to a pill, and leaves the corner radius alone when pill is unset', async () => {
+    const plain = await fixture<LyraTextarea>(html`<lr-textarea aria-label="Notes"></lr-textarea>`);
+    expect(plain.pill).to.equal(false);
+    expect(getComputedStyle(field(plain)).borderTopLeftRadius).to.equal('6px');
+
+    const pilled = await fixture<LyraTextarea>(html`<lr-textarea pill aria-label="Notes"></lr-textarea>`);
+    expect(pilled.pill).to.equal(true);
+    expect(pilled.getAttribute('pill')).to.equal('');
+    expect(getComputedStyle(field(pilled)).borderTopLeftRadius).to.equal('999px');
+  });
+});
+
+it('is accessible with the pill treatment applied', async () => {
+  const el = await fixture<LyraTextarea>(
+    html`<lr-textarea pill label="Notes" hint="Optional"></lr-textarea>`,
+  );
+  await expect(el).to.be.accessible();
+});

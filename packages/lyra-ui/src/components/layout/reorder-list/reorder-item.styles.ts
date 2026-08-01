@@ -24,12 +24,12 @@ export const styles = css`
     border: none;
     background: none;
     color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
     cursor: pointer;
     border-radius: var(--lr-radius);
   }
   /* chevronIcon() renders a right-pointing chevron with no baked-in rotation (see icons.ts) --
-     rotate the whole button, matching lr-tree-node's identical [part='toggle'] rotation approach. */
+     rotate the whole button, matching lr-tree-item's identical [part='toggle'] rotation approach. */
   [part='move-up-button'] {
     transform: rotate(-90deg);
   }
@@ -39,6 +39,17 @@ export const styles = css`
   [part='move-up-button']:hover,
   [part='move-down-button']:hover {
     background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
+  }
+  /* Declared before the :disabled rule below, which restates background/color at equal
+     specificity, so a disabled arrow stays flat whatever the pointer does to it. */
+  [part='move-up-button']:active,
+  [part='move-down-button']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-color-brand);
   }
   [part='move-up-button']:focus-visible,

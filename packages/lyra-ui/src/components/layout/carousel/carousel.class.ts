@@ -9,11 +9,21 @@ import { tag } from "../../../internal/prefix.js";
 
 interface SlideSnapshot {
   hidden: boolean | "until-found";
+  inert: boolean;
   role: string | null;
   ariaLabel: string | null;
   ariaRoleDescription: string | null;
   ariaHidden: string | null;
 }
+
+/**
+ * Quiet period after the last `scroll` event before the resting slide is adopted. Native touch
+ * scrolling emits `scroll` continuously through the fling and the rubber-band, so reacting per
+ * event would emit a slide change for every slide the finger flicked past. Waiting for the
+ * scroller to actually come to rest emits exactly one. `scrollend` short-circuits this wherever
+ * it is implemented; the timer is what keeps the contract identical where it is not.
+ */
+const SCROLL_SETTLE_MS = 120;
 
 export interface LyraCarouselEventMap {
   "lr-slide-change": CustomEvent<{ index: number }>;
@@ -25,12 +35,20 @@ export interface LyraCarouselEventMap {
  * every change emits `lr-slide-change` so applications can persist or
  * coordinate the active slide.
  *
+ * Slides live in a native scroll-snap track, so touch swiping, trackpad
+ * panning, momentum, and rubber-banding all come from the platform rather
+ * than a synthetic pointer-drag. Scrolling to a slide by hand is therefore a
+ * first-class way to change the active slide: once the scroller comes to
+ * rest, the resting slide is adopted and `lr-slide-change` is emitted, the
+ * same as if a button had been pressed.
+ *
  * @customElement lr-carousel
  * @slot - Slide elements. Each assigned element becomes one slide.
- * @event lr-slide-change - Active slide changed. `detail: { index }`.
+ * @event lr-slide-change - Active slide changed, whether by button, keyboard, indicator, autoplay,
+ *   or the user scrolling the track to rest on another slide. `detail: { index }`.
  * @csspart base - The carousel landmark.
- * @csspart viewport - The keyboard-focusable slide viewport.
- * @csspart track - The slotted slide wrapper.
+ * @csspart viewport - The keyboard-focusable slide viewport, and the scroll-snap scroll port.
+ * @csspart track - The slotted slide wrapper, laid out as the inline snap track.
  * @csspart controls - Previous/next control row.
  * @csspart previous-button - Previous slide button.
  * @csspart previous-glyph - The chevron glyph inside `previous-button`, mirrored under RTL.
@@ -48,6 +66,9 @@ export interface LyraCarouselEventMap {
  *   indicator without hijacking the library-wide `--lr-color-brand-quiet` token.
  * @cssprop [--lr-carousel-indicator-current-border-color=var(--lr-color-brand)] - Border color of
  *   the current slide's indicator dot.
+ * @cssprop [--lr-carousel-slide-basis=100%] - Flex basis of every slide in the snap track. The
+ *   default gives one slide per view; a smaller value (e.g. `50%`) shows several at once while the
+ *   snap positions still land on each slide's inline start.
  */
 export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -67,11 +88,21 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     | string
     | null = null;
   @query("slot") private slideSlot?: HTMLSlotElement;
+  @query('[part="viewport"]') private viewport?: HTMLElement;
 
   private timer?: number;
   private reduceMotion = false;
   private mediaQuery?: MediaQueryList;
   private readonly slideSnapshots = new Map<HTMLElement, SlideSnapshot>();
+  private scrollSettleTimer?: number;
+  /** True while `index` is being adopted *from* the scroller, so the resulting update does not turn
+   *  around and drive the scroller back to where it already is. */
+  private adoptingScrolledSlide = false;
+  /** The first alignment happens without animation: an `index` set in markup must not read as the
+   *  carousel sliding into place on load. */
+  private hasAlignedOnce = false;
+  /** Slide a programmatic scroll is currently travelling toward, if any. */
+  private pendingAlignIndex?: number;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -94,6 +125,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   override disconnectedCallback(): void {
     this.stopAutoplay();
+    this.cancelScrollSettle();
+    this.hasAlignedOnce = false;
     this.mediaQuery?.removeEventListener(
       "change",
       this.onMotionPreferenceChange
@@ -116,6 +149,12 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.syncSlides();
     if (changed.has("autoplay") || changed.has("autoplayInterval"))
       this.restartAutoplay();
+    // Only an index the component itself moved drives the scroller. An index adopted *from* a
+    // user scroll is already where it belongs, and re-driving it would fight the gesture.
+    if (!this.adoptingScrolledSlide && (changed.has("index") || !this.hasAlignedOnce)) {
+      this.alignToActiveSlide();
+    }
+    this.hasAlignedOnce = true;
   }
 
   private onMotionPreferenceChange = (event: MediaQueryListEvent): void => {
@@ -148,6 +187,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private restoreSlide(slide: HTMLElement, snapshot: SlideSnapshot): void {
     slide.hidden = snapshot.hidden;
+    slide.inert = snapshot.inert;
     this.restoreAttribute(slide, "role", snapshot.role);
     this.restoreAttribute(slide, "aria-label", snapshot.ariaLabel);
     this.restoreAttribute(
@@ -179,6 +219,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       const existing = this.slideSnapshots.get(slide);
       const snapshot: SlideSnapshot = existing ?? {
         hidden: slide.hidden,
+        inert: slide.inert,
         role: slide.getAttribute("role"),
         ariaLabel: slide.getAttribute("aria-label"),
         ariaRoleDescription: slide.getAttribute("aria-roledescription"),
@@ -218,11 +259,16 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         this.restoreAttribute(slide, "aria-label", snapshot.ariaLabel);
       }
 
+      // Off-screen slides keep their boxes -- the snap track needs something to scroll between --
+      // but are taken out of the tab order and the accessibility tree. `inert` is what makes that
+      // safe: a link two slides away must not be reachable by Tab while it is scrolled out of
+      // view, and `aria-hidden` alone would leave it focusable but unnamed.
+      slide.hidden = snapshot.hidden;
       if (slideIndex === current) {
-        slide.hidden = snapshot.hidden;
+        slide.inert = snapshot.inert;
         this.restoreAttribute(slide, "aria-hidden", snapshot.ariaHidden);
       } else {
-        slide.hidden = true;
+        slide.inert = true;
         slide.setAttribute("aria-hidden", "true");
       }
     });
@@ -268,6 +314,108 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.requestUpdate();
   };
 
+  /** Signed inline-axis distance from the viewport's inline start to `slide`'s. Reading rectangles
+   *  rather than `scrollLeft` keeps this correct under RTL, where the inline start is the right
+   *  edge and the scroll offset itself is negative. */
+  private inlineOffsetOf(slide: HTMLElement, viewport: HTMLElement): number {
+    const viewportRect = viewport.getBoundingClientRect();
+    const slideRect = slide.getBoundingClientRect();
+    return this.effectiveDirection === "rtl"
+      ? slideRect.right - viewportRect.right
+      : slideRect.left - viewportRect.left;
+  }
+
+  /** The slide the scroller is currently resting closest to, or `undefined` when there is nothing
+   *  to measure yet (no viewport, or no slides). */
+  private restingSlideIndex(): number | undefined {
+    const viewport = this.viewport;
+    const slides = this.slides();
+    if (!viewport || slides.length === 0) return undefined;
+    let nearest: number | undefined;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    slides.forEach((slide, slideIndex) => {
+      const distance = Math.abs(this.inlineOffsetOf(slide, viewport));
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = slideIndex;
+      }
+    });
+    return nearest;
+  }
+
+  /** Brings the active slide's inline start flush with the viewport's, if it is not already.
+   *  `instant` rather than `auto`: `auto` defers to the stylesheet's own `scroll-behavior: smooth`,
+   *  so it would animate exactly where an animation is not wanted. */
+  private alignToActiveSlide(): void {
+    const viewport = this.viewport;
+    const target = this.normalizedIndex();
+    const slide = this.slides()[target];
+    if (!viewport || !slide) return;
+    const offset = this.inlineOffsetOf(slide, viewport);
+    if (Math.round(offset) === 0) {
+      this.pendingAlignIndex = undefined;
+      return;
+    }
+    this.pendingAlignIndex = target;
+    viewport.scrollBy({
+      left: offset,
+      behavior: this.reduceMotion || !this.hasAlignedOnce ? "instant" : "smooth",
+    });
+  }
+
+  private cancelScrollSettle(): void {
+    if (this.scrollSettleTimer !== undefined)
+      window.clearTimeout(this.scrollSettleTimer);
+    this.scrollSettleTimer = undefined;
+  }
+
+  private onViewportScroll = (): void => {
+    this.cancelScrollSettle();
+    this.scrollSettleTimer = window.setTimeout(
+      this.settleScrolledSlide,
+      SCROLL_SETTLE_MS
+    );
+  };
+
+  /** `scrollend` fires once the scroller has finished, momentum included. Where it exists it makes
+   *  the settle immediate; where it does not, the timer above is the only path and the contract is
+   *  unchanged. */
+  private onViewportScrollEnd = (): void => {
+    this.cancelScrollSettle();
+    this.settleScrolledSlide();
+  };
+
+  /** A user gesture supersedes any programmatic scroll still travelling: from here on the scroller
+   *  is theirs, and the next resting position is theirs to define. */
+  private readonly onViewportTakeover = {
+    handleEvent: (): void => {
+      this.pendingAlignIndex = undefined;
+    },
+    passive: true,
+  };
+
+  private settleScrolledSlide = (): void => {
+    this.scrollSettleTimer = undefined;
+    if (!this.isConnected) return;
+    const resting = this.restingSlideIndex();
+    if (resting === undefined) return;
+    // A smooth programmatic scroll keeps emitting `scroll` while it travels, and one janky frame
+    // is enough for the settle timer to fire mid-flight. Adopting that intermediate slide would
+    // both emit a slide change nobody asked for and -- because mandatory snapping re-evaluates
+    // when the slide metadata changes -- abort the animation short of its target.
+    if (this.pendingAlignIndex !== undefined) {
+      if (resting === this.pendingAlignIndex) this.pendingAlignIndex = undefined;
+      return;
+    }
+    if (resting === this.index) return;
+    this.adoptingScrolledSlide = true;
+    this.index = resting;
+    this.emit("lr-slide-change", { index: resting });
+    void this.updateComplete.then(() => {
+      this.adoptingScrolledSlide = false;
+    });
+  };
+
   private onViewportKeyDown = (event: KeyboardEvent): void => {
     const rtl = this.effectiveDirection === "rtl";
     const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
@@ -310,6 +458,11 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         tabindex="0"
         aria-live=${this.autoplay ? "off" : "polite"}
         @keydown=${this.onViewportKeyDown}
+        @scroll=${this.onViewportScroll}
+        @scrollend=${this.onViewportScrollEnd}
+        @pointerdown=${this.onViewportTakeover}
+        @touchstart=${this.onViewportTakeover}
+        @wheel=${this.onViewportTakeover}
       >
         <div part="track"><slot @slotchange=${this.onSlotChange}></slot></div>
       </div>

@@ -42,7 +42,7 @@ export const styles = [
       max-inline-size: 100%;
       align-items: baseline;
       gap: var(--lr-space-2xs);
-      animation: lr-transcript-fade-in var(--lr-transition-fast) ease-out;
+      animation: lr-transcript-fade-in var(--lr-duration-fast) var(--lr-easing-standard);
     }
     @keyframes lr-transcript-fade-in {
       from {
@@ -99,7 +99,8 @@ export const styles = [
       background: var(--lr-color-surface);
       color: var(--lr-color-text);
       cursor: pointer;
-      box-shadow: var(--lr-shadow);
+      /* Overlay step, matching lr-chat-viewport's jump pill: it floats over the feed, not in it. */
+      box-shadow: var(--lr-shadow-m);
     }
     [part='jump-button']:focus-visible {
       outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -107,6 +108,9 @@ export const styles = [
     }
     [part='jump-button']:hover {
       background: var(--lr-color-brand-quiet);
+    }
+    [part='jump-button']:active {
+      background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     }
   `,
   srOnly,

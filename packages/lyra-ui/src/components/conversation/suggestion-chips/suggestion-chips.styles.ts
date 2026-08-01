@@ -37,6 +37,16 @@ export const styles = css`
     background: var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-suggestion-chips-hover-border, var(--lr-color-brand));
   }
+  /* Mixes the SAME --lr-suggestion-chips-hover-bg the rule above uses, so a consumer retinting the
+     hover fill gets a matching pressed step without a second custom property to keep in sync. */
+  [part~='chip']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    border-color: var(--lr-suggestion-chips-hover-border, var(--lr-color-brand));
+  }
   [part~='chip']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

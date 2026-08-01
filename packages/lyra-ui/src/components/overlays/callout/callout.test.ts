@@ -97,6 +97,66 @@ it('actually renders the inline variant with a transparent panel background', as
   expect(getComputedStyle(inlineBase).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
 });
 
+// -- size --------------------------------------------------------------------
+
+describe('size', () => {
+  const panel = (el: LyraCallout): CSSStyleDeclaration =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+
+  const render = async (size?: string): Promise<LyraCallout> =>
+    (await fixture(
+      size === undefined
+        ? html`<lr-callout>Message</lr-callout>`
+        : html`<lr-callout size=${size}>Message</lr-callout>`,
+    )) as LyraCallout;
+
+  it('defaults to "m", and the unset default renders identically to the explicit tier', async () => {
+    const unset = await render();
+    const explicit = await render('m');
+    expect(unset.size).to.equal('m');
+    expect(unset.getAttribute('size')).to.equal('m');
+    expect(panel(unset).paddingBlockStart).to.equal(panel(explicit).paddingBlockStart);
+    expect(panel(unset).fontSize).to.equal(panel(explicit).fontSize);
+  });
+
+  it('grows the rendered panel padding and font size monotonically across the ladder', async () => {
+    const measured: { padding: number; font: number }[] = [];
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+      const style = panel(await render(size));
+      measured.push({
+        padding: Number.parseFloat(style.paddingBlockStart),
+        font: Number.parseFloat(style.fontSize),
+      });
+    }
+    for (let i = 1; i < measured.length; i++) {
+      expect(measured[i]!.padding, `padding tier ${i} >= ${i - 1}`).to.be.at.least(measured[i - 1]!.padding);
+      expect(measured[i]!.font, `font tier ${i} >= ${i - 1}`).to.be.at.least(measured[i - 1]!.font);
+    }
+    expect(measured.at(-1)!.padding, 'xl padding beats 2xs').to.be.greaterThan(measured[0]!.padding);
+    expect(measured.at(-1)!.font, 'xl font beats 2xs').to.be.greaterThan(measured[0]!.font);
+  });
+
+  it('accepts the Web Awesome size spellings as exact synonyms of the step names', async () => {
+    for (const [step, alias] of [['s', 'small'], ['m', 'medium'], ['l', 'large']] as const) {
+      const stepped = panel(await render(step));
+      const aliased = panel(await render(alias));
+      expect(aliased.paddingBlockStart, `${alias} padding`).to.equal(stepped.paddingBlockStart);
+      expect(aliased.fontSize, `${alias} font`).to.equal(stepped.fontSize);
+    }
+  });
+
+  it('keeps the compact inline treatment padding-free at every tier', async () => {
+    const el = (await fixture(html`<lr-callout inline size="xl">Message</lr-callout>`)) as LyraCallout;
+    expect(panel(el).paddingBlockStart).to.equal('0px');
+    expect(panel(el).paddingInlineStart).to.equal('0px');
+  });
+
+  it('stays accessible at the smallest tier with a close action', async () => {
+    const el = (await fixture(html`<lr-callout size="2xs" closable>Message</lr-callout>`)) as LyraCallout;
+    await expect(el).to.be.accessible();
+  });
+});
+
 it('gives close-button a hover state', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='close-button'\]:hover/);

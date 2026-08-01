@@ -31,6 +31,9 @@ export const styles = css`
   [part='select-all'] [role='checkbox']:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, var(--lr-color-surface));
   }
+  [part='select-all'] [role='checkbox']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='select-all'] [role='checkbox']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
@@ -72,8 +75,17 @@ export const styles = css`
   [part='disclosure']:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }
+  [part='disclosure']:active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='item']:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
+  }
+  /* The row itself is the control here -- clicking anywhere in it toggles the source (the
+     [part='checkbox'] box inside is a painted div, not a focusable target), so the row earns a
+     pressed state of its own rather than deferring to something nested. */
+  [part='item']:active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='item']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

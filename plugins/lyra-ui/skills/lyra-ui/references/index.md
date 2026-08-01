@@ -2,7 +2,7 @@
 
 # Component index
 
-268 custom elements, grouped by the source family they live in.
+275 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -18,7 +18,7 @@ get the class without registering the tag.
 `strings`, TypeScript, frameworks, SSR): `llms/shared.md`. Design tokens: `llms/tokens.md`.
 Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 
-## Form controls & inputs — `components/forms/` (26)
+## Form controls & inputs — `components/forms/` (28)
 
 - `lr-combobox` · forms/combobox/combobox.js — a filterable single/multi select that combines a text input with a listbox.
 - `lr-option` · forms/combobox/option.js — a selectable option for `<lr-combobox>`.
@@ -29,7 +29,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-button` · forms/button/button.js — a generic action-button primitive.
 - `lr-icon-button` · forms/icon-button/icon-button.js — an accessible icon-only action button.
 - `lr-input` · forms/input/input.js — a single-line plain-text input primitive, the `lr-*` equivalent of a plain `wa-input`, form-associated via the `FormAssociated` mixin (sa...
-- `lr-number-input` · forms/input/number-input.js — a numeric-input alias with the complete `lr-input` form, validation, and native editing contract.
+- `lr-number-input` · forms/input/number-input.js — a numeric field with the complete `lr-input` form, validation, and native editing contract, plus its own increment/decrement stepper pair.
 - `lr-time-input` · forms/input/time-input.js — a native time-input alias with Lyra form chrome and events.
 - `lr-phone-input` · forms/phone-input/phone-input.js — a country-aware telephone field whose form value is canonical E.164.
 - `lr-time-range` · forms/time-range/time-range.js — a two-handle brush/scrubber over a numeric domain.
@@ -38,11 +38,13 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-switch` · forms/switch/switch.js — a boolean toggle-switch form control.
 - `lr-slider` · forms/slider/slider.js — a numeric range control (e.g.
 - `lr-radio` · forms/radio/radio.js — a form-associated single-choice control.
+- `lr-radio-button` · forms/radio/radio-button.js — a single-choice control rendered as a button rather than a circle.
+- `lr-otp-input` · forms/otp-input/otp-input.js — a form-associated one-time-code field: several character segments that together hold one value.
 - `lr-radio-group` · forms/radio/radio-group.js — a labeled, keyboard-navigable group of radios.
 - `lr-checkbox-group` · forms/checkbox-group/checkbox-group.js — a form-associated group of `<lr-checkbox>` elements.
 - `lr-token-input` · forms/token-input/token-input.js — an editable, form-associated list of removable tokens.
 - `lr-code-editor` · forms/code-editor/code-editor.js — dependency-free multiline code editing surface with optional line numbers.
-- `lr-color-picker` · forms/color-picker/color-picker.js — a form-associated native color picker with label, hint and error chrome.
+- `lr-color-picker` · forms/color-picker/color-picker.js — a form-associated colour picker: a compact swatch trigger that opens a popover with a saturation/brightness grid, a hue slider, an option...
 - `lr-emoji-picker` · forms/emoji-picker/emoji-picker.js — a searchable, keyboard-navigable, form-associated emoji picker.
 - `lr-rubric-form` · forms/rubric-form/rubric-form.js — a configurable annotation rubric (LangSmith annotation-queue style): score, category, and freeform-comment keys with a submit-and-next fl...
 - `lr-locale-picker` · forms/locale-picker/locale-picker.js — a closed-list locale switcher over the library's own locale registry.
@@ -52,13 +54,13 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-sparkline` · data/sparkline/sparkline.js — a zero-dependency inline SVG trend chart.
 - `lr-stat` · data/stat/stat.js — a KPI/stat card.
 - `lr-table` · data/table/table.js — a sort/select-aware data table.
-- `lr-pagination` · data/pagination/pagination.js — controlled, server-friendly page navigation with an editable page jump and optional item-range summary.
+- `lr-pagination` · data/pagination/pagination.js — controlled, server-friendly page navigation: a numbered page list with elided gaps, optional first/last controls, an optional item-range...
 - `lr-gauge` · data/gauge/gauge.js — a radial, full-circle ring, or linear meter.
 - `lr-word-cloud` · data/word-cloud/word-cloud.js — a zero-dependency SVG word/tag cloud.
 - `lr-heatmap` · data/heatmap/heatmap.js — a Canvas heatmap with a DPR-aware, resize-aware redraw loop, in one of two `mode`s:
 - `lr-sequence-strip` · data/sequence-strip/sequence-strip.js — a compact, one-thin-cell-per-item strip visualizing a sequence of categorical states, with an optional secondary per-cell marker.
 - `lr-tree` · data/tree/tree.js — an expand/collapse hierarchy for graph/document navigation.
-- `lr-tree-node` · data/tree/tree-node.js — internal recursive renderer for `<lr-tree>`.
+- `lr-tree-item` · data/tree/tree-item.js — one row of `<lr-tree>`, in either of two child models.
 - `lr-flow-canvas` · data/flow-canvas/flow-canvas.js — a pannable/zoomable DAG workflow canvas: positions HTML node cards, draws SVG edges between their handles, runs a shared layered auto-lay...
 - `lr-flow-node` · data/flow-node/flow-node.js — the card a workflow node renders as: header/body/toolbar chrome, tool-lifecycle status tones, and the named connection-handle elements ed...
 - `lr-flow-minimap` · data/flow-minimap/flow-minimap.js — a corner overview map of a `lr-flow-canvas`: scaled node rectangles plus a draggable viewport rectangle, for orientation and fast navigat...
@@ -74,7 +76,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-graph-query-builder` · data/graph-query-builder/graph-query-builder.js — an editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type...
 - `lr-query-builder` · data/query-builder/query-builder.js — a composable structured-query builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with one AN...
 
-## Layout, navigation & structure — `components/layout/` (30)
+## Layout, navigation & structure — `components/layout/` (33)
 
 - `lr-split` · layout/split/split.js — resizable panels for dashboard layouts.
 - `lr-widget` · layout/widget/widget.js — a titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
@@ -82,8 +84,10 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-carousel-item` · layout/carousel/carousel-item.js — an optional semantic wrapper for one child of `<lr-carousel>`.
 - `lr-button-group` · layout/button-group/button-group.js — a responsive grouping primitive for related actions.
 - `lr-scroller` · layout/scroller/scroller.js — a responsive overflow surface with optional previous and next controls.
-- `lr-tabs` · layout/tabs/tabs.js — a tab strip whose panels are direct light-DOM children, each carrying `slot="<id>"` (the panel's stable id) and `label="<text>"` (the tab...
+- `lr-tab-group` · layout/tab-group/tab-group.js — a tab strip whose panels are direct light-DOM children, each carrying `slot="<id>"` (the panel's stable id) and `label="<text>"` (the tab...
 - `lr-stepper` · layout/stepper/stepper.js — ordered multi-step wizard/form navigation: label + index per step, current/completed/locked/error state, click-to-jump.
+- `lr-tab` · layout/tab-group/tab.js — one tab in a `<lr-tab-group>`'s strip.
+- `lr-tab-panel` · layout/tab-group/tab-panel.js — the content revealed by the `<lr-tab>` whose `panel` matches this element's `name`.
 - `lr-control-group` · layout/control-group/control-group.js — a responsive layout primitive for a row of mixed form controls and action buttons (e.g.
 - `lr-reorder-list` · layout/reorder-list/reorder-list.js — a generic vertical list of `<lr-reorder-item>` rows, reorderable via per-row move-up/move-down buttons (always available) or Ctrl/Cmd+Arr...
 - `lr-reorder-item` · layout/reorder-list/reorder-item.js — one row inside `<lr-reorder-list>`.
@@ -92,6 +96,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-app-rail` · layout/app-rail/app-rail.js — a responsive navigation rail that adapts across three presentations as the *viewport* narrows (not this element's own inline size — see t...
 - `lr-app-rail-item` · layout/app-rail/app-rail-item.js — an explicit icon/label navigation item for `<lr-app-rail>`.
 - `lr-responsive-panel` · layout/responsive-panel/responsive-panel.js — the same slotted content either docked inline in the page's normal layout flow (desktop) or presented as a full-screen/ bottom-sheet over...
+- `lr-menu-label` · layout/menu/menu-label.js — a non-interactive section heading inside `<lr-menu>`'s default slot.
 - `lr-menu` · layout/menu/menu.js — an anchored dropdown of `<lr-menu-item>` actions, opened from a consumer-supplied trigger (typically an icon button).
 - `lr-menu-item` · layout/menu/menu-item.js — a single action row inside `<lr-menu>`'s default slot.
 - `lr-dropdown-item` · layout/menu/dropdown-item.js — the Web Awesome-compatible name for a menu item.
@@ -107,7 +112,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-drilldown-panel` · layout/drilldown-panel/drilldown-panel.js — controlled navigation from a chart/table datum to its related evidence, documents, entities, or agent runs.
 - `lr-filter-bar` · layout/filter-bar/filter-bar.js — a row of dashboard filters, each declared by the host (`filters`) rather than invented by this component: every filter composes an existi...
 
-## Overlays, status & feedback — `components/overlays/` (19)
+## Overlays, status & feedback — `components/overlays/` (20)
 
 - `lr-toast` · overlays/toast/toast.js — the stacking toast region.
 - `lr-toast-item` · overlays/toast/toast-item.js — a single toast notification.
@@ -118,18 +123,19 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-chip` · overlays/chip/chip.js — a small, content-agnostic pill for a short label: a tag, an active-filter/scope indicator, etc.
 - `lr-chip-group` · overlays/chip/chip-group.js — a flex-wrap container for a set of `<lr-chip>` children (plain light-DOM composition — direct children are the chips, the same shape `<lr...
 - `lr-kbd` · overlays/kbd/kbd.js — a small chip representing a keyboard shortcut, rendering the platform-appropriate glyph for cross-platform modifier keys (⌘ on macOS, "Ct...
+- `lr-popup` · overlays/popup/popup.js — the low-level anchored-positioning primitive.
 - `lr-popover` · overlays/overlay/popover.js — a click-triggered, light-dismiss floating surface.
-- `lr-tooltip` · overlays/overlay/tooltip.js — a localized, hover/focus tooltip for a consumer-owned trigger.
+- `lr-tooltip` · overlays/overlay/tooltip.js — a localized tooltip for a consumer-owned trigger.
 - `lr-dropdown` · overlays/overlay/dropdown.js — a menu-role popover for action lists and consumer-supplied menu content.
 - `lr-spinner` · overlays/spinner/spinner.js — an indeterminate busy indicator.
 - `lr-progress-bar` · overlays/progress/progress-bar.js — a determinate or indeterminate progress indicator.
 - `lr-progress-ring` · overlays/progress/progress-ring.js — a circular determinate or indeterminate progress indicator.
 - `lr-badge` · overlays/badge/badge.js — a compact status label.
-- `lr-tag` · overlays/badge/tag.js — a semantic alias for the compact badge treatment.
+- `lr-tag` · overlays/badge/tag.js — the compact badge treatment with tag semantics: the same `variant`/`size`/ `appearance`/`pill`/`attention` surface as `<lr-badge>`, plus...
 - `lr-callout` · overlays/callout/callout.js — an inline message surface for status, warning, and error content.
 - `lr-rating` · overlays/rating/rating.js — a keyboard-accessible star rating control.
 
-## Utilities, formatting & observers — `components/utility/` (19)
+## Utilities, formatting & observers — `components/utility/` (20)
 
 - `lr-export-button` · utility/export-button/export-button.js — a CSV/JSON download button, single-format or a format-choice menu.
 - `lr-copy-button` · utility/copy-button/copy-button.js — a standalone icon-only copy-to-clipboard affordance for a plain single/multi-line text value in a layout the consumer controls (e.g.
@@ -141,7 +147,8 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-poll-status` · utility/poll-status/poll-status.js — a "next scheduled refresh" countdown with a built-in pause control: a ticking `M:SS` display counting down to the next scheduled action,...
 - `lr-mention-popover` · utility/mention-popover/mention-popover.js — a caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete inside a plain-text `<textarea>`/`<input>...
 - `lr-diff-view` · utility/diff-view/diff-view.js — a real two-string line diff (Myers/LCS-style alignment), rendered as interleaved unified-diff output -- not diff-flavored syntax highligh...
-- `lr-icon` · utility/icon/icon.js — a tiny dependency-free SVG icon primitive using a named path set.
+- `lr-icon` · utility/icon/icon.js — an SVG icon primitive.
+- `lr-visually-hidden` · utility/visually-hidden/visually-hidden.js — hides its content from sight while leaving it in the accessibility tree, so screen readers still announce it.
 - `lr-divider` · utility/divider/divider.js — a themeable semantic separator.
 - `lr-format-number` · utility/format/format-number.js — locale-aware `Intl.NumberFormat` output.
 - `lr-format-date` · utility/format/format-date.js — locale-aware `Intl.DateTimeFormat` output.
@@ -163,7 +170,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-file-icon` · media/file-icon/file-icon.js — Displays a localized, tokenized file-type badge from a MIME type.
 - `lr-media-card` · media/media-card/media-card.js — a lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message body (e.g.
 - `lr-attachment-trigger` · media/attachment-trigger/attachment-trigger.js — a compact attach affordance designed for a chat composer's leading slot (see `<lr-chat-composer>`'s own `leading` slot, which this drops...
-- `lr-avatar` · media/avatar/avatar.js — a small, fixed-size identity marker: default-slotted icon/glyph content, an image, or an initials fallback, in that priority order (which...
+- `lr-avatar` · media/avatar/avatar.js — a small, fixed-size identity marker: default-slotted icon/glyph content, an image, an `icon`-slotted fallback glyph, or an initials fallb...
 - `lr-animated-image` · media/animated-image/animated-image.js — - displays an animated GIF/APNG/WebP with a play/pause control, defaulting to a frozen first frame both at rest and automatically under `...
 - `lr-animation` · media/animation/animation.js — `<lr-animation>` declaratively animates its single slotted child through the native Web Animations API: a small curated preset catalog (`...
 - `lr-avatar-group` · media/avatar-group/avatar-group.js — stacks a set of slotted `<lr-avatar>` children into a single overlapping row (negative-margin overlap, ring border so each circle reads a...
@@ -252,7 +259,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 
 - `lr-tool-call-chip` · agent-tools/tool-call-chip/tool-call-chip.js — a compact inline pill representing one tool/ function call an agent made mid-conversation, e.g.
 - `lr-tool-result-view` · agent-tools/tool-result-view/tool-result-view.js — renders a tool call's result via whichever custom renderer a host app has registered for it (see `registerToolRenderer()` in `registry.ts...
-- `lr-tool-result-dialog` · agent-tools/tool-result-dialog/tool-result-dialog.js — a full tool-call detail overlay: a status/ duration header plus a `body` slot where a consumer typically places a `<lr-tabs>` with Input/...
+- `lr-tool-result-dialog` · agent-tools/tool-result-dialog/tool-result-dialog.js — a full tool-call detail overlay: a status/ duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with I...
 - `lr-tool-select-dialog` · agent-tools/tool-select-dialog/tool-select-dialog.js — a category-grouped, filterable, searchable tool-enablement dialog for picking which agent tools are available in a conversation.
 - `lr-thinking-panel` · agent-tools/thinking-panel/thinking-panel.js — a collapsible panel for an AI agent's intermediate reasoning/"thinking" transcript, kept visually and semantically distinct from its fina...
 - `lr-stack-trace` · agent-tools/stack-trace/stack-trace.js — parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a leading message plus activatable frames, splitting chained/caused-...
@@ -303,7 +310,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-citation-badge` · retrieval/citation-badge/citation-badge.js — an inline `[n]` citation marker with a hover/ focus preview popover and confidence/verification-status coloring.
 - `lr-source-list` · retrieval/source-list/source-list.js — a collapsible "Sources" panel for one chat message, grouping a set of `<lr-source-card>` children (its default-slot light-DOM children, p...
 - `lr-source-card` · retrieval/source-card/source-card.js — one citation/source entry, meant to be a direct light-DOM child of `<lr-source-list>` (though it renders and functions fine standalone).
-- `lr-entity-dossier` · retrieval/entity-dossier/entity-dossier.js — a full entity detail surface: a persistent header (`lr-entity-card` plus an optional confidence `lr-stat`) above a `lr-tabs` strip for Re...
+- `lr-entity-dossier` · retrieval/entity-dossier/entity-dossier.js — a full entity detail surface: a persistent header (`lr-entity-card` plus an optional confidence `lr-stat`) above a `lr-tab-group` strip f...
 - `lr-grounding-summary` · retrieval/grounding-summary/grounding-summary.js — - the claim-level scorecard for one generated answer: supported/ unsupported claim counts, citation coverage, an optional confidence scor...
 - `lr-ingestion-queue` · retrieval/ingestion-queue/ingestion-queue.js — a controlled list of documents moving through an ingestion pipeline (upload → text extraction → chunking → embedding → indexing), each ro...
 - `lr-knowledge-base` · retrieval/knowledge-base/knowledge-base.js — a source list for a retrieval knowledge base: sync status, indexing health, permissions, and per-row create/sync/pause/delete affordances.

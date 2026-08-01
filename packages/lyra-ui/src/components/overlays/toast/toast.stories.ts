@@ -45,7 +45,7 @@ export const Triggers: Story = {
   },
 };
 
-const sizes: ToastSize[] = ['xs', 's', 'm', 'l', 'xl'];
+const sizes: ToastSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
 
 export const Sizes: Story = {
   render: () => html`

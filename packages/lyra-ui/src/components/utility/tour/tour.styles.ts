@@ -55,7 +55,10 @@ export const styles = css`
     color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Modal tier, not the anchored-panel tier its "popover" name suggests: this panel sits on the
+       modal layer above a full-viewport backdrop scrim (and centers itself like a dialog when
+       unanchored), so it needs the separation a menu next to live page content does not. */
+    box-shadow: var(--lr-shadow-l);
     pointer-events: auto;
     overflow: auto;
   }
@@ -143,8 +146,20 @@ export const styles = css`
   :where([part='skip-button']):hover {
     background: var(--lr-color-brand-quiet);
   }
+  :where([part='previous-button']):active:where(:not(:disabled)),
+  :where([part='skip-button']):active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  /* A background mix, not filter: brightness(): a filter multiplies every channel of the subtree,
+     so it dragged this button's own --lr-color-on-brand label along with the fill, and moved
+     neither at all once the brand token was themed to pure white or pure black. Mixing the fill
+     toward --lr-color-mix-partner (which tracks the text color) always moves, and only the fill
+     moves. */
   [part='next-button']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='next-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='previous-button']:focus-visible,
   [part='skip-button']:focus-visible,

@@ -3,14 +3,65 @@ import './chip.js';
 import type { LyraChip } from './chip.js';
 import { styles } from './chip.styles.js';
 
-it('defaults to size="m", tone="neutral", removable=false, and value=undefined', async () => {
+/** Resolves a `--lr-*` token to the concrete computed string `getComputedStyle` reports for a
+ *  rendered element, via a throwaway probe in the chip's own light DOM (custom properties inherit
+ *  into slotted children, so the probe sees the identical cascade the shadow tree does). Reading
+ *  the custom property directly reports its substituted token text (`0.375rem`), never the used
+ *  value the matching layout property reports (`6px`). */
+function resolved(host: HTMLElement, property: string, token: string): string {
+  const probe = document.createElement('span');
+  probe.style.setProperty(property, `var(${token})`);
+  host.append(probe);
+  const value = getComputedStyle(probe).getPropertyValue(property);
+  probe.remove();
+  return value;
+}
+
+it('defaults to size="m", variant="neutral", removable=false, pill=false, and value=undefined', async () => {
   const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
   expect(el.size).to.equal('m');
   expect(el.getAttribute('size')).to.equal('m');
-  expect(el.tone).to.equal('neutral');
-  expect(el.getAttribute('tone')).to.equal('neutral');
+  expect(el.variant).to.equal('neutral');
+  expect(el.getAttribute('variant')).to.equal('neutral');
   expect(el.removable).to.be.false;
+  expect(el.pill).to.be.false;
   expect(el.value).to.be.undefined;
+});
+
+// -- pill / corner radius ----------------------------------------------------
+
+describe('pill', () => {
+  const radius = (el: LyraChip): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).borderRadius;
+
+  it('renders a rounded rectangle by default, visibly distinct from the pill treatment', async () => {
+    const plain = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
+    const pill = (await fixture(html`<lr-chip pill>Tag</lr-chip>`)) as LyraChip;
+    expect(plain.pill, 'pill defaults to false').to.be.false;
+    expect(plain.hasAttribute('pill')).to.be.false;
+    expect(pill.pill).to.be.true;
+    // The whole point of the property: the two must render differently. Before `pill` existed the
+    // chip was unconditionally pill-shaped, so setting it was indistinguishable from omitting it.
+    expect(radius(plain), 'default radius must differ from the pill radius').to.not.equal(radius(pill));
+    expect(radius(pill)).to.equal(resolved(pill, 'border-radius', '--lr-radius-pill'));
+    expect(radius(plain)).to.equal(resolved(plain, 'border-radius', '--lr-radius'));
+    expect(Number.parseFloat(radius(plain)), 'default is still rounded, just not a pill').to.be.greaterThan(0);
+  });
+
+  it('toggles back to the rounded rectangle when pill is unset again', async () => {
+    const el = (await fixture(html`<lr-chip pill>Tag</lr-chip>`)) as LyraChip;
+    const pilled = radius(el);
+    el.pill = false;
+    await el.updateComplete;
+    expect(el.hasAttribute('pill')).to.be.false;
+    expect(radius(el)).to.not.equal(pilled);
+  });
+
+  it('carries the pill radius through to the remove button', async () => {
+    const el = (await fixture(html`<lr-chip pill removable>Tag</lr-chip>`)) as LyraChip;
+    const remove = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    expect(getComputedStyle(remove).borderRadius).to.equal(resolved(el, 'border-radius', '--lr-radius-pill'));
+  });
 });
 
 it('keeps size="m" pixel-equivalent to the original chip and scales compact tiers', async () => {
@@ -107,13 +158,31 @@ it('keeps compact removable and toggleable chips keyboard-accessible with adequa
   }
 });
 
-it('reflects tone and removable changes onto host attributes', async () => {
+it('reflects variant and removable changes onto host attributes', async () => {
   const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
-  el.tone = 'danger';
+  el.variant = 'danger';
   el.removable = true;
   await el.updateComplete;
-  expect(el.getAttribute('tone')).to.equal('danger');
+  expect(el.getAttribute('variant')).to.equal('danger');
   expect(el.hasAttribute('removable')).to.be.true;
+});
+
+it('tints the pill from the shared semantic grid for every non-neutral variant', async () => {
+  // The four per-variant blocks this component used to declare are gone; the tint now comes from
+  // the shared `variants` sheet's generic slots. Assert the rendered result rather than the
+  // stylesheet text: a slot that never resolves would leave the neutral surface in place.
+  const neutral = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
+  const neutralBg = getComputedStyle(neutral.shadowRoot!.querySelector('[part="base"]') as HTMLElement).backgroundColor;
+  const seen = new Set<string>();
+  for (const variant of ['brand', 'success', 'warning', 'danger'] as const) {
+    const el = (await fixture(html`<lr-chip variant=${variant}>Tag</lr-chip>`)) as LyraChip;
+    const style = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(style.backgroundColor, `${variant} background must leave the neutral surface`).to.not.equal(neutralBg);
+    // Every non-neutral variant drops the border in favour of the tint.
+    expect(style.borderTopColor, `${variant} border`).to.equal('rgba(0, 0, 0, 0)');
+    seen.add(`${style.backgroundColor}/${style.color}`);
+  }
+  expect(seen.size, 'all four variants must resolve to distinct tint/ink pairs').to.equal(4);
 });
 
 it('renders the default slot as the label', async () => {
@@ -251,9 +320,9 @@ it('is accessible in the default (non-removable, no icon) state', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('is accessible in a populated removable state with an icon and a non-neutral tone', async () => {
+it('is accessible in a populated removable state with an icon and a non-neutral variant', async () => {
   const el = (await fixture(html`
-    <lr-chip tone="danger" removable value="scope-1"><span slot="icon">●</span>Overdue</lr-chip>
+    <lr-chip variant="danger" removable value="scope-1"><span slot="icon">●</span>Overdue</lr-chip>
   `)) as LyraChip;
   await expect(el).to.be.accessible();
 });
@@ -550,14 +619,14 @@ describe('per-tier min-height and exact-height hatch', () => {
     expect(getComputedStyle(b).blockSize).to.equal(natural);
   });
 
-  it('exposes --lr-chip-radius, defaulting to the pre-existing pill literal on both base and remove-button', async () => {
+  it('exposes --lr-chip-radius, defaulting to the shared rounded-rectangle token on both base and remove-button', async () => {
     const el = (await fixture(html`<lr-chip removable>Tag</lr-chip>`)) as LyraChip;
     const baseCs = getComputedStyle(base(el));
     const removeCs = getComputedStyle(
       el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement,
     );
-    expect(baseCs.borderRadius).to.equal('999px');
-    expect(removeCs.borderRadius).to.equal('999px');
+    expect(baseCs.borderRadius).to.equal(resolved(el, 'border-radius', '--lr-radius'));
+    expect(removeCs.borderRadius).to.equal(resolved(el, 'border-radius', '--lr-radius'));
   });
 
   it('retunes the base and remove-button corner radius together with no ::part() rule', async () => {
@@ -574,7 +643,7 @@ describe('per-tier min-height and exact-height hatch', () => {
 
   it('declares --lr-chip-radius on :host and consumes it once on [part="base"] and [part="remove-button"]', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/:host \{[^}]*--lr-chip-radius: var\(--lr-radius-pill\);/);
+    expect(css).to.match(/:host \{[^}]*--lr-chip-radius: var\(--lr-radius\);/);
     expect(css).to.match(/\[part='base'\] \{[^}]*border-radius: var\(--lr-chip-radius\);/);
     expect(css).to.match(/\[part='remove-button'\] \{[^}]*border-radius: var\(--lr-chip-radius\);/);
   });

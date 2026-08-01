@@ -55,6 +55,8 @@ export const styles = css`
   }
   [part='previous-button']:hover,
   [part='next-button']:hover { background: var(--lr-color-brand-quiet); }
+  [part='previous-button']:active,
+  [part='next-button']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='previous-button']:disabled,
   [part='next-button']:disabled { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
   [part='previous-button']:focus-visible,

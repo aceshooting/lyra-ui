@@ -229,3 +229,49 @@ export const SelectEvent: Story = {
     </div>
   `,
 };
+
+/** A row that owns an `<lr-menu slot="submenu">` becomes a submenu parent: `aria-haspopup="menu"`,
+ *  a chevron, and a nested menu that opens beside it. ArrowRight steps in and ArrowLeft steps back
+ *  out (swapped under RTL); hovering opens after a short intent delay, with enough grace on the way
+ *  out to cut diagonally across the rows in between. Selections made in a submenu arrive as the
+ *  outer menu's own single `lr-menu-select`. */
+export const NestedSubmenus: Story = {
+  render: () => html`
+    <div>
+      <lr-menu
+        label="Row actions"
+        @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => {
+          const out = document.getElementById('menu-submenu-log');
+          if (out) out.textContent = `Selected: ${e.detail.value}`;
+        }}
+      >
+        <button slot="trigger" aria-label="Row actions" style="cursor:pointer;">⋮</button>
+        <lr-menu-item value="rename">Rename</lr-menu-item>
+        <lr-menu-item value="share">
+          Share
+          <lr-menu slot="submenu">
+            <lr-menu-item value="share-email">Email</lr-menu-item>
+            <lr-menu-item value="share-link">Copy link</lr-menu-item>
+            <lr-menu-item value="share-more">
+              More
+              <lr-menu slot="submenu">
+                <lr-menu-item value="share-teams">Teams</lr-menu-item>
+                <lr-menu-item value="share-embed">Embed code</lr-menu-item>
+              </lr-menu>
+            </lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+        <lr-menu-item value="move">
+          Move to
+          <lr-menu slot="submenu">
+            <lr-menu-item value="move-inbox">Inbox</lr-menu-item>
+            <lr-menu-item value="move-archive">Archive</lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+        <hr />
+        <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+      </lr-menu>
+      <p id="menu-submenu-log">Selected: (none yet)</p>
+    </div>
+  `,
+};

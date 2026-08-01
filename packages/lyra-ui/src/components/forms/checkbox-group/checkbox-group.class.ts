@@ -2,7 +2,10 @@ import { html, nothing, type ReactiveController, type TemplateResult } from 'lit
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { nextId } from '../../../internal/a11y.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox-group.styles.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.class.js';
 
@@ -83,28 +86,63 @@ export interface LyraCheckboxGroupEventMap {
  * @event input - User selection changed.
  * @event change - User selection changed.
  * @event lr-change - User selection changed; detail is `{ value: string[] }`.
+ * @cssstate required - Matches while `required` is set. Style with
+ * `lr-checkbox-group:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the group satisfies its constraints, including any
+ * `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: toggling one of the
+ * group's checkboxes, a blur, or a `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required group is genuinely invalid, but colouring it red
+ * before the user has done anything is hostile.
  * @csspart form-control - Group wrapper.
  * @csspart form-control-label - Label.
  * @csspart options - Checkbox collection.
  * @csspart hint - Supporting text.
  * @csspart error - Validation message.
+ * @cssprop [--lr-checkbox-group-row-gap=calc(var(--lr-form-control-height) * 0.1)] - Vertical gap
+ * between the group's label, options and messages, scaled by `size`.
+ * @cssprop [--lr-checkbox-group-option-gap=calc(var(--lr-form-control-height) * 0.2)] - Gap between
+ * adjacent options, scaled by `size`.
  */
 export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
+    size: { reflect: true },
     value: { attribute: false, noAccessor: true },
   };
+
+  /**
+   * Size of the group's own chrome, on the library's shared ladder. Accepts both spellings of every
+   * tier — `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating
+   * either way is a tag rename. Scales the group's label type size and the gaps around and between
+   * its options off the same `--lr-form-control-*` values the controls themselves use. It does not
+   * resize the `<lr-checkbox>` children: each carries its own `size`, so a group can hold options at
+   * mixed sizes and an explicitly-sized option is never silently overridden by its container. Set
+   * the same `size` on the children to scale the whole group.
+   */
+  size: LyraSize = 'm';
 
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private touched = false;
+  /** Whether the user has acted on this group yet, which is what gates the `user-valid`/
+   *  `user-invalid` custom states. Deliberately separate from `touched` (which drives the visible
+   *  `data-invalid`/`aria-invalid` pair and is set on blur alone): toggling a child checkbox is an
+   *  interaction the instant it happens, and `reportValidity()` — what a submit attempt runs —
+   *  counts as one too, exactly as it does for native `:user-invalid`. Not `@state`: nothing in
+   *  `render()` reads it. */
+  private hasInteracted = false;
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
@@ -270,6 +308,14 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     if (this.required && next.length === 0) this.validityController.setValidity({ valueMissing: true }, this.localize('checkboxGroupRequired'));
     else this.validityController.setValidity({});
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    this.reflectValidityStates();
+  }
+
+  /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
+   *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. Called from
+   *  every path that can move either validity or the interaction flag. */
+  private reflectValidityStates(): void {
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.hasInteracted });
   }
 
   private isOwnedCheckbox(target: EventTarget | null): target is LyraCheckbox {
@@ -282,6 +328,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     if (!this.isOwnedCheckbox(event.target)) return;
     event.stopImmediatePropagation();
     if (event.type !== 'change' || this.effectiveDisabled) return;
+    this.hasInteracted = true;
     this.sync();
     this.emit('input', { value: this.value });
     this.emit('change', { value: this.value });
@@ -366,7 +413,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   protected override firstUpdated(): void {
-    this.addEventListener('blur', () => { this.touched = true; this.sync(); }, true);
+    this.addEventListener('blur', () => { this.touched = true; this.hasInteracted = true; this.sync(); }, true);
   }
 
   /** @internal */
@@ -376,8 +423,38 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   get validationMessage(): string { return this.internals.validationMessage; }
   get willValidate(): boolean { return this.internals.willValidate; }
   checkValidity(): boolean { return this.internals.checkValidity(); }
-  reportValidity(): boolean { return this.internals.reportValidity(); }
-  formResetCallback(): void { this.boxes.forEach((box) => { box.checked = box.hasAttribute('checked'); }); this.touched = false; this.sync(); }
+  reportValidity(): boolean {
+    // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
+    // point, so it counts as interaction for the `user-*` custom states. `checkValidity()`
+    // deliberately does not: it is the silent query.
+    this.hasInteracted = true;
+    this.reflectValidityStates();
+    return this.internals.reportValidity();
+  }
+
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("that combination of topics is not available") that no client-side constraint can
+   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
+   * group fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`
+   * clears it.
+   *
+   * Clearing restores the group's own computed validity rather than forcing it valid: a required
+   * group with nothing checked stays `valueMissing`. The custom error also survives every
+   * intrinsic recomputation in between (`sync()` re-runs on each child toggle, slot change and
+   * `name`/`required` change) and a form reset, exactly like a native control — only another
+   * `setCustomValidity('')` clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    this.reflectValidityStates();
+    // `aria-invalid` is rendered from `internals.validity`, which the call above just moved.
+    this.requestUpdate();
+  }
+  formResetCallback(): void { this.boxes.forEach((box) => { box.checked = box.hasAttribute('checked'); }); this.touched = false; this.hasInteracted = false; this.sync(); }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     this.propagateDisabled();

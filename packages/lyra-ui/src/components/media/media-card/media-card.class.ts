@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { expandIcon, fileIcon } from '../../../internal/icons.js';
 import {
   safeDownloadHref as validateLinkHref,
@@ -12,9 +13,11 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 export type MediaCardKind = 'image' | 'video' | 'file';
 
-/** Visual chrome for `<lr-media-card>`'s root, mirroring `lr-source-card`'s `appearance`
- *  vocabulary. */
-export type MediaCardAppearance = 'card' | 'plain';
+/** Whether the root draws itself as a bounded card — an alias of the shared {@linkcode LyraFrame},
+ *  so there is one definition. Named `frame`, not `appearance`: `appearance` is the library's
+ *  vocabulary for how a *control fills itself*, and using it for container chrome as well made one
+ *  property name mean two unrelated things. */
+export type MediaCardFrame = LyraFrame;
 
 export interface MediaCardOpenDetail {
   src: string;
@@ -130,11 +133,11 @@ function detectKind(mimeType: string): MediaCardKind {
  * @cssprop [--lr-media-card-max-height=var(--lr-size-20rem)] - Cap on the block size of the
  * `<img>`/`<video>` in `[part="media"]`.
  *
- * **Chrome escape hatch.** `appearance="plain"` drops `[part="base"]`'s border, background,
+ * **Chrome escape hatch.** `frame="plain"` drops `[part="base"]`'s border, background,
  * padding, and corner radius — for a dense list/feed of cards (this component's own documented
  * primary use case) where the surrounding container already provides its own separation, so
- * cards don't double up on chrome. Mirrors `<lr-source-card>`'s identical `appearance`
- * vocabulary.
+ * cards don't double up on chrome. `frame` is the library-wide name for this container
+ * treatment.
  */
 export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -168,11 +171,11 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
    *  ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
-  /** Visual chrome, mirroring `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the
-   *  default) keeps the bordered, filled box. `'plain'` removes the border, background, padding
-   *  and corner radius, so a card inside a dense chat transcript (or any container already
-   *  drawing its own separation between attachments) doesn't double the frame. */
-  @property({ reflect: true }) appearance: MediaCardAppearance = 'card';
+  /** Visual chrome, on the library-wide `frame` vocabulary. `'card'` (the default) keeps the
+   *  bordered, filled box. `'plain'` removes the border, background, padding and corner radius, so
+   *  a card inside a dense chat transcript (or any container already drawing its own separation
+   *  between attachments) doesn't double the frame. */
+  @property({ reflect: true }) frame: MediaCardFrame = 'card';
 
   /** Effective kind used for rendering — `kind` if explicitly set,
    *  otherwise detected from `mime-type`. */

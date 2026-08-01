@@ -18,7 +18,7 @@ or agent runs. It renders a breadcrumb path and delegates category content to ex
 
 **Properties:** `path: DrilldownNode[] = []` and `types: NodeTypeStyle[] = []` (both attribute:
 false), `accessibleLabel: string | null = null` (attribute `aria-label` — names the nested
-`lr-tabs`; unset renders no `aria-label` at all, matching `lr-tabs`' own default),
+`lr-tab-group`; unset renders no `aria-label` at all, matching `lr-tab-group`' own default),
 `communityLabel: string = ''` (attribute `community-label`), `showFocusButton: boolean = true`
 (attribute `show-focus-button`). **Events:**
 `lr-drilldown-navigate` (`detail: { id, index }`). **Slots:** `runs`. **CSS parts:** `base`,

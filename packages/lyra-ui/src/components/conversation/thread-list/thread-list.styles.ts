@@ -32,6 +32,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* no-pressed-state: [part='search-input'] is a text field. A press on it is answered by the field
+     taking focus and raising its focus ring, which is both stronger than any momentary pressed tint
+     and outlasts the mouse button; a second, competing flash on mousedown would only add noise to
+     the one interaction that already has unambiguous feedback. */
   [part='search-input']:hover {
     border-color: var(--lr-color-brand);
   }
@@ -104,6 +108,10 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
     color: var(--lr-color-text);
   }
+  lr-virtual-list::part(group-toggle):active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-text);
+  }
   lr-virtual-list::part(group-toggle):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -141,6 +149,10 @@ export const styles = css`
   }
   lr-virtual-list::part(row-action):hover {
     background: var(--lr-color-surface-raised);
+    color: var(--lr-color-text);
+  }
+  lr-virtual-list::part(row-action):active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     color: var(--lr-color-text);
   }
   lr-virtual-list::part(row-action):focus-visible {

@@ -16,7 +16,7 @@ For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once a
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 
-## Themeable inputs (234)
+## Themeable inputs (277)
 
 | Internal token | `--lr-theme-*` input | Fallback |
 |---|---|---|
@@ -26,20 +26,7 @@ override a single element without touching the shared layer.
 | `--lr-color-text-quiet` | `--lr-theme-color-text-quiet` | `#6b7280` |
 | `--lr-color-border` | `--lr-theme-color-surface-border` | `#8a8a90` |
 | `--lr-color-border-strong` | `--lr-theme-color-border-strong` | `#4b5563` |
-| `--lr-color-brand` | `--lr-theme-color-brand-fill-loud` | `#0969da` |
-| `--lr-color-brand-quiet` | `--lr-theme-color-brand-fill-quiet` | `#ddf4ff` |
-| `--lr-color-success` | `--lr-theme-color-success-fill-loud` | `#1a7f37` |
-| `--lr-color-success-quiet` | `--lr-theme-color-success-fill-quiet` | `#dafbe1` |
-| `--lr-color-warning` | `--lr-theme-color-warning-fill-loud` | `#9a6700` |
-| `--lr-color-warning-quiet` | `--lr-theme-color-warning-fill-quiet` | `#fff8c5` |
-| `--lr-color-danger` | `--lr-theme-color-danger-fill-loud` | `#cf222e` |
-| `--lr-color-danger-quiet` | `--lr-theme-color-danger-fill-quiet` | `#ffebe9` |
-| `--lr-color-neutral` | `--lr-theme-color-neutral-fill-loud` | `#1a1a1a` |
-| `--lr-color-on-brand` | `--lr-theme-color-brand-on-loud` | `#fff` |
-| `--lr-color-on-success` | `--lr-theme-color-success-on-loud` | `#fff` |
-| `--lr-color-on-warning` | `--lr-theme-color-warning-on-loud` | `#fff` |
-| `--lr-color-on-danger` | `--lr-theme-color-danger-on-loud` | `#fff` |
-| `--lr-color-on-neutral` | `--lr-theme-color-neutral-on-loud` | `#fff` |
+| `--lr-color-surface-overlay` | `--lr-theme-color-surface-overlay` | `var(--lr-color-surface)` |
 | `--lr-color-overlay` | `--lr-theme-color-overlay` | `rgb(0 0 0 / 0.5)` |
 | `--lr-color-overlay-strong` | `--lr-theme-color-overlay-strong` | `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92))` |
 | `--lr-color-no-data` | `--lr-theme-color-no-data` | `rgb(128 128 128 / 25%)` |
@@ -56,7 +43,6 @@ override a single element without touching the shared layer.
 | `--lr-font-size-sm` | `--lr-theme-font-size-sm` | `0.8125rem` |
 | `--lr-font-size-m` | `--lr-theme-font-size-m` | `1rem` |
 | `--lr-font-size-md-sm` | `--lr-theme-font-size-md-sm` | `0.875rem` |
-| `--lr-font-size-md` | `--lr-theme-font-size-md` | `1rem` |
 | `--lr-font-size-lg` | `--lr-theme-font-size-lg` | `1.125rem` |
 | `--lr-font-size-xl` | `--lr-theme-font-size-xl` | `1.25rem` |
 | `--lr-font-size-2xl` | `--lr-theme-font-size-2xl` | `1.75rem` |
@@ -77,14 +63,14 @@ override a single element without touching the shared layer.
 | `--lr-radius-xs` | `--lr-theme-border-radius-xs` | `2px` |
 | `--lr-radius-pill` | `--lr-theme-border-radius-pill` | `999px` |
 | `--lr-color-shadow` | `--lr-theme-color-shadow` | `#000` |
-| `--lr-color-chart-1` | `--lr-theme-color-chart-1` | `#8250df` |
-| `--lr-color-chart-2` | `--lr-theme-color-chart-2` | `#bf3989` |
-| `--lr-color-chart-3` | `--lr-theme-color-chart-3` | `#0a7d91` |
-| `--lr-color-chart-4` | `--lr-theme-color-chart-4` | `#57606a` |
-| `--lr-color-chart-5` | `--lr-theme-color-chart-5` | `#b083f5` |
-| `--lr-color-chart-6` | `--lr-theme-color-chart-6` | `#f470b8` |
-| `--lr-color-chart-7` | `--lr-theme-color-chart-7` | `#52d6e8` |
-| `--lr-color-chart-8` | `--lr-theme-color-chart-8` | `#c9d1d9` |
+| `--lr-color-chart-1` | `--lr-theme-color-chart-1` | `#0e006e` |
+| `--lr-color-chart-2` | `--lr-theme-color-chart-2` | `#4d011a` |
+| `--lr-color-chart-3` | `--lr-theme-color-chart-3` | `#862002` |
+| `--lr-color-chart-4` | `--lr-theme-color-chart-4` | `#503983` |
+| `--lr-color-chart-5` | `--lr-theme-color-chart-5` | `#315fdd` |
+| `--lr-color-chart-6` | `--lr-theme-color-chart-6` | `#935e7c` |
+| `--lr-color-chart-7` | `--lr-theme-color-chart-7` | `#de6906` |
+| `--lr-color-chart-8` | `--lr-theme-color-chart-8` | `#8f81d3` |
 | `--lr-graph-cat-1` | `--lr-theme-graph-cat-1` | `#8250df` |
 | `--lr-graph-cat-2` | `--lr-theme-graph-cat-2` | `#bf3989` |
 | `--lr-graph-cat-3` | `--lr-theme-graph-cat-3` | `#0a7d91` |
@@ -93,22 +79,38 @@ override a single element without touching the shared layer.
 | `--lr-graph-cat-6` | `--lr-theme-graph-cat-6` | `#f470b8` |
 | `--lr-graph-cat-7` | `--lr-theme-graph-cat-7` | `#52d6e8` |
 | `--lr-graph-cat-8` | `--lr-theme-graph-cat-8` | `#c9d1d9` |
-| `--lr-terminal-color-black` | `--lr-theme-terminal-color-black` | `#24292e` |
-| `--lr-terminal-color-red` | `--lr-theme-terminal-color-red` | `#cf222e` |
-| `--lr-terminal-color-green` | `--lr-theme-terminal-color-green` | `#1a7f37` |
-| `--lr-terminal-color-yellow` | `--lr-theme-terminal-color-yellow` | `#9a6700` |
-| `--lr-terminal-color-blue` | `--lr-theme-terminal-color-blue` | `#0969da` |
-| `--lr-terminal-color-magenta` | `--lr-theme-terminal-color-magenta` | `#8250df` |
-| `--lr-terminal-color-cyan` | `--lr-theme-terminal-color-cyan` | `#1b7c83` |
-| `--lr-terminal-color-white` | `--lr-theme-terminal-color-white` | `#6b7280` |
-| `--lr-terminal-color-bright-black` | `--lr-theme-terminal-color-bright-black` | `#57606a` |
-| `--lr-terminal-color-bright-red` | `--lr-theme-terminal-color-bright-red` | `#fa4549` |
-| `--lr-terminal-color-bright-green` | `--lr-theme-terminal-color-bright-green` | `#4ac26b` |
-| `--lr-terminal-color-bright-yellow` | `--lr-theme-terminal-color-bright-yellow` | `#d4a72c` |
-| `--lr-terminal-color-bright-blue` | `--lr-theme-terminal-color-bright-blue` | `#4184e4` |
-| `--lr-terminal-color-bright-magenta` | `--lr-theme-terminal-color-bright-magenta` | `#a475f9` |
-| `--lr-terminal-color-bright-cyan` | `--lr-theme-terminal-color-bright-cyan` | `#3192aa` |
-| `--lr-terminal-color-bright-white` | `--lr-theme-terminal-color-bright-white` | `#d0d7de` |
+| `--lr-terminal-color-black` | `--lr-theme-terminal-color-black` | `#2b2b2b` |
+| `--lr-terminal-color-red` | `--lr-theme-terminal-color-red` | `#901114` |
+| `--lr-terminal-color-green` | `--lr-theme-terminal-color-green` | `#015e15` |
+| `--lr-terminal-color-yellow` | `--lr-theme-terminal-color-yellow` | `#5f4a03` |
+| `--lr-terminal-color-blue` | `--lr-theme-terminal-color-blue` | `#06489c` |
+| `--lr-terminal-color-magenta` | `--lr-theme-terminal-color-magenta` | `#67298c` |
+| `--lr-terminal-color-cyan` | `--lr-theme-terminal-color-cyan` | `#02585f` |
+| `--lr-terminal-color-white` | `--lr-theme-terminal-color-white` | `#555555` |
+| `--lr-terminal-color-bright-black` | `--lr-theme-terminal-color-bright-black` | `#404040` |
+| `--lr-terminal-color-bright-red` | `--lr-theme-terminal-color-bright-red` | `#b32322` |
+| `--lr-terminal-color-bright-green` | `--lr-theme-terminal-color-bright-green` | `#01791e` |
+| `--lr-terminal-color-bright-yellow` | `--lr-theme-terminal-color-bright-yellow` | `#796005` |
+| `--lr-terminal-color-bright-blue` | `--lr-theme-terminal-color-bright-blue` | `#145ec1` |
+| `--lr-terminal-color-bright-magenta` | `--lr-theme-terminal-color-bright-magenta` | `#823bae` |
+| `--lr-terminal-color-bright-cyan` | `--lr-theme-terminal-color-bright-cyan` | `#04717a` |
+| `--lr-terminal-color-bright-white` | `--lr-theme-terminal-color-bright-white` | `#6c6c6c` |
+| `--lr-terminal-bg-black` | `--lr-theme-terminal-bg-black` | `#868686` |
+| `--lr-terminal-bg-red` | `--lr-theme-terminal-bg-red` | `#d2918a` |
+| `--lr-terminal-bg-green` | `--lr-theme-terminal-bg-green` | `#89b18a` |
+| `--lr-terminal-bg-yellow` | `--lr-theme-terminal-bg-yellow` | `#b6a372` |
+| `--lr-terminal-bg-blue` | `--lr-theme-terminal-bg-blue` | `#88a6d4` |
+| `--lr-terminal-bg-magenta` | `--lr-theme-terminal-bg-magenta` | `#b497cb` |
+| `--lr-terminal-bg-cyan` | `--lr-theme-terminal-bg-cyan` | `#77b0b6` |
+| `--lr-terminal-bg-white` | `--lr-theme-terminal-bg-white` | `#b7b7b7` |
+| `--lr-terminal-bg-bright-black` | `--lr-theme-terminal-bg-bright-black` | `#9e9e9e` |
+| `--lr-terminal-bg-bright-red` | `--lr-theme-terminal-bg-bright-red` | `#f9aea5` |
+| `--lr-terminal-bg-bright-green` | `--lr-theme-terminal-bg-bright-green` | `#a4d2a4` |
+| `--lr-terminal-bg-bright-yellow` | `--lr-theme-terminal-bg-bright-yellow` | `#d8c288` |
+| `--lr-terminal-bg-bright-blue` | `--lr-theme-terminal-bg-bright-blue` | `#a2c6fb` |
+| `--lr-terminal-bg-bright-magenta` | `--lr-theme-terminal-bg-bright-magenta` | `#d6b4f0` |
+| `--lr-terminal-bg-bright-cyan` | `--lr-theme-terminal-bg-bright-cyan` | `#8dd2da` |
+| `--lr-terminal-bg-bright-white` | `--lr-theme-terminal-bg-bright-white` | `#d1d1d1` |
 | `--lr-layer-base` | `--lr-theme-z-index-base` | `0` |
 | `--lr-layer-content` | `--lr-theme-z-index-content` | `1` |
 | `--lr-layer-dropdown` | `--lr-theme-z-index-dropdown` | `900` |
@@ -206,12 +208,27 @@ override a single element without touching the shared layer.
 | `--lr-size-8em` | `--lr-theme-size-8em` | `8em` |
 | `--lr-size-8rem` | `--lr-theme-size-8rem` | `8rem` |
 | `--lr-radius` | `--lr-theme-border-radius-m` | `0.375rem` |
-| `--lr-shadow` | `--lr-theme-shadow-m` | `0 2px 8px rgb(0 0 0 / 0.15)` |
+| `--lr-shadow-color` | `--lr-theme-shadow-color` | `0 0 0` |
+| `--lr-shadow-xs` | `--lr-theme-shadow-xs` | `0 1px 2px rgb(var(--lr-shadow-color) / 0.12)` |
+| `--lr-shadow-s` | `--lr-theme-shadow-s` | `0 1px 4px rgb(var(--lr-shadow-color) / 0.14)` |
+| `--lr-shadow-m` | `--lr-theme-shadow-m` | `0 2px 8px rgb(var(--lr-shadow-color) / 0.15)` |
+| `--lr-shadow-l` | `--lr-theme-shadow-l` | `0 6px 16px rgb(var(--lr-shadow-color) / 0.18)` |
+| `--lr-shadow-xl` | `--lr-theme-shadow-xl` | `0 12px 32px rgb(var(--lr-shadow-color) / 0.22)` |
 | `--lr-font` | `--lr-theme-font-family-body` | `system-ui, sans-serif` |
-| `--lr-transition-fast` | `--lr-theme-transition-fast` | `120ms ease-out` |
-| `--lr-transition-base` | `--lr-theme-transition-normal` | `180ms ease-out` |
-| `--lr-transition-ambient` | `--lr-theme-transition-slow` | `1.8s ease-in-out` |
+| `--lr-duration-fast` | `--lr-theme-duration-fast` | `120ms` |
+| `--lr-duration-base` | `--lr-theme-duration-normal` | `180ms` |
+| `--lr-duration-ambient` | `--lr-theme-duration-slow` | `1.8s` |
+| `--lr-easing-standard` | `--lr-theme-easing-standard` | `ease-out` |
+| `--lr-easing-emphasized` | `--lr-theme-easing-emphasized` | `ease-in-out` |
+| `--lr-easing-linear` | `--lr-theme-easing-linear` | `linear` |
+| `--lr-transition-fast` | `--lr-theme-transition-fast` | `var(--lr-duration-fast) var(--lr-easing-standard)` |
+| `--lr-transition-base` | `--lr-theme-transition-normal` | `var(--lr-duration-base) var(--lr-easing-standard)` |
+| `--lr-transition-ambient` | `--lr-theme-transition-slow` | `var(--lr-duration-ambient) var(--lr-easing-emphasized)` |
 | `--lr-opacity-disabled` | `--lr-theme-opacity-disabled` | `0.5` |
+| `--lr-opacity-muted` | `--lr-theme-opacity-muted` | `0.85` |
+| `--lr-color-mix-hover` | `--lr-theme-color-mix-hover` | `12%` |
+| `--lr-color-mix-active` | `--lr-theme-color-mix-active` | `22%` |
+| `--lr-color-mix-partner` | `--lr-theme-color-mix-partner` | `var(--lr-color-text)` |
 | `--lr-hover-brightness` | `--lr-theme-hover-brightness` | `1.08` |
 | `--lr-popover-viewport-clamp` | `--lr-theme-popover-viewport-clamp` | `92vw` |
 | `--lr-focus-ring-width` | `--lr-theme-focus-ring-width` | `2px` |
@@ -224,28 +241,14 @@ override a single element without touching the shared layer.
 | `--lr-color-text-quiet` | `--lr-theme-color-text-quiet` | `#9aa1ac` |
 | `--lr-color-border` | `--lr-theme-color-surface-border` | `#6b6b74` |
 | `--lr-color-border-strong` | `--lr-theme-color-border-strong` | `#c4c9d1` |
-| `--lr-color-brand` | `--lr-theme-color-brand-fill-loud` | `#4ea0f0` |
-| `--lr-color-brand-quiet` | `--lr-theme-color-brand-fill-quiet` | `#163650` |
-| `--lr-color-success` | `--lr-theme-color-success-fill-loud` | `#3fb950` |
-| `--lr-color-success-quiet` | `--lr-theme-color-success-fill-quiet` | `#17411e` |
-| `--lr-color-warning` | `--lr-theme-color-warning-fill-loud` | `#d29922` |
-| `--lr-color-warning-quiet` | `--lr-theme-color-warning-fill-quiet` | `#3b2900` |
-| `--lr-color-danger` | `--lr-theme-color-danger-fill-loud` | `#fa524a` |
-| `--lr-color-danger-quiet` | `--lr-theme-color-danger-fill-quiet` | `#4c1210` |
-| `--lr-color-neutral` | `--lr-theme-color-neutral-fill-loud` | `#e5e7eb` |
-| `--lr-color-on-brand` | `--lr-theme-color-brand-on-loud` | `#111827` |
-| `--lr-color-on-success` | `--lr-theme-color-success-on-loud` | `#111827` |
-| `--lr-color-on-warning` | `--lr-theme-color-warning-on-loud` | `#111827` |
-| `--lr-color-on-danger` | `--lr-theme-color-danger-on-loud` | `#111827` |
-| `--lr-color-on-neutral` | `--lr-theme-color-neutral-on-loud` | `#111827` |
-| `--lr-color-chart-1` | `--lr-theme-color-chart-1` | `#b58cff` |
-| `--lr-color-chart-2` | `--lr-theme-color-chart-2` | `#ff7ab2` |
-| `--lr-color-chart-3` | `--lr-theme-color-chart-3` | `#4fd1c5` |
-| `--lr-color-chart-4` | `--lr-theme-color-chart-4` | `#aab4c4` |
-| `--lr-color-chart-5` | `--lr-theme-color-chart-5` | `#d4a7ff` |
-| `--lr-color-chart-6` | `--lr-theme-color-chart-6` | `#ff91c8` |
-| `--lr-color-chart-7` | `--lr-theme-color-chart-7` | `#79e2ef` |
-| `--lr-color-chart-8` | `--lr-theme-color-chart-8` | `#e4e7eb` |
+| `--lr-color-chart-1` | `--lr-theme-color-chart-1` | `#bbff94` |
+| `--lr-color-chart-2` | `--lr-theme-color-chart-2` | `#ffbce8` |
+| `--lr-color-chart-3` | `--lr-theme-color-chart-3` | `#2bd66a` |
+| `--lr-color-chart-4` | `--lr-theme-color-chart-4` | `#bb99cb` |
+| `--lr-color-chart-5` | `--lr-theme-color-chart-5` | `#7888fe` |
+| `--lr-color-chart-6` | `--lr-theme-color-chart-6` | `#9b6b90` |
+| `--lr-color-chart-7` | `--lr-theme-color-chart-7` | `#db3a29` |
+| `--lr-color-chart-8` | `--lr-theme-color-chart-8` | `#555de3` |
 | `--lr-graph-cat-1` | `--lr-theme-graph-cat-1` | `#b58cff` |
 | `--lr-graph-cat-2` | `--lr-theme-graph-cat-2` | `#ff7ab2` |
 | `--lr-graph-cat-3` | `--lr-theme-graph-cat-3` | `#4fd1c5` |
@@ -254,8 +257,48 @@ override a single element without touching the shared layer.
 | `--lr-graph-cat-6` | `--lr-theme-graph-cat-6` | `#ff91c8` |
 | `--lr-graph-cat-7` | `--lr-theme-graph-cat-7` | `#79e2ef` |
 | `--lr-graph-cat-8` | `--lr-theme-graph-cat-8` | `#e4e7eb` |
+| `--lr-color-surface-overlay` | `--lr-theme-color-surface-overlay` | `#2b3038` |
+| `--lr-color-overlay` | `--lr-theme-color-overlay` | `rgb(0 0 0 / 0.72)` |
+| `--lr-color-overlay-strong` | `--lr-theme-color-overlay-strong` | `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.95))` |
+| `--lr-shadow-xs` | `--lr-theme-shadow-xs` | `0 1px 2px rgb(var(--lr-shadow-color) / 0.34)` |
+| `--lr-shadow-s` | `--lr-theme-shadow-s` | `0 1px 4px rgb(var(--lr-shadow-color) / 0.4)` |
+| `--lr-shadow-m` | `--lr-theme-shadow-m` | `0 2px 8px rgb(var(--lr-shadow-color) / 0.46)` |
+| `--lr-shadow-l` | `--lr-theme-shadow-l` | `0 8px 20px rgb(var(--lr-shadow-color) / 0.56)` |
+| `--lr-shadow-xl` | `--lr-theme-shadow-xl` | `0 16px 40px rgb(var(--lr-shadow-color) / 0.66)` |
+| `--lr-terminal-color-black` | `--lr-theme-terminal-color-black` | `#929292` |
+| `--lr-terminal-color-red` | `--lr-theme-terminal-color-red` | `#f9786c` |
+| `--lr-terminal-color-green` | `--lr-theme-terminal-color-green` | `#67bb6b` |
+| `--lr-terminal-color-yellow` | `--lr-theme-terminal-color-yellow` | `#c7a01e` |
+| `--lr-terminal-color-blue` | `--lr-theme-terminal-color-blue` | `#69a5fe` |
+| `--lr-terminal-color-magenta` | `--lr-theme-terminal-color-magenta` | `#c385ef` |
+| `--lr-terminal-color-cyan` | `--lr-theme-terminal-color-cyan` | `#17bac8` |
+| `--lr-terminal-color-white` | `--lr-theme-terminal-color-white` | `#c4c4c4` |
+| `--lr-terminal-color-bright-black` | `--lr-theme-terminal-color-bright-black` | `#ababab` |
+| `--lr-terminal-color-bright-red` | `--lr-theme-terminal-color-bright-red` | `#ffaba1` |
+| `--lr-terminal-color-bright-green` | `--lr-theme-terminal-color-bright-green` | `#7cdf81` |
+| `--lr-terminal-color-bright-yellow` | `--lr-theme-terminal-color-bright-yellow` | `#ecbe24` |
+| `--lr-terminal-color-bright-blue` | `--lr-theme-terminal-color-bright-blue` | `#a0c6fe` |
+| `--lr-terminal-color-bright-magenta` | `--lr-theme-terminal-color-bright-magenta` | `#dcaefe` |
+| `--lr-terminal-color-bright-cyan` | `--lr-theme-terminal-color-bright-cyan` | `#00ddef` |
+| `--lr-terminal-color-bright-white` | `--lr-theme-terminal-color-bright-white` | `#dedede` |
+| `--lr-terminal-bg-black` | `--lr-theme-terminal-bg-black` | `#292929` |
+| `--lr-terminal-bg-red` | `--lr-theme-terminal-bg-red` | `#733a35` |
+| `--lr-terminal-bg-green` | `--lr-theme-terminal-bg-green` | `#335735` |
+| `--lr-terminal-bg-yellow` | `--lr-theme-terminal-bg-yellow` | `#5c4b1a` |
+| `--lr-terminal-bg-blue` | `--lr-theme-terminal-bg-blue` | `#324e76` |
+| `--lr-terminal-bg-magenta` | `--lr-theme-terminal-bg-magenta` | `#5a406e` |
+| `--lr-terminal-bg-cyan` | `--lr-theme-terminal-bg-cyan` | `#1c565d` |
+| `--lr-terminal-bg-white` | `--lr-theme-terminal-bg-white` | `#525252` |
+| `--lr-terminal-bg-bright-black` | `--lr-theme-terminal-bg-bright-black` | `#3d3d3d` |
+| `--lr-terminal-bg-bright-red` | `--lr-theme-terminal-bg-bright-red` | `#904e47` |
+| `--lr-terminal-bg-bright-green` | `--lr-theme-terminal-bg-bright-green` | `#456f46` |
+| `--lr-terminal-bg-bright-yellow` | `--lr-theme-terminal-bg-bright-yellow` | `#756127` |
+| `--lr-terminal-bg-bright-blue` | `--lr-theme-terminal-bg-bright-blue` | `#446493` |
+| `--lr-terminal-bg-bright-magenta` | `--lr-theme-terminal-bg-bright-magenta` | `#73548a` |
+| `--lr-terminal-bg-bright-cyan` | `--lr-theme-terminal-bg-bright-cyan` | `#286f76` |
+| `--lr-terminal-bg-bright-white` | `--lr-theme-terminal-bg-bright-white` | `#696969` |
 
-## Derived tokens (280)
+## Derived tokens (343)
 
 Computed from the layer above; not directly themeable.
 
@@ -267,20 +310,21 @@ Computed from the layer above; not directly themeable.
 | `--lr-color-text-quiet` | `var(--lr-theme-color-text-quiet, #6b7280)` |
 | `--lr-color-border` | `var(--lr-theme-color-surface-border, #8a8a90)` |
 | `--lr-color-border-strong` | `var(--lr-theme-color-border-strong, #4b5563)` |
-| `--lr-color-brand` | `var(--lr-theme-color-brand-fill-loud, #0969da)` |
-| `--lr-color-brand-quiet` | `var(--lr-theme-color-brand-fill-quiet, #ddf4ff)` |
-| `--lr-color-success` | `var(--lr-theme-color-success-fill-loud, #1a7f37)` |
-| `--lr-color-success-quiet` | `var(--lr-theme-color-success-fill-quiet, #dafbe1)` |
-| `--lr-color-warning` | `var(--lr-theme-color-warning-fill-loud, #9a6700)` |
-| `--lr-color-warning-quiet` | `var(--lr-theme-color-warning-fill-quiet, #fff8c5)` |
-| `--lr-color-danger` | `var(--lr-theme-color-danger-fill-loud, #cf222e)` |
-| `--lr-color-danger-quiet` | `var(--lr-theme-color-danger-fill-quiet, #ffebe9)` |
-| `--lr-color-neutral` | `var(--lr-theme-color-neutral-fill-loud, #1a1a1a)` |
-| `--lr-color-on-brand` | `var(--lr-theme-color-brand-on-loud, #fff)` |
-| `--lr-color-on-success` | `var(--lr-theme-color-success-on-loud, #fff)` |
-| `--lr-color-on-warning` | `var(--lr-theme-color-warning-on-loud, #fff)` |
-| `--lr-color-on-danger` | `var(--lr-theme-color-danger-on-loud, #fff)` |
-| `--lr-color-on-neutral` | `var(--lr-theme-color-neutral-on-loud, #fff)` |
+| `--lr-color-brand` | `var(--lr-color-brand-fill-loud)` |
+| `--lr-color-brand-quiet` | `var(--lr-color-brand-fill-quiet)` |
+| `--lr-color-success` | `var(--lr-color-success-fill-loud)` |
+| `--lr-color-success-quiet` | `var(--lr-color-success-fill-quiet)` |
+| `--lr-color-warning` | `var(--lr-color-warning-fill-loud)` |
+| `--lr-color-warning-quiet` | `var(--lr-color-warning-fill-quiet)` |
+| `--lr-color-danger` | `var(--lr-color-danger-fill-loud)` |
+| `--lr-color-danger-quiet` | `var(--lr-color-danger-fill-quiet)` |
+| `--lr-color-neutral` | `var(--lr-color-neutral-fill-loud)` |
+| `--lr-color-on-brand` | `var(--lr-color-brand-on-loud)` |
+| `--lr-color-on-success` | `var(--lr-color-success-on-loud)` |
+| `--lr-color-on-warning` | `var(--lr-color-warning-on-loud)` |
+| `--lr-color-on-danger` | `var(--lr-color-danger-on-loud)` |
+| `--lr-color-on-neutral` | `var(--lr-color-neutral-on-loud)` |
+| `--lr-color-surface-overlay` | `var(--lr-theme-color-surface-overlay, var(--lr-color-surface))` |
 | `--lr-color-overlay` | `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.5))` |
 | `--lr-color-overlay-strong` | `var(--lr-theme-color-overlay-strong, var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92)))` |
 | `--lr-color-no-data` | `var(--lr-theme-color-no-data, rgb(128 128 128 / 25%))` |
@@ -297,7 +341,6 @@ Computed from the layer above; not directly themeable.
 | `--lr-font-size-sm` | `var(--lr-theme-font-size-sm, 0.8125rem)` |
 | `--lr-font-size-m` | `var(--lr-theme-font-size-m, 1rem)` |
 | `--lr-font-size-md-sm` | `var(--lr-theme-font-size-md-sm, 0.875rem)` |
-| `--lr-font-size-md` | `var(--lr-theme-font-size-md, 1rem)` |
 | `--lr-font-size-lg` | `var(--lr-theme-font-size-lg, 1.125rem)` |
 | `--lr-font-size-xl` | `var(--lr-theme-font-size-xl, 1.25rem)` |
 | `--lr-font-size-2xl` | `var(--lr-theme-font-size-2xl, 1.75rem)` |
@@ -319,14 +362,14 @@ Computed from the layer above; not directly themeable.
 | `--lr-radius-pill` | `var(--lr-theme-border-radius-pill, 999px)` |
 | `--lr-color-shadow` | `var(--lr-theme-color-shadow, #000)` |
 | `--lr-mask-opaque` | `#000` |
-| `--lr-color-chart-1` | `var(--lr-theme-color-chart-1, #8250df)` |
-| `--lr-color-chart-2` | `var(--lr-theme-color-chart-2, #bf3989)` |
-| `--lr-color-chart-3` | `var(--lr-theme-color-chart-3, #0a7d91)` |
-| `--lr-color-chart-4` | `var(--lr-theme-color-chart-4, #57606a)` |
-| `--lr-color-chart-5` | `var(--lr-theme-color-chart-5, #b083f5)` |
-| `--lr-color-chart-6` | `var(--lr-theme-color-chart-6, #f470b8)` |
-| `--lr-color-chart-7` | `var(--lr-theme-color-chart-7, #52d6e8)` |
-| `--lr-color-chart-8` | `var(--lr-theme-color-chart-8, #c9d1d9)` |
+| `--lr-color-chart-1` | `var(--lr-theme-color-chart-1, #0e006e)` |
+| `--lr-color-chart-2` | `var(--lr-theme-color-chart-2, #4d011a)` |
+| `--lr-color-chart-3` | `var(--lr-theme-color-chart-3, #862002)` |
+| `--lr-color-chart-4` | `var(--lr-theme-color-chart-4, #503983)` |
+| `--lr-color-chart-5` | `var(--lr-theme-color-chart-5, #315fdd)` |
+| `--lr-color-chart-6` | `var(--lr-theme-color-chart-6, #935e7c)` |
+| `--lr-color-chart-7` | `var(--lr-theme-color-chart-7, #de6906)` |
+| `--lr-color-chart-8` | `var(--lr-theme-color-chart-8, #8f81d3)` |
 | `--lr-graph-cat-1` | `var(--lr-theme-graph-cat-1, #8250df)` |
 | `--lr-graph-cat-2` | `var(--lr-theme-graph-cat-2, #bf3989)` |
 | `--lr-graph-cat-3` | `var(--lr-theme-graph-cat-3, #0a7d91)` |
@@ -335,22 +378,38 @@ Computed from the layer above; not directly themeable.
 | `--lr-graph-cat-6` | `var(--lr-theme-graph-cat-6, #f470b8)` |
 | `--lr-graph-cat-7` | `var(--lr-theme-graph-cat-7, #52d6e8)` |
 | `--lr-graph-cat-8` | `var(--lr-theme-graph-cat-8, #c9d1d9)` |
-| `--lr-terminal-color-black` | `var(--lr-theme-terminal-color-black, #24292e)` |
-| `--lr-terminal-color-red` | `var(--lr-theme-terminal-color-red, #cf222e)` |
-| `--lr-terminal-color-green` | `var(--lr-theme-terminal-color-green, #1a7f37)` |
-| `--lr-terminal-color-yellow` | `var(--lr-theme-terminal-color-yellow, #9a6700)` |
-| `--lr-terminal-color-blue` | `var(--lr-theme-terminal-color-blue, #0969da)` |
-| `--lr-terminal-color-magenta` | `var(--lr-theme-terminal-color-magenta, #8250df)` |
-| `--lr-terminal-color-cyan` | `var(--lr-theme-terminal-color-cyan, #1b7c83)` |
-| `--lr-terminal-color-white` | `var(--lr-theme-terminal-color-white, #6b7280)` |
-| `--lr-terminal-color-bright-black` | `var(--lr-theme-terminal-color-bright-black, #57606a)` |
-| `--lr-terminal-color-bright-red` | `var(--lr-theme-terminal-color-bright-red, #fa4549)` |
-| `--lr-terminal-color-bright-green` | `var(--lr-theme-terminal-color-bright-green, #4ac26b)` |
-| `--lr-terminal-color-bright-yellow` | `var(--lr-theme-terminal-color-bright-yellow, #d4a72c)` |
-| `--lr-terminal-color-bright-blue` | `var(--lr-theme-terminal-color-bright-blue, #4184e4)` |
-| `--lr-terminal-color-bright-magenta` | `var(--lr-theme-terminal-color-bright-magenta, #a475f9)` |
-| `--lr-terminal-color-bright-cyan` | `var(--lr-theme-terminal-color-bright-cyan, #3192aa)` |
-| `--lr-terminal-color-bright-white` | `var(--lr-theme-terminal-color-bright-white, #d0d7de)` |
+| `--lr-terminal-color-black` | `var(--lr-theme-terminal-color-black, #2b2b2b)` |
+| `--lr-terminal-color-red` | `var(--lr-theme-terminal-color-red, #901114)` |
+| `--lr-terminal-color-green` | `var(--lr-theme-terminal-color-green, #015e15)` |
+| `--lr-terminal-color-yellow` | `var(--lr-theme-terminal-color-yellow, #5f4a03)` |
+| `--lr-terminal-color-blue` | `var(--lr-theme-terminal-color-blue, #06489c)` |
+| `--lr-terminal-color-magenta` | `var(--lr-theme-terminal-color-magenta, #67298c)` |
+| `--lr-terminal-color-cyan` | `var(--lr-theme-terminal-color-cyan, #02585f)` |
+| `--lr-terminal-color-white` | `var(--lr-theme-terminal-color-white, #555555)` |
+| `--lr-terminal-color-bright-black` | `var(--lr-theme-terminal-color-bright-black, #404040)` |
+| `--lr-terminal-color-bright-red` | `var(--lr-theme-terminal-color-bright-red, #b32322)` |
+| `--lr-terminal-color-bright-green` | `var(--lr-theme-terminal-color-bright-green, #01791e)` |
+| `--lr-terminal-color-bright-yellow` | `var(--lr-theme-terminal-color-bright-yellow, #796005)` |
+| `--lr-terminal-color-bright-blue` | `var(--lr-theme-terminal-color-bright-blue, #145ec1)` |
+| `--lr-terminal-color-bright-magenta` | `var(--lr-theme-terminal-color-bright-magenta, #823bae)` |
+| `--lr-terminal-color-bright-cyan` | `var(--lr-theme-terminal-color-bright-cyan, #04717a)` |
+| `--lr-terminal-color-bright-white` | `var(--lr-theme-terminal-color-bright-white, #6c6c6c)` |
+| `--lr-terminal-bg-black` | `var(--lr-theme-terminal-bg-black, #868686)` |
+| `--lr-terminal-bg-red` | `var(--lr-theme-terminal-bg-red, #d2918a)` |
+| `--lr-terminal-bg-green` | `var(--lr-theme-terminal-bg-green, #89b18a)` |
+| `--lr-terminal-bg-yellow` | `var(--lr-theme-terminal-bg-yellow, #b6a372)` |
+| `--lr-terminal-bg-blue` | `var(--lr-theme-terminal-bg-blue, #88a6d4)` |
+| `--lr-terminal-bg-magenta` | `var(--lr-theme-terminal-bg-magenta, #b497cb)` |
+| `--lr-terminal-bg-cyan` | `var(--lr-theme-terminal-bg-cyan, #77b0b6)` |
+| `--lr-terminal-bg-white` | `var(--lr-theme-terminal-bg-white, #b7b7b7)` |
+| `--lr-terminal-bg-bright-black` | `var(--lr-theme-terminal-bg-bright-black, #9e9e9e)` |
+| `--lr-terminal-bg-bright-red` | `var(--lr-theme-terminal-bg-bright-red, #f9aea5)` |
+| `--lr-terminal-bg-bright-green` | `var(--lr-theme-terminal-bg-bright-green, #a4d2a4)` |
+| `--lr-terminal-bg-bright-yellow` | `var(--lr-theme-terminal-bg-bright-yellow, #d8c288)` |
+| `--lr-terminal-bg-bright-blue` | `var(--lr-theme-terminal-bg-bright-blue, #a2c6fb)` |
+| `--lr-terminal-bg-bright-magenta` | `var(--lr-theme-terminal-bg-bright-magenta, #d6b4f0)` |
+| `--lr-terminal-bg-bright-cyan` | `var(--lr-theme-terminal-bg-bright-cyan, #8dd2da)` |
+| `--lr-terminal-bg-bright-white` | `var(--lr-theme-terminal-bg-bright-white, #d1d1d1)` |
 | `--lr-layer-base` | `var(--lr-theme-z-index-base, 0)` |
 | `--lr-layer-content` | `var(--lr-theme-z-index-content, 1)` |
 | `--lr-layer-dropdown` | `var(--lr-theme-z-index-dropdown, 900)` |
@@ -452,12 +511,28 @@ Computed from the layer above; not directly themeable.
 | `--lr-size-8em` | `var(--lr-theme-size-8em, 8em)` |
 | `--lr-size-8rem` | `var(--lr-theme-size-8rem, 8rem)` |
 | `--lr-radius` | `var(--lr-theme-border-radius-m, 0.375rem)` |
-| `--lr-shadow` | `var(--lr-theme-shadow-m, 0 2px 8px rgb(0 0 0 / 0.15))` |
+| `--lr-shadow-color` | `var(--lr-theme-shadow-color, 0 0 0)` |
+| `--lr-shadow-xs` | `var(--lr-theme-shadow-xs, 0 1px 2px rgb(var(--lr-shadow-color) / 0.12))` |
+| `--lr-shadow-s` | `var(--lr-theme-shadow-s, 0 1px 4px rgb(var(--lr-shadow-color) / 0.14))` |
+| `--lr-shadow-m` | `var(--lr-theme-shadow-m, 0 2px 8px rgb(var(--lr-shadow-color) / 0.15))` |
+| `--lr-shadow-l` | `var(--lr-theme-shadow-l, 0 6px 16px rgb(var(--lr-shadow-color) / 0.18))` |
+| `--lr-shadow-xl` | `var(--lr-theme-shadow-xl, 0 12px 32px rgb(var(--lr-shadow-color) / 0.22))` |
+| `--lr-shadow` | `var(--lr-shadow-m)` |
 | `--lr-font` | `var(--lr-theme-font-family-body, system-ui, sans-serif)` |
-| `--lr-transition-fast` | `var(--lr-theme-transition-fast, 120ms ease-out)` |
-| `--lr-transition-base` | `var(--lr-theme-transition-normal, 180ms ease-out)` |
-| `--lr-transition-ambient` | `var(--lr-theme-transition-slow, 1.8s ease-in-out)` |
+| `--lr-duration-fast` | `var(--lr-theme-duration-fast, 120ms)` |
+| `--lr-duration-base` | `var(--lr-theme-duration-normal, 180ms)` |
+| `--lr-duration-ambient` | `var(--lr-theme-duration-slow, 1.8s)` |
+| `--lr-easing-standard` | `var(--lr-theme-easing-standard, ease-out)` |
+| `--lr-easing-emphasized` | `var(--lr-theme-easing-emphasized, ease-in-out)` |
+| `--lr-easing-linear` | `var(--lr-theme-easing-linear, linear)` |
+| `--lr-transition-fast` | `var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard))` |
+| `--lr-transition-base` | `var(--lr-theme-transition-normal, var(--lr-duration-base) var(--lr-easing-standard))` |
+| `--lr-transition-ambient` | `var(--lr-theme-transition-slow, var(--lr-duration-ambient) var(--lr-easing-emphasized))` |
 | `--lr-opacity-disabled` | `var(--lr-theme-opacity-disabled, 0.5)` |
+| `--lr-opacity-muted` | `var(--lr-theme-opacity-muted, 0.85)` |
+| `--lr-color-mix-hover` | `var(--lr-theme-color-mix-hover, 12%)` |
+| `--lr-color-mix-active` | `var(--lr-theme-color-mix-active, 22%)` |
+| `--lr-color-mix-partner` | `var(--lr-theme-color-mix-partner, var(--lr-color-text))` |
 | `--lr-hover-brightness` | `var(--lr-theme-hover-brightness, 1.08)` |
 | `--lr-popover-viewport-clamp` | `var(--lr-theme-popover-viewport-clamp, 92vw)` |
 | `--lr-focus-ring-width` | `var(--lr-theme-focus-ring-width, 2px)` |
@@ -472,28 +547,14 @@ Computed from the layer above; not directly themeable.
 | `--lr-color-text-quiet` | `var(--lr-theme-color-text-quiet, #9aa1ac)` |
 | `--lr-color-border` | `var(--lr-theme-color-surface-border, #6b6b74)` |
 | `--lr-color-border-strong` | `var(--lr-theme-color-border-strong, #c4c9d1)` |
-| `--lr-color-brand` | `var(--lr-theme-color-brand-fill-loud, #4ea0f0)` |
-| `--lr-color-brand-quiet` | `var(--lr-theme-color-brand-fill-quiet, #163650)` |
-| `--lr-color-success` | `var(--lr-theme-color-success-fill-loud, #3fb950)` |
-| `--lr-color-success-quiet` | `var(--lr-theme-color-success-fill-quiet, #17411e)` |
-| `--lr-color-warning` | `var(--lr-theme-color-warning-fill-loud, #d29922)` |
-| `--lr-color-warning-quiet` | `var(--lr-theme-color-warning-fill-quiet, #3b2900)` |
-| `--lr-color-danger` | `var(--lr-theme-color-danger-fill-loud, #fa524a)` |
-| `--lr-color-danger-quiet` | `var(--lr-theme-color-danger-fill-quiet, #4c1210)` |
-| `--lr-color-neutral` | `var(--lr-theme-color-neutral-fill-loud, #e5e7eb)` |
-| `--lr-color-on-brand` | `var(--lr-theme-color-brand-on-loud, #111827)` |
-| `--lr-color-on-success` | `var(--lr-theme-color-success-on-loud, #111827)` |
-| `--lr-color-on-warning` | `var(--lr-theme-color-warning-on-loud, #111827)` |
-| `--lr-color-on-danger` | `var(--lr-theme-color-danger-on-loud, #111827)` |
-| `--lr-color-on-neutral` | `var(--lr-theme-color-neutral-on-loud, #111827)` |
-| `--lr-color-chart-1` | `var(--lr-theme-color-chart-1, #b58cff)` |
-| `--lr-color-chart-2` | `var(--lr-theme-color-chart-2, #ff7ab2)` |
-| `--lr-color-chart-3` | `var(--lr-theme-color-chart-3, #4fd1c5)` |
-| `--lr-color-chart-4` | `var(--lr-theme-color-chart-4, #aab4c4)` |
-| `--lr-color-chart-5` | `var(--lr-theme-color-chart-5, #d4a7ff)` |
-| `--lr-color-chart-6` | `var(--lr-theme-color-chart-6, #ff91c8)` |
-| `--lr-color-chart-7` | `var(--lr-theme-color-chart-7, #79e2ef)` |
-| `--lr-color-chart-8` | `var(--lr-theme-color-chart-8, #e4e7eb)` |
+| `--lr-color-chart-1` | `var(--lr-theme-color-chart-1, #bbff94)` |
+| `--lr-color-chart-2` | `var(--lr-theme-color-chart-2, #ffbce8)` |
+| `--lr-color-chart-3` | `var(--lr-theme-color-chart-3, #2bd66a)` |
+| `--lr-color-chart-4` | `var(--lr-theme-color-chart-4, #bb99cb)` |
+| `--lr-color-chart-5` | `var(--lr-theme-color-chart-5, #7888fe)` |
+| `--lr-color-chart-6` | `var(--lr-theme-color-chart-6, #9b6b90)` |
+| `--lr-color-chart-7` | `var(--lr-theme-color-chart-7, #db3a29)` |
+| `--lr-color-chart-8` | `var(--lr-theme-color-chart-8, #555de3)` |
 | `--lr-graph-cat-1` | `var(--lr-theme-graph-cat-1, #b58cff)` |
 | `--lr-graph-cat-2` | `var(--lr-theme-graph-cat-2, #ff7ab2)` |
 | `--lr-graph-cat-3` | `var(--lr-theme-graph-cat-3, #4fd1c5)` |
@@ -502,6 +563,51 @@ Computed from the layer above; not directly themeable.
 | `--lr-graph-cat-6` | `var(--lr-theme-graph-cat-6, #ff91c8)` |
 | `--lr-graph-cat-7` | `var(--lr-theme-graph-cat-7, #79e2ef)` |
 | `--lr-graph-cat-8` | `var(--lr-theme-graph-cat-8, #e4e7eb)` |
+| `--lr-color-surface-overlay` | `var(--lr-theme-color-surface-overlay, #2b3038)` |
+| `--lr-color-overlay` | `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.72))` |
+| `--lr-color-overlay-strong` | `var(--lr-theme-color-overlay-strong, var(--lr-theme-color-overlay, rgb(0 0 0 / 0.95)))` |
+| `--lr-shadow-xs` | `var(--lr-theme-shadow-xs, 0 1px 2px rgb(var(--lr-shadow-color) / 0.34))` |
+| `--lr-shadow-s` | `var(--lr-theme-shadow-s, 0 1px 4px rgb(var(--lr-shadow-color) / 0.4))` |
+| `--lr-shadow-m` | `var(--lr-theme-shadow-m, 0 2px 8px rgb(var(--lr-shadow-color) / 0.46))` |
+| `--lr-shadow-l` | `var(--lr-theme-shadow-l, 0 8px 20px rgb(var(--lr-shadow-color) / 0.56))` |
+| `--lr-shadow-xl` | `var(--lr-theme-shadow-xl, 0 16px 40px rgb(var(--lr-shadow-color) / 0.66))` |
+| `--lr-terminal-color-black` | `var(--lr-theme-terminal-color-black, #929292)` |
+| `--lr-terminal-color-red` | `var(--lr-theme-terminal-color-red, #f9786c)` |
+| `--lr-terminal-color-green` | `var(--lr-theme-terminal-color-green, #67bb6b)` |
+| `--lr-terminal-color-yellow` | `var(--lr-theme-terminal-color-yellow, #c7a01e)` |
+| `--lr-terminal-color-blue` | `var(--lr-theme-terminal-color-blue, #69a5fe)` |
+| `--lr-terminal-color-magenta` | `var(--lr-theme-terminal-color-magenta, #c385ef)` |
+| `--lr-terminal-color-cyan` | `var(--lr-theme-terminal-color-cyan, #17bac8)` |
+| `--lr-terminal-color-white` | `var(--lr-theme-terminal-color-white, #c4c4c4)` |
+| `--lr-terminal-color-bright-black` | `var(--lr-theme-terminal-color-bright-black, #ababab)` |
+| `--lr-terminal-color-bright-red` | `var(--lr-theme-terminal-color-bright-red, #ffaba1)` |
+| `--lr-terminal-color-bright-green` | `var(--lr-theme-terminal-color-bright-green, #7cdf81)` |
+| `--lr-terminal-color-bright-yellow` | `var(--lr-theme-terminal-color-bright-yellow, #ecbe24)` |
+| `--lr-terminal-color-bright-blue` | `var(--lr-theme-terminal-color-bright-blue, #a0c6fe)` |
+| `--lr-terminal-color-bright-magenta` | `var(--lr-theme-terminal-color-bright-magenta, #dcaefe)` |
+| `--lr-terminal-color-bright-cyan` | `var(--lr-theme-terminal-color-bright-cyan, #00ddef)` |
+| `--lr-terminal-color-bright-white` | `var(--lr-theme-terminal-color-bright-white, #dedede)` |
+| `--lr-terminal-bg-black` | `var(--lr-theme-terminal-bg-black, #292929)` |
+| `--lr-terminal-bg-red` | `var(--lr-theme-terminal-bg-red, #733a35)` |
+| `--lr-terminal-bg-green` | `var(--lr-theme-terminal-bg-green, #335735)` |
+| `--lr-terminal-bg-yellow` | `var(--lr-theme-terminal-bg-yellow, #5c4b1a)` |
+| `--lr-terminal-bg-blue` | `var(--lr-theme-terminal-bg-blue, #324e76)` |
+| `--lr-terminal-bg-magenta` | `var(--lr-theme-terminal-bg-magenta, #5a406e)` |
+| `--lr-terminal-bg-cyan` | `var(--lr-theme-terminal-bg-cyan, #1c565d)` |
+| `--lr-terminal-bg-white` | `var(--lr-theme-terminal-bg-white, #525252)` |
+| `--lr-terminal-bg-bright-black` | `var(--lr-theme-terminal-bg-bright-black, #3d3d3d)` |
+| `--lr-terminal-bg-bright-red` | `var(--lr-theme-terminal-bg-bright-red, #904e47)` |
+| `--lr-terminal-bg-bright-green` | `var(--lr-theme-terminal-bg-bright-green, #456f46)` |
+| `--lr-terminal-bg-bright-yellow` | `var(--lr-theme-terminal-bg-bright-yellow, #756127)` |
+| `--lr-terminal-bg-bright-blue` | `var(--lr-theme-terminal-bg-bright-blue, #446493)` |
+| `--lr-terminal-bg-bright-magenta` | `var(--lr-theme-terminal-bg-bright-magenta, #73548a)` |
+| `--lr-terminal-bg-bright-cyan` | `var(--lr-theme-terminal-bg-bright-cyan, #286f76)` |
+| `--lr-terminal-bg-bright-white` | `var(--lr-theme-terminal-bg-bright-white, #696969)` |
+| `--lr-duration-fast` | `0.001ms` |
+| `--lr-duration-base` | `0.001ms` |
+| `--lr-duration-ambient` | `0.001ms` |
+| `--lr-easing-standard` | `linear` |
+| `--lr-easing-emphasized` | `linear` |
 | `--lr-transition-fast` | `0.001ms linear` |
 | `--lr-transition-base` | `0.001ms linear` |
 | `--lr-transition-ambient` | `0.001ms linear` |

@@ -3,53 +3,35 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lr-known-date-field-padding-block: var(--lr-space-s);
-    --lr-known-date-field-padding-inline: var(--lr-space-s);
-    --lr-known-date-field-font-size: var(--lr-font-size-md-sm);
+    /* Every per-tier value below comes from the library's one shared size ladder
+       (internal/sizes.styles.ts), which re-points --lr-form-control-* per :host([size='...']) and
+       matches BOTH spellings of every tier in the same selector list -- so small/medium/large work
+       here for free. This component's own --lr-known-date-field-* surface is unchanged and still
+       the documented override point; only the values behind it moved, which is what keeps a
+       birthdate field the same height as the <lr-input>/<lr-date-input> beside it in a form row at
+       every tier instead of drifting from a hand-kept copy of that scale. */
+    --lr-known-date-field-padding-block: var(--lr-form-control-padding-block);
+    --lr-known-date-field-padding-inline: var(--lr-form-control-padding-inline);
+    --lr-known-date-field-font-size: var(--lr-form-control-font-size);
+    /* Not --lr-form-control-gap: that knob is the rhythm between one control's own inline
+       affordances, an order of magnitude tighter than the gap between three separate field
+       blocks. Constant across tiers by design. */
     --lr-known-date-field-gap: var(--lr-space-s);
     --lr-known-date-year-field-width: var(--lr-size-5em);
     --lr-known-date-day-field-width: var(--lr-size-3-5em);
     --lr-known-date-month-field-width: var(--lr-size-3-5em);
-    /* Per-tier minimum block size of each field input, reassigned by the same size tiers as
-       padding/font-size above -- reusing lr-input's own min-height scale values (xs=1.5rem,
-       s=1.875rem, m=2.5rem, l=3rem, xl=3.5rem) so a birthdate <lr-known-date> sitting in a form
-       row next to a regular <lr-input>/<lr-date-input> at the same declared size renders at the
-       same height instead of a visibly shorter box (previously matched lr-button's scale
-       instead, an 8px/25% mismatch at the default tier). At the xs/s/m tiers the floor is now
-       taller than the field's own padding/font-driven content height, so it actively pins the
-       rendered box (byte-identical is no longer the invariant there); at l/xl the natural content
-       height already exceeds the floor, so those two tiers render unchanged. */
-    --lr-known-date-field-min-height: var(--lr-size-2-5rem);
+    /* max() rather than the bare ladder height: the ladder's 2xs tier resolves to 1.25rem/20px,
+       and a field a pointer has to hit floors at WCAG 2.2 SC 2.5.8's 24px minimum. Above that the
+       floor tracks the ladder exactly. At the small tiers the floor exceeds the field's own
+       padding/font-driven content height and actively pins the rendered box; at l/xl the content
+       height stays under it, so the floor is inert there. */
+    --lr-known-date-field-min-height: max(var(--lr-form-control-height), var(--lr-size-24px));
     /* --lr-known-date-field-height is intentionally NOT declared here. It is a consumer-facing
        exact-height escape hatch consumed only through the var() fallbacks on [part='field-input']
        below; declaring any value for it (even 'auto') would make those fallback arms unreachable
        and turn --lr-known-date-field-min-height into dead code (the lr-select trap). Left
        undeclared, both arms stay live: the per-tier floor falls out of the fallback, and setting
        the property pins an exact height. */
-  }
-  :host([size='xs']) {
-    --lr-known-date-field-padding-block: var(--lr-size-0-125rem);
-    --lr-known-date-field-padding-inline: var(--lr-space-xs);
-    --lr-known-date-field-font-size: var(--lr-font-size-xs);
-    --lr-known-date-field-min-height: var(--lr-size-1-5rem);
-  }
-  :host([size='s']) {
-    --lr-known-date-field-padding-block: var(--lr-space-xs);
-    --lr-known-date-field-padding-inline: var(--lr-space-xs);
-    --lr-known-date-field-font-size: var(--lr-font-size-sm);
-    --lr-known-date-field-min-height: var(--lr-size-1-875rem);
-  }
-  :host([size='l']) {
-    --lr-known-date-field-padding-block: var(--lr-space-m);
-    --lr-known-date-field-padding-inline: var(--lr-space-m);
-    --lr-known-date-field-font-size: var(--lr-font-size-lg);
-    --lr-known-date-field-min-height: var(--lr-size-3rem);
-  }
-  :host([size='xl']) {
-    --lr-known-date-field-padding-block: var(--lr-space-l);
-    --lr-known-date-field-padding-inline: var(--lr-space-l);
-    --lr-known-date-field-font-size: var(--lr-font-size-xl);
-    --lr-known-date-field-min-height: var(--lr-size-3-5rem);
   }
 
   [part='form-control'] {
@@ -114,7 +96,7 @@ export const styles = css`
     padding-block: var(--lr-known-date-field-padding-block);
     padding-inline: var(--lr-known-date-field-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-form-control-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font-family: inherit;
@@ -131,7 +113,10 @@ export const styles = css`
     inline-size: var(--lr-known-date-year-field-width);
   }
   /* Mouse-hover parity with the keyboard :focus-visible ring below -- same border-retint
-     treatment as lr-color-picker's own bordered [part='input']:hover. */
+     treatment as lr-color-picker's own bordered [part='input']:hover.
+     no-pressed-state: a press on a number field lands the caret rather than activating a control,
+     so a pressed tint would show only for the length of the mousedown and then be replaced by the
+     :focus-visible ring below, which is the state that actually persists and communicates. */
   [part='field-input']:hover {
     border-color: var(--lr-color-brand);
   }

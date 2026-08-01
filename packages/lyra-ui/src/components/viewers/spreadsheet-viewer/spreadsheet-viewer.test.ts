@@ -43,7 +43,7 @@ describe('lr-spreadsheet-viewer', () => {
   });
 
   it('never scrolls vertically on the sheet wrapper -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar', async () => {
-    // Same bug/fix as lr-tabs: pinning only overflow-x to a non-'visible' value forces the browser
+    // Same bug/fix as lr-tab-group: pinning only overflow-x to a non-'visible' value forces the browser
     // to resolve the unset y axis to 'auto' too (never leaves it 'visible'), risking a phantom empty
     // vertical scrollbar on a workbook that fits horizontally.
     const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
@@ -128,8 +128,8 @@ describe('lr-spreadsheet-viewer', () => {
     const restore = fetchBuffer(buffer({ Inventory: [['Name'], ['Widget']], Summary: [['Total'], [12]] }));
     try {
       el.src = 'https://example.test/book.xlsx';
-      await waitUntil(() => el.shadowRoot!.querySelector('lr-tabs') !== null);
-      const tabs = el.shadowRoot!.querySelector('lr-tabs')!;
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-tab-group') !== null);
+      const tabs = el.shadowRoot!.querySelector('lr-tab-group')!;
       await (tabs as HTMLElement & { updateComplete: Promise<boolean> }).updateComplete;
       expect(tabs.shadowRoot!.querySelectorAll('[part="tab"]')).to.have.lengthOf(2);
     } finally { restore(); }
@@ -140,14 +140,14 @@ describe('lr-spreadsheet-viewer', () => {
     const restore = fetchBuffer(buffer({ Sheet1: [['Name'], ['Ada']], Sheet2: [['Name'], ['Grace']] }));
     try {
       el.src = 'https://example.test/book.xlsx';
-      await waitUntil(() => el.shadowRoot!.querySelector('lr-tabs') !== null);
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-tab-group') !== null);
       let leaked = 0;
       for (const name of ['lr-load-more', 'lr-visible-range-changed', 'lr-scroll']) {
         el.addEventListener(name as never, () => { leaked++; });
         el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
       }
-      el.addEventListener('lr-tabs-change' as never, () => { leaked++; });
-      el.shadowRoot!.querySelector('lr-tabs')!.dispatchEvent(new CustomEvent('lr-tabs-change', {
+      el.addEventListener('lr-tab-show' as never, () => { leaked++; });
+      el.shadowRoot!.querySelector('lr-tab-group')!.dispatchEvent(new CustomEvent('lr-tab-show', {
         detail: { tabId: 'sheet-1' },
         bubbles: true,
         composed: true,
@@ -291,7 +291,7 @@ describe('lr-spreadsheet-viewer', () => {
         expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
           'This document is too large to preview.',
         );
-        expect(el.shadowRoot!.querySelector('lr-tabs') === null).to.be.true;
+        expect(el.shadowRoot!.querySelector('lr-tab-group') === null).to.be.true;
       } finally {
         restore();
       }
@@ -332,8 +332,8 @@ describe('lr-spreadsheet-viewer', () => {
     const restore = fetchBuffer(buffer({ Inventory: [['Name'], ['Widget']], Summary: [['Total'], [12]] }));
     try {
       el.src = 'https://example.test/book.xlsx';
-      await waitUntil(() => el.shadowRoot!.querySelector('lr-tabs') !== null);
-      const tabs = el.shadowRoot!.querySelector('lr-tabs')!;
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-tab-group') !== null);
+      const tabs = el.shadowRoot!.querySelector('lr-tab-group')!;
       await (tabs as HTMLElement & { updateComplete: Promise<boolean> }).updateComplete;
       const tabButtons = tabs.shadowRoot!.querySelectorAll('[part="tab"]');
       expect(tabButtons).to.have.lengthOf(2);
@@ -537,7 +537,7 @@ describe('lr-spreadsheet-viewer', () => {
       const restore = fetchBuffer(buffer({ Sheet1: [['X'], [1], [2]], Sheet2: [['Name'], ['Ada'], ['Grace']] }));
       try {
         el.src = 'https://example.test/book.xlsx';
-        await waitUntil(() => el.shadowRoot!.querySelector('lr-tabs') !== null);
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-tab-group') !== null);
         const result = await el.scrollToAnchor({ kind: 'cell-range', sheet: 'Sheet2', range: 'A2' });
         expect(result).to.be.true;
         expect((el as unknown as { activeSheetIndex: number }).activeSheetIndex).to.equal(1);
@@ -624,7 +624,7 @@ describe('lr-spreadsheet-viewer', () => {
       const restore = fetchBuffer(buffer({ Sheet1: [['X'], ['nothing']], Sheet2: [['Name'], ['Ada'], ['Grace']] }));
       try {
         el.src = 'https://example.test/book.xlsx';
-        await waitUntil(() => el.shadowRoot!.querySelector('lr-tabs') !== null);
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-tab-group') !== null);
         const count = await el.search('ada');
         expect(count).to.equal(1);
         expect((el as unknown as { activeSheetIndex: number }).activeSheetIndex).to.equal(1);

@@ -65,6 +65,41 @@ so retinting one tone doesn't repaint the other surface reading that token, and 
 `::part('line')` stylesheet override — the background is applied inline, so a stylesheet rule can't
 beat it without `!important`.
 
+**The ANSI/SGR palette is two token sets, not one.** SGR gives the sixteen colour names two
+different jobs, and each job is themed separately:
+
+- `--lr-terminal-color-<name>` — **foregrounds**, i.e. `CSI 30`–`37` and `CSI 90`–`97`, drawn *on*
+  the terminal panel.
+- `--lr-terminal-bg-<name>` — **backgrounds**, i.e. `CSI 40`–`47` and `CSI 100`–`107`, drawn *under*
+  the panel's text.
+
+`<name>` is `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white` and their
+`bright-` counterparts — 32 tokens in all, each with its own `--lr-theme-terminal-color-*` /
+`--lr-theme-terminal-bg-*` retheme hook, and each with a separate light- and dark-mode value.
+
+The two sets exist because each is solved against a different reference, which is what makes the two
+cases a program cannot avoid legible:
+
+1. every `--lr-terminal-color-*` clears 4.5:1 against `--lr-color-surface-raised` — the panel
+   `<lr-terminal>` paints for itself — so **any foreground is legible on the panel**;
+2. every `--lr-terminal-bg-*` clears 4.5:1 against the panel's default text colour, which is the
+   foreground actually in effect whenever a program sets a background and no explicit colour, so
+   **the default foreground is legible on any background**.
+
+A single shared set could not do both: foregrounds solved against a light panel are all dark, so
+`ESC[41m` would paint a near-black red behind near-black text. An *explicit* foreground+background
+pair (`ESC[30;47m`) is the emitting program's choice and is not guaranteed here, exactly as in a
+native terminal — sixteen against sixteen is 256 combinations, several degenerate by construction.
+
+Each colour keeps its canonical ANSI hue (a terminal's red has to look like red, or escape sequences
+stop meaning what every other terminal makes them mean); only lightness is solved for. The
+consequence worth stating: on a light panel every background is a light tint, so `ESC[40m` ("black
+background") renders as the darkest tint that still leaves the default text readable rather than as
+literal black. Extended-colour sequences follow the same split: 256-colour indices 0–15 resolve to
+the role-matching named token (so `ESC[48;5;1m` gets the background red, not the foreground one),
+while indices 16–255 and truecolor become literal `rgb()` values — those are content-supplied rather
+than token-driven, and carry no contrast guarantee.
+
 **Additional API surface:**
 
 - `--lr-terminal-search-outline-color` — Outline color for a line containing a non-active search match. Default: `var(--lr-color-warning)`.

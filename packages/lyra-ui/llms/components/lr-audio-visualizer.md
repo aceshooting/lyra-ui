@@ -38,7 +38,7 @@ canvas resolves token values at paint time and cannot inherit `var()` directly).
 **CSS parts:** `base` (the root wrapper) and `canvas` (the drawing surface, `aria-hidden`; the host
 itself carries `role="img"` and the accessible name).
 
-**Themeable custom properties:** `--lr-audio-visualizer-color` (default `--lr-color-brand` —
+**Themeable custom properties:** `--lr-audio-visualizer-color` (default `var(--lr-color-brand)` —
 active bar/waveform color), `--lr-audio-visualizer-quiet-color` (default
-`--lr-color-brand-quiet` — inactive/idle color), and `--lr-audio-visualizer-height` (default
+`var(--lr-color-brand-quiet)` — inactive/idle color), and `--lr-audio-visualizer-height` (default
 `var(--lr-size-3rem)` — the host's block size).

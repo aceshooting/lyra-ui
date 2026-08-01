@@ -1,6 +1,7 @@
 import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { tag } from '../../../internal/prefix.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-canvas.class.js';
 import { styles } from './flow-controls.styles.js';
@@ -57,8 +58,9 @@ const lockClosedGlyph = () =>
 const lockOpenGlyph = () =>
   glyphSvg(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 7.4-2"></path>`);
 
-/** Visual chrome for `<lr-flow-controls>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
-export type FlowControlsAppearance = 'card' | 'plain';
+/** Container treatment for `<lr-flow-controls>`'s root. The library-wide {@linkcode LyraFrame}
+ *  vocabulary under this component's own export name. */
+export type FlowControlsAppearance = LyraFrame;
 
 /**
  * `<lr-flow-controls>` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so
@@ -68,7 +70,7 @@ export type FlowControlsAppearance = 'card' | 'plain';
  * @customElement lr-flow-controls
  * @slot - Extra host buttons appended to the cluster, styled by the same group.
  * @csspart base - The `role="group"` wrapper. Drops its floating-surface chrome (border,
- *   background, shadow, padding, radius) under `appearance="plain"`.
+ *   background, shadow, padding, radius) under `frame="plain"`.
  * @csspart zoom-in - Zoom-in button.
  * @csspart zoom-out - Zoom-out button.
  * @csspart fit - Zoom-to-fit button.
@@ -86,12 +88,12 @@ export class LyraFlowControls extends LyraElement {
   /** Omits the lock/unlock toggle button entirely, for canvases that never expose an interaction
    *  lock. */
   @property({ type: Boolean, attribute: 'hide-lock' }) hideLock = false;
-  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+  /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, shadowed floating cluster. `'plain'` removes the border, background, shadow,
    *  padding and corner radius, so a cluster placed in a host toolbar or panel that already draws
    *  its own surface doesn't double the frame. The buttons keep their shared minimum hit area and
    *  their own hover/focus affordances either way. */
-  @property({ reflect: true }) appearance: FlowControlsAppearance = 'card';
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @state() private snapshot: FlowStructureSnapshot | null = null;
   @state() private locked = false;

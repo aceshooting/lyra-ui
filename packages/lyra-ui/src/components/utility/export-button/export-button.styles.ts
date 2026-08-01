@@ -26,6 +26,12 @@ export const styles = css`
   :where([part='trigger']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
+  /* Same :where() shape as the hover rule above, for the same reason -- a consumer's own
+     ::part(trigger):active must still win without !important. */
+  :where([part='trigger']):active:where(:not(:disabled)) {
+    border-color: var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='trigger']:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
@@ -67,7 +73,8 @@ export const styles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Anchored overlay: a positioner-placed menu floating over page content, not a modal layer. */
+    box-shadow: var(--lr-shadow-m);
     opacity: 0;
     transform: translateY(var(--lr-size-neg-4px));
     transition:
@@ -107,6 +114,9 @@ export const styles = css`
      hover rule above for the full rationale. */
   :where([part='menu-item']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
+  }
+  :where([part='menu-item']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='menu-item']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

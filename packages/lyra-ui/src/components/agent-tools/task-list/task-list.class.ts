@@ -8,6 +8,7 @@ import {
 } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -19,8 +20,8 @@ import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } fr
  *  (unlike `<lr-tool-call-chip>`'s status vocabulary, which does need one). */
 export type TaskStatus = 'pending' | 'running' | 'success' | 'error';
 
-/** Visual chrome for `<lr-task-list>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
-export type TaskListAppearance = 'card' | 'plain';
+/** Visual chrome for `<lr-task-list>`'s root — the library's shared container-frame vocabulary. */
+export type TaskListAppearance = LyraFrame;
 
 export interface TaskItem {
   id: string;
@@ -172,14 +173,14 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   /** Tighter header/body padding and item gap for dense contexts (a plan tracker nested in an
    *  already-padded transcript row) -- same convention as `lr-agent-run`/`lr-source-card`'s
    *  `compact`. Defaults to `false`, i.e. the full padding. Purely a density knob: the border and
-   *  background stay, so use `appearance="plain"` instead to drop the chrome entirely. */
+   *  background stay, so use `frame="plain"` instead to drop the chrome entirely. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
-  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
-   *  bordered, filled box. `'plain'` removes `[part="base"]`'s border, background, and corner
-   *  radius, so a list embedded in the transcript inside a frame that already draws a border (an
-   *  agent-run panel, a message bubble) doesn't double it. */
-  @property({ reflect: true }) appearance: TaskListAppearance = 'card';
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps the bordered, filled box. `'plain'` removes `[part="base"]`'s border, background, and
+   *  corner radius, so a list embedded in the transcript inside a container that already draws a
+   *  border (an agent-run panel, a message bubble) doesn't double it. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 

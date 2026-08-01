@@ -738,7 +738,11 @@ describe('deny/approve as lr-button', () => {
     const resolve = (token: string) => getComputedStyle(el).getPropertyValue(token).trim();
     const denyBase = denyButton(el).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const approveBase = approveButton(el).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(getComputedStyle(denyBase).backgroundColor).to.equal(toRgb(resolve('--lr-color-surface')));
+    // Deny is variant="neutral" appearance="outlined": no fill, so it recedes against the dialog
+    // panel, with --lr-color-text for the label. Declared on the button, not inherited -- when
+    // lr-button's default appearance became "accent" in 8.0.0, inheriting it would have turned the
+    // SAFE action into the loud one.
+    expect(getComputedStyle(denyBase).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
     expect(getComputedStyle(denyBase).color).to.equal(toRgb(resolve('--lr-color-text')));
     expect(getComputedStyle(approveBase).backgroundColor).to.equal(toRgb(resolve('--lr-color-brand')));
     expect(getComputedStyle(approveBase).color).to.equal(toRgb(resolve('--lr-color-on-brand')));

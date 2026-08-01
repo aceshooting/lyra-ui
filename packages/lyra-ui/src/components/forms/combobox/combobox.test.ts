@@ -4,9 +4,11 @@ import './combobox.js';
 import './option.js';
 import '../input/input.js';
 import '../select/select.js';
+import '../button/button.js';
 import '../../layout/segmented/segmented.js';
 import type { ComboboxFilterDetail, LyraCombobox } from './combobox.js';
 import { styles } from './combobox.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const basic = () => html`
   <lr-combobox>
@@ -1948,6 +1950,79 @@ it('folds the filter query and option labels through locale-aware toLocaleLowerC
 });
 
 describe('size', () => {
+  // Locked to literal pixels rather than to each other: adopting the shared form-control ladder
+  // moved where these numbers are DECLARED, and the whole point is that it did not move the
+  // numbers. A relative assertion would have passed either way.
+  const TIER_HEIGHTS: ReadonlyArray<readonly [string, string]> = [
+    ['2xs', '20px'],
+    ['xs', '24px'],
+    ['s', '30px'],
+    ['m', '40px'],
+    ['l', '48px'],
+    ['xl', '56px'],
+  ];
+
+  it('renders the same trigger height at every tier as before the shared ladder', async () => {
+    for (const [size, px] of TIER_HEIGHTS) {
+      const el = await fixture(html`<lr-combobox size=${size} label="Tags"></lr-combobox>`);
+      const trigger = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+      expect(getComputedStyle(trigger).minBlockSize, `min-block-size at size=${size}`).to.equal(px);
+    }
+  });
+
+  it('renders the same laid-out trigger box at every tier as before the shared ladder', async () => {
+    // 2xs/xs are the two tiers whose CONTENT, not the floor, decides the height, so a padding or
+    // font-size drift there would show up here and nowhere else.
+    const expected: ReadonlyArray<readonly [string, number]> = [
+      ['2xs', 20],
+      ['xs', 25],
+      ['s', 30],
+      ['m', 40],
+      ['l', 48],
+      ['xl', 56],
+    ];
+    for (const [size, px] of expected) {
+      const el = await fixture(html`<lr-combobox size=${size} label="Tags"></lr-combobox>`);
+      const trigger = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+      expect(trigger.getBoundingClientRect().height, `laid-out height at size=${size}`).to.equal(px);
+    }
+  });
+
+  it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+    const pairs: ReadonlyArray<readonly [string, string]> = [
+      ['small', 's'],
+      ['medium', 'm'],
+      ['large', 'l'],
+    ];
+    for (const [alias, step] of pairs) {
+      const aliasEl = await fixture(html`<lr-combobox size=${alias} label="Tags"></lr-combobox>`);
+      const stepEl = await fixture(html`<lr-combobox size=${step} label="Tags"></lr-combobox>`);
+      const box = (el: Element) => el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+      expect(getComputedStyle(box(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
+        getComputedStyle(box(stepEl)).minBlockSize,
+      );
+      expect(getComputedStyle(box(aliasEl)).fontSize, `font-size for ${alias}`).to.equal(
+        getComputedStyle(box(stepEl)).fontSize,
+      );
+      expect(box(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
+        box(stepEl).getBoundingClientRect().height,
+      );
+    }
+  });
+
+  it('rounds the trigger row to a pill without a ::part() rule', async () => {
+    const plain = (await fixture(basic())) as LyraCombobox;
+    const pill = (await fixture(html`
+      <lr-combobox pill><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    const radius = (el: LyraCombobox) =>
+      getComputedStyle(el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement).borderStartStartRadius;
+    expect(pill.pill).to.be.true;
+    expect(pill.getAttribute('pill')).to.equal('');
+    expect(radius(pill)).to.not.equal(radius(plain));
+    expect(Number.parseFloat(radius(pill))).to.be.greaterThan(Number.parseFloat(radius(plain)));
+  });
+
   it('defaults to size="m" and reflects the attribute', async () => {
     const el = (await fixture(basic())) as LyraCombobox;
     expect(el.size).to.equal('m');
@@ -2978,4 +3053,332 @@ it('ignores option activation entirely while disabled', async () => {
   option.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(el.value).to.equal('');
+});
+
+// The tag remove button's interaction states are a currentColor tint (this part inherits the
+// tag's own text colour, so there is no token to darken), which is a different colour-mix shape
+// from every other part here -- proved through the real pointer rather than the stylesheet text,
+// since an unparseable color-mix() is dropped silently and would still read fine as source.
+// Colour STRINGS are compared, never elements: a DOM node as chai's actual/expected hangs the file.
+it('tints the tag remove button on hover and deepens that tint while it is pressed', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.multiple = true;
+  el.value = ['a'];
+  await el.updateComplete;
+  const remove = el.shadowRoot!.querySelector('[part="tag__remove-button"]') as HTMLElement;
+  const rect = remove.getBoundingClientRect();
+  const centre: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  const rest = getComputedStyle(remove).backgroundColor;
+  try {
+    await sendMouse({ type: 'move', position: centre });
+    const hovered = getComputedStyle(remove).backgroundColor;
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(remove).backgroundColor;
+    await sendMouse({ type: 'up' });
+    expect(hovered, 'hover must tint the resting (transparent) background').to.not.equal(rest);
+    expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(hovered);
+  } finally {
+    await resetMouse();
+  }
+});
+
+// `CustomStateSet` and the `:state()` selector ship separately from each other and from the rest
+// of `ElementInternals` -- these two guards are why the same block passes on WebKit, where a
+// missing `CustomStateSet` would otherwise throw on the very first assertion.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('validity custom states', () => {
+  it('publishes required/optional and valid/invalid from the first update', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`
+      <lr-combobox required name="fruit">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid after a selection').to.be.true;
+    expect(el.matches(':state(invalid)'), 'invalid after a selection').to.be.false;
+
+    el.required = false;
+    await el.updateComplete;
+    expect(el.matches(':state(optional)'), 'optional after clearing required').to.be.true;
+    expect(el.matches(':state(required)'), 'required after clearing required').to.be.false;
+  });
+
+  it('keeps user-valid/user-invalid off a pristine control and turns them on at first interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`
+      <lr-combobox required name="fruit">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    // Invalid, but nobody has had a turn yet: styling this red would be hostile, which is the
+    // whole reason the `user-*` pair exists.
+    expect(el.matches(':state(invalid)'), 'invalid while pristine').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid while pristine').to.be.false;
+    expect(el.matches(':state(user-valid)'), 'user-valid while pristine').to.be.false;
+
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    input.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after blur').to.be.true;
+    expect(el.matches(':state(user-valid)'), 'user-valid after blur').to.be.false;
+
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.matches(':state(user-valid)'), 'user-valid once satisfied').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid once satisfied').to.be.false;
+  });
+
+  it('counts a reportValidity() call as interaction, and a form reset as going pristine again', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = (await fixture(html`
+      <form>
+        <lr-combobox required name="fruit">
+          <lr-option value="a">Apple</lr-option>
+        </lr-combobox>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid before reporting').to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reporting').to.be.true;
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reset').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid after reset').to.be.true;
+  });
+});
+
+describe('lr-combobox setCustomValidity()', () => {
+  const inForm = () => html`
+    <form>
+      <lr-combobox name="fruit">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-combobox>
+    </form>
+  `;
+
+  it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
+    const form = (await fixture(inForm())) as HTMLFormElement;
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    let submits = 0;
+    // Registered before any requestSubmit() below, so a successful submission can never navigate
+    // the test page.
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+    expect(el.checkValidity(), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('That fruit is out of stock.');
+    expect(el.validity.customError).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('That fruit is out of stock.');
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(0);
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validationMessage).to.equal('');
+    form.requestSubmit();
+    expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('keeps a custom error through an intrinsic revalidation', async () => {
+    const el = (await fixture(html`
+      <lr-combobox required><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    el.setCustomValidity('Rejected by the server.');
+
+    // Committing a selection re-runs updateValidity(), the traffic that would otherwise wipe the
+    // custom error out on every interaction.
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'the intrinsic error cleared').to.be.false;
+    expect(el.validity.customError, 'the custom error survived the recomputation').to.be.true;
+    expect(el.validationMessage).to.equal('Rejected by the server.');
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('keeps a custom error across a form reset, matching native setCustomValidity semantics', async () => {
+    // Native `form.reset()` restores value and pristine-ness but never clears a consumer-set
+    // custom error -- only another `setCustomValidity('')` does. This control matches.
+    const form = (await fixture(html`
+      <form>
+        <lr-combobox name="fruit">
+          <lr-option value="a" selected>Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+        </lr-combobox>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    el.value = 'b';
+    el.setCustomValidity('Already chosen by this order.');
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.value, 'the reset restored the declarative default').to.equal('a');
+    expect(el.validity.customError, 'the custom error outlives the reset').to.be.true;
+    expect(el.validationMessage).to.equal('Already chosen by this order.');
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`
+      <lr-combobox required><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'required and unselected to begin with').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validity.valueMissing, 'an unselected required control is still missing a value').to.be.true;
+    expect(el.checkValidity(), 'clearing must not force the control valid').to.be.false;
+    expect(el.validationMessage.length, 'the intrinsic message is republished').to.be.greaterThan(0);
+  });
+
+  it('publishes the custom error through the validity custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(basic())) as LyraCombobox;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.matches(':state(invalid)'), 'invalid synchronously, not on the next Lit update').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    expect(el.matches(':state(user-invalid)'), 'still pristine until the user has a turn').to.be.false;
+
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)'), 'a reported validation counts as interaction').to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)')).to.be.true;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+  });
+});
+
+describe('lr-combobox implicit form submission', () => {
+  const enterOn = (el: LyraCombobox, init: KeyboardEventInit = {}) =>
+    (el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
+    );
+
+  const inForm = () => html`
+    <form>
+      <lr-combobox name="fruit">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-combobox>
+    </form>
+  `;
+
+  it('submits the ancestor form when Enter commits nothing in the listbox', async () => {
+    const form = (await fixture(inForm())) as HTMLFormElement;
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el);
+    expect(submits).to.equal(1);
+  });
+
+  it('submits through an lr-button submitter, which requestSubmit() itself would reject', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-combobox name="fruit"><lr-option value="a">Apple</lr-option></lr-combobox>
+        <lr-button type="submit" name="action" value="save">Go</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    let submitterName = '';
+    let submits = 0;
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+      submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
+    });
+    enterOn(el);
+    expect(submits).to.equal(1);
+    expect(submitterName, 'the lr-button was the submitter').to.equal('action');
+  });
+
+  it('picks the active option instead of submitting while the listbox has one highlighted', async () => {
+    const form = (await fixture(inForm())) as HTMLFormElement;
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    el.show();
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    enterOn(el);
+    await el.updateComplete;
+    expect(el.value, 'Enter committed the highlighted option').to.equal('a');
+    expect(submits, 'committing a selection is not implicit submission').to.equal(0);
+  });
+
+  it('never submits on a held modifier, during IME composition, or after a veto', async () => {
+    const form = (await fixture(inForm())) as HTMLFormElement;
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el, { shiftKey: true });
+    enterOn(el, { ctrlKey: true });
+    enterOn(el, { altKey: true });
+    enterOn(el, { metaKey: true });
+    enterOn(el, { isComposing: true });
+    expect(submits).to.equal(0);
+
+    // Capture on the host runs before the internal input's own listener.
+    const veto = (e: Event): void => e.preventDefault();
+    el.addEventListener('keydown', veto, true);
+    enterOn(el);
+    el.removeEventListener('keydown', veto, true);
+    expect(submits).to.equal(0);
+
+    enterOn(el);
+    expect(submits, 'a bare Enter still submits').to.equal(1);
+  });
 });

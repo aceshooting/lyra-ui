@@ -1,162 +1,335 @@
 /* Lyra's standalone theme inputs. Import this file once at the application root, then
    switch `.lr-light`/`.lr-dark` (or data-lr-theme) on an ancestor to change modes. */
-:root,
-.lr-light,
-[data-lr-theme='light'] {
-  color-scheme: light;
-  --lr-theme-color-surface-default: #ffffff;
-  --lr-theme-color-text-normal: #1a1a1a;
-  --lr-theme-color-text-quiet: #6b7280;
-  --lr-theme-color-surface-border: #8a8a90;
-  --lr-theme-color-border-strong: #4b5563;
-  --lr-theme-color-brand-fill-loud: #0969da;
-  --lr-theme-color-brand-fill-quiet: #ddf4ff;
-  --lr-theme-color-brand-on-loud: #ffffff;
-  --lr-theme-color-success-fill-loud: #1a7f37;
-  --lr-theme-color-success-fill-quiet: #dafbe1;
-  --lr-theme-color-success-on-loud: #ffffff;
-  --lr-theme-color-warning-fill-loud: #9a6700;
-  --lr-theme-color-warning-fill-quiet: #fff8c5;
-  --lr-theme-color-warning-on-loud: #ffffff;
-  --lr-theme-color-danger-fill-loud: #cf222e;
-  --lr-theme-color-danger-fill-quiet: #ffebe9;
-  --lr-theme-color-danger-on-loud: #ffffff;
-  --lr-theme-color-neutral-fill-loud: #1a1a1a;
-  --lr-theme-color-neutral-on-loud: #ffffff;
-  --lr-theme-color-focus: #0969da;
-  --lr-theme-color-no-data: rgb(128 128 128 / 25%);
-  --lr-theme-color-surface-raised: #f6f8fa;
-  /* Two independent scrims: the plain one backs dialog/drawer backdrops, the strong one
-     backs full-bleed media chrome. Set them separately. */
-  --lr-theme-color-overlay: rgb(0 0 0 / 0.5);
-  --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.92);
-  --lr-theme-font-family-body: system-ui, sans-serif;
-  --lr-theme-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* Type scale. `-m` is the body step; `-md` is a separate, independently tunable step
-     that happens to share its default. */
-  --lr-theme-font-size-3xs: 0.5rem;
-  --lr-theme-font-size-2xs: 0.625rem;
-  --lr-theme-font-size-xs: 0.75rem;
-  --lr-theme-font-size-sm: 0.8125rem;
-  --lr-theme-font-size-md-sm: 0.875rem;
-  --lr-theme-font-size-m: 1rem;
-  --lr-theme-font-size-md: 1rem;
-  --lr-theme-font-size-lg: 1.125rem;
-  --lr-theme-font-size-xl: 1.25rem;
-  --lr-theme-font-size-2xl: 1.75rem;
-  --lr-theme-font-size-3xl: 2rem;
+/* Cascade layers. Declaring the order up front fixes it regardless of the order the stylesheets
+   themselves happen to load in, which a bundler, a <link> and an @import between them do not let an
+   application control reliably.
 
-  /* Spacing scale. */
-  --lr-theme-space-2xs: 0.125rem;
-  --lr-theme-space-xs: 0.25rem;
-  --lr-theme-space-s: 0.5rem;
-  --lr-theme-space-m: 0.75rem;
-  --lr-theme-space-l: 1rem;
-  --lr-theme-space-2xl: 2rem;
+   The tokens below sit in `lr-theme`. The point is not where they sit relative to each other -- it
+   is that ANY UNLAYERED declaration beats EVERY layered one, whatever its specificity and whatever
+   the order. So a consumer's plain `:root { --lr-theme-color-brand-fill-loud: … }` now always wins,
+   with no `!important` and no worrying about which stylesheet the bundler emitted first. Before
+   this, the theme was unlayered at `:root` (0,1,0) and a consumer's identically-specific rule won
+   or lost purely on source order.
 
-  --lr-theme-border-radius-m: 0.375rem;
+   `lr-base` is reserved for any future element-level reset; `lr-utilities` and `lr-overrides` are
+   named so an application can opt its own layers into a defined position relative to Lyra's rather
+   than inventing one. Anything an app leaves unlayered still outranks all four. */
+@layer lr-base, lr-theme, lr-utilities, lr-overrides;
 
-  /* Focus ring geometry. The color is --lr-theme-color-focus above. */
-  --lr-theme-focus-ring-width: 2px;
-  --lr-theme-focus-ring-offset: 2px;
+@layer lr-theme {
+  :root,
+  .lr-light,
+  [data-lr-theme='light'] {
+    color-scheme: light;
+    --lr-theme-color-surface-default: #ffffff;
+    --lr-theme-color-text-normal: #1a1a1a;
+    --lr-theme-color-text-quiet: #6b7280;
+    --lr-theme-color-surface-border: #8a8a90;
+    --lr-theme-color-border-strong: #4b5563;
+    /* semantic grid: generated -- see scripts/generate-palette.mjs */
+    --lr-theme-color-brand-fill-quiet: #e5efff;
+    --lr-theme-color-brand-fill-normal: #95c0fe;
+    --lr-theme-color-brand-fill-loud: #035ec6;
+    --lr-theme-color-brand-border-quiet: #95c0fe;
+    --lr-theme-color-brand-border-normal: #2d7de9;
+    --lr-theme-color-brand-border-loud: #034492;
+    --lr-theme-color-brand-on-quiet: #000001;
+    --lr-theme-color-brand-on-normal: #000001;
+    --lr-theme-color-brand-on-loud: #edeef1;
+    --lr-theme-color-success-fill-quiet: #d3fbd8;
+    --lr-theme-color-success-fill-normal: #91d09a;
+    --lr-theme-color-success-fill-loud: #0c7830;
+    --lr-theme-color-success-border-quiet: #91d09a;
+    --lr-theme-color-success-border-normal: #3e9550;
+    --lr-theme-color-success-border-loud: #00571f;
+    --lr-theme-color-success-on-quiet: #000001;
+    --lr-theme-color-success-on-normal: #000001;
+    --lr-theme-color-success-on-loud: #edeef1;
+    --lr-theme-color-warning-fill-quiet: #ffebd2;
+    --lr-theme-color-warning-fill-normal: #ddb781;
+    --lr-theme-color-warning-fill-loud: #855905;
+    --lr-theme-color-warning-border-quiet: #ddb781;
+    --lr-theme-color-warning-border-normal: #a77526;
+    --lr-theme-color-warning-border-loud: #624001;
+    --lr-theme-color-warning-on-quiet: #000001;
+    --lr-theme-color-warning-on-normal: #000001;
+    --lr-theme-color-warning-on-loud: #edeef1;
+    --lr-theme-color-danger-fill-quiet: #ffe9e6;
+    --lr-theme-color-danger-fill-normal: #ffa099;
+    --lr-theme-color-danger-fill-loud: #bb0320;
+    --lr-theme-color-danger-border-quiet: #ffa099;
+    --lr-theme-color-danger-border-normal: #dc3e41;
+    --lr-theme-color-danger-border-loud: #890415;
+    --lr-theme-color-danger-on-quiet: #000001;
+    --lr-theme-color-danger-on-normal: #000001;
+    --lr-theme-color-danger-on-loud: #edeef1;
+    --lr-theme-color-neutral-fill-quiet: #edeef1;
+    --lr-theme-color-neutral-fill-normal: #bcbec1;
+    --lr-theme-color-neutral-fill-loud: #616368;
+    --lr-theme-color-neutral-border-quiet: #bcbec1;
+    --lr-theme-color-neutral-border-normal: #7e8085;
+    --lr-theme-color-neutral-border-loud: #46484c;
+    --lr-theme-color-neutral-on-quiet: #000001;
+    --lr-theme-color-neutral-on-normal: #000001;
+    --lr-theme-color-neutral-on-loud: #edeef1;
+    --lr-theme-color-focus: #035ec6;
+    /* semantic grid: end */
+    --lr-theme-color-no-data: rgb(128 128 128 / 25%);
+    --lr-theme-color-surface-raised: #f6f8fa;
+    /* Two independent scrims: the plain one backs dialog/drawer backdrops, the strong one
+       backs full-bleed media chrome. Set them separately. */
+    --lr-theme-color-overlay: rgb(0 0 0 / 0.5);
+    --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.92);
+    /* The surface a modal panel paints itself with. In light mode it is the page surface: a white
+       dialog on a white page is separated by the scrim drawn around it. In dark mode it must not
+       be, or the panel and the page are the same near-black and there is no panel. */
+    --lr-theme-color-surface-overlay: #ffffff;
 
-  /* Minimum tappable box for icon-only buttons, and the hit-area floor for the expand
-     affordances inside lr-date-input/lr-combobox/lr-input/lr-select. Keep the resolved
-     value at or above 24px — anything smaller fails WCAG 2.2 SC 2.5.8. */
-  --lr-theme-icon-button-size: 2.5rem;
+    /* Elevation. The colour is an `r g b` triplet so each step can set its own alpha against it,
+       and so a theme can tint every shadow at once by setting the colour alone. */
+    --lr-theme-shadow-color: 0 0 0;
+    --lr-theme-shadow-xs: 0 1px 2px rgb(var(--lr-theme-shadow-color) / 0.12);
+    --lr-theme-shadow-s: 0 1px 4px rgb(var(--lr-theme-shadow-color) / 0.14);
+    --lr-theme-shadow-m: 0 2px 8px rgb(var(--lr-theme-shadow-color) / 0.15);
+    --lr-theme-shadow-l: 0 6px 16px rgb(var(--lr-theme-shadow-color) / 0.18);
+    --lr-theme-shadow-xl: 0 12px 32px rgb(var(--lr-theme-shadow-color) / 0.22);
+    --lr-theme-font-family-body: system-ui, sans-serif;
+    --lr-theme-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* Stacking layers. Raise these together if the host app owns a higher stacking
-     context; -popover and -modal share a default deliberately. */
-  --lr-theme-z-index-base: 0;
-  --lr-theme-z-index-content: 1;
-  --lr-theme-z-index-dropdown: 900;
-  --lr-theme-z-index-popover: 1000;
-  --lr-theme-z-index-modal: 1000;
-  --lr-theme-z-index-toast: 9999;
+    /* Type scale. `-m` is the body step; `-md` is a separate, independently tunable step
+       that happens to share its default. */
+    --lr-theme-font-size-3xs: 0.5rem;
+    --lr-theme-font-size-2xs: 0.625rem;
+    --lr-theme-font-size-xs: 0.75rem;
+    --lr-theme-font-size-sm: 0.8125rem;
+    --lr-theme-font-size-md-sm: 0.875rem;
+    --lr-theme-font-size-m: 1rem;
+    --lr-theme-font-size-lg: 1.125rem;
+    --lr-theme-font-size-xl: 1.25rem;
+    --lr-theme-font-size-2xl: 1.75rem;
+    --lr-theme-font-size-3xl: 2rem;
 
-  /* Categorical chart series, assigned by series index. */
-  --lr-theme-color-chart-1: #8250df;
-  --lr-theme-color-chart-2: #bf3989;
-  --lr-theme-color-chart-3: #0a7d91;
-  --lr-theme-color-chart-4: #57606a;
-  --lr-theme-color-chart-5: #b083f5;
-  --lr-theme-color-chart-6: #f470b8;
-  --lr-theme-color-chart-7: #52d6e8;
-  --lr-theme-color-chart-8: #c9d1d9;
+    /* Spacing scale. */
+    --lr-theme-space-2xs: 0.125rem;
+    --lr-theme-space-xs: 0.25rem;
+    --lr-theme-space-s: 0.5rem;
+    --lr-theme-space-m: 0.75rem;
+    --lr-theme-space-l: 1rem;
+    --lr-theme-space-2xl: 2rem;
 
-  /* Knowledge-graph node categories, assigned by category index. Separate from the chart
-     series above so a graph and a chart on the same page can be recolored independently. */
-  --lr-theme-graph-cat-1: #8250df;
-  --lr-theme-graph-cat-2: #bf3989;
-  --lr-theme-graph-cat-3: #0a7d91;
-  --lr-theme-graph-cat-4: #57606a;
-  --lr-theme-graph-cat-5: #b083f5;
-  --lr-theme-graph-cat-6: #f470b8;
-  --lr-theme-graph-cat-7: #52d6e8;
-  --lr-theme-graph-cat-8: #c9d1d9;
+    --lr-theme-border-radius-m: 0.375rem;
 
-  /* The 16-color ANSI/SGR palette rendered by lr-terminal. */
-  --lr-theme-terminal-color-black: #24292e;
-  --lr-theme-terminal-color-red: #cf222e;
-  --lr-theme-terminal-color-green: #1a7f37;
-  --lr-theme-terminal-color-yellow: #9a6700;
-  --lr-theme-terminal-color-blue: #0969da;
-  --lr-theme-terminal-color-magenta: #8250df;
-  --lr-theme-terminal-color-cyan: #1b7c83;
-  --lr-theme-terminal-color-white: #6b7280;
-  --lr-theme-terminal-color-bright-black: #57606a;
-  --lr-theme-terminal-color-bright-red: #fa4549;
-  --lr-theme-terminal-color-bright-green: #4ac26b;
-  --lr-theme-terminal-color-bright-yellow: #d4a72c;
-  --lr-theme-terminal-color-bright-blue: #4184e4;
-  --lr-theme-terminal-color-bright-magenta: #a475f9;
-  --lr-theme-terminal-color-bright-cyan: #3192aa;
-  --lr-theme-terminal-color-bright-white: #d0d7de;
-}
+    /* Focus ring geometry. The color is --lr-theme-color-focus above. */
+    --lr-theme-focus-ring-width: 2px;
+    --lr-theme-focus-ring-offset: 2px;
 
-.lr-dark,
-[data-lr-theme='dark'] {
-  color-scheme: dark;
-  --lr-theme-color-surface-default: #1a1a1a;
-  --lr-theme-color-text-normal: #f2f2f2;
-  --lr-theme-color-text-quiet: #9aa1ac;
-  --lr-theme-color-surface-border: #6b6b74;
-  --lr-theme-color-border-strong: #c4c9d1;
-  --lr-theme-color-brand-fill-loud: #4ea0f0;
-  --lr-theme-color-brand-fill-quiet: #163650;
-  --lr-theme-color-brand-on-loud: #111827;
-  --lr-theme-color-success-fill-loud: #3fb950;
-  --lr-theme-color-success-fill-quiet: #17411e;
-  --lr-theme-color-success-on-loud: #111827;
-  --lr-theme-color-warning-fill-loud: #d29922;
-  --lr-theme-color-warning-fill-quiet: #3b2900;
-  --lr-theme-color-warning-on-loud: #111827;
-  --lr-theme-color-danger-fill-loud: #fa524a;
-  --lr-theme-color-danger-fill-quiet: #4c1210;
-  --lr-theme-color-danger-on-loud: #111827;
-  --lr-theme-color-neutral-fill-loud: #e5e7eb;
-  --lr-theme-color-neutral-on-loud: #111827;
-  --lr-theme-color-focus: #4ea0f0;
-  --lr-theme-color-no-data: rgb(180 180 180 / 30%);
-  /* Every value the light block sets that has a distinct dark counterpart must be
-     re-set here, or .lr-dark keeps the light value and disagrees with the
-     prefers-color-scheme: dark fallbacks the components ship. */
-  --lr-theme-color-surface-raised: #22272e;
-  --lr-theme-color-chart-1: #b58cff;
-  --lr-theme-color-chart-2: #ff7ab2;
-  --lr-theme-color-chart-3: #4fd1c5;
-  --lr-theme-color-chart-4: #aab4c4;
-  --lr-theme-color-chart-5: #d4a7ff;
-  --lr-theme-color-chart-6: #ff91c8;
-  --lr-theme-color-chart-7: #79e2ef;
-  --lr-theme-color-chart-8: #e4e7eb;
-  --lr-theme-graph-cat-1: #b58cff;
-  --lr-theme-graph-cat-2: #ff7ab2;
-  --lr-theme-graph-cat-3: #4fd1c5;
-  --lr-theme-graph-cat-4: #aab4c4;
-  --lr-theme-graph-cat-5: #d4a7ff;
-  --lr-theme-graph-cat-6: #ff91c8;
-  --lr-theme-graph-cat-7: #79e2ef;
-  --lr-theme-graph-cat-8: #e4e7eb;
+    /* Minimum tappable box for icon-only buttons, and the hit-area floor for the expand
+       affordances inside lr-date-input/lr-combobox/lr-input/lr-select. Keep the resolved
+       value at or above 24px — anything smaller fails WCAG 2.2 SC 2.5.8. */
+    --lr-theme-icon-button-size: 2.5rem;
+
+    /* Stacking layers. Raise these together if the host app owns a higher stacking
+       context; -popover and -modal share a default deliberately. */
+    --lr-theme-z-index-base: 0;
+    --lr-theme-z-index-content: 1;
+    --lr-theme-z-index-dropdown: 900;
+    --lr-theme-z-index-popover: 1000;
+    --lr-theme-z-index-modal: 1000;
+    --lr-theme-z-index-toast: 9999;
+
+    /* Categorical chart series, assigned by series index. Separates on LIGHTNESS as well as
+       hue: hue is the channel colour blindness collapses, so a ramp that varies only in hue
+       becomes several identical series for ~1 in 12 men. */
+    /* chart ramp: generated (light) -- see scripts/generate-chart-palette.mjs */
+    --lr-theme-color-chart-1: #0e006e;
+    --lr-theme-color-chart-2: #4d011a;
+    --lr-theme-color-chart-3: #862002;
+    --lr-theme-color-chart-4: #503983;
+    --lr-theme-color-chart-5: #315fdd;
+    --lr-theme-color-chart-6: #935e7c;
+    --lr-theme-color-chart-7: #de6906;
+    --lr-theme-color-chart-8: #8f81d3;
+    /* chart ramp: end */
+
+    /* Knowledge-graph node categories, assigned by category index. Separate from the chart
+       series above so a graph and a chart on the same page can be recolored independently. */
+    --lr-theme-graph-cat-1: #8250df;
+    --lr-theme-graph-cat-2: #bf3989;
+    --lr-theme-graph-cat-3: #0a7d91;
+    --lr-theme-graph-cat-4: #57606a;
+    --lr-theme-graph-cat-5: #b083f5;
+    --lr-theme-graph-cat-6: #f470b8;
+    --lr-theme-graph-cat-7: #52d6e8;
+    --lr-theme-graph-cat-8: #c9d1d9;
+
+    /* The 16-color ANSI/SGR palette rendered by lr-terminal. */
+    /* terminal ramp: generated (light) -- see scripts/generate-terminal-palette.mjs */
+    --lr-theme-terminal-color-black: #2b2b2b;
+    --lr-theme-terminal-color-red: #901114;
+    --lr-theme-terminal-color-green: #015e15;
+    --lr-theme-terminal-color-yellow: #5f4a03;
+    --lr-theme-terminal-color-blue: #06489c;
+    --lr-theme-terminal-color-magenta: #67298c;
+    --lr-theme-terminal-color-cyan: #02585f;
+    --lr-theme-terminal-color-white: #555555;
+    --lr-theme-terminal-color-bright-black: #404040;
+    --lr-theme-terminal-color-bright-red: #b32322;
+    --lr-theme-terminal-color-bright-green: #01791e;
+    --lr-theme-terminal-color-bright-yellow: #796005;
+    --lr-theme-terminal-color-bright-blue: #145ec1;
+    --lr-theme-terminal-color-bright-magenta: #823bae;
+    --lr-theme-terminal-color-bright-cyan: #04717a;
+    --lr-theme-terminal-color-bright-white: #6c6c6c;
+    --lr-theme-terminal-bg-black: #868686;
+    --lr-theme-terminal-bg-red: #d2918a;
+    --lr-theme-terminal-bg-green: #89b18a;
+    --lr-theme-terminal-bg-yellow: #b6a372;
+    --lr-theme-terminal-bg-blue: #88a6d4;
+    --lr-theme-terminal-bg-magenta: #b497cb;
+    --lr-theme-terminal-bg-cyan: #77b0b6;
+    --lr-theme-terminal-bg-white: #b7b7b7;
+    --lr-theme-terminal-bg-bright-black: #9e9e9e;
+    --lr-theme-terminal-bg-bright-red: #f9aea5;
+    --lr-theme-terminal-bg-bright-green: #a4d2a4;
+    --lr-theme-terminal-bg-bright-yellow: #d8c288;
+    --lr-theme-terminal-bg-bright-blue: #a2c6fb;
+    --lr-theme-terminal-bg-bright-magenta: #d6b4f0;
+    --lr-theme-terminal-bg-bright-cyan: #8dd2da;
+    --lr-theme-terminal-bg-bright-white: #d1d1d1;
+    /* terminal ramp: end */
+  }
+
+  .lr-dark,
+  [data-lr-theme='dark'] {
+    color-scheme: dark;
+    --lr-theme-color-surface-default: #1a1a1a;
+    --lr-theme-color-text-normal: #f2f2f2;
+    --lr-theme-color-text-quiet: #9aa1ac;
+    --lr-theme-color-surface-border: #6b6b74;
+    --lr-theme-color-border-strong: #c4c9d1;
+    /* semantic grid: generated -- see scripts/generate-palette.mjs */
+    --lr-theme-color-brand-fill-quiet: #002b62;
+    --lr-theme-color-brand-fill-normal: #035ec6;
+    --lr-theme-color-brand-fill-loud: #5b9eff;
+    --lr-theme-color-brand-border-quiet: #002b62;
+    --lr-theme-color-brand-border-normal: #2d7de9;
+    --lr-theme-color-brand-border-loud: #5b9eff;
+    --lr-theme-color-brand-on-quiet: #edeef1;
+    --lr-theme-color-brand-on-normal: #edeef1;
+    --lr-theme-color-brand-on-loud: #000001;
+    --lr-theme-color-success-fill-quiet: #013912;
+    --lr-theme-color-success-fill-normal: #0c7830;
+    --lr-theme-color-success-fill-loud: #67b374;
+    --lr-theme-color-success-border-quiet: #013912;
+    --lr-theme-color-success-border-normal: #3e9550;
+    --lr-theme-color-success-border-loud: #67b374;
+    --lr-theme-color-success-on-quiet: #edeef1;
+    --lr-theme-color-success-on-normal: #edeef1;
+    --lr-theme-color-success-on-loud: #000001;
+    --lr-theme-color-warning-fill-quiet: #402801;
+    --lr-theme-color-warning-fill-normal: #855905;
+    --lr-theme-color-warning-fill-loud: #c39554;
+    --lr-theme-color-warning-border-quiet: #402801;
+    --lr-theme-color-warning-border-normal: #a77526;
+    --lr-theme-color-warning-border-loud: #c39554;
+    --lr-theme-color-warning-on-quiet: #edeef1;
+    --lr-theme-color-warning-on-normal: #edeef1;
+    --lr-theme-color-warning-on-loud: #000001;
+    --lr-theme-color-danger-fill-quiet: #5c010a;
+    --lr-theme-color-danger-fill-normal: #bb0320;
+    --lr-theme-color-danger-fill-loud: #f86b66;
+    --lr-theme-color-danger-border-quiet: #5c010a;
+    --lr-theme-color-danger-border-normal: #dc3e41;
+    --lr-theme-color-danger-border-loud: #f86b66;
+    --lr-theme-color-danger-on-quiet: #edeef1;
+    --lr-theme-color-danger-on-normal: #edeef1;
+    --lr-theme-color-danger-on-loud: #000001;
+    --lr-theme-color-neutral-fill-quiet: #2c2e31;
+    --lr-theme-color-neutral-fill-normal: #616368;
+    --lr-theme-color-neutral-fill-loud: #9c9ea3;
+    --lr-theme-color-neutral-border-quiet: #2c2e31;
+    --lr-theme-color-neutral-border-normal: #7e8085;
+    --lr-theme-color-neutral-border-loud: #9c9ea3;
+    --lr-theme-color-neutral-on-quiet: #edeef1;
+    --lr-theme-color-neutral-on-normal: #edeef1;
+    --lr-theme-color-neutral-on-loud: #000001;
+    --lr-theme-color-focus: #5b9eff;
+    /* semantic grid: end */
+    --lr-theme-color-no-data: rgb(180 180 180 / 30%);
+    /* Every value the light block sets that has a distinct dark counterpart must be
+       re-set here, or .lr-dark keeps the light value and disagrees with the
+       prefers-color-scheme: dark fallbacks the components ship. */
+    --lr-theme-color-surface-raised: #22272e;
+    --lr-theme-color-surface-overlay: #2b3038;
+    /* A 50% black scrim over an already-dark page barely darkens it, so the boundary the scrim
+       exists to draw disappears. Both scrims go heavier here. */
+    --lr-theme-color-overlay: rgb(0 0 0 / 0.72);
+    --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.95);
+    /* Elevation is a luminance difference, and a 12%-alpha black shadow on a near-black surface is
+       not one. The alphas roughly triple so each step stays a visible step; the geometry of the two
+       largest steps grows too, since a wider, softer shadow is what still reads as depth when the
+       surface underneath it is already dark. */
+    --lr-theme-shadow-xs: 0 1px 2px rgb(var(--lr-theme-shadow-color) / 0.34);
+    --lr-theme-shadow-s: 0 1px 4px rgb(var(--lr-theme-shadow-color) / 0.4);
+    --lr-theme-shadow-m: 0 2px 8px rgb(var(--lr-theme-shadow-color) / 0.46);
+    --lr-theme-shadow-l: 0 8px 20px rgb(var(--lr-theme-shadow-color) / 0.56);
+    --lr-theme-shadow-xl: 0 16px 40px rgb(var(--lr-theme-shadow-color) / 0.66);
+    /* chart ramp: generated (dark) -- see scripts/generate-chart-palette.mjs */
+    --lr-theme-color-chart-1: #bbff94;
+    --lr-theme-color-chart-2: #ffbce8;
+    --lr-theme-color-chart-3: #2bd66a;
+    --lr-theme-color-chart-4: #bb99cb;
+    --lr-theme-color-chart-5: #7888fe;
+    --lr-theme-color-chart-6: #9b6b90;
+    --lr-theme-color-chart-7: #db3a29;
+    --lr-theme-color-chart-8: #555de3;
+    /* chart ramp: end */
+    --lr-theme-graph-cat-1: #b58cff;
+    --lr-theme-graph-cat-2: #ff7ab2;
+    --lr-theme-graph-cat-3: #4fd1c5;
+    --lr-theme-graph-cat-4: #aab4c4;
+    --lr-theme-graph-cat-5: #d4a7ff;
+    --lr-theme-graph-cat-6: #ff91c8;
+    --lr-theme-graph-cat-7: #79e2ef;
+    --lr-theme-graph-cat-8: #e4e7eb;
+
+    /* The 16-colour ANSI/SGR palette. Declared per mode deliberately: it used to exist only in
+       the light block, so a dark terminal rendered light-mode colours on a near-black panel and
+       ten of the sixteen fell below 4.5:1 -- `black` at 1.02:1, i.e. invisible. */
+    /* terminal ramp: generated (dark) -- see scripts/generate-terminal-palette.mjs */
+    --lr-theme-terminal-color-black: #929292;
+    --lr-theme-terminal-color-red: #f9786c;
+    --lr-theme-terminal-color-green: #67bb6b;
+    --lr-theme-terminal-color-yellow: #c7a01e;
+    --lr-theme-terminal-color-blue: #69a5fe;
+    --lr-theme-terminal-color-magenta: #c385ef;
+    --lr-theme-terminal-color-cyan: #17bac8;
+    --lr-theme-terminal-color-white: #c4c4c4;
+    --lr-theme-terminal-color-bright-black: #ababab;
+    --lr-theme-terminal-color-bright-red: #ffaba1;
+    --lr-theme-terminal-color-bright-green: #7cdf81;
+    --lr-theme-terminal-color-bright-yellow: #ecbe24;
+    --lr-theme-terminal-color-bright-blue: #a0c6fe;
+    --lr-theme-terminal-color-bright-magenta: #dcaefe;
+    --lr-theme-terminal-color-bright-cyan: #00ddef;
+    --lr-theme-terminal-color-bright-white: #dedede;
+    --lr-theme-terminal-bg-black: #292929;
+    --lr-theme-terminal-bg-red: #733a35;
+    --lr-theme-terminal-bg-green: #335735;
+    --lr-theme-terminal-bg-yellow: #5c4b1a;
+    --lr-theme-terminal-bg-blue: #324e76;
+    --lr-theme-terminal-bg-magenta: #5a406e;
+    --lr-theme-terminal-bg-cyan: #1c565d;
+    --lr-theme-terminal-bg-white: #525252;
+    --lr-theme-terminal-bg-bright-black: #3d3d3d;
+    --lr-theme-terminal-bg-bright-red: #904e47;
+    --lr-theme-terminal-bg-bright-green: #456f46;
+    --lr-theme-terminal-bg-bright-yellow: #756127;
+    --lr-theme-terminal-bg-bright-blue: #446493;
+    --lr-theme-terminal-bg-bright-magenta: #73548a;
+    --lr-theme-terminal-bg-bright-cyan: #286f76;
+    --lr-theme-terminal-bg-bright-white: #696969;
+    /* terminal ramp: end */
+  }
 }

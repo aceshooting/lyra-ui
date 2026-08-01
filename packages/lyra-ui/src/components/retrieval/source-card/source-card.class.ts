@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { StripHostTitleAttribute } from '../../../internal/strip-host-title.js';
 import { styles } from './source-card.styles.js';
@@ -15,8 +16,9 @@ export interface SourceCardOpenDetail {
   href?: string;
 }
 
-/** Visual chrome for `<lr-source-card>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
-export type SourceCardAppearance = 'card' | 'plain';
+/** Container treatment for `<lr-source-card>`'s root. The library-wide {@linkcode LyraFrame}
+ *  vocabulary under this component's own export name. */
+export type SourceCardAppearance = LyraFrame;
 
 export interface LyraSourceCardEventMap {
   'lr-expand': CustomEvent<SourceCardExpandDetail>;
@@ -109,17 +111,17 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
 
   /** Tighter root padding and row gap, for the dense citation lists these cards usually render in
    *  -- same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e. the full card
-   *  padding. Purely a density knob: the border and background stay, so use `appearance="plain"`
+   *  padding. Purely a density knob: the border and background stay, so use `frame="plain"`
    *  to drop the chrome entirely. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
-  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+  /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
    *  radius, so a card inside a `<lr-source-list>` (or any container already drawing its own
    *  border/dividers) doesn't double the frame. `plain` wins over `compact` when both are set
    *  (nothing left to tighten); the title and toggle keep their brand color and hover underline,
    *  which never depended on the card chrome. */
-  @property({ reflect: true }) appearance: SourceCardAppearance = 'card';
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   // See `<lr-widget>`'s `hasActionsSlot` for the identical
   // presence-tracking convention -- a `[part]` always contains a literal

@@ -330,19 +330,19 @@ const overlayBaseChrome = (el: LyraFlowRunOverlay) => {
   };
 };
 
-it('defaults to appearance="card", rendering identically to that value restated', async () => {
+it('defaults to frame="card", rendering identically to that value restated', async () => {
   const implicit = (await fixture(
     html`<lr-flow-run-overlay .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}></lr-flow-run-overlay>`,
   )) as LyraFlowRunOverlay;
   const explicit = (await fixture(
     html`<lr-flow-run-overlay
-      appearance="card"
+      frame="card"
       .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}
     ></lr-flow-run-overlay>`,
   )) as LyraFlowRunOverlay;
 
-  expect(implicit.appearance).to.equal('card');
-  expect(implicit.getAttribute('appearance')).to.equal('card');
+  expect(implicit.frame).to.equal('card');
+  expect(implicit.getAttribute('frame')).to.equal('card');
   expect(overlayBaseChrome(explicit)).to.deep.equal(overlayBaseChrome(implicit));
 
   const chrome = overlayBaseChrome(implicit);
@@ -352,14 +352,14 @@ it('defaults to appearance="card", rendering identically to that value restated'
   expect(chrome.boxShadow).to.not.equal('none');
 });
 
-it('drops border, background, shadow, padding and radius under appearance="plain"', async () => {
+it('drops border, background, shadow, padding and radius under frame="plain"', async () => {
   const el = (await fixture(
     html`<lr-flow-run-overlay
-      appearance="plain"
+      frame="plain"
       .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}
     ></lr-flow-run-overlay>`,
   )) as LyraFlowRunOverlay;
-  expect(el.getAttribute('appearance')).to.equal('plain');
+  expect(el.getAttribute('frame')).to.equal('plain');
   const chrome = overlayBaseChrome(el);
   expect(chrome.borderTopWidth).to.equal('0px');
   expect(chrome.borderTopLeftRadius).to.equal('0px');
@@ -369,12 +369,12 @@ it('drops border, background, shadow, padding and radius under appearance="plain
   expect(chrome.paddingLeft).to.equal('0px');
 });
 
-it('is accessible under appearance="plain"', async () => {
+it('is accessible under frame="plain"', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas>
       <lr-flow-run-overlay
         slot="top-end"
-        appearance="plain"
+        frame="plain"
         .decorations=${{ fetch: { status: 'running' }, summarize: { status: 'success' } } as FlowRunDecorations}
       ></lr-flow-run-overlay>
     </lr-flow-canvas>

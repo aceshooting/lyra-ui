@@ -12,7 +12,7 @@ import type { LyraConversationItem } from '../conversation-item/conversation-ite
 import type { LyraVirtualList, VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './thread-list.styles.js';
-import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 
@@ -574,12 +574,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private announceMatchCount(count: number): void {
     if (this.searchText.trim() === '') return;
-    const key =
-      getPluralRules(this.effectiveLocale).select(count) === 'one'
-        ? 'threadListMatchAnnounce'
-        : 'threadListMatchAnnouncePlural';
     this.liveRegion?.announce(
-      this.localize(key, undefined, { count: getNumberFormat(this.effectiveLocale).format(count) }),
+      this.localize('threadListMatchAnnounce', undefined, {
+        count: getNumberFormat(this.effectiveLocale).format(count),
+        pluralCount: count,
+      }),
     );
   }
 

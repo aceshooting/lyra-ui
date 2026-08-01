@@ -2,7 +2,7 @@ export * from './spreadsheet-viewer.class.js';
 export * from './spreadsheet-loader.js';
 import { html } from 'lit';
 import { defineElement } from '../../../internal/prefix.js';
-import '../../layout/tabs/tabs.js';
+import '../../layout/tab-group/tab-group.js';
 import '../../layout/virtual-list/virtual-list.js';
 import { registerDocumentRenderer, type DocumentFile, type DocumentRendererDefinition } from '../document-viewer/registry.js';
 import { LyraSpreadsheetViewer } from './spreadsheet-viewer.class.js';

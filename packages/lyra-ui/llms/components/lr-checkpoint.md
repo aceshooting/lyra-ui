@@ -40,8 +40,12 @@ the inline confirm when `confirmRestore` is on. Not cancelable.
 glyph), `label`, `timestamp`, `restore-button` (only while `restorable`), `confirm-group`,
 `confirm-prompt`, `confirm-button`, `cancel-button`.
 
-**Themeable custom properties:** `--lr-checkpoint-spin-duration` (default `1s`) — duration of one
-restoring-spinner rotation; stopped under reduced motion.
+**Themeable custom properties:** `--lr-checkpoint-spin-duration` (default
+`var(--lr-transition-ambient)`, the library's compound duration/timing-function token for infinite
+"still alive" motion) — the restoring spinner's rotation cycle. Because that value carries a timing
+function as well as a duration, it can only be spliced into the `animation` shorthand, never
+assigned to `animation-duration` alone. The spinner stops outright under
+`prefers-reduced-motion: reduce`.
 
 ```html
 <lr-checkpoint checkpoint-id="ck_18" label="Before refactor" .timestamp=${t}

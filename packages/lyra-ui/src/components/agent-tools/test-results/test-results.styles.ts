@@ -42,6 +42,14 @@ export const styles = css`
     border-color: var(--lr-test-results-filter-active-border, var(--lr-color-brand));
     color: var(--lr-test-results-filter-active-color, var(--lr-color-brand));
   }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
+     than hover rather than repeating it. It must stay after the [aria-pressed='true'] rule: the two
+     selectors are both (0,2,0), so source order alone decides whether pressing an already-selected
+     filter shows any feedback at all. */
+  [part='filter-toggle']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='filter-toggle']:focus-visible,
   [part='test-name']:focus-visible,
   [part='test-expand-toggle']:focus-visible {
@@ -51,6 +59,10 @@ export const styles = css`
   [part='test-name']:hover,
   [part='test-expand-toggle']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='test-name']:active,
+  [part='test-expand-toggle']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='suite'] + [part='suite'] {
     margin-block-start: var(--lr-space-s);

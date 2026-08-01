@@ -141,7 +141,9 @@ function isSuppressed(rawLines, strippedLines, flaggedLine, ruleId) {
 
 function defaultStringKeys() {
   const source = fs.readFileSync(path.join(internalRoot, 'localization.ts'), 'utf8');
-  const match = source.match(/const DEFAULT_STRINGS: Record<LyraMessageKey, string> = \{([\s\S]*?)\n\};/);
+  // `LyraMessage` since 8.0.0 (a plain string OR a plural-category object); `string` is still
+  // accepted so this rule keeps working if the value type is ever narrowed back.
+  const match = source.match(/const DEFAULT_STRINGS: Record<LyraMessageKey, (?:string|LyraMessage)> = \{([\s\S]*?)\n\};/);
   if (!match) throw new Error('could not locate DEFAULT_STRINGS in src/internal/localization.ts');
   const keys = new Set([...match[1].matchAll(/^\s*([A-Za-z0-9_]+):/gm)].map((m) => m[1]));
   if (keys.size < 100) throw new Error(`implausibly few DEFAULT_STRINGS keys parsed (${keys.size})`);

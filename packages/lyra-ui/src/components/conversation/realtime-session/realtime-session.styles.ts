@@ -12,6 +12,7 @@ export const styles = css`
     border-radius: var(--lr-radius); background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; cursor: pointer;
   }
   [part='controls'] button:hover { background: var(--lr-color-surface-raised); }
+  [part='controls'] button:active { background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='controls'] button:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='error'] { margin: 0; padding: var(--lr-space-s); border-inline-start: var(--lr-border-width-thick) solid var(--lr-color-danger); background: var(--lr-color-danger-quiet); color: var(--lr-color-text); }
   [part='capture'] { align-self: center; }

@@ -6,12 +6,34 @@ import { FormAssociated } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
+import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
-export type TextareaResize = 'none' | 'vertical' | 'both' | 'auto';
+export type TextareaResize = 'none' | 'vertical' | 'horizontal' | 'both' | 'auto';
 export type TextareaWrap = 'hard' | 'soft' | 'off';
 export type TextareaSelectionDirection = 'forward' | 'backward' | 'none';
+/** Alias of the canonical six-step size ladder. The `size` property itself accepts
+ *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
+export type TextareaSize = LyraSizeStep;
+/** Alias of the library's one `appearance` (fill-treatment) vocabulary. */
+export type TextareaAppearance = LyraAppearance;
+
+/** Scroll offsets read from, or written to, the internal native `<textarea>`. */
+export interface TextareaScrollPosition {
+  top: number;
+  left: number;
+}
+
+/**
+ * How long the character count waits after the last keystroke before republishing itself to the
+ * polite live region. Announcing on every keystroke would talk over the character the user just
+ * typed; a pause long enough to read as "the user stopped" is the standard compromise.
+ */
+const COUNT_ANNOUNCE_DELAY_MS = 1000;
 
 /** Enumerated (not boolean-presence) attribute parsing for `spellcheck`, matching the native HTML
  *  `spellcheck` attribute's own true/false/empty/inherit semantics -- Lit's built-in `type:
@@ -60,13 +82,34 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @slot error - Custom error content.
  * @csspart form-control - The outer wrapper around label, textarea, error and hint.
  * @csspart form-control-label - The `<label>` element.
+ * @csspart textarea-wrapper - The wrapper around the native `<textarea>`.
  * @csspart textarea - The native `<textarea>` element.
+ * @csspart footer - The row below the field carrying the character count. Hidden without `with-count`.
+ * @csspart count - The character count, rendered only with `with-count`.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
  * @cssprop [--lr-textarea-max-block-size=none] - Maximum auto-grown block size before the textarea scrolls.
+ * @cssprop [--lr-textarea-padding=var(--lr-form-control-padding-inline)] - Padding of the native
+ * textarea on all four sides, from the active `size` tier of the shared form-control ladder
+ * (`internal/sizes.styles.ts`). The ladder's *inline* gutter is used on every side deliberately:
+ * its block padding is `0` at the two tightest tiers because a control row's height floor supplies
+ * the space there, and a textarea has no such floor -- the first line of text would sit on the
+ * border.
+ * @cssprop [--lr-textarea-font-size=var(--lr-form-control-font-size)] - Font size of the native
+ * textarea, from the active `size` tier of the shared ladder.
+ * @cssprop [--lr-textarea-radius=var(--lr-form-control-radius)] - Corner radius of the field, from
+ * the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius).
+ * `pill` swaps it to `--lr-radius-pill`.
+ * @cssprop [--lr-textarea-fill=var(--lr-color-surface)] - Background of the field. Swapped per
+ * `appearance`; the documented default is `appearance="filled-outlined"`'s value.
+ * @cssprop [--lr-textarea-border-color=var(--lr-color-border)] - Border color of the field,
+ * swapped per `appearance` in the same way as `--lr-textarea-fill`.
  */
 export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
-  static override styles = [LyraElement.styles, styles];
+  // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
+  // so the padding/font-size/radius knobs point at the active tier's value -- and so both spellings
+  // of every tier (`s` and `small`, ...) work with no per-component rule.
+  static override styles = [LyraElement.styles, sizes, styles];
 
   /** Visible text rows. */
   // numeric-guard-exempt: forwarded only to the native <textarea rows> attribute (see the
@@ -74,10 +117,31 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   // its default for an invalid value instead of throwing, and this file performs no arithmetic on
   // `rows` itself (fitToContent() measures the live DOM scrollHeight, not this property).
   @property({ type: Number }) rows = 3;
-  /** Native CSS `resize` behavior for the textarea, plus `'auto'`: a `ResizeObserver`-driven
-   *  grow-to-content mode with no manual drag handle (mirrors `wa-textarea`'s `resize="auto"`).
-   *  An invalid runtime value falls back to `'vertical'`. */
+  /** Native CSS `resize` behavior for the textarea (`'none'`, `'vertical'`, `'horizontal'`,
+   *  `'both'`), plus `'auto'`: a `ResizeObserver`-driven grow-to-content mode with no manual drag
+   *  handle (mirrors `wa-textarea`'s `resize="auto"`). An invalid runtime value falls back to
+   *  `'vertical'`. */
   @property() resize: TextareaResize = 'vertical';
+  /** Visual size on the library's one control ladder, shared with `<lr-input>`/`<lr-select>`.
+   *  Accepts both the canonical `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's
+   *  `'small'`/`'medium'`/`'large'` spellings of `s`/`m`/`l`; the two render identically. Governs
+   *  the field's padding and font size — a textarea's own height comes from `rows`/`resize`, not
+   *  from the ladder's control-height floor. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Visual treatment of the field, from the library's shared vocabulary and with the same
+   *  meanings as `<lr-input>`'s `appearance`. Each value only swaps
+   *  `--lr-textarea-fill`/`--lr-textarea-border-color`. */
+  @property({ reflect: true }) appearance: LyraAppearance = 'filled-outlined';
+  /** Fully rounded field corners, matching `<lr-input>`'s/`<lr-select>`'s own `pill` — Shoelace and
+   *  Web Awesome both ship it on their textarea, so a mechanical tag rename must not drop it.
+   *  Re-assigns `--lr-textarea-radius` to `--lr-radius-pill` rather than declaring a radius on
+   *  `[part="textarea"]`, so a consumer's own `--lr-textarea-radius` stays the single corner-radius
+   *  knob. Most useful on a one-or-two-row field; a tall multi-line surface with fully rounded ends
+   *  wastes its first and last line's inline space, so this is opt-in rather than tied to `size`. */
+  @property({ type: Boolean, reflect: true }) pill = false;
+  /** Renders a character count below the field. With `maxlength` set it counts down the remaining
+   *  characters instead of up from zero. */
+  @property({ attribute: 'with-count', type: Boolean, reflect: true }) withCount = false;
   @property() placeholder = '';
   /** Forwards native read-only behavior to the internal textarea. The value remains focusable,
    *  selectable, copyable, and form-submittable; constraint validation is suspended until the
@@ -118,18 +182,23 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    *  the limit; it reports `tooLong` for values that arrive some other way (paste of a longer
    *  value, a programmatic assignment). */
   // numeric-guard-exempt: same rationale as `minlength` above, for the native <textarea maxlength>
-  // attribute and ValidityState.tooLong.
+  // attribute and ValidityState.tooLong. The one place this file *does* compute with it -- the
+  // remaining-characters readout behind `with-count` -- routes through countMaxlength(), which
+  // drops a non-finite value entirely rather than arithmetic-ing on it.
   @property({ type: Number }) maxlength?: number;
 
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @state() private hasLabelSlot = false;
   @state() private touched = false;
+  /** Empty until the user pauses typing, so the live region says nothing on first render. */
+  @state() private announcedCountText = '';
 
   @query('textarea') private textareaEl?: HTMLTextAreaElement;
   private resizeObserver?: ResizeObserver;
   private lastObservedWidth?: number;
   private resizeRaf?: number;
+  private countAnnounceTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     super();
@@ -189,6 +258,26 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     this.textareaEl?.setSelectionRange(start, end, direction);
   }
 
+  /**
+   * Reads or writes the internal textarea's scroll offsets — the one piece of scroll state a
+   * consumer restoring a draft, or pinning a long value to its end, cannot reach through any other
+   * public member.
+   *
+   * Called with no argument it returns the current `{ top, left }`; called with a partial position
+   * it writes only the axes present and returns `undefined`. Returns `undefined` either way before
+   * the internal textarea has rendered.
+   */
+  scrollPosition(position?: { top?: number; left?: number }): TextareaScrollPosition | undefined {
+    const ta = this.textareaEl;
+    if (!ta) return undefined;
+    if (position) {
+      if (position.top !== undefined) ta.scrollTop = finiteNumber(position.top, ta.scrollTop);
+      if (position.left !== undefined) ta.scrollLeft = finiteNumber(position.left, ta.scrollLeft);
+      return undefined;
+    }
+    return { top: ta.scrollTop, left: ta.scrollLeft };
+  }
+
   /** Passthrough to the native `<textarea>`'s `setRangeText()`. Mirrors `wa-textarea`'s own method
    *  of the same name/signature. No-op if the element hasn't rendered yet. */
   setRangeText(replacement: string): void;
@@ -235,7 +324,56 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     this.resizeObserver = undefined;
     if (this.resizeRaf !== undefined) cancelAnimationFrame(this.resizeRaf);
     this.resizeRaf = undefined;
+    if (this.countAnnounceTimer !== undefined) clearTimeout(this.countAnnounceTimer);
+    this.countAnnounceTimer = undefined;
     super.disconnectedCallback();
+  }
+
+  /**
+   * `maxlength` as a usable non-negative integer, or `undefined` when it was never set or arrived
+   * unparseable — an attribute goes through `Number()`, so `maxlength="oops"` reaches this
+   * property as `NaN`, and subtracting from that would render a literal `NaN` in the count.
+   */
+  private countMaxlength(): number | undefined {
+    const declared = this.maxlength;
+    if (declared === undefined || !Number.isFinite(declared)) return undefined;
+    return finiteCount(declared, 0);
+  }
+
+  /**
+   * The character count's text. Lengths count UTF-16 code units (`String.length`) rather than
+   * grapheme clusters, deliberately: that is exactly what the native `maxlength` the count is
+   * reporting against enforces, and a count that disagreed with the limit it describes would be
+   * worse than one that disagrees with an emoji.
+   *
+   * The remaining count floors at zero. Only a script-assigned value can exceed `maxlength` (the
+   * native control blocks typing past it), and "-3 characters remaining" is a worse signal for
+   * that state than the `tooLong` validity flag already raised for it.
+   */
+  private countText(): string {
+    const format = getNumberFormat(this.effectiveLocale);
+    const max = this.countMaxlength();
+    if (max !== undefined) {
+      const remaining = Math.max(0, max - this.value.length);
+      return this.localize('textareaCharactersRemaining', undefined, {
+        count: format.format(remaining),
+        pluralCount: remaining,
+      });
+    }
+    const length = this.value.length;
+    return this.localize('textareaCharacterCount', undefined, {
+      count: format.format(length),
+      pluralCount: length,
+    });
+  }
+
+  private scheduleCountAnnouncement(): void {
+    if (this.countAnnounceTimer !== undefined) clearTimeout(this.countAnnounceTimer);
+    if (!this.withCount) return;
+    this.countAnnounceTimer = setTimeout(() => {
+      this.countAnnounceTimer = undefined;
+      this.announcedCountText = this.countText();
+    }, COUNT_ANNOUNCE_DELAY_MS);
   }
 
   /**
@@ -357,6 +495,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     if (!this.textareaEl) return;
     this.value = this.textareaEl.value;
     if (this.resize === 'auto') this.fitToContent();
+    this.scheduleCountAnnouncement();
     this.emit('input');
     this.emit('lr-input', { value: this.value });
   };
@@ -405,41 +544,49 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
         <label part="form-control-label" for="textarea" ?hidden=${!hasLabel}>
           ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
         </label>
-        <textarea
-          id="textarea"
-          part="textarea"
-          rows=${this.rows}
-          placeholder=${this.placeholder}
-          style=${styleMap({ resize: cssResize })}
-          ?data-auto-resize=${this.resize === 'auto'}
-          aria-label=${this.accessibleLabel ||
-          (hasLabel ? nothing : this.placeholder || this.localize('textareaLabel'))}
-          aria-describedby=${describedBy || nothing}
-          aria-required=${this.required ? 'true' : 'false'}
-          aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
-          spellcheck=${this.spellcheck}
-          autocapitalize=${this.autocapitalize || nothing}
-          autocorrect=${this.autoCorrect || nothing}
-          autocomplete=${this.autocomplete || nothing}
-          inputmode=${this.inputMode || nothing}
-          enterkeyhint=${this.enterKeyHint || nothing}
-          minlength=${this.minlength ?? nothing}
-          maxlength=${this.maxlength ?? nothing}
-          wrap=${this.wrap}
-          .value=${this.value}
-          ?required=${this.required}
-          ?disabled=${this.effectiveDisabled}
-          ?readonly=${this.readonly}
-          @input=${this.onInput}
-          @change=${this.onChange}
-          @focus=${this.onFocus}
-          @blur=${this.onBlur}
-        ></textarea>
+        <div part="textarea-wrapper">
+          <textarea
+            id="textarea"
+            part="textarea"
+            rows=${this.rows}
+            placeholder=${this.placeholder}
+            style=${styleMap({ resize: cssResize })}
+            ?data-auto-resize=${this.resize === 'auto'}
+            aria-label=${this.accessibleLabel ||
+            (hasLabel ? nothing : this.placeholder || this.localize('textareaLabel'))}
+            aria-describedby=${describedBy || nothing}
+            aria-required=${this.required ? 'true' : 'false'}
+            aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
+            spellcheck=${this.spellcheck}
+            autocapitalize=${this.autocapitalize || nothing}
+            autocorrect=${this.autoCorrect || nothing}
+            autocomplete=${this.autocomplete || nothing}
+            inputmode=${this.inputMode || nothing}
+            enterkeyhint=${this.enterKeyHint || nothing}
+            minlength=${this.minlength ?? nothing}
+            maxlength=${this.maxlength ?? nothing}
+            wrap=${this.wrap}
+            .value=${this.value}
+            ?required=${this.required}
+            ?disabled=${this.effectiveDisabled}
+            ?readonly=${this.readonly}
+            @input=${this.onInput}
+            @change=${this.onChange}
+            @focus=${this.onFocus}
+            @blur=${this.onBlur}
+          ></textarea>
+        </div>
         <div id="textarea-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
         </div>
         <div id="textarea-hint" part="hint" ?hidden=${!hasHint}>
           ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+        </div>
+        <div part="footer" ?hidden=${!this.withCount}>
+          ${this.withCount
+            ? html`<div part="count" aria-hidden="true">${this.countText()}</div>
+                <div class="count-announcement" aria-live="polite">${this.announcedCountText}</div>`
+            : nothing}
         </div>
       </div>
     `;

@@ -59,12 +59,82 @@ export const Variants: Story = {
 
 export const Appearances: Story = {
   render: () => html`
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
       <lr-button variant="brand" appearance="accent">Accent</lr-button>
       <lr-button variant="brand" appearance="filled">Filled</lr-button>
       <lr-button variant="brand" appearance="outlined">Outlined</lr-button>
+      <lr-button variant="brand" appearance="filled-outlined">Filled outlined</lr-button>
       <lr-button variant="brand" appearance="plain">Plain</lr-button>
+      <lr-button variant="brand" appearance="quiet">Quiet</lr-button>
       <lr-button variant="brand" appearance="link">Link</lr-button>
+    </div>
+  `,
+};
+
+export const FilledOutlined: Story = {
+  name: 'Filled outlined',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`appearance="filled-outlined"` keeps the filled tier’s fill and foreground but takes the ' +
+          'outlined tier’s `--lr-button-outlined-border`, so the edge still reads against a ' +
+          'same-toned surface.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+      <lr-button appearance="filled">Filled</lr-button>
+      <lr-button appearance="filled-outlined">Filled outlined</lr-button>
+      <lr-button variant="brand" appearance="filled-outlined">Brand</lr-button>
+      <lr-button variant="danger" appearance="filled-outlined">Danger</lr-button>
+    </div>
+  `,
+};
+
+export const Pill: Story = {
+  name: 'Pill',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`pill` re-assigns `--lr-button-radius` to `--lr-radius-pill`, so every appearance and ' +
+          'size tier picks up fully rounded ends through the same knob a consumer would override.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+      <lr-button pill variant="brand" appearance="accent">Accent</lr-button>
+      <lr-button pill appearance="outlined">Outlined</lr-button>
+      <lr-button pill size="xs">Extra small</lr-button>
+      <lr-button pill size="l">Large</lr-button>
+    </div>
+  `,
+};
+
+export const WithCaret: Story = {
+  name: 'Dropdown trigger (with-caret)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `with-caret` chevron (`::part(caret)`) marks the button as a dropdown/menu trigger. ' +
+          'It is decorative (`aria-hidden`) — the popup relationship belongs on the host as ' +
+          '`aria-haspopup`/`aria-expanded`, both of which are forwarded to the internal control.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+      <lr-button with-caret aria-haspopup="menu" aria-expanded="false">Actions</lr-button>
+      <lr-button with-caret pill appearance="outlined" aria-haspopup="menu" aria-expanded="false">
+        Filter
+      </lr-button>
+      <lr-button with-caret size="xs" appearance="quiet" aria-haspopup="menu" aria-expanded="false">
+        Sort
+      </lr-button>
     </div>
   `,
 };
@@ -92,12 +162,28 @@ export const Link: Story = {
   `,
 };
 
-export const NeutralAccentVsFilled: Story = {
-  name: 'Neutral: accent vs. filled',
+export const AccentVsFilled: Story = {
+  name: 'Accent vs. filled, every variant',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`appearance="accent"` (the default) is the active `variant`’s **loud** fill; ' +
+          '`appearance="filled"` is the same tone one emphasis step down, its **quiet** tint. The two ' +
+          'resolve against different rows of the shared semantic grid, so they differ for every ' +
+          'variant — including `neutral`, whose filled tier used to be the page surface, i.e. no fill ' +
+          'at all.',
+      },
+    },
+  },
   render: () => html`
-    <div style="display: flex; gap: 0.5rem;">
-      <lr-button variant="neutral" appearance="accent">Accent (loud fill)</lr-button>
-      <lr-button variant="neutral" appearance="filled">Filled (ambient surface)</lr-button>
+    <div style="display: grid; grid-template-columns: repeat(2, max-content); gap: 0.5rem;">
+      ${['neutral', 'brand', 'success', 'warning', 'danger'].map(
+        (variant) => html`
+          <lr-button variant=${variant} appearance="accent">${variant} accent</lr-button>
+          <lr-button variant=${variant} appearance="filled">${variant} filled</lr-button>
+        `,
+      )}
     </div>
   `,
 };
@@ -105,11 +191,38 @@ export const NeutralAccentVsFilled: Story = {
 export const Sizes: Story = {
   render: () => html`
     <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <lr-button size="2xs">2XS</lr-button>
       <lr-button size="xs">XS</lr-button>
       <lr-button size="s">S</lr-button>
       <lr-button size="m">M</lr-button>
       <lr-button size="l">L</lr-button>
       <lr-button size="xl">XL</lr-button>
+    </div>
+  `,
+};
+
+export const SizeSpellings: Story = {
+  name: 'Both size spellings',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Every tier of the shared form-control ladder matches both its canonical step and Web ' +
+          'Awesome’s/Shoelace’s name for it, so migrating markup that says `size="small"` renders ' +
+          'exactly what `size="s"` renders — same height, padding and font size — with no attribute ' +
+          'rewrite. The same ladder backs `<lr-input>`, `<lr-select>` and `<lr-textarea>`, so ' +
+          'same-tier controls line up in a toolbar row.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; grid-template-columns: repeat(2, max-content); gap: 0.5rem; align-items: center;">
+      <lr-button size="s">size="s"</lr-button>
+      <lr-button size="small">size="small"</lr-button>
+      <lr-button size="m">size="m"</lr-button>
+      <lr-button size="medium">size="medium"</lr-button>
+      <lr-button size="l">size="l"</lr-button>
+      <lr-button size="large">size="large"</lr-button>
     </div>
   `,
 };
@@ -120,8 +233,9 @@ export const CompactToolbarTier: Story = {
     docs: {
       description: {
         story:
-          'Each `size` tier is expressed as `--lr-button-padding-block`, `--lr-button-padding-inline`, ' +
-          '`--lr-button-font-size` and `--lr-button-min-height`, so a toolbar can retune a tier — or pin ' +
+          'Each `size` tier reaches the button through `--lr-button-padding-block`, ' +
+          '`--lr-button-padding-inline`, `--lr-button-font-size` and `--lr-button-min-height` — all ' +
+          'four pointed at the shared form-control ladder — so a toolbar can retune a tier — or pin ' +
           'an exact row height with `--lr-button-height` — without a `::part(base)` rule. ' +
           '`--lr-button-height` is undeclared by default, which is what keeps each tier’s min-height ' +
           'floor working when it is unset.',
@@ -148,7 +262,9 @@ export const OutlinedFill: Story = {
         story:
           '`appearance="outlined"` is transparent by default; `--lr-button-outlined-fill` tints it ' +
           'without a `::part(base)` rule. It is not swapped per `variant` (same stance as ' +
-          '`--lr-button-quiet-*`), and the hover `filter: brightness()` visibly affects a tinted fill.',
+          '`--lr-button-quiet-*`). The hover and press states mix away from ' +
+          '`--lr-button-hover-base`, which this appearance leaves on the page surface, so set that ' +
+          'to the same colour when you tint the fill.',
       },
     },
   },
@@ -226,6 +342,41 @@ export const SubmitInAForm: Story = {
       }}
     >
       <lr-button type="submit" variant="brand">Save</lr-button>
+    </form>
+  `,
+};
+
+export const NamedSubmitters: Story = {
+  name: 'Named submitters (name / value / form* overrides)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A submit button carrying `name`/`value` contributes that pair to the submitted ' +
+          '`FormData`, so one form can distinguish which action was taken. `formnovalidate` (and ' +
+          '`formaction`/`formenctype`/`formmethod`/`formtarget`) override the form owner for that ' +
+          'submission only.',
+      },
+    },
+  },
+  render: () => html`
+    <form
+      @submit=${(event: SubmitEvent) => {
+        event.preventDefault();
+        const form = event.currentTarget as HTMLFormElement;
+        const data = new FormData(form, event.submitter);
+        alert(`action=${String(data.get('action'))} title=${String(data.get('title'))}`);
+      }}
+    >
+      <label>Title <input name="title" required /></label>
+      <div style="display: flex; gap: 0.5rem; margin-block-start: 0.5rem;">
+        <lr-button type="submit" name="action" value="publish" variant="brand" appearance="accent">
+          Publish
+        </lr-button>
+        <lr-button type="submit" name="action" value="draft" appearance="outlined" formnovalidate>
+          Save draft (skips validation)
+        </lr-button>
+      </div>
     </form>
   `,
 };

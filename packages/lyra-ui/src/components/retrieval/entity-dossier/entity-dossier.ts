@@ -6,6 +6,6 @@ import '../neighbor-list/neighbor-list.js';
 import '../chunk-inspector/chunk-inspector.js';
 import '../provenance-panel/provenance-panel.js';
 import '../../data/stat/stat.js';
-import '../../layout/tabs/tabs.js';
+import '../../layout/tab-group/tab-group.js';
 import '../../overlays/empty/empty.js';
 defineElement('entity-dossier', LyraEntityDossier);

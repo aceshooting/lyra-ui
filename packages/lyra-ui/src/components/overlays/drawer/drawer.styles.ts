@@ -17,28 +17,27 @@ export const styles = css`
     align-items: flex-end;
     justify-content: stretch;
   }
+  /* Only the animation NAME is overridden here. Duration, easing and fill-mode all keep coming
+     from the dialog panel rule this extends, so --lr-dialog-panel-duration retunes both surfaces
+     and the reduced-motion token flattening reaches the drawer for free. */
   [part='panel'] {
     inline-size: min(var(--lr-drawer-width, var(--lr-size-24rem)), 100%);
     block-size: 100%;
     max-inline-size: 100%;
     max-block-size: 100%;
     border-radius: 0;
+    /* Modal layer, one step below lr-dialog's --lr-shadow-xl: an edge-anchored sheet is flush with
+       three viewport edges, so only the one inward edge can cast anything. The surface itself keeps
+       the inherited --lr-color-surface-overlay. */
+    box-shadow: var(--lr-shadow-l);
+    animation-name: lr-drawer-in;
   }
   :host([placement='top']) [part='panel'],
   :host([placement='bottom']) [part='panel'] {
     inline-size: 100%;
     block-size: min(var(--lr-drawer-height, var(--lr-size-24rem)), 100%);
     max-block-size: 100%;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    [part='panel'] {
-      animation: lr-drawer-in var(--lr-transition-base) both;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    [part='panel'] {
-      animation: none;
-    }
+    animation-name: lr-drawer-in-block;
   }
   @keyframes lr-drawer-in {
     from {
@@ -48,6 +47,36 @@ export const styles = css`
     to {
       opacity: 1;
       transform: translateX(0);
+    }
+  }
+  @keyframes lr-drawer-out {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(var(--lr-drawer-enter-x, calc(-1 * var(--lr-size-1rem))));
+    }
+  }
+  @keyframes lr-drawer-in-block {
+    from {
+      opacity: 0;
+      transform: translateY(var(--lr-drawer-enter-y, calc(-1 * var(--lr-size-1rem))));
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes lr-drawer-out-block {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(var(--lr-drawer-enter-y, calc(-1 * var(--lr-size-1rem))));
     }
   }
   :host([placement='end']) [part='panel'] {
@@ -65,21 +94,17 @@ export const styles = css`
   :host(:dir(rtl)[placement='end']) [part='panel'] {
     --lr-drawer-enter-x: calc(-1 * var(--lr-size-1rem));
   }
-  :host([placement='top']) [part='panel'],
-  :host([placement='bottom']) [part='panel'] {
-    animation-name: lr-drawer-in-block;
-  }
-  @keyframes lr-drawer-in-block {
-    from {
-      opacity: 0;
-      transform: translateY(var(--lr-drawer-enter-y, calc(-1 * var(--lr-size-1rem))));
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
   :host([placement='bottom']) [part='panel'] {
     --lr-drawer-enter-y: var(--lr-size-1rem);
+  }
+  /* Declared last so they win the tie against the same-specificity placement rules above; the
+     placement-qualified exit rule below is more specific still, so a top/bottom drawer leaves
+     along the block axis it arrived on. */
+  :host([data-closing]) [part='panel'] {
+    animation-name: lr-drawer-out;
+  }
+  :host([data-closing][placement='top']) [part='panel'],
+  :host([data-closing][placement='bottom']) [part='panel'] {
+    animation-name: lr-drawer-out-block;
   }
 `;

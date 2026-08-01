@@ -2,12 +2,18 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
+import { submitOnEnter } from '../../../internal/submit-on-enter.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
 
-export type LyraTokenInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraTokenInputSize = LyraSizeStep;
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -70,6 +76,11 @@ const delimiterConverter = {
 };
 
 /** `<lr-token-input>` — an editable, form-associated list of removable tokens.
+ *
+ * Enter commits the typed draft into a token while there is one; with the draft empty it performs
+ * the implicit form submission a native text field would (see `internal/submit-on-enter.ts` — the
+ * internal input is in a shadow root and has no form owner, so the platform can never do it here).
+ * A `delimiter` keystroke stays purely a commit key and never submits.
  * @customElement lr-token-input
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
@@ -100,22 +111,34 @@ const delimiterConverter = {
  * @cssprop --lr-token-input-token-padding - Per-token chip padding, scaled by `size`.
  * @cssprop [--lr-token-input-gap=var(--lr-space-xs)] - Gap between form/row children.
  * @cssprop [--lr-token-input-token-gap=var(--lr-space-2xs)] - Gap inside token chips.
- * @cssprop [--lr-token-input-radius=var(--lr-radius)] - Row/token corner radius.
+ * @cssprop [--lr-token-input-radius=var(--lr-radius)] - Row/token corner radius. The `pill`
+ *   attribute swaps it for `--lr-radius-pill`.
  * @cssprop [--lr-token-input-token-bg=var(--lr-color-brand-quiet)] - Token chip background.
  * @cssprop [--lr-token-input-action-hover-bg=var(--lr-color-brand-quiet)] - Edit/remove hover background.
  * @cssprop [--lr-token-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
  * @cssprop [--lr-token-input-invalid-border-color=var(--lr-color-danger)] - Invalid row border color.
  * @cssprop --lr-token-input-font-size - Input-wrapper/token font size, scaled by `size`.
- * @cssprop --lr-token-input-control-min-height - Input-wrapper block-size floor, scaled by `size`.
+ * @cssprop [--lr-token-input-control-min-height=var(--lr-form-control-height)] - Input-wrapper
+ *   block-size floor. Reads the shared form-control height ladder, so retuning
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.
  * @cssprop --lr-token-input-control-height - Exact input-wrapper height. Unset by default, which
  *   leaves `--lr-token-input-control-min-height` as a floor only; set it to a length to both floor
  *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
  *   never declared by the component itself, it can be set from an ancestor or an outer-tree rule
  *   as well as inline on the element.
+ * @cssstate required - Matches while `required` is set.
+ * @cssstate optional - Matches while `required` is not set (the complement of `required`).
+ * @cssstate valid - Matches while the control satisfies its constraints.
+ * @cssstate invalid - Matches while it does not — including a pristine required control with no
+ *   tokens yet, exactly like native `:invalid`.
+ * @cssstate user-valid - `valid`, but only after the user has interacted (blurred the text input,
+ *   or been through a `reportValidity()`/submit attempt).
+ * @cssstate user-invalid - `invalid`, but only after that same interaction — a required control
+ *   nobody has touched yet is invalid without being styled as an error.
  */
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     name: { reflect: true, noAccessor: true },
@@ -136,8 +159,14 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    *  The camel-cased property avoids the boolean `HTMLElement.autocorrect` DOM typing. */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
-  /** Visual size — same `2xs`–`xl` scale as `lr-input`'s own `size`. */
-  @property({ reflect: true }) size: LyraTokenInputSize = 'm';
+  /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`. The Web Awesome /
+   *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
+   *  tag rename with no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Rounds the token row's corners to a full pill, mirroring `lr-input`'s own `pill`. It is a
+   *  single override of `--lr-token-input-radius`, which the tokens share with the row, so the
+   *  chips round with it. */
+  @property({ type: Boolean, reflect: true }) pill = false;
   @property({ attribute: 'allow-duplicates', type: Boolean }) allowDuplicates = false;
   /** Allow editing an existing token in place: each token becomes a roving tab stop that opens an
    *  inline editor on click, Enter, or F2. Defaults to `false`, in which case the token row renders
@@ -274,7 +303,31 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    */
   [VALIDITY_ANCHOR](): HTMLElement | null { return this.inputEl ?? this.renderRoot?.querySelector('[part="input-wrapper"]') ?? null; }
   checkValidity(): boolean { return this.internals.checkValidity(); }
-  reportValidity(): boolean { return this.internals.reportValidity(); }
+  /** Reporting is what a submit attempt does, and a failed submit is precisely when native
+   *  `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
+   *  `FormAssociated` mixin. */
+  reportValidity(): boolean { this.touched = true; this.syncValidity(); return this.internals.reportValidity(); }
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a rejection no
+   * client-side constraint can express ("that tag is reserved"). A non-empty `message` raises
+   * `customError` and becomes `validationMessage`, so the control fails `checkValidity()`, blocks
+   * submission, and matches `:state(invalid)`; `''` clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * `required` control with no tokens stays `valueMissing`. The custom error also survives every
+   * intrinsic recomputation in between (each token add/remove/edit re-runs `syncValidity()`) and a
+   * `form.reset()` — matching a native control, where only another `setCustomValidity('')` clears
+   * it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    // Republishes `data-invalid` and the six validity custom states from the now-current effective
+    // validity. The intrinsic recomputation this also runs is idempotent and, by construction,
+    // never touches the custom layer the line above just set.
+    this.syncValidity();
+  }
   override focus(options?: FocusOptions): void { this.inputEl?.focus(options); }
   override blur(): void { this.inputEl?.blur(); }
   /** Focuses the draft text input, mirroring what a real click on the token row would land on --
@@ -297,6 +350,13 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     const missing = this.required && this.value.length === 0;
     this.validityController.setValidity(missing ? { valueMissing: true } : {}, missing ? this.localize('tokenInputRequired') : '');
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    // The six validity custom states, from the shared helper in `internal/custom-states.ts`. This
+    // control drives `ElementInternals` directly rather than through the `FormAssociated` mixin
+    // (its value is a `string[]`), so it publishes them itself; `touched` is its own interaction
+    // flag, already set on blur, which keeps the `user-*` pair off a pristine control the way
+    // native `:user-invalid` does. Every mutation path funnels through here, so this one call
+    // covers `value`, `required`, `name`, blur, and `form.reset()`.
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
     const data = new FormData();
     if (this.name) this.value.forEach((token) => data.append(this.name, token));
     this.internals.setFormValue(this.name ? data : null);
@@ -444,7 +504,13 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private onInput = (event: Event): void => { this.draft = (event.target as HTMLInputElement).value; };
   private onKeyDown = (event: KeyboardEvent): void => {
     if (this.effectiveDisabled) return;
-    if (event.key === 'Enter' || (this.delimiter !== null && event.key === this.delimiter)) { if (this.draft.trim()) { event.preventDefault(); this.addDraft(); } }
+    if (event.key === 'Enter' || (this.delimiter !== null && event.key === this.delimiter)) {
+      if (this.draft.trim()) { event.preventDefault(); this.addDraft(); }
+      // No draft to commit, so Enter means what it means in any other text field: implicit
+      // submission of the ancestor form. Only Enter -- a delimiter keystroke is this component's
+      // own commit key, never a submit key.
+      else if (event.key === 'Enter') submitOnEnter(this, event);
+    }
     else if (event.key === 'Tab') { if (this.draft.trim()) this.addDraft(); }
     // An open token editor owns Backspace: the destructive "remove the last token" shortcut must
     // not fire for a keystroke that was aimed at the text being edited.

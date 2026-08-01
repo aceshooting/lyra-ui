@@ -112,6 +112,22 @@ export const Sizes: Story = {
   },
 };
 
+/**
+ * `size` also accepts the Web Awesome / Shoelace spellings — `small`, `medium` and `large` render
+ * exactly as `s`, `m` and `l` — and `pill` rounds the field (and the country trigger's leading
+ * corners) to a full pill.
+ */
+export const AliasSizesAndPill: Story = {
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+      <lr-phone-input size="small" label='size="small"' default-country="LU" .adapter=${demoAdapter}></lr-phone-input>
+      <lr-phone-input size="medium" label='size="medium"' default-country="LU" .adapter=${demoAdapter}></lr-phone-input>
+      <lr-phone-input size="large" label='size="large"' default-country="LU" .adapter=${demoAdapter}></lr-phone-input>
+      <lr-phone-input pill label="pill" default-country="LU" .adapter=${demoAdapter}></lr-phone-input>
+    </div>
+  `,
+};
+
 export const Required: Story = {
   render: () => html`
     <lr-phone-input

@@ -80,6 +80,29 @@ export const Sizes: Story = {
 };
 
 /**
+ * `size` also accepts the Web Awesome / Shoelace spellings — `small`, `medium` and `large` render
+ * exactly as `s`, `m` and `l` — and `pill` rounds the trigger row to a full pill.
+ */
+export const AliasSizesAndPill: Story = {
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+      <lr-combobox size="small" label='size="small"' placeholder="Choose a value…">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>
+      <lr-combobox size="medium" label='size="medium"' placeholder="Choose a value…">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>
+      <lr-combobox size="large" label='size="large"' placeholder="Choose a value…">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>
+      <lr-combobox pill label="pill" placeholder="Choose a value…">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>
+    </div>
+  `,
+};
+
+/**
  * Rows come from `<lr-option>` children plus `group` (section headers),
  * `sub` (a secondary line), and `dot-color` (a leading status dot) — useful
  * for richer pickers like a device or status list.

@@ -5,9 +5,13 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { sanitizeSwatchColor } from '../../../internal/safe-css.js';
 import { srOnly } from '../../../internal/a11y.js';
+import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
 
-export type ContextMeterTone = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
+/** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
+export type ContextMeterTone = LyraVariant;
+/** Deliberately NOT the shared vocabulary: this is the meter's rendered SHAPE, not a semantic
+ *  tone, and it shares no members with `LyraVariant`. */
 export type ContextMeterVariant = 'ring' | 'bar';
 
 export interface ContextMeterSegment {

@@ -52,6 +52,32 @@ function findPixel(
   return false;
 }
 
+/** Resolves one of the component's canvas color tokens to its `[r, g, b]` channels, exactly the
+ *  way `heatmap.class.ts` does it: canvas cannot consume `var()`, so the component reads the custom
+ *  property off the host with `getComputedStyle()` and normalizes it through `resolveRgb()` before
+ *  assigning it to `fillStyle`/`strokeStyle`. Pixel assertions below resolve the SAME token through
+ *  the SAME path instead of restating a literal hex — the palette is generated
+ *  (`scripts/generate-palette.mjs`), so any legitimate regeneration moves these values, and a
+ *  hardcoded copy would be asserting the palette rather than the component. Reading from `el`
+ *  (not `document.documentElement`) keeps the lookup in the same shadow scope the component uses,
+ *  so a per-instance `style="--lr-heatmap-*"` override resolves identically here. */
+function resolveTokenRgb(el: HTMLElement, token: string): [number, number, number] {
+  const declared = getComputedStyle(el).getPropertyValue(token).trim();
+  // Guard the silent-failure mode: an unresolvable/typo'd token would make `resolveRgb()` return
+  // its fallback, quietly turning every comparison below into an assertion about an arbitrary color.
+  expect(declared, `${token} should resolve to a real color`).to.not.equal('');
+  const [r, g, b] = resolveRgb(declared, '#000000');
+  return [r, g, b];
+}
+
+/** The `[r, g, b]` triple of a single CSS-px pixel, as plain numbers (never a DOM node or a typed
+ *  array, so a failure renders a readable chai diff instead of hanging the file). */
+function pixelRgb(ctx: CanvasRenderingContext2D, cssX: number, cssY: number): [number, number, number] {
+  const dpr = window.devicePixelRatio || 1;
+  const data = ctx.getImageData(Math.round(cssX * dpr), Math.round(cssY * dpr), 1, 1).data;
+  return [data[0]!, data[1]!, data[2]!];
+}
+
 it('puts the generated group role and summary only on the host semantic owner', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
   el.rowLabels = ['Mon', 'Tue'];
@@ -488,14 +514,13 @@ describe('bucket-count', () => {
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    const dpr = window.devicePixelRatio || 1;
     // The max-value cell should land in the last of the fallback 5 buckets,
-    // i.e. exactly the ramp's hi endpoint (#0969da), not the canvas default
-    // black that an unresolved bucket count would silently leave behind.
-    const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(33 * dpr), 1, 1).data;
-    expect(pixel[0]).to.equal(0x09);
-    expect(pixel[1]).to.equal(0x69);
-    expect(pixel[2]).to.equal(0xda);
+    // i.e. exactly the ramp's hi endpoint (--lr-heatmap-scale-hi, resolved at
+    // runtime), not the canvas default black that an unresolved bucket count
+    // would silently leave behind.
+    const hi = resolveTokenRgb(el, '--lr-heatmap-scale-hi');
+    expect(hi).to.not.deep.equal([0, 0, 0]); // the black this test exists to rule out
+    expect(pixelRgb(ctx, 32, 33)).to.deep.equal(hi);
   });
 
   it('calendar mode: a fractional bucket-count is floored instead of producing an out-of-range ramp index', async () => {
@@ -509,13 +534,9 @@ describe('bucket-count', () => {
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    const dpr = window.devicePixelRatio || 1;
     // With bucketCount floored to 4, the max-value cell lands in the last
     // bucket (index 3), i.e. exactly the ramp's hi endpoint.
-    const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(33 * dpr), 1, 1).data;
-    expect(pixel[0]).to.equal(0x09);
-    expect(pixel[1]).to.equal(0x69);
-    expect(pixel[2]).to.equal(0xda);
+    expect(pixelRgb(ctx, 32, 33)).to.deep.equal(resolveTokenRgb(el, '--lr-heatmap-scale-hi'));
   });
 });
 
@@ -527,14 +548,11 @@ it('matrix mode: scale="sqrt" buckets the low value exactly to the ramp\'s lo en
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
-  const dpr = window.devicePixelRatio || 1;
   // sqrtStep(1, 100, 7) === 0, so the first cell (value 1) should be exactly
-  // the ramp's lo endpoint (#ddf4ff) — the linear scale would instead mix in
-  // 10% of the hi endpoint for this same value, since it never reaches 0.
-  const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
-  expect(pixel[0]).to.equal(0xdd);
-  expect(pixel[1]).to.equal(0xf4);
-  expect(pixel[2]).to.equal(0xff);
+  // the ramp's lo endpoint (--lr-heatmap-scale-lo, resolved at runtime) — the
+  // linear scale would instead mix in 10% of the hi endpoint for this same
+  // value, since it never reaches 0.
+  expect(pixelRgb(ctx, 65, 25)).to.deep.equal(resolveTokenRgb(el, '--lr-heatmap-scale-lo'));
 });
 
 it('matrix mode (default): is unaffected by the new mode/days properties', async () => {
@@ -1276,13 +1294,10 @@ describe('columnX override (calendar mode)', () => {
 
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    const dpr = window.devicePixelRatio || 1;
     // week 1's cell x-origin is columnX(1) = 150, y-origin CAL_LABEL_H(16).
-    const pixel = ctx.getImageData(Math.round(154 * dpr), Math.round(20 * dpr), 1, 1).data;
-    // Max value of the two -> exactly the ramp's hi endpoint (#0969da).
-    expect(pixel[0]).to.equal(0x09);
-    expect(pixel[1]).to.equal(0x69);
-    expect(pixel[2]).to.equal(0xda);
+    // Max value of the two -> exactly the ramp's hi endpoint
+    // (--lr-heatmap-scale-hi, resolved at runtime).
+    expect(pixelRgb(ctx, 154, 20)).to.deep.equal(resolveTokenRgb(el, '--lr-heatmap-scale-hi'));
 
     const rect = canvas.getBoundingClientRect();
     let detail: { date: string; value: number } | undefined;
@@ -1445,12 +1460,10 @@ describe('rowY override (calendar mode)', () => {
 
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    const dpr = window.devicePixelRatio || 1;
     // weekday 2's cell y-origin is rowY(2) = 200, x-origin CAL_PAD_LEFT(28).
-    const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(204 * dpr), 1, 1).data;
-    expect(pixel[0]).to.equal(0x09);
-    expect(pixel[1]).to.equal(0x69);
-    expect(pixel[2]).to.equal(0xda);
+    // Max value of the two -> exactly the ramp's hi endpoint
+    // (--lr-heatmap-scale-hi, resolved at runtime).
+    expect(pixelRgb(ctx, 32, 204)).to.deep.equal(resolveTokenRgb(el, '--lr-heatmap-scale-hi'));
 
     const rect = canvas.getBoundingClientRect();
     let detail: { date: string; value: number } | undefined;
@@ -1826,14 +1839,11 @@ describe('calendar-mode scale (extends the existing matrix-only property)', () =
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    const dpr = window.devicePixelRatio || 1;
     // sqrtStep(1, 100, 5) === 0, so the low-value cell is exactly the ramp's
-    // lo endpoint (#ddf4ff) — the default quartile scale instead lands it in
-    // a middle bucket (rank 1/2 of 2 sorted values), a visibly different color.
-    const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(20 * dpr), 1, 1).data;
-    expect(pixel[0]).to.equal(0xdd);
-    expect(pixel[1]).to.equal(0xf4);
-    expect(pixel[2]).to.equal(0xff);
+    // lo endpoint (--lr-heatmap-scale-lo, resolved at runtime) — the default
+    // quartile scale instead lands it in a middle bucket (rank 1/2 of 2 sorted
+    // values), a visibly different color (asserted by the sibling test below).
+    expect(pixelRgb(ctx, 32, 20)).to.deep.equal(resolveTokenRgb(el, '--lr-heatmap-scale-lo'));
   });
 
   it('defaults to the quartile scale (unchanged), not sqrt, for the same skewed value set', async () => {
@@ -1845,9 +1855,11 @@ describe('calendar-mode scale (extends the existing matrix-only property)', () =
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    const dpr = window.devicePixelRatio || 1;
-    const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(20 * dpr), 1, 1).data;
-    expect([pixel[0], pixel[1], pixel[2]]).to.not.deep.equal([0xcd, 0xe2, 0xfb]);
+    // The counterpart of the sqrt test above: under the default quartile scale this same low value
+    // must NOT land on the ramp's lo endpoint, so the two scales are provably distinguishable.
+    // Resolved at runtime for the same reason -- the previous literal here was the JS-side
+    // FALLBACK_SCALE_LO (never actually painted while the token resolves), so it could not fail.
+    expect(pixelRgb(ctx, 32, 20)).to.not.deep.equal(resolveTokenRgb(el, '--lr-heatmap-scale-lo'));
   });
 });
 
@@ -2286,12 +2298,9 @@ describe('coverage: focus-ring fast-path repaint color/overlay branches', () => 
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // focuses (0,0) via the fast path
     await el.updateComplete;
     const ctx = canvas.getContext('2d')!;
-    const dpr = window.devicePixelRatio || 1;
-    const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
-    // sqrtStep(1, 100, 7) === 0 -> exactly the ramp's lo endpoint.
-    expect(pixel[0]).to.equal(0xdd);
-    expect(pixel[1]).to.equal(0xf4);
-    expect(pixel[2]).to.equal(0xff);
+    // sqrtStep(1, 100, 7) === 0 -> exactly the ramp's lo endpoint
+    // (--lr-heatmap-scale-lo, resolved at runtime).
+    expect(pixelRgb(ctx, 65, 25)).to.deep.equal(resolveTokenRgb(el, '--lr-heatmap-scale-lo'));
   });
 
   it('matrix mode: respects colorSteps when computing the repainted cell color', async () => {
@@ -2327,8 +2336,10 @@ describe('coverage: focus-ring fast-path repaint color/overlay branches', () => 
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // moves to (0,1), repainting (0,0)
     await el.updateComplete;
     const ctx = canvas.getContext('2d')!;
-    // (0,0) is no longer focused, so only its annotation ring (default #cf222e) should be visible.
-    expect(findPixel(ctx, 59, 19, 24, 24, (r, g, b) => r === 0xcf && g === 0x22 && b === 0x2e)).to.equal(true);
+    // (0,0) is no longer focused, so only its annotation ring should be visible -- painted with
+    // --lr-heatmap-annotation-color, resolved at runtime rather than restated as a literal.
+    const [ar, ag, ab] = resolveTokenRgb(el, '--lr-heatmap-annotation-color');
+    expect(findPixel(ctx, 59, 19, 24, 24, (r, g, b) => r === ar && g === ag && b === ab)).to.equal(true);
   });
 
   it('calendar mode: respects scale="sqrt" when computing the repainted cell color', async () => {
@@ -2342,11 +2353,9 @@ describe('coverage: focus-ring fast-path repaint color/overlay branches', () => 
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     await el.updateComplete;
     const ctx = canvas.getContext('2d')!;
-    const dpr = window.devicePixelRatio || 1;
-    const pixel = ctx.getImageData(Math.round(33 * dpr), Math.round(21 * dpr), 1, 1).data;
-    expect(pixel[0]).to.equal(0xdd);
-    expect(pixel[1]).to.equal(0xf4);
-    expect(pixel[2]).to.equal(0xff);
+    // sqrtStep(1, 100, 5) === 0 -> exactly the ramp's lo endpoint
+    // (--lr-heatmap-scale-lo, resolved at runtime).
+    expect(pixelRgb(ctx, 33, 21)).to.deep.equal(resolveTokenRgb(el, '--lr-heatmap-scale-lo'));
   });
 
   it('calendar mode: respects colorSteps when computing the repainted cell color', async () => {
@@ -2384,8 +2393,10 @@ describe('coverage: focus-ring fast-path repaint color/overlay branches', () => 
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); // moves to weekday 1, repainting weekday 0
     await el.updateComplete;
     const ctx = canvas.getContext('2d')!;
-    // weekday 0 is no longer focused; the selected ring (#1a7f37, stroked after the annotation ring) should be visible.
-    expect(findPixel(ctx, 27, 15, 13, 13, (r, g, b) => r === 0x1a && g === 0x7f && b === 0x37)).to.equal(true);
+    // weekday 0 is no longer focused; the selected ring (painted with --lr-heatmap-selected-color,
+    // resolved at runtime, and stroked after the annotation ring) should be visible.
+    const [sr, sg, sb] = resolveTokenRgb(el, '--lr-heatmap-selected-color');
+    expect(findPixel(ctx, 27, 15, 13, 13, (r, g, b) => r === sr && g === sg && b === sb)).to.equal(true);
   });
 });
 

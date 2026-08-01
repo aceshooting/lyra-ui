@@ -51,13 +51,15 @@ cancelable. Retry is available for `error` and `cancelled`.
 - `compact: boolean = false` (reflected) — tighter root padding and header/body gap for dense
   contexts (a run rendered as a row in a list, or in a side panel); same convention as `lr-empty`'s
   `compact`. Purely a density knob: the border and background stay, so reach for
-  `appearance="plain"` instead when the goal is to drop the chrome entirely
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` keeps the bordered, filled, padded box; `'plain'` removes the
-  border, background, padding and corner radius, so a run nested inside a host frame that already
-  draws a border doesn't double it. `plain` wins over `compact` when both are set — there is no
-  padding left to tighten. The built-in Cancel/Retry buttons draw their own border and background
-  and stay visibly interactive either way
+  `frame="plain"` instead when the goal is to drop the chrome entirely
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`), the same property `<lr-card>` and every other card-shaped
+  component carries. `'card'` keeps the bordered, filled, padded box; `'plain'` removes the
+  border, background, padding and corner radius, so a run nested inside a host container that
+  already draws a border doesn't double it. `plain` wins over `compact` when both are set — there is
+  no padding left to tighten. The built-in Cancel/Retry buttons draw their own border and background
+  and stay visibly interactive either way. The exported alias `AgentRunAppearance` is retained as a
+  name for the same union
 
 **Events:** `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
 `@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-retry`

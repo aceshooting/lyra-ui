@@ -72,9 +72,13 @@ interface PhoneNumberAdapter {
   `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once; without that registration the
   trigger simply omits the image. The open popup list stays text-only — a native `<option>` cannot
   contain elements.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-input`'s
-  `size`; scales input padding, font size, and wrapper min-height; `size="s"` shares its outer
-  control height with `lr-input`, `lr-select`, and `lr-combobox` without part overrides)
+- `size: LyraSize = 'm'` (reflected — the shared control ladder, so both `2xs`/`xs`/`s`/`m`/`l`/`xl`
+  and `small`/`medium`/`large` are accepted; scales input padding, font size, and wrapper
+  min-height; `size="s"` shares its outer control height with `lr-input`, `lr-select`, and
+  `lr-combobox` without part overrides)
+- `pill: boolean = false` (reflected) — rounds the field's corners to a full pill, mirroring
+  `lr-input`'s own `pill`. It re-assigns `--lr-phone-input-radius` to `--lr-radius-pill`, and the
+  country trigger's leading corners follow, since both read that one knob
 - `country: string` — current uppercase ISO alpha-2 selection; falls back to `defaultCountry`, then
   the first explicit/adapter country. Changing the country reparses the editable number.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —

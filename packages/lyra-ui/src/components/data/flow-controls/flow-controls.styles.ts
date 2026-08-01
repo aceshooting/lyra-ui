@@ -12,12 +12,14 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Overlay step: this cluster's job is to float over a flow canvas as a toolbar, which is why the
+       plain escape below strips the whole surface treatment when it is embedded in real chrome. */
+    box-shadow: var(--lr-shadow-m);
   }
   :host([orientation='vertical']) [part='base'] {
     flex-direction: column;
   }
-  /* Chrome-less escape, mirroring lr-card's appearance="plain" (and lr-callout's [inline]): the
+  /* Chrome-less escape, mirroring the shared LyraFrame vocabulary's frame="plain" (and lr-callout's [inline]): the
      cluster is often placed directly inside a host toolbar or panel that already draws its own
      border/background, where this floating-surface chrome doubles the frame. The box-shadow goes
      with the rest of the box decoration, exactly as lr-flow-run-overlay's plain does -- a lift
@@ -29,7 +31,7 @@ export const styles = css`
      [part='base'], i.e. equal specificity, so source order alone decides. Only flex-direction vs.
      box decoration is set today, so nothing collides -- keeping this last preserves plain as the
      stronger statement ("no chrome at all") if either rule grows. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -64,6 +66,17 @@ export const styles = css`
      lr-attachment-trigger's identical fix for the same over-specific shape. */
   :where([part='base'] button):hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));
+  }
+  /* Same shape as the hover rule, so it inherits the same (0,1,0) specificity and a consumer's
+     ::part(zoom-in):active override still wins. The fill is the hovered one carried further toward
+     --lr-color-mix-partner (the text colour), which moves in whichever direction the surface needs
+     rather than always lightening. */
+  :where([part='base'] button):active:where(:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface-hover, var(--lr-color-border)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='base'] button:disabled {
     opacity: var(--lr-opacity-disabled);

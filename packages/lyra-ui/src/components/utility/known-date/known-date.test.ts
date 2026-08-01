@@ -2,6 +2,7 @@ import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './known-date.js';
 import '../../forms/input/input.js';
+import '../../forms/button/button.js';
 import type { LyraKnownDate } from './known-date.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './known-date.styles.js';
@@ -513,6 +514,33 @@ describe('size', () => {
     const smallFontSize = getComputedStyle(input).fontSize;
     expect(smallFontSize).to.not.equal(fontSize);
   });
+
+  // The tiers come from the library's one shared ladder, which matches both spellings of each
+  // step in the same selector list -- so migrating from an upstream that spells them
+  // small/medium/large is an attribute-value no-op rather than a rewrite.
+  it('accepts the small/medium/large spellings at the same rendered field height as s/m/l', async () => {
+    const heightOf = async (size: string): Promise<string> => {
+      const el = (await fixture(html`<lr-known-date size=${size}></lr-known-date>`)) as LyraKnownDate;
+      await el.updateComplete;
+      return getComputedStyle(fieldFor(el, 'day')).minBlockSize;
+    };
+    for (const [alias, step] of [
+      ['small', 's'],
+      ['medium', 'm'],
+      ['large', 'l'],
+    ]) {
+      expect(await heightOf(alias), alias).to.equal(await heightOf(step));
+    }
+  });
+
+  // The shared ladder's own 2xs height is 1.25rem/20px; a text field is a pointer target, so the
+  // per-tier floor clamps at WCAG 2.2 SC 2.5.8's 24px minimum rather than following it down.
+  it('supports the 2xs tier, floored at the 24px pointer-target minimum', async () => {
+    const el = (await fixture(html`<lr-known-date size="2xs"></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    expect(el.getAttribute('size')).to.equal('2xs');
+    expect(getComputedStyle(fieldFor(el, 'day')).minBlockSize).to.equal('24px');
+  });
 });
 
 describe('accessibility', () => {
@@ -754,9 +782,16 @@ describe('invalid-border cssprop indirection', () => {
     day.dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
     await el.updateComplete;
     const field = el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;
-    // Fallback arm resolves to the same --lr-color-danger token as before the indirection
-    // (light-theme default #cf222e).
-    expect(getComputedStyle(field).borderColor).to.equal('rgb(207, 34, 46)');
+    // The invariant is that the fallback arm still resolves to --lr-color-danger -- NOT that danger
+    // is any particular hex. Resolving the token here rather than restating its value keeps this
+    // honest across a palette regeneration, which is exactly what broke the literal it replaced.
+    const probe = document.createElement('span');
+    probe.style.color = getComputedStyle(el).getPropertyValue('--lr-color-danger').trim();
+    el.shadowRoot!.append(probe);
+    const danger = getComputedStyle(probe).color;
+    probe.remove();
+    expect(danger).to.match(/^rgb/);
+    expect(getComputedStyle(field).borderColor).to.equal(danger);
   });
 });
 
@@ -792,4 +827,102 @@ it('focus() activates the first field in locale order and blur() releases it', a
   expect(focused!.tagName).to.equal('INPUT');
   el.blur();
   expect(el.shadowRoot!.activeElement).to.be.null;
+});
+
+describe('lr-known-date implicit form submission', () => {
+  const enterOn = (el: LyraKnownDate, init: KeyboardEventInit = {}) =>
+    fields(el)[0]!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
+    );
+
+  it('submits the ancestor form when Enter is pressed in a date field', async () => {
+    const form = (await fixture(html`
+      <form><lr-known-date name="bday" value="2007-03-27" label="Birthdate"></lr-known-date></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-known-date') as LyraKnownDate;
+    await el.updateComplete;
+    let submits = 0;
+    let submittedValue: string | null = null;
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+      submittedValue = new FormData(form).get('bday') as string | null;
+    });
+    enterOn(el);
+    expect(submits).to.equal(1);
+    expect(submittedValue).to.equal('2007-03-27');
+  });
+
+  it('flushes a pending change before submitting, so a listener sees the committed date', async () => {
+    const form = (await fixture(html`
+      <form><lr-known-date name="bday" label="Birthdate"></lr-known-date></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-known-date') as LyraKnownDate;
+    await el.updateComplete;
+    const order: string[] = [];
+    el.addEventListener('change', () => order.push('change'));
+    form.addEventListener('submit', (e) => { e.preventDefault(); order.push('submit'); });
+    for (const input of fields(el)) {
+      input.value = input.dataset['field'] === 'year' ? '2007' : input.dataset['field'] === 'month' ? '03' : '27';
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    }
+    await el.updateComplete;
+    expect(el.value, 'the three fields resolve to a real date').to.equal('2007-03-27');
+    enterOn(el);
+    expect(order.join(','), 'change is flushed ahead of the submission').to.equal('change,submit');
+  });
+
+  it('submits through an lr-button submitter, which requestSubmit() itself would reject', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-known-date name="bday" value="2007-03-27" label="Birthdate"></lr-known-date>
+        <lr-button type="submit" name="action" value="save">Go</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-known-date') as LyraKnownDate;
+    await el.updateComplete;
+    let submits = 0;
+    let submitterName = '';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+      submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
+    });
+    enterOn(el);
+    expect(submits).to.equal(1);
+    expect(submitterName, 'the lr-button was the submitter').to.equal('action');
+  });
+
+  it('never submits while readonly, on a held modifier, during IME composition, or after a veto', async () => {
+    const form = (await fixture(html`
+      <form><lr-known-date name="bday" value="2007-03-27" label="Birthdate"></lr-known-date></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-known-date') as LyraKnownDate;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el, { shiftKey: true });
+    enterOn(el, { ctrlKey: true });
+    enterOn(el, { altKey: true });
+    enterOn(el, { metaKey: true });
+    enterOn(el, { isComposing: true });
+    expect(submits).to.equal(0);
+
+    // Capture on the host runs before the internal input's own listener.
+    const veto = (e: Event): void => e.preventDefault();
+    el.addEventListener('keydown', veto, true);
+    enterOn(el);
+    el.removeEventListener('keydown', veto, true);
+    expect(submits).to.equal(0);
+
+    el.readonly = true;
+    await el.updateComplete;
+    enterOn(el);
+    expect(submits, 'a readonly control never submits').to.equal(0);
+
+    el.readonly = false;
+    await el.updateComplete;
+    enterOn(el);
+    expect(submits, 'a bare Enter still submits').to.equal(1);
+  });
 });

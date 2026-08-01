@@ -28,7 +28,7 @@ export const styles = css`
      and plain. plain is the stronger statement ("no chrome at all"), so it goes last. The title and
      toggle affordances are brand-colored text with a hover underline, never a border, so they stay
      legible with no chrome behind them. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -54,6 +54,13 @@ export const styles = css`
   }
   [part='title']:hover {
     text-decoration: underline;
+  }
+  /* Both affordances here are transparent-backed brand-colored text (see the frame='plain' note
+     above), so the pressed signal is a wash mixed from that transparent base -- the label itself has
+     to keep its brand color to stay readable as a link. */
+  [part='title']:active {
+    text-decoration: underline;
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='title']:focus-visible,
   [part='toggle']:focus-visible {
@@ -87,6 +94,10 @@ export const styles = css`
   }
   [part='toggle']:hover {
     text-decoration: underline;
+  }
+  [part='toggle']:active {
+    text-decoration: underline;
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='full'] {
     min-inline-size: 0;

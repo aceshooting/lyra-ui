@@ -16,8 +16,8 @@ export const styles = css`
   }
   /* Strips the card chrome for a community card nested inside an already-bordered/backgrounded
      container -- same escape hatch as this component's own sibling lr-entity-card's identical
-     appearance='plain' rule. */
-  :host([appearance='plain']) [part='base'] {
+     frame='plain' rule. */
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -44,13 +44,20 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text);
     font: inherit;
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
     cursor: pointer;
   }
   [part='title'] button:hover {
     text-decoration: underline;
+  }
+  /* The label already renders in --lr-color-text, which is what --lr-color-mix-partner tracks, so
+     mixing the *text* would move nothing; the pressed signal is a wash mixed from the button's own
+     transparent background instead. */
+  [part='title'] button:active {
+    text-decoration: underline;
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='title'] button:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -96,6 +103,10 @@ export const styles = css`
   [part='member']:hover,
   [part='overflow']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='member']:active,
+  [part='overflow']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='member']:focus-visible,
   [part='overflow']:focus-visible {

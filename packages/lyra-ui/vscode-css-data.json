@@ -338,6 +338,13 @@
       }
     },
     {
+      "name": "--lr-av-player-marker-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-av-player>`** — The resting fill a `[part=\"timeline-marker\"]` actually renders, resolved per tone from the `--lr-av-player-marker-*-bg` knobs above. Its hover and pressed states are colour mixes taken from this value, so setting it directly retints all three at once for one marker; retint a whole tone through the `-bg` knob instead."
+      }
+    },
+    {
       "name": "--lr-av-player-marker-neutral-bg",
       "description": {
         "kind": "markdown",
@@ -369,49 +376,49 @@
       "name": "--lr-avatar-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-color-border)`) — Container background. Each non-neutral `tone` sets it to that tone's `-quiet` tint."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-color-border)`) — Container background. Each non-neutral `variant` sets it to that variant's `-quiet` tint."
       }
     },
     {
       "name": "--lr-avatar-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-color-text)`) — Initials/glyph color. Each non-neutral `tone` sets it to that tone's loud color."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-color-text)`) — Initials/glyph color. Each non-neutral `variant` sets it to that variant's loud color."
       }
     },
     {
       "name": "--lr-avatar-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` swaps it to `var(--lr-font-size-xs)` (`sm`) or `var(--lr-font-size-md)` (`lg`), so the initials track the circle instead of staying at one fixed size across every tier."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` steps it alongside the diameter, so the initials track the circle instead of staying at one fixed size across every tier."
       }
     },
     {
       "name": "--lr-avatar-group-avatar-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar-group>`** (default: `var(--lr-size-2rem)`) — Sizes the overflow badge to match the slotted avatars. Does not resize the avatars themselves (see class doc) — set a matching `size` on each `<lr-avatar>` child directly for that."
+        "value": "**`<lr-avatar-group>`** (default: `var(--lr-size-2rem)`) — Sizes the overflow badge to match the slotted avatars, tier for tier with `<lr-avatar>`'s own `--lr-avatar-size`. Does not resize the avatars themselves (see class doc) — set a matching `size` on each `<lr-avatar>` child directly for that."
       }
     },
     {
       "name": "--lr-avatar-group-badge-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar-group>`** (default: `var(--lr-color-border)`) — Overflow badge background. Tone-driven; see `tone`."
+        "value": "**`<lr-avatar-group>`** (default: `var(--lr-color-border)`) — Overflow badge background. Variant-driven; see `variant`."
       }
     },
     {
       "name": "--lr-avatar-group-badge-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar-group>`** (default: `var(--lr-color-text)`) — Overflow badge text color. Tone-driven; see `tone`."
+        "value": "**`<lr-avatar-group>`** (default: `var(--lr-color-text)`) — Overflow badge text color. Variant-driven; see `variant`."
       }
     },
     {
       "name": "--lr-avatar-group-badge-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar-group>`** (default: `var(--lr-font-size-sm)`) — Font size of the \"+N\" badge label. `size` swaps it to `var(--lr-font-size-xs)` (`sm`) or `var(--lr-font-size-md)` (`lg`), matching `<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars it caps read at the same optical weight."
+        "value": "**`<lr-avatar-group>`** (default: `var(--lr-font-size-sm)`) — Font size of the \"+N\" badge label. `size` steps it across the same six-step ladder as `<lr-avatar>`'s own `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight."
       }
     },
     {
@@ -439,28 +446,63 @@
       "name": "--lr-avatar-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-size-2rem)`) — Inline and block size of the container. `size` swaps it to `var(--lr-size-1-5rem)` (`sm`) or `var(--lr-size-2-5rem)` (`lg`)."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-size-2rem)`) — Inline and block size of the container. `size` steps it across the shared six-step ladder, from `var(--lr-size-1rem)` (`2xs`) to `var(--lr-size-3rem)` (`xl`); the default `medium`/`m` tier is `var(--lr-size-2rem)`."
+      }
+    },
+    {
+      "name": "--lr-badge-attention-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-duration-ambient)`) — One cycle of the `attention` animation."
+      }
+    },
+    {
+      "name": "--lr-badge-attention-easing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-easing-emphasized)`) — Timing function of the `attention` animation."
       }
     },
     {
       "name": "--lr-badge-background",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-surface)`) — The badge's background. Each non-neutral `variant` sets it to that variant's `-quiet` tint."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-fill)`) — Explicit override for the badge's background, winning over whatever `variant` and `appearance` resolved. Left unset (the default) so it still inherits from a consumer's own ancestor rule."
       }
     },
     {
       "name": "--lr-badge-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-border)`) — The badge's border color. Each non-neutral `variant` sets it to that variant's loud color."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-stroke)`) — Explicit override for the badge's border color, on the same terms as `--lr-badge-background`."
+      }
+    },
+    {
+      "name": "--lr-badge-bounce-distance",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-size-0-1875rem)`) — Peak travel of the `attention=\"bounce\"` hop."
       }
     },
     {
       "name": "--lr-badge-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-text)`) — The badge's text color. Each non-neutral `variant` sets it to that variant's loud color."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-text)`) — Explicit override for the badge's text color, on the same terms as `--lr-badge-background`."
+      }
+    },
+    {
+      "name": "--lr-badge-edge",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-border)`) — Palette slot: the variant's border color. Each non-neutral `variant` sets it to that variant's loud fill."
+      }
+    },
+    {
+      "name": "--lr-badge-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-tint)`) — Surface slot: which palette entry `appearance` routed onto the background. Set it to retune a single appearance without touching the palette."
       }
     },
     {
@@ -471,10 +513,31 @@
       }
     },
     {
+      "name": "--lr-badge-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-space-2xs)`) — Space between the `start` slot, the label, and the `end` slot."
+      }
+    },
+    {
+      "name": "--lr-badge-ink",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-text)`) — Palette slot: the variant's text color. Each non-neutral `variant` sets it to that variant's loud fill."
+      }
+    },
+    {
       "name": "--lr-badge-min-height",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-size-1-25rem)`) — The badge's minimum block size. Each `size` sets it to that step's minimum block size."
+      }
+    },
+    {
+      "name": "--lr-badge-on-solid",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-on-loud)`) — Palette slot: the text color that stays legible on `--lr-badge-solid`."
       }
     },
     {
@@ -485,10 +548,52 @@
       }
     },
     {
+      "name": "--lr-badge-pulse-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `color-mix(in srgb, currentColor 40%, transparent)`) — Color of the expanding ring drawn by `attention=\"pulse\"`."
+      }
+    },
+    {
+      "name": "--lr-badge-pulse-spread",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-size-0-25rem)`) — How far the `attention=\"pulse\"` ring expands."
+      }
+    },
+    {
       "name": "--lr-badge-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-radius-pill)`) — Corner radius of the badge surface. Does not vary by `size` tier."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-radius)`) — Corner radius of the badge surface. `pill` raises it to `var(--lr-radius-pill)`. Does not vary by `size` tier."
+      }
+    },
+    {
+      "name": "--lr-badge-solid",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-fill-loud)`) — Palette slot: the variant's loud fill, used by `appearance=\"accent\"`."
+      }
+    },
+    {
+      "name": "--lr-badge-stroke",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-edge)`) — Surface slot: which palette entry `appearance` routed onto the border color."
+      }
+    },
+    {
+      "name": "--lr-badge-text",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-ink)`) — Surface slot: which palette entry `appearance` routed onto the label color."
+      }
+    },
+    {
+      "name": "--lr-badge-tint",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-surface)`) — Palette slot: the variant's quiet fill. Each non-neutral `variant` sets it to that variant's quiet fill from the shared semantic grid."
       }
     },
     {
@@ -551,21 +656,28 @@
       "name": "--lr-button-accent",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-color-text)`) — Text/glyph color for the chrome-less appearances (`outlined`, `plain`, `link`). Swapped per `variant` to that variant's semantic color."
+        "value": "**`<lr-button>`** (default: `var(--lr-color-fill-loud)`) — Text/glyph color for the chrome-less appearances (`outlined`, `plain`, `link`), i.e. the active `variant`'s loud fill used as a foreground. `variant=\"neutral\"` is the one exception: its loud fill is a mid grey picked to carry light text, so borrowing it as text on the page surface would wash out every plain and link button — neutral keeps `--lr-color-text`."
       }
     },
     {
       "name": "--lr-button-accent-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-color-neutral)`) — Background of `appearance=\"accent\"` (and its border color). Swapped per `variant` to that variant's semantic color."
+        "value": "**`<lr-button>`** (default: `var(--lr-color-fill-loud)`) — Background of `appearance=\"accent\"` (and its border color): the active `variant`'s loud fill, the one primary action in a view."
       }
     },
     {
       "name": "--lr-button-accent-on-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-color-on-neutral)`) — Text color on top of `--lr-button-accent-fill`. Swapped per `variant` to that variant's `on-*` color."
+        "value": "**`<lr-button>`** (default: `var(--lr-color-on-loud)`) — Text color on top of `--lr-button-accent-fill`, the grid's guaranteed-legible foreground for that fill."
+      }
+    },
+    {
+      "name": "--lr-button-active-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background while a non-disabled button is pressed — the same mix at the stronger `--lr-color-mix-active` share, so the pressed state reads as more than the hover. `appearance=\"link\"` moves its text colour by these two shares instead of taking a background."
       }
     },
     {
@@ -579,28 +691,35 @@
       "name": "--lr-button-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-color-border)`) — Border color of the internal button. Swapped per `variant` to that variant's semantic color."
+        "value": "**`<lr-button>`** (default: `var(--lr-color-border-normal)`) — Border color of the internal button, from the active `variant`'s row of the shared semantic grid."
+      }
+    },
+    {
+      "name": "--lr-button-caret-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-size-0-75em)`) — Font size of the `with-caret` chevron, i.e. its rendered glyph box. Relative to the button's own font size, so it follows every `size` tier without a per-tier rule."
       }
     },
     {
       "name": "--lr-button-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-color-surface)`) — Background of `appearance=\"filled\"`. Swapped per `variant` to that variant's semantic color."
+        "value": "**`<lr-button>`** (default: `var(--lr-color-fill-quiet)`) — Background of `appearance=\"filled\"`: the active `variant`'s quiet tint, i.e. a secondary-action fill that is visibly a fill rather than the page surface. Follows `variant` through the shared semantic grid."
       }
     },
     {
       "name": "--lr-button-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-font-size-m)`) — Font size of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). `appearance=\"link\"` ignores it and inherits the ambient font instead."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-font-size)`) — Font size of the internal button, from the active `size` tier. `appearance=\"link\"` ignores it and inherits the ambient font instead."
       }
     },
     {
       "name": "--lr-button-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-space-2xs)`) — Gap between the icon/label and any slotted content in the internal button. Unlike the size knobs above it does not vary by `size` tier. Override it to retune without a `::part(base)` rule."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-gap)`) — Gap between the icon/label and any slotted content in the internal button. Constant across the ladder's tiers. Override it to retune without a `::part(base)` rule."
       }
     },
     {
@@ -618,52 +737,59 @@
       }
     },
     {
-      "name": "--lr-button-hover-brightness",
+      "name": "--lr-button-hover-background",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `1.08`) — `filter: brightness()` multiplier applied while hovering a non-disabled button."
+        "value": "**`<lr-button>`** (default: `color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) — Background of a non-disabled button while hovered. Replaced the pre-8.0.0 `--lr-button-hover-brightness` multiplier: a `filter` multiplies every channel, so it moved a mid-toned fill but did nothing at all to a pure white or pure black one, and it dimmed the label and icons along with the box."
+      }
+    },
+    {
+      "name": "--lr-button-hover-base",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-color-surface)`) — The colour the hover and press mixes move away from. Each painted appearance re-points it at its own fill (`--lr-button-fill` for `filled`/`filled-outlined`, `--lr-button-accent-fill` for `accent`); the chrome-less tiers (`outlined`, `plain`, `quiet`, `link`) paint nothing, so they mix from the page surface. Set it alongside `--lr-button-outlined-fill` when you tint an outlined button."
       }
     },
     {
       "name": "--lr-button-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-button-size-m)`) — The active tier's `min-block-size` floor. Re-assigned per `size` tier to that tier's own `--lr-button-size-*` token, and used as the fallback when `--lr-button-height` is unset."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-height)`) — The active tier's `min-block-size` floor, resolved through that tier's own `--lr-button-size-*` token, and used as the fallback when `--lr-button-height` is unset."
       }
     },
     {
       "name": "--lr-button-on-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-color-text)`) — Text color on top of `--lr-button-fill`. Swapped per `variant` to that variant's `on-*` color."
+        "value": "**`<lr-button>`** (default: `var(--lr-color-on-quiet)`) — Text color on top of `--lr-button-fill`, the grid's guaranteed-legible foreground for that tint."
       }
     },
     {
       "name": "--lr-button-outlined-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-color-border-strong)`) — Border color of `appearance=\"outlined\"`, which overrides `--lr-button-border`."
+        "value": "**`<lr-button>`** (default: `var(--lr-color-border-strong)`) — Border color of `appearance=\"outlined\"` and `appearance=\"filled-outlined\"`, which overrides `--lr-button-border`."
       }
     },
     {
       "name": "--lr-button-outlined-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `transparent`) — Background of `appearance=\"outlined\"`. Transparent by default; set it to tint the button (e.g. a faint surface wash behind the outline) without a `::part(base)` rule. Like `--lr-button-quiet-*`, it is deliberately *not* swapped per `variant`. Note that the `:hover` `filter: brightness()` applies to whatever fill is set, so a tinted outlined button now visibly brightens on hover where a transparent one did not."
+        "value": "**`<lr-button>`** (default: `transparent`) — Background of `appearance=\"outlined\"`. Transparent by default; set it to tint the button (e.g. a faint surface wash behind the outline) without a `::part(base)` rule. Like `--lr-button-quiet-*`, it is deliberately *not* swapped per `variant`. The hover and press mixes read `--lr-button-hover-base`, which this tier leaves on the page surface, so set both together when you tint an outlined button."
       }
     },
     {
       "name": "--lr-button-padding-block",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-space-xs)`) — Block padding of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). Override it to retune a tier without a `::part(base)` rule; `appearance=\"link\"` ignores it (it renders with zero padding)."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-padding-block)`) — Block padding of the internal button, taken from the active `size` tier of the shared ladder. Override it to retune a tier without a `::part(base)` rule; `appearance=\"link\"` ignores it (it renders with zero padding)."
       }
     },
     {
       "name": "--lr-button-padding-inline",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-space-m)`) — Inline padding of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). `appearance=\"link\"` ignores it."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-padding-inline)`) — Inline padding of the internal button, from the active `size` tier. `appearance=\"link\"` ignores it."
       }
     },
     {
@@ -684,7 +810,7 @@
       "name": "--lr-button-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-radius)`) — Corner radius of the internal button. Does not vary by `size` tier. `appearance=\"link\"` ignores it (it renders with zero radius)."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the internal button, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall control reads as a lozenge). `appearance=\"link\"` ignores it (it renders with zero radius). `pill` re-assigns it to `--lr-radius-pill`."
       }
     },
     {
@@ -698,42 +824,42 @@
       "name": "--lr-button-size-2xs",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-size-1-25rem)`) — `min-block-size` at `size=\"2xs\"`."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-height-2xs)`) — `min-block-size` at `size=\"2xs\"`. Since 8.0.0 the whole scale comes from the shared form-control ladder (`internal/sizes.styles.ts`), so a button is the same height as an input, select, combobox or date input of the same tier by construction rather than by two lists agreeing."
       }
     },
     {
       "name": "--lr-button-size-l",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-size-3rem)`) — `min-block-size` at `size=\"l\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"l\"` control height."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-height-l)`) — `min-block-size` at `size=\"l\"` (and at `size=\"large\"`)."
       }
     },
     {
       "name": "--lr-button-size-m",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-size-2-5rem)`) — `min-block-size` at `size=\"m\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own default control height, so a default-size button sitting next to a default-size input/select/combobox in the same row lines up."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-height-m)`) — `min-block-size` at `size=\"m\"` (and at `size=\"medium\"`), the default tier."
       }
     },
     {
       "name": "--lr-button-size-s",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-size-1-875rem)`) — `min-block-size` at `size=\"s\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"s\"` control height."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-height-s)`) — `min-block-size` at `size=\"s\"` (and at the `size=\"small\"` spelling)."
       }
     },
     {
       "name": "--lr-button-size-xl",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-size-3-5rem)`) — `min-block-size` at `size=\"xl\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"xl\"` control height."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-height-xl)`) — `min-block-size` at `size=\"xl\"`."
       }
     },
     {
       "name": "--lr-button-size-xs",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-size-1-5rem)`) — `min-block-size` at `size=\"xs\"`."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-height-xs)`) — `min-block-size` at `size=\"xs\"`."
       }
     },
     {
@@ -782,14 +908,14 @@
       "name": "--lr-callout-background",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-callout>`** (default: `var(--lr-color-surface)`) — The callout surface's background. Each non-neutral `variant` sets it to that variant's `-quiet` tint."
+        "value": "**`<lr-callout>`** (default: `var(--lr-color-surface)`) — The callout surface's background. Each non-neutral `variant` sets it to that variant's quiet fill from the shared semantic grid."
       }
     },
     {
       "name": "--lr-callout-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-callout>`** (default: `var(--lr-color-border)`) — The callout surface's border color. Each non-neutral `variant` sets it to that variant's loud color."
+        "value": "**`<lr-callout>`** (default: `var(--lr-color-border)`) — The callout surface's border color. Each non-neutral `variant` sets it to that variant's loud fill."
       }
     },
     {
@@ -803,7 +929,28 @@
       "name": "--lr-callout-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-callout>`** (default: `var(--lr-color-text)`) — The callout's text color. Each non-neutral `variant` sets it to that variant's loud color."
+        "value": "**`<lr-callout>`** (default: `var(--lr-color-text)`) — The callout's text color. Each non-neutral `variant` sets it to that variant's loud fill."
+      }
+    },
+    {
+      "name": "--lr-callout-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-callout>`** (default: `var(--lr-form-control-font-size)`) — The callout's text size. Each `size` tier sets it from the library's shared size ladder."
+      }
+    },
+    {
+      "name": "--lr-callout-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-callout>`** (default: `var(--lr-space-s)`) — Space between the icon, the content, and the close action. Deliberately does not vary by `size`: it separates three adjacent boxes rather than setting the panel's density, and shrinking it at the small tiers only crowds them."
+      }
+    },
+    {
+      "name": "--lr-callout-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-callout>`** (default: `var(--lr-form-control-padding-inline)`) — Padding of the panel, on both axes. Each `size` tier sets it from the shared ladder's inline-padding knob: a panel's block rhythm is generous like a control's inline padding, not tight like its block padding (which exists to fit text inside a fixed control height). `inline` removes it entirely."
       }
     },
     {
@@ -818,6 +965,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand)`) — Border color of the current slide's indicator dot."
+      }
+    },
+    {
+      "name": "--lr-carousel-slide-basis",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `100%`) — Flex basis of every slide in the snap track. The default gives one slide per view; a smaller value (e.g. `50%`) shows several at once while the snap positions still land on each slide's inline start."
       }
     },
     {
@@ -1003,6 +1157,13 @@
       }
     },
     {
+      "name": "--lr-checkbox-box-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox>`** (default: `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`) — Edge length of `[part='box']`. Derived from the `size` tier's shared control height, so the box lines up with an `<lr-input>`/`<lr-select>`/`<lr-button>` of the same `size`; set it to pin the box independently of the tier."
+      }
+    },
+    {
       "name": "--lr-checkbox-checked-bg",
       "description": {
         "kind": "markdown",
@@ -1017,10 +1178,24 @@
       }
     },
     {
+      "name": "--lr-checkbox-group-option-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox-group>`** (default: `calc(var(--lr-form-control-height) * 0.2)`) — Gap between adjacent options, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-checkbox-group-row-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox-group>`** (default: `calc(var(--lr-form-control-height) * 0.1)`) — Vertical gap between the group's label, options and messages, scaled by `size`."
+      }
+    },
+    {
       "name": "--lr-checkbox-label-indent",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-checkbox>`** (default: `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`) — The inline distance from the control's start edge to the start of the label text, i.e. the box's own floor plus the gap next to it. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-checkbox` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control."
+        "value": "**`<lr-checkbox>`** (default: `calc(var(--lr-checkbox-box-size) + var(--lr-space-s))`) — The inline distance from the control's start edge to the start of the label text, i.e. the box's own floor plus the gap next to it — so it tracks `size` along with the box. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-checkbox` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size`, `--lr-theme-form-control-height-*` and `--lr-theme-space-s`, which you control."
       }
     },
     {
@@ -1034,21 +1209,21 @@
       "name": "--lr-chip-accent",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-color-text)`) — Text/icon color of the pill. Each `tone` sets it to that tone's loud color."
+        "value": "**`<lr-chip>`** (default: `var(--lr-color-text)`) — Text/icon color of the pill. Each non-neutral `variant` sets it to that variant's loud fill."
       }
     },
     {
       "name": "--lr-chip-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-color-surface)`) — Background of the pill. Each `tone` sets it to that tone's `-quiet` tint."
+        "value": "**`<lr-chip>`** (default: `var(--lr-color-surface)`) — Background of the pill. Each non-neutral `variant` sets it to that variant's quiet fill."
       }
     },
     {
       "name": "--lr-chip-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-color-border)`) — Border color of the pill. Every non-neutral `tone` sets it to `transparent`."
+        "value": "**`<lr-chip>`** (default: `var(--lr-color-border)`) — Border color of the pill. Every non-neutral `variant` sets it to `transparent`."
       }
     },
     {
@@ -1125,7 +1300,7 @@
       "name": "--lr-chip-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-radius-pill)`) — Corner radius of the pill and of the remove button, kept in sync so retuning one retunes both. Does not vary by `size` tier."
+        "value": "**`<lr-chip>`** (default: `var(--lr-radius)`) — Corner radius of the pill and of the remove button, kept in sync so retuning one retunes both. `pill` raises it to `var(--lr-radius-pill)`. Does not vary by `size` tier."
       }
     },
     {
@@ -1213,10 +1388,52 @@
       }
     },
     {
+      "name": "--lr-color-picker-checker-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-color-border)`) — Tint of the alpha checkerboard."
+      }
+    },
+    {
+      "name": "--lr-color-picker-checker-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-0-5rem)`) — Cell size of the alpha checkerboard."
+      }
+    },
+    {
       "name": "--lr-color-picker-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-color-picker>`** (default: `var(--lr-space-xs)`) — Gap between field chrome."
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-space-xs)`) — Gap between field chrome and panel rows."
+      }
+    },
+    {
+      "name": "--lr-color-picker-grid-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-8rem)`) — Saturation/brightness grid height."
+      }
+    },
+    {
+      "name": "--lr-color-picker-grid-handle-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-1rem)`) — Diameter of the grid handle."
+      }
+    },
+    {
+      "name": "--lr-color-picker-grid-hue",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — The saturation/brightness grid's fully-saturated base hue. Rewritten on every render, like `--lr-color-picker-swatch-color`."
+      }
+    },
+    {
+      "name": "--lr-color-picker-grid-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-15rem)`) — Saturation/brightness grid width."
       }
     },
     {
@@ -1227,17 +1444,59 @@
       }
     },
     {
+      "name": "--lr-color-picker-hue-stops",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — The hue ramp's own gradient stops, shared by the hue slider in both text directions. Defaults to the six-stop sRGB hue wheel."
+      }
+    },
+    {
+      "name": "--lr-color-picker-opacity-gradient",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — The opacity slider's transparent-to-opaque ramp, built from the current colour and text direction. Rewritten on every render."
+      }
+    },
+    {
+      "name": "--lr-color-picker-palette-swatch-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-1-5rem)`) — Size of a palette swatch."
+      }
+    },
+    {
       "name": "--lr-color-picker-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-color-picker>`** (default: `var(--lr-radius)`) — Swatch corner radius."
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-radius)`) — Trigger, grid, and panel corner radius."
+      }
+    },
+    {
+      "name": "--lr-color-picker-slider-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-0-75rem)`) — Thickness of the visible hue/opacity ramp. The slider's own pointer target stays floored at 24px regardless."
+      }
+    },
+    {
+      "name": "--lr-color-picker-slider-handle-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-size-1-25rem)`) — Diameter of a slider handle."
+      }
+    },
+    {
+      "name": "--lr-color-picker-swatch-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — The live colour painted on the trigger, preview, slider handles, and palette swatches. Rewritten on every render, so it reports state rather than accepting configuration."
       }
     },
     {
       "name": "--lr-color-picker-swatch-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-color-picker>`** — The swatch's inline and block size, scaled by `size`."
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-form-control-height,var(--lr-size-2-5rem))`) — The trigger's inline and block size. Reads the shared form-control height ladder, so retuning `--lr-theme-form-control-height-*` keeps the trigger square with the fields beside it."
       }
     },
     {
@@ -1251,7 +1510,7 @@
       "name": "--lr-combobox-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-combobox>`** — Input text size."
+        "value": "**`<lr-combobox>`** (default: `var(--lr-form-control-font-size)`) — Input text size, from the shared form-control size ladder."
       }
     },
     {
@@ -1300,7 +1559,7 @@
       "name": "--lr-combobox-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-combobox>`** (default: `var(--lr-radius)`) — Corner radius of the trigger row (`[part='combobox']`). Does not vary by `size` tier."
+        "value": "**`<lr-combobox>`** (default: `var(--lr-radius)`) — Corner radius of the trigger row (`[part='combobox']`). Does not vary by `size` tier; the `pill` attribute swaps it for `--lr-radius-pill`."
       }
     },
     {
@@ -1328,7 +1587,7 @@
       "name": "--lr-combobox-trigger-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-combobox>`** — Minimum input-container block size, scaled by `size`."
+        "value": "**`<lr-combobox>`** (default: `var(--lr-form-control-height)`) — Minimum input-container block size. Reads the shared form-control height ladder, so retuning `--lr-theme-form-control-height-*` moves this control and every sibling field together."
       }
     },
     {
@@ -1629,7 +1888,7 @@
       "name": "--lr-date-input-control-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-date-input>`** (default: `var(--lr-size-2-5rem)`) — Minimum block size of the input row, scaled by `size` to mirror `lr-input`'s own min-height scale. Each default sits below the row's transitively-pinned height, so it is dead until a consumer raises it -- the unset render is unchanged."
+        "value": "**`<lr-date-input>`** (default: `var(--lr-form-control-height)`) — Minimum block size of the input row, read from the shared form-control height ladder so retuning `--lr-theme-form-control-height-*` moves this control and every sibling field together. Each default sits below the row's transitively-pinned height, so it is dead until a consumer raises it -- the unset render is unchanged."
       }
     },
     {
@@ -1678,7 +1937,7 @@
       "name": "--lr-date-input-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-date-input>`** (default: `var(--lr-radius)`) — Input-row corner radius."
+        "value": "**`<lr-date-input>`** (default: `var(--lr-radius)`) — Input-row corner radius. The `pill` attribute swaps it for `--lr-radius-pill`."
       }
     },
     {
@@ -1710,6 +1969,34 @@
       }
     },
     {
+      "name": "--lr-details-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder."
+      }
+    },
+    {
+      "name": "--lr-details-spacing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row."
+      }
+    },
+    {
+      "name": "--lr-dialog-backdrop-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-duration-fast)`) — Duration of the backdrop's fade."
+      }
+    },
+    {
+      "name": "--lr-dialog-backdrop-filter",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `none`) — `backdrop-filter` applied to the scrim, for a frosted-glass treatment over the page behind it."
+      }
+    },
+    {
       "name": "--lr-dialog-max-width",
       "description": {
         "kind": "markdown",
@@ -1721,6 +2008,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-color-overlay)`) — Backdrop scrim color."
+      }
+    },
+    {
+      "name": "--lr-dialog-panel-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-duration-base)`) — Duration of the panel's enter/exit animation."
+      }
+    },
+    {
+      "name": "--lr-dialog-spacing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-space-l)`) — Padding inside the body, and the inline padding of the header and footer rows."
+      }
+    },
+    {
+      "name": "--lr-dialog-spacing-block",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-space-m)`) — Block padding of the header and footer rows, which are tighter than the body by default."
       }
     },
     {
@@ -1951,14 +2259,14 @@
       "name": "--lr-drawer-enter-x",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Horizontal offset the panel animates in from for start/end drawers. Set per placement (and flipped under RTL) by the stylesheet; only read when `prefers-reduced-motion` is `no-preference`."
+        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Horizontal offset the panel slides in from, and back out to, for start/end drawers. Set per placement (and flipped under RTL) by the stylesheet."
       }
     },
     {
       "name": "--lr-drawer-enter-y",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Vertical offset the panel animates in from for top/bottom drawers. Set to `var(--lr-size-1rem)` for `bottom`; only read when `prefers-reduced-motion` is `no-preference`."
+        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Vertical offset the panel slides in from, and back out to, for top/bottom drawers. Set to `var(--lr-size-1rem)` for `bottom`."
       }
     },
     {
@@ -2683,10 +2991,17 @@
       }
     },
     {
+      "name": "--lr-icon-button-background-active",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background fill while pressed: the same mix at the stronger `--lr-color-mix-active` share, so the pressed state is visibly more than the hover."
+      }
+    },
+    {
       "name": "--lr-icon-button-background-hover",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-icon-button>`** (default: `var(--lr-color-surface)`) — Background fill on hover."
+        "value": "**`<lr-icon-button>`** (default: `color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) — Background fill on hover. Before 8.0.0 this fell back to `var(--lr-color-surface)` — the page background — so on a default page a hovered icon button painted itself the colour it was already sitting on and showed no hover at all."
       }
     },
     {
@@ -2694,6 +3009,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-icon-button>`** (default: `0`) — Complete border shorthand of the native button."
+      }
+    },
+    {
+      "name": "--lr-icon-button-border-active",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))`) — Complete border shorthand while pressed; falls through to the hover border when only that is set."
       }
     },
     {
@@ -2708,6 +3030,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-icon-button>`** (default: `inherit`) — Icon/text color of the native button."
+      }
+    },
+    {
+      "name": "--lr-icon-button-color-active",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))`) — Icon/text color while pressed; falls through to the hover colour when only that is set."
       }
     },
     {
@@ -2729,6 +3058,34 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-icon-button>`** (default: `2.5rem`) — Minimum tappable inline and block size of the native button — a **floor**, not a fixed size: content larger than it grows the button and keeps its own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components size their icon controls against), so overriding it globally resizes all of them together."
+      }
+    },
+    {
+      "name": "--lr-icon-fixed-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `var(--lr-size-1-5rem)`) — Inline size of the box while `fixed-width` is set; the glyph keeps `--lr-icon-size` and centers inside it."
+      }
+    },
+    {
+      "name": "--lr-icon-flip-x",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1`) — Horizontal scale factor, set to `-1` by `flip`."
+      }
+    },
+    {
+      "name": "--lr-icon-flip-y",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1`) — Vertical scale factor, set to `-1` by `flip`."
+      }
+    },
+    {
+      "name": "--lr-icon-rotate",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0deg`) — Rotation applied to the box. Written inline from the `rotate` property, so set that rather than this property."
       }
     },
     {
@@ -2788,6 +3145,13 @@
       }
     },
     {
+      "name": "--lr-image-viewer-highlight-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** — The resting fill a `[part=\"highlight\"]` actually renders, resolved per tone from the `--lr-image-viewer-highlight-*-bg` knobs above. Its hover and pressed states are colour mixes taken from this value, so setting it directly retints all three at once for one highlight; retint a whole tone through the `-bg` knob instead."
+      }
+    },
+    {
       "name": "--lr-image-viewer-highlight-neutral-bg",
       "description": {
         "kind": "markdown",
@@ -2837,6 +3201,13 @@
       }
     },
     {
+      "name": "--lr-input-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-color-border)`) — Border color of the control row, swapped per `appearance` in the same way as `--lr-input-fill`."
+      }
+    },
+    {
       "name": "--lr-input-control-height",
       "description": {
         "kind": "markdown",
@@ -2847,14 +3218,21 @@
       "name": "--lr-input-control-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Outer control height floor, scaled by `size`."
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-form-control-height)`) — Outer control height floor, taken from the active `size` tier of the shared form-control ladder (`internal/sizes.styles.ts`), so an input is exactly as tall as an `<lr-button>`/`<lr-select>` of the same tier."
+      }
+    },
+    {
+      "name": "--lr-input-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-color-surface)`) — Background of the control row. Swapped per `appearance`; the documented default is `appearance=\"filled-outlined\"`'s value."
       }
     },
     {
       "name": "--lr-input-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Font size of the native input, scaled by `size`."
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-form-control-font-size)`) — Font size of the native input, from the active `size` tier."
       }
     },
     {
@@ -2868,21 +3246,21 @@
       "name": "--lr-input-padding-block",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Block padding of the native input, scaled by `size`."
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-form-control-padding-block)`) — Block padding of the native input, from the active `size` tier of the shared ladder."
       }
     },
     {
       "name": "--lr-input-padding-inline",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Inline padding of the control row, scaled by `size`."
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-form-control-padding-inline)`) — Inline padding of the control row, from the active `size` tier."
       }
     },
     {
       "name": "--lr-input-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-radius)`) — Corner radius of the control row. Does not vary by `size` tier."
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the control row, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius). `pill` swaps it to `--lr-radius-pill`."
       }
     },
     {
@@ -2973,7 +3351,7 @@
       "name": "--lr-known-date-field-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-known-date>`** (default: `var(--lr-font-size-md-sm)`) — Font size of each `field-input`, auto-swapped per `size`."
+        "value": "**`<lr-known-date>`** (default: `var(--lr-form-control-font-size)`) — Font size of each `field-input`, auto-swapped per `size` by the shared ladder."
       }
     },
     {
@@ -2994,21 +3372,21 @@
       "name": "--lr-known-date-field-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-known-date>`** (default: `var(--lr-size-2-5rem)`) — Minimum block size of each `field-input`, auto-swapped per `size` (`xs`→`1.5rem`, `s`→`1.875rem`, `l`→`3rem`, `xl`→`3.5rem`) -- matches `lr-input`'s/`lr-date-input`'s own min-height scale, so a birthdate field sitting in a form row next to those controls renders at the same height. At `xs`/`s`/`m` the floor now exceeds the field's own content height and actively pins the rendered box; at `l`/`xl` the content height already exceeds the floor, so those two tiers are unaffected."
+        "value": "**`<lr-known-date>`** (default: `max(var(--lr-form-control-height),var(--lr-size-24px))`) — Minimum block size of each `field-input`, auto-swapped per `size` (`2xs`/`xs`→`24px`, `s`→`1.875rem`, `m`→`2.5rem`, `l`→`3rem`, `xl`→`3.5rem`) -- the same shared control-height ladder `lr-input`/`lr-date-input` sit on, so a birthdate field in a form row beside those controls renders at the same height. The `max()` floors the two smallest tiers at WCAG 2.2 SC 2.5.8's 24px pointer-target minimum. At the small tiers the floor exceeds the field's own content height and actively pins the rendered box; at `l`/`xl` the content height stays under it, so those two tiers are unaffected."
       }
     },
     {
       "name": "--lr-known-date-field-padding-block",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-known-date>`** (default: `var(--lr-space-s)`) — Block padding of each `field-input`, auto-swapped per `size`."
+        "value": "**`<lr-known-date>`** (default: `var(--lr-form-control-padding-block)`) — Block padding of each `field-input`, auto-swapped per `size` by the shared ladder."
       }
     },
     {
       "name": "--lr-known-date-field-padding-inline",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-known-date>`** (default: `var(--lr-space-s)`) — Inline padding of each `field-input`, auto-swapped per `size`."
+        "value": "**`<lr-known-date>`** (default: `var(--lr-form-control-padding-inline)`) — Inline padding of each `field-input`, auto-swapped per `size` by the shared ladder."
       }
     },
     {
@@ -3078,7 +3456,7 @@
       "name": "--lr-locale-picker-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-locale-picker>`** — Trigger font size, scaled by `size`."
+        "value": "**`<lr-locale-picker>`** (default: `var(--lr-form-control-font-size)`) — Trigger font size, from the shared form-control size ladder."
       }
     },
     {
@@ -3141,7 +3519,7 @@
       "name": "--lr-locale-picker-trigger-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-locale-picker>`** — Trigger block-size floor, scaled by `size`."
+        "value": "**`<lr-locale-picker>`** (default: `var(--lr-form-control-height)`) — Trigger block-size floor. Reads the shared form-control height ladder, so retuning `--lr-theme-form-control-height-*` moves this control and every sibling field together."
       }
     },
     {
@@ -3211,7 +3589,7 @@
       "name": "--lr-media-card-max-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-media-card>`** (default: `var(--lr-size-20rem)`) — Cap on the block size of the `<img>`/`<video>` in `[part=\"media\"]`. **Chrome escape hatch.** `appearance=\"plain\"` drops `[part=\"base\"]`'s border, background, padding, and corner radius — for a dense list/feed of cards (this component's own documented primary use case) where the surrounding container already provides its own separation, so cards don't double up on chrome. Mirrors `<lr-source-card>`'s identical `appearance` vocabulary."
+        "value": "**`<lr-media-card>`** (default: `var(--lr-size-20rem)`) — Cap on the block size of the `<img>`/`<video>` in `[part=\"media\"]`. **Chrome escape hatch.** `frame=\"plain\"` drops `[part=\"base\"]`'s border, background, padding, and corner radius — for a dense list/feed of cards (this component's own documented primary use case) where the surrounding container already provides its own separation, so cards don't double up on chrome. `frame` is the library-wide name for this container treatment."
       }
     },
     {
@@ -3309,7 +3687,7 @@
       "name": "--lr-model-select-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-model-select>`** (default: `var(--lr-font-size-md)`) — Trigger/combobox font size, scaled by `size`."
+        "value": "**`<lr-model-select>`** (default: `var(--lr-form-control-font-size)`) — Trigger/combobox font size, scaled by `size` off the shared control ladder."
       }
     },
     {
@@ -3351,14 +3729,14 @@
       "name": "--lr-model-select-trigger-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-model-select>`** (default: `var(--lr-size-2-5rem)`) — Trigger/combobox block-size floor, scaled by `size`."
+        "value": "**`<lr-model-select>`** (default: `var(--lr-form-control-height)`) — Trigger/combobox block-size floor, scaled by `size` off the shared control ladder."
       }
     },
     {
       "name": "--lr-model-select-trigger-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-model-select>`** (default: `var(--lr-space-xs) var(--lr-space-s)`) — Trigger/combobox padding shorthand, scaled by `size`."
+        "value": "**`<lr-model-select>`** (default: `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`) — Trigger/combobox padding shorthand, scaled by `size` off the shared control ladder."
       }
     },
     {
@@ -3383,6 +3761,20 @@
       }
     },
     {
+      "name": "--lr-otp-input-mask-char",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `'•'`) — The glyph shown for a masked character, and for every empty segment while `with-mask` is set. Must be a quoted string, because it is used as CSS `content`."
+      }
+    },
+    {
+      "name": "--lr-overlay-arrow-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-size-0-375rem)`) — Half-width of the arrow square."
+      }
+    },
+    {
       "name": "--lr-overlay-max-inline-size",
       "description": {
         "kind": "markdown",
@@ -3401,6 +3793,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-page-rail>`** (default: `var(--lr-size-24rem)`) — Block size of the virtualized rail."
+      }
+    },
+    {
+      "name": "--lr-pagination-control-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** — Resting background of every control; defaults from the `appearance` variant."
+      }
+    },
+    {
+      "name": "--lr-pagination-control-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** — Resting border color of every control; defaults from the `appearance` variant."
       }
     },
     {
@@ -3463,7 +3869,7 @@
       "name": "--lr-phone-input-control-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-phone-input>`** — Input-wrapper block-size floor, scaled by `size`."
+        "value": "**`<lr-phone-input>`** (default: `var(--lr-form-control-height)`) — Input-wrapper block-size floor. Reads the shared form-control height ladder, so retuning `--lr-theme-form-control-height-*` moves this control and every sibling field together."
       }
     },
     {
@@ -3526,7 +3932,7 @@
       "name": "--lr-phone-input-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-phone-input>`** (default: `var(--lr-radius)`) — Input-wrapper corner radius."
+        "value": "**`<lr-phone-input>`** (default: `var(--lr-radius)`) — Input-wrapper corner radius, shared with the country trigger's leading corners. The `pill` attribute swaps it for `--lr-radius-pill`."
       }
     },
     {
@@ -3562,6 +3968,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-poll-status>`** (default: `var(--lr-color-success)`) — Background of `indicator` while `data-due` is set, without repainting every other component that reuses the shared success token."
+      }
+    },
+    {
+      "name": "--lr-popup-arrow-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-popup>`** (default: `var(--lr-size-0-375rem)`) — Half-width of the arrow square."
       }
     },
     {
@@ -3652,21 +4065,49 @@
       "name": "--lr-radio-checked-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio>`** (default: `var(--lr-color-brand)`) — Border color of `[part='circle']` while `checked`. Retint just this control's checked ring without touching the shared `--lr-color-brand` token every other component also reads."
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `var(--lr-color-brand)`) — Border color of `[part='circle']` while `checked`. Retint just this control's checked ring without touching the shared `--lr-color-brand` token every other component also reads."
       }
     },
     {
       "name": "--lr-radio-checked-dot-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio>`** (default: `var(--lr-color-brand)`) — Background of `[part='dot']` while `checked`."
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `var(--lr-color-brand)`) — Background of `[part='dot']` while `checked`."
+      }
+    },
+    {
+      "name": "--lr-radio-circle-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`) — Edge length of `[part='circle']`. Derived from the `size` tier's shared control height so a radio lines up with an `<lr-input>`/`<lr-select>`/`<lr-button>` of the same `size`."
+      }
+    },
+    {
+      "name": "--lr-radio-dot-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `min(calc(var(--lr-radio-circle-size) * 0.5), calc(var(--lr-form-control-height) * 0.3))`) — Edge length of `[part='dot']`, capped at half the circle so it can never outgrow its ring."
+      }
+    },
+    {
+      "name": "--lr-radio-group-row-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-group>`** (default: `calc(var(--lr-form-control-height) * 0.2)`) — Vertical gap between the group's label, options and messages, scaled by `size`."
       }
     },
     {
       "name": "--lr-radio-label-indent",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio>`** (default: `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`) — The inline distance from the control's start edge to the start of the label text, i.e. the circle's own floor plus the gap next to it. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-radio` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control."
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `calc(var(--lr-radio-circle-size) + var(--lr-space-s))`) — The inline distance from the control's start edge to the start of the label text, i.e. the circle's own floor plus the gap next to it — so it tracks `size` along with the circle. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-radio` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size`, `--lr-theme-form-control-height-*` and `--lr-theme-space-s`, which you control."
+      }
+    },
+    {
+      "name": "--lr-radio-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio>`** (default: `var(--lr-radius-pill)`) — Corner radius of the control's own chrome. A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at the shared control radius and swaps it for a pill when `pill` is set.\n\n**`<lr-radio-button>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the outer edges of the button row. Inherited from `<lr-radio>` and re-pointed here at the shared control radius; `pill` swaps it for `--lr-radius-pill`."
       }
     },
     {
@@ -3694,21 +4135,21 @@
       "name": "--lr-rating-empty-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-rating>`** (default: `var(--lr-color-border)`) — Unfilled-star color, retained during hover preview."
+        "value": "**`<lr-rating>`** (default: `var(--lr-color-border)`) — Unfilled-symbol color, retained during hover preview."
       }
     },
     {
       "name": "--lr-rating-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-rating>`** (default: `var(--lr-color-warning)`) — Filled-star color."
+        "value": "**`<lr-rating>`** (default: `var(--lr-color-warning)`) — Filled-symbol color."
       }
     },
     {
       "name": "--lr-rating-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-rating>`** (default: `var(--lr-font-size-xl)`) — Star size."
+        "value": "**`<lr-rating>`** (default: `var(--lr-font-size-xl)`) — Symbol size. Each `size` step rewrites it; the `m` default reproduces the treatment this component had before `size` existed."
       }
     },
     {
@@ -3834,7 +4275,7 @@
       "name": "--lr-scroll-fade-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the track actually overflows, so a row that fits is never dimmed.\n\n**`<lr-tabs>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the tablist actually overflows, so a row that fits is never dimmed."
+        "value": "**`<lr-segmented>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the track actually overflows, so a row that fits is never dimmed.\n\n**`<lr-tab-group>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the tablist actually overflows, so a row that fits is never dimmed."
       }
     },
     {
@@ -3855,7 +4296,7 @@
       "name": "--lr-segmented-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `var(--lr-font-size-sm)`) — Each segment's font size. Re-set per `size`; this default applies at the unset/`m` size."
+        "value": "**`<lr-segmented>`** (default: `var(--lr-form-control-font-size)`) — Each segment's font size, taken from the `size` tier's shared control font size."
       }
     },
     {
@@ -3869,7 +4310,7 @@
       "name": "--lr-segmented-segment-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `var(--lr-size-0-125rem) var(--lr-space-s)`) — Each segment's padding. Re-set per `size`; this default applies at the unset/`m` size."
+        "value": "**`<lr-segmented>`** (default: `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`) — Each segment's padding, taken from the `size` tier's shared control padding."
       }
     },
     {
@@ -3918,7 +4359,7 @@
       "name": "--lr-segmented-track-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `var(--lr-size-2-5rem)`) — Minimum height of the `base` track. Re-set per `size` (`2xs` through `xl`); the `2.5rem` (40px) default applies at the unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared default-tier floor. Because it is declared on `:host` per tier, override it on the element itself, not on an ancestor."
+        "value": "**`<lr-segmented>`** (default: `var(--lr-form-control-height)`) — Minimum height of the `base` track, taken from the `size` tier's shared control height; the `2.5rem` (40px) default applies at the unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared default-tier floor. Because it is declared on `:host`, override it on the element itself, not on an ancestor."
       }
     },
     {
@@ -3939,14 +4380,14 @@
       "name": "--lr-select-expand-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-select>`** — Decorative expand-icon box size, scaled by `size`."
+        "value": "**`<lr-select>`** — Decorative expand-icon box size, scaled by `size`. The one piece of this component's geometry the shared ladder does not own: it sizes a glyph, not the control row."
       }
     },
     {
       "name": "--lr-select-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-select>`** — Trigger font size, scaled by `size`."
+        "value": "**`<lr-select>`** (default: `var(--lr-form-control-font-size)`) — Trigger font size, from the active `size` tier."
       }
     },
     {
@@ -3995,7 +4436,21 @@
       "name": "--lr-select-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-select>`** — Trigger corner radius. Doesn't vary by `size`."
+        "value": "**`<lr-select>`** (default: `var(--lr-form-control-radius)`) — Trigger corner radius, from the active `size` tier of the shared form-control ladder (the two tightest tiers take a smaller radius)."
+      }
+    },
+    {
+      "name": "--lr-select-tag-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** — Chip text size. Doesn't vary by `size`."
+      }
+    },
+    {
+      "name": "--lr-select-tag-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** — Padding inside a `multiple`-mode chip. Doesn't vary by `size`."
       }
     },
     {
@@ -4009,14 +4464,14 @@
       "name": "--lr-select-trigger-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-select>`** — Trigger block-size floor, scaled by `size`, and live at every tier including the default `m` (`2.5rem`, matching `<lr-input>`/`<lr-combobox>` at that tier)."
+        "value": "**`<lr-select>`** (default: `var(--lr-form-control-height)`) — Trigger block-size floor, from the active `size` tier of the shared ladder, and live at every tier including the default `m` -- so a select is exactly as tall as an `<lr-button>`/`<lr-input>` of that tier."
       }
     },
     {
       "name": "--lr-select-trigger-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-select>`** — Trigger padding shorthand, scaled by `size`."
+        "value": "**`<lr-select>`** — Trigger padding shorthand. Defaults to the active `size` tier's `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)` from the shared ladder."
       }
     },
     {
@@ -4087,6 +4542,34 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-skeleton>`** (default: `100%`) — Inline size of the placeholder."
+      }
+    },
+    {
+      "name": "--lr-slider-row-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `calc(var(--lr-form-control-height) * 0.6)`) — Cross-axis extent of the control's interactive row: its block size when horizontal, its inline size when vertical. Scales off the shared form-control ladder, so a size tier moves it without a per-tier rule."
+      }
+    },
+    {
+      "name": "--lr-slider-thumb-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `calc(var(--lr-form-control-height) * 0.4)`) — Diameter of each draggable handle, derived from the `size` tier's shared control height. The transparent drag area around it never drops below 1.75rem/28px, whatever this is set to."
+      }
+    },
+    {
+      "name": "--lr-slider-track-length",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `var(--lr-size-10rem)`) — Length of the track in `orientation=\"vertical\"`; the horizontal track fills its container instead. Declared as an inline `var()` fallback (never on `:host`), so a consumer override at any ancestor wins."
+      }
+    },
+    {
+      "name": "--lr-slider-track-thickness",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `calc(var(--lr-slider-thumb-size) * 0.25)`) — Thickness of the track, the filled indicator and (scaled from it) the `with-markers` ticks."
       }
     },
     {
@@ -4297,6 +4780,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-stat>`** (default: `var(--lr-color-success)`) — Text color of the trend pill when its polarity is \"good\". Independent of the headline value's `variant=\"success\"` tint, which reads the shared `--lr-color-success` token directly."
+      }
+    },
+    {
+      "name": "--lr-stat-value-brand-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-color-brand)`) — Headline value color for the `brand` variant."
       }
     },
     {
@@ -4534,14 +5024,42 @@
       "name": "--lr-switch-track-block-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-switch>`** (default: `var(--lr-size-1-25rem)`) — Block size of the track; the thumb's diameter is derived from it minus twice `--lr-switch-thumb-offset`."
+        "value": "**`<lr-switch>`** (default: `calc(var(--lr-form-control-height) * 0.5)`) — Block size of the track, half the `size` tier's shared control height; the thumb's diameter is derived from it minus twice `--lr-switch-thumb-offset`."
+      }
+    },
+    {
+      "name": "--lr-switch-track-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-switch>`** (default: `var(--lr-color-border)`) — Resting fill of `[part='track']`, re-pointed at `var(--lr-color-brand)` while `checked`. The hover and press states mix away from whichever of the two is current, so retinting this retints all four renderings at once."
       }
     },
     {
       "name": "--lr-switch-track-inline-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-switch>`** (default: `var(--lr-size-2-25rem)`) — Inline size of the track, and (with the block size) the distance the thumb travels when checked."
+        "value": "**`<lr-switch>`** (default: `calc(var(--lr-switch-track-block-size) * 1.8)`) — Inline size of the track, and (with the block size) the distance the thumb travels when checked. Derived from the block size, so re-sizing the track keeps its aspect ratio."
+      }
+    },
+    {
+      "name": "--lr-tab-group-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tab-group>`** (default: `var(--lr-color-text)`) — Text color of a hovered, non-disabled tab. Independent of the selected-state props above."
+      }
+    },
+    {
+      "name": "--lr-tab-group-indicator-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tab-group>`** (default: `var(--lr-color-brand)`) — Color of the selected tab's underline, themeable independently of its text color."
+      }
+    },
+    {
+      "name": "--lr-tab-group-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tab-group>`** (default: `var(--lr-color-brand)`) — Text color of the selected tab. Scoped to `[aria-selected='true']` only, so it never repaints a hovered unselected tab (which is what hijacking `--lr-color-brand` library-wide used to do)."
       }
     },
     {
@@ -4622,24 +5140,17 @@
       }
     },
     {
-      "name": "--lr-tabs-hover-color",
+      "name": "--lr-tag-remove-hover-background",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tabs>`** (default: `var(--lr-color-text)`) — Text color of a hovered, non-disabled tab. Independent of the selected-state props above."
+        "value": "**`<lr-tag>`** (default: `color-mix(in srgb, currentColor 16%, transparent)`) — Background of the remove button on hover."
       }
     },
     {
-      "name": "--lr-tabs-indicator-color",
+      "name": "--lr-tag-remove-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tabs>`** (default: `var(--lr-color-brand)`) — Color of the selected tab's underline, themeable independently of its text color."
-      }
-    },
-    {
-      "name": "--lr-tabs-selected-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-tabs>`** (default: `var(--lr-color-brand)`) — Text color of the selected tab. Scoped to `[aria-selected='true']` only, so it never repaints a hovered unselected tab (which is what hijacking `--lr-color-brand` library-wide used to do)."
+        "value": "**`<lr-tag>`** (default: `var(--lr-badge-radius)`) — Corner radius of the remove button, defaulting to the tag's own corner so retuning one retunes both."
       }
     },
     {
@@ -4811,10 +5322,45 @@
       }
     },
     {
+      "name": "--lr-textarea-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-textarea>`** (default: `var(--lr-color-border)`) — Border color of the field, swapped per `appearance` in the same way as `--lr-textarea-fill`."
+      }
+    },
+    {
+      "name": "--lr-textarea-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-textarea>`** (default: `var(--lr-color-surface)`) — Background of the field. Swapped per `appearance`; the documented default is `appearance=\"filled-outlined\"`'s value."
+      }
+    },
+    {
+      "name": "--lr-textarea-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-textarea>`** (default: `var(--lr-form-control-font-size)`) — Font size of the native textarea, from the active `size` tier of the shared ladder."
+      }
+    },
+    {
       "name": "--lr-textarea-max-block-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-textarea>`** (default: `none`) — Maximum auto-grown block size before the textarea scrolls."
+      }
+    },
+    {
+      "name": "--lr-textarea-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-textarea>`** (default: `var(--lr-form-control-padding-inline)`) — Padding of the native textarea on all four sides, from the active `size` tier of the shared form-control ladder (`internal/sizes.styles.ts`). The ladder's *inline* gutter is used on every side deliberately: its block padding is `0` at the two tightest tiers because a control row's height floor supplies the space there, and a textarea has no such floor -- the first line of text would sit on the border."
+      }
+    },
+    {
+      "name": "--lr-textarea-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-textarea>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the field, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius). `pill` swaps it to `--lr-radius-pill`."
       }
     },
     {
@@ -5017,7 +5563,7 @@
       "name": "--lr-toast-accent-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-toast>`** (default: `var(--lr-color-border)`) — Accent bar / icon color of a slotted item, auto-swapped per its `variant`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-color-border)`) — Color of the accent bar and the icon, auto-swapped per `variant`."
+        "value": "**`<lr-toast>`** (default: `var(--lr-color-border)`) — Accent bar / icon color of a slotted item, auto-swapped per its `variant`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-color-border)`) — Color of the accent bar and the icon. Each non-neutral `variant` sets it to that variant's loud fill from the shared semantic grid; `neutral` keeps the plain border color, so an informational toast reads as unaccented."
       }
     },
     {
@@ -5031,7 +5577,7 @@
       "name": "--lr-toast-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-toast>`** (default: `var(--lr-font-size-md)`) — Font size of a slotted item, auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-font-size-md)`) — Font size of the item, auto-swapped per `size`."
+        "value": "**`<lr-toast>`** (default: `var(--lr-font-size-m)`) — Font size of a slotted item, auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-font-size-m)`) — Font size of the item, auto-swapped per `size` across the shared six-step ladder."
       }
     },
     {
@@ -5052,7 +5598,7 @@
       "name": "--lr-toast-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-toast>`** (default: `var(--lr-space-m)`) — Padding of a slotted item, auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-space-m)`) — Padding of the item, auto-swapped per `size`."
+        "value": "**`<lr-toast>`** (default: `var(--lr-space-m)`) — Padding of a slotted item, auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-space-m)`) — Padding of the item, auto-swapped per `size` across the shared six-step ladder."
       }
     },
     {
@@ -5087,7 +5633,7 @@
       "name": "--lr-token-input-control-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-token-input>`** — Input-wrapper block-size floor, scaled by `size`."
+        "value": "**`<lr-token-input>`** (default: `var(--lr-form-control-height)`) — Input-wrapper block-size floor. Reads the shared form-control height ladder, so retuning `--lr-theme-form-control-height-*` moves this control and every sibling field together."
       }
     },
     {
@@ -5150,7 +5696,7 @@
       "name": "--lr-token-input-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-token-input>`** (default: `var(--lr-radius)`) — Row/token corner radius."
+        "value": "**`<lr-token-input>`** (default: `var(--lr-radius)`) — Row/token corner radius. The `pill` attribute swaps it for `--lr-radius-pill`."
       }
     },
     {
@@ -5392,6 +5938,13 @@
       }
     },
     {
+      "name": "--lr-tooltip-arrow-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tooltip>`** (default: `var(--lr-size-0-375rem)`) — Half-width of the arrow square."
+      }
+    },
+    {
       "name": "--lr-tooltip-background",
       "description": {
         "kind": "markdown",
@@ -5535,91 +6088,91 @@
       "name": "--lr-tree-badge-brand-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand-quiet)`) — Brand badge background."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand-quiet)`) — Brand badge background."
       }
     },
     {
       "name": "--lr-tree-badge-brand-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand)`) — Brand badge text color."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand)`) — Brand badge text color."
       }
     },
     {
       "name": "--lr-tree-badge-danger-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-danger-quiet)`) — Danger badge background."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-danger-quiet)`) — Danger badge background."
       }
     },
     {
       "name": "--lr-tree-badge-danger-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-danger)`) — Danger badge text color."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-danger)`) — Danger badge text color."
       }
     },
     {
       "name": "--lr-tree-badge-neutral-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-surface)`) — Neutral badge background."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-surface)`) — Neutral badge background."
       }
     },
     {
       "name": "--lr-tree-badge-neutral-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-text-quiet)`) — Neutral badge text color."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-text-quiet)`) — Neutral badge text color."
       }
     },
     {
       "name": "--lr-tree-badge-success-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-success-quiet)`) — Success badge background."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-success-quiet)`) — Success badge background."
       }
     },
     {
       "name": "--lr-tree-badge-success-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-success)`) — Success badge text color."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-success)`) — Success badge text color."
       }
     },
     {
       "name": "--lr-tree-badge-warning-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-warning-quiet)`) — Warning badge background."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-warning-quiet)`) — Warning badge background."
       }
     },
     {
       "name": "--lr-tree-badge-warning-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-warning)`) — Warning badge text color."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-warning)`) — Warning badge text color."
       }
     },
     {
       "name": "--lr-tree-depth",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `0`) — Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`."
+        "value": "**`<lr-tree-item>`** (default: `0`) — Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`."
       }
     },
     {
       "name": "--lr-tree-selected-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand-quiet)`) — Background of the selected row."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand-quiet)`) — Background of the selected row."
       }
     },
     {
       "name": "--lr-tree-selected-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand)`) — Text color of the selected row."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand)`) — Text color of the selected row."
       }
     },
     {

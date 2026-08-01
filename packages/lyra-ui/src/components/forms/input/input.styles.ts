@@ -3,51 +3,58 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lr-input-padding-block: var(--lr-space-s);
-    --lr-input-padding-inline: var(--lr-space-s);
-    --lr-input-font-size: var(--lr-font-size-md-sm);
-    --lr-input-control-min-height: var(--lr-size-2-5rem);
+    /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, pulled in ahead of
+       this sheet by input.class.ts): one scale for lr-button/lr-input/lr-select/lr-combobox/
+       lr-date-input instead of five hand-maintained copies that had already drifted (this
+       component's own l and xl tiers used to overshoot their declared floor by 2px and 5px, so an
+       input never actually lined up with the button beside it). The ladder matches both spellings
+       of every tier in one selector list, so size="small" is size="s" here for free. */
+    --lr-input-padding-block: var(--lr-form-control-padding-block);
+    --lr-input-padding-inline: var(--lr-form-control-padding-inline);
+    --lr-input-font-size: var(--lr-form-control-font-size);
+    --lr-input-control-min-height: var(--lr-form-control-height);
     /* --lr-input-control-height is intentionally NOT declared here. It is a consumer-facing escape
        hatch consumed only through the two var() fallbacks on [part='input-wrapper'] below;
        declaring any value for it (even 'auto') would make those fallback arms unreachable and
        silently turn --lr-input-control-min-height into dead code. Left undeclared, both arms stay
        live: the per-tier floor falls out of the fallback, and setting the property from anywhere
        (inline style, an ancestor, an outer-tree rule) pins an exact height. */
-    /* Gap and radius don't vary by size tier (unlike the four knobs above), so each is declared
-       once here rather than re-assigned per :host([size='…']) block -- mirrors lr-button's
-       --lr-button-gap/--lr-button-radius. */
+    /* The adornment gap is deliberately NOT taken from the ladder: it does not vary by tier there
+       either, and the ladder's value is tuned for a button's icon-beside-label spacing, which is
+       tighter than a text field wants between an adornment and the caret. */
     --lr-input-gap: var(--lr-space-xs);
-    --lr-input-radius: var(--lr-radius);
+    --lr-input-radius: var(--lr-form-control-radius);
+    /* Fill/border pair swapped per appearance below. Declared here as well so an element whose
+       appearance attribute hasn't reflected yet (or was removed by hand) still paints the
+       committed filled-outlined treatment rather than an unstyled box. */
+    --lr-input-fill: var(--lr-color-surface);
+    --lr-input-border-color: var(--lr-color-border);
   }
-  :host([size='2xs']) {
-    --lr-input-padding-block: var(--lr-size-0-0625rem);
-    --lr-input-padding-inline: var(--lr-space-2xs);
-    --lr-input-font-size: var(--lr-font-size-2xs);
-    --lr-input-control-min-height: var(--lr-size-1-25rem);
+  :host([appearance='filled-outlined']) {
+    --lr-input-fill: var(--lr-color-surface);
+    --lr-input-border-color: var(--lr-color-border);
   }
-  :host([size='xs']) {
-    --lr-input-padding-block: var(--lr-size-0-125rem);
-    --lr-input-padding-inline: var(--lr-space-xs);
-    --lr-input-font-size: var(--lr-font-size-xs);
-    --lr-input-control-min-height: var(--lr-size-1-5rem);
+  :host([appearance='outlined']) {
+    --lr-input-fill: transparent;
+    --lr-input-border-color: var(--lr-color-border);
   }
-  :host([size='s']) {
-    --lr-input-padding-block: var(--lr-space-xs);
-    --lr-input-padding-inline: var(--lr-space-xs);
-    --lr-input-font-size: var(--lr-font-size-sm);
-    --lr-input-control-min-height: var(--lr-size-1-875rem);
+  :host([appearance='filled']) {
+    --lr-input-fill: var(--lr-color-surface-raised);
+    --lr-input-border-color: transparent;
   }
-  :host([size='l']) {
-    --lr-input-padding-block: var(--lr-space-m);
-    --lr-input-padding-inline: var(--lr-space-m);
-    --lr-input-font-size: var(--lr-font-size-lg);
-    --lr-input-control-min-height: var(--lr-size-3rem);
+  :host([appearance='plain']) {
+    --lr-input-fill: transparent;
+    --lr-input-border-color: transparent;
   }
-  :host([size='xl']) {
-    --lr-input-padding-block: var(--lr-space-l);
-    --lr-input-padding-inline: var(--lr-space-l);
-    --lr-input-font-size: var(--lr-font-size-xl);
-    --lr-input-control-min-height: var(--lr-size-3-5rem);
+  /* The loudest tier still has to read as an editable text surface, so it takes the *quiet* brand
+     tint as its fill and the loud brand color on the border only -- a loud fill would put user
+     text on a saturated background at an unpredictable contrast ratio. */
+  :host([appearance='accent']) {
+    --lr-input-fill: var(--lr-color-brand-quiet);
+    --lr-input-border-color: var(--lr-color-brand);
+  }
+  :host([pill]) {
+    --lr-input-radius: var(--lr-radius-pill);
   }
   [part='form-control-label'] {
     display: block;
@@ -73,9 +80,9 @@ export const styles = css`
        growing to fit its own content. */
     block-size: var(--lr-input-control-height, auto);
     padding-inline: var(--lr-input-padding-inline);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-input-border-color);
     border-radius: var(--lr-input-radius);
-    background: var(--lr-color-surface);
+    background: var(--lr-input-fill);
   }
   [part='input-wrapper']:focus-within {
     border-color: var(--lr-color-brand);
@@ -116,11 +123,15 @@ export const styles = css`
   [part='input'][type='search']::-webkit-search-decoration {
     appearance: none;
   }
-  [part='input'][type='number'] {
+  /* Gated on the rendered data attribute rather than :host([without-spin-buttons]) so the
+     suppression tracks the property on the very first render, independent of when Lit reflects
+     the host attribute -- and so a subclass defaulting the property the other way (see
+     <lr-number-input>) needs no converter gymnastics to keep the two in step. */
+  [part='input'][type='number'][data-without-spin-buttons] {
     appearance: textfield;
   }
-  [part='input'][type='number']::-webkit-outer-spin-button,
-  [part='input'][type='number']::-webkit-inner-spin-button {
+  [part='input'][type='number'][data-without-spin-buttons]::-webkit-outer-spin-button,
+  [part='input'][type='number'][data-without-spin-buttons]::-webkit-inner-spin-button {
     appearance: none;
     margin: 0;
   }
@@ -149,6 +160,9 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     border: none;
+    /* Invisible while the background is none; it exists so the pressed fill below (and the
+       focus ring, which follows the same corner) is a rounded chip rather than a hard rectangle. */
+    border-radius: var(--lr-radius);
     background: none;
     cursor: pointer;
     color: var(--lr-color-text-quiet);
@@ -156,13 +170,23 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     line-height: var(--lr-line-height-none);
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
   }
   [part='password-toggle']:hover {
     color: var(--lr-color-text);
   }
   [part='clear-button']:hover {
     color: var(--lr-color-text);
+  }
+  /* Pressed: the hover's quiet-to-full text step PLUS a fill, mixing the page surface toward
+     --lr-color-mix-partner. Deliberately more than the hover rather than a repeat of it -- these
+     two sit inside a text field whose own hover already moves the field border, so a fill at
+     rest-or-hover would compete with it, while a fill under the thumb only while the pointer is
+     down cannot. */
+  [part='password-toggle']:active,
+  [part='clear-button']:active {
+    color: var(--lr-color-text);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='password-toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

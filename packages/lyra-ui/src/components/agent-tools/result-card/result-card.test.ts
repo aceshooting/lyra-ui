@@ -135,12 +135,12 @@ it('is accessible with a title, header actions, and populated result-field body'
   await expect(el).to.be.accessible();
 });
 
-it('defaults to compact=false and appearance="card", keeping the border/background/padding', async () => {
+it('defaults to compact=false and frame="card", keeping the border/background/padding', async () => {
   const el = (await fixture(html`<lr-result-card title="x">body</lr-result-card>`)) as LyraResultCard;
   expect(el.compact).to.be.false;
-  expect(el.appearance).to.equal('card');
+  expect(el.frame).to.equal('card');
   expect(el.hasAttribute('compact')).to.be.false;
-  expect(el.getAttribute('appearance')).to.equal('card');
+  expect(el.getAttribute('frame')).to.equal('card');
 
   const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
   expect(base.borderTopWidth).to.equal('1px'); // --lr-border-width-thin
@@ -197,11 +197,11 @@ it('tightens the header/body gap under compact too, not just padding', async () 
   expect(getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).gap).to.equal('9px');
 });
 
-it('drops the border, background, and radius under appearance="plain", without doubling the actions/body padding', async () => {
+it('drops the border, background, and radius under frame="plain", without doubling the actions/body padding', async () => {
   const el = (await fixture(
-    html`<lr-result-card appearance="plain" title="x">body</lr-result-card>`,
+    html`<lr-result-card frame="plain" title="x">body</lr-result-card>`,
   )) as LyraResultCard;
-  expect(el.getAttribute('appearance')).to.equal('plain');
+  expect(el.getAttribute('frame')).to.equal('plain');
   const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
   expect(base.borderTopWidth).to.equal('0px');
   expect(base.borderTopLeftRadius).to.equal('0px');
@@ -212,7 +212,7 @@ it('drops the border, background, and radius under appearance="plain", without d
 
 it('lets plain win over compact when both are set', async () => {
   const el = (await fixture(
-    html`<lr-result-card compact appearance="plain" title="x">body</lr-result-card>`,
+    html`<lr-result-card compact frame="plain" title="x">body</lr-result-card>`,
   )) as LyraResultCard;
   const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
   expect(base.borderTopWidth).to.equal('0px');
@@ -222,6 +222,48 @@ it('lets plain win over compact when both are set', async () => {
   expect(header.paddingTop).to.equal('4px');
 });
 
+describe('frame', () => {
+  function base(el: LyraResultCard): CSSStyleDeclaration {
+    return getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+  }
+
+  it('keeps the card border and background under frame="card" and drops both under frame="plain"', async () => {
+    const card = (await fixture(html`<lr-result-card frame="card" title="x">body</lr-result-card>`)) as LyraResultCard;
+    expect(base(card).borderTopWidth).to.equal('1px');
+    expect(base(card).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+
+    const plain = (await fixture(
+      html`<lr-result-card frame="plain" title="x">body</lr-result-card>`,
+    )) as LyraResultCard;
+    expect(base(plain).borderTopWidth).to.equal('0px');
+    expect(base(plain).borderTopLeftRadius).to.equal('0px');
+    expect(base(plain).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('re-renders the chrome when frame is reassigned as a property', async () => {
+    const el = (await fixture(html`<lr-result-card title="x">body</lr-result-card>`)) as LyraResultCard;
+    expect(base(el).borderTopWidth).to.equal('1px');
+
+    el.frame = 'plain';
+    await el.updateComplete;
+    expect(el.getAttribute('frame')).to.equal('plain');
+    expect(base(el).borderTopWidth).to.equal('0px');
+
+    el.frame = 'card';
+    await el.updateComplete;
+    expect(base(el).borderTopWidth).to.equal('1px');
+  });
+
+  it('gives the superseded `appearance` attribute no effect at all -- the rename left no alias', async () => {
+    const el = (await fixture(
+      html`<lr-result-card appearance="plain" title="x">body</lr-result-card>`,
+    )) as LyraResultCard;
+    expect(el.frame).to.equal('card');
+    expect(base(el).borderTopWidth).to.equal('1px');
+    expect(base(el).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+});
+
 it('is accessible in the populated compact and plain states', async () => {
   const compactEl = (await fixture(
     html`<lr-result-card compact title="x">body</lr-result-card>`,
@@ -229,7 +271,7 @@ it('is accessible in the populated compact and plain states', async () => {
   await expect(compactEl).to.be.accessible();
 
   const plainEl = (await fixture(
-    html`<lr-result-card appearance="plain" title="x">body</lr-result-card>`,
+    html`<lr-result-card frame="plain" title="x">body</lr-result-card>`,
   )) as LyraResultCard;
   await expect(plainEl).to.be.accessible();
 });

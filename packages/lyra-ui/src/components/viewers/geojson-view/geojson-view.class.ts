@@ -406,11 +406,10 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
       case 'loaded': {
         const { value, featureCount, center, zoom, peerAvailable } = this.loadState;
         const metadata = JSON.stringify(value, null, 2);
-        const statusText = this.localize(
-          featureCount === 1 ? 'geojsonViewFeatureCount' : 'geojsonViewFeatureCountPlural',
-          undefined,
-          { count: getNumberFormat(this.effectiveLocale).format(featureCount) },
-        );
+        const statusText = this.localize('geojsonViewFeatureCount', undefined, {
+          count: getNumberFormat(this.effectiveLocale).format(featureCount),
+          pluralCount: featureCount,
+        });
         if (!peerAvailable) {
           return html`
             <p part="missing-library">${this.localize('geojsonViewMissingMapLibrary')}</p>

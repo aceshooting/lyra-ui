@@ -48,6 +48,12 @@ export const styles = css`
   [part='sources-summary']:hover {
     color: var(--lr-color-brand);
   }
+  /* The summary is a disclosure control, so the press gets a fill on top of the hover recolor --
+     mixed from [part='sources']'s own surface, which is what shows through the summary at rest. */
+  [part='sources-summary']:active {
+    color: var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
 
   [part='sources-summary']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

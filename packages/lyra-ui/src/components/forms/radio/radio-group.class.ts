@@ -3,12 +3,21 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { tag } from '../../../internal/prefix.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
 
 export interface LyraRadioGroupEventMap {
   'lr-change': CustomEvent<{ value: string; radio: LyraRadio }>;
 }
+
+// The two tags a group manages. `<lr-radio-button>` is a `LyraRadio` subclass, so every group
+// behaviour applies to it unchanged -- but discovery is by local name (an `instanceof` check would
+// force this module to import the subclass, and with it the button chrome, into every app that only
+// uses plain radios), so both names have to be listed. Computed rather than frozen at module scope
+// so the prefix stays the single source of truth.
+const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
 
 /**
  * `<lr-radio-group>` — a labeled, keyboard-navigable group of radios.
@@ -23,9 +32,21 @@ export interface LyraRadioGroupEventMap {
  * @csspart label - The group label.
  * @csspart hint - Supporting text.
  * @csspart error - Validation text.
+ * @cssprop [--lr-radio-group-row-gap=calc(var(--lr-form-control-height) * 0.2)] - Vertical gap
+ * between the group's label, options and messages, scaled by `size`.
  */
 export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
-  static override styles = [LyraElement.styles, groupStyles];
+  static override styles = [LyraElement.styles, sizes, groupStyles];
+  /**
+   * Size of the group's own chrome, on the library's shared ladder. Accepts both spellings of every
+   * tier — `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating
+   * either way is a tag rename. Scales the group's label type size and the gaps around and between
+   * its options off the same `--lr-form-control-*` values the controls themselves use. It does not
+   * resize the `<lr-radio>`/`<lr-radio-button>` children: each carries its own `size`, so a group
+   * can hold options at mixed sizes and an explicitly-sized option is never silently overridden by
+   * its container. Set the same `size` on the children to scale the whole group.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -82,11 +103,11 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   /** @internal Whether this group owns the radio through its default option slot. */
   ownsRadio(element: Element): element is LyraRadio {
-    return element.localName === tag('radio') && this.radioGroupOwner(element) === this;
+    return RADIO_TAGS().includes(element.localName) && this.radioGroupOwner(element) === this;
   }
 
   private radios(): LyraRadio[] {
-    return [...this.querySelectorAll(tag('radio'))].filter((radio) => this.ownsRadio(radio)) as LyraRadio[];
+    return [...this.querySelectorAll(RADIO_TAGS().join(','))].filter((radio) => this.ownsRadio(radio)) as LyraRadio[];
   }
   private syncRadios(preferred?: LyraRadio): void {
     if (this.syncingRadios) return;

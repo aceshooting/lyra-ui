@@ -2,12 +2,13 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './button.js';
 import type { LyraButton } from './button.class.js';
 import { styles } from './button.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-button', () => {
-  it('defaults to neutral/filled/m/button with a slotted label', async () => {
+  it('defaults to neutral/accent/m/button with a slotted label', async () => {
     const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
     expect(el.variant).to.equal('neutral');
-    expect(el.appearance).to.equal('filled');
+    expect(el.appearance).to.equal('accent');
     expect(el.size).to.equal('m');
     expect(el.type).to.equal('button');
     expect(el.loading).to.equal(false);
@@ -191,16 +192,28 @@ describe('lr-button', () => {
     expect(css).to.include('--lr-button-outlined-border: var(--lr-color-border-strong);');
   });
 
-  it('supports appearance="quiet": muted border/text tokens, transparent until hover', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include("--lr-button-quiet-border: var(--lr-color-border);");
-    expect(css).to.include("--lr-button-quiet-text: var(--lr-color-text-quiet);");
-    expect(css).to.match(
-      /:host\(\[appearance='quiet'\]\) \[part='base'\]\s*\{[^}]*background:\s*transparent;[^}]*color:\s*var\(--lr-button-quiet-text\);[^}]*border-color:\s*var\(--lr-button-quiet-border\);/,
+  it('supports appearance="quiet": muted border/text tokens, transparent until hover', async () => {
+    // Rendered results, not stylesheet text: a selector that never matches reads identically in
+    // the source, and the hover half of this pair shipped for two majors resolving to the page
+    // surface -- i.e. no hover at all -- while a source assertion on it stayed green.
+    const el = (await fixture(html`<lr-button appearance="quiet">Save</lr-button>`)) as LyraButton;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const computed = getComputedStyle(base);
+    expect(computed.backgroundColor, 'quiet is transparent at rest').to.equal('rgba(0, 0, 0, 0)');
+    expect(computed.color, 'quiet text is the muted token, not the body text').to.not.equal(
+      getComputedStyle(el).color,
     );
-    expect(css).to.match(
-      /:host\(\[appearance='quiet'\]\) \[part='base'\]:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--lr-color-surface\);/,
-    );
+    // The two quiet knobs reach the rendered box: re-point each and watch the box follow.
+    const retuned = (await fixture(html`
+      <lr-button appearance="quiet" style="--lr-button-quiet-text: rgb(1, 2, 3); --lr-button-quiet-border: rgb(4, 5, 6);"
+        >Save</lr-button
+      >
+    `)) as LyraButton;
+    await retuned.updateComplete;
+    const retunedBase = getComputedStyle(retuned.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(retunedBase.color).to.equal('rgb(1, 2, 3)');
+    expect(retunedBase.borderTopColor).to.equal('rgb(4, 5, 6)');
   });
 
   it('keeps appearance="quiet"\'s text/border independent of variant (unlike outlined)', async () => {
@@ -219,7 +232,10 @@ describe('lr-button', () => {
 
   it('ships a default :hover/:active treatment on [part="base"], disabled under reduced motion', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='base'\]:not\(:disabled\):hover\s*\{[^}]*filter:/);
+    // The hover/press COLOURS are asserted as rendered results in the hover-and-press-feedback
+    // block below -- a stylesheet-text match cannot tell a fill that moves from one that resolves
+    // to the page surface, which is exactly how the quiet hover shipped broken. What is left here
+    // is the reduced-motion contract, which is a media-query shape rather than a colour.
     expect(css).to.match(/\[part='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*scale\(/);
     expect(css).to.match(
       /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*none[^}]*\}[^]*\}/,
@@ -298,27 +314,29 @@ describe('lr-button', () => {
     );
   });
 
-  it('uses the standard medium size token and exposes a rethemeable size scale', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include("font-size: var(--lr-font-size-m);");
-    // Matches lr-input/lr-select/lr-combobox's own size="s" control-min-height token, so a
-    // default-row button lines up with its neighbors (size-tier-height-inconsistent-across-controls).
-    expect(css).to.include('--lr-button-size-s: var(--lr-size-1-875rem);');
-    // The per-tier floor now reaches min-block-size through --lr-button-min-height (re-assigned per
-    // size tier) so a consumer-set --lr-button-height can cap it; the size scale itself is unchanged.
-    expect(css).to.include('--lr-button-min-height: var(--lr-button-size-s);');
-    expect(css).to.include('min-block-size: var(--lr-button-height, var(--lr-button-min-height));');
+  it('reads the standard medium tier from the shared ladder and keeps the floor rethemeable', async () => {
+    const el = (await fixture(html`<lr-button>Go</lr-button>`)) as LyraButton;
+    const baseEl = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(baseEl).fontSize).to.equal('16px');
+    expect(getComputedStyle(baseEl).minBlockSize).to.equal('40px');
+    // The per-tier floor still reaches min-block-size through --lr-button-size-*, so overriding one
+    // tier for buttons alone stays a one-property change rather than a ::part(base) rule.
+    el.style.setProperty('--lr-button-size-m', '52px');
+    await el.updateComplete;
+    expect(getComputedStyle(baseEl).minBlockSize).to.equal('52px');
   });
 
-  it("matches lr-input/lr-select/lr-combobox's shared min-height scale at every size tier so a button never sits shorter than its row neighbors", () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    // Same token values as input.styles.ts's :host([size='…']) --lr-input-control-min-height scale.
-    expect(css).to.include('--lr-button-size-2xs: var(--lr-size-1-25rem);');
-    expect(css).to.include('--lr-button-size-xs: var(--lr-size-1-5rem);');
-    expect(css).to.include('--lr-button-size-s: var(--lr-size-1-875rem);');
-    expect(css).to.include('--lr-button-size-m: var(--lr-size-2-5rem);');
-    expect(css).to.include('--lr-button-size-l: var(--lr-size-3rem);');
-    expect(css).to.include('--lr-button-size-xl: var(--lr-size-3-5rem);');
+  it("matches lr-input's/lr-select's shared control height at every size tier so a button never sits shorter than its row neighbors", async () => {
+    // The one form-control ladder, measured rather than grepped: these are the same six values
+    // lr-input's and lr-select's own tier tests assert.
+    const expected: Record<string, string> = {
+      '2xs': '20px', xs: '24px', s: '30px', m: '40px', l: '48px', xl: '56px',
+    };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-button size=${size}>Go</lr-button>`)) as LyraButton;
+      const baseEl = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(getComputedStyle(baseEl).minBlockSize, `size=${size}`).to.equal(px);
+    }
   });
 
   it('propagates a consumer width from the host to the internal button', () => {
@@ -387,14 +405,14 @@ describe('lr-button', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('supports size="2xs": tighter than xs, with its own min-block-size token', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('--lr-button-size-2xs: var(--lr-size-1-25rem);');
-    // The tier's geometry now lives in cssprop re-assignment on :host([size='2xs']) rather than in
-    // property declarations on [part='base'] -- the values themselves are unchanged.
-    expect(css).to.match(
-      /:host\(\[size='2xs'\]\)\s*\{[^}]*--lr-button-padding-block:\s*var\(--lr-space-2xs\);[^}]*--lr-button-padding-inline:\s*var\(--lr-space-2xs\);[^}]*--lr-button-font-size:\s*var\(--lr-font-size-2xs\);[^}]*--lr-button-min-height:\s*var\(--lr-button-size-2xs\);/,
-    );
+  it('supports size="2xs": tighter than xs, with the ladder\'s tightest floor', async () => {
+    const el = (await fixture(html`<lr-button size="2xs">Go</lr-button>`)) as LyraButton;
+    const xsEl = (await fixture(html`<lr-button size="xs">Go</lr-button>`)) as LyraButton;
+    const cs = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    const xsCs = getComputedStyle(xsEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(cs.minBlockSize).to.equal('20px');
+    expect(parseFloat(cs.fontSize)).to.be.lessThan(parseFloat(xsCs.fontSize));
+    expect(parseFloat(cs.paddingInlineStart)).to.be.lessThan(parseFloat(xsCs.paddingInlineStart));
   });
 
   it('reflects size="2xs" as a host attribute', async () => {
@@ -404,23 +422,23 @@ describe('lr-button', () => {
   });
 
   describe('sizing custom properties', () => {
-    // The computed geometry each tier rendered *before* --lr-button-padding-block/-padding-inline/
-    // -font-size existed. An unset consumer must stay byte-identical, so these are hardcoded px
-    // (root font-size is 16px) rather than re-derived from the same tokens the stylesheet uses.
-    // minHeight now matches lr-input/lr-select/lr-combobox's shared control-min-height scale tier
-    // for tier (size-tier-height-inconsistent-across-controls) -- padding/font-size are unchanged.
+    // The geometry each tier renders, hardcoded in px (root font-size is 16px) rather than
+    // re-derived from the same tokens the stylesheet uses, so a token edit cannot make this test
+    // agree with itself. Since 8.0.0 every value comes from the one shared form-control ladder
+    // (internal/sizes.styles.ts): the min-heights are unchanged tier for tier, while padding and
+    // font-size moved onto the ladder's own steps.
     const tiers = [
-      { size: '2xs', padInline: '2px', padBlock: '2px', fontSize: '10px', minHeight: '20px' },
-      { size: 'xs', padInline: '4px', padBlock: '2px', fontSize: '12px', minHeight: '24px' },
+      { size: '2xs', padInline: '2px', padBlock: '0px', fontSize: '10px', minHeight: '20px' },
+      { size: 'xs', padInline: '4px', padBlock: '0px', fontSize: '12px', minHeight: '24px' },
       { size: 's', padInline: '8px', padBlock: '2px', fontSize: '13px', minHeight: '30px' },
       { size: 'm', padInline: '12px', padBlock: '4px', fontSize: '16px', minHeight: '40px' },
-      { size: 'l', padInline: '16px', padBlock: '8px', fontSize: '16px', minHeight: '48px' },
-      { size: 'xl', padInline: '32px', padBlock: '12px', fontSize: '18px', minHeight: '56px' },
+      { size: 'l', padInline: '16px', padBlock: '8px', fontSize: '18px', minHeight: '48px' },
+      { size: 'xl', padInline: '16px', padBlock: '8px', fontSize: '20px', minHeight: '56px' },
     ];
 
     const base = (el: LyraButton) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
-    it('renders byte-identical padding/font-size/min-height at all six tiers when the properties are untouched', async () => {
+    it('renders the ladder\'s padding/font-size/min-height at all six tiers when the properties are untouched', async () => {
       for (const tier of tiers) {
         const el = (await fixture(html`<lr-button size=${tier.size}>Go</lr-button>`)) as LyraButton;
         const cs = getComputedStyle(base(el));
@@ -447,24 +465,20 @@ describe('lr-button', () => {
       expect(cs.fontSize).to.equal('11px');
     });
 
-    it('declares the geometry knobs on :host (the "m" tier) and consumes them once on [part="base"]', () => {
+    it('takes every tier\'s geometry from the shared ladder, with no per-tier rule on [part="base"]', () => {
       const css = styles.cssText.replace(/\s+/g, ' ');
+      // The knobs read the ladder rather than restating a scale of their own.
       expect(css).to.match(
-        /:host \{[^}]*--lr-button-padding-block: var\(--lr-space-xs\);[^}]*--lr-button-padding-inline: var\(--lr-space-m\);[^}]*--lr-button-font-size: var\(--lr-font-size-m\);/,
+        /:host \{[^}]*--lr-button-padding-block: var\(--lr-form-control-padding-block\);[^}]*--lr-button-padding-inline: var\(--lr-form-control-padding-inline\);[^}]*--lr-button-font-size: var\(--lr-form-control-font-size\);/,
       );
-      // `size` reflects and defaults to 'm', so the ':host' declarations above *are* the m tier --
-      // a separate :host([size='m']) block would be dead weight.
-      expect(css, "a :host([size='m']) rule would only restate the :host defaults").to.not.match(
-        /:host\(\[size='m'\]\)[^;{]*\{/,
+      expect(css, 'no tier may restate a padding or font-size value of its own').to.not.match(
+        /:host\(\[size='[^']+'\]\)[^{]*\{[^}]*--lr-button-(?:padding|font-size)/,
       );
       expect(css).to.match(
         /\[part='base'\] \{[^}]*padding-inline: var\(--lr-button-padding-inline\);[^}]*padding-block: var\(--lr-button-padding-block\);/,
       );
-      // Per-tier blocks only re-assign the same knobs -- no property declarations of their own.
+      // A per-tier rule may only re-assign a cssprop -- never declare a property on the part.
       for (const size of ['2xs', 'xs', 's', 'l', 'xl']) {
-        expect(css, `size=${size}`).to.match(
-          new RegExp(`:host\\(\\[size='${size}'\\]\\) \\{[^}]*--lr-button-padding-block:`),
-        );
         expect(css, `size=${size} must not restyle [part='base'] directly`).to.not.include(
           `:host([size='${size}']) [part='base']`,
         );
@@ -525,12 +539,14 @@ describe('lr-button', () => {
       expect(getComputedStyle(base(el)).borderRadius).to.equal('0px');
     });
 
-    it('declares --lr-button-gap/--lr-button-radius on :host and consumes them once on [part="base"]', () => {
-      const css = styles.cssText.replace(/\s+/g, ' ');
-      expect(css).to.match(/:host \{[^}]*--lr-button-gap: var\(--lr-space-2xs\);/);
-      expect(css).to.match(/:host \{[^}]*--lr-button-radius: var\(--lr-radius\);/);
-      expect(css).to.include('gap: var(--lr-button-gap);');
-      expect(css).to.include('border-radius: var(--lr-button-radius);');
+    it('keeps the gap constant across tiers while the radius follows the shared ladder', async () => {
+      const mEl = (await fixture(html`<lr-button>Go</lr-button>`)) as LyraButton;
+      const xsEl = (await fixture(html`<lr-button size="xs">Go</lr-button>`)) as LyraButton;
+      expect(getComputedStyle(base(mEl)).gap).to.equal('2px');
+      expect(getComputedStyle(base(xsEl)).gap).to.equal('2px');
+      // The radius does vary: a 6px corner on a 24px-tall button reads as a lozenge.
+      expect(getComputedStyle(base(mEl)).borderTopLeftRadius).to.equal('6px');
+      expect(getComputedStyle(base(xsEl)).borderTopLeftRadius).to.equal('2px');
     });
 
     it('leaves --lr-button-height genuinely undeclared so its var() fallback arm can fire', () => {
@@ -868,4 +884,579 @@ it('tracks slotted end content through slotchange', async () => {
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await el.updateComplete;
   expect(flags.hasEndSlot).to.be.false;
+});
+
+describe('lr-button: pill', () => {
+  it('rounds the base to the pill radius token', async () => {
+    const el = (await fixture(html`<lr-button pill>Save</lr-button>`)) as LyraButton;
+    expect(el.pill).to.be.true;
+    expect(el.getAttribute('pill')).to.equal('');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // Rendered result, not stylesheet text: --lr-radius-pill resolves to 999px by default.
+    expect(getComputedStyle(base).borderRadius).to.equal('999px');
+  });
+
+  it('rounds a pill link button’s anchor the same way', async () => {
+    const el = (await fixture(
+      html`<lr-button pill href="https://example.com">Go</lr-button>`,
+    )) as LyraButton;
+    const base = el.shadowRoot!.querySelector('a[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).borderRadius).to.equal('999px');
+  });
+
+  it('leaves the corner radius on --lr-button-radius when pill is unset (regression)', async () => {
+    const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
+    expect(el.pill).to.be.false;
+    expect(el.hasAttribute('pill')).to.be.false;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // --lr-radius (0.375rem) at the default 16px root font size, exactly as before pill existed.
+    expect(getComputedStyle(base).borderRadius).to.equal('6px');
+  });
+
+  it('drops back to the default radius when pill is turned off again', async () => {
+    const el = (await fixture(html`<lr-button pill>Save</lr-button>`)) as LyraButton;
+    el.pill = false;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).borderRadius).to.equal('6px');
+  });
+
+  it('keeps appearance="link" at zero radius even while pill is set', async () => {
+    const el = (await fixture(
+      html`<lr-button pill appearance="link">Retry</lr-button>`,
+    )) as LyraButton;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).borderRadius).to.equal('0px');
+  });
+
+  it('is accessible as a pill button', async () => {
+    const el = await fixture(html`<lr-button pill variant="brand">Save</lr-button>`);
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-button: with-caret', () => {
+  it('renders no caret part by default (regression)', async () => {
+    const el = (await fixture(html`<lr-button>Menu</lr-button>`)) as LyraButton;
+    expect(el.withCaret).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="caret"]').length).to.equal(0);
+  });
+
+  it('renders a decorative caret glyph when with-caret is set', async () => {
+    const el = (await fixture(html`<lr-button with-caret>Menu</lr-button>`)) as LyraButton;
+    expect(el.withCaret).to.be.true;
+    expect(el.getAttribute('with-caret')).to.equal('');
+    const caret = el.shadowRoot!.querySelector('[part="caret"]') as HTMLElement;
+    // The glyph carries no accessible name: the label already names the trigger.
+    expect(caret.getAttribute('aria-hidden')).to.equal('true');
+    expect(el.shadowRoot!.querySelectorAll('[part="caret"] svg').length).to.equal(1);
+  });
+
+  it('points the caret down by rotating the wrapping part’s glyph', async () => {
+    const el = (await fixture(html`<lr-button with-caret>Menu</lr-button>`)) as LyraButton;
+    const glyph = el.shadowRoot!.querySelector('[part="caret"] svg') as unknown as HTMLElement;
+    // rotate(90deg) on the shared right-pointing chevron == matrix(0, 1, -1, 0, 0, 0).
+    expect(getComputedStyle(glyph).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
+  });
+
+  it('renders the caret in anchor mode too', async () => {
+    const el = (await fixture(
+      html`<lr-button with-caret href="https://example.com">Menu</lr-button>`,
+    )) as LyraButton;
+    expect(el.shadowRoot!.querySelectorAll('a[part="base"] [part="caret"]').length).to.equal(1);
+  });
+
+  it('hides the caret behind the loading spinner, like the label and adornments', async () => {
+    const el = (await fixture(
+      html`<lr-button with-caret .loading=${true}>Menu</lr-button>`,
+    )) as LyraButton;
+    const caret = el.shadowRoot!.querySelector('[part="caret"]') as HTMLElement;
+    expect(getComputedStyle(caret).opacity).to.equal('0');
+  });
+
+  it('removes the caret again when with-caret is turned off', async () => {
+    const el = (await fixture(html`<lr-button with-caret>Menu</lr-button>`)) as LyraButton;
+    el.withCaret = false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="caret"]').length).to.equal(0);
+    expect(el.hasAttribute('with-caret')).to.be.false;
+  });
+
+  it('keeps the caret at the inline end under RTL, with the glyph un-mirrored', async () => {
+    const el = (await fixture(
+      html`<lr-button dir="rtl" with-caret>القائمة</lr-button>`,
+    )) as LyraButton;
+    const caret = el.shadowRoot!.querySelector('[part="caret"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    // Inline-end under RTL is physically to the left of the label.
+    expect(caret.getBoundingClientRect().left).to.be.lessThan(
+      label.getBoundingClientRect().left,
+    );
+    // A downward caret is direction-neutral: it must not flip with the writing direction.
+    const glyph = el.shadowRoot!.querySelector('[part="caret"] svg') as unknown as HTMLElement;
+    expect(getComputedStyle(glyph).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
+  });
+
+  it('is accessible as a caret-bearing dropdown trigger', async () => {
+    const el = await fixture(
+      html`<lr-button with-caret aria-haspopup="menu" aria-expanded="false">Actions</lr-button>`,
+    );
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-button: appearance="filled-outlined"', () => {
+  it('combines the filled fill with the outlined border color', async () => {
+    const filledEl = (await fixture(
+      html`<lr-button appearance="filled" variant="brand">Save</lr-button>`,
+    )) as LyraButton;
+    const outlinedEl = (await fixture(
+      html`<lr-button appearance="outlined" variant="brand">Save</lr-button>`,
+    )) as LyraButton;
+    const bothEl = (await fixture(
+      html`<lr-button appearance="filled-outlined" variant="brand">Save</lr-button>`,
+    )) as LyraButton;
+    expect(bothEl.appearance).to.equal('filled-outlined');
+    expect(bothEl.getAttribute('appearance')).to.equal('filled-outlined');
+
+    const filled = getComputedStyle(filledEl.shadowRoot!.querySelector('[part="base"]')!);
+    const outlined = getComputedStyle(outlinedEl.shadowRoot!.querySelector('[part="base"]')!);
+    const both = getComputedStyle(bothEl.shadowRoot!.querySelector('[part="base"]')!);
+
+    expect(both.backgroundColor).to.equal(filled.backgroundColor);
+    expect(both.color).to.equal(filled.color);
+    expect(both.borderTopColor).to.equal(outlined.borderTopColor);
+    // The whole point of the tier: a border that reads distinctly against its own fill.
+    expect(both.borderTopColor).to.not.equal(filled.borderTopColor);
+  });
+
+  it('is accessible', async () => {
+    const el = await fixture(
+      html`<lr-button appearance="filled-outlined" variant="brand">Save</lr-button>`,
+    );
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-button: named submitter and form-submission overrides', () => {
+  it('contributes its name/value pair to the submitted FormData', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="q" value="hello" />
+        <lr-button type="submit" name="action" value="save">Save</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const captured: Record<string, string | null> = {};
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = new FormData(form, event.submitter);
+      captured.action = data.get('action') as string | null;
+      captured.q = data.get('q') as string | null;
+    });
+    el.click();
+    expect(captured.action).to.equal('save');
+    expect(captured.q).to.equal('hello');
+  });
+
+  it('contributes an empty value for a named button with no value', async () => {
+    const form = (await fixture(html`
+      <form><lr-button type="submit" name="action">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const captured: Record<string, string | null> = { action: null };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      captured.action = new FormData(form, event.submitter).get('action') as string | null;
+    });
+    el.click();
+    expect(captured.action).to.equal('');
+  });
+
+  it('leaves the submitted FormData and event.submitter untouched when nothing is named (regression)', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="q" value="hello" />
+        <lr-button type="submit">Save</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const seen: { submitterIsNull: boolean; keys: string[] } = { submitterIsNull: false, keys: [] };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      seen.submitterIsNull = event.submitter === null;
+      seen.keys = Array.from(new FormData(form, event.submitter).keys());
+    });
+    el.click();
+    expect(seen.submitterIsNull).to.be.true;
+    expect(seen.keys).to.deep.equal(['q']);
+  });
+
+  it('leaves no transient submitter behind in the form', async () => {
+    const form = (await fixture(html`
+      <form><lr-button type="submit" name="action" value="save">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const elementCountBefore = form.elements.length;
+    form.addEventListener('submit', (event) => event.preventDefault());
+    el.click();
+    expect(form.querySelectorAll('button').length).to.equal(0);
+    expect(form.elements.length).to.equal(elementCountBefore);
+  });
+
+  it('runs constraint validation on the real submission, blocking an invalid form', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="q" required />
+        <lr-button type="submit" name="action" value="save">Save</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    el.click();
+    expect(submitted).to.be.false;
+  });
+
+  it('skips constraint validation when formnovalidate is set', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="q" required />
+        <lr-button type="submit" name="action" value="save" formnovalidate>Save</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    expect(el.formNoValidate).to.be.true;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    el.click();
+    expect(submitted).to.be.true;
+  });
+
+  it('applies formaction/formenctype/formmethod/formtarget to the element the browser submits with', async () => {
+    const form = (await fixture(html`
+      <form action="/default-endpoint" method="get">
+        <lr-button
+          type="submit"
+          name="action"
+          value="save"
+          formaction="/custom-endpoint"
+          formenctype="multipart/form-data"
+          formmethod="post"
+          formtarget="_blank"
+          >Save</lr-button
+        >
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    expect(el.formAction).to.equal('/custom-endpoint');
+    expect(el.formEnctype).to.equal('multipart/form-data');
+    expect(el.formMethod).to.equal('post');
+    expect(el.formTarget).to.equal('_blank');
+
+    const seen: Record<string, string> = {};
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const submitter = event.submitter as HTMLButtonElement;
+      Object.assign(seen, {
+        tag: submitter.localName,
+        type: submitter.type,
+        name: submitter.name,
+        value: submitter.value,
+        action: submitter.formAction,
+        enctype: submitter.formEnctype,
+        method: submitter.formMethod,
+        target: submitter.formTarget,
+      });
+    });
+    el.click();
+
+    expect(seen.tag).to.equal('button');
+    expect(seen.type).to.equal('submit');
+    expect(seen.name).to.equal('action');
+    expect(seen.value).to.equal('save');
+    expect(seen.action).to.include('/custom-endpoint');
+    expect(seen.enctype).to.equal('multipart/form-data');
+    expect(seen.method).to.equal('post');
+    expect(seen.target).to.equal('_blank');
+  });
+
+  it('closes an ancestor dialog with its value through formmethod="dialog"', async () => {
+    const dialog = (await fixture(html`
+      <dialog>
+        <form>
+          <lr-button type="submit" name="action" value="save" formmethod="dialog">Save</lr-button>
+        </form>
+      </dialog>
+    `)) as HTMLDialogElement;
+    const el = dialog.querySelector('lr-button') as LyraButton;
+    dialog.show();
+    expect(dialog.open).to.be.true;
+    el.click();
+    expect(dialog.open).to.be.false;
+    expect(dialog.returnValue).to.equal('save');
+  });
+
+  it('reflects name synchronously on assignment, with no await', async () => {
+    const el = (await fixture(html`<lr-button type="submit">Save</lr-button>`)) as LyraButton;
+    el.name = 'action';
+    expect(el.getAttribute('name')).to.equal('action');
+    el.name = '';
+    expect(el.hasAttribute('name')).to.be.false;
+  });
+
+  it('submits with a name assigned in the same tick as the click', async () => {
+    const form = (await fixture(html`
+      <form><lr-button type="submit">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const captured: Record<string, string | null> = { action: null };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      captured.action = new FormData(form, event.submitter).get('action') as string | null;
+    });
+    // No `await el.updateComplete` between the two: a rename must reach the submission
+    // synchronously, not on Lit's async update cycle.
+    el.name = 'action';
+    el.value = 'save';
+    el.click();
+    expect(captured.action).to.equal('save');
+  });
+
+  it('exposes the submitter overrides as unset by default (regression)', async () => {
+    const el = (await fixture(html`<lr-button type="submit">Save</lr-button>`)) as LyraButton;
+    expect(el.name).to.equal('');
+    expect(el.value).to.equal('');
+    expect(el.formAction).to.be.undefined;
+    expect(el.formEnctype).to.be.undefined;
+    expect(el.formMethod).to.be.undefined;
+    expect(el.formTarget).to.be.undefined;
+    expect(el.formNoValidate).to.be.false;
+  });
+
+  it('never submits from a named button whose type is not submit', async () => {
+    const form = (await fixture(html`
+      <form><lr-button name="action" value="save">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    el.click();
+    expect(submitted).to.be.false;
+    expect(form.querySelectorAll('button').length).to.equal(0);
+  });
+
+  it('still resets from a named type="reset" button, with no transient submitter', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="q" />
+        <lr-button type="reset" name="action" value="clear">Reset</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const input = form.querySelector('input') as HTMLInputElement;
+    input.value = 'changed';
+    const el = form.querySelector('lr-button') as LyraButton;
+    el.click();
+    expect(input.value).to.equal('');
+    expect(form.querySelectorAll('button').length).to.equal(0);
+  });
+
+  it('ignores the submitter surface entirely in anchor mode', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-button type="submit" name="action" value="save" href="https://example.com"
+          >Go</lr-button
+        >
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    anchor.addEventListener('click', (event) => event.preventDefault());
+    el.click();
+    expect(submitted).to.be.false;
+    expect(form.querySelectorAll('button').length).to.equal(0);
+  });
+});
+
+describe('lr-button — the shared styling vocabulary', () => {
+  const base = (el: LyraButton) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const height = (el: LyraButton) => base(el).getBoundingClientRect().height;
+
+  it('defaults appearance to the loud accent tier, matching the upstream default', async () => {
+    const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
+    expect(el.appearance).to.equal('accent');
+    expect(el.getAttribute('appearance')).to.equal('accent');
+  });
+
+  // A migrating consumer keeps `size="small"` from wa-*/sl-* markup; it has to land on exactly the
+  // same tier `size="s"` does, geometry included, or the rename is only half a migration.
+  it('renders the Web Awesome size spellings at the same height as the canonical steps', async () => {
+    for (const [alias, step] of [['small', 's'], ['medium', 'm'], ['large', 'l']] as const) {
+      const aliasEl = (await fixture(html`<lr-button size=${alias}>Go</lr-button>`)) as LyraButton;
+      const stepEl = (await fixture(html`<lr-button size=${step}>Go</lr-button>`)) as LyraButton;
+      expect(height(aliasEl), `size=${alias} height`).to.equal(height(stepEl));
+      expect(getComputedStyle(base(aliasEl)).fontSize, `size=${alias} font-size`).to.equal(
+        getComputedStyle(base(stepEl)).fontSize,
+      );
+      expect(getComputedStyle(base(aliasEl)).paddingLeft, `size=${alias} padding-inline`).to.equal(
+        getComputedStyle(base(stepEl)).paddingLeft,
+      );
+    }
+  });
+
+  it('reads its control height from the shared form-control ladder at every tier', async () => {
+    const expected: Record<string, number> = { '2xs': 20, xs: 24, s: 30, m: 40, l: 48, xl: 56 };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-button size=${size}>Go</lr-button>`)) as LyraButton;
+      expect(height(el), `size=${size}`).to.equal(px);
+    }
+  });
+
+  // Before 8.0.0 both tiers resolved to the same loud token for the four chromatic variants, so
+  // `accent` and `filled` painted identically and the distinction existed only in the docs.
+  it('paints appearance="accent" differently from appearance="filled" for every variant', async () => {
+    for (const variant of ['neutral', 'brand', 'success', 'warning', 'danger'] as const) {
+      const filledEl = (await fixture(
+        html`<lr-button appearance="filled" variant=${variant}>Save</lr-button>`,
+      )) as LyraButton;
+      const accentEl = (await fixture(
+        html`<lr-button appearance="accent" variant=${variant}>Save</lr-button>`,
+      )) as LyraButton;
+      const filled = getComputedStyle(base(filledEl));
+      const accent = getComputedStyle(base(accentEl));
+      expect(accent.backgroundColor, `variant=${variant} background`).to.not.equal(filled.backgroundColor);
+      expect(accent.color, `variant=${variant} foreground`).to.not.equal(filled.color);
+      // ...and neither tier may fall back to "no fill at all" on the page surface.
+      expect(filled.backgroundColor, `variant=${variant} filled must not be transparent`).to.not.equal(
+        'rgba(0, 0, 0, 0)',
+      );
+    }
+  });
+
+  // The grid's shape is identical in both modes -- only which ramp step each slot points at moves --
+  // so the accent/filled split must survive the theme switch rather than being a light-mode accident.
+  it('keeps accent and filled apart in dark mode too', async () => {
+    for (const variant of ['neutral', 'brand', 'danger'] as const) {
+      const wrapper = (await fixture(html`
+        <div data-lr-theme="dark">
+          <lr-button appearance="filled" variant=${variant}>Save</lr-button>
+          <lr-button appearance="accent" variant=${variant}>Save</lr-button>
+        </div>
+      `)) as HTMLElement;
+      const [filledEl, accentEl] = Array.from(wrapper.querySelectorAll('lr-button')) as LyraButton[];
+      const filled = getComputedStyle(base(filledEl!));
+      const accent = getComputedStyle(base(accentEl!));
+      expect(accent.backgroundColor, `dark variant=${variant} background`).to.not.equal(
+        filled.backgroundColor,
+      );
+      expect(filled.backgroundColor, `dark variant=${variant} filled must not be transparent`).to.not.equal(
+        'rgba(0, 0, 0, 0)',
+      );
+    }
+  });
+
+  it('is accessible in its new default appearance, and as a pill textarea-adjacent control', async () => {
+    await expect(await fixture(html`<lr-button>Save</lr-button>`)).to.be.accessible();
+    await expect(
+      await fixture(html`<lr-button pill variant="danger" appearance="filled">Delete</lr-button>`),
+    ).to.be.accessible();
+  });
+});
+
+describe('lr-button hover and press feedback', () => {
+  // Every fixture below zeroes --lr-transition-fast: [part='base'] transitions its background, so
+  // reading getComputedStyle one frame after the pointer arrives would otherwise catch the
+  // INTERPOLATED colour -- still the resting one at t=0 -- and report a working hover as broken.
+  // The colour a fill has to differ FROM, resolved through the same token cascade the component
+  // itself reads. Painted onto a throwaway node inside the button's own shadow root so the value
+  // comes back as a normalised rgb()/color() string -- reading the custom property directly would
+  // hand back the raw token text, which is not comparable to a computed background-color, and
+  // hardcoding a hex would go stale the moment the generated palette moves.
+  function surfaceColor(el: LyraButton): string {
+    const probe = document.createElement('div');
+    probe.style.background = 'var(--lr-color-surface)';
+    el.shadowRoot!.appendChild(probe);
+    const painted = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return painted;
+  }
+
+  const center = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  for (const appearance of ['quiet', 'plain'] as const) {
+    it(`paints a hovered appearance="${appearance}" button something other than the page surface`, async () => {
+      const el = (await fixture(
+        html`<lr-button appearance=${appearance} style="--lr-transition-fast: 0s">Save</lr-button>`,
+      )) as LyraButton;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const surface = surfaceColor(el);
+      const resting = getComputedStyle(base).backgroundColor;
+      try {
+        await sendMouse({ type: 'move', position: center(base) });
+        const hovered = getComputedStyle(base).backgroundColor;
+        // Both hover defaults used to resolve to --lr-color-surface itself, i.e. the page
+        // background, so hovering changed nothing at all on a default page.
+        expect(hovered, `${appearance} hover vs page surface`).to.not.equal(surface);
+        expect(hovered, `${appearance} hover vs resting`).to.not.equal(resting);
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
+
+  it('presses a quiet button to a background stronger than -- and different from -- its hover', async () => {
+    const el = (await fixture(
+      html`<lr-button appearance="quiet" style="--lr-transition-fast: 0s">Save</lr-button>`,
+    )) as LyraButton;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    try {
+      await sendMouse({ type: 'move', position: center(base) });
+      const hovered = getComputedStyle(base).backgroundColor;
+      await sendMouse({ type: 'down' });
+      const pressed = getComputedStyle(base).backgroundColor;
+      expect(pressed, 'pressed vs hovered').to.not.equal(hovered);
+      expect(pressed, 'pressed vs page surface').to.not.equal(surfaceColor(el));
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it('moves an accent button away from its own fill on hover, without the pre-8.0.0 filter', async () => {
+    const el = (await fixture(
+      html`<lr-button appearance="accent" variant="brand" style="--lr-transition-fast: 0s">Save</lr-button>`,
+    )) as LyraButton;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const resting = getComputedStyle(base).backgroundColor;
+    try {
+      await sendMouse({ type: 'move', position: center(base) });
+      const hovered = getComputedStyle(base);
+      expect(hovered.backgroundColor, 'accent hover vs resting').to.not.equal(resting);
+      // A filter applies to the whole subtree, so the old brightness lift dimmed the label with
+      // the box. A background mix leaves everything but the background alone.
+      expect(hovered.filter).to.equal('none');
+    } finally {
+      await resetMouse();
+    }
+  });
 });

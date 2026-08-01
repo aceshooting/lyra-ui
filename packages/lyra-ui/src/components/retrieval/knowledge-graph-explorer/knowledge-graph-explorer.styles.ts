@@ -52,6 +52,9 @@ export const styles = css`
   [part='search-result'] button:hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
   }
+  [part='search-result'] button:active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='search-result'] button:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));

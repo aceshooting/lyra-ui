@@ -10,9 +10,9 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-function controlledPagination(totalItems = 237) {
+function controlledPagination(total = 237) {
   return html`<lr-pagination
-    total-items=${totalItems}
+    total=${total}
     page-size="20"
     @lr-page-change=${(event: CustomEvent<{ page: number }>) => {
       (event.currentTarget as LyraPagination).page = event.detail.page;
@@ -20,15 +20,151 @@ function controlledPagination(totalItems = 237) {
   ></lr-pagination>`;
 }
 
+function controlled(template: (apply: (event: Event) => void) => unknown) {
+  return template((event: Event) => {
+    const detail = (event as CustomEvent<{ page: number }>).detail;
+    (event.currentTarget as LyraPagination).page = detail.page;
+  });
+}
+
 export const Default: Story = {
   render: () => controlledPagination(),
 };
 
-/** `focus()` and `blur()` target the editable page-jump input and surface host focus events. */
+/** `focus()` and `blur()` target the editable page-jump input of the compact layout, and surface
+ *  host focus events. */
+/** The default `standard` layout: every page is its own control, with elided runs collapsed into a
+ *  decorative gap so the control keeps a constant width as the reader pages through. */
+export const Elided: Story = {
+  render: () =>
+    controlled(
+      (apply) => html`<lr-pagination
+        total="4000"
+        page-size="20"
+        page="87"
+        with-edges
+        with-summary
+        @lr-page-change=${apply}
+      ></lr-pagination>`,
+    ),
+};
+
+/** `sibling-count` widens the window around the current page; `boundary-count` pins more pages at
+ *  each end. */
+export const WindowSize: Story = {
+  name: 'Window size (sibling-count / boundary-count)',
+  render: () => html`
+    <div style="display: grid; gap: 1rem; justify-items: start;">
+      ${controlled(
+        (apply) => html`<lr-pagination
+          total="400"
+          page-size="20"
+          page="10"
+          sibling-count="0"
+          boundary-count="1"
+          @lr-page-change=${apply}
+        ></lr-pagination>`,
+      )}
+      ${controlled(
+        (apply) => html`<lr-pagination
+          total="400"
+          page-size="20"
+          page="10"
+          sibling-count="3"
+          boundary-count="2"
+          @lr-page-change=${apply}
+        ></lr-pagination>`,
+      )}
+    </div>
+  `,
+};
+
+/** Every resting look. The applied page stays a solid brand chip in all of them. */
+export const Appearance: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 1rem; justify-items: start;">
+      ${['accent', 'filled', 'outlined', 'filled-outlined', 'plain'].map((appearance) =>
+        controlled(
+          (apply) => html`<lr-pagination
+            total="200"
+            page-size="20"
+            page="4"
+            appearance=${appearance}
+            @lr-page-change=${apply}
+          ></lr-pagination>`,
+        ),
+      )}
+    </div>
+  `,
+};
+
+/** `size` runs the library-wide six-step ladder. Web Awesome's and Shoelace's
+ *  `small`/`medium`/`large` are accepted as exact synonyms of `s`/`m`/`l`, so a migrated pager
+ *  needs no attribute rewrite. Every control still clears the shared 40px hit-area floor at the
+ *  smallest tiers -- only the type scale tightens. */
+export const Sizes: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; justify-items: start;">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`<lr-pagination
+          size=${size}
+          total="200"
+          page-size="20"
+          page="3"
+        ></lr-pagination>`,
+      )}
+      ${(['small', 'medium', 'large'] as const).map(
+        (size) => html`<lr-pagination
+          size=${size}
+          total="200"
+          page-size="20"
+          page="3"
+        ></lr-pagination>`,
+      )}
+    </div>
+  `,
+};
+
+/** With `href-template`, each page renders as a real link, so the pager works before hydration and
+ *  is crawlable. The current page deliberately has no `href` -- the reader is already there. */
+export const Links: Story = {
+  render: () => html`
+    <lr-pagination
+      total="200"
+      page-size="20"
+      page="3"
+      with-edges
+      href-template="#page/{page}"
+    ></lr-pagination>
+  `,
+};
+
+/** `format="compact"` swaps the page list for the editable page-jump field, for toolbars and card
+ *  footers where a full list does not fit. */
+export const Compact: Story = {
+  render: () =>
+    controlled(
+      (apply) => html`<lr-pagination
+        format="compact"
+        total="237"
+        page-size="20"
+        with-summary
+        @lr-page-change=${apply}
+      ></lr-pagination>`,
+    ),
+};
+
 export const ProgrammaticFocus: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; justify-items: start;">
-      ${controlledPagination()}
+      ${controlled(
+        (apply) => html`<lr-pagination
+          format="compact"
+          total="237"
+          page-size="20"
+          @lr-page-change=${apply}
+        ></lr-pagination>`,
+      )}
       <button
         type="button"
         @click=${(event: Event) => {
@@ -45,7 +181,7 @@ export const ProgrammaticFocus: Story = {
 export const NarrowAllocation: Story = {
   render: () => html`<div style="inline-size: 18rem">
     <lr-pagination
-      total-items="237"
+      total="237"
       page-size="20"
       previous-label="Zur vorherigen Ergebnisseite wechseln"
       next-label="Zur nächsten Ergebnisseite wechseln"
@@ -65,7 +201,7 @@ export const Empty: Story = {
 
 export const Loading: Story = {
   render: () => html`
-    <lr-pagination total-items="237" page-size="20" page="4" loading></lr-pagination>
+    <lr-pagination total="237" page-size="20" page="4" loading></lr-pagination>
   `,
 };
 
@@ -81,7 +217,8 @@ export const ControlPadding: Story = {
   },
   render: () => html`
     <lr-pagination
-      total-items="237"
+      format="compact"
+      total="237"
       page-size="20"
       page="4"
       style="--lr-pagination-control-padding: 0.5rem"

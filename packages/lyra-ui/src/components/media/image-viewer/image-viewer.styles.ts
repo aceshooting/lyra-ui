@@ -48,6 +48,13 @@ export const styles = css`
   [part='annotate-toggle']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  /* Declared here rather than after the [aria-pressed='true'] rule below so the toggle's own "on"
+     fill keeps winning the source-order tie, exactly as it already does against :hover. */
+  [part='fit-control']:active,
+  [part='rotate-button']:active,
+  [part='annotate-toggle']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='fit-control']:focus-visible,
   [part='rotate-button']:focus-visible,
   [part='annotate-toggle']:focus-visible {
@@ -114,38 +121,53 @@ export const styles = css`
     position: absolute;
     inset: 0;
   }
+  /* Each tone sets --lr-image-viewer-highlight-fill rather than background directly, and the one
+     background declaration here reads it. That indirection is what lets the hover/active rules mix
+     from whichever fill a given highlight actually has: a background-mix written against the
+     untoned default would flatten every toned box to brand the instant the pointer touched it, and
+     a per-tone hover/active pair would be ten near-identical rules. The public
+     --lr-image-viewer-highlight-*-bg knobs are untouched -- still what each fill falls back
+     through. */
   [part='highlight'] {
     position: absolute;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border: var(--lr-border-width-medium) solid var(--lr-image-viewer-highlight-border, var(--lr-color-brand));
-    background: var(--lr-image-viewer-highlight-bg, color-mix(in srgb, var(--lr-color-brand) 20%, transparent));
+    --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-bg, color-mix(in srgb, var(--lr-color-brand) 20%, transparent));
+    background: var(--lr-image-viewer-highlight-fill);
     cursor: pointer;
     padding: 0;
   }
   [part='highlight']:where([data-tone='success']) {
     border-color: var(--lr-image-viewer-highlight-success-border, var(--lr-color-success));
-    background: var(--lr-image-viewer-highlight-success-bg, color-mix(in srgb, var(--lr-color-success) 20%, transparent));
+    --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-success-bg, color-mix(in srgb, var(--lr-color-success) 20%, transparent));
   }
   [part='highlight']:where([data-tone='warning']) {
     border-color: var(--lr-image-viewer-highlight-warning-border, var(--lr-color-warning));
-    background: var(--lr-image-viewer-highlight-warning-bg, color-mix(in srgb, var(--lr-color-warning) 20%, transparent));
+    --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-warning-bg, color-mix(in srgb, var(--lr-color-warning) 20%, transparent));
   }
   [part='highlight']:where([data-tone='danger']) {
     border-color: var(--lr-image-viewer-highlight-danger-border, var(--lr-color-danger));
-    background: var(--lr-image-viewer-highlight-danger-bg, color-mix(in srgb, var(--lr-color-danger) 20%, transparent));
+    --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-danger-bg, color-mix(in srgb, var(--lr-color-danger) 20%, transparent));
   }
   [part='highlight']:where([data-tone='neutral']) {
     border-color: var(--lr-image-viewer-highlight-neutral-border, var(--lr-color-border));
-    background: var(--lr-image-viewer-highlight-neutral-bg, color-mix(in srgb, var(--lr-color-text) 12%, transparent));
+    --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-neutral-bg, color-mix(in srgb, var(--lr-color-text) 12%, transparent));
   }
   [part='highlight']:where([data-active]) {
     border-width: var(--lr-border-width-thick);
     outline: var(--lr-focus-ring-width) solid var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand));
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Was filter: brightness(), which multiplies every channel -- so it lightened a dark highlight,
+     did nothing at all to a white one, and (filter applying to the whole subtree) dragged
+     [part='highlight-label']'s text along with the box. Mixing the fill alone toward
+     --lr-color-mix-partner always moves, and only the fill moves. */
   [part='highlight']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--lr-image-viewer-highlight-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='highlight']:active {
+    background: color-mix(in oklab, var(--lr-image-viewer-highlight-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='highlight']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

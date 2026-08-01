@@ -6,7 +6,7 @@
 - **Class** `LyraSwitch`, also available unregistered from `@aceshooting/lyra-ui/components/forms/switch/switch.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 7 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,12 +30,27 @@ control's visible, clickable label (same as `<lr-checkbox>`).
 - `hint: string = ''` — hint text below the switch. Unset: no hint chrome renders.
 - `errorText: string = ''` (attribute `error-text`) — error text below the switch (overridden by
   slotted `error` content). Unset: no error chrome renders.
+- `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
+  `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the track and thumb off the
+  same values `lr-input`/`lr-select`/`lr-button` read, so controls of one `size` line up in a row.
+  The slotted label keeps the library's standard control-label type size at every tier — restyle it
+  through `::part(label)` if you want it to track the control.
 
-**Events:** `lr-change` (`detail: { checked: boolean }`) — fired on a user toggle (click or
-Space/Enter); not fired for a programmatic `.checked` assignment. The internal control's native
+**Events:** a user toggle (click, Space/Enter, or the programmatic `click()` activation path) emits
+`input`, then `change`, then `lr-change` (`detail: { checked: boolean }`) — in that order, matching
+the native checkbox/radio contract. The two native-style events are **new in 8.0.0**: a boolean
+control that emitted only the `lr-`-prefixed alias was invisible to every form library, validation
+helper, and `<form>`-level `change` listener that binds the native names, which is the ordinary way
+a consumer observes a control they didn't write. Both bubble and compose, and neither carries a
+detail — read `event.target.checked`. None of the three fires for a programmatic `.checked`
+assignment, `form.reset()`, or session-state restoration. The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
+`setCustomValidity(message)` sets or clears a consumer-supplied error ("notifications are disabled
+for your plan"): a non-empty message raises `customError` and blocks submission, `''` restores the
+control's own computed validity so a required-and-unchecked switch goes back to `valueMissing`. It
+survives every toggle and a form reset; only another `setCustomValidity('')` clears it.
 
 **Slots:**
 - default — label text, rendered next to the track. Clicking it toggles the switch, the same as
@@ -49,10 +64,19 @@ whole interactive control, `role="switch"`), `track` (the pill-shaped background
 circular knob that slides across the track), `label` (wrapper around the default slot), `hint` (the
 hint message), `error` (the error message)
 
-**Themeable custom properties:** `--lr-switch-track-inline-size` (default `2.25rem`),
-`--lr-switch-track-block-size` (default `1.25rem`), `--lr-switch-thumb-offset` (default
-`2px`) — component-local geometry knobs, set on `:host`, since a fully-rounded pill/thumb needs
-a radius well past the shared `--lr-radius` default — plus shared tokens
+**Themeable custom properties:** `--lr-switch-track-block-size` (default
+`calc(var(--lr-form-control-height) * 0.5)`), `--lr-switch-track-inline-size` (default
+`calc(var(--lr-switch-track-block-size) * 1.8)`, the 1.8:1 aspect ratio the control has always had)
+and `--lr-switch-thumb-offset` (default `var(--lr-size-2px)`) — component-local geometry knobs set
+on `:host`, since a fully-rounded pill/thumb needs a radius well past the shared `--lr-radius`
+default. Both track dimensions ride the shared `size` ladder, so at the default `m` tier they
+resolve to exactly the `1.25rem` × `2.25rem` the switch shipped with before it had a `size` at all.
+
+`--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s resting fill,
+re-pointed at `--lr-color-brand` while `checked`. Hover and press are colour **mixes** away from
+whichever of the two is current — `--lr-color-mix-partner` at the `--lr-color-mix-hover` and
+`--lr-color-mix-active` shares — so retinting this one property retints all four renderings at
+once, and neither state touches the label text beside the track. Plus shared tokens
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
@@ -61,9 +85,10 @@ a radius well past the shared `--lr-radius` default — plus shared tokens
 ```html
 <lr-switch name="notifications" checked>Enable notifications</lr-switch>
 <script type="module">
-  document
-    .querySelector('lr-switch')
-    .addEventListener('lr-change', (e) => console.log(e.detail.checked));
+  import '@aceshooting/lyra-ui/components/forms/switch/switch.js';
+  const sw = document.querySelector('lr-switch');
+  sw.addEventListener('lr-change', (e) => console.log(e.detail.checked)); // prefixed alias
+  sw.addEventListener('change', (e) => console.log(e.target.checked));    // native-style, no detail
 </script>
 ```
 

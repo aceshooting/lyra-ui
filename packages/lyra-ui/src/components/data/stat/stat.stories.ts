@@ -13,6 +13,7 @@ export const Gallery: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
       <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" variant="success"></lr-stat>
+      <lr-stat label="Active agents" value="17" variant="brand"></lr-stat>
       <lr-stat label="Errors" value="128" trend="-5.1" variant="danger"></lr-stat>
       <lr-stat label="Pending Reviews" value="42" trend="8.6" variant="warning"></lr-stat>
       <lr-stat label="Sessions" value="9,204"></lr-stat>
@@ -41,11 +42,13 @@ export const RetintedVariants: Story = {
     <div
       class="flex flex-wrap gap-4"
       style="
+        --lr-stat-value-brand-color: var(--lr-color-success);
         --lr-stat-value-success-color: var(--lr-color-brand);
         --lr-stat-value-warning-color: var(--lr-color-danger);
         --lr-stat-value-danger-color: var(--lr-color-warning);
       "
     >
+      <lr-stat label="Running" value="17" variant="brand"></lr-stat>
       <lr-stat label="Passed" value="128" variant="success"></lr-stat>
       <lr-stat label="Waiting" value="42" variant="warning"></lr-stat>
       <lr-stat label="Failed" value="3" variant="danger"></lr-stat>
@@ -126,12 +129,12 @@ export const LinkedKpi: Story = {
   `,
 };
 
-export const Appearance: Story = {
+export const Frame: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
       <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" caption="Last 30 days"></lr-stat>
       <lr-stat
-        appearance="plain"
+        frame="plain"
         label="Revenue"
         value="12.4"
         unit="k€"
@@ -139,11 +142,11 @@ export const Appearance: Story = {
         caption="Last 30 days"
       ></lr-stat>
       <lr-stat
-        appearance="plain"
+        frame="plain"
         label="Memories"
         value="128"
         caption="Hover or tab to me — a plain link underlines its value instead of shifting a border it no longer has"
-        href="?path=/story/stat--appearance"
+        href="?path=/story/stat--frame"
       ></lr-stat>
     </div>
   `,
@@ -162,7 +165,7 @@ export const Orientation: Story = {
       ></lr-stat>
       <!-- The acceptance shape: chrome-less, single baseline row, no label box. -->
       <lr-stat
-        appearance="plain"
+        frame="plain"
         orientation="horizontal"
         value="87"
         unit="/100"

@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './icon-button.js';
 import '../../media/flag/flag.js';
 import { styles } from './icon-button.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraIconButton } from './icon-button.js';
 
 /** A 1x1 inline SVG, so `<lr-flag>` renders synchronously with no peer-package round trip. */
@@ -285,29 +286,104 @@ it('honours --lr-icon-button-border on the native button', async () => {
   expect(cs.borderTopColor).to.equal('rgb(10, 20, 30)');
 });
 
-it('drives the button:hover background from --lr-icon-button-background-hover, falling back to --lr-color-surface', () => {
-  // :hover has no scriptable state in this runner (no pointer-control plugin is installed), so
-  // this guards the hover-only token plumbing in the stylesheet text -- mirroring this file's
-  // radius-token check and the wider repo convention for hover rules. The rendered base-token
-  // test above proves the byte-identical var() plumbing resolves at runtime.
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(
-    'background: var(--lr-icon-button-background-hover, var(--lr-color-surface));',
-  );
+// :hover and :active DO have scriptable state here -- the runner drives a real pointer through
+// test/wtr-mouse.ts -- so these assert what the button actually paints. They used to match the
+// stylesheet text instead, which is precisely why the hover fallback could resolve to
+// var(--lr-color-surface), i.e. the page background, and read as "no hover at all" on a default
+// page for two majors with a green test.
+/** The page surface, painted onto a throwaway node inside the button's own shadow root so it comes
+ *  back as a normalised colour string comparable to a computed background-color. Never hardcode the
+ *  hex: the palette is generated. */
+function surfaceColor(el: Element): string {
+  const probe = document.createElement('div');
+  probe.style.background = 'var(--lr-color-surface)';
+  el.shadowRoot!.appendChild(probe);
+  const painted = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return painted;
+}
+
+const centerOf = (node: Element): [number, number] => {
+  const rect = node.getBoundingClientRect();
+  return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+};
+
+it('hovers to a background that is visibly not the page surface it sits on', async () => {
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  const button = el.shadowRoot!.querySelector('button')!;
+  const surface = surfaceColor(el);
+  const resting = getComputedStyle(button).backgroundColor;
+  try {
+    await sendMouse({ type: 'move', position: centerOf(button) });
+    const hovered = getComputedStyle(button).backgroundColor;
+    expect(hovered, 'hover vs page surface').to.not.equal(surface);
+    expect(hovered, 'hover vs resting').to.not.equal(resting);
+  } finally {
+    await resetMouse();
+  }
 });
 
-it('drives the button:hover foreground from --lr-icon-button-color-hover', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(
-    'color: var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit));',
-  );
+it('presses to a background stronger than -- and different from -- its hover', async () => {
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  const button = el.shadowRoot!.querySelector('button')!;
+  try {
+    await sendMouse({ type: 'move', position: centerOf(button) });
+    const hovered = getComputedStyle(button).backgroundColor;
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(button).backgroundColor;
+    expect(pressed, 'pressed vs hovered').to.not.equal(hovered);
+    expect(pressed, 'pressed vs page surface').to.not.equal(surfaceColor(el));
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
 });
 
-it('drives the button:hover border from --lr-icon-button-border-hover, falling back to the base border', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(
-    'border: var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0));',
-  );
+it('honours the hover and press override tokens on the rendered button', async () => {
+  const el = await fixture(html`
+    <lr-icon-button
+      icon="close"
+      aria-label="Dismiss"
+      style="--lr-icon-button-background-hover: rgb(1, 2, 3); --lr-icon-button-color-hover: rgb(4, 5, 6); --lr-icon-button-border-hover: 2px solid rgb(7, 8, 9); --lr-icon-button-background-active: rgb(10, 11, 12); --lr-icon-button-color-active: rgb(13, 14, 15); --lr-icon-button-border-active: 2px solid rgb(16, 17, 18);"
+    ></lr-icon-button>
+  `);
+  const button = el.shadowRoot!.querySelector('button')!;
+  try {
+    await sendMouse({ type: 'move', position: centerOf(button) });
+    const hovered = getComputedStyle(button);
+    expect(hovered.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(hovered.color).to.equal('rgb(4, 5, 6)');
+    expect(hovered.borderTopColor).to.equal('rgb(7, 8, 9)');
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(button);
+    expect(pressed.backgroundColor).to.equal('rgb(10, 11, 12)');
+    expect(pressed.color).to.equal('rgb(13, 14, 15)');
+    expect(pressed.borderTopColor).to.equal('rgb(16, 17, 18)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
+it('falls the press tokens through to the hover ones when only those are set', async () => {
+  const el = await fixture(html`
+    <lr-icon-button
+      icon="close"
+      aria-label="Dismiss"
+      style="--lr-icon-button-color-hover: rgb(4, 5, 6); --lr-icon-button-border-hover: 2px solid rgb(7, 8, 9);"
+    ></lr-icon-button>
+  `);
+  const button = el.shadowRoot!.querySelector('button')!;
+  try {
+    await sendMouse({ type: 'move', position: centerOf(button) });
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(button);
+    expect(pressed.color).to.equal('rgb(4, 5, 6)');
+    expect(pressed.borderTopColor).to.equal('rgb(7, 8, 9)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
 });
 
 it('renders unset background/color exactly as before (unset-regression)', async () => {

@@ -1,6 +1,11 @@
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { chevronIcon } from '../../../internal/icons.js';
+import { tag } from '../../../internal/prefix.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize } from '../../../internal/variants.js';
+import type { MenuFocusTarget, SubmenuPanel } from './menu-shared.js';
 import { styles } from './menu-item.styles.js';
 
 export type MenuItemType = 'normal' | 'checkbox';
@@ -50,7 +55,7 @@ export interface LyraMenuItemEventMap {
  * relationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`.
  *
  * `role="menuitem"` and the roving `tabindex` both live on *this host
- * element*, not an internal shadow-DOM button — mirroring `<lr-tree-node>`'s
+ * element*, not an internal shadow-DOM button — mirroring `<lr-tree-item>`'s
  * identical choice (see that class's doc). `<lr-menu>` is the sole owner of
  * this element's `tabIndex`: it flips exactly one navigable item's `tabIndex`
  * to `0` (the rest sit at `-1`) as its roving-tabindex highlight moves, and
@@ -65,6 +70,29 @@ export interface LyraMenuItemEventMap {
  * own keydown handler) — this element only wires a plain `click` listener
  * itself, so `select()` fires identically whether the item was reached by
  * mouse or keyboard.
+ *
+ * A `<lr-menu>` assigned to the `submenu` slot turns this row into a submenu
+ * parent: the host gains `aria-haspopup="menu"` plus an `aria-expanded` that
+ * renders `"true"` *and* `"false"` (never omitted — the attribute is part of
+ * the role's state, so a Lit `?aria-expanded=` directive would be wrong), a
+ * chevron renders in `[part="submenu-icon"]`, and activation opens the
+ * submenu instead of selecting. The parent `<lr-menu>` owns the interaction
+ * policy — the arrow keys (mirrored under RTL), pointer intent, and the
+ * one-submenu-per-level rule — and drives it through `openSubmenu()` /
+ * `closeSubmenu()`; this element owns the ARIA, the naming, and the panel
+ * wiring. Because a submenu parent is a disclosure rather than an action, it
+ * never fires `lr-menu-item-select`, and `type="checkbox"` has no effect on
+ * one. The submenu's own selections travel up as the *outer* menu's single
+ * consolidated `lr-menu-select` — there is no separate nested-selection
+ * event. The panel's `lr-show`/`lr-hide` stop here rather than surfacing on
+ * the ancestor menu, where a consumer would read them as that menu closing;
+ * listen on the submenu element itself for those.
+ *
+ * The submenu's `role="menu"` is named from this item's own label text, and
+ * so is the item, which otherwise computes its accessible name from its
+ * contents — those contents include the whole open submenu. A host-level
+ * `aria-label` (or a `label`/`aria-label` on the submenu itself) wins over
+ * both computed names.
  *
  * `type="checkbox"` (mirroring `wa-dropdown-item`'s identical `type` option)
  * renders `role="menuitemcheckbox"` in place of `role="menuitem"`, with
@@ -81,6 +109,9 @@ export interface LyraMenuItemEventMap {
  * @customElement lr-menu-item
  * @slot - The item's label content.
  * @slot icon - Optional leading icon.
+ * @slot submenu - A nested `<lr-menu>` that opens beside this row, turning it
+ * into a submenu parent. Anything else assigned here is rendered but gets no
+ * submenu semantics.
  * @event lr-menu-item-select - This item was activated (click, or the
  * parent `<lr-menu>`'s own Enter/Space handling of the roving-focused
  * item). No detail payload — a listener already has `event.target` (this
@@ -99,12 +130,23 @@ export interface LyraMenuItemEventMap {
  * @csspart icon - Wrapper around the `icon` slot. Not rendered at all when the slot is empty.
  * @csspart label - Wrapper around the default slot.
  * @csspart checkmark - The checkmark glyph shown when a `type="checkbox"` item is `checked`. Not rendered at all for `type="normal"`.
+ * @csspart submenu-icon - Wrapper around the chevron shown on a submenu parent. Not rendered at all without a `submenu` slot. Mirrors under RTL through this wrapper, never by swapping the glyph.
  */
 export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  // The shared ladder sits before this component's own sheet so the per-tier `--lr-form-control-*`
+  // knobs are already declared by the time `[part='base']` reads them.
+  static override styles = [LyraElement.styles, sizes, styles];
 
   /** An id/value the parent `<lr-menu>`'s `lr-menu-select` detail keys off of. */
   @property() value = '';
+
+  /** Row density, on the library's shared six-step ladder — `'m'` by default. Scales the row's
+   *  height, inline/block padding, font size and corner radius together; `'small'`/`'medium'`/
+   *  `'large'` are accepted as synonyms of `'s'`/`'m'`/`'l'`. Every tier still resolves to at
+   *  least the 24px pointer-target floor, so even `'2xs'` stays tappable. Each item carries its
+   *  own size rather than inheriting one from `<lr-menu>`, so a single compact row inside an
+   *  otherwise default menu needs no wrapper. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Disables selection and excludes this item from `<lr-menu>`'s roving-tabindex nav entirely. */
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -123,6 +165,29 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   // own comment on that part. Same fix as lr-tool-call-chip's hasDetailSlot.
   @state() private hasIconSlot = false;
 
+  // Reactive because the host's aria-haspopup/aria-expanded and the chevron all key off them.
+  @state() private submenuAssigned = false;
+  @state() private submenuExpanded = false;
+  // The default slot's text, kept apart from `textContent` -- which, for a submenu parent, also
+  // contains every label inside the submenu.
+  @state() private slottedLabel = '';
+
+  private submenuPanel: SubmenuPanel | null = null;
+  // A consumer-authored name always wins; these record that the computed one was ours to update.
+  private ownsAriaLabel = false;
+  private ownsPanelAriaLabel = false;
+
+  /** Whether a `<lr-menu>` is assigned to this item's `submenu` slot, making it a submenu parent. */
+  get hasSubmenu(): boolean {
+    return this.submenuAssigned;
+  }
+
+  /** Whether this item's submenu is currently open. Tracks the panel's own state, however it
+   *  changed — the parent menu's keyboard/pointer handling, a dismissal, or a direct write. */
+  get submenuOpen(): boolean {
+    return this.submenuExpanded;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     // A safe, focusable-but-out-of-tab-order baseline before <lr-menu> ever
@@ -133,10 +198,17 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     if (this.tabIndex !== 0) this.tabIndex = -1;
   }
 
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    // Transient open state never survives a detach: the panel is a child, so it tears its own
+    // `open` down at the same moment, and a reconnect must not resume with a stale aria-expanded.
+    this.submenuExpanded = false;
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     // role/aria-disabled/aria-checked live on the host (see the class doc),
     // so they're plain imperative attribute writes here rather than part of
-    // render()'s shadow-DOM template -- mirrors lr-tree-node's identical
+    // render()'s shadow-DOM template -- mirrors lr-tree-item's identical
     // willUpdate.
     const isCheckbox = this.type === 'checkbox';
     this.setAttribute('role', isCheckbox ? 'menuitemcheckbox' : 'menuitem');
@@ -146,6 +218,20 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       // Kept absent entirely for type="normal" -- see the class doc's "no
       // role, rendering, or event differences" guarantee for that default.
       this.removeAttribute('aria-checked');
+    }
+    if (this.submenuAssigned) {
+      this.setAttribute('aria-haspopup', 'menu');
+      // Both states render: an omitted aria-expanded is a different, weaker statement than
+      // aria-expanded="false", and this role is stateful.
+      this.setAttribute('aria-expanded', this.submenuExpanded ? 'true' : 'false');
+      this.applyComputedName();
+    } else {
+      this.removeAttribute('aria-haspopup');
+      this.removeAttribute('aria-expanded');
+      if (this.ownsAriaLabel) {
+        this.removeAttribute('aria-label');
+        this.ownsAriaLabel = false;
+      }
     }
     this.setAttribute('aria-disabled', String(this.disabled));
     if (this.disabled) {
@@ -170,9 +256,17 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   /** Fires `lr-menu-item-select` (no-op while `disabled`). Called by this element's own
    *  click handler, and by `<lr-menu>`'s Enter/Space keydown handling of the active item.
    *  For `type="checkbox"`, also toggles `checked` and fires `lr-menu-item-change` first --
-   *  see the class doc. */
+   *  see the class doc.
+   *
+   *  A submenu parent is a disclosure rather than an action: it opens its submenu (without
+   *  moving focus, since this path is the pointer one -- `<lr-menu>`'s own Enter/Space handling
+   *  calls `openSubmenu('first')` directly instead) and fires neither event. */
   select(): void {
     if (this.disabled) return;
+    if (this.submenuPanel) {
+      this.openSubmenu('none');
+      return;
+    }
     if (this.type === 'checkbox') {
       this.checked = !this.checked;
       this.emit<MenuItemChangeDetail>('lr-menu-item-change', { value: this.value, checked: this.checked });
@@ -180,9 +274,102 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.emit('lr-menu-item-select');
   }
 
+  /** Opens this item's submenu. A no-op without one, or while `disabled`. `focus` follows
+   *  `<lr-menu>`'s own `show()` vocabulary — `'first'` for keyboard activation, `'none'` for
+   *  pointer intent, which must not pull focus out from under the keyboard. Re-opening an
+   *  already-open submenu still applies the focus target, so ArrowRight moves into a submenu the
+   *  pointer opened a moment earlier. */
+  openSubmenu(focus: MenuFocusTarget = 'first'): void {
+    const panel = this.submenuPanel;
+    if (!panel || this.disabled) return;
+    panel.anchor = this;
+    panel.show(focus);
+    // Read back rather than assume: `open` settles synchronously, so `aria-expanded` lands in
+    // this same update instead of one tick behind the panel's own `lr-show`.
+    this.submenuExpanded = panel.open;
+  }
+
+  /** Closes this item's submenu (and, through it, any of its own descendants). A no-op without
+   *  one. Focus is left alone — the caller that moved it knows where it belongs. */
+  closeSubmenu(): void {
+    const panel = this.submenuPanel;
+    if (!panel) return;
+    panel.hide();
+    this.submenuExpanded = panel.open;
+  }
+
   private onIconSlotChange = (e: Event): void => {
     this.hasIconSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
+
+  private onLabelSlotChange = (e: Event): void => {
+    this.slottedLabel = (e.target as HTMLSlotElement)
+      .assignedNodes({ flatten: true })
+      .map((node) => node.textContent ?? '')
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    this.applyPanelName();
+  };
+
+  private onSubmenuSlotChange = (e: Event): void => {
+    // Matched by tag name rather than `instanceof`: importing the class here would close an
+    // import cycle with menu.class.ts (see menu-shared.ts).
+    const next = (e.target as HTMLSlotElement)
+      .assignedElements({ flatten: true })
+      .find((element) => element.localName === tag('menu')) as SubmenuPanel | undefined;
+    if (next === this.submenuPanel) return;
+    this.submenuPanel?.removeEventListener('lr-show', this.onPanelShow);
+    this.submenuPanel?.removeEventListener('lr-hide', this.onPanelHide);
+    this.submenuPanel = next ?? null;
+    this.submenuAssigned = this.submenuPanel !== null;
+    this.ownsPanelAriaLabel = false;
+    if (!this.submenuPanel) {
+      this.submenuExpanded = false;
+      return;
+    }
+    this.submenuPanel.anchor = this;
+    this.submenuPanel.addEventListener('lr-show', this.onPanelShow);
+    this.submenuPanel.addEventListener('lr-hide', this.onPanelHide);
+    this.submenuExpanded = this.submenuPanel.open;
+    this.applyPanelName();
+  };
+
+  /** Tracking the panel's own events (rather than only the calls this element makes) keeps
+   *  `aria-expanded` right however the submenu closed — Escape, an outside click, a selection,
+   *  an ancestor closing, or a direct `panel.open = false`. Both stop here: on the ancestor
+   *  `<lr-menu>` they read as *that* menu showing/hiding, which it is not. */
+  private onPanelShow = (e: Event): void => {
+    e.stopPropagation();
+    this.submenuExpanded = true;
+  };
+
+  private onPanelHide = (e: Event): void => {
+    e.stopPropagation();
+    this.submenuExpanded = false;
+  };
+
+  /** Names the item explicitly once it has a submenu. Name-from-content would otherwise walk into
+   *  the submenu the moment it opens (a visible subtree, so nothing excludes it) and announce
+   *  "Share Email Copy link". */
+  private applyComputedName(): void {
+    if (!this.slottedLabel) return;
+    if (this.hasAttribute('aria-label') && !this.ownsAriaLabel) return;
+    this.ownsAriaLabel = true;
+    if (this.getAttribute('aria-label') === this.slottedLabel) return;
+    this.setAttribute('aria-label', this.slottedLabel);
+  }
+
+  /** Names the submenu's `role="menu"` after the row that opens it — the APG relationship, which
+   *  `aria-labelledby` cannot express here because an idref cannot cross a shadow boundary. */
+  private applyPanelName(): void {
+    const panel = this.submenuPanel;
+    if (!panel || !this.slottedLabel || panel.hasAttribute('label')) return;
+    if (panel.hasAttribute('aria-label') && !this.ownsPanelAriaLabel) return;
+    this.ownsPanelAriaLabel = true;
+    if (panel.getAttribute('aria-label') === this.slottedLabel) return;
+    panel.setAttribute('aria-label', this.slottedLabel);
+  }
 
   override render(): TemplateResult {
     return html`
@@ -190,9 +377,15 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
         <span part="icon" aria-hidden="true" ?hidden=${!this.hasIconSlot}>
           <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
         </span>
-        <span part="label"><slot></slot></span>
+        <span part="label"><slot @slotchange=${this.onLabelSlotChange}></slot></span>
         ${this.type === 'checkbox' && this.checked ? checkmarkGlyph() : nothing}
+        ${this.submenuAssigned
+          ? html`<span part="submenu-icon" aria-hidden="true">${chevronIcon()}</span>`
+          : nothing}
       </span>
+      <!-- Outside [part='base'] on purpose: a click inside the submenu must not read as an
+           activation of the row that owns it. -->
+      <slot name="submenu" @slotchange=${this.onSubmenuSlotChange}></slot>
     `;
   }
 }

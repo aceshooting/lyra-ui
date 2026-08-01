@@ -94,7 +94,7 @@ describe('<lr-reorder-item>', () => {
   // A `role="listitem"` host is only ARIA-valid nested inside a `role="list"` ancestor (the
   // WAI-ARIA required-parent rule) -- <lr-reorder-item> is never used standalone in practice (it's
   // always a child of <lr-reorder-list>, which renders role="list"), so this wraps it the same way
-  // <lr-tree-node>'s own accessibility test wraps in role="tree", while still asserting
+  // <lr-tree-item>'s own accessibility test wraps in role="tree", while still asserting
   // accessibility on the item's own instance.
   it('is accessible, including when disabled', async () => {
     const wrapper = await fixture<HTMLDivElement>(

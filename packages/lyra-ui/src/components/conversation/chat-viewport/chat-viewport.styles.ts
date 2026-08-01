@@ -23,7 +23,7 @@ export const styles = css`
        set to a non-'visible' value the other axis's used value is forced to 'auto' too (it never
        stays 'visible') -- an implicit overflow-x here would risk a phantom horizontal scrollbar
        from a wide inline code span or a fractional-width bubble under zoom, even though this
-       transcript is only ever meant to scroll vertically. Same fix lr-tabs already applies for the
+       transcript is only ever meant to scroll vertically. Same fix lr-tab-group already applies for the
        identical reason. */
     overflow-x: hidden;
     overflow-y: auto;
@@ -99,7 +99,9 @@ export const styles = css`
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
-    box-shadow: var(--lr-shadow);
+    /* Overlay step: the pill floats over the transcript it scrolls, so it is an anchored layer
+       rather than resting chrome. */
+    box-shadow: var(--lr-shadow-m);
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
@@ -124,6 +126,9 @@ export const styles = css`
   }
   [part='jump-pill']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='jump-pill']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   @container (max-inline-size: 20rem) {
     [part='jump-pill'] {

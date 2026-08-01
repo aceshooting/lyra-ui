@@ -63,7 +63,7 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   `focusNode()`/`fit()`, hulls, edge labels, and `hiddenTypes` filtering all work identically to
   force mode. Switching `layout` at runtime repositions every node without a tween. The layering
   algorithm itself lives in the standalone, dependency-free `layeredLayout()` export
-  (`@aceshooting/lyra-ui/internal/layered-layout`), reusable by any other layered-diagram consumer
+  (`@aceshooting/lyra-ui/utilities/layered-layout`), reusable by any other layered-diagram consumer
 - `renderer: 'svg' | 'canvas' = 'svg'` — `'canvas'` swaps the per-node/per-link SVG DOM for a single
   DPR-aware `<canvas>`; every event/method/property behaves identically to `'svg'`, with hit-testing
   resolved via an offscreen color-picking canvas instead of DOM event targets. Trade-offs: no
@@ -359,11 +359,12 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
   dossier rendered in a sidebar, a result list) — the same convention as `lr-empty`'s `compact` and
   as this component's sibling `lr-community-card`. Purely a density knob: the border and background
   stay. `false` (the default) keeps the full card padding.
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'`
-  removes the border, background, padding and corner radius, so a card nested inside a container
-  that already draws a border doesn't double the frame. `plain` wins over `compact` when both are
-  set — there is nothing left to tighten.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
+  `'plain'` removes the border, background, padding and corner radius, so a card nested inside a
+  container that already draws a border doesn't double it. `plain` wins over `compact` when both are
+  set — there is nothing left to tighten. The exported alias `EntityCardAppearance` is retained as a
+  name for the same union.
 
 **Events:** `lr-entity-activate` (`detail: { id }`, the built-in focus button was activated).
 
@@ -552,11 +553,12 @@ graph or membership fetching — `lr-drill` asks the host to load members/subgra
 - `maxMembers: number = 8` (attribute `max-members`) — remaining members collapse into a "+N"
   overflow chip
 - `compact: boolean = false` (reflected) — omits the summary excerpt and member chips
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary and this component's sibling `lr-entity-card`'s identical property.
-  `'card'` (the default) keeps the bordered, filled, padded box; `'plain'` removes the border,
-  background, and padding, so a card nested inside a container that already draws a border doesn't
-  double the frame.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`), the same property this component's sibling `lr-entity-card`
+  carries. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'` removes the
+  border, background, and padding, so a card nested inside a container that already draws a border
+  doesn't double it. The exported alias `CommunityCardAppearance` is retained as a name for the same
+  union.
 
 **Events:** `lr-drill` (`detail: { id }`, the drill button, header, or overflow chip — all three
 mean "show me this whole community"), `lr-entity-activate` (`detail: { id }`, a member chip was
@@ -985,12 +987,13 @@ while collapsed).
 - `compact: boolean = false` (reflected) — tighter root padding and row gap, for the dense citation
   lists these cards usually render in — the same convention as `lr-empty`'s `compact`. Purely a
   density knob: the border and background stay. `false` (the default) keeps the full card padding.
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'`
-  removes the border, background, padding and corner radius, so a card inside a `<lr-source-list>`
-  (or any container already drawing its own border/dividers) doesn't double the frame. `plain` wins
-  over `compact` when both are set — nothing left to tighten. The title and toggle keep their brand
-  color and hover underline under `plain`, since neither ever depended on the card chrome.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
+  `'plain'` removes the border, background, padding and corner radius, so a card inside a
+  `<lr-source-list>` (or any container already drawing its own border/dividers) doesn't double it.
+  `plain` wins over `compact` when both are set — nothing left to tighten. The title and toggle keep
+  their brand color and hover underline under `plain`, since neither ever depended on the card
+  chrome. The exported alias `SourceCardAppearance` is retained as a name for the same union.
 
 **Events:**
 - `lr-expand` (`detail: { sourceId: string; expanded: boolean }`) — the per-card "Show
@@ -1069,7 +1072,7 @@ time.
 ## `lr-entity-dossier`
 
 Entity detail surface: a persistent header (`lr-entity-card` + an optional confidence `lr-stat`)
-above an `lr-tabs` strip for Relationships (`lr-neighbor-list`), Supporting chunks
+above an `lr-tab-group` strip for Relationships (`lr-neighbor-list`), Supporting chunks
 (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout — never fetches, ranks,
 or mutates graph/document state.
 
@@ -1099,14 +1102,14 @@ or mutates graph/document state.
 - `showFocusButton: boolean = true` (attribute `show-focus-button`) — forwarded to `lr-entity-card`
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name for the internal
-  `lr-tabs` strip; unset renders the strip with no `aria-label`
+  `lr-tab-group` strip; unset renders the strip with no `aria-label`
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
 (`composed: true`): `lr-entity-activate` (`detail: { id }`), `lr-node-expand` (`detail: { id }`),
 `lr-chunk-open` (`detail: { id, sourceId, anchor? }`), `lr-expand` (`detail: { id, expanded }`),
-`lr-toggle` (`detail: { section, expanded }`), and `lr-tabs-change`
+`lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
-| 'provenance'` — also the `lr-tabs` slot/tab ids).
+| 'provenance'` — also the `lr-tab-group` slot/tab ids).
 
 **Slots:** none.
 
@@ -1119,7 +1122,7 @@ or mutates graph/document state.
 **Optional peer deps:** none.
 
 **Known gotchas:**
-- The active tab is internal `@state`, not a controlled property — `lr-tabs` already owns it, and a
+- The active tab is internal `@state`, not a controlled property — `lr-tab-group` already owns it, and a
   stale public property re-bound on an unrelated re-render would fight the user's own click.
 - Tab labels reuse each composed child's own `localize()` key (`neighborListLabel`,
   `chunkInspectorLabel`, `provenancePanelLabel`), so a locale only translates each string once.

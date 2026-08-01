@@ -23,17 +23,17 @@ it('defaults to entries=[], mode="live", follow=true, expanded=false, label="Act
   expect(el.virtualizeThreshold).to.equal(200);
 });
 
-it('renders one [part="entry"] row per entry, carrying data-tone', async () => {
+it('renders one [part="entry"] row per entry, carrying data-variant', async () => {
   const el = (await fixture(
     html`<lr-activity-feed expanded .entries=${[
-      { id: '1', text: 'Searching the web…', tone: 'brand' },
+      { id: '1', text: 'Searching the web…', variant: 'brand' },
       { id: '2', text: 'Read src/index.ts' },
     ]}></lr-activity-feed>`,
   )) as LyraActivityFeed;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="entry"]')] as HTMLElement[];
   expect(rows.length).to.equal(2);
-  expect(rows[0]!.dataset.tone).to.equal('brand');
-  expect(rows[1]!.dataset.tone).to.equal('neutral');
+  expect(rows[0]!.dataset.variant).to.equal('brand');
+  expect(rows[1]!.dataset.variant).to.equal('neutral');
   expect(rows[0]!.querySelector('[part="entry-text"]')!.textContent!.trim()).to.equal('Searching the web…');
 });
 
@@ -68,7 +68,7 @@ it('keeps a long public label contained without collapsing the live summary at 3
   expect(summary.textContent!.trim()).to.equal('Latest step remains visible');
 });
 
-it('renders a literal icon hint when set, a tone dot otherwise', async () => {
+it('renders a literal icon hint when set, a variant dot otherwise', async () => {
   const el = (await fixture(
     html`<lr-activity-feed expanded .entries=${[
       { id: '1', text: 'With icon', icon: '🔍' },
@@ -77,7 +77,7 @@ it('renders a literal icon hint when set, a tone dot otherwise', async () => {
   )) as LyraActivityFeed;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="entry"]')] as HTMLElement[];
   expect(rows[0]!.querySelector('[part="entry-icon"]')!.textContent!.trim()).to.equal('🔍');
-  expect(rows[1]!.querySelectorAll('[part="entry-icon"] [part~="tone-dot"]').length).to.equal(1);
+  expect(rows[1]!.querySelectorAll('[part="entry-icon"] [part~="variant-dot"]').length).to.equal(1);
 });
 
 it('shows the latest entry as a one-line ticker in the header while mode="live"', async () => {
@@ -477,10 +477,10 @@ describe('mode transition announcement', () => {
 });
 
 describe('entry part styling reaches both rendering paths', () => {
-  const toneEntries: ActivityEntry[] = [
+  const variantEntries: ActivityEntry[] = [
     { id: 'a', text: 'Neutral step' },
-    { id: 'b', text: 'Finished step', tone: 'success' },
-    { id: 'c', text: 'Timestamped step', tone: 'danger', timestamp: new Date('2024-01-01T10:30:00Z') },
+    { id: 'b', text: 'Finished step', variant: 'success' },
+    { id: 'c', text: 'Timestamped step', variant: 'danger', timestamp: new Date('2024-01-01T10:30:00Z') },
   ];
 
   /** The shadow tree the entry rows actually live in: this component's own below
@@ -496,7 +496,7 @@ describe('entry part styling reaches both rendering paths', () => {
       show-timestamps
       virtualize-threshold=${threshold}
       style=${`--lr-theme-color-success-fill-loud: rgb(1, 2, 3); --lr-theme-color-text-quiet: rgb(4, 5, 6); ${extraHostStyle}`}
-      .entries=${toneEntries}
+      .entries=${variantEntries}
     ></lr-activity-feed>`)) as LyraActivityFeed;
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list');
@@ -524,14 +524,14 @@ describe('entry part styling reaches both rendering paths', () => {
       expect(getComputedStyle(icon).flexGrow).to.equal('0');
     });
 
-    it(`tints the tone dot from its entry's tone in the ${label} path`, async () => {
+    it(`tints the variant dot from its entry's variant in the ${label} path`, async () => {
       const el = await feed(threshold);
-      const dots = [...entryRoot(el).querySelectorAll('[part~="tone-dot"]')] as HTMLElement[];
-      expect(dots.length).to.equal(toneEntries.length);
-      // The tone travels in the part list, not a [data-tone] qualifier -- `::part()` cannot be
-      // followed by an attribute selector, so a tone-qualified rule would never match.
-      expect(dots[0]!.getAttribute('part')).to.equal('tone-dot tone-dot-neutral');
-      expect(dots[1]!.getAttribute('part')).to.equal('tone-dot tone-dot-success');
+      const dots = [...entryRoot(el).querySelectorAll('[part~="variant-dot"]')] as HTMLElement[];
+      expect(dots.length).to.equal(variantEntries.length);
+      // The variant travels in the part list, not a [data-variant] qualifier -- `::part()` cannot be
+      // followed by an attribute selector, so a variant-qualified rule would never match.
+      expect(dots[0]!.getAttribute('part')).to.equal('variant-dot variant-dot-neutral');
+      expect(dots[1]!.getAttribute('part')).to.equal('variant-dot variant-dot-success');
       expect(getComputedStyle(dots[0]!).backgroundColor).to.equal('rgb(4, 5, 6)');
       expect(getComputedStyle(dots[1]!).backgroundColor).to.equal('rgb(1, 2, 3)');
       // The dot is a real circle, not an unstyled inline span.
@@ -563,14 +563,14 @@ describe('entry part styling reaches both rendering paths', () => {
           lr-activity-feed::part(entry-text) {
             color: rgb(12, 34, 56);
           }
-          lr-activity-feed::part(tone-dot) {
+          lr-activity-feed::part(variant-dot) {
             outline-color: rgb(21, 43, 65);
           }
-          lr-activity-feed::part(tone-dot-success) {
+          lr-activity-feed::part(variant-dot-success) {
             background: rgb(33, 55, 77);
           }
         </style>
-        <lr-activity-feed expanded virtualize-threshold="1" .entries=${toneEntries}></lr-activity-feed>
+        <lr-activity-feed expanded virtualize-threshold="1" .entries=${variantEntries}></lr-activity-feed>
       </div>
     `);
     const el = wrapper.querySelector('lr-activity-feed') as LyraActivityFeed;
@@ -579,14 +579,14 @@ describe('entry part styling reaches both rendering paths', () => {
     await (list as unknown as { updateComplete: Promise<unknown> }).updateComplete;
     await twoFrames();
     expect(list.getAttribute('exportparts')).to.contain('entry:entry');
-    expect(list.getAttribute('exportparts')).to.contain('tone-dot:tone-dot');
-    expect(list.getAttribute('exportparts')).to.contain('tone-dot-success:tone-dot-success');
+    expect(list.getAttribute('exportparts')).to.contain('variant-dot:variant-dot');
+    expect(list.getAttribute('exportparts')).to.contain('variant-dot-success:variant-dot-success');
     const text = list.shadowRoot!.querySelector('[part="entry-text"]') as HTMLElement;
-    const dot = list.shadowRoot!.querySelector('[part~="tone-dot"]') as HTMLElement;
-    const successDot = list.shadowRoot!.querySelector('[part~="tone-dot-success"]') as HTMLElement;
+    const dot = list.shadowRoot!.querySelector('[part~="variant-dot"]') as HTMLElement;
+    const successDot = list.shadowRoot!.querySelector('[part~="variant-dot-success"]') as HTMLElement;
     expect(getComputedStyle(text).color).to.equal('rgb(12, 34, 56)');
     expect(getComputedStyle(dot).outlineColor).to.equal('rgb(21, 43, 65)');
-    // A consumer can retint exactly one tone -- the whole reason the tone is a part name.
+    // A consumer can retint exactly one variant -- the whole reason the variant is a part name.
     expect(getComputedStyle(successDot).backgroundColor).to.equal('rgb(33, 55, 77)');
   });
 });
@@ -596,14 +596,14 @@ it('is accessible collapsed, with no entries', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('is accessible expanded, with entries, icons, tones, and timestamps', async () => {
+it('is accessible expanded, with entries, icons, variants, and timestamps', async () => {
   const el = (await fixture(
     html`<lr-activity-feed
       expanded
       show-timestamps
       .entries=${[
-        { id: '1', text: 'Searching the web…', icon: '🔍', tone: 'brand', timestamp: new Date() },
-        { id: '2', text: 'Read src/index.ts', tone: 'success' },
+        { id: '1', text: 'Searching the web…', icon: '🔍', variant: 'brand', timestamp: new Date() },
+        { id: '2', text: 'Read src/index.ts', variant: 'success' },
       ]}
     ></lr-activity-feed>`,
   )) as LyraActivityFeed;

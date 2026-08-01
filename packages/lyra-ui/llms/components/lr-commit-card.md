@@ -25,11 +25,12 @@ number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []`
 boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean = true` (reflected).
 `compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
 row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,
-so pair it with `appearance="plain"` to drop the chrome entirely. `appearance: 'card' | 'plain' =
-'card'` (reflected) — mirrors `lr-card`'s/`<lr-agent-run>`'s `appearance` vocabulary: `'card'` keeps
-the bordered, padded box, `'plain'` removes the border, padding, and corner radius so a commit nested
-in a host list that already draws its own row chrome doesn't double it; `plain` wins over `compact`
-when both are set.
+so pair it with `frame="plain"` to drop the chrome entirely. `frame: LyraFrame = 'card'` (reflected)
+— container treatment, in the library-wide `frame` vocabulary (`'card' | 'plain'`), the same
+property `<lr-agent-run>`/`<lr-card>` carry: `'card'` keeps the bordered, padded box, `'plain'`
+removes the border, padding, and corner radius so a commit nested in a host list that already draws
+its own row chrome doesn't double it; `plain` wins over `compact` when both are set. The exported
+alias `CommitCardAppearance` is retained as a name for the same union.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 

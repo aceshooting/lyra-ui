@@ -70,8 +70,27 @@ export const styles = css`
     padding: 0;
     cursor: pointer;
   }
-  [part='bar']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+  /* The hover/pressed tint is a veil on a pseudo-element rather than a background swap on the bar
+     itself, because a bar's fill is one of five different things: four solid tones, a striped
+     gradient for the running tone, and a transparent dashed box for the pending one. No single
+     background declaration tints all five; one translucent overlay does. Mixing toward
+     --lr-color-mix-partner (which follows the text colour) darkens the veil in a light theme and
+     lightens it in a dark one -- which the filter: brightness() this replaces only managed by luck.
+     A filter multiplies every channel, so it moved a mid-tone bar, did nothing at all to a pure
+     white or pure black one, and applied to the whole subtree instead of just the surface. */
+  [part='bar']::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: transparent;
+  }
+  [part='bar']:hover::after {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='bar']:active::after {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='bar']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -94,7 +113,7 @@ export const styles = css`
         var(--lr-size-6px) calc(var(--lr-size-6px) * 2)
     );
     background-size: 200% 100%;
-    animation: lr-span-waterfall-stripe var(--lr-span-waterfall-stripe-speed, var(--lr-transition-ambient)) linear infinite;
+    animation: lr-span-waterfall-stripe var(--lr-span-waterfall-stripe-speed, var(--lr-duration-ambient)) linear infinite;
   }
   [part='bar'][data-tone='neutral'] {
     background: transparent;

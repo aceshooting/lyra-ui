@@ -5,7 +5,14 @@ export const styles = css`
      glyph still pads out to a full target, while slotted content larger than it grows the button
      and keeps its own aspect ratio instead of being squashed to 1:1. */
   button { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); padding: 0; border: var(--lr-icon-button-border, 0); border-radius: var(--lr-icon-button-radius); background: var(--lr-icon-button-background, transparent); color: var(--lr-icon-button-color, inherit); cursor: pointer; }
-  button:hover { border: var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0)); background: var(--lr-icon-button-background-hover, var(--lr-color-surface)); color: var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit)); }
+  /* The hover fallback used to be var(--lr-color-surface) -- the PAGE background -- so hovering an
+     icon button on a default page changed nothing at all. It mixes the page surface toward
+     --lr-color-mix-partner (which follows the text colour) instead, which always moves, and always
+     in the direction the surface needs: darker on a light page, lighter on a dark one. The press
+     fallback is the same mix at the stronger --lr-color-mix-active share, so the pressed state
+     reads as more than the hover rather than as a repeat of it. */
+  button:hover { border: var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0)); background: var(--lr-icon-button-background-hover, color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))); color: var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit)); }
+  button:active { border: var(--lr-icon-button-border-active, var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))); background: var(--lr-icon-button-background-active, color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))); color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))); }
   button:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   button:disabled { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
   /* Mirrors lr-icon's own default box so the bare-geometry SVG fallback sizes the same as a

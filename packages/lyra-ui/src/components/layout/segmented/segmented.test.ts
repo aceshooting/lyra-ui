@@ -594,8 +594,11 @@ describe("selected-state cssprops", () => {
         "font-weight"
       )
     );
+    // The selected thumb is resting chrome riding inside its own track, not a floating panel, so
+    // it sits at the lowest step of the elevation scale rather than the mid one every site used to
+    // share.
     expect(checked.boxShadow).to.equal(
-      resolvedInShadow(el, "box-shadow: var(--lr-shadow)", "box-shadow")
+      resolvedInShadow(el, "box-shadow: var(--lr-shadow-xs)", "box-shadow")
     );
   });
 
@@ -635,8 +638,12 @@ describe("track height", () => {
     // The hatch must stay *genuinely undeclared* -- a `:host { --lr-segmented-track-height: auto }`
     // declaration would be a valid value that always wins, making the per-tier
     // --lr-segmented-track-min-height fallback dead code (the trap lr-select fell into).
+    // The shared ladder's own heights (internal/sizes.styles.ts), not a scale of this component's
+    // own -- the 2xs track floor is the ladder's 1.25rem. The segments themselves keep their
+    // separate 1.5rem/24px WCAG 2.5.8 floor at 2xs/xs, so the rendered track is still a
+    // conformant row of targets; see the target-size test below.
     const floors = new Map([
-      ["2xs", "24px"],
+      ["2xs", "20px"],
       ["xs", "24px"],
       ["s", "30px"],
       ["m", "40px"],
@@ -668,6 +675,14 @@ describe("track height", () => {
 });
 
 describe("size", () => {
+  async function sizedTrack(size: string): Promise<HTMLElement> {
+    const el = (await fixture(
+      html`<lr-segmented size=${size} .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  }
+
   it('defaults to size="m", matching lr-input/lr-select/lr-combobox\'s shared 40px default-tier floor', async () => {
     const el = (await fixture(
       html`<lr-segmented .items=${items()} value="day"></lr-segmented>`
@@ -701,6 +716,34 @@ describe("size", () => {
       html`<lr-segmented size="xl" .items=${items()}></lr-segmented>`
     )) as LyraSegmented;
     expect(el.getAttribute("size")).to.equal("xl");
+  });
+
+  it("accepts the Web Awesome size spellings at the same geometry", async () => {
+    // `size` is the library's shared LyraSize now, so `small`/`medium`/`large` render exactly as
+    // `s`/`m`/`l` -- a Web Awesome migration is a tag rename with no attribute rewrite.
+    for (const [alias, step] of [
+      ["small", "s"],
+      ["medium", "m"],
+      ["large", "l"],
+    ] as const) {
+      const aliasBase = await sizedTrack(alias);
+      const stepBase = await sizedTrack(step);
+      expect(getComputedStyle(aliasBase).minBlockSize, alias).to.equal(
+        getComputedStyle(stepBase).minBlockSize
+      );
+      expect(
+        aliasBase.getBoundingClientRect().height,
+        `${alias} height`
+      ).to.be.closeTo(stepBase.getBoundingClientRect().height, 0.5);
+    }
+  });
+
+  it("grows the rendered track from size=\"s\" to size=\"l\"", async () => {
+    const small = await sizedTrack("s");
+    const large = await sizedTrack("l");
+    expect(large.getBoundingClientRect().height).to.be.greaterThan(
+      small.getBoundingClientRect().height
+    );
   });
 
   it("keeps 2xs/xs segment targets and adjacent centers at least 24px apart", async () => {

@@ -719,11 +719,36 @@ it('dims the base part via the :disabled pseudo-class when disabled only through
   expect(getComputedStyle(base).cursor).to.equal('not-allowed');
 });
 
-/** Render the filter declared on `selector`'s :hover rule (read off the element's own applied
- *  stylesheets) into the component's shadow scope, returning its resolved computed value. Proves both
- *  that the rule is wired to the shared token and that the token resolves — a hardcoded literal or a
- *  broken var() would compute to a different value or `none`. */
-function renderedHoverFilter(el: HTMLElement, selector: string): string {
+/** Resolve a declaration value (var()s, color-mix() and all) for `property` inside the component's
+ *  shadow scope, returning the browser's computed value for `readProperty`. Rendering it rather than
+ *  reading the stylesheet is the point: a broken var() chain or an unregistered token computes to
+ *  something else entirely, and only the browser can tell us which. */
+function resolveInShadow(el: HTMLElement, property: string, value: string, readProperty = property): string {
+  const probe = document.createElement('span');
+  probe.style.setProperty(property, value);
+  el.shadowRoot!.appendChild(probe);
+  const computed = getComputedStyle(probe).getPropertyValue(readProperty);
+  probe.remove();
+  return computed;
+}
+
+/** The computed background `selector`'s own rule paints, resolved in the component's shadow scope. */
+function renderedRuleBackground(el: HTMLElement, selector: string): string {
+  const normalize = (text: string) => text.replace(/"/g, "'");
+  let declared = '';
+  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (rule instanceof CSSStyleRule && normalize(rule.selectorText) === normalize(selector)) {
+        const value = rule.style.getPropertyValue('background') || rule.style.getPropertyValue('background-color');
+        if (value) declared = value;
+      }
+    }
+  }
+  return resolveInShadow(el, 'background', declared, 'background-color');
+}
+
+/** The computed filter `selector`'s own rule applies, resolved the same way. `none` means none. */
+function renderedRuleFilter(el: HTMLElement, selector: string): string {
   const normalize = (text: string) => text.replace(/"/g, "'");
   let declared = '';
   for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
@@ -733,18 +758,45 @@ function renderedHoverFilter(el: HTMLElement, selector: string): string {
       }
     }
   }
-  const probe = document.createElement('span');
-  probe.style.filter = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).filter;
-  probe.remove();
-  return value;
+  return resolveInShadow(el, 'filter', declared);
 }
 
-it('lifts the send button on hover through the shared hover-brightness token', async () => {
+it('escalates the send button from resting to hover to pressed with the shared colour-mix tokens', async () => {
   const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   await el.updateComplete;
-  expect(renderedHoverFilter(el, "[part='action-button']:hover")).to.equal('brightness(1.08)');
+  const resting = resolveInShadow(el, 'background', 'var(--lr-color-brand)', 'background-color');
+  const hovered = renderedRuleBackground(el, "[part='action-button']:hover");
+  const pressed = renderedRuleBackground(el, "[part='action-button']:active");
+
+  // Each step actually moves. The middle assertion is the one that matters most: an :active rule
+  // byte-identical to its :hover rule is the same "no pressed state" defect wearing a costume.
+  expect(hovered).to.not.equal(resting);
+  expect(pressed).to.not.equal(hovered);
+  expect(pressed).to.not.equal(resting);
+
+  // ...and each step is exactly the shared token's mix of the resting brand fill, so hover is the
+  // 12% step and pressed the 22% one -- provably a stronger press, and both retintable at once.
+  expect(hovered).to.equal(
+    resolveInShadow(
+      el,
+      'background',
+      'color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))',
+      'background-color',
+    ),
+  );
+  expect(pressed).to.equal(
+    resolveInShadow(
+      el,
+      'background',
+      'color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+      'background-color',
+    ),
+  );
+
+  // No filter in either state: brightness() applies to the subtree, so it would dim the send glyph
+  // along with the fill -- and does nothing at all to a pure white or pure black brand colour.
+  expect(renderedRuleFilter(el, "[part='action-button']:hover")).to.equal('none');
+  expect(renderedRuleFilter(el, "[part='action-button']:active")).to.equal('none');
 });
 
 it('recolors the busy action-button background via --lr-chat-composer-busy-bg without affecting the textarea placeholder color', async () => {
@@ -887,7 +939,7 @@ describe('blur/focus bubbling', () => {
   });
 });
 
-describe('appearance', () => {
+describe('frame', () => {
   const baseOf = (el: LyraChatComposer): HTMLElement =>
     el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
@@ -905,12 +957,12 @@ describe('appearance', () => {
     };
   };
 
-  it('defaults to appearance="card", rendering identically to that value restated', async () => {
+  it('defaults to frame="card", rendering identically to that value restated', async () => {
     const implicit = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
-    const explicit = (await fixture(html`<lr-chat-composer appearance="card"></lr-chat-composer>`)) as LyraChatComposer;
+    const explicit = (await fixture(html`<lr-chat-composer frame="card"></lr-chat-composer>`)) as LyraChatComposer;
 
-    expect(implicit.appearance).to.equal('card');
-    expect(implicit.getAttribute('appearance')).to.equal('card');
+    expect(implicit.frame).to.equal('card');
+    expect(implicit.getAttribute('frame')).to.equal('card');
     expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
 
     const chrome = baseChrome(implicit);
@@ -920,9 +972,9 @@ describe('appearance', () => {
     expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('drops border, background, padding and radius under appearance="plain"', async () => {
-    const el = (await fixture(html`<lr-chat-composer appearance="plain"></lr-chat-composer>`)) as LyraChatComposer;
-    expect(el.getAttribute('appearance')).to.equal('plain');
+  it('drops border, background, padding and radius under frame="plain"', async () => {
+    const el = (await fixture(html`<lr-chat-composer frame="plain"></lr-chat-composer>`)) as LyraChatComposer;
+    expect(el.getAttribute('frame')).to.equal('plain');
     const chrome = baseChrome(el);
     expect(chrome.borderTopWidth).to.equal('0px');
     expect(chrome.borderTopLeftRadius).to.equal('0px');
@@ -943,7 +995,7 @@ describe('appearance', () => {
     textareaOf(card).focus();
     expect(getComputedStyle(baseOf(card)).borderTopColor).to.not.equal(cardResting);
 
-    const plain = (await fixture(html`<lr-chat-composer appearance="plain"></lr-chat-composer>`)) as LyraChatComposer;
+    const plain = (await fixture(html`<lr-chat-composer frame="plain"></lr-chat-composer>`)) as LyraChatComposer;
     const resting = getComputedStyle(baseOf(plain)).boxShadow;
     expect(resting).to.equal('none');
     textareaOf(plain).focus();
@@ -955,7 +1007,7 @@ describe('appearance', () => {
   it('retunes the plain focus underline through the shared focus-ring tokens', async () => {
     const wrapper = (await fixture(html`
       <div style="--lr-theme-focus-ring-width: 5px; --lr-theme-color-focus: rgb(10, 20, 30)">
-        <lr-chat-composer appearance="plain"></lr-chat-composer>
+        <lr-chat-composer frame="plain"></lr-chat-composer>
       </div>
     `)) as HTMLElement;
     const el = wrapper.querySelector('lr-chat-composer') as LyraChatComposer;
@@ -968,26 +1020,34 @@ describe('appearance', () => {
 
   it('leaves the disabled treatment and the transition the reduced-motion block overrides untouched under plain', async () => {
     const el = (await fixture(
-      html`<lr-chat-composer appearance="plain" disabled></lr-chat-composer>`,
+      html`<lr-chat-composer frame="plain" disabled></lr-chat-composer>`,
     )) as LyraChatComposer;
     const s = getComputedStyle(baseOf(el));
     expect(s.opacity).to.equal('0.5'); // --lr-opacity-disabled
     expect(s.cursor).to.equal('not-allowed');
     // The @media (prefers-reduced-motion: reduce) block targets [part='base'] unqualified by
-    // appearance, so what it overrides has to still be there for plain too.
+    // frame, so what it overrides has to still be there for plain too.
     const card = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
     expect(s.transitionProperty).to.equal(getComputedStyle(baseOf(card)).transitionProperty);
     expect(s.transitionProperty).to.equal('border-color');
   });
 
-  it('is accessible under appearance="plain" with the textarea focused', async () => {
+  it('is accessible under frame="plain" with the textarea focused', async () => {
     const el = (await fixture(html`
-      <lr-chat-composer appearance="plain" placeholder="Message the assistant…" value="Draft"></lr-chat-composer>
+      <lr-chat-composer frame="plain" placeholder="Message the assistant…" value="Draft"></lr-chat-composer>
     `)) as LyraChatComposer;
     textareaOf(el).focus();
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement === textareaOf(el)).to.be.true;
     await expect(el).to.be.accessible();
+  });
+
+  it('exposes no `appearance` property, and a stale appearance="plain" keeps the card chrome', async () => {
+    const el = (await fixture(html`<lr-chat-composer appearance="plain"></lr-chat-composer>`)) as LyraChatComposer;
+    expect('appearance' in el, 'appearance is gone from the instance').to.be.false;
+    const chrome = baseChrome(el);
+    expect(chrome.borderTopWidth, 'the card border is still drawn').to.equal('1px');
+    expect(chrome.backgroundColor, 'the card background is still drawn').to.not.equal('rgba(0, 0, 0, 0)');
   });
 });
 

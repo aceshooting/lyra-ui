@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './tool-result-dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
-import '../../layout/tabs/tabs.js';
+import '../../layout/tab-group/tab-group.js';
 import '../../utility/json-viewer/json-viewer.js';
 
 const meta: Meta = {
@@ -20,7 +20,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tabs>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape/backdrop dismiss, scroll lock, a maximize toggle) around it.',
+          'A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape/backdrop dismiss, scroll lock, a maximize toggle) around it.',
       },
     },
   },
@@ -38,7 +38,7 @@ const runPythonOutput = { stdout: 'sum = 5050\n', stderr: '', exit_code: 0 };
 
 function toolCallPanels() {
   return html`
-    <lr-tabs slot="body">
+    <lr-tab-group slot="body">
       <pre slot="input" label="Input" style="margin:0;padding:0.75rem 0;white-space:pre-wrap;">
 print(sum(range(1, 101)))</pre
       >
@@ -50,7 +50,7 @@ print(sum(range(1, 101)))</pre
       <pre slot="raw" label="Raw" style="margin:0;padding:0.75rem 0;white-space:pre-wrap;">
 ${JSON.stringify(runPythonOutput, null, 2)}</pre
       >
-    </lr-tabs>
+    </lr-tab-group>
   `;
 }
 

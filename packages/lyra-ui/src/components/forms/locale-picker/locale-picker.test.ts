@@ -376,6 +376,44 @@ it('reflects size="2xs" as a host attribute', async () => {
   expect(el.getAttribute('size')).to.equal('2xs');
 });
 
+it('renders the same trigger height at every tier as before the shared ladder', async () => {
+  const expected: ReadonlyArray<readonly [string, string]> = [
+    ['2xs', '20px'],
+    ['xs', '24px'],
+    ['s', '30px'],
+    ['m', '40px'],
+    ['l', '48px'],
+    ['xl', '56px'],
+  ];
+  for (const [size, px] of expected) {
+    const el = await fixture(html`<lr-locale-picker size=${size}></lr-locale-picker>`);
+    const triggerEl = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+    expect(getComputedStyle(triggerEl).minBlockSize, `size=${size}`).to.equal(px);
+  }
+});
+
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  const box = (el: Element) => el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  for (const [alias, step] of pairs) {
+    const aliasEl = await fixture(html`<lr-locale-picker size=${alias}></lr-locale-picker>`);
+    const stepEl = await fixture(html`<lr-locale-picker size=${step}></lr-locale-picker>`);
+    expect(getComputedStyle(box(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
+      getComputedStyle(box(stepEl)).minBlockSize,
+    );
+    expect(getComputedStyle(box(aliasEl)).fontSize, `font-size for ${alias}`).to.equal(
+      getComputedStyle(box(stepEl)).fontSize,
+    );
+    expect(box(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
+      box(stepEl).getBoundingClientRect().height,
+    );
+  }
+});
+
 // Obligation 12: unset-regression.
 it('unset (only locales, or nothing) renders deterministically with no other new property touched', async () => {
   const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
@@ -823,5 +861,161 @@ describe('ElementInternals fallback (lr-locale-picker)', () => {
         expect(internals.checkValidity()).to.be.true;
       },
     );
+  });
+});
+
+// `CustomStateSet` and the `:state()` selector ship separately from each other and from the rest
+// of `ElementInternals` -- these two guards are why the same block passes on WebKit, where a
+// missing `CustomStateSet` would otherwise throw on the very first assertion.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('validity custom states', () => {
+  it('publishes required/optional and valid/invalid from the first update', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-locale-picker required name="locale" .locales=${['fr', 'de']}></lr-locale-picker>`,
+    )) as LyraLocalePicker;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    el.value = 'fr';
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid once committed').to.be.true;
+    expect(el.matches(':state(invalid)'), 'invalid once committed').to.be.false;
+
+    el.required = false;
+    await el.updateComplete;
+    expect(el.matches(':state(optional)'), 'optional after clearing required').to.be.true;
+    expect(el.matches(':state(required)'), 'required after clearing required').to.be.false;
+  });
+
+  it('keeps user-valid/user-invalid off a pristine control and turns them on at first interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-locale-picker required name="locale" .locales=${['fr', 'de']}></lr-locale-picker>`,
+    )) as LyraLocalePicker;
+    await el.updateComplete;
+    expect(el.matches(':state(invalid)'), 'invalid while pristine').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid while pristine').to.be.false;
+    expect(el.matches(':state(user-valid)'), 'user-valid while pristine').to.be.false;
+
+    trigger(el).dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after the trigger blurs').to.be.true;
+
+    el.value = 'de';
+    await el.updateComplete;
+    expect(el.matches(':state(user-valid)'), 'user-valid once satisfied').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid once satisfied').to.be.false;
+  });
+
+  it('counts a reportValidity() call as interaction, and a form reset as going pristine again', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = (await fixture(html`
+      <form><lr-locale-picker required name="locale" .locales=${['fr']}></lr-locale-picker></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-locale-picker') as LyraLocalePicker;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid before reporting').to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reporting').to.be.true;
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reset').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid after reset').to.be.true;
+  });
+});
+
+describe('lr-locale-picker setCustomValidity()', () => {
+  it('blocks form submission and becomes the validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-locale-picker name="locale"></lr-locale-picker></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-locale-picker') as LyraLocalePicker;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    form.requestSubmit();
+    expect(submits, 'an otherwise-valid picker submits').to.equal(1);
+
+    el.setCustomValidity('That locale is not enabled for your account');
+    expect(el.validationMessage).to.equal('That locale is not enabled for your account');
+    expect(el.validity.customError, 'customError').to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(1);
+  });
+
+  it('survives an intrinsic revalidation', async () => {
+    const el = (await fixture(html`<lr-locale-picker required></lr-locale-picker>`)) as LyraLocalePicker;
+    el.setCustomValidity('Server says no');
+    el.value = 'en'; // clears valueMissing and re-runs the intrinsic recompute
+    expect(el.validity.valueMissing, 'valueMissing cleared').to.be.false;
+    expect(el.validity.customError, 'custom error survives the recompute').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // Native `setCustomValidity()` is sticky: `form.reset()` restores values, never the custom
+  // error, which only another `setCustomValidity('')` clears. Matching that here.
+  it('keeps the custom error across a form reset', async () => {
+    const form = (await fixture(html`
+      <form><lr-locale-picker name="locale"></lr-locale-picker></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-locale-picker') as LyraLocalePicker;
+    el.setCustomValidity('Server says no');
+    form.reset();
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`<lr-locale-picker required></lr-locale-picker>`)) as LyraLocalePicker;
+    el.setCustomValidity('Server says no');
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'custom error cleared').to.be.false;
+    expect(
+      el.validity.valueMissing,
+      'an empty custom error must not force a still-uncommitted required picker valid',
+    ).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.not.equal('');
+    el.value = 'en';
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('drives the valid/invalid custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before').to.be.true;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while a custom error is set').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
   });
 });

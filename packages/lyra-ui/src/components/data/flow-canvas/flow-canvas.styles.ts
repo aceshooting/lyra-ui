@@ -155,8 +155,24 @@ export const styles = css`
       var(--lr-flow-canvas-node-hover-outline-color, var(--lr-color-border-strong));
     outline-offset: var(--lr-size-2px);
   }
+  /* A node is pressed for two different gestures -- a click that selects it and a pointerdown that
+     starts a drag -- and both need to read immediately. The pointer-feedback colour is shared with
+     the hover rule above (one knob for "the pointer is on this node"); only the weight steps up, so
+     the pressed ring is unmistakably heavier than the hovered one without introducing a second
+     colour that would then have to stay in sync with it. */
+  [part='node']:active {
+    outline: var(--lr-size-2px) solid
+      var(--lr-flow-canvas-node-hover-outline-color, var(--lr-color-border-strong));
+    outline-offset: var(--lr-size-2px);
+  }
   [part='edge']:hover {
     stroke-width: 2.5;
+  }
+  /* Stroke weight is the only channel an edge has: its stroke colour is the tone the consumer
+     assigned it (see the [data-tone] rules above), so tinting it on press would read as a tone
+     change rather than as feedback. 3.5 also clears the 2.5 an already-selected edge carries. */
+  [part='edge']:active {
+    stroke-width: 3.5;
   }
   [part='node']:has([part='node-control']:focus-visible),
   [part='edge']:focus-visible {
@@ -196,7 +212,7 @@ export const styles = css`
   }
   [part='edge'][data-running] {
     stroke-dasharray: 6 4;
-    animation: lr-flow-canvas-march var(--lr-flow-canvas-march-duration, var(--lr-transition-ambient)) linear infinite;
+    animation: lr-flow-canvas-march var(--lr-flow-canvas-march-duration, var(--lr-duration-ambient)) linear infinite;
   }
   [part='edge'][data-running-static] {
     stroke-dasharray: 6 4;

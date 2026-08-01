@@ -18,7 +18,7 @@ A generic windowed/virtualized list host. Renders only the items within the curr
 multi-thousand-row chat-history sidebar (or a long message thread) stays cheap to scroll. Content is
 entirely caller-supplied: `renderItem(item, index)` returns whatever `lit-html` value should represent
 that row, and `keyFunction(item, index)` gives it a stable identity for DOM reconciliation. First-party
-invention (no Web Awesome equivalent).
+invention (no `wa-*`/`sl-*` counterpart).
 
 **Properties:**
 - `items: unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via

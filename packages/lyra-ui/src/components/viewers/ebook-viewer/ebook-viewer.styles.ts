@@ -44,6 +44,10 @@ export const styles = css`
   [part='next-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='previous-button']:active,
+  [part='next-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='previous-button']:disabled,
   [part='next-button']:disabled {
     cursor: not-allowed;

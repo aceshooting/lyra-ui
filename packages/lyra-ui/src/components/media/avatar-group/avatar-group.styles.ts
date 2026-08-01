@@ -11,33 +11,59 @@ export const styles = css`
     --lr-avatar-group-badge-bg: var(--lr-color-border);
     --lr-avatar-group-badge-color: var(--lr-color-text);
     /* Mirrors lr-avatar's own --lr-avatar-font-size scale exactly, so a "+N" badge and the
-       avatars it caps read at the same optical weight at every tier. The 'md' default is the
-       single font-size the badge used to use at every tier, so an unset group is byte-identical. */
+       avatars it caps read at the same optical weight at every tier. The 'm'/'medium' default is
+       the single font-size the badge used to use at every tier, so an unset group is
+       byte-identical. */
     --lr-avatar-group-badge-font-size: var(--lr-font-size-sm);
   }
+  /* Every spelling of every tier, matching lr-avatar's own ladder declaration for declaration --
+     the group's badge has to be the same diameter as the avatars it caps, so a tier lr-avatar
+     renders and lr-avatar-group ignores would produce a visibly mismatched "+N" circle. Both
+     components accept the canonical LyraSize ladder plus the older sm|md|lg shorthands. */
+  :host([size='2xs']) {
+    --lr-avatar-group-avatar-size: var(--lr-size-1rem);
+    --lr-avatar-group-overlap: var(--lr-size-neg-4px);
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-2xs);
+  }
+  :host([size='xs']) {
+    --lr-avatar-group-avatar-size: var(--lr-size-1-25rem);
+    --lr-avatar-group-overlap: var(--lr-size-neg-4px);
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-2xs);
+  }
+  :host([size='s']),
+  :host([size='small']),
   :host([size='sm']) {
     --lr-avatar-group-avatar-size: var(--lr-size-1-5rem);
     --lr-avatar-group-overlap: var(--lr-size-neg-4px);
     --lr-avatar-group-badge-font-size: var(--lr-font-size-xs);
   }
+  :host([size='l']),
+  :host([size='large']),
   :host([size='lg']) {
     --lr-avatar-group-avatar-size: var(--lr-size-2-5rem);
     --lr-avatar-group-overlap: var(--lr-size-neg-8px);
-    --lr-avatar-group-badge-font-size: var(--lr-font-size-md);
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-m);
   }
-  :host([tone='brand']) {
+  :host([size='xl']) {
+    --lr-avatar-group-avatar-size: var(--lr-size-3rem);
+    --lr-avatar-group-overlap: var(--lr-size-neg-8px);
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-lg);
+  }
+  /* Same colour mapping lr-avatar uses (the variant's quiet tint behind its loud colour), not the
+     shared internal/variants.styles.ts grid pairing -- see the note in avatar.styles.ts. */
+  :host([variant='brand']) {
     --lr-avatar-group-badge-bg: var(--lr-color-brand-quiet);
     --lr-avatar-group-badge-color: var(--lr-color-brand);
   }
-  :host([tone='success']) {
+  :host([variant='success']) {
     --lr-avatar-group-badge-bg: var(--lr-color-success-quiet);
     --lr-avatar-group-badge-color: var(--lr-color-success);
   }
-  :host([tone='warning']) {
+  :host([variant='warning']) {
     --lr-avatar-group-badge-bg: var(--lr-color-warning-quiet);
     --lr-avatar-group-badge-color: var(--lr-color-warning);
   }
-  :host([tone='danger']) {
+  :host([variant='danger']) {
     --lr-avatar-group-badge-bg: var(--lr-color-danger-quiet);
     --lr-avatar-group-badge-color: var(--lr-color-danger);
   }
@@ -69,6 +95,9 @@ export const styles = css`
   /* Each avatar's own ring adapts to that avatar's own reflected shape attribute -- no
      group-level coordination needed even in a mixed-shape group. */
   ::slotted(lr-avatar[shape='square']) {
+    border-radius: 0;
+  }
+  ::slotted(lr-avatar[shape='rounded']) {
     border-radius: var(--lr-radius);
   }
 
@@ -102,10 +131,19 @@ export const styles = css`
       box-shadow var(--lr-transition-fast);
   }
   :host([shape='square']) [part='overflow-badge'] {
+    border-radius: 0;
+  }
+  :host([shape='rounded']) [part='overflow-badge'] {
     border-radius: var(--lr-radius);
   }
   [part='overflow-badge']:hover {
     box-shadow: 0 0 0 var(--lr-avatar-group-ring-width) var(--lr-color-brand);
+  }
+  /* Pressed keeps the hover ring and adds a fill shift, so the two states are never mistaken for
+     each other -- the badge is a real button (it expands the collapsed avatars). */
+  [part='overflow-badge']:active {
+    box-shadow: 0 0 0 var(--lr-avatar-group-ring-width) var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-avatar-group-badge-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='overflow-badge']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

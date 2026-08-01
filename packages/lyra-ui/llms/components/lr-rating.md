@@ -13,22 +13,98 @@
 
 ## `lr-rating`
 
-A keyboard-accessible star rating control with slider semantics. **Properties:** `value`, `max`,
-`precision`, `readonly`, `disabled`, and `accessibleLabel` (`aria-label`). **Events:**
-`lr-change` with `{ value }`. **CSS parts:** `base`, `star`, `star-fill` (the filled overlay
-inside each star, clipped to the fractional `precision` value). **Themeable custom properties:**
-`--lr-rating-fill` (default `--lr-color-warning` — filled-star color), `--lr-rating-empty-color`
-(default `--lr-color-border` — unfilled-star color, also retained during hover preview), and
-`--lr-rating-size` (default
-`--lr-font-size-xl` — star size).
+A keyboard-accessible star rating control with slider semantics. It is a **form-associated control**
+that lives in this family rather than in `components/forms/` — if you came looking for it among the
+form controls, this is its section. Everything the "Form association" section says about `name`,
+submission, validity and the `user-*` custom states applies to it.
+
+It is form-associated through `ElementInternals` directly rather than through the shared
+`FormAssociated` mixin, because its `value` is a number and the mixin's contract assumes a plain
+string — routing through it would force every consumer into string round-tripping for what is
+natively a numeric score. The submitted entry is the clamped value stringified (`"0"` while
+unrated), and `required` reports `valueMissing` until a rating above zero is set. As on a native
+`<input>`, the `value` *content attribute* is the reset default that `form.reset()` restores, while
+the `value` IDL property is the live score and is deliberately not reflected.
+
+**Properties:** `value: number = 0`, `max: number = 5`, `precision: number = 1`,
+`readonly: boolean = false` (reflected), `disabled`, `required`, `name`,
+`size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — rewrites `--lr-rating-size` from a type ramp
+rather than the shared control ladder, since a rating has no control frame to size; the `m` default
+reproduces the treatment this component had before `size` existed), plus two separate naming knobs:
+`accessibleLabel: string = ''` (attribute **`aria-label`**) and `label: string = ''` (attribute
+`label`). `label` is an accessible-name fallback used when the host carries no `aria-label` — it is
+*not* visible label text, since a rating is a bare row of symbols with no field frame of its own;
+wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+
+`getSymbol?: (value: number, selected: boolean) => unknown` (property only, no attribute) — **new in
+8.0.0.** Renders a consumer-supplied symbol per position instead of the built-in star. It is called
+*twice per position*: once for the empty backdrop (`selected` false) and once for the overlay
+clipped to that position's filled fraction (`selected` true), which is what keeps a fractional
+`precision` rendering a partial fill. Return any Lit-renderable value; a plain string renders as
+text, never as markup. Left unset, the built-in star outline/solid pair is unchanged.
+
+**Events:**
+- `lr-change` — `detail: { value }`. The rating was committed to a new value. Not emitted when the
+  clamped value is unchanged, nor on a programmatic `value` write.
+- `lr-hover` — **new in 8.0.0.** `detail: { phase: 'start' | 'move' | 'end', value }`, where `value`
+  is the rating that committing the current pointer position *would* produce — enough to render a
+  live description of what is being hovered without waiting for a click. Fires only while the rating
+  is settable (neither `disabled`, fieldset-disabled, nor `readonly`). `start` also covers a pointer
+  that reaches the symbols without a `pointerenter` the component saw; `end` fires on
+  `pointerleave` **and** on `pointercancel` (a touch drag taken over by scrolling, palm rejection),
+  so an interrupted gesture never leaves the preview frozen. A disconnect or a disablement drops the
+  preview silently, with no `end` phase — that teardown wasn't user-driven.
+
+**Methods:** `focus()`, `blur()` and `click()` forward to the internal rating control.
+`checkValidity()` and `reportValidity()` behave as on a native form control — `reportValidity()`
+additionally shows the browser's validation UI, and counts as interaction, so a failed submit is
+what starts `user-invalid` matching. `setCustomValidity(message: string)` sets a consumer-supplied
+rejection no client-side constraint can express ("you have already rated this item"): a non-empty
+message raises `customError` and becomes `validationMessage`, so the control fails
+`checkValidity()`, blocks submission and matches `:state(invalid)`. It is caller-supplied content,
+so it is used verbatim and never localized. `setCustomValidity('')` clears it and restores the
+control's *computed* validity rather than forcing it valid — a `required` control that is still
+unrated stays `valueMissing`. Like a native control, the custom error survives every intrinsic
+recomputation in between (each `value`/`max`/`required` change re-runs validation) and a
+`form.reset()`; only another `setCustomValidity('')` clears it.
+
+**Reset and state restore.** `form.reset()` restores the `value` *content attribute*, drops any
+in-flight hover preview, and returns the control to pristine, so the `user-valid`/`user-invalid`
+states stop matching even though a required-and-unrated control is still `invalid`. Browser session
+restore (`formStateRestoreCallback`) reinstates the previously submitted numeric value; a
+non-string restored state falls back to `0` rather than producing NaN geometry.
+
+**Custom states:** `required`, `optional`, `valid`, `invalid`, `user-valid`, `user-invalid` —
+`lr-rating:state(user-invalid)` is the one to paint red. Plain `invalid` matches a pristine
+`required` rating that has never been set.
+
+**CSS parts:** `base` (the `role="slider"` control), `star` (each rendered symbol), `star-fill` (the
+filled overlay inside each symbol, clipped to that symbol's filled fraction — 0%, a partial
+percentage under a fractional `precision`, or 100%).
+
+**Themeable custom properties:** `--lr-rating-fill` (default `--lr-color-warning` — filled-symbol
+color), `--lr-rating-empty-color` (default `--lr-color-border` — unfilled-symbol color, also
+retained during hover preview), and `--lr-rating-size` (default `--lr-font-size-xl` — symbol size;
+each `size` step rewrites it).
 
 Pointer selection resolves the position within the clicked star and snaps upward to `precision`
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
 input as well as keyboard/value updates. The semantic slider's base keeps a 40×40px minimum
 activation area even for the degenerate `max=0`/`max=1` cases; larger ratings naturally grow wider.
 
-**Additional API surface:**
+```html
+<lr-rating name="score" label="Overall rating" max="5" precision="0.5" size="l"></lr-rating>
+<p id="preview"></p>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/overlays/rating/rating.js';
 
-- `blur()` — Forwards host blur to the internal rating control.
-- `click()` — Forwards host activation to the internal rating control.
-- `focus()` — Forwards host focus to the internal rating control.
+  const rating = document.querySelector('lr-rating');
+  const preview = document.getElementById('preview');
+  rating.getSymbol = (value, selected) => (selected ? '♥' : '♡');
+  rating.addEventListener('lr-hover', (event) => {
+    const { phase, value } = event.detail;
+    preview.textContent = phase === 'end' ? '' : `Rate ${value}`;
+  });
+  rating.addEventListener('lr-change', (event) => console.log('committed', event.detail.value));
+</script>
+```

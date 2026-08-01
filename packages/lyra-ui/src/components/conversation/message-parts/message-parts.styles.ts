@@ -17,8 +17,13 @@ export const styles = css`
     min-inline-size: 0;
   }
 
+  /* De-emphasises this part's OWN text while an answer is still streaming. Deliberately a colour
+     change rather than an opacity on the subtree: a streaming part can contain a nested component
+     (an <lr-thinking-panel>, a tool-call chip) that sets its own colour at the contrast floor, and
+     a container opacity multiplies that down through it — which is a WCAG 1.4.3 failure the nested
+     component cannot see or defend against. color only reaches text that actually inherits it. */
   [part~='part-streaming'] {
-    opacity: var(--lr-opacity-muted);
+    color: var(--lr-color-text-quiet);
   }
 
   [part~='tool-call'],

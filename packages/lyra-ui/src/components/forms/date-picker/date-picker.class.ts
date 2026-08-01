@@ -10,6 +10,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { nextId } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './date-picker.styles.js';
 import {
   monthMatrix,
@@ -30,7 +31,9 @@ import {
   type WeekdayFormat,
 } from './calendar-core.js';
 
-export type LyraDatePickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraDatePickerSize = LyraSizeStep;
 
 export interface DateRange {
   from: Date | null;
@@ -61,6 +64,12 @@ export interface LyraDatePickerEventMap {
  * or a date range. Mirrors the core `<wa-date-picker>` API under `lr-`.
  *
  * Value is ISO 8601: `YYYY-MM-DD` (single) or `YYYY-MM-DD/YYYY-MM-DD` (range).
+ *
+ * Deliberately does **not** perform implicit form submission on Enter (unlike its `<lr-date-input>`
+ * wrapper, which routes through `internal/submit-on-enter.ts`): Enter selects the focused day in
+ * the calendar grid — the grid's own commit key, the same carve-out `<lr-textarea>` has for a
+ * newline. This element is also not form-associated; the wrapping `<lr-date-input>` is what
+ * participates in a `<form>`.
  *
  * @customElement lr-date-picker
  * @event change - The user committed a value.
@@ -101,8 +110,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property({ converter: monthsConverter }) months: 1 | 2 = 1;
   /** Visual size — scales `--lr-cell-size` proportionally; not pixel-matched to
-   *  `lr-input`'s row-height scale (a calendar cell isn't a text row). */
-  @property({ reflect: true }) size: LyraDatePickerSize = 'm';
+   *  `lr-input`'s row-height scale (a calendar cell isn't a text row). The Web Awesome / Shoelace spellings
+   *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
+   *  attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   @property() override locale = '';
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
   @property({ attribute: 'weekday-format', converter: weekdayFormatConverter }) weekdayFormat: WeekdayFormat = 'short';
@@ -358,7 +369,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     // explicit `direction` override, so under `dir="rtl"` the browser mirrors
     // the column order itself (day 1 of the week renders at the inline-start
     // edge, which `direction` puts on the right) -- the same auto-mirroring
-    // `<lr-tabs>`/`<lr-split>`/`<lr-tree>` rely on for their own
+    // `<lr-tab-group>`/`<lr-split>`/`<lr-tree>` rely on for their own
     // row/track layouts. So ArrowLeft/ArrowRight must swap which physical key
     // advances a day, or keyboard nav would point the opposite way from what
     // the mirrored grid shows. ArrowUp/ArrowDown move by week (the block

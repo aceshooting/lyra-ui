@@ -26,6 +26,20 @@ export const Sizes: Story = {
   },
 };
 /**
+ * `size` also accepts the Web Awesome / Shoelace spellings — `small`, `medium` and `large` render
+ * exactly as `s`, `m` and `l` — and `pill` rounds the row and its token chips to a full pill.
+ */
+export const AliasSizesAndPill: Story = {
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+      <lr-token-input size="small" label='size="small"' .value=${['Token A']}></lr-token-input>
+      <lr-token-input size="medium" label='size="medium"' .value=${['Token A']}></lr-token-input>
+      <lr-token-input size="large" label='size="large"' .value=${['Token A']}></lr-token-input>
+      <lr-token-input pill label="pill" .value=${['Token A', 'Token B']}></lr-token-input>
+    </div>
+  `,
+};
+/**
  * `editable` turns every token into a roving tab stop that opens an inline editor on click, Enter,
  * or F2 — Enter commits and emits `lr-token-edit`, Escape reverts. `.delimiter=${null}` keeps
  * commas (and every other character) inside a token instead of splitting it, which is what a rule

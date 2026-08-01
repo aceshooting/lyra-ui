@@ -106,33 +106,33 @@ it("sets aria-orientation to horizontal for a top/bottom-docked handle", async (
   expect(handle.getAttribute("aria-orientation")).to.equal("horizontal");
 });
 
-it("applies the size property as the host inline-size for a start/end edge", async () => {
-  const el = await dockedFixture('size="300px"');
+it("applies the extent property as the host inline-size for a start/end edge", async () => {
+  const el = await dockedFixture('extent="300px"');
   await elementUpdated(el);
   expect(el.getBoundingClientRect().width).to.be.closeTo(300, 1);
 });
 
-it("applies the size property as the host block-size for a top/bottom edge", async () => {
-  const el = await dockedFixture('size="150px"', "top");
+it("applies the extent property as the host block-size for a top/bottom edge", async () => {
+  const el = await dockedFixture('extent="150px"', "top");
   await elementUpdated(el);
   expect(el.getBoundingClientRect().height).to.be.closeTo(150, 1);
 });
 
-it("lets an explicit min-size below the collapsed-rail token width render while expanded", async () => {
+it("lets an explicit min-extent below the collapsed-rail token width render while expanded", async () => {
   // --lr-icon-button-size (the collapsed-rail token) is 2.5rem = 40px --
   // an unconditional CSS min-inline-size floor at that width used to win
-  // over this smaller explicit size/min-size even though nothing here is
+  // over this smaller explicit extent/min-extent even though nothing here is
   // collapsed.
   const el = await dockedFixture(
-    'size="24px" min-size="24px" max-size="200px"'
+    'extent="24px" min-extent="24px" max-extent="200px"'
   );
   await elementUpdated(el);
   expect(el.getBoundingClientRect().width).to.be.closeTo(24, 1);
 });
 
-it("resizes via keyboard and emits lr-resize with a px size in the detail", async () => {
+it("resizes via keyboard and emits lr-resize with a px extent in the detail", async () => {
   const el = await dockedFixture(
-    'size="300px" min-size="100px" max-size="500px"'
+    'extent="300px" min-extent="100px" max-extent="500px"'
   );
   await elementUpdated(el);
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
@@ -148,14 +148,14 @@ it("resizes via keyboard and emits lr-resize with a px size in the detail", asyn
     new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.size).to.equal("316px");
-  expect(detail!.size).to.equal("316px");
+  expect(el.extent).to.equal("316px");
+  expect(detail!.extent).to.equal("316px");
 
   handle.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.size).to.equal("300px");
+  expect(el.extent).to.equal("300px");
 });
 
 it('swaps ArrowLeft/ArrowRight for edge="end" under dir="rtl"', async () => {
@@ -166,9 +166,9 @@ it('swaps ArrowLeft/ArrowRight for edge="end" under dir="rtl"', async () => {
     >
       <lr-dock-panel
         edge="end"
-        size="300px"
-        min-size="100px"
-        max-size="500px"
+        extent="300px"
+        min-extent="100px"
+        max-extent="500px"
       ></lr-dock-panel>
     </div>`
   );
@@ -184,7 +184,7 @@ it('swaps ArrowLeft/ArrowRight for edge="end" under dir="rtl"', async () => {
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await elementUpdated(panel);
-  expect(panel.size).to.equal("316px");
+  expect(panel.extent).to.equal("316px");
 });
 
 it('does not swap ArrowUp/ArrowDown for a top/bottom edge under dir="rtl"', async () => {
@@ -195,9 +195,9 @@ it('does not swap ArrowUp/ArrowDown for a top/bottom edge under dir="rtl"', asyn
     >
       <lr-dock-panel
         edge="top"
-        size="150px"
-        min-size="80px"
-        max-size="300px"
+        extent="150px"
+        min-extent="80px"
+        max-extent="300px"
       ></lr-dock-panel>
     </div>`
   );
@@ -210,12 +210,12 @@ it('does not swap ArrowUp/ArrowDown for a top/bottom edge under dir="rtl"', asyn
     new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
   );
   await elementUpdated(panel);
-  expect(panel.size).to.equal("166px");
+  expect(panel.extent).to.equal("166px");
 });
 
-it("clamps keyboard resizing to min-size and max-size", async () => {
+it("clamps keyboard resizing to min-extent and max-extent", async () => {
   const el = await dockedFixture(
-    'size="110px" min-size="100px" max-size="200px"'
+    'extent="110px" min-extent="100px" max-extent="200px"'
   );
   await elementUpdated(el);
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
@@ -226,7 +226,7 @@ it("clamps keyboard resizing to min-size and max-size", async () => {
     );
   }
   await elementUpdated(el);
-  expect(el.size).to.equal("100px");
+  expect(el.extent).to.equal("100px");
 
   for (let i = 0; i < 10; i++) {
     handle.dispatchEvent(
@@ -234,12 +234,12 @@ it("clamps keyboard resizing to min-size and max-size", async () => {
     );
   }
   await elementUpdated(el);
-  expect(el.size).to.equal("200px");
+  expect(el.extent).to.equal("200px");
 });
 
 it('resizes via pointer drag and mirrors direction under dir="rtl"', async () => {
   const el = await dockedFixture(
-    'size="300px" min-size="100px" max-size="500px"'
+    'extent="300px" min-extent="100px" max-extent="500px"'
   );
   await elementUpdated(el);
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
@@ -258,14 +258,14 @@ it('resizes via pointer drag and mirrors direction under dir="rtl"', async () =>
     new PointerEvent("pointermove", { pointerId: 1, clientX: 150 })
   );
   const { detail } = (await resized) as CustomEvent<DockPanelResizeDetail>;
-  expect(detail.size).to.equal("350px");
-  expect(el.size).to.equal("350px");
+  expect(detail.extent).to.equal("350px");
+  expect(el.extent).to.equal("350px");
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
 });
 
 it("ignores a pointermove/pointerup from an unrelated pointerId mid-drag", async () => {
   const el = await dockedFixture(
-    'size="300px" min-size="100px" max-size="500px"'
+    'extent="300px" min-extent="100px" max-extent="500px"'
   );
   await elementUpdated(el);
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
@@ -282,13 +282,13 @@ it("ignores a pointermove/pointerup from an unrelated pointerId mid-drag", async
     new PointerEvent("pointermove", { pointerId: 2, clientX: 100 })
   );
   await elementUpdated(el);
-  expect(el.size).to.equal("300px");
+  expect(el.extent).to.equal("300px");
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
 });
 
 it("aborts an active pointer resize when collapsed is enabled mid-gesture", async () => {
   const el = await dockedFixture(
-    'size="300px" min-size="100px" max-size="500px" collapsible'
+    'extent="300px" min-extent="100px" max-extent="500px" collapsible'
   );
   await elementUpdated(el);
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
@@ -308,13 +308,13 @@ it("aborts an active pointer resize when collapsed is enabled mid-gesture", asyn
     new PointerEvent("pointermove", { pointerId: 31, clientX: 100 })
   );
 
-  expect(el.size).to.equal("300px");
+  expect(el.extent).to.equal("300px");
   expect(events).to.equal(0);
 });
 
 it("aborts an active pointer resize when resizable is revoked mid-gesture", async () => {
   const el = await dockedFixture(
-    'size="300px" min-size="100px" max-size="500px"'
+    'extent="300px" min-extent="100px" max-extent="500px"'
   );
   await elementUpdated(el);
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
@@ -332,11 +332,11 @@ it("aborts an active pointer resize when resizable is revoked mid-gesture", asyn
     new PointerEvent("pointermove", { pointerId: 32, clientX: 100 })
   );
 
-  expect(el.size).to.equal("300px");
+  expect(el.extent).to.equal("300px");
 });
 
 it("does not throw on a stray pointermove/pointerup after disconnect mid-drag", async () => {
-  const el = await dockedFixture('size="300px"');
+  const el = await dockedFixture('extent="300px"');
   await elementUpdated(el);
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
   handle.setPointerCapture = () => {};
@@ -360,7 +360,7 @@ it("does not throw on a stray pointermove/pointerup after disconnect mid-drag", 
 });
 
 it("toggles collapsed via the collapse-toggle button and emits lr-collapse-change", async () => {
-  const el = await dockedFixture('size="280px" collapsible');
+  const el = await dockedFixture('extent="280px" collapsible');
   await elementUpdated(el);
   const toggle = el.shadowRoot!.querySelector(
     '[part="collapse-toggle"]'
@@ -387,10 +387,10 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   expect(el.shadowRoot!.querySelector('[part="handle"]')).to.equal(null);
 });
 
-it("preserves the last expanded size across a collapse/expand round trip", async () => {
-  const el = await dockedFixture('size="280px" collapsible');
+it("preserves the last expanded extent across a collapse/expand round trip", async () => {
+  const el = await dockedFixture('extent="280px" collapsible');
   await elementUpdated(el);
-  expect(el.size).to.equal("280px");
+  expect(el.extent).to.equal("280px");
 
   const toggle = el.shadowRoot!.querySelector(
     '[part="collapse-toggle"]'
@@ -398,12 +398,12 @@ it("preserves the last expanded size across a collapse/expand round trip", async
   toggle.click();
   await elementUpdated(el);
   expect(el.collapsed).to.equal(true);
-  expect(el.size).to.equal("280px"); // untouched while collapsed
+  expect(el.extent).to.equal("280px"); // untouched while collapsed
 
   toggle.click();
   await elementUpdated(el);
   expect(el.collapsed).to.equal(false);
-  expect(el.size).to.equal("280px");
+  expect(el.extent).to.equal("280px");
   expect(el.getBoundingClientRect().width).to.be.closeTo(280, 1);
 });
 
@@ -466,7 +466,7 @@ it("keeps aria-valuemax/aria-valuenow live against a passive container resize", 
   const wrapper = (await fixture(
     `<div style="position: relative; width: 400px; height: 20rem; display: flex;">
       <div style="flex: 1;">main</div>
-      <lr-dock-panel edge="end" size="100px" min-size="50px"></lr-dock-panel>
+      <lr-dock-panel edge="end" extent="100px" min-extent="50px"></lr-dock-panel>
     </div>`
   )) as HTMLDivElement;
   const el = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
@@ -499,13 +499,13 @@ it("is accessible in its default state (no collapsible, resizable handle only)",
 });
 
 it("is accessible when collapsible and populated with content", async () => {
-  const el = await dockedFixture('size="280px" collapsible');
+  const el = await dockedFixture('extent="280px" collapsible');
   await elementUpdated(el);
   await expect(el).to.be.accessible();
 });
 
 it("is accessible while collapsed", async () => {
-  const el = await dockedFixture('size="280px" collapsible collapsed');
+  const el = await dockedFixture('extent="280px" collapsible collapsed');
   await elementUpdated(el);
   await expect(el).to.be.accessible();
 });
@@ -550,4 +550,15 @@ describe("aria-label localization", () => {
     await elementUpdated(el);
     expect(toggle.getAttribute("aria-label")).to.equal("Agrandir le panneau");
   });
+});
+
+it("no longer answers to the pre-8.0.0 size/min-size/max-size attributes — extent replaced them outright", async () => {
+  const el = await dockedFixture('size="300px" min-size="24px" max-size="500px"');
+  await elementUpdated(el);
+  // `size` was a CSS length on a property name the rest of the library reserves for a tier on the
+  // six-step ladder; the rename is clean, with no alias, so the old spellings are inert.
+  expect(el.extent).to.equal("280px");
+  expect(el.minExtent).to.equal("160px");
+  expect(el.maxExtent).to.equal("");
+  expect(el.getBoundingClientRect().width).to.be.closeTo(280, 1);
 });

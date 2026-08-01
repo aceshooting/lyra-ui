@@ -52,7 +52,9 @@ export const styles = css`
     inset-inline-start: var(--lr-comparer-position, 50%);
     inline-size: var(--lr-size-1px);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Card step, not the overlay step: the shadow here only has to keep a hairline legible against
+       arbitrary imagery on both sides -- a wider blur reads as a smudge along the seam. */
+    box-shadow: var(--lr-shadow-s);
     pointer-events: none;
   }
   [part='base'][data-orientation='vertical'] [part='divider'] {
@@ -106,5 +108,11 @@ export const styles = css`
      the divider isn't itself the pointer target). */
   [part='base']:has([part='handle']:hover) [part='divider'] {
     background: var(--lr-color-brand);
+  }
+  /* Pressed rides the same :has() indirection as the hover rule above, and for the same reason:
+     [part='handle'] is a 1%-opacity full-bleed range input with nothing of its own to tint, so
+     while the pointer is down mid-drag it is the seam that deepens past its hover accent. */
+  [part='base']:has([part='handle']:active) [part='divider'] {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
 `;

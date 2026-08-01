@@ -185,7 +185,7 @@ function formatDuration(ms: number): {
 /**
  * `<lr-tool-result-dialog>` — a full tool-call detail overlay: a status/
  * duration header plus a `body` slot where a consumer typically places a
- * `<lr-tabs>` with Input/Preview/JSON/Raw panels. This component knows
+ * `<lr-tab-group>` with Input/Preview/JSON/Raw panels. This component knows
  * nothing about what's inside that slot — it only supplies the modal chrome
  * around it.
  *
@@ -196,7 +196,7 @@ function formatDuration(ms: number): {
  * duplicates that pattern locally instead of composing the previous one:
  * slot-forwarding into a nested `<lr-dialog>` would put a forwarding
  * `<slot>` where a light-DOM-scanning descendant (e.g. a slotted
- * `<lr-tabs>`'s own `Array.from(this.children)` scan) expects real
+ * `<lr-tab-group>`'s own `Array.from(this.children)` scan) expects real
  * projected content.
  *
  * `maximized` toggles between a constrained modal size and a near-fullscreen
@@ -210,7 +210,7 @@ function formatDuration(ms: number): {
  * so instances beneath it stay open and untouched until the one on top closes.
  *
  * @customElement lr-tool-result-dialog
- * @slot body - The dialog's main content — typically a `<lr-tabs>` with
+ * @slot body - The dialog's main content — typically a `<lr-tab-group>` with
  * Input/Preview/JSON/Raw panels, entirely consumer-assembled.
  * @slot footer - Optional action buttons, rendered in a bottom row.
  * @event lr-close - `detail: ToolResultDialogCloseReason`. Fired

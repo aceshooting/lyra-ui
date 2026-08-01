@@ -18,12 +18,12 @@ export const styles = css`
   [part='base']:focus-within {
     border-color: var(--lr-color-brand);
   }
-  /* Chrome-less escape, mirroring lr-card's appearance="plain" (and lr-callout's [inline]): a
-     composer is routinely docked to the block-end edge of a surface that already draws its own
+  /* Chrome-less escape, the library-wide frame="plain" (and lr-callout's [inline]): a composer is
+     routinely docked to the block-end edge of a surface that already draws its own
      border/background (a chat panel, a dialog footer, a bordered toolbar), where this card chrome
      doubles the frame. Only the box decoration goes -- the flex layout, gap, disabled treatment and
      the send/stop button's own chrome stay. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -33,10 +33,10 @@ export const styles = css`
      left to shift once plain has removed it -- focus would become invisible, which is an
      accessibility regression rather than a cosmetic one (the textarea itself sets outline: none, so
      nothing else marks the focused row). A chrome-less composer underlines its whole input row
-     instead, the same swap-the-affordance approach lr-stat's plain appearance takes. Drawn as an
+     instead, the same swap-the-affordance approach lr-stat's plain frame takes. Drawn as an
      inset box-shadow rather than a border so it costs no layout: adding a real border back on focus
      would shift the row by its width every time the textarea is focused. */
-  :host([appearance='plain']) [part='base']:focus-within {
+  :host([frame='plain']) [part='base']:focus-within {
     box-shadow: inset 0 calc(-1 * var(--lr-focus-ring-width)) 0 0 var(--lr-focus-ring-color);
   }
   /* :host(:disabled), not :host([disabled]) -- this is a form-associated
@@ -138,9 +138,17 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
+  /* Hover/press are a background mix, never filter: brightness(). brightness() multiplies every
+     channel, so it lightens a dark fill and darkens a light one only by accident, does nothing at
+     all to a pure white or pure black brand color, and -- because filter applies to the whole
+     subtree -- dims the glyph inside the button along with its fill. Mixing the resting fill toward
+     --lr-color-mix-partner (which tracks the text color) always moves, always in the direction the
+     surface needs, and leaves the icon alone. */
   [part='action-button']:hover {
-    background: var(--lr-color-brand);
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='action-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='action-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

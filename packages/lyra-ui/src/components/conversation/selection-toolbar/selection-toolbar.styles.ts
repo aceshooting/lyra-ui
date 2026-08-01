@@ -20,7 +20,8 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Anchored overlay: a floating toolbar pinned to the current selection, not a modal layer. */
+    box-shadow: var(--lr-shadow-m);
     transform: translate(-50%, calc(-100% - var(--lr-space-xs)));
   }
 
@@ -57,6 +58,14 @@ export const styles = css`
 
   [part~='action']:hover {
     color: var(--lr-color-brand);
+  }
+
+  /* Each action is an <lr-button appearance="plain">, which already supplies its own pressed
+     treatment (--lr-button-active-scale) inside its shadow root. What this rule adds is the
+     toolbar's brand accent escalated one step -- a background box on the host would sit behind the
+     button's own transparent base and read as a second, misaligned control. */
+  [part~='action']:active {
+    color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
 
   [part~='action']:focus-visible {

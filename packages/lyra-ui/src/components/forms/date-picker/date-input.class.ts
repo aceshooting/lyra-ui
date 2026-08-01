@@ -21,11 +21,14 @@ import {
   normalizeWeekdayFormat,
   type WeekdayFormat,
 } from './calendar-core.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './date-input.styles.js';
 import { LyraDatePicker } from './date-picker.class.js';
 import './date-picker.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { isImplicitSubmission, submitOnEnter } from '../../../internal/submit-on-enter.js';
 
 /** Determines the locale's day/month/year field order from a real formatted
  *  sample (Jan 2, 2026 -- a date where day/month/year are all numerically
@@ -61,7 +64,9 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
 };
 
 export type LyraDateInputSelectionDirection = 'forward' | 'backward' | 'none';
-export type LyraDateInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraDateInputSize = LyraSizeStep;
 
 export interface LyraDateInputEventMap {
   'lr-show': CustomEvent<undefined>;
@@ -80,7 +85,10 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * (`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` in range mode). Form-associated.
  *
  * This component uses a single text field; typing accepts ISO or a
- * locale-parseable date.
+ * locale-parseable date. Enter commits the typed text and then performs the implicit form
+ * submission a native `<input>` would (see `internal/submit-on-enter.ts` — the internal input is
+ * in a shadow root and has no form owner, so the platform can never do it here); the commit runs
+ * first so the submitted value is the date the field visibly shows.
  *
  * `size` uses the same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`,
  * default `m`. The calendar-toggle and clear buttons keep a constant touch-target size at every
@@ -114,12 +122,14 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @cssprop [--lr-date-input-font-size=inherit] - Font size of the text input, scaled by `size`.
  * @cssprop [--lr-date-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @cssprop [--lr-date-input-gap=var(--lr-space-xs)] - Gap between input-row children.
- * @cssprop [--lr-date-input-radius=var(--lr-radius)] - Input-row corner radius.
+ * @cssprop [--lr-date-input-radius=var(--lr-radius)] - Input-row corner radius. The `pill`
+ *   attribute swaps it for `--lr-radius-pill`.
  * @cssprop [--lr-date-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
- * @cssprop [--lr-date-input-control-min-height=var(--lr-size-2-5rem)] - Minimum block size of the
- *   input row, scaled by `size` to mirror `lr-input`'s own min-height scale. Each default sits
- *   below the row's transitively-pinned height, so it is dead until a consumer raises it -- the
- *   unset render is unchanged.
+ * @cssprop [--lr-date-input-control-min-height=var(--lr-form-control-height)] - Minimum block size
+ *   of the input row, read from the shared form-control height ladder so retuning
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together. Each
+ *   default sits below the row's transitively-pinned height, so it is dead until a consumer raises
+ *   it -- the unset render is unchanged.
  * @cssprop --lr-date-input-control-height - Exact block size of the input row. Undeclared by
  *   default, so the row grows to fit its content (floored by `--lr-date-input-control-min-height`).
  *   Set it to pin a fixed height; the calendar toggle keeps its own 24x24 touch target even when
@@ -132,7 +142,7 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   calendar toggle — so consumer content never sits outboard of the calendar button.
  */
 export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     mode: { noAccessor: true },
@@ -145,9 +155,15 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
-  /** Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`.
-   *  `'2xs'` is the tightest tier, for dense toolbar-embedded fields. */
-  @property({ reflect: true }) size: LyraDateInputSize = 'm';
+  /** Visual size — the library-wide `2xs`–`xl` ladder shared with
+   *  `lr-input`/`lr-select`/`lr-combobox`. `'2xs'` is the tightest tier, for dense
+   *  toolbar-embedded fields. The Web Awesome / Shoelace spellings `small`/`medium`/`large` are
+   *  accepted for `s`/`m`/`l`, so a migration is a tag rename with no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Rounds the input row's corners to a full pill, mirroring `lr-input`'s own `pill`. It is a
+   *  single override of `--lr-date-input-radius`, so a consumer setting that property directly
+   *  still wins for a bespoke shape. */
+  @property({ type: Boolean, reflect: true }) pill = false;
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -195,6 +211,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   @property({ attribute: 'dialog-label' }) dialogLabel = 'Choose date';
 
   @query('input[part="input"]') private inputElement?: HTMLInputElement;
+  /** Raw text the Enter key already committed, or `null`. Lets `onInputChange()` recognise -- and
+   *  ignore -- the native `change` the browser fires for that very same keystroke, which would
+   *  otherwise re-commit the identical text and emit a second `input`/`change` pair. */
+  private enterCommittedText: string | null = null;
 
   private cleanupFn?: () => void;
   private popupTrigger?: HTMLElement;
@@ -536,6 +556,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
     this.popupTrigger = undefined;
     this.restorePopupFocusOnClose = false;
+    // One keystroke's worth of transient state; a reconnect starts from a clean slate rather than
+    // carrying a token that could swallow the first `change` after it.
+    this.enterCommittedText = null;
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // stuck `true` across the disconnect, `updated()` never sees it
@@ -582,6 +605,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  whether the text actually committed, so callers can decide whether to
    *  emit `input`/`change` (only a real, user-driven edit does). */
   private applyTypedText(raw: string): boolean {
+    // Any real commit ends the "the Enter key just committed this" window (see `onInputKey`); the
+    // Enter path itself re-arms the token immediately after calling in here.
+    this.enterCommittedText = null;
     const trimmed = raw.trim();
     if (!trimmed) {
       // The mixin's value setter recomputes validity (updateValidity()),
@@ -605,7 +631,19 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   private onInputChange = (e: Event): void => {
-    const committed = this.applyTypedText((e.target as HTMLInputElement).value);
+    const raw = (e.target as HTMLInputElement).value;
+    // The Enter key already committed this text (see `onInputKey`), and the browser fires its own
+    // `change` for that same keystroke -- and again on the following blur, by which point the
+    // re-render has replaced the typed text with the formatted `displayText`. Both are the same
+    // commit, so both are ignored rather than re-emitting `input`/`change` for one edit. Both
+    // conditions describe a no-op commit by construction (the text re-derives the value the
+    // control already holds), so the token can safely outlive the first match; any genuinely
+    // different text falls through, and any real commit clears it in `applyTypedText()`.
+    if (this.enterCommittedText !== null && (raw === this.enterCommittedText || raw === this.displayText)) {
+      return;
+    }
+    this.enterCommittedText = null;
+    const committed = this.applyTypedText(raw);
     if (committed) {
       this.emit('input');
       this.emit('change');
@@ -687,7 +725,26 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (e.altKey && e.key === 'ArrowDown') {
       e.preventDefault();
       this.show();
+      return;
     }
+    if (this.effectiveDisabled || this.readonly) return;
+    if (!isImplicitSubmission(e)) return;
+    // Commit first, submit second. The submitted form value is read synchronously from
+    // `ElementInternals`, and the typed text has not reached it yet -- the native `change` that
+    // would normally commit it fires as part of this keystroke's own default action, i.e. after
+    // this handler. Without this the form would carry the previously committed date (or nothing)
+    // while the field visibly shows the new one.
+    const input = this.inputElement;
+    if (input && input.value !== this.displayText) {
+      const raw = input.value;
+      if (this.applyTypedText(raw)) {
+        this.emit('input');
+        this.emit('change');
+      }
+      // Set after the commit, since `applyTypedText()` clears the token itself.
+      this.enterCommittedText = raw;
+    }
+    submitOnEnter(this, e);
   };
 
   // Attached to the whole form-control, not just the text input, so Escape

@@ -116,10 +116,14 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the internal date input
 - `autocomplete: string = ''`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
   (`enterkeyhint`) — forwarded to the internal `<input>`.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size, matching
-  `lr-input`/`lr-select`/`lr-combobox`'s shared scale. Governs the field's padding and font-size;
+- `size: LyraSize = 'm'` (reflected) — visual size on the shared control ladder, matching
+  `lr-input`/`lr-select`/`lr-combobox`/`lr-button`; both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
+  `small`/`medium`/`large` are accepted. Governs the field's padding and font-size;
   the calendar-toggle and clear buttons keep a constant, accessible touch target at every size.
   The default `m` tier is unchanged from this component's pre-`size` rendering.
+- `pill: boolean = false` (reflected) — rounds the input row's corners to a full pill, mirroring
+  `lr-input`'s own `pill`. It only re-assigns `--lr-date-input-radius` to `--lr-radius-pill`, so a
+  consumer setting that property directly still wins for a bespoke shape
 
 **Methods:** `show()`, `hide()`, `clear()`, `focus(options?)`, `blur()`, `select()`,
 `setSelectionRange()`, `setRangeText()` (all of the focus/selection methods forward to the internal
@@ -147,10 +151,12 @@ the internal `<input>`'s own `blur`, bubbling and composed unlike the native eve
 **Themeable custom properties:** `--lr-date-input-padding-block` (default `--lr-space-xs`) and
 `--lr-date-input-padding-inline` (default `--lr-space-s`) — the `input-wrapper`'s padding;
 `--lr-date-input-font-size` (default `inherit`) — the `input` part's font size;
-`--lr-date-input-control-min-height` (default `--lr-size-2-5rem`) — the `input-wrapper`'s block-size
+`--lr-date-input-control-min-height` (default `--lr-form-control-height`, i.e. `2.5rem` at the
+default `m` tier) — the `input-wrapper`'s block-size
 floor. All four are declared on `:host` and auto-swapped per `size`
 (`2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` defaults), using the same per-`size` values
-`lr-input` uses. Plus shared tokens.
+`lr-input` uses. `pill` re-assigns `--lr-date-input-radius` to `--lr-radius-pill`. Plus shared
+tokens.
 
 `--lr-date-input-control-height` pins an **exact** `input-wrapper` height (both floors and caps it).
 It is **undeclared by default**, so the row grows to fit its content — see "exact-height hatches"

@@ -30,3 +30,22 @@ export const ValueIsReadOnly: Story = {
     <p id="checkbox-group-value" style="font-family: monospace;" aria-live="polite">["news"]</p>
   `,
 };
+
+export const Sizes: StoryObj = {
+  name: 'Size ladder',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`size` is the library\'s shared ladder, so a `size` set here matches an `<lr-input>`, `<lr-select>` or `<lr-button>` of the same `size` in the same row. Both spellings of every tier are accepted — `s`/`m`/`l` and Web Awesome\'s `small`/`medium`/`large` — so a migration is a tag rename with no attribute rewrite.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); justify-items: start;">
+      <lr-checkbox-group size="s" name="pick-s" label="Size s"><lr-checkbox value="a" size="s">Alpha</lr-checkbox><lr-checkbox value="b" size="s">Bravo</lr-checkbox></lr-checkbox-group>
+      <lr-checkbox-group size="m" name="pick-m" label="Size m"><lr-checkbox value="a" size="m">Alpha</lr-checkbox><lr-checkbox value="b" size="m">Bravo</lr-checkbox></lr-checkbox-group>
+      <lr-checkbox-group size="l" name="pick-l" label="Size l"><lr-checkbox value="a" size="l">Alpha</lr-checkbox><lr-checkbox value="b" size="l">Bravo</lr-checkbox></lr-checkbox-group>
+    </div>
+  `,
+};

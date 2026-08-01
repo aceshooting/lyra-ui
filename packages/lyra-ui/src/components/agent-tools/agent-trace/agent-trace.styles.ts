@@ -24,7 +24,7 @@ export const styles = css`
     gap: var(--lr-space-2xs);
     padding: var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-m);
+    border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
     box-sizing: border-box;
     max-inline-size: 100%;
@@ -46,8 +46,15 @@ export const styles = css`
     cursor: pointer;
     border-radius: var(--lr-radius-xs);
   }
+  /* The handoff button has no fill of its own, so both states tint the transparent surface toward
+     --lr-color-mix-partner (which follows the text colour): it darkens in a light theme, lightens in
+     a dark one. Previously a hand-rolled 8% mix against --lr-color-text -- same idea, but a literal
+     no consumer could retune and a strength no other control in the library shared. */
   [part='handoff']:hover {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='handoff']:active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='handoff']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

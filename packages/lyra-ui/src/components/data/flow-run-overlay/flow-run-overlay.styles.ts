@@ -16,16 +16,19 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Resting chrome, despite the element's name: this is an in-flow status strip (the host is a
+       plain display:block box with no positioning of its own, and it is usually dropped into a
+       toolbar next to the canvas), not a layer floating above the page. */
+    box-shadow: var(--lr-shadow-s);
     font-size: var(--lr-font-size-xs);
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  /* Chrome-less escape, mirroring lr-card's appearance="plain" (and lr-callout's [inline]): the
+  /* Chrome-less escape, mirroring the shared LyraFrame vocabulary's frame="plain" (and lr-callout's [inline]): the
      summary strip is often placed directly inside a host toolbar that already draws its own
      border/background, where this floating-surface chrome doubles the frame. Only the box
      decoration goes -- the flex layout, gap and the per-status count dots stay. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -42,7 +45,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-2xs);
-    color: var(--lr-color-text-muted);
+    color: var(--lr-color-text-quiet);
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;

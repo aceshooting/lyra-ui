@@ -1,11 +1,23 @@
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './typing-indicator.styles.js';
 
+/**
+ * Which animation SHAPE to draw. Deliberately NOT the shared `LyraVariant`: these are three
+ * different decorative motions, not semantic tones, so they share only the property name.
+ */
 export type TypingIndicatorVariant = 'dots' | 'pulse' | 'cursor';
-export type TypingIndicatorSize = 'sm' | 'md';
+/**
+ * An alias of the shared {@linkcode LyraSize} ladder, so this component speaks the same size
+ * vocabulary as everything else (it used to have a private `'sm' | 'md'` scale of its own).
+ * A presence cue has three usefully distinguishable sizes rather than six, so the ladder renders as
+ * three tiers: `2xs`/`xs`/`s`/`small` are compact, `m`/`medium` is the default, and
+ * `l`/`large`/`xl` are roomy. Every accepted value matches a rule — none is silently inert.
+ */
+export type TypingIndicatorSize = LyraSize;
 
 /**
  * `<lr-typing-indicator>` — a purely presentational "assistant is
@@ -69,8 +81,9 @@ export class LyraTypingIndicator extends LyraElement {
    *  `accessibleLabel`) so the component never loses its accessible name. */
   @property() label = 'Thinking…';
 
-  /** Compact sizing for dense layouts (e.g. inline with a message bubble). */
-  @property({ reflect: true }) size: TypingIndicatorSize = 'md';
+  /** Visual size on the shared ladder — drop to `s`/`small` (or below) for dense layouts, e.g.
+   *  inline with a message bubble. `'m'` (the default) is the standalone status-line size. */
+  @property({ reflect: true }) size: TypingIndicatorSize = 'm';
 
   // `label` supplies the default accessible name, but an author-provided host `aria-label` must
   // win (the idiomatic way to name any custom element for assistive tech) -- tracked the same way

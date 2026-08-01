@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { LyraDrawer } from './drawer.js';
 
 const meta: Meta = {
   title: 'Drawer',
@@ -30,4 +31,34 @@ export const NarrowLongContent: Story = {
       <div slot="footer"><button type="button">Reset all filters</button><button type="button">Apply filters</button></div>
     </lr-drawer>
   </div>`,
+};
+
+export const Lifecycle: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`show()`/`hide()` and the `lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide` lifecycle are inherited from `<lr-dialog>` unchanged; `lr-after-hide` fires once the panel has finished sliding out. An open drawer sits in the browser top layer, so no consumer stacking context can cover it.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="position: relative; z-index: 0; isolation: isolate;">
+      <button
+        @click=${(e: Event) =>
+          ((e.currentTarget as HTMLElement).parentElement!.querySelector('lr-drawer') as LyraDrawer).show()}
+      >
+        Open drawer
+      </button>
+      <lr-drawer
+        heading="Filters"
+        closable
+        @lr-after-show=${() => console.info('lr-after-show')}
+        @lr-after-hide=${() => console.info('lr-after-hide')}
+      >
+        <p>Slides in from the end edge, and back out again on close.</p>
+        <input autofocus placeholder="[autofocus] takes initial focus" />
+      </lr-drawer>
+    </div>
+  `,
 };

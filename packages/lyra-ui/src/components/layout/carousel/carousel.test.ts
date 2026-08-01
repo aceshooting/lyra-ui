@@ -18,12 +18,19 @@ async function carousel(
   return el;
 }
 
-it("exposes one visible slide and localized navigation controls", async () => {
+it("exposes one active slide and localized navigation controls", async () => {
   const el = await carousel();
   const slides = [...el.children] as HTMLElement[];
 
+  // Every slide stays laid out -- the scroll-snap track needs real boxes to scroll between, so
+  // off-screen slides are neutralized with `inert`/`aria-hidden` rather than `hidden` (which
+  // would remove their boxes and make swiping impossible).
   expect(slides[0].hidden).to.be.false;
-  expect(slides[1].hidden).to.be.true;
+  expect(slides[1].hidden).to.be.false;
+  expect(slides[0].inert).to.be.false;
+  expect(slides[1].inert).to.be.true;
+  expect(slides[0].getAttribute("aria-hidden")).to.be.null;
+  expect(slides[1].getAttribute("aria-hidden")).to.equal("true");
   expect(slides[0].hasAttribute("role")).to.be.false;
   expect(slides[0].hasAttribute("aria-roledescription")).to.be.false;
   expect(el.shadowRoot!.querySelectorAll('[part="indicator"]').length).to.equal(
@@ -147,7 +154,7 @@ it("clamps a NaN, negative, or oversized index to a valid slide instead of NaN/o
   el.index = NaN;
   await el.updateComplete;
   expect(el.index).to.equal(0);
-  expect(([...el.children] as HTMLElement[])[0].hidden).to.be.false;
+  expect(([...el.children] as HTMLElement[])[0].inert).to.be.false;
 
   el.index = -5;
   await el.updateComplete;
@@ -179,7 +186,7 @@ it("ignores non-finite goTo() requests without emitting or corrupting the active
 
   expect(el.index).to.equal(0);
   expect(changes).to.equal(0);
-  expect(([...el.children] as HTMLElement[])[0]!.hidden).to.be.false;
+  expect(([...el.children] as HTMLElement[])[0]!.inert).to.be.false;
 });
 
 it("clamps invalid indices in the current update without scheduling a follow-up update", async () => {
@@ -329,7 +336,7 @@ it("preserves author semantics on arbitrary slides instead of replacing them wit
   expect(link.getAttribute("aria-label")).to.equal("Open detailed report");
 });
 
-it("restores wrapper-owned visibility and slide metadata when slides are removed or the carousel disconnects", async () => {
+it("restores wrapper-owned inertness and slide metadata when slides are removed or the carousel disconnects", async () => {
   const el = await carousel(html`
     <lr-carousel>
       <lr-carousel-item aria-label="Author label">One</lr-carousel-item>
@@ -337,22 +344,22 @@ it("restores wrapper-owned visibility and slide metadata when slides are removed
     </lr-carousel>
   `);
   const [first, second] = [...el.children] as HTMLElement[];
-  expect(second.hidden).to.be.true;
+  expect(second.inert).to.be.true;
 
   second.remove();
   el.dispatchEvent(new Event("slotchange"));
   await el.updateComplete;
-  expect(second.hidden).to.be.false;
+  expect(second.inert).to.be.false;
   expect(second.getAttribute("aria-hidden")).to.equal("false");
 
   const parent = el.parentElement!;
   el.remove();
-  expect(first.hidden).to.be.false;
+  expect(first.inert).to.be.false;
   expect(first.getAttribute("aria-label")).to.equal("Author label");
   parent.append(el);
 });
 
-it("reapplies slide visibility after disconnect and reconnect", async () => {
+it("reapplies slide inertness after disconnect and reconnect", async () => {
   const el = await carousel(html`
     <lr-carousel>
       <lr-carousel-item>One</lr-carousel-item>
@@ -361,18 +368,34 @@ it("reapplies slide visibility after disconnect and reconnect", async () => {
   `);
   const [first, second] = [...el.children] as HTMLElement[];
   const parent = el.parentElement!;
-  expect(second.hidden).to.be.true;
+  expect(second.inert).to.be.true;
 
   el.remove();
-  expect(first.hidden).to.be.false;
-  expect(second.hidden).to.be.false;
+  expect(first.inert).to.be.false;
+  expect(second.inert).to.be.false;
   parent.append(el);
   await el.updateComplete;
   await new Promise<void>((resolve) => queueMicrotask(resolve));
 
-  expect(first.hidden).to.be.false;
-  expect(second.hidden).to.be.true;
+  expect(first.inert).to.be.false;
+  expect(second.inert).to.be.true;
   expect(second.getAttribute("aria-hidden")).to.equal("true");
+});
+
+it("preserves an author's own inert slide across the carousel's own inert bookkeeping", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <lr-carousel-item inert>One</lr-carousel-item>
+      <lr-carousel-item>Two</lr-carousel-item>
+    </lr-carousel>
+  `);
+  const [first] = [...el.children] as HTMLElement[];
+  expect(first.inert, "the active slide keeps the author's own inert").to.be.true;
+
+  const parent = el.parentElement!;
+  el.remove();
+  expect(first.inert, "disconnect restores the author value, not `false`").to.be.true;
+  parent.append(el);
 });
 
 it("refreshes generated carousel-item metadata after a live strings change", async () => {
@@ -582,4 +605,264 @@ it("reacts to prefers-reduced-motion changing after mount", async () => {
   } finally {
     window.matchMedia = originalMatchMedia;
   }
+});
+
+describe("touch scrolling and scroll-snap", () => {
+  const SETTLE_WAIT = 400;
+
+  function viewportOf(el: LyraCarousel): HTMLElement {
+    return el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  }
+
+  function slidesOf(el: LyraCarousel): HTMLElement[] {
+    return [...el.children] as HTMLElement[];
+  }
+
+  /** Inline offset that would bring `slide` flush with the viewport's inline start. Mirrors what a
+   *  swipe resolves to, and stays correct under RTL (where the inline start is the right edge). */
+  function inlineDelta(el: LyraCarousel, slide: HTMLElement): number {
+    const viewportRect = viewportOf(el).getBoundingClientRect();
+    const slideRect = slide.getBoundingClientRect();
+    return el.getAttribute("dir") === "rtl"
+      ? slideRect.right - viewportRect.right
+      : slideRect.left - viewportRect.left;
+  }
+
+  /** Waits for a smooth scroll to actually stop. Engines differ by a lot here -- Firefox's easing
+   *  is still shedding its last couple of pixels well after Chromium has finished -- so the tests
+   *  wait for the scroller to stop moving rather than for a fixed budget. */
+  async function scrollAtRest(el: LyraCarousel): Promise<void> {
+    const viewport = viewportOf(el);
+    let previous = Number.NaN;
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
+      if (viewport.scrollLeft === previous) return;
+      previous = viewport.scrollLeft;
+    }
+  }
+
+  async function sized(direction?: "rtl"): Promise<LyraCarousel> {
+    const el = await carousel(html`
+      <lr-carousel
+        dir=${direction ?? "ltr"}
+        style="inline-size: 300px"
+        aria-label="Panels"
+      >
+        <div style="block-size: 60px">One</div>
+        <div style="block-size: 60px">Two</div>
+        <div style="block-size: 60px">Three</div>
+      </lr-carousel>
+    `);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    return el;
+  }
+
+  it("lays the slides out in a snapping, natively scrollable track", async () => {
+    const el = await sized();
+    const viewport = viewportOf(el);
+    const viewportStyle = getComputedStyle(viewport);
+
+    expect(viewportStyle.overflowX).to.equal("auto");
+    expect(viewportStyle.overflowY).to.equal("hidden");
+    expect(viewportStyle.scrollSnapType).to.contain("inline");
+    expect(viewportStyle.scrollSnapType).to.contain("mandatory");
+    expect(getComputedStyle(slidesOf(el)[0]).scrollSnapAlign).to.contain("start");
+    // Three viewport-width slides in a 300px allocation: the track really overflows, which is what
+    // makes the browser's own touch/momentum scrolling available at all.
+    expect(viewport.scrollWidth).to.be.greaterThan(viewport.clientWidth);
+    expect(Math.round(slidesOf(el)[0].getBoundingClientRect().width)).to.equal(
+      Math.round(viewport.clientWidth)
+    );
+  });
+
+  it("adopts the slide the user scrolled to and announces it once", async () => {
+    const el = await sized();
+    const viewport = viewportOf(el);
+    const delta = inlineDelta(el, slidesOf(el)[1]);
+    let changes = 0;
+    el.addEventListener("lr-slide-change", () => (changes += 1));
+
+    const changed = oneEvent(el, "lr-slide-change");
+    viewport.scrollBy({ left: delta, behavior: "instant" });
+    const event = await changed;
+    await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
+
+    expect(event.detail).to.deep.equal({ index: 1 });
+    expect(el.index).to.equal(1);
+    expect(changes, "one settled gesture emits exactly one change").to.equal(1);
+    expect(slidesOf(el)[1].inert).to.be.false;
+    expect(slidesOf(el)[0].inert).to.be.true;
+  });
+
+  it("settles instead of reacting to every scroll event of one gesture", async () => {
+    const el = await sized();
+    const viewport = viewportOf(el);
+    let changes = 0;
+    el.addEventListener("lr-slide-change", () => (changes += 1));
+
+    viewport.scrollBy({ left: inlineDelta(el, slidesOf(el)[2]), behavior: "instant" });
+    for (let tick = 0; tick < 6; tick += 1) {
+      viewport.dispatchEvent(new Event("scroll"));
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
+
+    expect(el.index).to.equal(2);
+    expect(changes).to.equal(1);
+  });
+
+  it("maps a scroll to the visually adjacent slide under RTL", async () => {
+    const el = await sized("rtl");
+    const viewport = viewportOf(el);
+    const delta = inlineDelta(el, slidesOf(el)[1]);
+
+    expect(delta, "the second slide sits to the inline start, i.e. left, under RTL").to.be.lessThan(
+      0
+    );
+    const changed = oneEvent(el, "lr-slide-change");
+    viewport.scrollBy({ left: delta, behavior: "instant" });
+    const event = await changed;
+
+    expect(event.detail).to.deep.equal({ index: 1 });
+    expect(el.index).to.equal(1);
+  });
+
+  it("does not scroll the track back when the index came from the user's own scroll", async () => {
+    const el = await sized();
+    const viewport = viewportOf(el);
+    const delta = inlineDelta(el, slidesOf(el)[1]);
+    const changed = oneEvent(el, "lr-slide-change");
+    viewport.scrollBy({ left: delta, behavior: "instant" });
+    await changed;
+
+    const calls: unknown[] = [];
+    const original = viewport.scrollBy.bind(viewport);
+    viewport.scrollBy = ((...args: unknown[]) => {
+      calls.push(args[0]);
+      return (original as (...a: unknown[]) => void)(...args);
+    }) as typeof viewport.scrollBy;
+    try {
+      await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
+      expect(calls.length, "adopting a scrolled slide must not re-drive the scroller").to.equal(0);
+    } finally {
+      viewport.scrollBy = original;
+    }
+  });
+
+  it("scrolls the track when a button, key, or the index property changes the slide", async () => {
+    const el = await sized();
+    const viewport = viewportOf(el);
+    const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+
+    next.click();
+    await el.updateComplete;
+    await scrollAtRest(el);
+
+    expect(el.index).to.equal(1);
+    expect(
+      Math.abs(inlineDelta(el, slidesOf(el)[1])),
+      "slide two is flush with the viewport",
+    ).to.be.at.most(2);
+    expect(viewport.scrollLeft).to.not.equal(0);
+  });
+
+  it("scrolls instantly rather than smoothly under prefers-reduced-motion", async () => {
+    // `instant`, not `auto`: `auto` defers to the stylesheet, whose own `scroll-behavior: smooth`
+    // would animate the very scroll the preference asks not to animate.
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === "(prefers-reduced-motion: reduce)",
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as typeof window.matchMedia;
+
+    try {
+      const el = await sized();
+      const viewport = viewportOf(el);
+      const behaviors: (string | undefined)[] = [];
+      const original = viewport.scrollBy.bind(viewport);
+      viewport.scrollBy = ((options: ScrollToOptions) => {
+        behaviors.push(options?.behavior);
+        return (original as (o: ScrollToOptions) => void)(options);
+      }) as typeof viewport.scrollBy;
+
+      el.goTo(2);
+      await el.updateComplete;
+      expect(behaviors).to.deep.equal(["instant"]);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it("scrolls smoothly when motion is allowed", async () => {
+    const el = await sized();
+    const viewport = viewportOf(el);
+    const behaviors: (string | undefined)[] = [];
+    const original = viewport.scrollBy.bind(viewport);
+    viewport.scrollBy = ((options: ScrollToOptions) => {
+      behaviors.push(options?.behavior);
+      return (original as (o: ScrollToOptions) => void)(options);
+    }) as typeof viewport.scrollBy;
+
+    el.goTo(2);
+    await el.updateComplete;
+    expect(behaviors).to.deep.equal(["smooth"]);
+  });
+
+  it("drops a pending scroll settle when the carousel disconnects mid-gesture", async () => {
+    const el = await sized();
+    const viewport = viewportOf(el);
+    const parent = el.parentElement!;
+    let changes = 0;
+    el.addEventListener("lr-slide-change", () => (changes += 1));
+
+    viewport.scrollBy({ left: inlineDelta(el, slidesOf(el)[1]), behavior: "instant" });
+    el.remove();
+    await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
+
+    expect(changes).to.equal(0);
+    expect(el.index).to.equal(0);
+    parent.append(el);
+  });
+
+  it("scrolls all the way to the last slide, without stopping at the ones it crosses", async () => {
+    const el = await sized();
+    const viewport = viewportOf(el);
+
+    viewport.focus();
+    viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+    await el.updateComplete;
+    await scrollAtRest(el);
+
+    expect(el.index).to.equal(2);
+    // scroll-snap-stop: always would strand this a whole slide short.
+    expect(Math.abs(inlineDelta(el, slidesOf(el)[2]))).to.be.at.most(2);
+  });
+
+  it("shows several slides at once through --lr-carousel-slide-basis", async () => {
+    const el = await sized();
+    const viewport = viewportOf(el);
+    const slideWidth = () => slidesOf(el)[0].getBoundingClientRect().width;
+    expect(Math.round(slideWidth()), "unset, one slide fills the viewport").to.equal(
+      Math.round(viewport.clientWidth)
+    );
+
+    el.style.setProperty("--lr-carousel-slide-basis", "50%");
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(Math.round(slideWidth())).to.equal(Math.round(viewport.clientWidth / 2));
+    expect(getComputedStyle(slidesOf(el)[0]).scrollSnapAlign).to.contain("start");
+  });
+
+  it("is accessible with focusable content inside an off-screen slide", async () => {
+    const el = await carousel(html`
+      <lr-carousel aria-label="Panels" style="inline-size: 300px">
+        <div><a href="#one">First link</a></div>
+        <div><a href="#two">Second link</a></div>
+      </lr-carousel>
+    `);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(slidesOf(el)[1].inert).to.be.true;
+    await expect(el).to.be.accessible();
+  });
 });

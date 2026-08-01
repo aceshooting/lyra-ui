@@ -6,10 +6,18 @@ import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { closeIcon, eyeIcon, eyeOffIcon } from '../../../internal/icons.js';
 import { styles } from './input.styles.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
+import { finiteCount } from '../../../internal/numbers.js';
+import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 
 export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time' | 'search';
-export type LyraInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the canonical six-step size ladder. The `size` property itself accepts
+ *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
+export type LyraInputSize = LyraSizeStep;
+/** Alias of the library's one `appearance` (fill-treatment) vocabulary. */
+export type LyraInputAppearance = LyraAppearance;
 
 /** The `type`s whose native `<input>` honors `minlength`/`maxlength` at all. The platform ignores
  *  both on `number`/`time`, so the dirty-value supplement in `updateValidity()` must ignore them
@@ -34,8 +42,9 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lr-textarea>`/
  * `<lr-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`
  * parts) — left unset, the chrome stays hidden. `size` uses the same `xs`–`xl` scale as
- * `<lr-select>`/`<lr-combobox>`. `type="password"` always renders a
- * `password-toggle` eye-icon button that flips the internal native input between
+ * `<lr-select>`/`<lr-combobox>`, and `appearance` the shared fill/border vocabulary.
+ * `type="password"` renders a `password-toggle` eye-icon button — opt-in via the
+ * `password-toggle` attribute — that flips the internal native input between
  * `type="password"`/`type="text"` and tracks `passwordVisible`. `type="email"`/`type="number"`
  * (with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own
  * browser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`
@@ -48,7 +57,15 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *
  * Forwards the full native selection/editing surface (`selectionStart`/`selectionEnd`,
  * `setSelectionRange()`, `setRangeText()`), the same as `<lr-textarea>`, in addition to
- * `focus()`/`blur()`/`select()`.
+ * `focus()`/`blur()`/`select()`, `showPicker()`, and `stepUp()`/`stepDown()`.
+ *
+ * Pressing Enter submits the ancestor `<form>`, the implicit submission a native `<input>`
+ * performs — the internal input is inside a shadow root and has no form owner of its own, so the
+ * platform can never do it here. The form's first enabled submit control becomes
+ * `SubmitEvent.submitter` (an `<lr-button type="submit">` included, via its own `click()`), a
+ * modifier-held or IME-composition Enter is ignored, and a form with no submit button submits only
+ * from a single field — all of it the platform's own rules, shared with every other lyra text
+ * control through `internal/submit-on-enter.ts`.
  *
  * @customElement lr-input
  * @event input - Native-style composed event fired on every user-driven edit.
@@ -71,34 +88,64 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @csspart start - Wrapper around the `start` adornment slot.
  * @csspart end - Wrapper around the `end` adornment slot.
  * @csspart clear-button - The clear action, rendered for non-empty clearable text/search inputs.
- * @csspart password-toggle - The show/hide-password button, present only when `type="password"`.
+ * @csspart password-toggle - The show/hide-password button, rendered only for `type="password"`
+ *   with `password-toggle` set.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
- * @cssprop --lr-input-control-min-height - Outer control height floor, scaled by `size`.
+ * @cssprop [--lr-input-control-min-height=var(--lr-form-control-height)] - Outer control height
+ *   floor, taken from the active `size` tier of the shared form-control ladder
+ *   (`internal/sizes.styles.ts`), so an input is exactly as tall as an `<lr-button>`/`<lr-select>`
+ *   of the same tier.
  * @cssprop --lr-input-control-height - Exact outer control height. Unset by default, which leaves
  *   `--lr-input-control-min-height` as a floor only; set it to a length to both floor and cap the
  *   control row (e.g. to pixel-match `<lr-select>`/`<lr-combobox>` in the same toolbar). Because it
  *   is never declared by the component itself, it can be set from an ancestor or an outer-tree rule
  *   as well as inline on the element.
- * @cssprop --lr-input-padding-block - Block padding of the native input, scaled by `size`.
- * @cssprop --lr-input-padding-inline - Inline padding of the control row, scaled by `size`.
- * @cssprop --lr-input-font-size - Font size of the native input, scaled by `size`.
+ * @cssprop [--lr-input-padding-block=var(--lr-form-control-padding-block)] - Block padding of the
+ *   native input, from the active `size` tier of the shared ladder.
+ * @cssprop [--lr-input-padding-inline=var(--lr-form-control-padding-inline)] - Inline padding of
+ *   the control row, from the active `size` tier.
+ * @cssprop [--lr-input-font-size=var(--lr-form-control-font-size)] - Font size of the native input,
+ *   from the active `size` tier.
  * @cssprop [--lr-input-gap=var(--lr-space-xs)] - Gap between the start/end adornments and the
  * native input in the control row. Unlike the size knobs above it does not vary by `size` tier.
  * Override it to retune without a `::part(input-wrapper)` rule.
- * @cssprop [--lr-input-radius=var(--lr-radius)] - Corner radius of the control row. Does not vary
- * by `size` tier.
+ * @cssprop [--lr-input-radius=var(--lr-form-control-radius)] - Corner radius of the control row,
+ * from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius).
+ * `pill` swaps it to `--lr-radius-pill`.
+ * @cssprop [--lr-input-fill=var(--lr-color-surface)] - Background of the control row. Swapped per
+ * `appearance`; the documented default is `appearance="filled-outlined"`'s value.
+ * @cssprop [--lr-input-border-color=var(--lr-color-border)] - Border color of the control row,
+ * swapped per `appearance` in the same way as `--lr-input-fill`.
  */
 export class LyraInput extends FormAssociated(LyraInputBase) {
-  static override styles = [LyraElement.styles, styles];
+  // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
+  // so every `--lr-input-*` geometry knob can simply point at the active tier's value -- and so
+  // both spellings of every tier (`s` and `small`, …) work with no per-component rule.
+  static override styles = [LyraElement.styles, sizes, styles];
 
   @property() type: LyraInputType = 'text';
-  /** Visual size — same `2xs`–`xl` scale as `lr-select`/`lr-combobox`'s own `size`. `'2xs'` is
-   *  the tightest tier, for dense toolbar-embedded controls. */
-  @property({ reflect: true }) size: LyraInputSize = 'm';
+  /** Visual size on the library's one control ladder — shared with `lr-button`/`lr-select`/
+   *  `lr-combobox`, so same-tier controls line up in a toolbar row. Accepts both the canonical
+   *  `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's `'small'`/`'medium'`/`'large'` spellings of
+   *  `s`/`m`/`l`; the two render identically. `'2xs'` is the tightest tier, for dense
+   *  toolbar-embedded controls. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Visual treatment of the control row, from the library's shared field vocabulary.
+   *  `'filled-outlined'` (the default) draws both a surface fill and a border; `'outlined'` drops
+   *  the fill, `'filled'` drops the border, `'plain'` drops both, and `'accent'` tints both with
+   *  the brand color. Each value only swaps `--lr-input-fill`/`--lr-input-border-color`, so a
+   *  consumer can retune any of them without a `::part(input-wrapper)` rule. */
+  @property({ reflect: true }) appearance: LyraAppearance = 'filled-outlined';
+  /** Rounds the control row to a full pill by swapping `--lr-input-radius` to
+   *  `--lr-radius-pill`. */
+  @property({ type: Boolean, reflect: true }) pill = false;
   @property() placeholder = '';
   /** Shows a built-in clear action for non-empty `text` and `search` inputs. */
   @property({ type: Boolean, reflect: true }) clearable = false;
+  /** Web Awesome's spelling of {@link clearable}, accepted so a mechanical `wa-` → `lr-` rename
+   *  does not silently drop the clear action. Prefer `clearable` in new code. */
+  @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   /** Forwards native read-only behavior to the internal input and disables the clear action. */
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property() label = '';
@@ -108,6 +155,9 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    *  `label` and `placeholder` when set, matching `<lr-textarea>`'s `accessibleLabel`. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() autocomplete = '';
+  /** Forwarded to the internal native `<input>`, so the browser's own autofocus algorithm targets
+   *  the real text control rather than the (non-focusable) custom-element host. */
+  @property({ type: Boolean }) override autofocus = false;
   @property({ converter: spellcheckConverter }) override spellcheck = true;
   @property() override autocapitalize = '';
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
@@ -150,9 +200,18 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    *  (no pattern). Compiled by the browser with the `v` flag and anchored to the whole value, so
    *  no `^`/`$` is needed; an empty value never violates it. */
   @property() pattern?: string;
+  /** `type="password"` only — renders the built-in show/hide-password button. Opt-in: a bare
+   *  `type="password"` field ships no toggle at all, so a consumer whose threat model or visual
+   *  design excludes one is not forced to hide it with CSS. */
+  @property({ type: Boolean, attribute: 'password-toggle', reflect: true }) passwordToggle = false;
   /** `type="password"` only — whether the field currently reveals its raw text. Toggled by the
-   *  built-in `password-toggle` button; also settable by a consumer up front. */
+   *  built-in `password-toggle` button; also settable by a consumer up front, with or without
+   *  that button being rendered. */
   @property({ type: Boolean, attribute: 'password-visible' }) passwordVisible = false;
+  /** `type="number"` only — suppresses the browser's own increment/decrement spin buttons. Left
+   *  unset, the platform's spinners render exactly as they do on a bare `<input type="number">`.
+   *  `<lr-number-input>` defaults it the other way, since it draws its own stepper pair. */
+  @property({ type: Boolean, attribute: 'without-spin-buttons', reflect: true }) withoutSpinButtons = false;
 
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
@@ -192,6 +251,61 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
   select(): void {
     this.inputEl?.select();
+  }
+
+  /**
+   * Opens the browser's own picker for the current `type` (the time picker, the OS colour/file
+   * chooser on the types that have one), delegating to the internal native `<input>`.
+   *
+   * Deliberately failure-tolerant: the platform method throws for every environmental reason a
+   * component can neither detect up front nor usefully report — the call not being driven by user
+   * activation (`NotAllowedError`), a cross-origin document (`SecurityError`), a non-mutable
+   * control (`InvalidStateError`) — and engines that predate it don't define it at all. A picker
+   * that cannot open is a no-op here rather than an exception a consumer must wrap every call in.
+   * Also a no-op while disabled or readonly, matching every other editing entry point.
+   */
+  showPicker(): void {
+    const native = this.inputEl;
+    if (!native || this.effectiveDisabled || this.readonly) return;
+    if (!('showPicker' in HTMLInputElement.prototype)) return;
+    try {
+      native.showPicker();
+    } catch {
+      /* No transient activation, no picker for this type, or a non-mutable control. */
+    }
+  }
+
+  /**
+   * Increments the value by `steps` × the effective `step`, through the native `<input>`'s own
+   * `stepUp()` — so `min`/`max` clamping and decimal handling stay the platform's, not a
+   * hand-rolled reimplementation.
+   *
+   * Silent, like the native method: it updates `value`, the submitted form value, and validity,
+   * but emits no `input`/`change`. A stepper *button* is a user edit and emits them itself.
+   */
+  stepUp(steps = 1): void {
+    this.applyStep('up', steps);
+  }
+
+  /** Decrementing counterpart of `stepUp()`, with the same signature and the same silence. */
+  stepDown(steps = 1): void {
+    this.applyStep('down', steps);
+  }
+
+  private applyStep(direction: 'up' | 'down', steps: number): void {
+    const native = this.inputEl;
+    if (!native || this.effectiveDisabled || this.readonly) return;
+    const count = finiteCount(steps, 1);
+    if (count === 0) return;
+    try {
+      if (direction === 'up') native.stepUp(count);
+      else native.stepDown(count);
+    } catch {
+      /* The native control throws InvalidStateError for a type with no allowed value step
+         (every non-numeric type, and step="any") — nothing to step, so nothing to do. */
+      return;
+    }
+    if (this.value !== native.value) this.value = native.value;
   }
 
   /** Cursor/selection extent, mirroring `<lr-textarea>`'s identical passthrough. `null` both when
@@ -355,6 +469,17 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     this.emit('blur');
   };
 
+  /**
+   * Implicit form submission, through the shared `internal/submit-on-enter.ts` gate every other
+   * text-bearing control in the library now routes through — so the modifier/IME/veto rules and
+   * the submitter resolution (including an `<lr-button type="submit">`, which `requestSubmit()`
+   * refuses as a submitter) are one implementation rather than one per component.
+   */
+  private onKeyDown = (event: KeyboardEvent): void => {
+    if (this.effectiveDisabled || this.readonly) return;
+    submitOnEnter(this, event);
+  };
+
   private onTogglePasswordVisible = (): void => {
     this.passwordVisible = !this.passwordVisible;
   };
@@ -391,14 +516,27 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  /**
+   * Extension point for a subclass adding its own controls to the end of the control row, between
+   * the built-in clear/password actions and the `end` adornment slot — `<lr-number-input>`'s
+   * stepper pair. Renders nothing here, so `<lr-input>`'s own DOM is unchanged.
+   */
+  protected renderControls(): unknown {
+    return nothing;
+  }
+
   override render(): TemplateResult {
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     const describedBy = [hasError ? 'input-error' : '', hasHint ? 'input-hint' : ''].filter(Boolean).join(' ');
     const isPassword = this.type === 'password';
+    const showPasswordToggle = isPassword && this.passwordToggle;
     const nativeType = isPassword && this.passwordVisible ? 'text' : this.type;
-    const canClear = this.clearable && (this.type === 'text' || this.type === 'search') && this.value !== '';
+    const canClear =
+      (this.clearable || this.withClear) &&
+      (this.type === 'text' || this.type === 'search') &&
+      this.value !== '';
     return html`
       <div part="form-control">
         <label part="form-control-label" for="input" ?hidden=${!hasLabel}>
@@ -434,12 +572,15 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}
+            ?autofocus=${this.autofocus}
+            ?data-without-spin-buttons=${this.withoutSpinButtons}
             @input=${this.onInput}
             @change=${this.onChange}
             @focus=${this.onFocus}
             @blur=${this.onBlur}
+            @keydown=${this.onKeyDown}
           />
-          ${isPassword
+          ${showPasswordToggle
             ? html`<button
                 part="password-toggle"
                 type="button"
@@ -462,6 +603,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
                 ${closeIcon()}
               </button>`
             : nothing}
+          ${this.renderControls()}
           <span part="end" ?hidden=${!this.hasEndSlot}>
             <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
           </span>

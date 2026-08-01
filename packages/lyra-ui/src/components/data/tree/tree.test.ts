@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree, TreeItem } from './tree.js';
-import type { LyraTreeNode } from './tree-node.js';
+import type { LyraTreeItem } from './tree-item.js';
 
 const data = [
   {
@@ -23,7 +23,7 @@ it('exposes selection and skips disabled items in interaction and roving focus',
     { id: 'selected', label: 'Selected', selected: true },
   ];
   await el.updateComplete;
-  const [loading, selected] = [...el.querySelectorAll('lr-tree-node')] as LyraTreeNode[];
+  const [loading, selected] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
   let selections = 0;
   el.addEventListener('lr-node-select', () => selections++);
 
@@ -48,7 +48,7 @@ it('does not choose a hidden child of a collapsed disabled branch as the roving 
     { id: 'visible', label: 'Visible item' },
   ];
   await el.updateComplete;
-  const [disabled, visible] = [...el.querySelectorAll('lr-tree-node')] as HTMLElement[];
+  const [disabled, visible] = [...el.querySelectorAll('lr-tree-item')] as HTMLElement[];
 
   expect(disabled.tabIndex).to.equal(-1);
   expect(visible.tabIndex).to.equal(0);
@@ -60,11 +60,11 @@ it('stops rendering a cyclic item graph instead of recursing indefinitely', asyn
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = [cyclic];
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as LyraTreeItem;
 
   root.expand();
   await root.updateComplete;
-  const repeated = root.shadowRoot!.querySelector('lr-tree-node') as LyraTreeNode;
+  const repeated = root.shadowRoot!.querySelector('lr-tree-item') as LyraTreeItem;
   expect(repeated).to.exist;
   expect(repeated.hasChildren).to.be.false;
 });
@@ -80,10 +80,10 @@ it('bounds rendering of a valid extremely deep hierarchy', async () => {
   await el.expandAll();
 
   let renderedDepth = 0;
-  let current = el.querySelector('lr-tree-node') as LyraTreeNode | null;
+  let current = el.querySelector('lr-tree-item') as LyraTreeItem | null;
   while (current) {
     renderedDepth++;
-    current = current.shadowRoot?.querySelector('lr-tree-node') as LyraTreeNode | null;
+    current = current.shadowRoot?.querySelector('lr-tree-item') as LyraTreeItem | null;
   }
   expect(renderedDepth).to.be.greaterThan(1);
   expect(renderedDepth).to.be.lessThan(5000);
@@ -95,19 +95,19 @@ it('mirrors the collapsed disclosure chevron under RTL while keeping expanded ch
   const branch: TreeItem = { id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] };
 
   const ltrCollapsed = (await fixture(
-    html`<lr-tree-node .item=${branch}></lr-tree-node>`,
-  )) as LyraTreeNode;
+    html`<lr-tree-item .item=${branch}></lr-tree-item>`,
+  )) as LyraTreeItem;
   const ltrExpanded = (await fixture(
-    html`<lr-tree-node expanded .item=${branch}></lr-tree-node>`,
-  )) as LyraTreeNode;
+    html`<lr-tree-item expanded .item=${branch}></lr-tree-item>`,
+  )) as LyraTreeItem;
   const rtlCollapsed = (await fixture(
-    html`<lr-tree-node dir="rtl" .item=${branch}></lr-tree-node>`,
-  )) as LyraTreeNode;
+    html`<lr-tree-item dir="rtl" .item=${branch}></lr-tree-item>`,
+  )) as LyraTreeItem;
   const rtlExpanded = (await fixture(
-    html`<lr-tree-node dir="rtl" expanded .item=${branch}></lr-tree-node>`,
-  )) as LyraTreeNode;
+    html`<lr-tree-item dir="rtl" expanded .item=${branch}></lr-tree-item>`,
+  )) as LyraTreeItem;
 
-  const toggleOf = (node: LyraTreeNode) =>
+  const toggleOf = (node: LyraTreeItem) =>
     node.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
 
   expect(getComputedStyle(toggleOf(ltrCollapsed)).transform).to.equal('none');
@@ -131,7 +131,7 @@ it('renders top-level treeitems with a tree role', async () => {
   el.data = data;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[role="tree"]')).to.exist;
-  const items = el.querySelectorAll('lr-tree-node');
+  const items = el.querySelectorAll('lr-tree-item');
   expect(items.length).to.equal(2);
 });
 
@@ -153,7 +153,7 @@ it('emits lr-node-toggle when a parent node is expanded', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as HTMLElement;
+  const root = el.querySelector('lr-tree-item') as HTMLElement;
   const toggle = root.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   setTimeout(() => toggle.click());
   const ev = await oneEvent(el, 'lr-node-toggle');
@@ -164,7 +164,7 @@ it('emits lr-node-select when a node label is activated', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const leaf = [...el.querySelectorAll('lr-tree-node')].find(
+  const leaf = [...el.querySelectorAll('lr-tree-item')].find(
     (n) => (n as any).item.id === '2',
   ) as HTMLElement;
   const label = leaf.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
@@ -177,9 +177,9 @@ it('moves real DOM focus to a node when its row (not just the label text) is cli
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const leaf = [...el.querySelectorAll('lr-tree-node')].find(
-    (n) => (n as unknown as LyraTreeNode).item.id === '2',
-  ) as unknown as LyraTreeNode;
+  const leaf = [...el.querySelectorAll('lr-tree-item')].find(
+    (n) => (n as unknown as LyraTreeItem).item.id === '2',
+  ) as unknown as LyraTreeItem;
   const row = (leaf as unknown as HTMLElement).shadowRoot!.querySelector('[part="row"]') as HTMLElement;
 
   row.click();
@@ -192,7 +192,7 @@ it('a click on the toggle button does not also fire lr-node-select via bubbling 
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   const toggle = (root as unknown as HTMLElement).shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
 
   let selectFired = false;
@@ -211,7 +211,7 @@ it('a mousedown on the toggle button focuses the host node rather than the hidde
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   const toggle = (root as unknown as HTMLElement).shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
 
   const mousedown = new MouseEvent('mousedown', { bubbles: true, composed: true, cancelable: true });
@@ -228,7 +228,7 @@ it('a mouse click on a node\'s toggle syncs activeId to that node, not just the 
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = nested;
   await el.updateComplete;
-  const [x, y] = [...el.querySelectorAll('lr-tree-node')] as unknown as LyraTreeNode[];
+  const [x, y] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
   expect((x as unknown as HTMLElement).tabIndex).to.equal(0);
 
   const toggleY = (y as unknown as HTMLElement).shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
@@ -242,7 +242,7 @@ it('a mouse click on a node\'s toggle syncs activeId to that node, not just the 
   (y as unknown as HTMLElement).focus();
   y.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
-  const y1 = y.shadowRoot!.querySelector('lr-tree-node');
+  const y1 = y.shadowRoot!.querySelector('lr-tree-item');
   expect(deepActiveElement()).to.equal(y1);
 });
 
@@ -250,7 +250,7 @@ it('a mouse click that collapses an expanded ancestor of the active node leaves 
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-node')] as unknown as LyraTreeNode[];
+  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
 
   root.expand();
   await el.updateComplete;
@@ -258,7 +258,7 @@ it('a mouse click that collapses an expanded ancestor of the active node leaves 
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
 
-  const childA = root.shadowRoot!.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const childA = root.shadowRoot!.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   expect((childA as unknown as HTMLElement).tabIndex).to.equal(0);
 
   const toggle = (root as unknown as HTMLElement).shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
@@ -278,7 +278,7 @@ it('expandAll()/collapseAll() toggle every parent node', async () => {
   await el.updateComplete;
   el.expandAll();
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as any;
+  const root = el.querySelector('lr-tree-item') as any;
   expect(root.expanded).to.be.true;
   el.collapseAll();
   await el.updateComplete;
@@ -297,12 +297,12 @@ it('bulk expansion skips disabled branches', async () => {
     { id: 'visible', label: 'Visible item' },
   ];
   await el.updateComplete;
-  const [disabled, visible] = [...el.querySelectorAll('lr-tree-node')] as LyraTreeNode[];
+  const [disabled, visible] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
 
   await el.expandAll();
 
   expect(disabled.expanded).to.be.false;
-  expect(disabled.shadowRoot!.querySelectorAll('lr-tree-node').length).to.equal(0);
+  expect(disabled.shadowRoot!.querySelectorAll('lr-tree-item').length).to.equal(0);
   expect((visible as unknown as HTMLElement).tabIndex).to.equal(0);
 });
 
@@ -317,10 +317,10 @@ it('collapseAll closes a branch that became disabled and restores a visible rovi
     { id: 'visible', label: 'Visible item' },
   ];
   await el.updateComplete;
-  const branch = el.querySelector('lr-tree-node') as LyraTreeNode;
+  const branch = el.querySelector('lr-tree-item') as LyraTreeItem;
   branch.expand();
   await el.updateComplete;
-  branch.shadowRoot!.querySelector<HTMLElement>('lr-tree-node')!.focus();
+  branch.shadowRoot!.querySelector<HTMLElement>('lr-tree-item')!.focus();
 
   el.data = [
     {
@@ -335,7 +335,7 @@ it('collapseAll closes a branch that became disabled and restores a visible rovi
   el.collapseAll();
   await el.updateComplete;
 
-  const visible = [...el.querySelectorAll<HTMLElement>('lr-tree-node')][1]!;
+  const visible = [...el.querySelectorAll<HTMLElement>('lr-tree-item')][1]!;
   expect(branch.expanded).to.be.false;
   expect(visible.tabIndex).to.equal(0);
   expect(deepActiveElement()?.getAttribute('aria-disabled')).to.not.equal('true');
@@ -352,10 +352,10 @@ it('immediately collapses a reused expanded branch when a same-id data refresh d
     { id: 'visible', label: 'Visible item' },
   ];
   await el.updateComplete;
-  const branch = el.querySelector('lr-tree-node') as LyraTreeNode;
+  const branch = el.querySelector('lr-tree-item') as LyraTreeItem;
   branch.expand();
   await el.updateComplete;
-  expect(branch.shadowRoot!.querySelector('lr-tree-node')).to.exist;
+  expect(branch.shadowRoot!.querySelector('lr-tree-item')).to.exist;
 
   el.data = [
     {
@@ -368,13 +368,13 @@ it('immediately collapses a reused expanded branch when a same-id data refresh d
   ];
   await el.updateComplete;
 
-  const [branchAfter, visible] = [...el.querySelectorAll('lr-tree-node')] as LyraTreeNode[];
+  const [branchAfter, visible] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
   expect(branchAfter).to.equal(branch);
   expect(branchAfter.expanded).to.be.false;
   expect(branchAfter.shadowRoot!.querySelector('[part="group"]')).to.be.null;
   expect((visible as unknown as HTMLElement).tabIndex).to.equal(0);
   expect(
-    [...el.querySelectorAll<HTMLElement>('lr-tree-node')].filter((node) => node.tabIndex === 0),
+    [...el.querySelectorAll<HTMLElement>('lr-tree-item')].filter((node) => node.tabIndex === 0),
   ).to.have.lengthOf(1);
 });
 
@@ -386,9 +386,9 @@ it('expandAll() does not mark leaf nodes as expanded, so a following collapseAll
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = withLeaf;
   await el.updateComplete;
-  const leaf = [...el.querySelectorAll('lr-tree-node')].find(
+  const leaf = [...el.querySelectorAll('lr-tree-item')].find(
     (n) => (n as any).item.id === '2',
-  ) as unknown as LyraTreeNode;
+  ) as unknown as LyraTreeItem;
 
   await el.expandAll();
 
@@ -397,7 +397,7 @@ it('expandAll() does not mark leaf nodes as expanded, so a following collapseAll
 
   el.collapseAll();
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   expect(root.expanded).to.be.false;
 });
 
@@ -415,14 +415,14 @@ it('resolves an awaited expandAll() only once every descendant at every depth ha
 
   await el.expandAll();
 
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   expect(root.expanded).to.be.true;
   const child = (root as unknown as HTMLElement).shadowRoot!.querySelector(
-    'lr-tree-node',
-  ) as unknown as LyraTreeNode;
+    'lr-tree-item',
+  ) as unknown as LyraTreeItem;
   expect(child, 'the first-level child should already be rendered').to.exist;
   expect(child.expanded).to.be.true;
-  const grandchild = (child as unknown as HTMLElement).shadowRoot!.querySelector('lr-tree-node');
+  const grandchild = (child as unknown as HTMLElement).shadowRoot!.querySelector('lr-tree-item');
   expect(grandchild, 'the second-level grandchild should already be rendered').to.exist;
 });
 
@@ -430,14 +430,14 @@ it('collapseAll() leaves exactly one node with a roving tabindex of 0 after the 
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-node')] as unknown as LyraTreeNode[];
+  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
 
   root.expand();
   await el.updateComplete;
   (root as unknown as HTMLElement).focus();
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
-  const childA = root.shadowRoot!.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const childA = root.shadowRoot!.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   expect((childA as unknown as HTMLElement).tabIndex).to.equal(0);
 
   el.collapseAll();
@@ -452,7 +452,7 @@ it('preserves per-node expanded state when data is reassigned a new array with t
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as any;
+  const root = el.querySelector('lr-tree-item') as any;
   root.expanded = true;
   await el.updateComplete;
 
@@ -460,7 +460,7 @@ it('preserves per-node expanded state when data is reassigned a new array with t
   el.data = JSON.parse(JSON.stringify(data));
   await el.updateComplete;
 
-  const rootAfter = el.querySelector('lr-tree-node') as any;
+  const rootAfter = el.querySelector('lr-tree-item') as any;
   expect(rootAfter).to.equal(root, 'the same node instance should be reused, not recreated');
   expect(rootAfter.expanded).to.be.true;
 });
@@ -469,12 +469,12 @@ it('reconciles added, removed, and reordered top-level items by id', async () =>
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [rootNode, leafNode] = [...el.querySelectorAll('lr-tree-node')] as any[];
+  const [rootNode, leafNode] = [...el.querySelectorAll('lr-tree-item')] as any[];
 
   el.data = [{ id: '2', label: 'Leaf' }, { id: '3', label: 'New' }, ...data.slice(0, 1)];
   await el.updateComplete;
 
-  const nodesAfter = [...el.querySelectorAll('lr-tree-node')] as any[];
+  const nodesAfter = [...el.querySelectorAll('lr-tree-item')] as any[];
   expect(nodesAfter.map((n) => n.item.id)).to.deep.equal(['2', '3', '1']);
   expect(nodesAfter[0]).to.equal(leafNode, 'leaf node instance should be reused');
   expect(nodesAfter[2]).to.equal(rootNode, 'root node instance should be reused');
@@ -484,14 +484,14 @@ it('refocuses the newly active node when a data reassignment removes the node th
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   (root as unknown as HTMLElement).focus();
   expect(deepActiveElement()).to.equal(root as unknown as Element);
 
   el.data = [{ id: '2', label: 'Leaf' }];
   await el.updateComplete;
 
-  const newRoot = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const newRoot = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   expect(newRoot.item.id).to.equal('2');
   expect(deepActiveElement()).to.equal(newRoot as unknown as Element);
 });
@@ -515,7 +515,7 @@ it('gives the first item a roving tabindex of 0 and every other item -1', async 
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-node')] as HTMLElement[];
+  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as HTMLElement[];
   expect(root.tabIndex).to.equal(0);
   expect(leaf.tabIndex).to.equal(-1);
 });
@@ -524,7 +524,7 @@ it('nests role="group" as a DOM descendant of its role="treeitem" host', async (
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   root.expand();
   await root.updateComplete;
   expect(root.getAttribute('role')).to.equal('treeitem');
@@ -535,7 +535,7 @@ it('ArrowDown moves the roving tabindex to the next visible item', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-node')] as unknown as LyraTreeNode[];
+  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
   (root as unknown as HTMLElement).focus();
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
@@ -547,7 +547,7 @@ it('ArrowRight expands a collapsed node without moving focus, then a 2nd press s
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   (root as unknown as HTMLElement).focus();
 
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
@@ -557,7 +557,7 @@ it('ArrowRight expands a collapsed node without moving focus, then a 2nd press s
 
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
   await el.updateComplete;
-  const firstChild = root.shadowRoot!.querySelector('lr-tree-node');
+  const firstChild = root.shadowRoot!.querySelector('lr-tree-item');
   expect(deepActiveElement()).to.equal(firstChild);
 });
 
@@ -565,7 +565,7 @@ it('Home/End jump to the first/last visible item', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-node')] as unknown as LyraTreeNode[];
+  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
   (root as unknown as HTMLElement).focus();
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   await el.updateComplete;
@@ -580,7 +580,7 @@ it('Enter fires lr-node-select on the focused item', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   (root as unknown as HTMLElement).focus();
   setTimeout(() =>
     root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true })),
@@ -593,7 +593,7 @@ it('ArrowUp moves the roving tabindex to the previous visible item', async () =>
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-node')] as unknown as LyraTreeNode[];
+  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
   (root as unknown as HTMLElement).focus();
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   await el.updateComplete;
@@ -610,7 +610,7 @@ it('ArrowLeft collapses an expanded node without moving focus off it', async () 
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   root.expand();
   await el.updateComplete;
   (root as unknown as HTMLElement).focus();
@@ -626,14 +626,14 @@ it('ArrowLeft on a collapsed or leaf node moves focus to its nearest ancestor', 
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   root.expand();
   await el.updateComplete;
   (root as unknown as HTMLElement).focus();
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
 
-  const childA = root.shadowRoot!.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const childA = root.shadowRoot!.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   expect(deepActiveElement()).to.equal(childA as unknown as Element);
 
   childA.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
@@ -650,17 +650,17 @@ it('preserves nested per-node expanded state when a nested children array is reo
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = nested;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   root.expand();
   await root.updateComplete;
-  const childB = root.shadowRoot!.querySelectorAll('lr-tree-node')[1] as unknown as LyraTreeNode;
+  const childB = root.shadowRoot!.querySelectorAll('lr-tree-item')[1] as unknown as LyraTreeItem;
   childB.expanded = true;
   await root.updateComplete;
 
   root.item = { ...root.item, children: [nested[0].children![1], nested[0].children![0]] };
   await root.updateComplete;
 
-  const after = [...root.shadowRoot!.querySelectorAll('lr-tree-node')] as unknown as LyraTreeNode[];
+  const after = [...root.shadowRoot!.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
   expect(after[0]).to.equal(childB, 'the "B" node instance should be reused after reordering');
   expect(after[0].expanded).to.be.true;
 });
@@ -669,7 +669,7 @@ it('renders the toggle as an svg chevron rather than a text glyph', async () => 
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as HTMLElement;
+  const root = el.querySelector('lr-tree-item') as HTMLElement;
   const toggle = root.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   expect(toggle.querySelector('svg')).to.exist;
   expect(toggle.textContent?.trim()).to.equal('');
@@ -679,7 +679,7 @@ it('hides the toggle placeholder for a leaf node with no children', async () => 
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const leaf = [...el.querySelectorAll('lr-tree-node')].find(
+  const leaf = [...el.querySelectorAll('lr-tree-item')].find(
     (n) => (n as any).item.id === '2',
   ) as HTMLElement;
   const toggle = leaf.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
@@ -689,7 +689,7 @@ it('hides the toggle placeholder for a leaf node with no children', async () => 
   // this leaf row's label lines up with a sibling row that has a chevron.
   expect(getComputedStyle(toggle).display).to.not.equal('none');
 
-  const root = el.querySelector('lr-tree-node') as HTMLElement;
+  const root = el.querySelector('lr-tree-item') as HTMLElement;
   const rootToggle = root.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   expect(rootToggle.hidden).to.be.false;
   expect(getComputedStyle(rootToggle).visibility).to.equal('visible');
@@ -699,7 +699,7 @@ it('rotates the toggle chevron when the node is expanded', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   const toggle = root.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   expect(getComputedStyle(toggle).transform).to.equal('none');
   root.expand();
@@ -711,7 +711,7 @@ it('gives the toggle a touch-friendly clickable box via padding, not just a bare
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as HTMLElement;
+  const root = el.querySelector('lr-tree-item') as HTMLElement;
   const toggle = root.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   expect(parseFloat(getComputedStyle(toggle).paddingTop)).to.be.greaterThan(0);
   const box = toggle.getBoundingClientRect();
@@ -722,8 +722,8 @@ it('gives the toggle a touch-friendly clickable box via padding, not just a bare
 it('truncates a long label instead of overflowing, and caps indentation at depth', async () => {
   const item = { id: 'deep', label: 'A very long label '.repeat(20) };
   const el = (await fixture(
-    html`<lr-tree-node .item=${item} .depth=${50}></lr-tree-node>`,
-  )) as LyraTreeNode;
+    html`<lr-tree-item .item=${item} .depth=${50}></lr-tree-item>`,
+  )) as LyraTreeItem;
   await el.updateComplete;
 
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
@@ -743,7 +743,7 @@ it('renders the badge with the higher-contrast text token instead of text-quiet'
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as HTMLElement;
+  const root = el.querySelector('lr-tree-item') as HTMLElement;
   const badge = root.shadowRoot!.querySelector('[part="badge"]') as HTMLElement;
   // --lr-color-text falls back to #1a1a1a (rgb(26, 26, 26)) with no WA
   // tokens loaded in the test env; --lr-color-text-quiet falls back to
@@ -781,7 +781,7 @@ it('sets aria-level, aria-setsize, and aria-posinset to the correct values for t
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-node')] as unknown as LyraTreeNode[];
+  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
 
   expect((root as unknown as HTMLElement).getAttribute('aria-level')).to.equal('1');
   expect((root as unknown as HTMLElement).getAttribute('aria-setsize')).to.equal('2');
@@ -793,7 +793,7 @@ it('sets aria-level, aria-setsize, and aria-posinset to the correct values for t
   root.expand();
   await el.updateComplete;
   const [childA, childB] = [
-    ...(root as unknown as HTMLElement).shadowRoot!.querySelectorAll('lr-tree-node'),
+    ...(root as unknown as HTMLElement).shadowRoot!.querySelectorAll('lr-tree-item'),
   ] as unknown as HTMLElement[];
   expect(childA.getAttribute('aria-level')).to.equal('2');
   expect(childA.getAttribute('aria-setsize')).to.equal('2');
@@ -807,13 +807,13 @@ it('renders a badge value of 0 instead of treating it as absent', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = [{ id: '1', label: 'Root', badge: 0 }];
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as HTMLElement;
+  const root = el.querySelector('lr-tree-item') as HTMLElement;
   const badge = root.shadowRoot!.querySelector('[part="badge"]');
   expect(badge).to.exist;
   expect(badge!.textContent).to.equal('0');
 });
 
-describe('tree-node badges', () => {
+describe('tree-item badges', () => {
   const dataWithBadges: TreeItem[] = [
     {
       id: 'a',
@@ -830,7 +830,7 @@ describe('tree-node badges', () => {
     const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
     el.data = [{ id: 'a', label: 'no badges here' }];
     await el.updateComplete;
-    const node = el.querySelector('lr-tree-node') as LyraTreeNode;
+    const node = el.querySelector('lr-tree-item') as LyraTreeItem;
     const badgeParts = node.shadowRoot!.querySelectorAll('[part="badge"]');
     expect(badgeParts.length).to.equal(0);
   });
@@ -839,7 +839,7 @@ describe('tree-node badges', () => {
     const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
     el.data = dataWithBadges;
     await el.updateComplete;
-    const node = el.querySelector('lr-tree-node') as LyraTreeNode;
+    const node = el.querySelector('lr-tree-item') as LyraTreeItem;
     const badgeParts = [...node.shadowRoot!.querySelectorAll('[part="badge"]')] as HTMLElement[];
     // legacy badge (3) first, then the two badges chips, in array order
     expect(badgeParts.length).to.equal(3);
@@ -854,7 +854,7 @@ describe('tree-node badges', () => {
     const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
     el.data = dataWithBadges;
     await el.updateComplete;
-    const node = el.querySelector('lr-tree-node') as LyraTreeNode;
+    const node = el.querySelector('lr-tree-item') as LyraTreeItem;
     const badgeParts = [...node.shadowRoot!.querySelectorAll('[part="badge"]')] as HTMLElement[];
     expect(badgeParts[1].getAttribute('aria-label')).to.equal('Modified'); // label wins
     expect(badgeParts[2].getAttribute('aria-label')).to.equal('+2'); // falls back to text
@@ -864,7 +864,7 @@ describe('tree-node badges', () => {
     const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
     el.data = [{ id: 'a', label: 'x', badges: [{ text: 'U' }] }];
     await el.updateComplete;
-    const node = el.querySelector('lr-tree-node') as LyraTreeNode;
+    const node = el.querySelector('lr-tree-item') as LyraTreeItem;
     expect((node.shadowRoot!.querySelector('[part="badge"]') as HTMLElement).dataset.tone).to.equal('neutral');
   });
 
@@ -897,7 +897,7 @@ describe('tree-node badges', () => {
       ],
     }];
     await el.updateComplete;
-    const node = el.querySelector('lr-tree-node') as LyraTreeNode;
+    const node = el.querySelector('lr-tree-item') as LyraTreeItem;
     const expected = new Map([
       ['neutral', ['rgb(1, 2, 3)', 'rgb(4, 5, 6)']],
       ['brand', ['rgb(7, 8, 9)', 'rgb(10, 11, 12)']],
@@ -924,7 +924,7 @@ it('swaps which arrow key expands/collapses under dir="rtl"', async () => {
   const el = (await fixture(html`<lr-tree dir="rtl"></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   (root as unknown as HTMLElement).focus();
 
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
@@ -951,7 +951,7 @@ it('keeps arrow-key navigation correct after a node\'s `item` is mutated directl
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = nested;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   root.expand();
   await el.updateComplete;
   (root as unknown as HTMLElement).focus();
@@ -960,14 +960,14 @@ it('keeps arrow-key navigation correct after a node\'s `item` is mutated directl
   // direct mutation below -- this is what exposes a stale memoized cache.
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
-  const a = root.shadowRoot!.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const a = root.shadowRoot!.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   expect(deepActiveElement()).to.equal(a as unknown as Element);
 
   (a as unknown as HTMLElement).dispatchEvent(
     new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
   );
   await el.updateComplete;
-  const b = root.shadowRoot!.querySelectorAll('lr-tree-node')[1] as unknown as LyraTreeNode;
+  const b = root.shadowRoot!.querySelectorAll('lr-tree-item')[1] as unknown as LyraTreeItem;
   expect(deepActiveElement()).to.equal(b as unknown as Element);
 
   // Legitimate direct write path (also used by this file's own
@@ -980,7 +980,7 @@ it('keeps arrow-key navigation correct after a node\'s `item` is mutated directl
     new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
   );
   await el.updateComplete;
-  const c = root.shadowRoot!.querySelectorAll('lr-tree-node')[2] as unknown as LyraTreeNode;
+  const c = root.shadowRoot!.querySelectorAll('lr-tree-item')[2] as unknown as LyraTreeItem;
   expect(deepActiveElement()).to.equal(c as unknown as Element);
 });
 
@@ -988,7 +988,7 @@ it('keeps arrow-key navigation correct after expandAll() reveals nodes that were
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   (root as unknown as HTMLElement).focus();
 
   // Exercise ArrowDown/ArrowUp while still collapsed so a memoized
@@ -1004,7 +1004,7 @@ it('keeps arrow-key navigation correct after expandAll() reveals nodes that were
 
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
-  const childA = root.shadowRoot!.querySelector('lr-tree-node');
+  const childA = root.shadowRoot!.querySelector('lr-tree-item');
   expect(deepActiveElement()).to.equal(childA);
 });
 
@@ -1014,7 +1014,7 @@ it('renders a structured icon and secondary description without adding another i
   el.data = [{ id: 'rich', label: 'Judgment', icon, description: 'Grand Chamber · 2026', badge: 3 }];
   await el.updateComplete;
 
-  const node = el.querySelector('lr-tree-node') as HTMLElement;
+  const node = el.querySelector('lr-tree-item') as HTMLElement;
   const iconPart = node.shadowRoot!.querySelector('[part="icon"]')!;
   const description = node.shadowRoot!.querySelector('[part="description"]')!;
 
@@ -1037,7 +1037,7 @@ it('uses accessibleLabel as the treeitem host name without changing its visible 
   ];
   await el.updateComplete;
 
-  const node = el.querySelector('lr-tree-node') as HTMLElement;
+  const node = el.querySelector('lr-tree-item') as HTMLElement;
   expect(node.getAttribute('aria-label')).to.equal(
     'Case C-42/24, Judgment, 3 cited decisions',
   );
@@ -1048,7 +1048,7 @@ it('removes a stale accessible label when reassigned row data no longer supplies
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = [{ id: 'case', label: 'Case', accessibleLabel: 'Detailed case label' }];
   await el.updateComplete;
-  const node = el.querySelector('lr-tree-node') as HTMLElement;
+  const node = el.querySelector('lr-tree-item') as HTMLElement;
   expect(node.getAttribute('aria-label')).to.equal('Detailed case label');
 
   el.data = [{ id: 'case', label: 'Case' }];
@@ -1096,14 +1096,14 @@ describe('reorderable', () => {
   };
 
   /** Expand the root and walk focus down to the nested child with `id`. */
-  async function focusNestedChild(el: LyraTree, id: string): Promise<LyraTreeNode> {
-    const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+  async function focusNestedChild(el: LyraTree, id: string): Promise<LyraTreeItem> {
+    const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
     root.expand();
     await el.updateComplete;
     (root as unknown as HTMLElement).focus();
     let current: Element = root as unknown as Element;
     for (let i = 0; i < 8; i++) {
-      const active = deepActiveElement() as unknown as LyraTreeNode | null;
+      const active = deepActiveElement() as unknown as LyraTreeItem | null;
       if (active?.item?.id === id) return active;
       arrow(current, 'ArrowDown');
       await el.updateComplete;
@@ -1116,7 +1116,7 @@ describe('reorderable', () => {
     const el = (await fixture(html`<lr-tree reorderable></lr-tree>`)) as LyraTree;
     el.data = clone();
     await el.updateComplete;
-    const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+    const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
     (root as unknown as HTMLElement).focus();
 
     const events: CustomEvent[] = [];
@@ -1164,7 +1164,7 @@ describe('reorderable', () => {
     // '1.3' is the last child of '1'; the *visually* next row is the top-level
     // uncle '2'. A reorder must never turn into a reparent, so nothing happens.
     expect(events.length).to.equal(0);
-    expect((deepActiveElement() as unknown as LyraTreeNode | null)?.item?.id).to.equal('1.3');
+    expect((deepActiveElement() as unknown as LyraTreeItem | null)?.item?.id).to.equal('1.3');
   });
 
   it('Ctrl+ArrowUp on the first sibling is a silent no-op rather than a move out of the subtree', async () => {
@@ -1179,14 +1179,14 @@ describe('reorderable', () => {
     await el.updateComplete;
 
     expect(events.length).to.equal(0);
-    expect((deepActiveElement() as unknown as LyraTreeNode | null)?.item?.id).to.equal('1.1');
+    expect((deepActiveElement() as unknown as LyraTreeItem | null)?.item?.id).to.equal('1.1');
   });
 
   it('with reorderable unset, Ctrl+ArrowDown never emits lr-reorder and still moves the roving tabindex', async () => {
     const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
     el.data = clone();
     await el.updateComplete;
-    const [root, leaf] = [...el.querySelectorAll('lr-tree-node')] as unknown as LyraTreeNode[];
+    const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
     (root as unknown as HTMLElement).focus();
 
     const events: CustomEvent[] = [];
@@ -1195,7 +1195,7 @@ describe('reorderable', () => {
     await el.updateComplete;
 
     expect(events.length).to.equal(0);
-    expect((deepActiveElement() as unknown as LyraTreeNode | null)?.item?.id).to.equal('2');
+    expect((deepActiveElement() as unknown as LyraTreeItem | null)?.item?.id).to.equal('2');
     expect((leaf as unknown as HTMLElement).tabIndex).to.equal(0);
     // No live region is rendered at all until the feature is opted into.
     expect(el.shadowRoot!.querySelector('lr-live-region')).to.not.exist;
@@ -1213,7 +1213,7 @@ describe('reorderable', () => {
     const el = (await fixture(html`<lr-tree reorderable></lr-tree>`)) as LyraTree;
     el.data = clone();
     await el.updateComplete;
-    const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+    const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
     (root as unknown as HTMLElement).focus();
 
     el.addEventListener('lr-reorder', (e) => {
@@ -1226,13 +1226,13 @@ describe('reorderable', () => {
     modArrow(root as unknown as Element, 'ArrowDown');
     await el.updateComplete;
 
-    const ids = [...el.querySelectorAll('lr-tree-node')].map(
-      (n) => (n as unknown as LyraTreeNode).item.id,
+    const ids = [...el.querySelectorAll('lr-tree-item')].map(
+      (n) => (n as unknown as LyraTreeItem).item.id,
     );
     expect(ids).to.deep.equal(['2', '1']);
     // `syncNodes()` re-inserts the moved element, which drops real DOM focus to
     // <body>; the moved node must get it back, and keep the roving tabindex.
-    expect((deepActiveElement() as unknown as LyraTreeNode | null)?.item?.id).to.equal('1');
+    expect((deepActiveElement() as unknown as LyraTreeItem | null)?.item?.id).to.equal('1');
     expect((root as unknown as HTMLElement).tabIndex).to.equal(0);
   });
 
@@ -1254,19 +1254,19 @@ describe('reorderable', () => {
     modArrow(childA as unknown as Element, 'ArrowDown');
     await el.updateComplete;
 
-    const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
-    const childIds = [...root.shadowRoot!.querySelectorAll('lr-tree-node')].map(
-      (n) => (n as unknown as LyraTreeNode).item.id,
+    const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
+    const childIds = [...root.shadowRoot!.querySelectorAll('lr-tree-item')].map(
+      (n) => (n as unknown as LyraTreeItem).item.id,
     );
     expect(childIds).to.deep.equal(['1.2', '1.1', '1.3']);
-    expect((deepActiveElement() as unknown as LyraTreeNode | null)?.item?.id).to.equal('1.1');
+    expect((deepActiveElement() as unknown as LyraTreeItem | null)?.item?.id).to.equal('1.1');
   });
 
   it('does not swap the vertical reorder keys under dir="rtl"', async () => {
     const el = (await fixture(html`<lr-tree dir="rtl" reorderable></lr-tree>`)) as LyraTree;
     el.data = clone();
     await el.updateComplete;
-    const [root, leaf] = [...el.querySelectorAll('lr-tree-node')] as unknown as LyraTreeNode[];
+    const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
     (root as unknown as HTMLElement).focus();
 
     const events: CustomEvent[] = [];
@@ -1297,7 +1297,7 @@ describe('reorderable', () => {
     expect(region, 'a reorderable tree renders a live region').to.exist;
     await region.updateComplete;
 
-    const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+    const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
     (root as unknown as HTMLElement).focus();
     modArrow(root as unknown as Element, 'ArrowDown');
     await el.updateComplete;
@@ -1317,7 +1317,7 @@ describe('reorderable', () => {
     };
     await region.updateComplete;
 
-    const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+    const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
     (root as unknown as HTMLElement).focus();
     modArrow(root as unknown as Element, 'ArrowDown');
     await el.updateComplete;
@@ -1355,15 +1355,15 @@ describe('reorderable', () => {
   });
 });
 
-it("survives keyboard navigation over slotted tree-nodes that carry no item", async () => {
-  // `<lr-tree>`'s documented slot takes `<lr-tree-node>` elements, and `item` is `attribute: false`
+it("survives keyboard navigation over slotted tree-items that carry no item", async () => {
+  // `<lr-tree>`'s documented slot takes `<lr-tree-item>` elements, and `item` is `attribute: false`
   // -- so any consumer writing the tree declaratively in HTML necessarily gets nodes whose `item`
   // is undefined. `visibleNodeElements()` already guards with `n.item?.disabled`, but the keyboard
   // handler and `focusNode()` read `n.item.id` bare, throwing a TypeError on the first arrow key.
   const el = (await fixture(html`
     <lr-tree>
-      <lr-tree-node>Alpha</lr-tree-node>
-      <lr-tree-node>Beta</lr-tree-node>
+      <lr-tree-item>Alpha</lr-tree-item>
+      <lr-tree-item>Beta</lr-tree-item>
     </lr-tree>
   `)) as LyraTree;
   await el.updateComplete;
@@ -1376,4 +1376,205 @@ it("survives keyboard navigation over slotted tree-nodes that carry no item", as
   expect(() => press("ArrowUp")).to.not.throw();
   expect(() => press("Home")).to.not.throw();
   expect(() => press("End")).to.not.throw();
+});
+
+// The declarative child model end to end. A `wa-tree`/`sl-tree` app migrates by renaming tags only,
+// so this markup shape -- no `data` property anywhere -- has to be a working tree: rendered rows,
+// no empty state, a roving tabindex, arrow navigation and correct set-position ARIA.
+describe('tree declarative child model', () => {
+  const declarative = html`
+    <lr-tree label="Docs">
+      <lr-tree-item label="Guides">
+        <lr-tree-item label="Install"></lr-tree-item>
+        <lr-tree-item label="Usage"></lr-tree-item>
+      </lr-tree-item>
+      <lr-tree-item label="Reference"></lr-tree-item>
+    </lr-tree>
+  `;
+
+  const press = (el: LyraTree, key: string): void => {
+    const base = el.shadowRoot!.querySelector('[part="base"]') ?? el;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
+  };
+
+  it('renders slotted items instead of the empty state, with no data assigned', async () => {
+    const el = (await fixture(declarative)) as LyraTree;
+    await el.updateComplete;
+
+    // Never hand chai a DOM node as actual/expected -- compare a boolean instead.
+    expect(el.shadowRoot!.querySelector('lr-empty') === null, 'no empty state while items are slotted').to.be
+      .true;
+    const [guides, reference] = [...el.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
+    expect(guides!.getAttribute('aria-level')).to.equal('1');
+    expect(guides!.getAttribute('aria-setsize')).to.equal('2');
+    expect(guides!.getAttribute('aria-posinset')).to.equal('1');
+    expect(reference!.getAttribute('aria-posinset')).to.equal('2');
+    expect(guides!.tabIndex, 'the first slotted item owns the roving tabindex').to.equal(0);
+    expect(reference!.tabIndex).to.equal(-1);
+  });
+
+  it('gives nested slotted items their own depth and set-position ARIA once expanded', async () => {
+    const el = (await fixture(declarative)) as LyraTree;
+    const guides = el.querySelector('lr-tree-item') as LyraTreeItem;
+    guides.expand();
+    await el.updateComplete;
+
+    const [install, usage] = [...guides.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
+    expect(install!.depth).to.equal(1);
+    expect(install!.getAttribute('aria-level')).to.equal('2');
+    expect(install!.getAttribute('aria-setsize')).to.equal('2');
+    expect(usage!.getAttribute('aria-posinset')).to.equal('2');
+  });
+
+  it('navigates slotted items with the arrow keys, stepping into an expanded branch', async () => {
+    const el = (await fixture(declarative)) as LyraTree;
+    await el.updateComplete;
+    const [guides, reference] = [...el.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
+
+    press(el, 'ArrowRight'); // expand, focus stays put
+    await el.updateComplete;
+    expect(guides!.expanded).to.be.true;
+
+    press(el, 'ArrowDown'); // step into the first child
+    await el.updateComplete;
+    const install = guides!.querySelector('lr-tree-item') as LyraTreeItem;
+    expect(install.tabIndex).to.equal(0);
+    expect(guides!.tabIndex).to.equal(-1);
+
+    press(el, 'End');
+    await el.updateComplete;
+    expect(reference!.tabIndex).to.equal(0);
+  });
+
+  it('expandAll()/collapseAll() reach slotted descendants', async () => {
+    const el = (await fixture(declarative)) as LyraTree;
+    const guides = el.querySelector('lr-tree-item') as LyraTreeItem;
+    await el.expandAll();
+    expect(guides.expanded).to.be.true;
+    el.collapseAll();
+    await el.updateComplete;
+    expect(guides.expanded).to.be.false;
+  });
+
+  it('skips a disabled slotted item in roving focus and arrow navigation', async () => {
+    const el = (await fixture(html`
+      <lr-tree label="Docs">
+        <lr-tree-item label="Disabled" disabled></lr-tree-item>
+        <lr-tree-item label="First enabled"></lr-tree-item>
+        <lr-tree-item label="Second enabled"></lr-tree-item>
+      </lr-tree>
+    `)) as LyraTree;
+    await el.updateComplete;
+    const [disabled, first, second] = [...el.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
+
+    expect(disabled!.getAttribute('aria-disabled')).to.equal('true');
+    expect(disabled!.tabIndex).to.equal(-1);
+    expect(first!.tabIndex, 'the roving stop skips past the disabled item').to.equal(0);
+
+    press(el, 'ArrowDown');
+    await el.updateComplete;
+    expect(second!.tabIndex).to.equal(0);
+    press(el, 'Home');
+    await el.updateComplete;
+    expect(first!.tabIndex, 'Home lands on the first *enabled* item').to.equal(0);
+  });
+
+  it('ignores data while author-written items are present', async () => {
+    const el = (await fixture(declarative)) as LyraTree;
+    await el.updateComplete;
+    el.data = [{ id: 'from-data', label: 'From data' }];
+    await el.updateComplete;
+
+    const tops = [...el.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
+    expect(tops.map((node) => node.label)).to.eql(['Guides', 'Reference']);
+    expect(el.shadowRoot!.querySelector('lr-empty') === null, 'still no empty state').to.be.true;
+  });
+
+  it('re-homes the roving tabindex when the active slotted item is removed', async () => {
+    const el = (await fixture(declarative)) as LyraTree;
+    await el.updateComplete;
+    const [guides, reference] = [...el.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
+    expect(guides!.tabIndex).to.equal(0);
+
+    guides!.remove();
+    await new Promise((resolve) => setTimeout(resolve, 0)); // let slotchange land
+    await el.updateComplete;
+    expect(reference!.tabIndex, 'the surviving item must keep the tree in the tab order').to.equal(0);
+  });
+
+  it('requests a sibling-scoped reorder for a nested slotted item', async () => {
+    const el = (await fixture(html`
+      <lr-tree label="Docs" reorderable>
+        <lr-tree-item label="Guides" expanded>
+          <lr-tree-item label="Install"></lr-tree-item>
+          <lr-tree-item label="Usage"></lr-tree-item>
+        </lr-tree-item>
+      </lr-tree>
+    `)) as LyraTree;
+    await el.updateComplete;
+    const guides = el.querySelector('lr-tree-item') as LyraTreeItem;
+    const [install] = [...guides.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
+    install!.focus();
+    install!.select();
+    await el.updateComplete;
+
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-reorder', (e) => events.push(e as CustomEvent));
+    install!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, ctrlKey: true }),
+    );
+    await el.updateComplete;
+
+    expect(events.length).to.equal(1);
+    expect(events[0]!.detail).to.deep.equal({
+      id: install!.nodeId,
+      parentId: guides.nodeId,
+      fromIndex: 0,
+      toIndex: 1,
+    });
+  });
+
+  it('renders a nested item that a host promotes to the top level', async () => {
+    // Its former parent gave it slot="children"; <lr-tree> only has a default slot, so a stale
+    // `slot` would leave the promoted node assigned to nothing and rendering nowhere.
+    const el = (await fixture(declarative)) as LyraTree;
+    const guides = el.querySelector('lr-tree-item') as LyraTreeItem;
+    guides.expand();
+    await el.updateComplete;
+    const install = guides.querySelector('lr-tree-item') as LyraTreeItem;
+    expect(install.getAttribute('slot')).to.equal('children');
+
+    el.appendChild(install);
+    await new Promise((resolve) => setTimeout(resolve, 0)); // let slotchange land
+    await el.updateComplete;
+
+    expect(install.hasAttribute('slot'), 'the stale slot must be cleared').to.be.false;
+    expect(install.assignedSlot === null, 'it must be assigned to the default slot').to.be.false;
+    expect(install.getAttribute('aria-level')).to.equal('1');
+    expect(install.getAttribute('aria-posinset')).to.equal('3');
+  });
+
+  it('still tracks new items after being disconnected and reconnected', async () => {
+    const el = (await fixture(declarative)) as LyraTree;
+    await el.updateComplete;
+    const parent = el.parentElement!;
+    el.remove();
+    parent.appendChild(el);
+    await el.updateComplete;
+
+    const added = document.createElement('lr-tree-item') as LyraTreeItem;
+    added.label = 'Appendix';
+    el.appendChild(added);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+
+    expect(added.getAttribute('aria-posinset')).to.equal('3');
+    expect(added.getAttribute('aria-setsize')).to.equal('3');
+  });
+
+  it('is accessible when written declaratively', async () => {
+    const el = (await fixture(declarative)) as LyraTree;
+    await el.expandAll();
+    await expect(el).to.be.accessible();
+  });
 });

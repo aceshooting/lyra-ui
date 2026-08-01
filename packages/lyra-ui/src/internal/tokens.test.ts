@@ -2,9 +2,10 @@ import { fixture, expect, html } from '@open-wc/testing';
 import { LitElement } from 'lit';
 import { tag } from './prefix.js';
 import { tokens } from './tokens.styles.js';
+import { palette } from './tokens/palette.styles.js';
 
 class TokenProbe extends LitElement {
-  static styles = [tokens];
+  static styles = [palette, tokens];
   render() {
     return html`<div part="probe"></div>`;
   }
@@ -17,7 +18,7 @@ customElements.define(tag('token-probe'), TokenProbe);
 // inner probe; only a --lr-theme-* input (declared nowhere in component styles) inherits
 // all the way down.
 class NestedTokenProbe extends LitElement {
-  static styles = [tokens];
+  static styles = [palette, tokens];
   render() {
     return html`<lr-token-probe></lr-token-probe>`;
   }
@@ -43,10 +44,40 @@ async function probeNestedVar(name: string, ancestorStyle = ''): Promise<string>
 
 type PaletteMode = 'light' | 'dark';
 
+/** The palette's light grid lives on `:host`, its dark grid on `:host([data-lr-theme='dark'])`. */
+function paletteBlock(mode: PaletteMode): string {
+  const text = palette.cssText;
+  const darkAt = text.indexOf(":host([data-lr-theme='dark'])");
+  expect(darkAt, 'palette must declare a dark grid block').to.be.greaterThan(-1);
+  return mode === 'light' ? text.slice(0, darkAt) : text.slice(darkAt);
+}
+
+/**
+ * The standalone value a token resolves to with no consumer theme loaded.
+ *
+ * A semantic colour no longer carries its own literal per mode: it names a grid slot, the slot
+ * names a ramp step, and the step carries the hex. Following that chain here is the point --
+ * asserting the literal directly is what let the flat token and its own grid slot drift into two
+ * different colours in the first place.
+ */
 function fallbackHex(name: string, mode: PaletteMode): string {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const bridged = tokens.cssText.match(new RegExp(`${escaped(name)}:\\s*var\\((--lr-color-[a-z0-9-]+)\\)`, 'i'));
+  if (bridged) {
+    const block = paletteBlock(mode);
+    const slot = block.match(
+      new RegExp(`${escaped(bridged[1])}:\\s*var\\([^,]+,\\s*var\\((--lr-ramp-[a-z0-9-]+)\\)\\)`, 'i'),
+    );
+    expect(slot, `${name} bridges to ${bridged[1]}, which the ${mode} grid does not declare`).to.not.equal(null);
+    // The ramp is declared once, on `:host`, and inherits into the dark block.
+    const step = palette.cssText.match(new RegExp(`${escaped(slot![1])}:\\s*(#[0-9a-f]{3,8})`, 'i'));
+    expect(step, `${slot![1]} is referenced but never declared`).to.not.equal(null);
+    return step![1];
+  }
+
   const matches = [
-    ...tokens.cssText.matchAll(new RegExp(`${escaped}:\\s*var\\([^,]+,\\s*(#[0-9a-f]{3,8})\\s*\\)`, 'gi')),
+    ...tokens.cssText.matchAll(new RegExp(`${escaped(name)}:\\s*var\\([^,]+,\\s*(#[0-9a-f]{3,8})\\s*\\)`, 'gi')),
   ];
   expect(matches.length, `${name} must define light and dark standalone fallbacks`).to.equal(2);
   return matches[mode === 'light' ? 0 : 1][1];
@@ -93,6 +124,31 @@ function expectPaletteContrast(mode: PaletteMode): void {
   });
   expect(failures.join('\n')).to.equal('');
 }
+
+/** The elevation scale, smallest to largest. `--lr-shadow` is an alias for the `m` step. */
+const ELEVATION_STEPS = ['xs', 's', 'm', 'l', 'xl'] as const;
+
+/** The 16 ANSI/SGR slots, each of which has both a foreground and a background ramp entry. */
+const TERMINAL_SLOTS = [
+  'black',
+  'red',
+  'green',
+  'yellow',
+  'blue',
+  'magenta',
+  'cyan',
+  'white',
+  'bright-black',
+  'bright-red',
+  'bright-green',
+  'bright-yellow',
+  'bright-blue',
+  'bright-magenta',
+  'bright-cyan',
+  'bright-white',
+] as const;
+
+const squash = (value: string) => value.trim().replace(/\s+/g, ' ');
 
 it('defines the new motion tokens with the documented fallback values', async () => {
   expect(await probeVar('--lr-transition-fast')).to.equal('120ms ease-out');
@@ -233,13 +289,27 @@ it('keeps every standalone dark fallback semantic pair at WCAG AA contrast', () 
   expectPaletteContrast('dark');
 });
 
-it('chains filled-content and border tokens through the matching lyra theme-input roles', () => {
-  const cssText = tokens.cssText;
-  for (const tone of ['brand', 'success', 'warning', 'danger']) {
-    expect(cssText).to.include(`--lr-color-on-${tone}: var(--lr-theme-color-${tone}-on-loud`);
+it('chains filled-content and border tokens through the matching lyra theme-input roles', async () => {
+  // Asserted on the RENDERED result, not on the stylesheet text. The chain gained a link when the
+  // semantic grid landed -- a flat token now reaches its theme input through its grid slot rather
+  // than naming it directly -- and a text assertion would have failed that purely structural change
+  // while a broken chain that still *looked* right would have passed.
+  const el = (await fixture(html`<lr-token-probe></lr-token-probe>`)) as TokenProbe;
+  const read = (name: string) => getComputedStyle(el).getPropertyValue(name).trim();
+  const cases: Array<[input: string, reaches: string]> = [
+    ['--lr-theme-color-surface-border', '--lr-color-border'],
+    ['--lr-theme-color-focus', '--lr-focus-ring-color'],
+    ...(['brand', 'success', 'warning', 'danger'] as const).map(
+      (tone) => [`--lr-theme-color-${tone}-on-loud`, `--lr-color-on-${tone}`] as [string, string],
+    ),
+  ];
+  const failures: string[] = [];
+  for (const [input, reaches] of cases) {
+    el.style.setProperty(input, 'rgb(7, 8, 9)');
+    if (read(reaches) !== 'rgb(7, 8, 9)') failures.push(`${input} does not reach ${reaches} (got ${read(reaches)})`);
+    el.style.removeProperty(input);
   }
-  expect(cssText).to.include('--lr-color-border: var(--lr-theme-color-surface-border');
-  expect(cssText).to.include('--lr-focus-ring-color: var(--lr-theme-color-focus');
+  expect(failures.join('\n')).to.equal('');
 });
 
 // --- theme.css: the standalone consumer-facing theme-input sheet ---------------------
@@ -273,6 +343,23 @@ async function withThemeCss<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Read several tokens off ONE fixture mounted under `themeClass`.
+ *
+ * A fixture per token is ~200x slower, and — more importantly — reading a whole related set off a
+ * single mounted host is what makes "these five values are all different from each other" an
+ * assertion about one real rendered element rather than about five unrelated ones.
+ */
+async function probeVarsUnder(themeClass: string, names: readonly string[]): Promise<Map<string, string>> {
+  const wrapper = (await fixture(
+    html`<div class=${themeClass}><lr-token-probe></lr-token-probe></div>`,
+  )) as HTMLElement;
+  const probe = wrapper.querySelector(tag('token-probe')) as TokenProbe;
+  await probe.updateComplete;
+  const computed = getComputedStyle(probe);
+  return new Map(names.map((name) => [name, squash(computed.getPropertyValue(name))]));
+}
+
 async function probeVarUnder(themeClass: string, name: string): Promise<string> {
   const wrapper = (await fixture(
     html`<div class=${themeClass}><lr-token-probe></lr-token-probe></div>`,
@@ -289,28 +376,23 @@ const REQUIRED_THEME_INPUTS = [
   '--lr-theme-color-surface-raised',
   '--lr-theme-color-overlay',
   '--lr-theme-color-overlay-strong',
-  ...['2xs', 'xs', 'sm', 'md-sm', 'm', 'md', 'lg', 'xl', '2xl', '3xl'].map((step) => `--lr-theme-font-size-${step}`),
+  // The surface a MODAL panel paints itself with. A separate input from the page surface because
+  // in dark mode it must NOT equal it: a dialog painted the page's near-black read as a scrim
+  // with floating text and no panel at all.
+  '--lr-theme-color-surface-overlay',
+  // Elevation. The colour is its own input so a theme can tint all five steps at once.
+  '--lr-theme-shadow-color',
+  ...ELEVATION_STEPS.map((step) => `--lr-theme-shadow-${step}`),
+  // 'md' is deliberately absent: it and 'm' were the same 1rem under two names, so a control could
+  // declare two 'different' type tiers that rendered identically. 8.0.0 keeps 'm'.
+  ...['2xs', 'xs', 'sm', 'md-sm', 'm', 'lg', 'xl', '2xl', '3xl'].map((step) => `--lr-theme-font-size-${step}`),
   ...['2xs', 'xs', 's', 'm', 'l', '2xl'].map((step) => `--lr-theme-space-${step}`),
   ...['base', 'content', 'dropdown', 'popover', 'modal', 'toast'].map((layer) => `--lr-theme-z-index-${layer}`),
   ...Array.from({ length: 8 }, (_, index) => `--lr-theme-color-chart-${index + 1}`),
-  ...[
-    'black',
-    'red',
-    'green',
-    'yellow',
-    'blue',
-    'magenta',
-    'cyan',
-    'white',
-    'bright-black',
-    'bright-red',
-    'bright-green',
-    'bright-yellow',
-    'bright-blue',
-    'bright-magenta',
-    'bright-cyan',
-    'bright-white',
-  ].map((slot) => `--lr-theme-terminal-color-${slot}`),
+  // Foregrounds and backgrounds are two independent ramps: one shared set made a background slot
+  // the same colour as the text drawn on it.
+  ...TERMINAL_SLOTS.map((slot) => `--lr-theme-terminal-color-${slot}`),
+  ...TERMINAL_SLOTS.map((slot) => `--lr-theme-terminal-bg-${slot}`),
 ];
 
 it('declares every documented theme input in theme.css', async () => {
@@ -322,11 +404,19 @@ it('declares every documented theme input in theme.css', async () => {
 it('names only tokens that tokens.styles.ts actually reads', async () => {
   const { text } = await loadThemeCss();
   const declared = [...text.matchAll(/^\s*(--lr-theme-[\w-]+):/gm)].map((match) => match[1]);
-  const unused = declared.filter((name) => !tokens.cssText.includes(`var(${name},`));
+  // Both component layers count. The semantic grid's 45 inputs are read by `palette`, not by
+  // `tokens`, so checking only the latter would report every one of them as dead.
+  const read = `${tokens.cssText}\n${palette.cssText}`;
+  const unused = declared.filter((name) => !read.includes(`var(${name},`));
   expect(unused.join('\n')).to.equal('');
 });
 
 it('leaves every bridged token at its built-in value when theme.css is imported', async () => {
+  // The chart and terminal entries below are SPOT SAMPLES of two generated ramps
+  // (scripts/generate-chart-palette.mjs, scripts/generate-terminal-palette.mjs). Both generators
+  // write theme.css AND tokens.styles.ts's fallbacks in one pass, which is what actually prevents
+  // the drift this test detects; regenerating the ramp therefore means updating these four values
+  // from the generator's output, not hand-picking new ones.
   const expected: Array<[name: string, value: string]> = [
     ['--lr-icon-button-size', '2.5rem'],
     ['--lr-focus-ring-width', '2px'],
@@ -347,10 +437,19 @@ it('leaves every bridged token at its built-in value when theme.css is imported'
     ['--lr-layer-base', '0'],
     ['--lr-layer-dropdown', '900'],
     ['--lr-layer-toast', '9999'],
-    ['--lr-color-chart-1', '#8250df'],
-    ['--lr-color-chart-8', '#c9d1d9'],
-    ['--lr-terminal-color-red', '#cf222e'],
-    ['--lr-terminal-color-bright-white', '#d0d7de'],
+    ['--lr-color-chart-1', '#0e006e'],
+    ['--lr-color-chart-8', '#8f81d3'],
+    ['--lr-terminal-color-red', '#901114'],
+    ['--lr-terminal-color-bright-white', '#6c6c6c'],
+    // The background ramp is generated in the same pass and drifts the same way, so it needs its
+    // own samples; the foreground entries above cannot detect a background gone stale.
+    ['--lr-terminal-bg-red', '#d2918a'],
+    ['--lr-terminal-bg-bright-white', '#d1d1d1'],
+    // Elevation, sampled at both ends. A custom property's computed value is its token stream after
+    // var() substitution, not a box-shadow serialization, so the shadow COLOUR appears here already
+    // resolved from the --lr-shadow-color triplet.
+    ['--lr-shadow-xs', '0 1px 2px rgb(0 0 0 / 0.12)'],
+    ['--lr-shadow-xl', '0 12px 32px rgb(0 0 0 / 0.22)'],
   ];
   await withThemeCss(async () => {
     const failures: string[] = [];
@@ -369,8 +468,8 @@ it('mirrors every dark-mode fallback value in theme.css .lr-dark', async () => {
     // visible symptom.
     expect(await probeVarUnder('lr-dark', '--lr-color-surface')).to.equal('#1a1a1a');
     expect(await probeVarUnder('lr-dark', '--lr-color-surface-raised')).to.equal('#22272e');
-    expect(await probeVarUnder('lr-dark', '--lr-color-chart-1')).to.equal('#b58cff');
-    expect(await probeVarUnder('lr-dark', '--lr-color-chart-8')).to.equal('#e4e7eb');
+    expect(await probeVarUnder('lr-dark', '--lr-color-chart-1')).to.equal('#bbff94');
+    expect(await probeVarUnder('lr-dark', '--lr-color-chart-8')).to.equal('#555de3');
   });
 });
 
@@ -405,4 +504,100 @@ it('changes no bridged token value anywhere when theme.css is imported', async (
     themed.get(name) === baseline.get(name) ? [] : [`${name}: ${themed.get(name)} !== ${baseline.get(name)}`],
   );
   expect(failures.join('\n')).to.equal('');
+});
+
+// --- elevation ------------------------------------------------------------------------
+//
+// One shadow token served the whole library, so a chip, a menu and a dialog all sat at the same
+// depth and elevation carried no information. Five steps only mean anything while they stay five
+// DIFFERENT values, which is a rendered-result question: each step chains through its own
+// --lr-theme-shadow-* input and a shared --lr-shadow-color triplet, and a broken link anywhere in
+// that chain collapses a step to the empty string — invisibly to every other gate.
+
+const ELEVATION_TOKENS = ELEVATION_STEPS.map((step) => `--lr-shadow-${step}`);
+
+it('resolves the elevation scale to five distinct, non-empty steps', async () => {
+  const values = await probeVarsUnder('lr-light', ELEVATION_TOKENS);
+  const resolved = ELEVATION_TOKENS.map((name) => values.get(name)!);
+
+  const empty = ELEVATION_TOKENS.filter((name) => values.get(name) === '');
+  expect(empty.join('\n'), 'elevation steps that resolve to nothing').to.equal('');
+  expect(new Set(resolved).size, `collapsed elevation steps: ${resolved.join(' | ')}`).to.equal(
+    ELEVATION_TOKENS.length,
+  );
+
+  // --lr-shadow is the alias every pre-8.0.0 site still uses; it must stay the mid step.
+  const alias = await probeVarsUnder('lr-light', ['--lr-shadow', '--lr-shadow-m']);
+  expect(alias.get('--lr-shadow'), 'the --lr-shadow alias must resolve to a real value').to.not.equal('');
+  expect(alias.get('--lr-shadow')).to.equal(alias.get('--lr-shadow-m'));
+});
+
+it('keeps the elevation scale distinct, and visibly heavier than light, under a dark ancestor', async () => {
+  await withThemeCss(async () => {
+    const dark = await probeVarsUnder('lr-dark', ELEVATION_TOKENS);
+    const light = await probeVarsUnder('lr-light', ELEVATION_TOKENS);
+    const resolved = ELEVATION_TOKENS.map((name) => dark.get(name)!);
+
+    const empty = ELEVATION_TOKENS.filter((name) => dark.get(name) === '');
+    expect(empty.join('\n'), 'dark elevation steps that resolve to nothing').to.equal('');
+    expect(new Set(resolved).size, `collapsed dark elevation steps: ${resolved.join(' | ')}`).to.equal(
+      ELEVATION_TOKENS.length,
+    );
+
+    // Proves the dark ancestor actually reached the host. A step left at its light value would
+    // satisfy the distinctness check above while rendering a shadow nobody can see on a dark page.
+    const unchanged = ELEVATION_TOKENS.filter((name) => dark.get(name) === light.get(name));
+    expect(unchanged.join('\n'), 'elevation steps that did not darken').to.equal('');
+  });
+});
+
+// --- terminal palette, dark mode ------------------------------------------------------
+//
+// The 16-colour ANSI ramp once existed only in the light block, so a dark terminal drew light-mode
+// colours on a near-black panel. `black` and `white` also shared one hex per mode, which made
+// `ESC[30;47m` — black on white — text painted in its own background colour.
+
+it('resolves the terminal ramp to its dark values under a dark ancestor', async () => {
+  const sample = ['black', 'white', 'red', 'green', 'blue', 'bright-white'].map(
+    (slot) => `--lr-terminal-color-${slot}`,
+  );
+  await withThemeCss(async () => {
+    const dark = await probeVarsUnder('lr-dark', sample);
+    const light = await probeVarsUnder('lr-light', sample);
+
+    const empty = sample.filter((name) => dark.get(name) === '');
+    expect(empty.join('\n'), 'terminal slots that resolve to nothing in dark').to.equal('');
+    // Compared at runtime rather than against hardcoded hexes, so regenerating the ramp
+    // (scripts/generate-terminal-palette.mjs) cannot make this test lie.
+    const stuck = sample.filter((name) => dark.get(name) === light.get(name));
+    expect(stuck.join('\n'), 'terminal slots still showing their light value under .lr-dark').to.equal('');
+  });
+});
+
+it('keeps terminal black and white apart in both modes, and backgrounds off the foreground ramp', async () => {
+  const names = [
+    '--lr-terminal-color-black',
+    '--lr-terminal-color-white',
+    '--lr-terminal-bg-black',
+    '--lr-terminal-bg-white',
+  ];
+  await withThemeCss(async () => {
+    const failures: string[] = [];
+    for (const mode of ['lr-light', 'lr-dark']) {
+      const values = await probeVarsUnder(mode, names);
+      const [foregroundBlack, foregroundWhite, backgroundBlack, backgroundWhite] = names.map((n) => values.get(n)!);
+      // ESC[30;47m: black text on a white cell. One shared hex per slot made that invisible.
+      if (foregroundBlack === foregroundWhite) {
+        failures.push(`${mode}: terminal black and white foregrounds are both ${foregroundBlack}`);
+      }
+      // The background ramp is generated separately so a cell never matches the glyph drawn on it.
+      if (backgroundBlack === foregroundBlack) {
+        failures.push(`${mode}: bg-black equals color-black (${backgroundBlack})`);
+      }
+      if (backgroundWhite === foregroundWhite) {
+        failures.push(`${mode}: bg-white equals color-white (${backgroundWhite})`);
+      }
+    }
+    expect(failures.join('\n')).to.equal('');
+  });
 });

@@ -84,6 +84,10 @@ export const styles = css`
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
     color: var(--lr-color-text);
   }
+  [part='actions-trigger']:active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-text);
+  }
   [part='actions-trigger']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

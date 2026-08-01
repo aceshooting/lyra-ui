@@ -29,7 +29,8 @@ the accessibility tree; the status then uses `aria-label` or the localized "Load
 **CSS parts:** `base` (the `role="status"` wrapper), `spinner` (the animated ring; `aria-hidden`),
 `label` (the default-slot wrapper).
 
-**Themeable custom properties:** `--lr-spinner-size` (default `--lr-size-1-25rem` — both
-dimensions), `--lr-spinner-track-width` (default `--lr-border-width-medium` — ring thickness),
-`--lr-spinner-duration` (default `800ms` — one full rotation; the animation is dropped entirely
-under `prefers-reduced-motion: reduce`). The ring colors come from `--lr-color-brand`/`-brand-quiet`.
+**Themeable custom properties:** `--lr-spinner-size` (default `var(--lr-size-1-25rem)` — both
+dimensions), `--lr-spinner-track-width` (default `var(--lr-border-width-medium)` — ring thickness),
+`--lr-spinner-duration` (default `var(--lr-transition-ambient)` — the duration *and* easing of one
+full rotation; the animation is dropped entirely under `prefers-reduced-motion: reduce`). The ring
+colors come from `--lr-color-brand`/`-brand-quiet`.

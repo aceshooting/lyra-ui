@@ -43,6 +43,11 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
     color: var(--lr-color-text);
   }
+  :where([part='up-button']):active:where(:not(:disabled)),
+  :where([part='down-button']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-text);
+  }
   [part='up-button']:focus-visible,
   [part='down-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -129,6 +134,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* no-pressed-state: [part='comment'] is a textarea. A press on a text field is answered by the
+     field taking focus and raising its focus ring, which is both stronger than any momentary
+     pressed tint and outlasts the mouse button; a second, competing flash on mousedown would only
+     add noise to the one interaction that already has unambiguous feedback. */
   :where([part='comment']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
@@ -146,8 +155,17 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
+  /* Hover/press are a background mix, never filter: brightness(). brightness() multiplies every
+     channel, so it lightens a dark fill and darkens a light one only by accident, does nothing at
+     all to a pure white or pure black brand color, and -- because filter applies to the whole
+     subtree -- dims the label along with the fill. Mixing the resting fill toward
+     --lr-color-mix-partner (which tracks the text color) always moves, always in the direction the
+     surface needs, and leaves the label alone. */
   [part='submit-button']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='submit-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='submit-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

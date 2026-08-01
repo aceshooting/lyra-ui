@@ -1,14 +1,14 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { StripHostTitleAttribute } from '../../../internal/strip-host-title.js';
 import { styles } from './result-card.styles.js';
 
 class LyraResultCardBase extends LyraElement {}
 
-/** Visual chrome for `<lr-result-card>`'s root, mirroring `lr-card`'s/`lr-agent-run`'s
- *  `appearance` vocabulary. */
-export type ResultCardAppearance = 'card' | 'plain';
+/** Visual chrome for `<lr-result-card>`'s root — the library's shared container-frame vocabulary. */
+export type ResultCardAppearance = LyraFrame;
 
 /**
  * `<lr-result-card>` — a small bordered card shell for a custom tool-result
@@ -68,15 +68,15 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
   /** Tighter header/body padding for dense contexts (a card rendered as a row in a transcript or
    *  result list) -- same convention as `lr-agent-run`'s `compact`. Defaults to `false`, i.e. the
    *  full card padding. Purely a density knob: the border and background stay, so use
-   *  `appearance="plain"` instead to drop the chrome entirely. */
+   *  `frame="plain"` instead to drop the chrome entirely. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
-  /** Visual chrome, mirroring `lr-card`'s/`lr-agent-run`'s `appearance` vocabulary. `'card'` (the
-   *  default) keeps the bordered, filled box. `'plain'` removes the border, background, and corner
-   *  radius, so a card nested inside a host frame that already draws a border (e.g.
-   *  `<lr-tool-result-view>`'s own chrome) doesn't double it. `plain` wins over `compact` when
-   *  both are set (nothing left to tighten). */
-  @property({ reflect: true }) appearance: ResultCardAppearance = 'card';
+  /** Visual chrome, in the library's shared container-frame vocabulary (the same `frame` property
+   *  `<lr-agent-run>` carries). `'card'` (the default) keeps the bordered, filled box. `'plain'`
+   *  removes the border, background, and corner radius, so a card nested inside a host container
+   *  that already draws a border (e.g. `<lr-tool-result-view>`'s own chrome) doesn't double it.
+   *  `plain` wins over `compact` when both are set (nothing left to tighten). */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   // See `<lr-widget>`'s identical `hasActionsSlot` -- a `[part]` wrapper
   // always contains a literal `<slot>` child regardless of assigned

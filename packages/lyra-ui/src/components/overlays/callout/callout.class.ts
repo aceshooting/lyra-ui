@@ -1,10 +1,16 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
+import { variants } from '../../../internal/variants.styles.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { styles } from './callout.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
-export type CalloutVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+/** The library's one semantic-tone vocabulary. */
+export type CalloutVariant = LyraVariant;
+/** The library's one size ladder, in either spelling. */
+export type CalloutSize = LyraSize;
 export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
 
 /**
@@ -31,19 +37,35 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
  * @csspart close-icon - The close button's visible "×" glyph, independent of `close-button`'s hit
  *   target size -- shrinks in the `inline` variant while the hit target stays full-size.
  * @cssprop [--lr-callout-background=var(--lr-color-surface)] - The callout surface's background.
- *   Each non-neutral `variant` sets it to that variant's `-quiet` tint.
+ *   Each non-neutral `variant` sets it to that variant's quiet fill from the shared semantic grid.
  * @cssprop [--lr-callout-border=var(--lr-color-border)] - The callout surface's border color. Each
- *   non-neutral `variant` sets it to that variant's loud color.
+ *   non-neutral `variant` sets it to that variant's loud fill.
  * @cssprop [--lr-callout-color=var(--lr-color-text)] - The callout's text color. Each non-neutral
- *   `variant` sets it to that variant's loud color.
+ *   `variant` sets it to that variant's loud fill.
  * @cssprop [--lr-callout-close-hover-bg=var(--lr-color-brand-quiet)] - The close button's hover
  *   background, decoupled from `--lr-callout-background` so a consumer can retint one without
  *   affecting the other (e.g. keeping the hover fill visibly distinct from a `variant="brand"`
  *   panel, which shares the same default token).
+ * @cssprop [--lr-callout-font-size=var(--lr-form-control-font-size)] - The callout's text size.
+ *   Each `size` tier sets it from the library's shared size ladder.
+ * @cssprop [--lr-callout-padding=var(--lr-form-control-padding-inline)] - Padding of the panel, on
+ *   both axes. Each `size` tier sets it from the shared ladder's inline-padding knob: a panel's
+ *   block rhythm is generous like a control's inline padding, not tight like its block padding
+ *   (which exists to fit text inside a fixed control height). `inline` removes it entirely.
+ * @cssprop [--lr-callout-gap=var(--lr-space-s)] - Space between the icon, the content, and the
+ *   close action. Deliberately does not vary by `size`: it separates three adjacent boxes rather
+ *   than setting the panel's density, and shrinking it at the small tiers only crowds them.
  */
 export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, variants, sizes, styles];
   @property({ reflect: true }) variant: CalloutVariant = 'neutral';
+
+  /** Visual density, on the library's shared ladder. Both spellings of every tier are accepted
+   *  (`s`/`small`, `m`/`medium`, `l`/`large`), so markup migrated from Web Awesome or Shoelace
+   *  needs no attribute rewrite. `m` reproduces the panel this component had before `size`
+   *  existed. */
+  @property({ reflect: true }) size: CalloutSize = 'm';
+
   @property() heading = '';
   @property({ type: Boolean, reflect: true }) closable = false;
   @property({ type: Boolean, reflect: true }) inline = false;

@@ -72,6 +72,14 @@ export const styles = css`
   [part='row'][data-active] {
     background: var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet));
   }
+  /* The row itself is the click target (it selects a span; the nested [part='toggle'] only expands
+     it), so it earns a pressed state. Mixing the hovered tint a further --lr-color-mix-active toward
+     --lr-color-mix-partner keeps it a distinctly deeper step than hover in both themes. It must stay
+     after the [data-active] rule: the two selectors are both (0,2,0), so source order alone decides
+     whether pressing the already-selected row shows any feedback at all. */
+  [part='row']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
 
   /* text-quiet's contrast ratio against brand-quiet lands at ~4.25:1 -- just under the WCAG AA
      4.5:1 floor for normal-size text -- even though it comfortably passes against the plain
@@ -146,6 +154,13 @@ export const styles = css`
   }
   [part='toggle']:hover {
     background: var(--lr-trace-tree-toggle-hover-bg, var(--lr-color-brand-quiet));
+  }
+  [part='toggle']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-trace-tree-toggle-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

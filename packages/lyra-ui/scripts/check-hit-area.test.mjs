@@ -206,4 +206,44 @@ for (const [name, classSource] of [
   assert.deepEqual(result.errors, [], `${name} is not a blanket 40px false positive`);
 }
 
+
+// --- multi-token part names and nested conditionals ---------------------------------------------
+// State belongs in the part name (`part="base base-error"`) because `::part(base)[state]` never
+// matches. The checker used to demand a separately-sized rule for EVERY token of such a name, and
+// to read a nested conditional's CONDITION literals as part names -- so a component doing exactly
+// what the contract requires was reported for a `[part='error']` rule that must never exist.
+
+const statePartClass = `
+  render() {
+    const part =
+      this.status === 'success' ? 'base base-success' : this.status === 'error' ? 'base base-error' : 'base';
+    return html\`<button part=\${part} type="button"></button>\`;
+  }
+`;
+const sizedBaseOnly = `
+  [part='base'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+  }
+`;
+
+assert.deepEqual(
+  checkStaticHitAreaFixture(statePartClass, [sizedBaseOnly]).errors,
+  [],
+  'a multi-token part name is one element: the floor met by `base` covers `base base-error` too',
+);
+
+const unsizedBase = `
+  [part='base'] { display: inline-flex; }
+`;
+const unsizedErrors = checkStaticHitAreaFixture(statePartClass, [unsizedBase]).errors;
+assert.ok(
+  unsizedErrors.length > 0,
+  'a multi-token part name whose tokens are all unsized is still reported',
+);
+assert.ok(
+  unsizedErrors.every((error) => !/part='error'/.test(error)),
+  "a nested conditional's condition literals are never treated as part names",
+);
+
 console.log('Hit-area checker self-tests passed.');

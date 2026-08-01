@@ -48,7 +48,9 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Resting chrome: a node card sits on the canvas, so it takes a card step -- s rather than xs
+       because it has to separate from a patterned/gridded canvas background, not a flat panel. */
+    box-shadow: var(--lr-shadow-s);
   }
   /* Density escape -- same convention as lr-source-card's compact. The tuned values sit behind
      inline var() fallbacks (rather than a :host declaration, which every instance re-declares and
@@ -83,7 +85,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-2xs);
     font-size: var(--lr-font-size-xs);
-    color: var(--lr-color-text-muted);
+    color: var(--lr-color-text-quiet);
   }
   .status-dot {
     inline-size: var(--lr-size-0-5rem);
@@ -130,12 +132,16 @@ export const styles = css`
   [part='toolbar']:has(::slotted(*)) {
     opacity: 0;
   }
+  /* no-pressed-state: the toolbar is not a target -- it is the container the consumer slots the
+     node's own action buttons into, and hovering/focusing the CARD is what reveals it. Pressing it
+     means pressing one of those buttons, which carries its own pressed state; a pressed treatment
+     on the container would fire for every one of them and say nothing about which. */
   :host(:hover) [part='toolbar'],
   :host(:focus-within) [part='toolbar'] {
     opacity: 1;
   }
   .card[data-pulse] {
-    animation: lr-flow-node-pulse var(--lr-transition-ambient) ease-in-out infinite;
+    animation: lr-flow-node-pulse var(--lr-duration-ambient) var(--lr-easing-emphasized) infinite;
   }
   :host([status='running']) .card {
     border-color: var(--lr-flow-node-running-border, var(--lr-color-brand));

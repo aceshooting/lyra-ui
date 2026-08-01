@@ -19,7 +19,12 @@ export const styles = css`
        every default here sits below that transitive height, so the floor is dead until a consumer
        raises it -- the unset render is byte-identical at every tier. lr-input/lr-select/lr-combobox
        all already expose this knob; lr-date-input previously had none. */
-    --lr-date-input-control-min-height: var(--lr-size-2-5rem);
+    /* The floor's six values come from the ONE shared form-control ladder
+       (internal/sizes.styles.ts) rather than a private copy, so retuning
+       --lr-theme-form-control-height-* moves this control and every sibling field together. That
+       ladder matches both spellings of every tier, which is what makes size="small" resolve here
+       without a per-component alias rule. */
+    --lr-date-input-control-min-height: var(--lr-form-control-height);
     /* --lr-date-input-control-height is intentionally NOT declared here. It is a consumer-facing
        exact-height escape hatch consumed only through the var() fallbacks on [part='input-wrapper']
        below; declaring any value for it (even 'auto') would make those fallback arms unreachable
@@ -29,40 +34,44 @@ export const styles = css`
        is safe -- the toggle keeps its own --lr-icon-button-size floor and simply overflows a short
        row rather than shrinking (WCAG 2.2 SC 2.5.8 preserved). */
   }
+  :host([pill]) {
+    --lr-date-input-radius: var(--lr-radius-pill);
+  }
   /* Each tier reuses lr-input's own 2xs-xl padding/font-size scale (input.styles.ts), so the two
      read as equally dense at a given size -- density parity, not height parity; see the
-     min-height comment above for why a same-size pair does not end up the same height.
+     min-height comment above for why a same-size pair does not end up the same height. That scale
+     is deliberately NOT the shared form-control padding ladder: it is a tier denser at every step,
+     and moving onto the shared values would change this row's rendered height at l and xl.
      'm' is the default and stays on the :host block above instead of a same-shaped rule here,
-     so the unset-size render is untouched by this scale. */
+     so the unset-size render is untouched by this scale. Both spellings of a tier match, for the
+     same reason sizes.styles.ts emits both -- the height ladder accepts size="small", so a row
+     whose density silently ignored it would be worse than one that never accepted it. */
   :host([size='2xs']) {
     --lr-date-input-padding-block: var(--lr-size-0-0625rem);
     --lr-date-input-padding-inline: var(--lr-space-2xs);
     --lr-date-input-font-size: var(--lr-font-size-2xs);
-    --lr-date-input-control-min-height: var(--lr-size-1-25rem);
   }
   :host([size='xs']) {
     --lr-date-input-padding-block: var(--lr-size-0-125rem);
     --lr-date-input-padding-inline: var(--lr-space-xs);
     --lr-date-input-font-size: var(--lr-font-size-xs);
-    --lr-date-input-control-min-height: var(--lr-size-1-5rem);
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-date-input-padding-block: var(--lr-space-xs);
     --lr-date-input-padding-inline: var(--lr-space-xs);
     --lr-date-input-font-size: var(--lr-font-size-sm);
-    --lr-date-input-control-min-height: var(--lr-size-1-875rem);
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-date-input-padding-block: var(--lr-space-m);
     --lr-date-input-padding-inline: var(--lr-space-m);
     --lr-date-input-font-size: var(--lr-font-size-lg);
-    --lr-date-input-control-min-height: var(--lr-size-3rem);
   }
   :host([size='xl']) {
     --lr-date-input-padding-block: var(--lr-space-l);
     --lr-date-input-padding-inline: var(--lr-space-l);
     --lr-date-input-font-size: var(--lr-font-size-xl);
-    --lr-date-input-control-min-height: var(--lr-size-3-5rem);
   }
   [part='form-control-label'] {
     display: block;
@@ -152,11 +161,20 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     line-height: var(--lr-line-height-none);
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
   }
   [part='clear-button']:hover,
   [part='expand-button']:hover {
     color: var(--lr-color-text);
+  }
+  /* Hover has already spent the colour step (quiet -> full text), so the press is a background pad
+     mixed off the row's own --lr-color-surface fill: it moves toward the text colour, so it darkens
+     a light field and lightens a dark one instead of depending on which way a filter happens to
+     push. */
+  [part='clear-button']:active,
+  [part='expand-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-radius: var(--lr-date-input-radius);
   }
   [part='clear-button']:focus-visible,
   [part='expand-button']:focus-visible {

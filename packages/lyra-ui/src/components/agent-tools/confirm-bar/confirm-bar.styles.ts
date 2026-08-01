@@ -19,7 +19,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }
-  :host([tone='danger']) [part='base'] {
+  :host([variant='danger']) [part='base'] {
     border-color: var(--lr-color-danger);
   }
   [part='heading'] {
@@ -82,7 +82,7 @@ export const styles = css`
   /* Compact presentation -- everything below is gated on [compact] and every value routes through a
      --lr-confirm-bar-compact-* custom property with today's-equivalent fallback, so an unset
      consumer renders byte-identically to the default card presentation. Declared last so it wins
-     the equal-specificity race against the :host([tone='danger']) [part='base'] border rule above. */
+     the equal-specificity race against the :host([variant='danger']) [part='base'] border rule above. */
   :host([compact]) {
     display: inline-flex;
     /* The container query above measures *this* host. A compact bar exists precisely to be dropped

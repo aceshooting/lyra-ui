@@ -3,12 +3,12 @@ import './confirm-bar.js';
 import type { LyraConfirmBar } from './confirm-bar.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
 
-it('defaults to decision null, pending null, tone neutral, and shows Deny before Approve', async () => {
+it('defaults to decision null, pending null, variant neutral, and shows Deny before Approve', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   expect(el.decision).to.equal(null);
   expect(el.pending).to.equal(null);
   expect(el.hasAttribute('pending')).to.be.false;
-  expect(el.tone).to.equal('neutral');
+  expect(el.variant).to.equal('neutral');
   const buttons = [...el.shadowRoot!.querySelectorAll('lr-button')];
   const denyIndex = buttons.findIndex((b) => b.getAttribute('part') === 'deny-button');
   const approveIndex = buttons.findIndex((b) => b.getAttribute('part') === 'approve-button');
@@ -166,9 +166,9 @@ it('routes the decided-state status color through --lr-confirm-bar-approved-colo
   );
 });
 
-it('reflects tone to a host attribute', async () => {
-  const el = (await fixture(html`<lr-confirm-bar tone="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
-  expect(el.getAttribute('tone')).to.equal('danger');
+it('reflects variant to a host attribute', async () => {
+  const el = (await fixture(html`<lr-confirm-bar variant="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
+  expect(el.getAttribute('variant')).to.equal('danger');
 });
 
 it('is role="group" labeled by the heading', async () => {
@@ -206,9 +206,9 @@ describe('compact', () => {
     expect(el.hasAttribute('compact')).to.be.true;
   });
 
-  it('renders as an inline row with no border, padding or background, even with tone="danger"', async () => {
+  it('renders as an inline row with no border, padding or background, even with variant="danger"', async () => {
     const el = (await fixture(
-      html`<lr-confirm-bar compact tone="danger" tool-name="delete_row"></lr-confirm-bar>`,
+      html`<lr-confirm-bar compact variant="danger" tool-name="delete_row"></lr-confirm-bar>`,
     )) as LyraConfirmBar;
 
     // The host itself must flip too -- restyling only [part='base'] still leaves a
@@ -298,7 +298,7 @@ describe('compact', () => {
   });
 
   it('leaves the default presentation byte-identical when compact is unset', async () => {
-    const el = (await fixture(html`<lr-confirm-bar tone="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
+    const el = (await fixture(html`<lr-confirm-bar variant="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
     expect(getComputedStyle(el).display).to.equal('block');
     expect(getComputedStyle(el).containerType).to.equal('inline-size');
 
@@ -311,7 +311,7 @@ describe('compact', () => {
 
   it('is accessible in the compact presentation, before and after a decision', async () => {
     const el = (await fixture(
-      html`<lr-confirm-bar compact tone="danger" tool-name="delete_row" .args=${{ id: 7 }}></lr-confirm-bar>`,
+      html`<lr-confirm-bar compact variant="danger" tool-name="delete_row" .args=${{ id: 7 }}></lr-confirm-bar>`,
     )) as LyraConfirmBar;
     await expect(el).to.be.accessible();
 
@@ -372,7 +372,7 @@ describe('localization', () => {
 });
 
 describe('deny/approve as lr-button', () => {
-  it('renders Deny/Approve as lr-button with variant="neutral"/"brand" ("danger" under tone="danger")', async () => {
+  it('renders Deny/Approve as lr-button with variant="neutral"/"brand" ("danger" under variant="danger")', async () => {
     const neutral = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     const deny = neutral.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
     const approve = neutral.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
@@ -383,10 +383,10 @@ describe('deny/approve as lr-button', () => {
     expect(deny.type).to.equal('button');
     expect(approve.type).to.equal('button');
 
-    const danger = (await fixture(html`<lr-confirm-bar tone="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
+    const danger = (await fixture(html`<lr-confirm-bar variant="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
     const dangerApprove = danger.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
     expect(dangerApprove.variant).to.equal('danger');
-    // Deny is not tone-sensitive -- stays neutral even under tone="danger".
+    // Deny is not variant-sensitive -- stays neutral even under variant="danger".
     const dangerDeny = danger.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
     expect(dangerDeny.variant).to.equal('neutral');
   });
@@ -410,15 +410,17 @@ describe('deny/approve as lr-button', () => {
     const approveBase = (
       el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton
     ).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    // Deny (variant="neutral", lr-button's own default appearance="filled"): --lr-color-surface /
-    // --lr-color-text, the same pairing todays hand-rolled CSS hardcoded before the swap.
-    expect(getComputedStyle(denyBase).backgroundColor).to.equal(toRgb(resolve('--lr-color-surface')));
+    // Deny is variant="neutral" appearance="outlined": no fill, so it recedes against whatever
+    // surface the bar sits on, with --lr-color-text for the label. Both are declared on the button
+    // rather than inherited -- when lr-button's default appearance changed to "accent" in 8.0.0, a
+    // bar relying on the default would have turned its SAFE action into the loud one.
+    expect(getComputedStyle(denyBase).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
     expect(getComputedStyle(denyBase).color).to.equal(toRgb(resolve('--lr-color-text')));
     // Approve (variant="brand"): --lr-color-brand / --lr-color-on-brand.
     expect(getComputedStyle(approveBase).backgroundColor).to.equal(toRgb(resolve('--lr-color-brand')));
     expect(getComputedStyle(approveBase).color).to.equal(toRgb(resolve('--lr-color-on-brand')));
 
-    const danger = (await fixture(html`<lr-confirm-bar tone="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
+    const danger = (await fixture(html`<lr-confirm-bar variant="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
     await danger.updateComplete;
     const dangerResolve = (token: string) => getComputedStyle(danger).getPropertyValue(token).trim();
     const dangerApproveBase = (

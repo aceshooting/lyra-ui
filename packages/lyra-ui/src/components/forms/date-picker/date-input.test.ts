@@ -1,5 +1,6 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './date-input.js';
+import '../button/button.js';
 import type { LyraDateInput } from './date-input.js';
 import type { LyraDatePicker } from './date-picker.js';
 import { styles } from './date-input.styles.js';
@@ -1450,6 +1451,41 @@ describe('control min-height knob and exact-height hatch', () => {
     }
   });
 
+  it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+    const pairs: ReadonlyArray<readonly [string, string]> = [
+      ['small', 's'],
+      ['medium', 'm'],
+      ['large', 'l'],
+    ];
+    for (const [alias, step] of pairs) {
+      const aliasEl = (await fixture(html`<lr-date-input size=${alias}></lr-date-input>`)) as LyraDateInput;
+      const stepEl = (await fixture(html`<lr-date-input size=${step}></lr-date-input>`)) as LyraDateInput;
+      await aliasEl.updateComplete;
+      await stepEl.updateComplete;
+      expect(getComputedStyle(wrapper(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
+        getComputedStyle(wrapper(stepEl)).minBlockSize,
+      );
+      expect(getComputedStyle(wrapper(aliasEl)).paddingBlockStart, `padding for ${alias}`).to.equal(
+        getComputedStyle(wrapper(stepEl)).paddingBlockStart,
+      );
+      expect(wrapper(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
+        wrapper(stepEl).getBoundingClientRect().height,
+      );
+    }
+  });
+
+  it('rounds the input row to a pill without a ::part() rule', async () => {
+    const plain = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+    const pill = (await fixture(html`<lr-date-input pill></lr-date-input>`)) as LyraDateInput;
+    await plain.updateComplete;
+    await pill.updateComplete;
+    expect(pill.pill).to.be.true;
+    expect(pill.getAttribute('pill')).to.equal('');
+    expect(
+      Number.parseFloat(getComputedStyle(wrapper(pill)).borderStartStartRadius),
+    ).to.be.greaterThan(Number.parseFloat(getComputedStyle(wrapper(plain)).borderStartStartRadius));
+  });
+
   it('leaves the rendered row height byte-identical when the height hatch is unset', async () => {
     const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
     await el.updateComplete;
@@ -1820,4 +1856,156 @@ it('tracks slotted hint and error content through slotchange', async () => {
   await el.updateComplete;
   expect(flags.hasHintSlot).to.be.false;
   expect(flags.hasErrorSlot).to.be.false;
+});
+
+describe('lr-date-input implicit form submission', () => {
+  const field = (el: LyraDateInput): HTMLInputElement =>
+    el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const enterOn = (el: LyraDateInput, init: KeyboardEventInit = {}) =>
+    field(el).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
+    );
+
+  it('submits the ancestor form when Enter is pressed in the date field', async () => {
+    const form = (await fixture(html`
+      <form><lr-date-input name="when" value="2026-07-15"></lr-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-date-input') as LyraDateInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el);
+    expect(submits).to.equal(1);
+  });
+
+  it('commits typed text before submitting, so the form carries what the user typed', async () => {
+    const form = (await fixture(html`
+      <form><lr-date-input name="when"></lr-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-date-input') as LyraDateInput;
+    await el.updateComplete;
+    let submittedValue: string | null = null;
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submittedValue = new FormData(form).get('when') as string | null;
+    });
+    field(el).value = '2026-07-15';
+    enterOn(el);
+    expect(el.value, 'the typed text committed').to.equal('2026-07-15');
+    expect(submittedValue, 'the submitted entry is the freshly typed date').to.equal('2026-07-15');
+  });
+
+  it('emits input/change exactly once for an Enter commit, even when a native change follows', async () => {
+    const el = (await fixture(html`<lr-date-input name="when"></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    let changes = 0;
+    let inputs = 0;
+    el.addEventListener('change', () => { changes += 1; });
+    el.addEventListener('input', () => { inputs += 1; });
+    field(el).value = '2026-07-15';
+    enterOn(el);
+    // A real browser fires the native `change` for the same keystroke, right after the keydown.
+    field(el).dispatchEvent(new Event('change', { bubbles: true }));
+    expect(changes, 'one change for one commit').to.equal(1);
+    expect(inputs, 'one input for one commit').to.equal(1);
+
+    // ...and again after the re-render has replaced the typed text with the formatted display
+    // text: blurring then fires a native `change` carrying that reformatted string, which is the
+    // same commit wearing different clothes.
+    await el.updateComplete;
+    field(el).dispatchEvent(new Event('change', { bubbles: true }));
+    expect(changes, 'the reformatted follow-up change is still the same commit').to.equal(1);
+    expect(inputs).to.equal(1);
+  });
+
+  it('still commits a genuinely new value typed after an Enter commit', async () => {
+    const el = (await fixture(html`<lr-date-input name="when"></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    let changes = 0;
+    el.addEventListener('change', () => { changes += 1; });
+    field(el).value = '2026-07-15';
+    enterOn(el);
+    await el.updateComplete;
+
+    field(el).value = '2026-08-01';
+    field(el).dispatchEvent(
+      new KeyboardEvent('keydown', { key: '1', bubbles: true, composed: true, cancelable: true }),
+    );
+    field(el).dispatchEvent(new Event('change', { bubbles: true }));
+    expect(el.value, 'the new date committed').to.equal('2026-08-01');
+    expect(changes, 'two distinct commits emit two change events').to.equal(2);
+  });
+
+  it('does not re-emit change when focus leaves after an Enter commit', async () => {
+    // Enter, then Tab away without typing: the keystroke that moves focus must not re-open the
+    // commit path, and the blur `change` the browser fires carries the reformatted display text.
+    const el = (await fixture(html`<lr-date-input name="when"></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    let changes = 0;
+    el.addEventListener('change', () => { changes += 1; });
+    field(el).value = '2026-07-15';
+    enterOn(el);
+    await el.updateComplete;
+
+    field(el).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, composed: true, cancelable: true }),
+    );
+    field(el).dispatchEvent(new Event('change', { bubbles: true }));
+    expect(changes, 'one commit, one change').to.equal(1);
+    expect(el.value).to.equal('2026-07-15');
+  });
+
+  it('submits through an lr-button submitter, which requestSubmit() itself would reject', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-date-input name="when" value="2026-07-15"></lr-date-input>
+        <lr-button type="submit" name="action" value="save">Go</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-date-input') as LyraDateInput;
+    await el.updateComplete;
+    let submits = 0;
+    let submitterName = '';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+      submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
+    });
+    enterOn(el);
+    expect(submits).to.equal(1);
+    expect(submitterName, 'the lr-button was the submitter').to.equal('action');
+  });
+
+  it('never submits while readonly, on a held modifier, during IME composition, or after a veto', async () => {
+    const form = (await fixture(html`
+      <form><lr-date-input name="when" value="2026-07-15"></lr-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-date-input') as LyraDateInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el, { shiftKey: true });
+    enterOn(el, { ctrlKey: true });
+    enterOn(el, { altKey: true });
+    enterOn(el, { metaKey: true });
+    enterOn(el, { isComposing: true });
+    expect(submits).to.equal(0);
+
+    // Capture on the host runs before the internal input's own listener.
+    const veto = (e: Event): void => e.preventDefault();
+    el.addEventListener('keydown', veto, true);
+    enterOn(el);
+    el.removeEventListener('keydown', veto, true);
+    expect(submits).to.equal(0);
+
+    el.readonly = true;
+    await el.updateComplete;
+    enterOn(el);
+    expect(submits, 'a readonly field never submits').to.equal(0);
+
+    el.readonly = false;
+    await el.updateComplete;
+    enterOn(el);
+    expect(submits, 'a bare Enter still submits').to.equal(1);
+  });
 });

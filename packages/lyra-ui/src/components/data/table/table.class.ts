@@ -2324,11 +2324,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         ${hasPagination
           ? html`<lr-pagination
               part="pagination"
+              format="compact"
               .page=${this.page}
               .pageSize=${this.normalizedPageSize}
-              .totalItems=${this.matchingTotalItems}
+              .total=${this.matchingTotalItems}
               .strings=${this.strings}
-              hide-summary
               @lr-page-change=${this.onPaginationChange}
             ></lr-pagination>`
           : nothing}

@@ -130,6 +130,18 @@ export const styles = css`
     background: var(--lr-widget-view-toggle-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-widget-view-toggle-hover-color, var(--lr-color-text));
   }
+  /* Whatever fill hover resolved to -- including a consumer's own
+     --lr-widget-view-toggle-hover-bg -- mixed further toward --lr-color-mix-partner, so a retinted
+     hover keeps a pressed step that is deeper than it rather than one pinned to the stock token.
+     Same zeroed specificity as the hover rule above, for the same reason. */
+  :where([part="view-toggle"]):active {
+    background: color-mix(
+      in oklab,
+      var(--lr-widget-view-toggle-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    color: var(--lr-widget-view-toggle-hover-color, var(--lr-color-text));
+  }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor without a :host declaration shadowing that. ::part(view-toggle)[aria-pressed='true'] is
      invalid CSS (an attribute selector cannot follow ::part), so recoloring the pressed toggle used
@@ -167,6 +179,15 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  [part="collapse-button"]:active,
+  [part="fullscreen-button"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    color: var(--lr-color-brand);
+  }
   [part="collapse-button"]:focus-visible,
   [part="fullscreen-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -202,7 +223,9 @@ export const styles = css`
     position: fixed;
     inset: var(--lr-widget-fullscreen-inset, 0);
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 1);
-    box-shadow: var(--lr-shadow);
+    /* Top of the scale: fullscreen is a modal layer sitting above [part="backdrop"], and it is the
+       only state in which this widget stops being resting chrome. */
+    box-shadow: var(--lr-shadow-xl);
   }
   :host([fullscreen]) [part="body"] {
     overflow: auto;

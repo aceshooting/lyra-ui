@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './switch.js';
 import type { LyraSwitch } from './switch.js';
-import { styles } from './switch.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 
 it('exposes namespaced geometry custom properties', async () => {
@@ -19,9 +19,59 @@ it('exposes namespaced geometry custom properties', async () => {
   expect(computed.getPropertyValue('--thumb-offset').trim()).to.equal('');
 });
 
-it('gives the switch control hover feedback matching the keyboard focus-visible cue', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='base'\]:hover\s*\{[^}]*filter:/);
+it('gives the switch track hover and press feedback matching the keyboard focus-visible cue', async () => {
+  // Rendered results, not stylesheet text. This shipped as a filter: brightness() lift on
+  // [part='base'] -- which faded the LABEL along with the track, because a filter applies to the
+  // whole subtree -- and a source match could not tell the difference.
+  // --lr-transition-fast is zeroed: the track transitions its background, so reading
+  // getComputedStyle one frame after the pointer arrives would otherwise catch the INTERPOLATED
+  // colour -- still the resting one at t=0 -- and report a working hover as broken.
+  const el = (await fixture(
+    html`<lr-switch style="--lr-transition-fast: 0s">Label</lr-switch>`,
+  )) as LyraSwitch;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const restingTrack = getComputedStyle(track).backgroundColor;
+  const restingLabel = getComputedStyle(label).color;
+  const rect = base.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  try {
+    await sendMouse({ type: 'move', position });
+    const hovered = getComputedStyle(track).backgroundColor;
+    expect(hovered, 'hovered track vs resting').to.not.equal(restingTrack);
+    expect(getComputedStyle(base).filter, 'no subtree filter').to.equal('none');
+    expect(getComputedStyle(label).color, 'the label must not move with the track').to.equal(restingLabel);
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(track).backgroundColor, 'pressed vs hovered').to.not.equal(hovered);
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
+it('moves the checked track under the pointer too, away from its own brand fill', async () => {
+  const el = (await fixture(
+    html`<lr-switch checked style="--lr-transition-fast: 0s">Label</lr-switch>`,
+  )) as LyraSwitch;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  const resting = getComputedStyle(track).backgroundColor;
+  const rect = base.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(track).backgroundColor, 'checked hover vs checked resting').to.not.equal(resting);
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('forwards host click() to the internal control, toggling checked', async () => {
@@ -111,6 +161,100 @@ it('toggles and emits lr-change with detail.checked on click', async () => {
   ev = await oneEvent(el, 'lr-change');
   expect(ev.detail.checked).to.be.false;
   expect(el.checked).to.be.false;
+});
+
+describe('native form event contract', () => {
+  /** Records the ordered event-name sequence a single activation produces on the host, so the
+   *  assertions below can prove both that the native pair fires *and* that it fires in the
+   *  native order (`input` before `change`) with the `lr-change` compatibility alias last --
+   *  matching `<lr-checkbox>`'s established sequence. */
+  const recordSequence = (el: LyraSwitch): string[] => {
+    const seen: string[] = [];
+    for (const name of ['input', 'change', 'lr-change']) {
+      el.addEventListener(name, (event) => seen.push(event.type));
+    }
+    return seen;
+  };
+
+  it('emits input, change and lr-change in that order on a pointer click', async () => {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const seen = recordSequence(el);
+
+    base.click();
+    expect(seen).to.deep.equal(['input', 'change', 'lr-change']);
+    expect(el.checked).to.be.true;
+  });
+
+  it('emits input and change on Space and on Enter keydown', async () => {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const seen = recordSequence(el);
+
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    expect(seen).to.deep.equal(['input', 'change', 'lr-change']);
+
+    base.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    );
+    expect(seen).to.deep.equal(['input', 'change', 'lr-change', 'input', 'change', 'lr-change']);
+    expect(el.checked).to.be.false;
+  });
+
+  it('emits input and change from the programmatic host click() activation path', async () => {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+    const seen = recordSequence(el);
+
+    el.click();
+    expect(seen).to.deep.equal(['input', 'change', 'lr-change']);
+  });
+
+  it('makes input and change bubbling, composed and non-cancelable', async () => {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+
+    const inputPromise = oneEvent(el, 'input');
+    el.click();
+    const inputEvent = await inputPromise;
+    expect(inputEvent.bubbles).to.be.true;
+    expect(inputEvent.composed).to.be.true;
+    expect(inputEvent.cancelable).to.be.false;
+
+    const changePromise = oneEvent(el, 'change');
+    el.click();
+    const changeEvent = await changePromise;
+    expect(changeEvent.bubbles).to.be.true;
+    expect(changeEvent.composed).to.be.true;
+    expect(changeEvent.cancelable).to.be.false;
+  });
+
+  it('emits neither input nor change while disabled, nor for a programmatic .checked assignment', async () => {
+    const el = (await fixture(html`<lr-switch disabled>Label</lr-switch>`)) as LyraSwitch;
+    const seen = recordSequence(el);
+
+    el.click();
+    el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }),
+    );
+    expect(seen).to.deep.equal([]);
+
+    el.disabled = false;
+    await el.updateComplete;
+    el.checked = true;
+    await el.updateComplete;
+    expect(seen).to.deep.equal([]);
+  });
+
+  it('emits neither input nor change from form.reset() or session-state restoration', async () => {
+    const form = (await fixture(html`
+      <form><lr-switch name="notify" checked>Notify me</lr-switch></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-switch') as LyraSwitch;
+    const seen = recordSequence(el);
+
+    form.reset();
+    el.formStateRestoreCallback('checked');
+    expect(seen).to.deep.equal([]);
+  });
 });
 
 it('toggles on Space and Enter keydown', async () => {
@@ -647,5 +791,206 @@ describe('ElementInternals fallback (lr-switch)', () => {
         expect(internals.checkValidity()).to.be.true;
       },
     );
+  });
+});
+
+describe('size', () => {
+  async function trackOf(markup: unknown): Promise<DOMRect> {
+    const el = (await fixture(markup as never)) as LyraSwitch;
+    await el.updateComplete;
+    const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+    return track.getBoundingClientRect();
+  }
+
+  it('defaults to the "m" tier and reflects it', async () => {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+  });
+
+  it('grows the rendered track from size="s" to size="l"', async () => {
+    const small = await trackOf(html`<lr-switch size="s">Label</lr-switch>`);
+    const large = await trackOf(html`<lr-switch size="l">Label</lr-switch>`);
+    expect(large.width).to.be.greaterThan(small.width);
+    expect(large.height).to.be.greaterThan(small.height);
+  });
+
+  it('renders "small"/"large" at the same geometry as "s"/"l"', async () => {
+    const s = await trackOf(html`<lr-switch size="s">Label</lr-switch>`);
+    const small = await trackOf(html`<lr-switch size="small">Label</lr-switch>`);
+    const l = await trackOf(html`<lr-switch size="l">Label</lr-switch>`);
+    const large = await trackOf(html`<lr-switch size="large">Label</lr-switch>`);
+    expect(small.width).to.be.closeTo(s.width, 0.5);
+    expect(large.width).to.be.closeTo(l.width, 0.5);
+  });
+
+  it('keeps the thumb inside the track and travelling its full width at every tier', async () => {
+    let previous = 0;
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+      const el = (await fixture(html`<lr-switch size=${size} checked>Label</lr-switch>`)) as LyraSwitch;
+      await el.updateComplete;
+      const track = (el.shadowRoot!.querySelector('[part="track"]') as HTMLElement).getBoundingClientRect();
+      const thumb = (el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement).getBoundingClientRect();
+      expect(thumb.height, `${size} thumb fits`).to.be.lessThan(track.height);
+      expect(thumb.right, `${size} thumb stays inside`).to.be.at.most(track.right + 0.5);
+      expect(track.width, `${size} track grows with the tier`).to.be.greaterThan(previous);
+      previous = track.width;
+    }
+  });
+
+  it('is accessible at a non-default tier', async () => {
+    const el = (await fixture(html`<lr-switch size="l">Label</lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
+// where either is missing -- an unguarded assertion fails on WebKit rather than skipping.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('lr-switch validity custom states', () => {
+  it('publishes required/optional and valid/invalid from the first render', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-switch required>Notifications</lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    const optional = (await fixture(html`<lr-switch>Notifications</lr-switch>`)) as LyraSwitch;
+    await optional.updateComplete;
+    expect(optional.matches(':state(optional)')).to.be.true;
+    expect(optional.matches(':state(valid)')).to.be.true;
+  });
+
+  it('withholds user-valid/user-invalid until the user has actually interacted', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-switch required>Notifications</lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'pristine required must not read as an error').to.be
+      .false;
+
+    el.click();
+    await el.updateComplete;
+    expect(el.checked).to.be.true;
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)'), 'user-valid after a real toggle').to.be.true;
+  });
+
+  it('counts a reportValidity() call -- what a submit attempt runs -- as interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-switch required>Notifications</lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)')).to.be.true;
+  });
+
+  it('goes pristine again after a form reset', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-switch name="notify" required>Notifications</lr-switch></form>`,
+    );
+    const el = form.querySelector('lr-switch') as LyraSwitch;
+    await el.updateComplete;
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)')).to.be.true;
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'reset returns the control to pristine').to.be.false;
+    expect(el.matches(':state(invalid)')).to.be.true;
+  });
+});
+
+describe('lr-switch setCustomValidity()', () => {
+  it('blocks form submission and becomes the validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-switch name="notify" value="yes" checked>Notify me</lr-switch></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-switch') as LyraSwitch;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    form.requestSubmit();
+    expect(submits, 'an otherwise-valid switch submits').to.equal(1);
+
+    el.setCustomValidity('Notifications are disabled for your plan');
+    expect(el.validationMessage).to.equal('Notifications are disabled for your plan');
+    expect(el.validity.customError, 'customError').to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(1);
+  });
+
+  it('survives an intrinsic revalidation', async () => {
+    const el = (await fixture(html`<lr-switch required>Agree</lr-switch>`)) as LyraSwitch;
+    el.setCustomValidity('Server says no');
+    el.checked = true; // clears valueMissing and re-runs the intrinsic recompute
+    expect(el.validity.valueMissing, 'valueMissing cleared').to.be.false;
+    expect(el.validity.customError, 'custom error survives the recompute').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // Native `setCustomValidity()` is sticky: `form.reset()` restores values, never the custom
+  // error, which only another `setCustomValidity('')` clears. Matching that here.
+  it('keeps the custom error across a form reset', async () => {
+    const form = (await fixture(html`
+      <form><lr-switch name="notify">Notify me</lr-switch></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-switch') as LyraSwitch;
+    el.setCustomValidity('Server says no');
+    form.reset();
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`<lr-switch required>Agree</lr-switch>`)) as LyraSwitch;
+    el.setCustomValidity('Server says no');
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'custom error cleared').to.be.false;
+    expect(
+      el.validity.valueMissing,
+      'an empty custom error must not force a still-unchecked required control valid',
+    ).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.not.equal('');
+    el.checked = true;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('drives the valid/invalid custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-switch>Notify me</lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before').to.be.true;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while a custom error is set').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
   });
 });

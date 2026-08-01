@@ -6,22 +6,53 @@
 - **Class** `LyraNumberInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/input/number-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-number-input`
 
-A migration-friendly numeric alias of `lr-input` — a subclass whose constructor and
-`connectedCallback()` both set `type = 'number'`. It adds no API of its own; everything below is
-`lr-input`'s surface, unchanged.
+A numeric field with the complete `lr-input` form, validation and native-editing contract, plus its
+own increment/decrement stepper pair. A subclass whose constructor and `connectedCallback()` both
+set `type = 'number'`; apart from the two properties below, everything is `lr-input`'s surface,
+unchanged.
 
-**Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
+**Properties:** `size` (`2xs`…`xl`), `appearance`, `pill`, `autofocus`, `placeholder`, `readonly`,
+`label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
 `autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), `enterKeyHint` (`enterkeyhint`), and
-`min`/`max`/`step` (the native numeric constraint validation). `clearable`, `passwordVisible`
-(`password-visible`), and `minlength`/`maxlength`/`pattern` are inherited but inert — see gotchas.
+`min`/`max`/`step` (the native numeric constraint validation), all inherited from `lr-input` with
+identical meaning and identical defaults. `clearable` (and its `with-clear` spelling),
+`passwordVisible` (`password-visible`), and `minlength`/`maxlength`/`pattern` are inherited but
+inert — see gotchas.
+
+Two properties are this component's own:
+
+- `steppers: boolean = true` (attribute `steppers`, reflected) — renders the increment/decrement
+  pair inside the control row. It **defaults to `true`**, so it needs a custom converter to switch
+  off: write `steppers="false"` as an attribute, or `.steppers=${false}` as a property binding.
+  A bare `?steppers=${false}` (or removing the attribute in a framework that models booleans by
+  presence) cannot reset a `true`-defaulting property.
+- `withoutSpinButtons: boolean = true` (attribute `without-spin-buttons`, reflected) — the same
+  knob `lr-input` exposes, but **defaulted the other way here** (`lr-input`'s default is `false`),
+  so the component's own steppers are never shown alongside the browser's built-in spin buttons.
+  It is `true`-defaulting too, so `without-spin-buttons="false"` / `.withoutSpinButtons=${false}`
+  brings the native pair back. The two properties are independent: `steppers="false"
+  without-spin-buttons="false"` returns the field to a plain native `<input type="number">`.
+
+Each stepper drives the inherited `stepUp()`/`stepDown()`, so `min`/`max` clamping and decimal
+handling stay the platform's. Unlike those silent methods, a stepper **click** is a user edit and
+emits the same `input`/`lr-input`/`change`/`lr-change` sequence typing would — but only when the
+value actually moved, so clicking at a bound is inert rather than emitting a no-op edit. Clicking
+also returns focus to the field.
+
+The steppers are deliberately outside the tab order (`tabindex="-1"`), like the native spin buttons
+they stand in for: a keyboard user steps the value with ArrowUp/ArrowDown on the field itself, which
+the native `<input type="number">` already handles, so making them tab stops would add two stops per
+field for no new capability. Each carries a localized accessible name and the shared
+`--lr-icon-button-size` hit-area floor in both axes, and both are disabled while the field is
+`disabled` or `readonly`.
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
@@ -29,18 +60,41 @@ input), and `lr-clear` (inherited, never fired here).
 
 **Slots:** `label`, `hint`, `error`, `start`, `end`.
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `start`, `end`,
+**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `stepper-down` and
+`stepper-up` (the two stepper buttons, rendered only while `steppers` is set; they sit side by side
+between the built-in clear/password actions and the `end` adornment, and each one rotates the shared
+chevron glyph — `[part="stepper-up"] > svg` a quarter turn one way, `[part="stepper-down"] > svg` the
+other — so a consumer replacing the button chrome keeps the same up/down orientation), `start`, `end`,
 `hint`, `error`, plus the inherited `clear-button` and `password-toggle`, neither of which this
-alias ever renders.
+component ever renders.
 
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
-`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, and `--lr-input-radius` (all
-but `--lr-input-control-height` swap per `size`; that one stays undeclared until you pin an exact
-row height, and `--lr-input-gap`/`--lr-input-radius` — like `--lr-button-gap`/`-radius` — never
-vary by `size` at all).
+`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
+`--lr-input-fill`, and `--lr-input-border-color` (all
+but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` tier;
+`--lr-input-control-height` stays undeclared until you pin an exact
+row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
+and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder). The steppers take their font size from `--lr-input-font-size` and their
+minimum box from `--lr-icon-button-size`.
+
+```html
+<lr-number-input label="Quantity" min="0" max="99" step="1" value="1"></lr-number-input>
+<!-- A bare numeric field: no steppers, and the browser's own spinners back: -->
+<lr-number-input label="Quantity" steppers="false" without-spin-buttons="false"></lr-number-input>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/input/number-input.js';
+</script>
+```
 
 **Known gotchas:**
+- **`steppers` and `without-spin-buttons` both default to `true` here.** Only the literal string
+  `"false"` parses as `false`; every other attribute value — including an empty one, and including
+  *removing* the attribute — parses as `true`. So `?attr=${false}` and a removed attribute cannot
+  reset either; use the `="false"` attribute value or the `.prop=${false}` property binding. The
+  two also serialize differently when reflected: `steppers` is absent while `true` and appears as
+  `steppers="false"` while `false`, whereas `without-spin-buttons` appears empty while `true` and is
+  absent while `false`. Assert the rendered result, not the attribute's presence.
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
   `type="text"`/`"search"`. `password-visible`/`password-toggle` are likewise inert, since the
   toggle only renders for `type="password"`. `minlength`/`maxlength`/`pattern` are inert too — the

@@ -32,6 +32,17 @@ export const styles = css`
   [part='base']:hover {
     background: color-mix(in srgb, var(--lr-entity-chip-color, var(--lr-color-brand)) 16%, var(--lr-entity-chip-bg, var(--lr-color-brand-quiet)));
   }
+  /* Pressed is the hovered fill pushed one further step toward --lr-color-mix-partner, not a larger
+     dose of the chip's own accent: the accent is already at 16% here, and stepping it to
+     --lr-color-mix-active (22%) would be a six-point move nobody can see. Mixing toward the partner
+     moves the fill regardless of which per-entity accent the chip was given. */
+  [part='base']:active {
+    background: color-mix(
+      in oklab,
+      color-mix(in srgb, var(--lr-entity-chip-color, var(--lr-color-brand)) 16%, var(--lr-entity-chip-bg, var(--lr-color-brand-quiet))),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -45,7 +56,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    box-shadow: var(--lr-shadow-m);
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-1-4);
     color: var(--lr-color-text);

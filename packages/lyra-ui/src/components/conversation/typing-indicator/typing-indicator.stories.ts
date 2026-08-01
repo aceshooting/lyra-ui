@@ -29,10 +29,19 @@ export const Variants: Story = {
 };
 
 export const Sizes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`size` takes the library-wide ladder. A presence cue only has three usefully distinguishable sizes, so `2xs`/`xs`/`s`/`small` render compact, `m`/`medium` is the default, and `l`/`large`/`xl` render roomy.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:flex; gap:2rem; align-items:center;">
-      <lr-typing-indicator size="sm"></lr-typing-indicator>
-      <lr-typing-indicator size="md"></lr-typing-indicator>
+      <lr-typing-indicator size="s"></lr-typing-indicator>
+      <lr-typing-indicator size="m"></lr-typing-indicator>
+      <lr-typing-indicator size="l"></lr-typing-indicator>
     </div>
   `,
 };

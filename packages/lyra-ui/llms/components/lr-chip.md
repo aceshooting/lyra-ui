@@ -14,22 +14,36 @@
 
 ## `lr-chip` / `lr-chip-group`
 
-A small, content-agnostic pill for a short label: a tag, an active-filter/scope indicator, etc.
+A small, content-agnostic surface for a short label: a tag, an active-filter/scope indicator, etc.
 Distinct from `<lr-attachment-chip>` (specifically file-shaped, with a thumbnail/size/upload-
 progress) — this pair carries no domain assumptions at all. `<lr-chip>` is a controlled component:
 clicking its remove (×) button only fires `lr-remove` — the chip never removes itself from the DOM
 on its own interaction, the same contract `<lr-attachment-chip>`/`<lr-conversation-item>`
 already follow.
 
+**Two breaks in 8.0.0.** `tone` is now `variant`, with no alias — one concept, one spelling,
+library-wide. And a chip is **no longer a pill by default**: `--lr-chip-radius` used to be
+`var(--lr-radius-pill)` unconditionally, is now `var(--lr-radius)` (a rounded rectangle), and the
+fully-rounded treatment moved behind the new opt-in `pill` boolean. Existing markup keeps its corner
+radius only if you add `pill`, or set `--lr-chip-radius: var(--lr-radius-pill)` once at the app
+level. `<lr-badge>`/`<lr-tag>` made the identical shape change, with the identical `pill` opt-in.
+
 ### `lr-chip`
 
 **Properties:**
 - `size: '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — standard visual-density
   scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions
-- `tone: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected — tints the
-  whole pill using a loud-color-on-quiet-tint convention; `neutral` has no dedicated token pair, so
-  it falls back to a plain bordered-surface look)
+- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
+  **renamed from `tone` in 8.0.0, with no alias** (see above). `<lr-badge>`, `<lr-callout>` and
+  `<lr-toast-item>` all already spelled it `variant`. The exported `ChipTone` *type* name is kept
+  alongside `ChipVariant`, so an existing `import type { ChipTone }` keeps resolving to the same five
+  values. It tints the whole surface using the loud-color-on-quiet-tint convention: background is the
+  variant's quiet fill, text/icon its loud fill, both read from the shared semantic grid. `neutral`
+  deliberately opts out of that grid and falls back to a plain bordered-surface look.
 - `removable: boolean = false` (reflected — shows the remove (×) button)
+- `pill: boolean = false` (reflected) — **new in 8.0.0.** Fully-rounded ends instead of the default
+  rounded rectangle; the same property `<lr-badge>`/`<lr-tag>` carry. Since it defaults to `false`,
+  `pill="false"` is not a way to switch it off — remove the attribute, or assign `.pill = false`.
 - `selected: boolean = false` (reflected) — current value for opt-in toggle/pressed mode. Once
   toggle mode is active, a separate native `[part='toggle-button']` owns focus, Enter/Space/click
   activation, and explicit `"true"`/`"false"` `aria-pressed`; `[part='base']` remains a container
@@ -66,9 +80,12 @@ entirely while empty), `label` (non-interactive wrapper around the default slot)
 remove (×) affordance, only rendered while `removable`)
 
 **Themeable custom properties:** `--lr-chip-accent`, `--lr-chip-bg`, `--lr-chip-border`
-(component-local trio swapped per `tone` rather than repeating background/color/border per part per
-tone; default `var(--lr-color-text)` / `var(--lr-color-surface)` / `var(--lr-color-border)` —
-mirrors the same accent/bg/border vocabulary `<lr-tool-call-chip>`/`<lr-attachment-chip>` use),
+(component-local trio swapped per `variant` rather than repeating background/color/border per part
+per variant; default `var(--lr-color-text)` / `var(--lr-color-surface)` / `var(--lr-color-border)` —
+mirrors the same accent/bg/border vocabulary `<lr-tool-call-chip>`/`<lr-attachment-chip>` use. One
+rule covers all four non-neutral variants, because the shared variants sheet has already re-pointed
+`--lr-color-fill-loud`/`--lr-color-fill-quiet` at the active variant's row of the semantic grid —
+the chip reads those generic slots and never names a variant, and sets its border `transparent`),
 `--lr-chip-pressed-border` (border color while pressed/selected — falls back to
 `--lr-chip-accent`), `--lr-chip-pressed-bg` (background color while pressed/selected — falls
 back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
@@ -76,12 +93,13 @@ back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-p
 `:host([size])` rule, so setting one directly on the element overrides that step of the scale; the
 `m` defaults are `--lr-font-size-sm` / `--lr-size-0-25rem` / `--lr-space-s` / `--lr-space-xs` /
 `--lr-font-size-sm`), the height pair `--lr-chip-min-height` / `--lr-chip-height` (below),
-`--lr-chip-radius` (default `--lr-radius-pill`, the corner radius of both `[part='base']` and
-`[part='remove-button']` — retunable without a `::part()` rule, and unlike the density quintet
-above does not vary by `size`; the same `--lr-button-radius` pattern),
+`--lr-chip-radius` (default `var(--lr-radius)`; `pill` raises it to `var(--lr-radius-pill)`) — the
+corner radius of both `[part='base']` and `[part='remove-button']`, kept in sync so retuning one
+retunes both, retunable without a `::part()` rule, and unlike the density quintet above it does not
+vary by `size`; the same `--lr-button-radius` pattern —
 plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
-`--lr-color-brand`/`-brand-quiet`, `--lr-color-success`/`-success-quiet`,
-`--lr-color-warning`/`-warning-quiet`, `--lr-color-danger`/`-danger-quiet`,
+`--lr-color-fill-loud`/`-fill-quiet`, `--lr-color-surface`, `--lr-color-border`, `--lr-color-text`,
+`--lr-color-mix-active`,
 `--lr-icon-button-size`, `--lr-focus-ring-width`, `--lr-focus-ring-color`,
 `--lr-focus-ring-offset`, `--lr-transition-fast`).
 
@@ -154,9 +172,9 @@ library-wide `--lr-color-text` token. Left unset, rendering is unchanged. Otherw
 ```html
 <lr-chip-group max-visible="3">
   <lr-chip removable value="draft">Draft</lr-chip>
-  <lr-chip tone="success" removable value="reviewed">Reviewed</lr-chip>
-  <lr-chip tone="warning">Needs input</lr-chip>
-  <lr-chip tone="danger">Blocked</lr-chip>
+  <lr-chip variant="success" removable value="reviewed">Reviewed</lr-chip>
+  <lr-chip variant="warning">Needs input</lr-chip>
+  <lr-chip variant="danger" pill>Blocked</lr-chip>
 </lr-chip-group>
 <script type="module">
   const group = document.querySelector('lr-chip-group');

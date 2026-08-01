@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './image-comparer.js';
 import type { LyraImageComparer } from './image-comparer.js';
-import { styles } from './image-comparer.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('renders before and after slots with a positioned divider', async () => {
   const el = (await fixture(html`
@@ -105,9 +105,39 @@ it('forwards host focus(), blur(), and click() to the range handle', async () =>
   expect(clicks).to.equal(1);
 });
 
-it('gives the drag handle a hover state matching its focus-visible affordance', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='handle'\]:hover/);
+it('tints the divider on hover and deepens it while the drag handle is pressed', async () => {
+  // [part="handle"] is a 1%-opacity full-bleed range input, so it has nothing of its own to tint:
+  // both interaction states reach the divider through a :has() indirection. That is exactly the
+  // shape that silently never matches if the selector drifts, and a stylesheet-text assertion
+  // cannot tell a matching selector from a dead one -- so this reads the rendered colour.
+  const el = (await fixture(html`
+    <lr-image-comparer aria-label="Compare images">
+      <div slot="before" style="inline-size: 200px; block-size: 120px">Before</div>
+      <div slot="after" style="inline-size: 200px; block-size: 120px">After</div>
+    </lr-image-comparer>
+  `)) as LyraImageComparer;
+  await el.updateComplete;
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+
+  const resting = getComputedStyle(divider).backgroundColor;
+  const rect = handle.getBoundingClientRect();
+  expect(rect.width, 'the handle covers the comparer, so it is what the pointer lands on').to.be.greaterThan(0);
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    const hovered = getComputedStyle(divider).backgroundColor;
+    expect(hovered, 'hovering the invisible handle tints the visible divider').to.not.equal(resting);
+
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(divider).backgroundColor;
+    expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
+    await sendMouse({ type: 'up' });
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('is accessible', async () => {

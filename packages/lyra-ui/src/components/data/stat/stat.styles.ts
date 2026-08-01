@@ -30,7 +30,17 @@ export const styles = css`
      !important. */
   :where([part='base'][href]):hover {
     border-color: var(--lr-color-brand);
-    box-shadow: var(--lr-shadow-sm);
+    /* One step of lift on an otherwise flat resting card -- a hovered tile is still resting chrome,
+       not an overlay, so it stops at the card step. */
+    box-shadow: var(--lr-shadow-s);
+  }
+  /* The pressed tile keeps the hovered border and lift and adds a fill: a shadow change alone is
+     nearly invisible on a card this large, and the tint mixes toward --lr-color-mix-partner (the
+     text colour) so it darkens a light theme and lightens a dark one rather than always doing one. */
+  :where([part='base'][href]):active {
+    border-color: var(--lr-color-brand);
+    box-shadow: var(--lr-shadow-s);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='base'][href]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -86,6 +96,11 @@ export const styles = css`
      focus ring. :where() zeroes the extra [tabindex] attribute selector's specificity
      contribution, leaving only :hover itself so a consumer's ::part(value):hover /
      ::part(row-value):hover override wins without needing !important. */
+  /* no-pressed-state: the [tabindex] on these parts exists only so a keyboard user can reach the
+     same native title tooltip a mouse user gets by hovering -- there is no click handler and
+     nothing to activate, which is exactly what cursor: help says. A value part inside a linked
+     stat never takes the tabindex at all (the anchor owns the interaction, and its own pressed
+     state above covers it). */
   :where([part='value'][tabindex]):hover,
   :where([part='row-value'][tabindex]):hover {
     color: var(--lr-color-brand);
@@ -129,6 +144,9 @@ export const styles = css`
   [part='trend'][data-polarity='bad'] {
     color: var(--lr-stat-trend-bad-color, var(--lr-color-danger));
     background: var(--lr-stat-trend-bad-bg, color-mix(in srgb, var(--lr-color-danger) 8%, transparent));
+  }
+  :host([variant='brand']) [part='value'] {
+    color: var(--lr-stat-value-brand-color, var(--lr-color-brand));
   }
   :host([variant='success']) [part='value'] {
     color: var(--lr-stat-value-success-color, var(--lr-color-success));
@@ -229,7 +247,7 @@ export const styles = css`
      a chrome-less stat sits at its content height so it can be dropped inline in prose or a
      toolbar. The emphasis accent edge is card chrome too and goes with the rest of the border;
      the emphasis brand value tint is unaffected and still applies. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -239,12 +257,26 @@ export const styles = css`
   /* The card's interactive affordance is a border-color shift plus a lift shadow, and neither
      reads on a border-less, background-less box — a linked plain stat underlines its headline
      value instead. The :focus-visible outline above needs no border and still applies as-is. */
-  :host([appearance='plain']) [part='base'][href]:hover {
+  :host([frame='plain']) [part='base'][href]:hover {
     box-shadow: none;
   }
-  :host([appearance='plain']) [part='base'][href]:hover [part='value'],
-  :host([appearance='plain']) [part='base'][href]:focus-visible [part='value'] {
+  /* The pressed card treatment has to be stripped for the same reason the hovered one is: a lift
+     shadow with no surface under it reads as a smudge, and a fill would put back exactly the box
+     frame="plain" exists to remove. The thicker underline below carries the press instead. */
+  :host([frame='plain']) [part='base'][href]:active {
+    box-shadow: none;
+    background: transparent;
+  }
+  :host([frame='plain']) [part='base'][href]:hover [part='value'],
+  :host([frame='plain']) [part='base'][href]:focus-visible [part='value'] {
     text-decoration: underline;
+  }
+  /* Pressed thickens the same underline rather than recolouring the value -- the value already
+     carries the status variant's colour, and overriding it for the length of a click would read as
+     the stat changing state. */
+  :host([frame='plain']) [part='base'][href]:active [part='value'] {
+    text-decoration: underline;
+    text-decoration-thickness: var(--lr-border-width-medium);
   }
   :host([orientation='horizontal']) [part='base'] {
     flex-direction: row;

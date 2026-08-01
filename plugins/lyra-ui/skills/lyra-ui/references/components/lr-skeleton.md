@@ -34,8 +34,8 @@ Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
 **CSS parts:** `base`
 
 **Themeable custom properties:** `--lr-skeleton-w`, `--lr-skeleton-h` (set/cleared by the
-`width`/`height` properties; default `100%` / `1em`) and shared `--lr-transition-ambient` for
-the pulse/sheen timing.
+`width`/`height` properties; defaults `100%` / `var(--lr-size-1em)`) and the shared
+`--lr-transition-ambient` (default `1.8s ease-in-out`) for the pulse/sheen timing.
 
 **Optional peer deps:** none.
 

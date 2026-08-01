@@ -34,6 +34,13 @@ string>` is the current per-key validation-message state.
 fired only on an actual change), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
 (`detail: { itemId }`, `skippable` only).
 
+**Methods:** `setCustomValidity(message)` sets or clears a form-level error no per-key rule can
+express ("this item was already annotated by someone else"): a non-empty message raises
+`customError` and blocks submission, `''` restores the rubric's own computed validity — unanswered
+required keys, and any key with an unsupported `type`, still hold it invalid. It is independent of
+the per-key `errors` map, which stays a read-out of this rubric's own field rules, so a message set
+here is never attributed to one key. It survives every `value`/`keys` write and a form reset.
+
 **CSS parts:** `base` (the outer wrapper), `field` (one key's wrapper), `label`, `description`,
 `scale` (the rendered score/category/comment control's wrapper), `error` (a field-level validation
 message), `footer`, `submit`, `skip` (only rendered when `skippable`), `empty` (shown when `keys` has

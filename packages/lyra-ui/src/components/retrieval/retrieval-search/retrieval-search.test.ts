@@ -16,6 +16,59 @@ function submitButtonOf(el: LyraRetrievalSearch): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="submit"]') as HTMLButtonElement;
 }
 
+/**
+ * A browser's real :hover/:active pseudo-classes track the physical pointer and cannot be forced
+ * from a dispatched event, so a state rule's value is read off the shipped rule and then *painted*
+ * on a probe inside the component's own shadow root. Every assertion below is on the rendered
+ * result of that paint -- the custom properties resolve exactly as they do in production -- never on
+ * stylesheet text.
+ */
+function declaredValue(root: ShadowRoot, selector: string, property: string): string {
+  const normalize = (text: string) => text.replace(/"/g, "'").replace(/\s+/g, ' ').trim();
+  for (const sheet of root.adoptedStyleSheets ?? []) {
+    for (const rule of sheet.cssRules) {
+      if (rule instanceof CSSStyleRule && normalize(rule.selectorText) === normalize(selector)) {
+        const value = rule.style.getPropertyValue(property);
+        if (value) return value;
+      }
+    }
+  }
+  return '';
+}
+
+function declaredBackground(root: ShadowRoot, selector: string): string {
+  return declaredValue(root, selector, 'background') || declaredValue(root, selector, 'background-color');
+}
+
+function paintProbe(root: ShadowRoot) {
+  const measure = (apply: (probe: HTMLElement) => void, read: (style: CSSStyleDeclaration) => string) => {
+    const probe = document.createElement('span');
+    apply(probe);
+    root.appendChild(probe);
+    const computed = read(getComputedStyle(probe));
+    probe.remove();
+    return computed;
+  };
+  return {
+    /* The zero-percent wrapper forces resting, hovered and pressed through one serialization, so the
+       channel distances compared in the tests are apples-to-apples even though the resting value is
+       a plain token and the two state values are mixes. */
+    render: (value: string) =>
+      measure(
+        (probe) => (probe.style.backgroundColor = `color-mix(in oklab, ${value}, transparent 0%)`),
+        (style) => style.backgroundColor,
+      ),
+    renderFilter: (value: string) => measure((probe) => (probe.style.filter = value), (style) => style.filter),
+  };
+}
+
+function channelDistance(left: string, right: string): number {
+  const channels = (color: string) => (color.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+  const a = channels(left);
+  const b = channels(right);
+  return Math.hypot(...a.map((value, index) => value - (b[index] ?? 0)));
+}
+
 function enterKeydown(init: KeyboardEventInit = {}): KeyboardEvent {
   return new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...init });
 }
@@ -423,31 +476,39 @@ describe('320px allocation', () => {
   });
 });
 
-describe('hover treatment', () => {
-  it('lifts the submit button on hover through the shared hover-brightness token', async () => {
+describe('hover and pressed treatment', () => {
+  it('mixes the submit fill toward the shared partner on hover and further again on press', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search query="inverter fault codes"></lr-retrieval-search>`,
     )) as LyraRetrievalSearch;
     await el.updateComplete;
-    const normalize = (text: string) => text.replace(/"/g, "'");
-    let declared = '';
-    for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-      for (const rule of sheet.cssRules) {
-        if (
-          rule instanceof CSSStyleRule &&
-          normalize(rule.selectorText) === normalize("[part='submit']:hover") &&
-          rule.style.filter
-        ) {
-          declared = rule.style.filter;
-        }
-      }
-    }
-    const probe = document.createElement('span');
-    probe.style.filter = declared;
-    el.shadowRoot!.appendChild(probe);
-    const computed = getComputedStyle(probe).filter;
-    probe.remove();
-    expect(computed).to.equal('brightness(1.08)');
+    const root = el.shadowRoot!;
+    const probes = paintProbe(root);
+
+    const resting = probes.render(declaredBackground(root, "[part='submit']"));
+    const hovered = probes.render(declaredBackground(root, "[part='submit']:hover"));
+    const pressed = probes.render(declaredBackground(root, "[part='submit']:active"));
+
+    // Every reading is a real painted colour, and all three come back in the same serialization, so
+    // the distances below compare like with like.
+    expect(hovered).to.not.equal(resting);
+    expect(pressed).to.not.equal(resting);
+    // The defect this guards: a pressed rule byte-identical to the hover one.
+    expect(pressed).to.not.equal(hovered);
+    expect(channelDistance(pressed, resting)).to.be.greaterThan(channelDistance(hovered, resting));
+  });
+
+  it('leaves the button label alone -- the state lives on the fill, not on a subtree filter', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search query="inverter fault codes"></lr-retrieval-search>`,
+    )) as LyraRetrievalSearch;
+    await el.updateComplete;
+    const root = el.shadowRoot!;
+    const probes = paintProbe(root);
+    // A filter applies to the whole subtree, so it would have dragged --lr-color-on-brand along with
+    // the fill. Rendering whatever the rules declare and reading it back proves none survives.
+    expect(probes.renderFilter(declaredValue(root, "[part='submit']:hover", 'filter'))).to.equal('none');
+    expect(probes.renderFilter(declaredValue(root, "[part='submit']:active", 'filter'))).to.equal('none');
   });
 });
 

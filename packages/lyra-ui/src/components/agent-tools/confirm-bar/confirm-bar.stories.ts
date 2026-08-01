@@ -22,10 +22,10 @@ export const Default: Story = {
   render: () => html`<lr-confirm-bar tool-name="run_shell" .args=${{ command: 'rm -rf build/' }}></lr-confirm-bar>`,
 };
 
-export const DangerTone: Story = {
+export const DangerVariant: Story = {
   render: () =>
     html`<lr-confirm-bar
-      tone="danger"
+      variant="danger"
       tool-name="delete_database"
       .args=${{ database: 'production' }}
     ></lr-confirm-bar>`,
@@ -81,7 +81,7 @@ export const AsyncPending: Story = {
 export const Compact: Story = {
   render: () => html`
     <div style="display:flex;align-items:center;gap:0.75rem;max-inline-size:32rem;">
-      <lr-confirm-bar compact tone="danger" heading="Delete row 42?"></lr-confirm-bar>
+      <lr-confirm-bar compact variant="danger" heading="Delete row 42?"></lr-confirm-bar>
     </div>
   `,
 };
@@ -108,7 +108,7 @@ export const CompactInTableCell: Story = {
         <tr style="border-block-start:1px solid var(--lr-color-border);">
           <td style="padding:0.4rem 0.75rem;"><code>delete_database</code></td>
           <td style="padding:0.4rem 0.75rem;">
-            <lr-confirm-bar compact tone="danger" heading="Delete?"></lr-confirm-bar>
+            <lr-confirm-bar compact variant="danger" heading="Delete?"></lr-confirm-bar>
           </td>
         </tr>
       </tbody>

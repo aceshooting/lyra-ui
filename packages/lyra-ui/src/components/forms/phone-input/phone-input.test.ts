@@ -1,10 +1,12 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import {
   type LyraPhoneInput,
   type PhoneNumberAdapter,
   loadLibphonenumberAdapter,
 } from './phone-input.js';
 import './phone-input.js';
+import '../button/button.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const adapter: PhoneNumberAdapter = {
   countries: [
@@ -560,6 +562,41 @@ it("matches lr-input's own row height at every shared size tier", async () => {
     const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
     expect(getComputedStyle(wrapper).minBlockSize, `size=${size}`).to.equal(px);
   }
+});
+
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  const row = (el: Element) => el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  for (const [alias, step] of pairs) {
+    const aliasEl = await fixture(html`<lr-phone-input size=${alias}></lr-phone-input>`);
+    const stepEl = await fixture(html`<lr-phone-input size=${step}></lr-phone-input>`);
+    expect(getComputedStyle(row(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
+      getComputedStyle(row(stepEl)).minBlockSize,
+    );
+    expect(getComputedStyle(row(aliasEl)).fontSize, `font-size for ${alias}`).to.equal(
+      getComputedStyle(row(stepEl)).fontSize,
+    );
+    expect(row(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
+      row(stepEl).getBoundingClientRect().height,
+    );
+  }
+});
+
+it('rounds the field to a pill without a ::part() rule', async () => {
+  const plain = (await fixture(html`<lr-phone-input></lr-phone-input>`)) as LyraPhoneInput;
+  const pill = (await fixture(html`<lr-phone-input pill></lr-phone-input>`)) as LyraPhoneInput;
+  const radius = (el: LyraPhoneInput) =>
+    Number.parseFloat(
+      getComputedStyle(el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement)
+        .borderStartStartRadius,
+    );
+  expect(pill.pill).to.be.true;
+  expect(pill.getAttribute('pill')).to.equal('');
+  expect(radius(pill)).to.be.greaterThan(radius(plain));
 });
 
 it('scales the flag and expand glyphs with the phone-input size tier', async () => {
@@ -1141,4 +1178,129 @@ it('is accessible with flags enabled', async () => {
   await customElements.whenDefined('lr-flag');
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+/** Comfortably past --lr-transition-fast, whose duration token this component transitions on. */
+const TRANSITION_SETTLE_MS = 400;
+
+// The country cell's press target is the invisible native <select> stretched over the visible
+// trigger, so its pressed rule has to hang off that select's own :active -- a `[part='country-
+// trigger']:active` rule would never match, because that div is not the element being activated.
+// Driven through the real pointer for exactly that reason: only a rendered assertion can tell a
+// live pressed state from a plausible-looking dead selector. Colour STRINGS are compared, never
+// elements -- a DOM node as chai's actual/expected hangs the whole file.
+it('tints the country trigger while the invisible select over it is hovered, and deepens it while pressed', async () => {
+  const el = (await fixture(
+    html`<lr-phone-input default-country="LU" .adapter=${adapter}></lr-phone-input>`,
+  )) as LyraPhoneInput;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="country-trigger"]') as HTMLElement;
+  const rect = trigger.getBoundingClientRect();
+  const centre: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  const rest = getComputedStyle(trigger).backgroundColor;
+  try {
+    await sendMouse({ type: 'move', position: centre });
+    // This part transitions background-color, so the value right after the state change is still
+    // the transition's start colour -- settle past --lr-transition-fast before reading. Real
+    // timers with a margin: @sinonjs/fake-timers does not work under wtr.
+    await aTimeout(TRANSITION_SETTLE_MS);
+    const hovered = getComputedStyle(trigger).backgroundColor;
+    await sendMouse({ type: 'down' });
+    await aTimeout(TRANSITION_SETTLE_MS);
+    const pressed = getComputedStyle(trigger).backgroundColor;
+    await sendMouse({ type: 'up' });
+    expect(hovered, 'hover must tint the resting background').to.not.equal(rest);
+    expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(hovered);
+  } finally {
+    await resetMouse();
+  }
+});
+
+describe('lr-phone-input implicit form submission', () => {
+  const enterOn = (el: LyraPhoneInput, init: KeyboardEventInit = {}) =>
+    (el.shadowRoot!.querySelector('input[part="input"]') as HTMLInputElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
+    );
+
+  it('submits the ancestor form when Enter is pressed in the telephone field', async () => {
+    const form = (await fixture(html`
+      <form><lr-phone-input name="tel" value="+35226123456" label="Phone"></lr-phone-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el);
+    expect(submits).to.equal(1);
+  });
+
+  it('submits through an lr-button submitter, which requestSubmit() itself would reject', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-phone-input name="tel" value="+35226123456" label="Phone"></lr-phone-input>
+        <lr-button type="submit" name="action" value="save">Go</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+    await el.updateComplete;
+    let submits = 0;
+    let submitterName = '';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+      submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
+    });
+    enterOn(el);
+    expect(submits).to.equal(1);
+    expect(submitterName, 'the lr-button was the submitter').to.equal('action');
+  });
+
+  it('runs the form\'s constraint validation, so an unparseable number blocks submission', async () => {
+    const form = (await fixture(html`
+      <form><lr-phone-input name="tel" value="not a number" label="Phone"></lr-phone-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    expect(el.checkValidity(), 'an unparseable number is invalid').to.be.false;
+    enterOn(el);
+    expect(submits).to.equal(0);
+  });
+
+  it('never submits while disabled, on a held modifier, during IME composition, or after a veto', async () => {
+    const form = (await fixture(html`
+      <form><lr-phone-input name="tel" value="+35226123456" label="Phone"></lr-phone-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el, { shiftKey: true });
+    enterOn(el, { ctrlKey: true });
+    enterOn(el, { altKey: true });
+    enterOn(el, { metaKey: true });
+    enterOn(el, { isComposing: true });
+    expect(submits).to.equal(0);
+
+    // Capture on the host runs before the internal input's own listener.
+    const veto = (e: Event): void => e.preventDefault();
+    el.addEventListener('keydown', veto, true);
+    enterOn(el);
+    el.removeEventListener('keydown', veto, true);
+    expect(submits).to.equal(0);
+
+    el.disabled = true;
+    await el.updateComplete;
+    enterOn(el);
+    expect(submits, 'a disabled control never submits').to.equal(0);
+
+    el.disabled = false;
+    await el.updateComplete;
+    enterOn(el);
+    expect(submits, 'a bare Enter still submits').to.equal(1);
+  });
 });

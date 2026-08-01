@@ -2982,6 +2982,29 @@ describe('--lr-table-row-selected-bg', () => {
     el.style.setProperty('--lr-table-row-selected-bg', 'var(--lr-color-brand-quiet)');
     expect(getComputedStyle(selected).backgroundColor).to.equal(unset);
   });
+
+  // [part='row']:active and [part='row'][aria-selected='true'] are both (0,2,0), so only source
+  // order makes the pressed fill win -- and the selected row is precisely the one a user presses to
+  // deselect. Nothing but a rendered assertion catches a reordering of those two rules.
+  it('shows a pressed fill on an already-selected row', async () => {
+    const el = await selectionFixture();
+    const selected = el.shadowRoot!.querySelector('[part="row"][aria-selected="true"]') as HTMLElement;
+    selected.scrollIntoView();
+    const resting = getComputedStyle(selected).backgroundColor;
+    const rect = selected.getBoundingClientRect();
+    const position: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    try {
+      await sendMouse({ type: 'move', position });
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(selected).backgroundColor).to.not.equal(resting);
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
 });
 
 describe('--lr-table-row-stripe-bg', () => {
