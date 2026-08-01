@@ -176,21 +176,13 @@ export class LyraFlag extends LyraElement {
    * - `"detailed"` — the pristine, full-detail vector, for rendering larger than icon scale (e.g.
    *   a hero display) where the extra illustrative detail is actually visible.
    *
-   * Has no effect when `src` is set — a pre-resolved URL is used as-is regardless. Takes precedence
-   * over the deprecated `detailed` boolean.
+   * Has no effect when `src` is set — a pre-resolved URL is used as-is regardless.
    */
   @property() variant?: FlagVariant;
 
-  /**
-   * @deprecated Use `variant="detailed"` instead. Kept as an alias for one minor cycle; when
-   * `variant` is unset, `detailed` still maps to the detailed tier. Removed in the next major.
-   */
-  @property({ type: Boolean, reflect: true }) detailed = false;
-
-  /** The effective tier to request: an explicit `variant` wins; otherwise the deprecated
-   *  `detailed` boolean is honored; otherwise `"standard"`. */
+  /** The effective tier to request: an explicit `variant`, otherwise `"standard"`. */
   private get effectiveVariant(): FlagVariant {
-    return this.variant ?? (this.detailed ? 'detailed' : 'standard');
+    return this.variant ?? 'standard';
   }
 
   @state() private resolvedSrc?: string;
@@ -230,8 +222,7 @@ export class LyraFlag extends LyraElement {
       !changed.has('country') &&
       !changed.has('language') &&
       !changed.has('src') &&
-      !changed.has('variant') &&
-      !changed.has('detailed')
+      !changed.has('variant')
     ) {
       return;
     }

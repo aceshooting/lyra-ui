@@ -310,9 +310,25 @@ export const tokens = css`
        surface — a disabled control does not, and borrowing that value here failed an axe check. */
     --lr-opacity-muted: var(--lr-theme-opacity-muted, 0.85);
 
-    /* Hover lift — the filter: brightness() multiplier applied to a solid
-       brand/fill control on :hover, so every such hover shares one rhythm
-       instead of each hardcoding its own 1.08/1.1/0.92 magic number. */
+    /* Interaction states are a COLOUR MIX, not a brightness filter.
+       filter: brightness() multiplies every channel, which means it lightens a dark control and
+       darkens a light one only by coincidence, does nothing whatsoever to a pure white or pure
+       black fill, and -- because filter applies to the element and its descendants -- shifts the
+       control's TEXT and ICONS along with its background. Mixing toward a partner colour has none
+       of those properties: it is defined on the fill alone, it always moves, and it moves in the
+       direction the surface actually needs.
+
+       The two knobs are percentages, so a theme can flatten or exaggerate every interaction in the
+       library at once without touching a component. */
+    --lr-color-mix-hover: var(--lr-theme-color-mix-hover, 12%);
+    --lr-color-mix-active: var(--lr-theme-color-mix-active, 22%);
+    /* What each state mixes TOWARD. Following the text colour makes the direction automatic: on a
+       light surface the text is dark, so a hover darkens; on a dark surface it is light, so the
+       same declaration lightens. That is the property filter: brightness() never had. */
+    --lr-color-mix-partner: var(--lr-theme-color-mix-partner, var(--lr-color-text));
+
+    /* Superseded by the two mix knobs above and retained only so a theme that set it keeps
+       rendering; no component reads it. Remove it once no consumer does. */
     --lr-hover-brightness: var(--lr-theme-hover-brightness, 1.08);
 
     /* Popover viewport clamp — the max-inline-size cap that keeps an anchored

@@ -84,25 +84,19 @@ it('country takes precedence over language when both are set', async () => {
   );
 });
 
-it('requests the detailed (pre-optimization) variant for a code that has one', async () => {
-  const el = (await fixture(html`<lr-flag country="es" detailed></lr-flag>`)) as LyraFlag;
-  const image = await img(el);
-  expect(image.getAttribute('src')).to.contain('/detailed/es.svg');
-});
-
-it('falls back to the default variant when detailed is set but the code has none', async () => {
-  const el = (await fixture(html`<lr-flag country="fr" detailed></lr-flag>`)) as LyraFlag;
+it('falls back to the standard variant when detailed is requested but the code has none', async () => {
+  const el = (await fixture(html`<lr-flag country="fr" variant="detailed"></lr-flag>`)) as LyraFlag;
   const image = await img(el);
   expect(image.getAttribute('src')).to.contain('fr.svg');
   expect(image.getAttribute('src')).to.not.contain('/detailed/');
 });
 
-it('re-resolves to the detailed variant when detailed is toggled on an already-mounted element', async () => {
+it('re-resolves when variant is set to detailed on an already-mounted element', async () => {
   const el = (await fixture(html`<lr-flag country="es"></lr-flag>`)) as LyraFlag;
   const first = await img(el);
   expect(first.getAttribute('src')).to.not.contain('/detailed/');
 
-  el.detailed = true;
+  el.variant = 'detailed';
   await waitUntil(
     () => el.shadowRoot!.querySelector('img')?.getAttribute('src')?.includes('/detailed/es.svg'),
     'flag image should update to the detailed variant',
@@ -122,16 +116,17 @@ it('falls back to the standard variant when compact is set but the code has none
   expect(image.getAttribute('src')).to.not.contain('/compact/');
 });
 
-it('variant="detailed" resolves the detailed vector, like the deprecated boolean', async () => {
+it('variant="detailed" resolves the detailed vector', async () => {
   const el = (await fixture(html`<lr-flag country="es" variant="detailed"></lr-flag>`)) as LyraFlag;
   const image = await img(el);
   expect(image.getAttribute('src')).to.contain('/detailed/es.svg');
 });
 
-it('variant takes precedence over the deprecated detailed boolean', async () => {
-  const el = (await fixture(html`<lr-flag country="es" variant="compact" detailed></lr-flag>`)) as LyraFlag;
+it('ignores a stray `detailed` attribute, which 8.0.0 removed', async () => {
+  // The 7.x boolean alias is gone, not silently honoured: a migration that leaves the attribute
+  // behind must render the default tier rather than keep working by accident and hide the break.
+  const el = (await fixture(html`<lr-flag country="es" detailed></lr-flag>`)) as LyraFlag;
   const image = await img(el);
-  expect(image.getAttribute('src')).to.contain('/compact/es.webp');
   expect(image.getAttribute('src')).to.not.contain('/detailed/');
 });
 
@@ -157,14 +152,15 @@ it('reflects the round attribute', async () => {
   expect(el.hasAttribute('round')).to.be.false;
 });
 
-it('reflects the detailed attribute', async () => {
-  const el = (await fixture(html`<lr-flag country="es" detailed></lr-flag>`)) as LyraFlag;
-  expect(el.detailed).to.be.true;
-  expect(el.hasAttribute('detailed')).to.be.true;
+it('reads the variant attribute into its property', async () => {
+  const el = (await fixture(html`<lr-flag country="es" variant="detailed"></lr-flag>`)) as LyraFlag;
+  expect(el.variant).to.equal('detailed');
 
-  el.detailed = false;
+  // `variant` is deliberately NOT reflected: nothing in the stylesheet selects on it, and the tier
+  // is resolved into the `src` the <img> ends up with, which is what a consumer can observe.
+  el.variant = 'compact';
   await el.updateComplete;
-  expect(el.hasAttribute('detailed')).to.be.false;
+  expect(el.variant).to.equal('compact');
 });
 
 it('resolves a language to a representative country flag', async () => {

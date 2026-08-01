@@ -5,6 +5,7 @@ import {
   SET_ANCHORED_VALIDITY,
   VALIDITY_ANCHOR,
 } from './anchored-validity.js';
+import { syncValidityStates } from './custom-states.js';
 
 type Constructor<T> = new (...args: any[]) => T;
 
@@ -250,39 +251,13 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     }
 
     /**
-     * Adds/removes one CSS custom state, tolerating every environment that can't take it: a DOM
-     * with no `ElementInternals` at all (`states` undefined behind a shim), and the engines that
-     * shipped `CustomStateSet` only accepting dashed idents. These states are a styling
-     * convenience, so a rejected state name must never break validity itself.
-     */
-    private setValidityState(name: string, present: boolean): void {
-      const states: CustomStateSet | undefined = this.internals?.states;
-      if (!states) return;
-      try {
-        if (present) states.add(name);
-        else states.delete(name);
-      } catch {
-        /* Engine rejected the state name; styling hooks are optional, validity is not. */
-      }
-    }
-
-    /**
-     * Publishes the six validity custom states — `required`/`optional`, `valid`/`invalid`,
-     * `user-valid`/`user-invalid` — so consumers can style a control's validation state with
-     * `lr-thing:state(user-invalid) { … }` without reaching into its shadow root. `valid`
-     * mirrors `validity.valid`; the `user-*` pair additionally requires that the user has
-     * interacted (an `input`/`change`/blur on this control, or a `reportValidity()` call, which
-     * is what a submit attempt runs).
+     * Publishes the six validity custom states. The implementation lives in
+     * `internal/custom-states.ts` because only 11 of the library's 28 form-associated controls use
+     * this mixin — the rest drive `ElementInternals` directly, and they publish the same six
+     * states by calling the same helper.
      */
     protected syncValidityStates(): void {
-      const valid = this.internals?.validity?.valid !== false;
-      const interacted = this._hasInteracted;
-      this.setValidityState('required', this.required);
-      this.setValidityState('optional', !this.required);
-      this.setValidityState('valid', valid);
-      this.setValidityState('invalid', !valid);
-      this.setValidityState('user-valid', valid && interacted);
-      this.setValidityState('user-invalid', !valid && interacted);
+      syncValidityStates(this.internals, { required: this.required, hasInteracted: this._hasInteracted });
     }
 
     get name(): string {
