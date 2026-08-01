@@ -99,6 +99,15 @@ const bundleEntries = {
     fixture: 'core',
     maxGzipBytes: 42_000,
   },
+  // Retention canaries rather than size budgets: these entries are imported only for side effects,
+  // so the assertions in runBundle prove a production tree-shaker kept the shipped CSS asset and
+  // locale registration module from the packed tarball.
+  theme: {
+    fixture: 'core',
+  },
+  locale: {
+    fixture: 'core',
+  },
   flag: {
     fixture: 'optional',
     maxRawBytes: 30_000,
@@ -389,6 +398,14 @@ export default defineConfig({
   const bundleSources = {
     core: `import '@aceshooting/lyra-ui';\nexport const loaded = true;\n`,
     button: `import '@aceshooting/lyra-ui/components/forms/button/button.js';\nexport const loaded = true;\n`,
+    theme: `import '@aceshooting/lyra-ui/theme.css';\nexport const loaded = true;\n`,
+    locale: `import '@aceshooting/lyra-ui/translations/fr.js';
+import { getRegisteredLyraLocales } from '@aceshooting/lyra-ui/localization.js';
+if (!getRegisteredLyraLocales().includes('fr')) {
+  throw new Error('the packed French locale side effect was tree-shaken');
+}
+export const loaded = true;
+`,
     flag: `import flagUrl from '@aceshooting/lyra-flags/flags/fr.svg';\nexport { flagUrl };\n`,
     codeBlock: `import '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js';\nexport const loaded = true;\n`,
     chart: `import '@aceshooting/lyra-ui/components/charts/chart/chart.js';\nexport const loaded = true;\n`,
@@ -459,6 +476,13 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   });
   const output = await bundleSize(join(fixtureDir, 'bundle', entry));
   const violations = [];
+  if (entry === 'theme') {
+    const cssFiles = output.files.filter((file) => file.endsWith('.css'));
+    const css = (await Promise.all(cssFiles.map((file) => readFile(file, 'utf8')))).join('\n');
+    if (cssFiles.length === 0 || !css.includes('--lr-theme-color-brand-fill-loud')) {
+      violations.push('the bare theme.css import emitted no retained Lyra theme asset');
+    }
+  }
   if (config.maxRawBytes != null && output.rawBytes > config.maxRawBytes) {
     violations.push(`raw ${formatBytes(output.rawBytes)} exceeds budget ${formatBytes(config.maxRawBytes)}`);
   }
@@ -475,6 +499,14 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   if (violations.length > 0) {
     throw new Error(
       `${entry} bundle is out of budget across ${output.files.length} files: ${violations.join('; ')}`,
+    );
+  }
+  if (entry === 'locale') {
+    await run(
+      process.execPath,
+      [join(fixtureDir, 'bundle', entry, 'index.js')],
+      fixtureDir,
+      'packed locale side-effect execution check',
     );
   }
   console.log(

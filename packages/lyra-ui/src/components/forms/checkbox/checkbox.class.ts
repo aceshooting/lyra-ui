@@ -7,6 +7,7 @@ import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js'
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox.styles.js';
+import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -90,11 +91,14 @@ function indeterminateGlyph(): SVGTemplateResult {
 }
 
 export interface LyraCheckboxEventMap {
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
+  input: Event;
+  change: Event;
+  'lr-input': CustomEvent<{ checked: boolean }>;
   'lr-change': CustomEvent<{ checked: boolean }>;
-  focus: CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
+  focus: FocusEvent;
+  blur: FocusEvent;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
 }
 /**
  * `<lr-checkbox>` — a boolean form control. Structurally the same idea as
@@ -124,11 +128,14 @@ export interface LyraCheckboxEventMap {
  * `ariaDescribedByElements` so externally-owned descriptions remain valid across the shadow
  * boundary.
  * @event input - The user toggled the checkbox; bubbling and composed like a native form event.
+ * @event lr-input - Prefixed compatibility alias for `input`; `detail: { checked }`.
  * @event change - Fired immediately after `input` for the same user toggle.
  * @event lr-change - Compatibility alias fired after `input` and `change` (click or Space).
  * `detail: { checked }`. Not fired for a programmatic `.checked` assignment.
  * @event focus - Re-dispatched from the internal control as a bubbling, composed event.
  * @event blur - Re-dispatched from the internal control as a bubbling, composed event.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @cssstate required - Matches while `required` is set. Style with `lr-checkbox:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
  * @cssstate valid - Matches while the control satisfies its constraints, including any
@@ -483,12 +490,12 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
    *  `click()` forwarding -- `HTMLElement.prototype.click()` is otherwise a no-op on a custom
    *  element with no native click semantics of its own. */
   override click(): void {
-    this[VALIDITY_ANCHOR]()?.click();
+    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.click();
   }
 
   /** Moves focus to the internal checkbox control. */
   override focus(options?: FocusOptions): void {
-    this[VALIDITY_ANCHOR]()?.focus(options);
+    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
   }
 
   /** Removes focus from the internal checkbox control. */
@@ -501,8 +508,9 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this.hasInteracted = true;
     this.checked = !this.checked;
     this.indeterminate = false;
-    this.emit('input');
-    this.emit('change');
+    dispatchNativeEvent(this, 'input');
+    this.emit('lr-input', { checked: this.checked });
+    dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { checked: this.checked });
   }
 
@@ -535,15 +543,17 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this.hasLabelSlot = nodes.some((n) => (n.textContent ?? '').trim().length > 0);
   }
 
-  private onBlur = (): void => {
+  private onBlur = (event: FocusEvent): void => {
     this.touched = true;
     this.hasInteracted = true;
     this.reflectInvalid();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
-  private onFocus = (): void => {
-    this.emit('focus');
+  private onFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   override render(): TemplateResult {

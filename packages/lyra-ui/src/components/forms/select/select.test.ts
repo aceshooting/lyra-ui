@@ -101,19 +101,22 @@ it('emits input alongside change on selection, matching a native <select>', asyn
   expect(inputFired).to.be.true;
 });
 
-it('emits lr-change with the new value alongside native-style change/input', async () => {
+it('emits typed aliases with the new value alongside native input/change events', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   el.open = true;
   await el.updateComplete;
   const seen: Array<{ type: string; detail: unknown }> = [];
-  for (const type of ['input', 'change', 'lr-change']) {
+  for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
     el.addEventListener(type, (e) => seen.push({ type, detail: (e as CustomEvent).detail }));
   }
   rows(el)[1].click();
   await el.updateComplete;
 
-  expect(seen.map((s) => s.type)).to.deep.equal(['input', 'change', 'lr-change']);
-  for (const s of seen) expect(s.detail).to.deep.equal({ value: 'b' });
+  expect(seen.map((s) => s.type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  expect(seen[0].detail).to.be.undefined;
+  expect(seen[1].detail).to.deep.equal({ value: 'b' });
+  expect(seen[2].detail).to.be.undefined;
+  expect(seen[3].detail).to.deep.equal({ value: 'b' });
 });
 
 it('stays silent on input/change/lr-change for a programmatic value assignment', async () => {
@@ -1832,7 +1835,7 @@ describe('multiple', () => {
     await el.updateComplete;
 
     const detail: unknown[] = [];
-    el.addEventListener('change', (e) => detail.push((e as CustomEvent).detail));
+    el.addEventListener('lr-change', (e) => detail.push((e as CustomEvent).detail));
     rows(el)[0].click();
     await el.updateComplete;
 

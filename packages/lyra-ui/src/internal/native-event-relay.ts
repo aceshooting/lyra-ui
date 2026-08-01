@@ -10,7 +10,12 @@ export function relayNativeEvent<T extends Event>(
   source: T,
   options: EventInit = {},
 ): T {
-  source.stopImmediatePropagation();
+  // `stopPropagation()`, deliberately not `stopImmediatePropagation()`: Firefox skips the
+  // submit-driven interactive-validation focus of a form-associated custom element whose inner
+  // control's `blur` had immediate propagation stopped. Both forms keep the source event from
+  // reaching the host -- these are component-authored templates with a single listener per
+  // event on the inner node, so the weaker stop is equivalent here.
+  source.stopPropagation();
 
   const init: EventInit = {
     bubbles: options.bubbles ?? true,

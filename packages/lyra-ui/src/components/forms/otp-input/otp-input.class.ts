@@ -6,6 +6,7 @@ import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { nextId } from '../../../internal/a11y.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './otp-input.styles.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 
 /** Which characters a segment accepts. */
 export type OtpInputType = 'numeric' | 'alpha' | 'alphanumeric';
@@ -27,8 +28,10 @@ const MAX_LENGTH = 32;
 type Cell = { kind: 'segment' } | { kind: 'separator'; text: string };
 
 export interface LyraOtpInputEventMap {
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
+  input: InputEvent;
+  change: Event;
+  focus: FocusEvent;
+  blur: FocusEvent;
   'lr-complete': CustomEvent<{ value: string }>;
 }
 
@@ -51,6 +54,8 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @slot error - Rich validation text, replacing the `errorText` attribute.
  * @event input - The value changed.
  * @event change - The value changed and the field settled.
+ * @event focus - Native focus relayed once from the real input.
+ * @event blur - Native blur relayed once from the real input.
  * @event lr-complete - Every segment is filled. `detail: { value }`.
  * @cssstate required - Matches while `required` is set. Style with `lr-otp-input:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
@@ -152,9 +157,13 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     return out.slice(0, this.segmentCount);
   }
 
-  override focus(options?: FocusOptions): void { this.control?.focus(options); }
+  override focus(options?: FocusOptions): void {
+    if (!this.effectiveDisabled) this.control?.focus(options);
+  }
   override blur(): void { this.control?.blur(); }
-  override click(): void { this.control?.click(); }
+  override click(): void {
+    if (!this.effectiveDisabled) this.control?.click();
+  }
   /** Selects the whole code, mirroring `<input>.select()`. */
   select(): void { this.control?.select(); }
 
@@ -192,28 +201,33 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   private onInput = (event: Event): void => {
-    event.stopPropagation();
     const raw = (event.target as HTMLInputElement).value;
     const next = this.sanitize(raw);
     // Keep the real input in step even when sanitizing rejected characters, or the caret walks
     // past text that was never accepted.
     if (this.control && this.control.value !== next) this.control.value = next;
-    if (next === this.value) return;
+    if (next === this.value) {
+      event.stopImmediatePropagation();
+      return;
+    }
     this.touched = true;
     this.value = next;
-    this.emit('input');
+    relayNativeEvent(this, event);
     if (next.length === this.segmentCount) this.emit('lr-complete', { value: next });
   };
 
   private onChange = (event: Event): void => {
-    event.stopPropagation();
-    this.emit('change');
+    relayNativeEvent(this, event);
   };
 
-  private onFocus = (): void => { this.focused = true; };
-  private onBlur = (): void => {
+  private onFocus = (event: FocusEvent): void => {
+    this.focused = true;
+    relayNativeEvent(this, event);
+  };
+  private onBlur = (event: FocusEvent): void => {
     this.focused = false;
     this.touched = true;
+    relayNativeEvent(this, event);
   };
 
   private onLabelSlotChange = (event: Event): void => {

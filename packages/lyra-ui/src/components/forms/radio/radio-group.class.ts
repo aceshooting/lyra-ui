@@ -7,8 +7,12 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
+import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
 
 export interface LyraRadioGroupEventMap {
+  input: Event;
+  change: Event;
+  'lr-input': CustomEvent<{ value: string; radio: LyraRadio }>;
   'lr-change': CustomEvent<{ value: string; radio: LyraRadio }>;
 }
 
@@ -27,6 +31,9 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
  * @slot label - Visible group label.
  * @slot hint - Supporting text.
  * @slot error - Validation text.
+ * @event input - Native event fired from the group when its selected value changes.
+ * @event change - Native event fired after `input` for the same group selection.
+ * @event lr-input - Prefixed alias for `input`; `detail: { value, radio }`.
  * @event lr-change - A radio was selected. `detail: { value, radio }`.
  * @csspart base - The radiogroup wrapper.
  * @csspart label - The group label.
@@ -177,6 +184,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       this.syncingRadios = false;
     }
     this.syncRadios();
+    dispatchNativeEvent(this, 'input');
+    this.emit('lr-input', { value: radio.value, radio });
+    dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { value: radio.value, radio });
     return true;
   }

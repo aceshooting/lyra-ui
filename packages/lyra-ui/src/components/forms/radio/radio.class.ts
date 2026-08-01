@@ -7,6 +7,7 @@ import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './radio.styles.js';
+import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 
 const omittedEmptyStringConverter: ComplexAttributeConverter<string> = {
   fromAttribute: (value) => value ?? '',
@@ -14,11 +15,13 @@ const omittedEmptyStringConverter: ComplexAttributeConverter<string> = {
 };
 
 export interface LyraRadioEventMap {
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
+  input: Event;
+  change: Event;
   'lr-change': CustomEvent<{ checked: boolean; value: string }>;
-  focus: CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
+  focus: FocusEvent;
+  blur: FocusEvent;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
 }
 
 interface RadioGroupController {
@@ -49,6 +52,8 @@ interface RadioGroupController {
  * radio group emits its aggregate event instead.
  * @event focus - The internal radio received focus.
  * @event blur - The internal radio lost focus.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @cssstate required - Matches while the radio is required, either by its own `required` attribute
  * or by an owning `<lr-radio-group required>`. Style with `lr-radio:state(required)`.
  * @cssstate optional - Matches while it is neither — the complement of `required`.
@@ -381,10 +386,10 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   }
 
   override click(): void {
-    this[VALIDITY_ANCHOR]()?.click();
+    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.click();
   }
   override focus(options?: FocusOptions): void {
-    this[VALIDITY_ANCHOR]()?.focus(options);
+    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
   }
   override blur(): void {
     this[VALIDITY_ANCHOR]()?.blur();
@@ -419,13 +424,11 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.hasInteracted = true;
     if (group) {
       if (!group.selectRadio?.(this)) return;
-      this.emit('input');
-      this.emit('change');
       return;
     }
     this.checked = true;
-    this.emit('input');
-    this.emit('change');
+    dispatchNativeEvent(this, 'input');
+    dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { checked: true, value: this.value });
   }
   /** Roving-tabindex state an owning group imposes; `<lr-radio-button>` reads it for its own
@@ -442,11 +445,15 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       this.select();
     }
   };
-  protected onFocus = (): void => { this.emit('focus'); };
-  protected onBlur = (): void => {
+  protected onFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
+  };
+  protected onBlur = (event: FocusEvent): void => {
     this.hasInteracted = true;
     this.reflectValidityStates();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
   private onSlotChange = (event: Event): void => {
     this.hasLabel = (event.target as HTMLSlotElement).assignedNodes({ flatten: true })

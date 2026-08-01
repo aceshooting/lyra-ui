@@ -6,6 +6,7 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './switch.styles.js';
+import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -43,11 +44,14 @@ function createNoopInternals(): ElementInternals {
 }
 
 export interface LyraSwitchEventMap {
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
+  input: Event;
+  change: Event;
+  'lr-input': CustomEvent<{ checked: boolean }>;
   'lr-change': CustomEvent<{ checked: boolean }>;
-  focus: CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
+  focus: FocusEvent;
+  blur: FocusEvent;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
 }
 /**
  * `<lr-switch>` — a boolean toggle-switch form control. Structurally the
@@ -76,6 +80,7 @@ export interface LyraSwitchEventMap {
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @event input - The user toggled the switch; bubbling and composed like a native form event.
+ * @event lr-input - Prefixed compatibility alias for `input`; `detail: { checked }`.
  * @event change - Fired immediately after `input` for the same user toggle, matching the native
  * checkbox/radio contract a form library expects from a boolean control.
  * @event lr-change - Compatibility alias fired after `input` and `change` (click, Space/Enter, or
@@ -85,6 +90,8 @@ export interface LyraSwitchEventMap {
  * non-bubbling native `focus`, re-dispatched as bubbling and composed.
  * @event blur - The internal switch control lost focus. Bridges the internal element's
  * non-bubbling native `blur`, re-dispatched as bubbling and composed.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @cssstate required - Matches while `required` is set. Style with `lr-switch:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
  * @cssstate valid - Matches while the control satisfies its constraints, including any
@@ -284,12 +291,12 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
    *  on the host is a no-op: the real click handler is bound only to the internal
    *  `[part="base"]` control, not the host itself. */
   override click(): void {
-    this[VALIDITY_ANCHOR]()?.click();
+    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.click();
   }
 
   /** Moves focus to the internal switch control. */
   override focus(options?: FocusOptions): void {
-    this[VALIDITY_ANCHOR]()?.focus(options);
+    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
   }
 
   /** Removes focus from the internal switch control. */
@@ -411,8 +418,9 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     // `lr-`-prefixed alias is invisible to every form library, validation helper, and
     // `<form>`-level `change` listener that binds the native names, which is the ordinary way a
     // consumer observes a control they did not write.
-    this.emit('input');
-    this.emit('change');
+    dispatchNativeEvent(this, 'input');
+    this.emit('lr-input', { checked: this.checked });
+    dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { checked: this.checked });
   }
 
@@ -420,15 +428,17 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     this.toggle();
   };
 
-  private onBlur = (): void => {
+  private onBlur = (event: FocusEvent): void => {
     this.touched = true;
     this.hasInteracted = true;
     this.reflectValidityStates();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
-  private onFocus = (): void => {
-    this.emit('focus');
+  private onFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {

@@ -67,7 +67,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
    * Compatibility alias for `mode`: true means `multiple`; false means `single-collapsible`.
    * When both attributes occur in initial markup, the explicit `mode` attribute wins.
    */
-  @property({ converter: trueDefaultBooleanConverter })
+  @property({ reflect: true, converter: trueDefaultBooleanConverter })
   get multiple(): boolean {
     return this.mode === 'multiple';
   }

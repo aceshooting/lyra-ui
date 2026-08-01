@@ -56,8 +56,10 @@ export class LyraAccordionItem extends LyraDetails {
   }
   set expanded(next: boolean) {
     const old = this.open;
-    this.open = Boolean(next);
+    const normalized = Boolean(next);
+    this.open = normalized;
     if (this.open !== old) this.requestUpdate('expanded', old);
+    else if (this.open !== normalized) this.toggleAttribute('expanded', this.open);
   }
 
   /** Heading level from 1–6, or `none` to render the button without a heading wrapper. */

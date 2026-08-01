@@ -2,10 +2,10 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    --spacing: var(--lr-form-control-padding-inline);
-    --show-duration: var(--lr-duration-base);
-    --hide-duration: var(--lr-duration-base);
-    --easing: var(--lr-easing-standard);
+    --lr-accordion-item-spacing: var(--lr-form-control-padding-inline);
+    --lr-accordion-item-show-duration: var(--lr-duration-base);
+    --lr-accordion-item-hide-duration: var(--lr-duration-base);
+    --lr-accordion-item-easing: var(--lr-easing-standard);
     display: block;
     min-inline-size: 0;
     color: var(--lr-color-text);
@@ -28,11 +28,11 @@ export const styles = css`
   [part~='button'] {
     display: flex;
     align-items: center;
-    gap: var(--spacing);
+    gap: var(--spacing, var(--lr-accordion-item-spacing));
     inline-size: 100%;
     min-block-size: var(--lr-icon-button-size);
     box-sizing: border-box;
-    padding: var(--spacing);
+    padding: var(--spacing, var(--lr-accordion-item-spacing));
     border: none;
     border-radius: 0;
     background: transparent;
@@ -73,7 +73,10 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     color: var(--lr-color-text-quiet);
-    transition: transform var(--hide-duration) var(--easing);
+    transition:
+      transform
+      var(--hide-duration, var(--lr-accordion-item-hide-duration))
+      var(--easing, var(--lr-accordion-item-easing));
   }
   :host([icon-placement='start']) [part~='icon'] {
     order: -1;
@@ -92,7 +95,7 @@ export const styles = css`
   :host([open]) [part~='icon'],
   :host([expanded]) [part~='icon'] {
     transform: rotate(90deg);
-    transition-duration: var(--show-duration);
+    transition-duration: var(--show-duration, var(--lr-accordion-item-show-duration));
   }
   :host([open]:dir(rtl)) [part~='icon'],
   :host([expanded]:dir(rtl)) [part~='icon'] {
@@ -105,17 +108,27 @@ export const styles = css`
     opacity: 0;
     color: var(--lr-color-text-quiet);
     transition:
-      grid-template-rows var(--hide-duration) var(--easing),
-      opacity var(--hide-duration) var(--easing),
-      visibility var(--hide-duration) step-end;
+      grid-template-rows
+        var(--hide-duration, var(--lr-accordion-item-hide-duration))
+        var(--easing, var(--lr-accordion-item-easing)),
+      opacity
+        var(--hide-duration, var(--lr-accordion-item-hide-duration))
+        var(--easing, var(--lr-accordion-item-easing)),
+      visibility var(--hide-duration, var(--lr-accordion-item-hide-duration)) step-end;
   }
   :host([open]) [part~='panel'],
   :host([expanded]) [part~='panel'] {
     grid-template-rows: 1fr;
     visibility: visible;
     opacity: 1;
-    transition-duration: var(--show-duration);
-    transition-timing-function: var(--easing);
+    transition:
+      grid-template-rows
+        var(--show-duration, var(--lr-accordion-item-show-duration))
+        var(--easing, var(--lr-accordion-item-easing)),
+      opacity
+        var(--show-duration, var(--lr-accordion-item-show-duration))
+        var(--easing, var(--lr-accordion-item-easing)),
+      visibility var(--show-duration, var(--lr-accordion-item-show-duration)) step-start;
   }
   .panel-clip {
     min-block-size: 0;
@@ -123,7 +136,10 @@ export const styles = css`
   }
   [part~='content'] {
     display: block;
-    padding: 0 var(--spacing) var(--spacing);
+    padding:
+      0
+      var(--spacing, var(--lr-accordion-item-spacing))
+      var(--spacing, var(--lr-accordion-item-spacing));
     overflow-wrap: anywhere;
   }
   @media (prefers-reduced-motion: reduce) {

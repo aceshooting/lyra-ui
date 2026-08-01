@@ -8,6 +8,7 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import type { LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './rating.styles.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 
 const DEFAULT_MAX = 5;
 /** No real-world star rating needs more stars than this; caps an untrusted `max` so it can't turn
@@ -35,6 +36,8 @@ export type LyraRatingSymbolRenderer = (value: number, selected: boolean) => unk
 export interface LyraRatingEventMap {
   'lr-change': CustomEvent<{ value: number }>;
   'lr-hover': CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>;
+  focus: FocusEvent;
+  blur: FocusEvent;
 }
 
 // A five-point star, sharing internal/icons.ts's 24x24 viewBox / 1em sizing
@@ -73,6 +76,8 @@ function starSolid(): SVGTemplateResult {
  * @event lr-hover - The pointer entered, moved across, or left the symbols while the rating is
  * settable. `detail: { phase, value }`, where `value` is the rating that committing the current
  * pointer position would produce — enough to render a live description of what is being hovered.
+ * @event focus - Native focus relayed once from the internal slider control.
+ * @event blur - Native blur relayed once from the internal slider control.
  * @method focus - Forwards focus to the internal slider control.
  * @method blur - Forwards blur to the internal slider control.
  * @method click - Forwards activation to the internal slider control.
@@ -471,7 +476,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   override focus(options?: FocusOptions): void {
-    this.control?.focus(options);
+    if (!this.effectiveDisabled) this.control?.focus(options);
   }
 
   override blur(): void {
@@ -479,8 +484,17 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   override click(): void {
-    this.control?.click();
+    if (!this.effectiveDisabled) this.control?.click();
   }
+
+  private onFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+  };
+
+  private onBlur = (event: FocusEvent): void => {
+    this.markInteracted();
+    relayNativeEvent(this, event);
+  };
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     // `disabled` can only change through its own setter; the fieldset path goes through
@@ -508,7 +522,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
       aria-valuetext=${getNumberFormat(this.effectiveLocale).format(safeValue)}
       aria-disabled=${this.effectiveDisabled ? 'true' : 'false'} aria-readonly=${this.readonly ? 'true' : 'false'}
       aria-required=${this.required ? 'true' : 'false'}
-      @click=${this.onClick} @keydown=${this.onKeyDown}
+      @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}
       @pointerenter=${this.onPointerEnter} @pointermove=${this.onPointerMove}
       @pointerleave=${this.onPointerEnd} @pointercancel=${this.onPointerEnd}>
       ${Array.from({ length: count }, (_, index) => {

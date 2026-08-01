@@ -14,6 +14,8 @@ import {
 } from '../../../internal/numbers.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './time-range.styles.js';
+import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export type TimeRangeHandle = 'start' | 'end';
 
@@ -95,8 +97,12 @@ function createNoopInternals(): ElementInternals {
 }
 
 export interface LyraTimeRangeEventMap {
+  input: Event;
+  change: Event;
   'lr-input': CustomEvent<{ start: number; end: number }>;
   'lr-change': CustomEvent<{ start: number; end: number }>;
+  focus: FocusEvent;
+  blur: FocusEvent;
 }
 /**
  * `<lr-time-range>` — a two-handle brush/scrubber over a numeric domain.
@@ -129,8 +135,12 @@ export interface LyraTimeRangeEventMap {
  * its own single-handle `label`; a labeled-field consumer wraps this element in their own layout.
  *
  * @customElement lr-time-range
+ * @event input - Native event fired continuously while a user moves either handle.
+ * @event change - Native event fired when a handle interaction or preset commits.
  * @event lr-input - Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.
  * @event lr-change - Fired on release / keyup-commit, or when a preset button is clicked. `detail: { start, end }`.
+ * @event focus - Native focus relayed once from either handle.
+ * @event blur - Native blur relayed once from either handle.
  * @csspart base - The time-range wrapper.
  * @csspart track - The complete range track.
  * @csspart range - The selected range.
@@ -268,6 +278,24 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.reflectValidityStates();
   };
 
+  private emitInput(): void {
+    dispatchNativeEvent(this, 'input');
+    this.emit('lr-input', { start: this.start, end: this.end });
+  }
+
+  private emitChange(): void {
+    dispatchNativeEvent(this, 'change');
+    this.emit('lr-change', { start: this.start, end: this.end });
+  }
+
+  private onHandleFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+  };
+
+  private onHandleBlur = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+  };
+
   /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
    *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. `required` is
    *  always `false` here — this control has no such constraint — so it is permanently
@@ -380,17 +408,23 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    *  the host itself, only to the internal `[part="handle-start"]`/`[part="handle-end"]`
    *  controls. Targets the start handle specifically, matching `focus()`/`blur()` below. */
   override click(): void {
-    (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.click();
+    if (!this.effectiveDisabled) {
+      (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.click();
+    }
   }
 
   /** Moves focus to the start handle. */
   override focus(options?: FocusOptions): void {
-    (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.focus(options);
+    if (!this.effectiveDisabled) {
+      (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.focus(options);
+    }
   }
 
-  /** Removes focus from the start handle. */
+  /** Removes focus from whichever handle currently owns it. */
   override blur(): void {
-    (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.blur();
+    const active = activeElementIn(this.shadowRoot);
+    if (active instanceof HTMLElement && active.matches('[part^="handle-"]')) active.blur();
+    else (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.blur();
   }
 
   // Both percentOf() and clamp() key off this same lo/hi pair — willUpdate()
@@ -478,8 +512,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // A handle that actually moved is an interaction the instant it happens, the same way a
     // toggle is for `<lr-checkbox>` — that is what turns the `user-*` custom states on.
     this.markInteracted();
-    this.emit('lr-input', { start: this.start, end: this.end });
-    if (commit) this.emit('lr-change', { start: this.start, end: this.end });
+    this.emitInput();
+    if (commit) this.emitChange();
     return true;
   }
 
@@ -509,8 +543,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.start = nextStart;
     this.end = nextEnd;
     this.markInteracted();
-    this.emit('lr-input', { start: this.start, end: this.end });
-    this.emit('lr-change', { start: this.start, end: this.end });
+    this.emitInput();
+    this.emitChange();
   }
 
   private onKeyDown = (handle: TimeRangeHandle, e: KeyboardEvent): void => {
@@ -562,7 +596,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // focused must not emit a spurious lr-change.
     if (this.effectiveDisabled || !isSliderKey(e.key) || !this.keyboardChanged) return;
     this.keyboardChanged = false;
-    this.emit('lr-change', { start: this.start, end: this.end });
+    this.emitChange();
   };
 
   private onPointerDown = (handle: TimeRangeHandle, e: PointerEvent): void => {
@@ -622,7 +656,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const drag = this.drags.get(pointerId);
     if (!drag) return;
     this.drags.delete(pointerId);
-    if (commit && drag.changed) this.emit('lr-change', { start: this.start, end: this.end });
+    if (commit && drag.changed) this.emitChange();
     // Only the last concurrent drag to end tears down the shared window
     // listeners — another pointer (e.g. the other finger of a two-finger
     // drag) may still be down.
@@ -734,6 +768,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('start', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('start', e)}
           @keyup=${(e: KeyboardEvent) => this.onKeyUp(e)}
+          @focus=${this.onHandleFocus}
+          @blur=${this.onHandleBlur}
         ></div>
         <div
           part="handle-end"
@@ -754,6 +790,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('end', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('end', e)}
           @keyup=${(e: KeyboardEvent) => this.onKeyUp(e)}
+          @focus=${this.onHandleFocus}
+          @blur=${this.onHandleBlur}
         ></div>
       </div>
     `;

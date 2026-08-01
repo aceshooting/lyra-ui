@@ -9,6 +9,10 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './model-select.styles.js';
+import {
+  dispatchNativeEvent,
+  relayNativeEvent,
+} from '../../../internal/native-event-relay.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
 import {
   filterCatalogEntries,
@@ -76,8 +80,10 @@ export interface LyraModelSelectEventMap {
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
   input: Event;
   change: Event;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 /**
  * `<lr-model-select>` — a provider/model picker that renders as a closed
@@ -108,12 +114,10 @@ export interface LyraModelSelectEventMap {
  *   native-style value-change pair so native form bindings/framework `v-model` handlers behave
  *   consistently across the picker family.
  * @event {Event} input - Fired alongside `change`/`lr-change` (see `change`).
- * @event blur - Re-dispatched from the free-text mode's internal native `<input>`'s own `blur` --
- *   bubbling and composed (unlike the native event, which is neither), so a listener above the
- *   shadow boundary can observe it. Closed-dropdown mode's trigger `<button>` has no equivalent
- *   re-dispatch, matching `<lr-select>`'s own trigger.
- * @event focus - Re-dispatched from the free-text mode's internal native `<input>`'s own `focus`,
- *   for the same reason as `blur`.
+ * @event blur - Native blur relayed once from the active control in either rendering mode.
+ * @event focus - Native focus relayed once from the active control in either rendering mode.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @cssstate required - Matches while `required` is set. Style with `lr-model-select:state(required)`.
@@ -267,12 +271,25 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    *  behavior for that mode is wired to the input's `focus` event (see `onInputFocus`), not a
    *  `click` handler on the input itself. */
   override click(): void {
+    if (this.effectiveDisabled) return;
     const trigger = this.renderRoot?.querySelector('[part="trigger"]') as HTMLButtonElement | null;
     if (trigger) {
       trigger.click();
       return;
     }
-    (this.renderRoot?.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
+    const input = this.renderRoot?.querySelector('[part="combobox-input"]') as HTMLInputElement | null;
+    input?.click();
+    input?.focus();
+  }
+
+  /** Focuses the active semantic control in both closed-dropdown and free-text modes. */
+  override focus(options?: FocusOptions): void {
+    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
+  }
+
+  /** Blurs the active semantic control in both rendering modes. */
+  override blur(): void {
+    this[VALIDITY_ANCHOR]()?.blur();
   }
 
   get form(): HTMLFormElement | null {
@@ -549,10 +566,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    * framework `v-model` handlers behave consistently across the picker
    * family. */
   private emitValueEvents(): void {
-    const EventConstructor = this.ownerDocument.defaultView?.Event ?? Event;
-    const init: EventInit = { bubbles: true, composed: true };
-    this.dispatchEvent(new EventConstructor('input', init));
-    this.dispatchEvent(new EventConstructor('change', init));
+    dispatchNativeEvent(this, 'input');
+    dispatchNativeEvent(this, 'change');
   }
 
   private selectEntry(entry: DisplayEntry): void {
@@ -576,10 +591,19 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     if (this.effectiveDisabled) return;
     this.open ? this.hide() : this.show();
   };
-  private onTriggerBlur = (): void => {
-    if (this.suppressControlBlur) return;
+  private onTriggerBlur = (event: FocusEvent): void => {
+    if (this.suppressControlBlur) {
+      event.stopImmediatePropagation();
+      return;
+    }
     this.touched = true;
     this.hide();
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
+  };
+  private onTriggerFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
   private onTriggerKeyDown = (e: KeyboardEvent): void => {
     const rows = this.effectiveEntries;
@@ -634,7 +658,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     e.preventDefault();
     (this.renderRoot.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
   };
-  private onInputFocus = (): void => {
+  private onInputFocus = (event: FocusEvent): void => {
     // Seed the editable text from the *current* value each time a fresh
     // editing session starts, not on every keystroke (onInput overwrites
     // `query` directly) — otherwise a same-session reopen via ArrowDown
@@ -642,22 +666,24 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     // whatever the user had typed before Escape.
     if (!this.open) this.query = this.labelFor(this.value);
     this.show();
-    // Bubbling, composed re-dispatch of the native (non-bubbling,
-    // non-composed) input focus -- so a host-level listener on
-    // <lr-model-select> can observe it across the shadow boundary.
-    this.emit('focus');
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
   private onInput = (e: Event): void => {
     this.query = (e.target as HTMLInputElement).value;
     this.activeIndex = -1;
     this.show();
+    relayNativeEvent(this, e);
   };
-  private onInputBlur = (): void => {
-    if (this.suppressControlBlur) return;
+  private onInputBlur = (event: FocusEvent): void => {
+    if (this.suppressControlBlur) {
+      event.stopImmediatePropagation();
+      return;
+    }
     this.touched = true;
     this.hide();
-    // Same re-dispatch reasoning as onInputFocus above.
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
   private onInputKeyDown = (e: KeyboardEvent): void => {
     const rows = this.filteredEntries;
@@ -806,6 +832,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         ?disabled=${this.effectiveDisabled}
         @click=${this.onTriggerClick}
         @keydown=${this.onTriggerKeyDown}
+        @focus=${this.onTriggerFocus}
         @blur=${this.onTriggerBlur}
       >
         ${this.provider ? html`<span part="provider-badge">${this.provider}</span>` : ''}

@@ -56,22 +56,23 @@ it('canonicalizes a declarative empty name attribute to omission', async () => {
   expect(el.hasAttribute('name')).to.be.false;
 });
 
-it('re-emits internal focus and blur as bubbling, composed host events', async () => {
+it('relays exactly one native focus/blur pair and retains typed aliases', async () => {
   const el = (await fixture(html`<lr-radio>One</lr-radio>`)) as LyraRadio;
-  const events: CustomEvent[] = [];
-  el.addEventListener('focus', (event) => {
-    if (event instanceof CustomEvent) events.push(event);
-  });
-  el.addEventListener('blur', (event) => {
-    if (event instanceof CustomEvent) events.push(event);
-  });
+  const events: FocusEvent[] = [];
+  const aliases: string[] = [];
+  el.addEventListener('focus', (event) => events.push(event as FocusEvent));
+  el.addEventListener('blur', (event) => events.push(event as FocusEvent));
+  el.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+  el.addEventListener('lr-blur', () => aliases.push('lr-blur'));
 
   el.focus();
   el.blur();
 
   expect(events.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(events.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(events.every((event) => event.target === el)).to.be.true;
   expect(events.every((event) => event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
 });
 
 it('forwards a host-level click() to the internal base control, like lr-button', async () => {

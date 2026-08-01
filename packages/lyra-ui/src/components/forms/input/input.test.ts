@@ -52,6 +52,51 @@ describe('lr-input', () => {
     expect(seen).to.deep.equal(['input', 'change']);
   });
 
+  it('relays one native InputEvent with its editing payload and typed alias', async () => {
+    const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const nativeEvents: InputEvent[] = [];
+    const aliases: CustomEvent[] = [];
+    el.addEventListener('input', (event) => nativeEvents.push(event as InputEvent));
+    el.addEventListener('lr-input', (event) => aliases.push(event as CustomEvent));
+
+    input.value = 'x';
+    input.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      composed: true,
+      data: 'x',
+      inputType: 'insertText',
+    }));
+
+    expect(nativeEvents).to.have.length(1);
+    expect(nativeEvents[0] instanceof InputEvent).to.be.true;
+    expect(nativeEvents[0].target === el).to.be.true;
+    expect(nativeEvents[0].data).to.equal('x');
+    expect(nativeEvents[0].inputType).to.equal('insertText');
+    expect(aliases).to.have.length(1);
+    expect(aliases[0].detail).to.deep.equal({ value: 'x' });
+  });
+
+  it('exposes exactly one native focus/blur pair plus lr aliases', async () => {
+    const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
+    const nativeEvents: FocusEvent[] = [];
+    const aliases: string[] = [];
+    for (const type of ['focus', 'blur']) {
+      el.addEventListener(type, (event) => nativeEvents.push(event as FocusEvent));
+    }
+    for (const type of ['lr-focus', 'lr-blur']) {
+      el.addEventListener(type, () => aliases.push(type));
+    }
+
+    el.focus();
+    el.blur();
+
+    expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+    expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+    expect(nativeEvents.every((event) => event.target === el)).to.be.true;
+    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  });
+
   it('updates value and fires lr-input on user typing', async () => {
     const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;

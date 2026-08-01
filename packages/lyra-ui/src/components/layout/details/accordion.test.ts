@@ -375,6 +375,43 @@ describe('<lr-accordion-item>', () => {
     expect(item.expanded).to.be.false;
   });
 
+  it('keeps a vetoed expanded attribute write synchronized with the open alias', async () => {
+    const item = (await fixture(
+      html`<lr-accordion-item label="Vetoed">Content</lr-accordion-item>`,
+    )) as LyraAccordionItem;
+    item.addEventListener('lr-show', (event) => event.preventDefault(), { once: true });
+
+    item.setAttribute('expanded', '');
+    await item.updateComplete;
+    expect(item.expanded).to.be.false;
+    expect(item.open).to.be.false;
+    expect(item.hasAttribute('expanded')).to.be.false;
+    expect(item.hasAttribute('open')).to.be.false;
+  });
+
+  it('publishes the animating custom state only while a transition is settling', async () => {
+    const item = (await fixture(html`<lr-accordion-item
+      label="Animation state"
+      style="--show-duration: 40ms"
+    >Content</lr-accordion-item>`)) as LyraAccordionItem;
+
+    const expansion = item.expand();
+    await item.updateComplete;
+    expect(item.matches(':state(animating)')).to.be.true;
+    await expansion;
+    expect(item.matches(':state(animating)')).to.be.false;
+  });
+
+  it('contains long labels and content at a 320px allocation', async () => {
+    const item = (await fixture(html`<lr-accordion-item
+      label="A_really_long_unbroken_label_that_must_wrap_without_widening_the_panel"
+      expanded
+      style="inline-size: 320px"
+    >A_really_long_unbroken_content_value_that_must_wrap_without_widening_the_panel</lr-accordion-item>`)) as LyraAccordionItem;
+    const base = item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+  });
+
   it('renders motion by default and installs a reduced-motion kill switch for panel and icon', async () => {
     const item = (await fixture(
       html`<lr-accordion-item label="Motion">Content</lr-accordion-item>`,

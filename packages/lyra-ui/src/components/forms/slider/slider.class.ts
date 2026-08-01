@@ -17,6 +17,8 @@ import {
 import { styles } from './slider.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 /** PageUp/PageDown move by a larger increment than a single Arrow step,
  *  matching the WAI-ARIA APG slider pattern's expected keyboard interactions
@@ -65,8 +67,14 @@ export interface LyraSliderChangeDetail {
 }
 
 export interface LyraSliderEventMap {
+  input: Event;
+  change: Event;
   'lr-input': CustomEvent<LyraSliderChangeDetail>;
   'lr-change': CustomEvent<LyraSliderChangeDetail>;
+  focus: FocusEvent;
+  blur: FocusEvent;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
 }
 
 interface SliderDragState {
@@ -130,6 +138,8 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * that has nowhere else to live.
  *
  * @customElement lr-slider
+ * @event input - Native event fired continuously while a user moves a handle.
+ * @event change - Native event fired when a handle interaction commits.
  * @event lr-input - Fired continuously during an active drag or a
  *   keyboard step (including OS key-repeat while a key is held), mirroring
  *   native `<input type=range>`'s own `input` event.
@@ -139,6 +149,10 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  *   PageUp/PageDown press fires both `lr-input` and `lr-change`,
  *   mirroring how native `<input type=range>` fires `change` on every
  *   committed step too. `detail: { value, minValue, maxValue, handle }`.
+ * @event focus - Native focus relayed once from the focused thumb.
+ * @event blur - Native blur relayed once from the thumb losing focus.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @slot hint - Rich hint content, replacing the plain-text `hint` attribute.
  * @csspart base - The row wrapping the track and the optional value readout. Carries
  *   `role="group"` (named from `label`/`aria-label`) in `range` mode, so the two handles are
@@ -451,17 +465,19 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    *  handler is bound to the host itself, only to `[part="base"]`/the thumbs. In `range` mode
    *  this targets the lower handle, matching `focus()`/`blur()` below. */
   override click(): void {
-    this.firstThumb()?.click();
+    if (!this.effectiveDisabled) this.firstThumb()?.click();
   }
 
   /** Moves focus to the first internal thumb control (the lower handle in `range` mode). */
   override focus(options?: FocusOptions): void {
-    this.firstThumb()?.focus(options);
+    if (!this.effectiveDisabled) this.firstThumb()?.focus(options);
   }
 
-  /** Removes focus from the first internal thumb control. */
+  /** Removes focus from whichever internal thumb currently owns it. */
   override blur(): void {
-    this.firstThumb()?.blur();
+    const active = activeElementIn(this.shadowRoot);
+    if (active instanceof HTMLElement && active.matches('[part~="thumb"]')) active.blur();
+    else this.firstThumb()?.blur();
   }
 
   private firstThumb(): HTMLElement | null {
@@ -605,6 +621,16 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     };
   }
 
+  private emitInput(handle: SliderHandle): void {
+    dispatchNativeEvent(this, 'input');
+    this.emit('lr-input', this.detailFor(handle));
+  }
+
+  private emitChange(handle: SliderHandle): void {
+    dispatchNativeEvent(this, 'change');
+    this.emit('lr-change', this.detailFor(handle));
+  }
+
   /** Assign one handle, clamped to the domain, the step grid, and its sibling.
    *  Returns whether anything actually moved. */
   private setValueFor(handle: SliderHandle, raw: number, commit: boolean): boolean {
@@ -628,8 +654,8 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     } else {
       this.value = String(clamped);
     }
-    this.emit('lr-input', this.detailFor(handle));
-    if (commit) this.emit('lr-change', this.detailFor(handle));
+    this.emitInput(handle);
+    if (commit) this.emitChange(handle);
     return true;
   }
 
@@ -671,7 +697,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     const handle = this.pendingKeyHandle;
     if (handle === null) return;
     this.pendingKeyHandle = null;
-    this.emit('lr-change', this.detailFor(handle));
+    this.emitChange(handle);
   };
 
   /** Resolve a pointer position to a 0..1 position along the value axis. The
@@ -789,7 +815,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     const drag = this.drags.get(pointerId);
     if (drag === undefined) return;
     this.drags.delete(pointerId);
-    if (commit && drag.changed) this.emit('lr-change', this.detailFor(drag.handle));
+    if (commit && drag.changed) this.emitChange(drag.handle);
     // Only the last concurrent drag to end tears down the shared window
     // listeners — an overlapping second pointer may still be down.
     if (this.drags.size === 0) {
@@ -801,15 +827,20 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     this.requestUpdate();
   }
 
-  private onHandleFocus(handle: SliderHandle): void {
+  private onHandleFocus(handle: SliderHandle, event: FocusEvent): void {
     this.focusedHandle = handle;
     this.requestUpdate();
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   }
 
-  private onHandleBlur(handle: SliderHandle): void {
-    if (this.focusedHandle !== handle) return;
-    this.focusedHandle = null;
-    this.requestUpdate();
+  private onHandleBlur(handle: SliderHandle, event: FocusEvent): void {
+    if (this.focusedHandle === handle) {
+      this.focusedHandle = null;
+      this.requestUpdate();
+    }
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   }
 
   private onHintSlotChange = (e: Event): void => {
@@ -888,8 +919,8 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
         @pointerdown=${(e: PointerEvent) => this.onPointerDown(handle, e)}
         @keydown=${(e: KeyboardEvent) => this.onKeyDown(handle, e)}
         @keyup=${this.onKeyUp}
-        @focus=${() => this.onHandleFocus(handle)}
-        @blur=${() => this.onHandleBlur(handle)}
+        @focus=${(event: FocusEvent) => this.onHandleFocus(handle, event)}
+        @blur=${(event: FocusEvent) => this.onHandleBlur(handle, event)}
       ></div>
       ${this.withTooltip
         ? html`<span part=${tooltipPart} aria-hidden="true" style=${this.offsetStyle(percent)}
