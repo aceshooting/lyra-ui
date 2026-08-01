@@ -84,13 +84,23 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *   size their icon controls against), so overriding it globally resizes all of them together.
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Corner radius of the native button.
  * @cssprop [--lr-icon-button-background=transparent] - Background fill of the native button.
- * @cssprop [--lr-icon-button-background-hover=var(--lr-color-surface)] - Background fill on hover.
+ * @cssprop [--lr-icon-button-background-hover=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ *   Background fill on hover. Before 8.0.0 this fell back to `var(--lr-color-surface)` — the page
+ *   background — so on a default page a hovered icon button painted itself the colour it was
+ *   already sitting on and showed no hover at all.
+ * @cssprop [--lr-icon-button-background-active=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ *   Background fill while pressed: the same mix at the stronger `--lr-color-mix-active` share, so
+ *   the pressed state is visibly more than the hover.
  * @cssprop [--lr-icon-button-color=inherit] - Icon/text color of the native button.
  * @cssprop [--lr-icon-button-color-hover=var(--lr-icon-button-color, inherit)] - Icon/text color
  *   on hover.
+ * @cssprop [--lr-icon-button-color-active=var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))] -
+ *   Icon/text color while pressed; falls through to the hover colour when only that is set.
  * @cssprop [--lr-icon-button-border=0] - Complete border shorthand of the native button.
  * @cssprop [--lr-icon-button-border-hover=var(--lr-icon-button-border, 0)] - Complete border
  *   shorthand on hover.
+ * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))] -
+ *   Complete border shorthand while pressed; falls through to the hover border when only that is set.
  */
 export class LyraIconButton extends LyraElement {
   static override styles = [LyraElement.styles, styles];

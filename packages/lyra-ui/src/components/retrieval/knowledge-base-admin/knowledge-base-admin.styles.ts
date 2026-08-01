@@ -42,6 +42,14 @@ export const styles = css`
     color: var(--lr-color-text);
   }
 
+  /* Pressed adds a fill the hover deliberately has none of: the tab's label is already moving to
+     --lr-color-text on hover, which is exactly what --lr-color-mix-partner tracks, so the only axis
+     left that can read as "held" is the tab's own transparent background mixed toward the partner. */
+  [part='tab']:active {
+    color: var(--lr-color-text);
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+
   [part='tab']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

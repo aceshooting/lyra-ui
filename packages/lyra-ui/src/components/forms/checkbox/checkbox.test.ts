@@ -3,6 +3,7 @@ import type { PropertyValues } from 'lit';
 import './checkbox.js';
 import type { LyraCheckbox } from './checkbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('defaults to unchecked with role="checkbox" and aria-checked="false"', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
@@ -910,5 +911,115 @@ describe('size', () => {
     const el = (await fixture(html`<lr-checkbox size="l">Label</lr-checkbox>`)) as LyraCheckbox;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+});
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
+// where either is missing -- an unguarded assertion fails on WebKit rather than skipping.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('lr-checkbox validity custom states', () => {
+  it('publishes required/optional and valid/invalid from the first render', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-checkbox required>Terms</lr-checkbox>`)) as LyraCheckbox;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    const optional = (await fixture(html`<lr-checkbox>Terms</lr-checkbox>`)) as LyraCheckbox;
+    await optional.updateComplete;
+    expect(optional.matches(':state(optional)')).to.be.true;
+    expect(optional.matches(':state(required)')).to.be.false;
+    expect(optional.matches(':state(valid)')).to.be.true;
+  });
+
+  it('withholds user-valid/user-invalid until the user has actually interacted', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-checkbox required>Terms</lr-checkbox>`)) as LyraCheckbox;
+    await el.updateComplete;
+    expect(el.matches(':state(invalid)')).to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'pristine required must not read as an error').to.be
+      .false;
+    expect(el.matches(':state(user-valid)')).to.be.false;
+
+    el.click();
+    await el.updateComplete;
+    expect(el.checked).to.be.true;
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)'), 'user-valid after a real toggle').to.be.true;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+  });
+
+  it('counts a reportValidity() call -- what a submit attempt runs -- as interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-checkbox required>Terms</lr-checkbox>`)) as LyraCheckbox;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)')).to.be.true;
+  });
+
+  it('goes pristine again after a form reset', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-checkbox name="terms" required>Terms</lr-checkbox></form>`,
+    );
+    const el = form.querySelector('lr-checkbox') as LyraCheckbox;
+    await el.updateComplete;
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)')).to.be.true;
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'reset returns the control to pristine').to.be.false;
+    expect(el.matches(':state(invalid)'), 'still intrinsically invalid, just not user-invalid').to.be
+      .true;
+  });
+});
+
+describe('lr-checkbox hover and press feedback', () => {
+  const centerOf = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  it('rings the box while pressed, on top of the hover border it already carries', async () => {
+    // The box's fill IS the state readout (surface unchecked, brand checked), so the pressed
+    // treatment is a ring rather than a tint -- asserted on the rendered box, since a stylesheet
+    // match cannot tell a ring that paints from one behind a selector that never matches.
+    const el = (await fixture(
+      html`<lr-checkbox style="--lr-transition-fast: 0s">Terms</lr-checkbox>`,
+    )) as LyraCheckbox;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    const restingBorder = getComputedStyle(box).borderTopColor;
+    expect(getComputedStyle(box).boxShadow, 'no ring at rest').to.equal('none');
+    try {
+      await sendMouse({ type: 'move', position: centerOf(base) });
+      expect(getComputedStyle(box).borderTopColor, 'hover moves the border').to.not.equal(restingBorder);
+      expect(getComputedStyle(box).boxShadow, 'hover alone must not ring').to.equal('none');
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(box).boxShadow, 'pressed rings the box').to.not.equal('none');
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
   });
 });

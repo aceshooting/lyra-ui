@@ -44,6 +44,12 @@ export const styles = css`
   :where([part='filter']):hover {
     background: var(--lr-color-brand-quiet);
   }
+  /* Pressing a text field is how you focus it, so it gets the same acknowledgement every other
+     control here does -- one step further toward --lr-color-mix-partner (the text colour) than the
+     hovered fill, and back to the hovered fill the moment the button is released. */
+  :where([part='filter']):active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='filter']::placeholder {
     color: var(--lr-color-text-quiet);
     opacity: 1;
@@ -128,6 +134,13 @@ export const styles = css`
     background: var(--lr-color-brand);
     opacity: var(--lr-table-resize-handle-opacity);
   }
+  /* The handle is a drag grip, so its pressed state is also its dragging state and stays applied
+     for the whole gesture. It doubles the same opacity knob rather than introducing a second one,
+     so a consumer that retunes the resting tint retunes the pressed one with it. */
+  [part='resize-handle']:active {
+    background: var(--lr-color-brand);
+    opacity: calc(var(--lr-table-resize-handle-opacity) * 2);
+  }
   [part='resize-handle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
@@ -159,6 +172,12 @@ export const styles = css`
      consumer needing !important. Matches attachment-trigger.styles.ts's remediation pattern. */
   :where([part='header-cell'][data-sortable]):hover {
     background: var(--lr-color-brand-quiet);
+  }
+  /* Re-sorting a large table is the slowest thing this component does, so the press has to read
+     before the rows move. Same zeroed specificity as the :hover arm above it, one step further
+     toward --lr-color-mix-partner. */
+  :where([part='header-cell'][data-sortable]):active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   /* Not scoped to [data-sortable] — the roving-tabindex header stop (see
      table.ts's focusedColKey()) can land on any column, sortable or not, so
@@ -208,6 +227,12 @@ export const styles = css`
   [part='row'][aria-selected='true'] {
     background: var(--lr-table-row-selected-bg, var(--lr-color-brand-quiet));
   }
+  /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides,
+     and the selected row is the one a user presses to DEselect -- put this first and the single
+     most common press in a selectable table would be the one press with no feedback. */
+  [part='row']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='group-cell'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -241,6 +266,9 @@ export const styles = css`
   }
   :where([part='cell-editor']):hover {
     background: var(--lr-color-brand-quiet);
+  }
+  :where([part='cell-editor']):active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   /* editType: 'number' cells render a native type="number" editor; without this reset the
      browser's default up/down spinner buttons show in raw, unstyled UA chrome inside an otherwise
@@ -285,6 +313,9 @@ export const styles = css`
   }
   [part='row-expand-toggle']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='row-expand-toggle']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='row-expand-toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -383,6 +414,10 @@ export const styles = css`
   [part='more-button']:hover,
   [part='reveal-columns-button']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='more-button']:active,
+  [part='reveal-columns-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='more-button']:focus-visible,
   [part='reveal-columns-button']:focus-visible {

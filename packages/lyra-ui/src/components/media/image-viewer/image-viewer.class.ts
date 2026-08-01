@@ -122,6 +122,10 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @cssprop --lr-image-viewer-highlight-danger-bg - Danger-tone highlight fill.
  * @cssprop --lr-image-viewer-highlight-neutral-border - Neutral-tone highlight border.
  * @cssprop --lr-image-viewer-highlight-neutral-bg - Neutral-tone highlight fill.
+ * @cssprop --lr-image-viewer-highlight-fill - The resting fill a `[part="highlight"]` actually
+ *   renders, resolved per tone from the `--lr-image-viewer-highlight-*-bg` knobs above. Its hover
+ *   and pressed states are colour mixes taken from this value, so setting it directly retints all
+ *   three at once for one highlight; retint a whole tone through the `-bg` knob instead.
  */
 export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

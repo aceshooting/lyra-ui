@@ -134,10 +134,29 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     border-color: var(--lr-color-brand);
   }
+  /* Same selectors, same zeroed specificity, one step further toward --lr-color-mix-partner (which
+     follows the text colour) -- so the pressed fill is unmistakably deeper than the hovered one in
+     either theme, and a consumer's ::part(next-button):active still wins. */
+  :where([part='first-button']):active:where(:not(:disabled)),
+  :where([part='previous-button']):active:where(:not(:disabled)),
+  :where([part='next-button']):active:where(:not(:disabled)),
+  :where([part='last-button']):active:where(:not(:disabled)),
+  :where([part~='page']):active:where(:not(:disabled)):where(:not([part~='page-current'])),
+  :where([part='page-input']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: var(--lr-color-brand);
+  }
   /* The current page is already a brand chip; without its own :hover arm it would fall back to the
      rule above and visibly lighten under the pointer, reading as "not selected". */
   :where([part~='page-current']):hover {
     background: var(--lr-color-brand);
+    border-color: transparent;
+  }
+  /* Pressing the page you are already on is a no-op, but it still has to acknowledge the click --
+     the chip deepens rather than lightening, so it never momentarily reads as deselected. MUST stay
+     after the generic :active rule above: both are (0,1,0) after :where(), so source order decides. */
+  :where([part~='page-current']):active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     border-color: transparent;
   }
   [part='first-button']:focus-visible,

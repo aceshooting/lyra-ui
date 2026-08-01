@@ -43,6 +43,18 @@ export const styles = css`
   [part='remove-button']:hover {
     background: var(--lr-tag-remove-hover-background);
   }
+  /* Pressed deepens the hover's own scrim -- currentColor mixed in again at the shared
+     --lr-color-mix-active share, landing the button at roughly double the hover's tint so the
+     press reads as a step past the hover rather than a repeat of it. Mixed toward currentColor
+     rather than --lr-color-mix-partner deliberately: this button sits INSIDE the badge, whose
+     variant may have painted a loud fill beneath it, and currentColor is then the pill's own ink,
+     the one colour guaranteed to contrast with that fill. --lr-color-mix-partner follows the PAGE
+     text, which on a solid-appearance badge (light ink on a loud fill) points the opposite way
+     from the hover -- hovering would lighten while pressing darkened. Layering on top of the hover
+     custom property also means a consumer who retints the hover gets a matching press for free. */
+  [part='remove-button']:active {
+    background: color-mix(in srgb, currentColor var(--lr-color-mix-active), var(--lr-tag-remove-hover-background));
+  }
   [part='remove-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

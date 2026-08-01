@@ -83,6 +83,15 @@ export const styles = css`
   :host(:not([disabled])) .dropzone:hover [part='base'] {
     border-color: var(--lr-color-brand);
   }
+  /* [part='base'] is the button that opens the file dialog, so the press is a real activation and
+     needs its own answer -- the hover border alone repeats what hover already said. Both selector
+     shapes are mirrored because the pointer can be over the button itself or over the
+     pointer-events: none content stacked on top of it in the same grid cell. */
+  :host(:not([disabled])) [part='base']:active,
+  :host(:not([disabled])) .dropzone:active [part='base'] {
+    border-color: var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

@@ -370,6 +370,39 @@ it('uses a series-provided color for its bar fill, and a default palette color o
   expect(rects[1].getAttribute('fill')).to.be.a('string').and.not.equal('#ff0000');
 });
 
+it('carries every mark colour in a computed `color` so the hover/active mix has a base to read', async () => {
+  // The hover and pressed rules mix the mark's own colour toward --lr-color-mix-partner, and CSS
+  // cannot read the value of a `fill` presentation attribute -- so each mark mirrors its series
+  // colour into `color`, and the stylesheet mixes from currentColor. Drop this and both states
+  // silently start mixing the inherited host text colour instead, which is invisible to every
+  // other assertion in this file.
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    .labels=${['only']}
+    .datasets=${[
+      { label: 'Custom', data: [1], color: 'rgb(255, 0, 0)' },
+      { label: 'Themed', data: [1], color: 'var(--lr-chart-color-3)' },
+    ]}
+  ></lr-lite-chart>`);
+  const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
+  expect(rects.length).to.equal(2);
+  expect(getComputedStyle(rects[0]!).color).to.equal('rgb(255, 0, 0)');
+  // A var()-valued series colour resolves the same way, and differs from the literal above.
+  expect(getComputedStyle(rects[1]!).color).to.not.equal('rgb(255, 0, 0)');
+  expect(getComputedStyle(rects[1]!).color).to.equal(getComputedStyle(rects[1]!).fill);
+});
+
+it('carries a line-chart point colour in `color` too, for the same hover/active mix', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="line"
+    .labels=${['a', 'b']}
+    .datasets=${[{ label: 'Custom', data: [1, 2], color: 'rgb(0, 128, 0)' }]}
+  ></lr-lite-chart>`);
+  const points = [...el.shadowRoot!.querySelectorAll('[part="point"]')] as SVGCircleElement[];
+  expect(points.length).to.equal(2);
+  expect(getComputedStyle(points[0]!).color).to.equal('rgb(0, 128, 0)');
+});
+
 it('allows the categorical palette to be rethemed through semantic chart color variables', async () => {
   const el = await mount(html`<lr-lite-chart
     style="--lr-chart-color-2: rgb(1 2 3)"

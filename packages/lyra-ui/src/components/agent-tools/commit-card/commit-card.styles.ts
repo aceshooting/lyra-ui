@@ -65,8 +65,14 @@ export const styles = css`
     cursor: pointer;
     padding: var(--lr-space-xs) 0;
   }
+  /* Pressed, here and on [part='file'] / [part='copy-button'] below, is the hovered tint pushed a
+     further --lr-color-mix-active toward --lr-color-mix-partner (which follows the text colour), so
+     it reads as a distinctly deeper step than hover in both light and dark themes. */
   [part='files-toggle']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='files-toggle']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='file'] {
     box-sizing: border-box;
@@ -97,6 +103,9 @@ export const styles = css`
   [part='file']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='file']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='copy-button'] {
     font: inherit;
     font-size: var(--lr-font-size-xs);
@@ -108,5 +117,8 @@ export const styles = css`
   }
   [part='copy-button']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='copy-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
 `;

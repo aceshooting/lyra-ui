@@ -81,6 +81,9 @@ export const styles = css`
   :where([part='trigger']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
+  :where([part='trigger']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   :host([open]) [part='trigger'] {
     border-color: var(--lr-color-brand);
   }
@@ -198,6 +201,15 @@ export const styles = css`
   [part='option']:hover,
   [part='option'][data-active] {
     background: var(--lr-model-select-option-active-bg, var(--lr-color-brand-quiet));
+  }
+  /* Mixes the SAME --lr-model-select-option-active-bg the hover/active-descendant rule above uses,
+     so a consumer retinting the highlight gets a matching pressed step for free. */
+  [part='option']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-model-select-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='option'][aria-selected='true'] {
     /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset

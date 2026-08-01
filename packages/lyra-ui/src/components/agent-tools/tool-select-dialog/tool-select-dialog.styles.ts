@@ -48,7 +48,7 @@ export const styles = css`
   }
   [part='title'] {
     margin: 0;
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='subtitle'] {
@@ -77,6 +77,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* no-pressed-state: a search field is a caret target, not a push target -- pointer-down places an
+     insertion point and hands the affordance to :focus-visible, so a pressed tint would flash for
+     one frame and then be contradicted by the focus ring. */
   :where([part='search-input']):hover {
     border-color: var(--lr-color-brand);
   }

@@ -57,7 +57,7 @@ export interface LyraToastItemEventMap {
  *   `neutral` keeps the plain border color, so an informational toast reads as unaccented.
  * @cssprop [--lr-toast-padding=var(--lr-space-m)] - Padding of the item, auto-swapped per `size`
  *   across the shared six-step ladder.
- * @cssprop [--lr-toast-font-size=var(--lr-font-size-md)] - Font size of the item, auto-swapped per
+ * @cssprop [--lr-toast-font-size=var(--lr-font-size-m)] - Font size of the item, auto-swapped per
  *   `size` across the shared six-step ladder.
  * @cssprop [--lr-toast-show-duration=var(--lr-transition-base, 180ms ease-out)] - Opacity/transform
  *   transition used while showing.

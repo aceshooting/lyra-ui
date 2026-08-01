@@ -161,11 +161,20 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     line-height: var(--lr-line-height-none);
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
   }
   [part='clear-button']:hover,
   [part='expand-button']:hover {
     color: var(--lr-color-text);
+  }
+  /* Hover has already spent the colour step (quiet -> full text), so the press is a background pad
+     mixed off the row's own --lr-color-surface fill: it moves toward the text colour, so it darkens
+     a light field and lightens a dark one instead of depending on which way a filter happens to
+     push. */
+  [part='clear-button']:active,
+  [part='expand-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-radius: var(--lr-date-input-radius);
   }
   [part='clear-button']:focus-visible,
   [part='expand-button']:focus-visible {

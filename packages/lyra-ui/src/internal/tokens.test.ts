@@ -383,7 +383,9 @@ const REQUIRED_THEME_INPUTS = [
   // Elevation. The colour is its own input so a theme can tint all five steps at once.
   '--lr-theme-shadow-color',
   ...ELEVATION_STEPS.map((step) => `--lr-theme-shadow-${step}`),
-  ...['2xs', 'xs', 'sm', 'md-sm', 'm', 'md', 'lg', 'xl', '2xl', '3xl'].map((step) => `--lr-theme-font-size-${step}`),
+  // 'md' is deliberately absent: it and 'm' were the same 1rem under two names, so a control could
+  // declare two 'different' type tiers that rendered identically. 8.0.0 keeps 'm'.
+  ...['2xs', 'xs', 'sm', 'md-sm', 'm', 'lg', 'xl', '2xl', '3xl'].map((step) => `--lr-theme-font-size-${step}`),
   ...['2xs', 'xs', 's', 'm', 'l', '2xl'].map((step) => `--lr-theme-space-${step}`),
   ...['base', 'content', 'dropdown', 'popover', 'modal', 'toast'].map((layer) => `--lr-theme-z-index-${layer}`),
   ...Array.from({ length: 8 }, (_, index) => `--lr-theme-color-chart-${index + 1}`),

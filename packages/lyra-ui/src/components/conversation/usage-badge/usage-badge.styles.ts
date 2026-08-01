@@ -10,6 +10,9 @@ export const styles = css`
   [part='base']:where([tabindex]) {
     cursor: help;
   }
+  /* no-pressed-state: with a tabindex, [part='base'] is a focusable role="group" that reveals a
+     tooltip (cursor: help) -- it is not activatable, has no click handler and nothing happens on
+     mousedown, so a pressed tint would promise an action the badge does not perform. */
   :where([part='base'][tabindex]):hover {
     background: var(--lr-color-surface-raised);
   }

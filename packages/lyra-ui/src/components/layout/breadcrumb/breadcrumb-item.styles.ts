@@ -26,6 +26,17 @@ export const styles = css`
   a[part="base"]:hover {
     text-decoration: underline;
   }
+  /* A link has no fill of its own to deepen, so the pressed state paints one. Mixing from
+     transparent yields --lr-color-mix-partner at --lr-color-mix-active alpha, which tints whatever
+     surface the trail happens to sit on rather than assuming --lr-color-surface is behind it. */
+  a[part="base"]:active {
+    text-decoration: underline;
+    background: color-mix(
+      in oklab,
+      transparent,
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

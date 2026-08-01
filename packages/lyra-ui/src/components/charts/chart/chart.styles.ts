@@ -87,6 +87,11 @@ export const styles = css`
   [part='legend-item']:where(:hover) {
     background: var(--lr-color-brand-quiet);
   }
+  /* Pressed: the same quiet brand tint pushed further toward the text colour, so the
+     mousedown that toggles the series is visibly distinct from merely pointing at it. */
+  [part='legend-item']:where(:active) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='legend-item']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -137,6 +142,9 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
   }
+  /* no-pressed-state: the canvas is a role="application" keyboard surface with no click handler of
+     its own -- pressing it activates a datum *inside* the bitmap, which no CSS rule can reach, and
+     re-outlining the whole plot on mousedown would read as the entire chart being the target. */
   [part='canvas']:hover {
     /* Scoped so a consumer can retint/resize just this hover outline (e.g. to make it more
        prominent) without also affecting every other --lr-border-width-thin consumer on the page
@@ -160,6 +168,9 @@ export const styles = css`
   }
   [part='data-table'] button:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='data-table'] button:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='data-table'] button:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -189,6 +200,9 @@ export const styles = css`
   }
   [part='reset-zoom-button']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='reset-zoom-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='reset-zoom-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -38,11 +38,15 @@ export const styles = css`
     pointer-events: none;
   }
   .message-role-chevron svg { transform: rotate(90deg); }
+  /* no-pressed-state: these three are field surfaces, not push targets -- pointer-down on the
+     textarea or the text input places a caret, and pointer-down on the role select hands the whole
+     interaction to the UA's own native option list, which paints its own pressed feedback and holds
+     it for as long as the popup is open. :focus-visible carries the affordance in all three cases. */
   :where([part='message-role'], [part='message-content'], [part='variable'] input):hover:where(:not(:disabled)) {
     border-color: var(--lr-prompt-studio-field-hover-border, var(--lr-color-brand));
   }
   [part='variables'], [part='versions'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }
-  [part='variables'] h3, [part='preview'] h3 { margin: 0; font-size: var(--lr-font-size-md); }
+  [part='variables'] h3, [part='preview'] h3 { margin: 0; font-size: var(--lr-font-size-m); }
   [part='variable'] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--lr-space-xs); }
   [part='variable'] input { min-inline-size: 0; padding-inline: var(--lr-space-s); }
   [part='toolbar'] button, [part='remove-message'], [part='add-message'], [part='version'] {
@@ -57,13 +61,29 @@ export const styles = css`
     cursor: pointer;
   }
   :where([part='toolbar'] button, [part='remove-message'], [part='add-message'], [part='version']):hover { background: var(--lr-color-surface-raised); }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
+     than hover in both light and dark themes rather than repeating it. */
+  :where([part='toolbar'] button, [part='remove-message'], [part='add-message'], [part='version']):active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='version'][aria-pressed='true'] {
     border-color: var(--lr-prompt-studio-version-selected-border, var(--lr-color-brand));
     background: var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet));
     color: var(--lr-prompt-studio-version-selected-color, var(--lr-color-text));
   }
+  /* Both of these must stay after the generic :where(...) rules above: every selector here is
+     :where()-wrapped, so they all land at the same (0,1,0) specificity and source order alone
+     decides which background the already-selected version chip gets. */
   :where([part='version'][aria-pressed='true']):hover {
     background: var(--lr-prompt-studio-version-selected-hover-bg, var(--lr-color-brand-quiet));
+  }
+  :where([part='version'][aria-pressed='true']):active {
+    background: color-mix(
+      in oklab,
+      var(--lr-prompt-studio-version-selected-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='toolbar'] button:focus-visible, [part='remove-message']:focus-visible, [part='add-message']:focus-visible, [part='version']:focus-visible,
   [part='message-role']:focus-visible, [part='message-content']:focus-visible, [part='variable'] input:focus-visible {

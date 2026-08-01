@@ -7,7 +7,7 @@ export const styles = css`
   [part='event-list'] { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
   [part='event'] { display: flex; flex-direction: column; gap: var(--lr-space-2xs); padding: var(--lr-space-m); border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border); }
   [part='event']:last-child { border-block-end: none; }
-  [part='event-summary'] { font-weight: var(--lr-font-weight-semibold); font-size: var(--lr-font-size-md); }
+  [part='event-summary'] { font-weight: var(--lr-font-weight-semibold); font-size: var(--lr-font-size-m); }
   [part='event-time'], [part='event-location'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='event-description'] { margin: 0; color: var(--lr-color-text); font-size: var(--lr-font-size-md-sm); line-height: var(--lr-line-height-normal); white-space: pre-wrap; overflow-wrap: anywhere; }
   .empty-note { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }

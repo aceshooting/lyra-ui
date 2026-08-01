@@ -127,6 +127,9 @@ export const styles = css`
   [part='jump-pill']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='jump-pill']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   @container (max-inline-size: 20rem) {
     [part='jump-pill'] {
       max-inline-size: calc(100% - 2 * var(--lr-space-s));

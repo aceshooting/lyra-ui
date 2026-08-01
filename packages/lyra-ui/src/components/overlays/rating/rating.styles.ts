@@ -37,6 +37,9 @@ export const styles = css`
      as an affordance) rather than a same-selector [part='star']:hover:not(:disabled) (which would
      exceed a consumer's ::part(star):hover specificity). */
   :host(:not(:disabled):not([readonly])) [part='base']:hover [part='star'] { color: var(--lr-rating-empty-color, var(--lr-color-border-strong)); }
+  /* Pressing commits a value, so the pressed cue is on the star the pointer is over rather than
+     the whole row -- the row-wide hover cue says "settable", this says "this one". */
+  :host(:not(:disabled):not([readonly])) [part='base']:active [part='star'] { color: color-mix(in oklab, var(--lr-rating-empty-color, var(--lr-color-border-strong)), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='star'] { position: relative; display: inline-flex; color: var(--lr-rating-empty-color, var(--lr-color-border)); font-size: var(--lr-rating-size); line-height: var(--lr-line-height-none); }
   [part='star'] svg { display: block; }
   /* white-space keeps a consumer getSymbol() glyph at its natural width inside the percentage-wide

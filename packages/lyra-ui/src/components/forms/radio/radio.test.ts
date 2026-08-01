@@ -1077,3 +1077,86 @@ describe('lr-radio-group size', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
+// where either is missing -- an unguarded assertion fails on WebKit rather than skipping.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('lr-radio validity custom states', () => {
+  it('publishes required/optional and valid/invalid from the first render', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-radio required value="a">One</lr-radio>`)) as LyraRadio;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    const optional = (await fixture(html`<lr-radio value="a">One</lr-radio>`)) as LyraRadio;
+    await optional.updateComplete;
+    expect(optional.matches(':state(optional)')).to.be.true;
+    expect(optional.matches(':state(valid)')).to.be.true;
+  });
+
+  it('reads an owning required group as required, not just its own attribute', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const group = (await fixture(html`
+      <lr-radio-group required name="pick" label="Pick">
+        <lr-radio value="a">One</lr-radio>
+        <lr-radio value="b">Two</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    const first = group.querySelector('lr-radio') as LyraRadio;
+    expect(first.hasAttribute('required'), 'no attribute of its own').to.be.false;
+    expect(first.matches(':state(required)'), 'required through the group').to.be.true;
+    expect(first.matches(':state(optional)')).to.be.false;
+  });
+
+  it('withholds user-valid/user-invalid until the user has actually interacted', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-radio required value="a">One</lr-radio>`)) as LyraRadio;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'pristine required must not read as an error').to.be
+      .false;
+    expect(el.matches(':state(user-valid)')).to.be.false;
+
+    el.click();
+    await el.updateComplete;
+    expect(el.checked).to.be.true;
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)'), 'user-valid after a real selection').to.be.true;
+  });
+
+  it('goes pristine again after a form reset', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-radio name="pick" required value="a">One</lr-radio></form>`,
+    );
+    const el = form.querySelector('lr-radio') as LyraRadio;
+    await el.updateComplete;
+    el.click();
+    await el.updateComplete;
+    expect(el.matches(':state(user-valid)')).to.be.true;
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-valid)'), 'reset returns the control to pristine').to.be.false;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+    expect(el.matches(':state(invalid)'), 'unchecked again, so intrinsically invalid').to.be.true;
+  });
+});

@@ -82,6 +82,7 @@ export const styles = css`
      hit-target box grows. */
   [part='remove'] { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: 0; padding: 0; background: transparent; color: inherit; cursor: pointer; }
   [part='remove']:hover { background: var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)); }
+  [part='remove']:active { background: color-mix(in oklab, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='remove']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   /* Only rendered while [editable] is set, so the non-editable token row keeps its plain,
      non-focusable text span and its exact current metrics. */
@@ -92,6 +93,7 @@ export const styles = css`
     cursor: pointer;
   }
   [part='token-label']:hover { background: var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)); }
+  [part='token-label']:active { background: color-mix(in oklab, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='token-label']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   :host(:disabled) [part='token-label'] { cursor: default; }
   [part='token-editor'] { inline-size: var(--lr-token-input-editor-inline-size, var(--lr-size-6rem)); max-inline-size: 100%; border: 0; outline: 0; padding: 0; background: transparent; color: inherit; font: inherit; }

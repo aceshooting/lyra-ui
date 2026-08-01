@@ -96,6 +96,15 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  /* Pressed carries the hover fill further toward --lr-color-mix-partner. These controls float over
+     arbitrary photography, so the press has to be legible on its own rather than relying on the
+     surrounding image to supply contrast. */
+  :where([part='close-button']):active,
+  :where([part='previous-button']):active:where(:not(:disabled)),
+  :where([part='next-button']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-brand);
+  }
   [part='close-button']:focus-visible,
   [part='previous-button']:focus-visible,
   [part='next-button']:focus-visible {

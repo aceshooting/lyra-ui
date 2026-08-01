@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import type { LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './rating.styles.js';
@@ -87,6 +88,16 @@ function starSolid(): SVGTemplateResult {
  * hover preview.
  * @cssprop [--lr-rating-size=var(--lr-font-size-xl)] - Symbol size. Each `size` step rewrites it;
  * the `m` default reproduces the treatment this component had before `size` existed.
+ * @cssstate required - A rating above zero is required. Style with `lr-rating:state(required)`.
+ * @cssstate optional - No rating is required.
+ * @cssstate valid - The control currently satisfies its constraints.
+ * @cssstate invalid - The control currently fails its constraints — true for a pristine
+ * `required` rating that has never been set, which is why validation styling should key off
+ * `user-invalid` instead.
+ * @cssstate user-valid - Valid, and the user has interacted: rated it, blurred it, or triggered
+ * validation (a submit attempt runs `reportValidity()`).
+ * @cssstate user-invalid - Invalid, and the user has interacted. This is the state to paint red;
+ * a form reset returns the control to pristine and drops it again.
  */
 export class LyraRating extends LyraElement<LyraRatingEventMap> {
   static formAssociated = true;
@@ -129,6 +140,12 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   private _disabled = false;
   private _fieldsetDisabled = false;
   private _defaultValue = 0;
+  /** Whether the user has driven this control yet — rated it, blurred it, or triggered validation.
+   *  Gates the `user-valid`/`user-invalid` custom states: a pristine `required` rating IS invalid,
+   *  but painting it red before anyone has touched it is hostile. Mirrors the `FormAssociated`
+   *  mixin's own flag; this control drives `ElementInternals` directly (its value is a number, not
+   *  the string that mixin assumes) so it has to track the flag itself. */
+  private _hasInteracted = false;
 
   constructor() {
     super();
@@ -137,6 +154,11 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.internals.setFormValue('0');
+    // `focusout` is the only blur signal observable on the host: native `blur` neither bubbles nor
+    // crosses a shadow boundary, so it can never reach here from the internal slider. Registered
+    // once, in the constructor, so a disconnect/reconnect cycle cannot stack duplicates.
+    this.addEventListener('focusout', this.markInteracted);
+    this.syncValidityStates();
   }
 
   /** The current rating. Clamped to `[0, max]` wherever it is read; the raw assignment is kept so
@@ -231,12 +253,19 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   reportValidity(): boolean {
+    // Reporting is what a submit attempt does, and a failed submit is precisely when native
+    // `:user-invalid` starts matching — so it counts as interaction here too.
+    this.markInteracted();
     return this.internals.reportValidity();
   }
 
   formResetCallback(): void {
     this.resetHover();
     this.value = this._defaultValue;
+    // A reset form is pristine again: drop the interaction flag so the `user-*` states stop
+    // matching, even though a required-and-unrated control is still `invalid`.
+    this._hasInteracted = false;
+    this.syncValidityStates();
   }
 
   formStateRestoreCallback(state: string | File | FormData | null, _mode?: 'restore' | 'autocomplete'): void {
@@ -310,10 +339,31 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     } else {
       this.validityController.setValidity({});
     }
+    this.syncValidityStates();
   }
+
+  /**
+   * Publishes the six validity custom states. The implementation lives in
+   * `internal/custom-states.ts` and is shared with the `FormAssociated` mixin, so a consumer's
+   * `lr-rating:state(user-invalid)` rule behaves identically to the same rule on `lr-input`.
+   */
+  private syncValidityStates(): void {
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this._hasInteracted });
+  }
+
+  /** Idempotent, and an arrow so it can be handed straight to `addEventListener`. */
+  private markInteracted = (): void => {
+    if (this._hasInteracted) return;
+    this._hasInteracted = true;
+    this.syncValidityStates();
+  };
 
   private setValue(next: number): void {
     if (!this.interactive) return;
+    // Reached only from the click and keydown handlers, so any call here is a user gesture —
+    // marked before the no-op guard below, since clicking the star already selected is still
+    // interaction even though it changes nothing.
+    this.markInteracted();
     const precision = this.safePrecision;
     const clamped = Math.max(0, Math.min(this.safeMax, Math.round(next / precision) * precision));
     if (clamped === this.value) return;

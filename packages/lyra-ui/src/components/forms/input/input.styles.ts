@@ -160,6 +160,9 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     border: none;
+    /* Invisible while the background is none; it exists so the pressed fill below (and the
+       focus ring, which follows the same corner) is a rounded chip rather than a hard rectangle. */
+    border-radius: var(--lr-radius);
     background: none;
     cursor: pointer;
     color: var(--lr-color-text-quiet);
@@ -167,13 +170,23 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     line-height: var(--lr-line-height-none);
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
   }
   [part='password-toggle']:hover {
     color: var(--lr-color-text);
   }
   [part='clear-button']:hover {
     color: var(--lr-color-text);
+  }
+  /* Pressed: the hover's quiet-to-full text step PLUS a fill, mixing the page surface toward
+     --lr-color-mix-partner. Deliberately more than the hover rather than a repeat of it -- these
+     two sit inside a text field whose own hover already moves the field border, so a fill at
+     rest-or-hover would compete with it, while a fill under the thumb only while the pointer is
+     down cannot. */
+  [part='password-toggle']:active,
+  [part='clear-button']:active {
+    color: var(--lr-color-text);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='password-toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -44,6 +44,13 @@ export const styles = css`
   [part='word']:hover {
     text-decoration-color: currentColor;
   }
+  /* A word's colour is data -- word-cloud.class.ts writes it as the SVG fill attribute, and it is
+     the thing the legend keys off -- so the pressed state thickens the underline the hover reveals
+     rather than tinting the glyph, which would read as the word changing category. */
+  [part='word']:active {
+    text-decoration-color: currentColor;
+    text-decoration-thickness: var(--lr-border-width-medium);
+  }
   [part='focus-ring'] {
     fill: none;
     stroke: var(--lr-focus-ring-color);

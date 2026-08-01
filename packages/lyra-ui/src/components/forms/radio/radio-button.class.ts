@@ -25,6 +25,19 @@ import { styles } from './radio-button.styles.js';
  * owning radio group emits its aggregate event instead.
  * @event focus - The internal control received focus.
  * @event blur - The internal control lost focus.
+ * @cssstate required - Matches while the control is required, either by its own `required`
+ * attribute or by an owning `<lr-radio-group required>`. Style with
+ * `lr-radio-button:state(required)`.
+ * @cssstate optional - Matches while it is neither — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything.
+ * @cssstate user-valid - `valid`, but only after the user has interacted with this control:
+ * selecting it, or blurring it.
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required control is genuinely invalid, but colouring it red
+ * before the user has done anything is hostile.
  * @csspart base - The interactive button. Carries `checked` and `disabled` in the part name so a
  * consumer can target either state through `::part()`.
  * @csspart prefix - The leading-content wrapper.

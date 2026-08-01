@@ -95,6 +95,13 @@ export const styles = css`
   :where([part='play-button']):hover:where(:not(:disabled)) {
     background: color-mix(in srgb, var(--lr-color-surface) 100%, transparent);
   }
+  /* Pressed goes one step past hover: hover only finishes opacifying the translucent scrim, so on
+     its own it cannot register a click at all once the button is already fully opaque. Mixing the
+     opaque surface toward --lr-color-mix-partner moves in whichever direction the theme's own
+     surface needs. */
+  :where([part='play-button']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='play-button']:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;

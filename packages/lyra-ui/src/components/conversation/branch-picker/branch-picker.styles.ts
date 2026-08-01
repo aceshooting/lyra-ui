@@ -36,6 +36,13 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  /* Pressed: the same brand-quiet fill pushed a further step toward the text color, so the press
+     reads as a deliberate escalation of the hover tint rather than a second, unrelated color. */
+  :where([part='previous-button']):active:where(:not(:disabled)),
+  :where([part='next-button']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-brand);
+  }
   [part='previous-button']:focus-visible,
   [part='next-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

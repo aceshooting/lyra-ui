@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './switch.styles.js';
@@ -84,6 +85,17 @@ export interface LyraSwitchEventMap {
  * non-bubbling native `focus`, re-dispatched as bubbling and composed.
  * @event blur - The internal switch control lost focus. Bridges the internal element's
  * non-bubbling native `blur`, re-dispatched as bubbling and composed.
+ * @cssstate required - Matches while `required` is set. Style with `lr-switch:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: a toggle, a blur, or a
+ * `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required switch is genuinely invalid, but colouring it red
+ * before the user has done anything is hostile.
  * @csspart form-control - The outer wrapper around the switch, error and hint.
  * @csspart base - The whole interactive control (`role="switch"`); wraps the track and label.
  * @csspart track - The pill-shaped background.
@@ -99,6 +111,9 @@ export interface LyraSwitchEventMap {
  *   it minus twice `--lr-switch-thumb-offset`.
  * @cssprop [--lr-switch-thumb-offset=var(--lr-size-2px)] - Inset of the thumb from the track's
  *   edges.
+ * @cssprop [--lr-switch-track-fill=var(--lr-color-border)] - Resting fill of `[part='track']`,
+ *   re-pointed at `var(--lr-color-brand)` while `checked`. The hover and press states mix away from
+ *   whichever of the two is current, so retinting this retints all four renderings at once.
  */
 export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   static override styles = [LyraElement.styles, sizes, styles];
@@ -148,6 +163,12 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   // below so validity styling never flashes on first render, mirroring
   // `<lr-checkbox>`'s/`<lr-combobox>`'s identical `touched` field.
   @state() private touched = false;
+  /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
+   *  `user-invalid` custom states. Deliberately separate from `touched` (which drives the visible
+   *  `data-invalid`/`aria-invalid` pair and is set on blur alone): a toggle is an interaction the
+   *  instant it happens, and `reportValidity()` — what a submit attempt runs — counts as one too,
+   *  exactly as it does for native `:user-invalid`. Not `@state`: nothing in `render()` reads it. */
+  private hasInteracted = false;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -316,6 +337,14 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     } else {
       this.validityController.setValidity({});
     }
+    this.reflectValidityStates();
+  }
+
+  /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
+   *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. Called from
+   *  every path that can move either validity or the interaction flag. */
+  private reflectValidityStates(): void {
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.hasInteracted });
   }
 
   private syncFormState(): void {
@@ -325,7 +354,9 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   formResetCallback(): void {
     this.touched = false;
+    this.hasInteracted = false;
     this.checked = this._defaultChecked;
+    this.reflectValidityStates();
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,
@@ -341,11 +372,17 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
+    // point, so it counts as interaction for the `user-*` custom states. `checkValidity()`
+    // deliberately does not: it is the silent query.
+    this.hasInteracted = true;
+    this.reflectValidityStates();
     return this.internals.reportValidity();
   }
 
   private toggle(): void {
     if (this.effectiveDisabled) return;
+    this.hasInteracted = true;
     this.checked = !this.checked;
     // Native `input` then `change`, then the library alias -- the same order (and the same
     // rationale) as `<lr-checkbox>`'s `toggle()`. A boolean control that emitted only the
@@ -363,6 +400,8 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   private onBlur = (): void => {
     this.touched = true;
+    this.hasInteracted = true;
+    this.reflectValidityStates();
     this.emit('blur');
   };
 

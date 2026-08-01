@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
@@ -119,6 +120,15 @@ const delimiterConverter = {
  *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
  *   never declared by the component itself, it can be set from an ancestor or an outer-tree rule
  *   as well as inline on the element.
+ * @cssstate required - Matches while `required` is set.
+ * @cssstate optional - Matches while `required` is not set (the complement of `required`).
+ * @cssstate valid - Matches while the control satisfies its constraints.
+ * @cssstate invalid - Matches while it does not — including a pristine required control with no
+ *   tokens yet, exactly like native `:invalid`.
+ * @cssstate user-valid - `valid`, but only after the user has interacted (blurred the text input,
+ *   or been through a `reportValidity()`/submit attempt).
+ * @cssstate user-invalid - `invalid`, but only after that same interaction — a required control
+ *   nobody has touched yet is invalid without being styled as an error.
  */
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   static formAssociated = true;
@@ -287,7 +297,10 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    */
   [VALIDITY_ANCHOR](): HTMLElement | null { return this.inputEl ?? this.renderRoot?.querySelector('[part="input-wrapper"]') ?? null; }
   checkValidity(): boolean { return this.internals.checkValidity(); }
-  reportValidity(): boolean { return this.internals.reportValidity(); }
+  /** Reporting is what a submit attempt does, and a failed submit is precisely when native
+   *  `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
+   *  `FormAssociated` mixin. */
+  reportValidity(): boolean { this.touched = true; this.syncValidity(); return this.internals.reportValidity(); }
   override focus(options?: FocusOptions): void { this.inputEl?.focus(options); }
   override blur(): void { this.inputEl?.blur(); }
   /** Focuses the draft text input, mirroring what a real click on the token row would land on --
@@ -310,6 +323,13 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     const missing = this.required && this.value.length === 0;
     this.validityController.setValidity(missing ? { valueMissing: true } : {}, missing ? this.localize('tokenInputRequired') : '');
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    // The six validity custom states, from the shared helper in `internal/custom-states.ts`. This
+    // control drives `ElementInternals` directly rather than through the `FormAssociated` mixin
+    // (its value is a `string[]`), so it publishes them itself; `touched` is its own interaction
+    // flag, already set on blur, which keeps the `user-*` pair off a pristine control the way
+    // native `:user-invalid` does. Every mutation path funnels through here, so this one call
+    // covers `value`, `required`, `name`, blur, and `form.reset()`.
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
     const data = new FormData();
     if (this.name) this.value.forEach((token) => data.append(this.name, token));
     this.internals.setFormValue(this.name ? data : null);

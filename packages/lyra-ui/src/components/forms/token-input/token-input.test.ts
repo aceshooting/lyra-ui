@@ -1101,3 +1101,81 @@ describe('ElementInternals fallback', () => {
     );
   });
 });
+
+// `CustomStateSet` and the `:state()` selector ship separately from each other and from the rest
+// of `ElementInternals` -- these two guards are why the same block passes on WebKit, where a
+// missing `CustomStateSet` would otherwise throw on the very first assertion.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('validity custom states', () => {
+  it('publishes required/optional and valid/invalid from the first update', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-token-input required name="tags"></lr-token-input>`)) as LyraTokenInput;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    el.value = ['alpha'];
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid once a token exists').to.be.true;
+    expect(el.matches(':state(invalid)'), 'invalid once a token exists').to.be.false;
+
+    el.required = false;
+    await el.updateComplete;
+    expect(el.matches(':state(optional)'), 'optional after clearing required').to.be.true;
+    expect(el.matches(':state(required)'), 'required after clearing required').to.be.false;
+  });
+
+  it('keeps user-valid/user-invalid off a pristine control and turns them on at first interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-token-input required name="tags"></lr-token-input>`)) as LyraTokenInput;
+    await el.updateComplete;
+    expect(el.matches(':state(invalid)'), 'invalid while pristine').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid while pristine').to.be.false;
+    expect(el.matches(':state(user-valid)'), 'user-valid while pristine').to.be.false;
+
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after blur').to.be.true;
+
+    el.value = ['alpha'];
+    await el.updateComplete;
+    expect(el.matches(':state(user-valid)'), 'user-valid once satisfied').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid once satisfied').to.be.false;
+  });
+
+  it('counts a reportValidity() call as interaction, and a form reset as going pristine again', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = (await fixture(
+      html`<form><lr-token-input required name="tags"></lr-token-input></form>`,
+    )) as HTMLFormElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid before reporting').to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reporting').to.be.true;
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reset').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid after reset').to.be.true;
+  });
+});

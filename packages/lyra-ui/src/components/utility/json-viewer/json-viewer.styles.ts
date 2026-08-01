@@ -116,6 +116,10 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  :where([part='toggle']):active:where(:not([hidden])) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-brand);
+  }
   [part='toggle']:focus-visible,
   [part='copy-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -200,6 +204,13 @@ export const styles = css`
   }
   [part='copy-button']:hover {
     background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
+  }
+  /* This is also the pressed state for the row-hover reveal rule further up: that rule only fades
+     the button in when its row is hovered, it is not itself a hover treatment on the button, and the
+     button's own held state belongs here next to its hover. */
+  [part='copy-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     color: var(--lr-color-brand);
   }
   /* Per-node copy buttons stay out of the way until the row is actually

@@ -109,4 +109,10 @@ export const styles = css`
   [part='base']:has([part='handle']:hover) [part='divider'] {
     background: var(--lr-color-brand);
   }
+  /* Pressed rides the same :has() indirection as the hover rule above, and for the same reason:
+     [part='handle'] is a 1%-opacity full-bleed range input with nothing of its own to tint, so
+     while the pointer is down mid-drag it is the seam that deepens past its hover accent. */
+  [part='base']:has([part='handle']:active) [part='divider'] {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
 `;

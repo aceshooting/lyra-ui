@@ -53,6 +53,13 @@ export const styles = css`
   }
   [part='restore-button']:hover, [part='copy-button']:hover, [part='download-button']:hover,
   [part='view-button']:hover { background: var(--lr-color-brand-quiet); color: var(--lr-color-brand); }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
+     than hover in both light and dark themes rather than repeating it. */
+  [part='restore-button']:active, [part='copy-button']:active, [part='download-button']:active,
+  [part='view-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='restore-button']:focus-visible, [part='copy-button']:focus-visible,
   [part='download-button']:focus-visible, [part='view-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);
@@ -74,7 +81,7 @@ export const styles = css`
     border: none;
     background: none;
     color: var(--lr-color-text);
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
     cursor: pointer;
     border-radius: var(--lr-radius);
   }
@@ -82,6 +89,10 @@ export const styles = css`
   [part='version-next']:hover {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
+  }
+  [part='version-previous']:active,
+  [part='version-next']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='version-previous']:focus-visible,
   [part='version-next']:focus-visible {

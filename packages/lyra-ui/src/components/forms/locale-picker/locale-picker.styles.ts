@@ -90,6 +90,16 @@ export const styles = css`
   :where([part='trigger']):hover:where(:not(:disabled)) {
     background: var(--lr-locale-picker-trigger-hover-bg, var(--lr-color-brand-quiet));
   }
+  /* Pressed mixes that same hover tint one shared step further toward the text colour, and stays
+     inside the identical :where()/:not(:disabled) wrapping so it neither out-specifies a
+     consumer's ::part(trigger):active nor fires on a disabled trigger. */
+  :where([part='trigger']):active:where(:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-locale-picker-trigger-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   :host([open]) [part='trigger'] {
     border-color: var(--lr-locale-picker-open-border-color, var(--lr-color-brand));
   }
@@ -173,6 +183,15 @@ export const styles = css`
   [part='option']:hover,
   [part='option'][data-active] {
     background: var(--lr-locale-picker-option-active-bg, var(--lr-color-brand-quiet));
+  }
+  /* Mixing the hover tint itself (not the bare token) keeps a consumer who retinted
+     --lr-locale-picker-option-active-bg in charge of both states. */
+  [part='option']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-locale-picker-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='option'][aria-selected='true'] {
     border-color: var(--lr-locale-picker-option-selected-border-color, var(--lr-color-brand));

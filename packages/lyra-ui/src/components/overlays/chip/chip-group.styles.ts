@@ -41,6 +41,17 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-text);
   }
+  /* Pressed adds what the hover deliberately leaves alone -- a fill -- so the press is a visible
+     step further in, not a restatement. The surface is mixed toward --lr-color-mix-partner (which
+     follows the text colour), so the tint darkens on a light theme and lightens on a dark one
+     without this rule knowing which is in force. The border and text treatments are restated
+     rather than inherited from the hover rule because keyboard activation (Space/Enter on the
+     focused indicator) raises :active with no :hover at all. */
+  [part='overflow-indicator']:active {
+    border-color: var(--lr-color-brand);
+    color: var(--lr-color-text);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='overflow-indicator']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

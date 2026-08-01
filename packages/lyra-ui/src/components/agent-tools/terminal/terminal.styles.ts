@@ -34,6 +34,13 @@ export const styles = css`
   [part='download-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
+     than hover in both light and dark themes rather than repeating it. */
+  [part='copy-button']:active,
+  [part='download-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='viewport'] {
     position: relative;
     block-size: var(--lr-terminal-height, var(--lr-size-20rem));
@@ -83,7 +90,15 @@ export const styles = css`
     z-index: var(--lr-layer-content);
     transition: opacity var(--lr-transition-fast);
   }
+  /* Mixed toward --lr-color-mix-partner (which follows the text colour) rather than the
+     filter: brightness() this replaces: a filter multiplies every channel, so it lightened this
+     brand-filled pill only by luck, did nothing at all to a pure white or pure black brand colour,
+     and -- because a filter applies to the whole subtree -- dragged the pill's own label along with
+     the surface. Mixing always moves, and always in the direction the surface needs. */
   [part='jump-to-latest']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='jump-to-latest']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
 `;

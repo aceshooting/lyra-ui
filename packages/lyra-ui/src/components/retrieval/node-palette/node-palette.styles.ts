@@ -27,6 +27,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* no-pressed-state: a press on a text field lands the caret rather than activating a control, so
+     a pressed tint would show only for the length of the mousedown and then be replaced by the
+     :focus-visible ring above, which is the state that actually persists and communicates. */
   [part='search']:hover {
     border-color: var(--lr-color-border-strong);
   }
@@ -75,6 +78,13 @@ export const styles = css`
   :where([part='item']):hover:where(:not([aria-disabled='true'])),
   :where([part='item']):focus-visible:where(:not([aria-disabled='true'])) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));
+  }
+  /* These items are drag sources (cursor: grab above), so the pressed state is the moment the drag
+     starts -- the deeper fill and the grabbing cursor together. Kept in the same :where() shape as
+     the hover rule so a consumer's ::part(item):active still outranks it. */
+  :where([part='item']):active:where(:not([aria-disabled='true'])) {
+    background: color-mix(in oklab, var(--lr-color-surface-hover, var(--lr-color-border)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    cursor: grabbing;
   }
   [part='item']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

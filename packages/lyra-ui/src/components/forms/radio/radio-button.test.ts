@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './radio-button.js';
 import './radio.js';
 import './radio-group.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('renders button chrome with the radio role and encodes checked state in the part name', async () => {
   const el = await fixture(html`<lr-radio-button value="a" checked>Alpha</lr-radio-button>`);
@@ -135,4 +136,39 @@ describe('size and pill', () => {
     const el = await fixture(html`<lr-radio-button pill size="l" value="a">Alpha</lr-radio-button>`);
     await expect(el).to.be.accessible();
   });
+});
+
+describe('lr-radio-button hover and press feedback', () => {
+  const centerOf = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  // Both pairs shipped with an :active rule byte-identical to their :hover one, which is a pressed
+  // state only on paper. Rendered results, because identical rules read identically in the source.
+  // --lr-transition-fast is zeroed on each fixture: the base transitions its background, so reading
+  // getComputedStyle one frame after the pointer arrives would otherwise catch the INTERPOLATED
+  // colour -- still the resting one at t=0 -- and report "hover does nothing" for a working hover.
+  for (const [label, markup] of [
+    ['unchecked', html`<lr-radio-button value="a" style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
+    ['checked', html`<lr-radio-button value="a" checked style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
+  ] as const) {
+    it(`presses a ${label} segment to a background different from its hover`, async () => {
+      const el = await fixture(markup);
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+      const resting = getComputedStyle(base).backgroundColor;
+      try {
+        await sendMouse({ type: 'move', position: centerOf(base) });
+        const hovered = getComputedStyle(base).backgroundColor;
+        expect(hovered, `${label} hover vs resting`).to.not.equal(resting);
+        await sendMouse({ type: 'down' });
+        expect(getComputedStyle(base).backgroundColor, `${label} pressed vs hovered`).to.not.equal(
+          hovered,
+        );
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    });
+  }
 });

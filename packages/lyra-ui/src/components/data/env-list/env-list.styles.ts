@@ -68,4 +68,12 @@ export const styles = css`
     background: var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-env-list-reveal-active-border, var(--lr-color-brand));
   }
+  /* MUST stay after the [aria-pressed='true'] rule above: both are (0,2,0), so source order alone
+     decides, and a revealed button's toggled-on fill is the same brand-quiet the hover uses -- put
+     this first and pressing the one button whose state you are about to flip would show nothing at
+     all. Only the fill is claimed, so the toggled border colour still reads while pressed. */
+  [part='reveal-button']:active,
+  [part='copy-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
 `;

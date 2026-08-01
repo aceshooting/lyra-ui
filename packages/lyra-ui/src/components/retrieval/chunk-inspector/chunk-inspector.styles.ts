@@ -100,6 +100,15 @@ export const styles = css`
     color: var(--lr-color-brand);
     text-decoration: underline;
   }
+  /* The pressed state adds the surface the hover underline has no room for: this button is
+     transparent-backed link chrome, so a wash mixed from that transparent base is the only thing
+     that can read as "held down" without repainting the brand-colored label. */
+  [part~='open-button']:active,
+  lr-virtual-list::part(open-button):active {
+    color: var(--lr-color-brand);
+    text-decoration: underline;
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part~='open-button']:focus-visible,
   lr-virtual-list::part(open-button):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -140,6 +149,11 @@ export const styles = css`
   [part~='toggle']:hover,
   lr-virtual-list::part(toggle):hover {
     text-decoration: underline;
+  }
+  [part~='toggle']:active,
+  lr-virtual-list::part(toggle):active {
+    text-decoration: underline;
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part~='toggle']:focus-visible,
   lr-virtual-list::part(toggle):focus-visible {

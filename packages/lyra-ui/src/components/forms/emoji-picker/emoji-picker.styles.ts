@@ -28,7 +28,7 @@ export const styles = css`
   :host([size='s']),
   :host([size='small']) {
     --lr-emoji-picker-item-size: var(--lr-size-2rem);
-    --lr-emoji-picker-glyph-size: var(--lr-font-size-md);
+    --lr-emoji-picker-glyph-size: var(--lr-font-size-m);
   }
   :host([size='l']),
   :host([size='large']) {
@@ -102,6 +102,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* no-pressed-state: pressing a search field places a caret, it does not activate a target --
+     there is no "did my click register?" gap to fill, and the engaged state it leads to is already
+     drawn by the :focus-visible rule above. Native text inputs have no pressed treatment either. */
   [part='search']:hover:not(:disabled) {
     border-color: var(--lr-emoji-picker-search-hover-border-color, var(--lr-color-brand));
   }
@@ -202,6 +205,16 @@ export const styles = css`
   [part='emoji']:hover,
   [part='emoji'][data-active] {
     background: var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet));
+  }
+  /* The pressed cell mixes the hover tint (not the bare token) one shared step further toward the
+     text colour, so a consumer who retinted --lr-emoji-picker-active-bg still owns both states.
+     Picking is a grid of near-identical targets, so "which one did I just hit" is the point. */
+  [part='emoji']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='empty'] {
     flex-basis: 100%;

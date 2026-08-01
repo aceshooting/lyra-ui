@@ -198,6 +198,14 @@ export const styles = css`
   :where([part='remove-button']):hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
   }
+  /* Pressed is the same tint carried further -- --lr-color-mix-active (22%) against the hover
+     rule's 8%, mixed from the buttons' own transparent fill, so the step is plainly visible while a
+     theme can still flatten or exaggerate every pressed state in the library from one knob. */
+  :where([part='retry-button']):active,
+  :where([part='preview-button']):active,
+  :where([part='remove-button']):active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='retry-button']:focus-visible,
   [part='preview-button']:focus-visible,
   [part='remove-button']:focus-visible {

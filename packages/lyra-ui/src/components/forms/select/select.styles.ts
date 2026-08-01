@@ -105,6 +105,13 @@ export const styles = css`
   :where([part='trigger']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
+  /* Pressed: the same quiet brand tint the hover lands on, carried further toward
+     --lr-color-mix-partner (which follows the text colour), so the press is visibly deeper than
+     the hover instead of a repeat of it. Same :where() zeroing as the hover above, so a consumer's
+     ::part(trigger):active still wins. */
+  :where([part='trigger']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   /* Appearance treatments. outlined is the base rule above, so only the other four restate
      what they change. Each keeps the same box, border width and radius -- only the fill, the
      border color and (for accent) the text color move. */
@@ -143,10 +150,20 @@ export const styles = css`
   :host([appearance='plain']) :where([part='trigger']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
-  /* The loud fill has no quieter tint to move to, so it shifts toward the contrast neutral --
-     which darkens in the light theme and lightens in the dark one, both times away from the fill. */
+  :host([appearance='filled']) :where([part='trigger']):active:where(:not(:disabled)),
+  :host([appearance='filled-outlined']) :where([part='trigger']):active:where(:not(:disabled)),
+  :host([appearance='plain']) :where([part='trigger']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  /* The loud fill has no quieter tint to move to, so it shifts toward --lr-color-mix-partner --
+     which follows the text colour, i.e. darkens in the light theme and lightens in the dark one,
+     both times away from the fill. Same two shares every other pressed/hovered surface in the
+     library uses, rather than the hand-written 12% this pair carried before 8.0.0. */
   :host([appearance='accent']) :where([part='trigger']):hover:where(:not(:disabled)) {
-    background: color-mix(in srgb, var(--lr-color-neutral) 12%, var(--lr-color-brand));
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  :host([appearance='accent']) :where([part='trigger']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   :host([open]) [part='trigger'] {
     border-color: var(--lr-color-brand);
@@ -252,6 +269,14 @@ export const styles = css`
   [part='clear-button']:hover {
     color: var(--lr-color-text);
   }
+  /* Pressed: the hover's quiet-to-full text step plus a fill, mixing the page surface toward
+     --lr-color-mix-partner at the stronger active share -- mirrors <lr-input>'s own
+     clear-button/password-toggle pressed rule, so the two controls feel identical under the thumb.
+     The button already carries --lr-select-radius, so the fill lands as a rounded chip. */
+  [part='clear-button']:active {
+    color: var(--lr-color-text);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='clear-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -341,6 +366,17 @@ export const styles = css`
        a consumer can retheme just this row state without hijacking --lr-color-brand-quiet
        library-wide. */
     background: var(--lr-select-option-active-bg, var(--lr-color-brand-quiet));
+  }
+  /* Pressed row. A pointer-down on an option commits a selection and closes the listbox, so this
+     is the last frame the user sees before the panel goes away -- it has to read as deeper than
+     the hover it replaces, not the same. Mixes the same row tint (consumer override included)
+     toward --lr-color-mix-partner. */
+  [part='option']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-select-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='option'][aria-selected='true'] {
     /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset

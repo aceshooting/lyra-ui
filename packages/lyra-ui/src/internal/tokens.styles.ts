@@ -74,7 +74,6 @@ export const tokens = css`
     --lr-font-size-sm: var(--lr-theme-font-size-sm, 0.8125rem);
     --lr-font-size-m: var(--lr-theme-font-size-m, 1rem);
     --lr-font-size-md-sm: var(--lr-theme-font-size-md-sm, 0.875rem);
-    --lr-font-size-md: var(--lr-theme-font-size-md, 1rem);
     --lr-font-size-lg: var(--lr-theme-font-size-lg, 1.125rem);
     --lr-font-size-xl: var(--lr-theme-font-size-xl, 1.25rem);
     --lr-font-size-2xl: var(--lr-theme-font-size-2xl, 1.75rem);

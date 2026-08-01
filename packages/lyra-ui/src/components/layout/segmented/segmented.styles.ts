@@ -99,6 +99,21 @@ export const styles = css`
     ) {
     color: var(--lr-segmented-hover-color, var(--lr-color-text));
   }
+  /* Hover lifts only the label colour on this control, so the pressed state has to add a surface
+     to be a visible step past it: the segment's own transparent fill mixed toward
+     --lr-color-mix-partner, which lands as the partner colour at --lr-color-mix-active alpha over
+     whatever track colour the theme is using. Same :not() guards, and the same zeroed specificity,
+     as the hover rule it twins. */
+  :where([part="segment"]):active:where(
+      :not([aria-disabled="true"]):not([aria-checked="true"])
+    ) {
+    background: color-mix(
+      in oklab,
+      transparent,
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    color: var(--lr-segmented-hover-color, var(--lr-color-text));
+  }
   [part="segment"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

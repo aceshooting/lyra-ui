@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './playback.js';
 import type { LyraPlayback } from './playback.js';
-import { styles } from './playback.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('does not leak an untracked duplicate timer chain when play() is called synchronously from a lr-step listener during tick()', async () => {
   const el = (await fixture(
@@ -473,10 +473,35 @@ it('gives the play/pause button the shared minimum hit area', async () => {
   expect(getComputedStyle(button).minBlockSize).to.equal('40px');
 });
 
-it('gives the enabled range slider a pointer cursor and a hover affordance matching the play button', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='slider'\]\s*\{[^}]*cursor:\s*pointer/);
-  expect(css).to.match(/:where\(\[part='slider'\]\):hover:where\(:not\(:disabled\)\)\s*\{[^}]*filter:\s*brightness\(var\(--lr-hover-brightness\)\)/);
+it('gives the enabled range slider a pointer cursor and rendered hover and pressed affordances', async () => {
+  // Asserted against the rendered result rather than the stylesheet text, because a stylesheet can
+  // carry a rule that never applies -- which is exactly what happened here before: the slider's ink
+  // is drawn by the UA from accent-color, so nothing about the previous brightness filter could be
+  // proven by matching source. Pressed is checked against hover, not against rest, so an :active
+  // rule that merely duplicates :hover fails.
+  const el = (await fixture(html`<lr-playback length="3"></lr-playback>`)) as LyraPlayback;
+  const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
+  expect(slider.disabled, 'the fixture renders an enabled slider').to.be.false;
+  expect(getComputedStyle(slider).cursor).to.equal('pointer');
+
+  const resting = getComputedStyle(slider).accentColor;
+  const rect = slider.getBoundingClientRect();
+  const centre: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  try {
+    await sendMouse({ type: 'move', position: centre });
+    const hovered = getComputedStyle(slider).accentColor;
+    expect(hovered, 'hover moves the slider ink off its resting accent').to.not.equal(resting);
+
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(slider).accentColor;
+    expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
+    await sendMouse({ type: 'up' });
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run', async () => {

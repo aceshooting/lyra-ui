@@ -82,6 +82,11 @@ export const styles = css`
   [part='legend-item']:where(:hover) {
     background: var(--lr-color-brand-quiet);
   }
+  /* Pressed, matching <lr-chart>'s legend item: the same quiet brand tint pushed further toward
+     the text colour, so the mousedown that toggles the series reads as distinct from hovering. */
+  [part='legend-item']:where(:active) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='legend-item']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

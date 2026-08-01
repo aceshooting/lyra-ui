@@ -59,6 +59,12 @@ export const styles = css`
   [part='frame']:focus-visible {
     color: var(--lr-stack-trace-interactive-color, var(--lr-color-brand));
   }
+  /* The hover recolours the label only, which leaves the pressed step nothing to deepen -- so
+     pressed tints the frame's own (transparent) surface toward --lr-color-mix-partner, which
+     follows the text colour and therefore darkens in a light theme and lightens in a dark one. */
+  [part='frame']:active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='frame']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -84,6 +90,9 @@ export const styles = css`
   [part='internal-toggle']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='internal-toggle']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='internal-toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -107,6 +116,11 @@ export const styles = css`
   }
   [part='copy-button']:hover {
     border-color: var(--lr-stack-trace-interactive-color, var(--lr-color-brand));
+  }
+  /* As with [part='frame'] above: the hover moves the border only, so pressed tints the button's
+     own surface fill toward --lr-color-mix-partner instead of restating the border colour. */
+  [part='copy-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='copy-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

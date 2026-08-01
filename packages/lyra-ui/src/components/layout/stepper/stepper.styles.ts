@@ -112,6 +112,17 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-text);
   }
+  /* The same brand-quiet fill, mixed further toward --lr-color-mix-partner: a step being pressed
+     is a visible tier past the one the pointer is only resting on. Same :not() guard and the same
+     zeroed specificity as the hover rule above. */
+  :where([part="step"]):active:where(:not([aria-disabled="true"])) {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    color: var(--lr-color-text);
+  }
   [part="step"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

@@ -67,11 +67,24 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-on-brand);
   }
+  /* A colour mix, not filter: brightness(). The filter multiplied every channel, so it moved a
+     mid-brand fill but did nothing at all to a pure white or pure black one, and -- because a
+     filter applies to the whole subtree -- it dragged the button's own label along with its
+     background. Mixing the fill toward --lr-color-mix-partner (which follows the text colour)
+     always moves, always in the direction the surface needs, and leaves the label alone. */
   [part='submit']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='submit']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='skip']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='skip']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='submit']:disabled,
   [part='skip']:disabled {

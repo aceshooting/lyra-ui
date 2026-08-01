@@ -104,6 +104,16 @@ export const styles = css`
   [part='divider']:hover {
     background: var(--lr-color-brand);
   }
+  /* The drag itself. Pointer capture holds :active for the whole gesture, so the divider stays at
+     the deeper mix from mousedown until release -- and a divider adjacent to a collapsed pane
+     never reaches it, since [aria-disabled='true'] below takes its pointer events away. */
+  [part='divider']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part='divider']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

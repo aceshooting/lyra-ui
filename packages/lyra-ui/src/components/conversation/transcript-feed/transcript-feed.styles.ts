@@ -109,6 +109,9 @@ export const styles = [
     [part='jump-button']:hover {
       background: var(--lr-color-brand-quiet);
     }
+    [part='jump-button']:active {
+      background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    }
   `,
   srOnly,
 ];

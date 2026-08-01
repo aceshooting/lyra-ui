@@ -697,3 +697,64 @@ describe('size', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
+// where either is missing -- an unguarded assertion fails on WebKit rather than skipping.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('lr-checkbox-group validity custom states', () => {
+  const requiredGroup = () => html`
+    <lr-checkbox-group name="topics" required label="Topics">
+      <lr-checkbox value="a">A</lr-checkbox>
+      <lr-checkbox value="b">B</lr-checkbox>
+    </lr-checkbox-group>
+  `;
+
+  it('publishes required/optional and valid/invalid from the first render', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(requiredGroup())) as LyraCheckboxGroup;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+  });
+
+  it('withholds user-valid/user-invalid until a child checkbox is actually toggled', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(requiredGroup())) as LyraCheckboxGroup;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'pristine required must not read as an error').to.be
+      .false;
+
+    const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+    box.click();
+    await el.updateComplete;
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)'), 'user-valid after a real toggle').to.be.true;
+  });
+
+  it('counts a reportValidity() call -- what a submit attempt runs -- as interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(requiredGroup())) as LyraCheckboxGroup;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)')).to.be.true;
+  });
+});

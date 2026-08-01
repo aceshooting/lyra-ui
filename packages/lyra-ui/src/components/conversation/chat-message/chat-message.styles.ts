@@ -129,6 +129,10 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  [part='collapse-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-brand);
+  }
   [part='collapse-button']:focus-visible,
   [part='retry-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -259,6 +263,9 @@ export const styles = css`
   }
   [part='retry-button']:hover {
     background: var(--lr-color-danger-quiet);
+  }
+  [part='retry-button']:active {
+    background: color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='retry-button'] svg {
     inline-size: var(--lr-size-0-875em);

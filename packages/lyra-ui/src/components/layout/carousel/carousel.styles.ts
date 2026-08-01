@@ -38,6 +38,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* no-pressed-state: the viewport is a scroll port, not a target -- pressing it activates
+     nothing, and :active matches the ancestors of whatever was pressed, so a click on any slide's
+     own content would flash this outline across the whole carousel. */
   [part="viewport"]:hover {
     outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
     outline-offset: var(--lr-focus-ring-offset);
@@ -83,6 +86,19 @@ export const styles = css`
   [part="previous-button"]:hover,
   [part="next-button"]:hover {
     background: var(--lr-color-brand-quiet);
+    border-color: var(--lr-color-brand);
+  }
+  /* The same brand-quiet fill hover uses, mixed further toward --lr-color-mix-partner (the text
+     colour) so the pressed step is deeper than the hover step on either theme. Declared before
+     :disabled below, which restates neither colour, so a disabled arrow cannot be activated and
+     never reaches this rule anyway. */
+  [part="previous-button"]:active,
+  [part="next-button"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     border-color: var(--lr-color-brand);
   }
   [part="previous-button"]:disabled,
@@ -156,6 +172,16 @@ export const styles = css`
   }
   [part="indicator"]:hover [part="indicator-dot"] {
     background: var(--lr-color-brand-quiet);
+    border-color: var(--lr-color-brand);
+  }
+  /* The dot is the only painted surface on this button (the hit box itself is transparent), so the
+     pressed state deepens the dot's own hover fill rather than the box around it. */
+  [part="indicator"]:active [part="indicator-dot"] {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     border-color: var(--lr-color-brand);
   }
   :host(:dir(rtl)) [part="previous-glyph"],

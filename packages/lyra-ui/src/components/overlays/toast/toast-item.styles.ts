@@ -7,7 +7,7 @@ export const styles = css`
     --lr-toast-show-duration: var(--lr-transition-base, 180ms ease-out);
     --lr-toast-hide-duration: var(--lr-transition-base, 180ms ease-out);
     --lr-toast-padding: var(--lr-space-m);
-    --lr-toast-font-size: var(--lr-font-size-md);
+    --lr-toast-font-size: var(--lr-font-size-m);
     --lr-toast-accent-color: var(--lr-color-border);
   }
   /* One rule for all four non-neutral variants, in place of the four one-declaration blocks that
@@ -34,7 +34,7 @@ export const styles = css`
   }
   :host([size='m']) {
     --lr-toast-padding: var(--lr-space-m);
-    --lr-toast-font-size: var(--lr-font-size-md);
+    --lr-toast-font-size: var(--lr-font-size-m);
   }
   :host([size='l']) {
     --lr-toast-padding: var(--lr-space-l);
@@ -153,6 +153,16 @@ export const styles = css`
   }
   [part='close-button']:hover:not([aria-disabled='true']) {
     color: var(--lr-color-text);
+  }
+  /* Pressed adds the fill the hover deliberately withholds: the resting button is background:none,
+     so mixing that transparent base toward --lr-color-mix-partner lands the partner colour at the
+     active share -- a scrim that darkens on a light toast and lightens on a dark one, following
+     the text colour either way. The ink change is restated because keyboard activation raises
+     :active with no :hover, and the disabled guard is carried over so a dismiss-blocked toast
+     stays visibly inert under a click. */
+  [part='close-button']:active:not([aria-disabled='true']) {
+    color: var(--lr-color-text);
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='close-button'][aria-disabled='true'] {
     opacity: var(--lr-opacity-disabled);

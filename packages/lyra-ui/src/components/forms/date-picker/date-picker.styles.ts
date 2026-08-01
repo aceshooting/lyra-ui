@@ -82,6 +82,17 @@ export const styles = css`
   :where([part='next']):hover {
     background: var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet));
   }
+  /* Pressed mixes the hover tint one shared step further toward the text colour -- month paging
+     repeats, so "the click landed" has to be legible without waiting for the grid to redraw.
+     Wrapped in :where() for the same specificity reason as the hover rule above. */
+  :where([part='previous']):active,
+  :where([part='next']):active {
+    background: color-mix(
+      in oklab,
+      var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part='previous']:focus-visible, [part='next']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -134,9 +145,16 @@ export const styles = css`
   [part~='day']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part~='day']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part~='day-outside'] {
     color: var(--lr-color-text-quiet);
   }
+  /* no-pressed-state: this is not a hover treatment. The :hover half only restates the resting
+     text colour so an adjacent-month day inside the selected range keeps full contrast once
+     [part~='day']:hover repaints its background; the pressed feedback for these cells is that same
+     [part~='day']:active rule above, which they match too. */
   [part~='day-outside'][part~='day-range-inner'],
   [part~='day-outside'][part~='day-range-inner']:hover {
     color: var(--lr-color-text);

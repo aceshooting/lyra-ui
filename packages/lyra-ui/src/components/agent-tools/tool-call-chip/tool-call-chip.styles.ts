@@ -64,6 +64,13 @@ export const styles = css`
   [part='base']:hover {
     border-color: var(--lr-color-brand);
   }
+  /* The hover moves the border only, which leaves the pressed step nothing to deepen -- so pressed
+     tints the chip's own fill toward --lr-color-mix-partner (which follows the text colour). The
+     fill is already a custom property, so this one declaration covers all five status tints without
+     restating any of them, and darkens in a light theme while lightening in a dark one. */
+  [part='base']:active {
+    background: color-mix(in oklab, var(--lr-tool-call-chip-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

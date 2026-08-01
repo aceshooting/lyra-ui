@@ -225,6 +225,102 @@ it('blocks submission while `required` and unrated, and clears the flag once rat
   expect(baseOf(optional).getAttribute('aria-required'), 'stateful ARIA renders "false" too').to.equal('false');
 });
 
+// -- validity custom states -----------------------------------------------
+//
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` selector shipped with it. The shared helper no-ops where either is missing, so these
+// assertions skip rather than fail on an engine that predates them -- the same guards
+// internal/form-associated.test.ts uses. `internals` is private on the class, so the states are
+// probed the way a consumer reaches them: through a selector match on the host.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(probe)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+it('publishes required/optional and valid/invalid as :state() selectors', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const el = (await fixture(html`<lr-rating name="score"></lr-rating>`)) as LyraRating;
+  const host = el as unknown as HTMLElement;
+  expect(host.matches(':state(optional)'), 'optional on a control with no constraint').to.be.true;
+  expect(host.matches(':state(required)'), 'required').to.be.false;
+  expect(host.matches(':state(valid)'), 'valid').to.be.true;
+  expect(host.matches(':state(invalid)'), 'invalid').to.be.false;
+
+  el.required = true;
+  expect(host.matches(':state(required)'), 'required after the property is set').to.be.true;
+  expect(host.matches(':state(optional)'), 'optional after the property is set').to.be.false;
+  expect(host.matches(':state(invalid)'), 'a required unrated control is invalid').to.be.true;
+  expect(host.matches(':state(valid)'), 'valid while unrated').to.be.false;
+
+  el.value = 4;
+  expect(host.matches(':state(valid)'), 'valid once rated').to.be.true;
+  expect(host.matches(':state(invalid)'), 'invalid once rated').to.be.false;
+});
+
+it('withholds user-valid/user-invalid until the user has rated or blurred the control', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const el = (await fixture(html`<lr-rating name="score" required></lr-rating>`)) as LyraRating;
+  const host = el as unknown as HTMLElement;
+  expect(host.matches(':state(invalid)'), 'pristine required control is invalid').to.be.true;
+  expect(host.matches(':state(user-invalid)'), 'but not user-invalid before any interaction').to.be.false;
+  expect(host.matches(':state(user-valid)'), 'nor user-valid').to.be.false;
+
+  // `focusout` is the blur signal that survives the shadow boundary.
+  host.dispatchEvent(new Event('focusout', { bubbles: true, composed: true }));
+  expect(host.matches(':state(user-invalid)'), 'user-invalid once blurred while unrated').to.be.true;
+  expect(host.matches(':state(user-valid)'), 'user-valid while unrated').to.be.false;
+
+  el.value = 3;
+  expect(host.matches(':state(user-valid)'), 'user-valid once rated').to.be.true;
+  expect(host.matches(':state(user-invalid)'), 'user-invalid once rated').to.be.false;
+});
+
+it('counts a click on the stars as interaction, without waiting for a blur', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const el = (await fixture(html`<lr-rating name="score" required max="5"></lr-rating>`)) as LyraRating;
+  const host = el as unknown as HTMLElement;
+  expect(host.matches(':state(user-invalid)'), 'pristine').to.be.false;
+
+  baseOf(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  expect(el.value, 'the key press rated the control').to.equal(1);
+  expect(host.matches(':state(user-valid)'), 'user-valid after a keyboard rating').to.be.true;
+});
+
+it('counts a reportValidity() call -- what a submit attempt runs -- as interaction', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const el = (await fixture(html`<lr-rating name="score" required></lr-rating>`)) as LyraRating;
+  const host = el as unknown as HTMLElement;
+  expect(host.matches(':state(user-invalid)'), 'pristine').to.be.false;
+  el.reportValidity();
+  expect(host.matches(':state(user-invalid)'), 'user-invalid after a reported validation').to.be.true;
+});
+
+it('goes pristine again after a form reset', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const form = (await fixture(html`
+    <form><lr-rating name="score" required></lr-rating></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-rating') as LyraRating;
+  const host = el as unknown as HTMLElement;
+  host.dispatchEvent(new Event('focusout', { bubbles: true, composed: true }));
+  expect(host.matches(':state(user-invalid)'), 'user-invalid after the blur').to.be.true;
+
+  form.reset();
+  expect(host.matches(':state(user-invalid)'), 'a reset form is pristine again').to.be.false;
+  expect(host.matches(':state(invalid)'), 'still intrinsically invalid, just not user-invalid').to.be.true;
+});
+
 it('inherits an ancestor fieldset disablement without mutating its own `disabled` property', async () => {
   const form = (await fixture(html`
     <form><fieldset><lr-rating name="score" value="2"></lr-rating></fieldset></form>

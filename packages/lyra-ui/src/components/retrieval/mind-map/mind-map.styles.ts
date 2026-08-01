@@ -33,6 +33,11 @@ export const styles = css`
   [part='node']:hover circle {
     stroke: var(--lr-mind-map-node-hover-halo, var(--lr-color-brand-quiet));
   }
+  /* Pressed is the same halo pushed one step toward --lr-color-mix-partner, so it stays whatever
+     hue a consumer set --lr-mind-map-node-hover-halo to while reading as visibly held. */
+  [part='node']:active circle {
+    stroke: color-mix(in oklab, var(--lr-mind-map-node-hover-halo, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='node-label'] {
     fill: var(--lr-color-text);
     font-size: var(--lr-font-size-sm);

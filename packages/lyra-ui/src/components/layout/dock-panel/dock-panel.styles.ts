@@ -68,13 +68,25 @@ export const styles = css`
     background: var(--lr-color-border);
     touch-action: none;
   }
-  [part="handle"]:hover,
-  [part="handle"]:focus-visible {
+  [part="handle"]:hover {
     background: var(--lr-color-brand);
   }
+  /* Split off from the :hover rule it used to share (rather than kept as one selector list) so the
+     pressed rule below can be that rule's exact twin: swapping :hover for :active in a list that
+     also carries :focus-visible would have repainted the focus state as pressed. */
   [part="handle"]:focus-visible {
+    background: var(--lr-color-brand);
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
+  /* After :focus-visible, so a handle that was focused by keyboard still shows the deeper pressed
+     fill for the duration of a pointer drag (pointer capture holds :active throughout). */
+  [part="handle"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   /* Transparent hit-slop, widening the draggable/tappable box along the
      resize axis only, without changing the handle's visible 3px thickness --
@@ -133,6 +145,14 @@ export const styles = css`
   }
   [part="collapse-toggle"]:hover {
     background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
+  }
+  [part="collapse-toggle"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-color-brand);
   }
   [part="collapse-toggle"]:focus-visible {

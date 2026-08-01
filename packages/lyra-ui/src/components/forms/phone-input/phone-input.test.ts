@@ -1,10 +1,11 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import {
   type LyraPhoneInput,
   type PhoneNumberAdapter,
   loadLibphonenumberAdapter,
 } from './phone-input.js';
 import './phone-input.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const adapter: PhoneNumberAdapter = {
   countries: [
@@ -1176,4 +1177,43 @@ it('is accessible with flags enabled', async () => {
   await customElements.whenDefined('lr-flag');
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+/** Comfortably past --lr-transition-fast, whose duration token this component transitions on. */
+const TRANSITION_SETTLE_MS = 400;
+
+// The country cell's press target is the invisible native <select> stretched over the visible
+// trigger, so its pressed rule has to hang off that select's own :active -- a `[part='country-
+// trigger']:active` rule would never match, because that div is not the element being activated.
+// Driven through the real pointer for exactly that reason: only a rendered assertion can tell a
+// live pressed state from a plausible-looking dead selector. Colour STRINGS are compared, never
+// elements -- a DOM node as chai's actual/expected hangs the whole file.
+it('tints the country trigger while the invisible select over it is hovered, and deepens it while pressed', async () => {
+  const el = (await fixture(
+    html`<lr-phone-input default-country="LU" .adapter=${adapter}></lr-phone-input>`,
+  )) as LyraPhoneInput;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="country-trigger"]') as HTMLElement;
+  const rect = trigger.getBoundingClientRect();
+  const centre: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  const rest = getComputedStyle(trigger).backgroundColor;
+  try {
+    await sendMouse({ type: 'move', position: centre });
+    // This part transitions background-color, so the value right after the state change is still
+    // the transition's start colour -- settle past --lr-transition-fast before reading. Real
+    // timers with a margin: @sinonjs/fake-timers does not work under wtr.
+    await aTimeout(TRANSITION_SETTLE_MS);
+    const hovered = getComputedStyle(trigger).backgroundColor;
+    await sendMouse({ type: 'down' });
+    await aTimeout(TRANSITION_SETTLE_MS);
+    const pressed = getComputedStyle(trigger).backgroundColor;
+    await sendMouse({ type: 'up' });
+    expect(hovered, 'hover must tint the resting background').to.not.equal(rest);
+    expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(hovered);
+  } finally {
+    await resetMouse();
+  }
 });

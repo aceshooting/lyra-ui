@@ -32,7 +32,7 @@ export const styles = css`
   [part='heading'] {
     min-inline-size: 0;
     margin: 0;
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
     font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }

@@ -3,6 +3,7 @@ import './calendar.js';
 import type { LyraCalendar } from './calendar.js';
 import { formatISO } from '../../forms/date-picker/calendar-core.js';
 import { styles } from './calendar.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 /**
  * Resolve a design token in the same scope `calendar.styles.ts` reads it from -- the calendar host,
@@ -171,7 +172,45 @@ it('applies a valid CalendarEvent.color as the event marker background', async (
   el.events = [{ date: '2026-07-15', title: 'Safe', color: '#ff0000' }];
   await el.updateComplete;
   const marker = el.shadowRoot!.querySelector('[data-date="2026-07-15"] [part="event"]') as HTMLElement;
-  expect(marker.style.background).to.not.equal('');
+  expect(marker.style.backgroundColor).to.not.equal('');
+});
+
+// The regression this guards: the hover/press feedback used to be `filter: brightness()`, which
+// multiplies every channel and therefore does NOTHING to a pure white (or pure black) chip -- and a
+// plain `background:` swap could not replace it either, because CalendarEvent.color is written as an
+// inline background-color and an inline declaration beats every stylesheet rule. Asserted through
+// getComputedStyle on a really hovered/pressed chip, never against the stylesheet text.
+it('shows a rendered hover and a stronger pressed overlay on a white event chip, without losing its fill', async () => {
+  const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
+  el.events = [{ date: '2026-07-15', title: 'White', color: '#ffffff' }];
+  await el.updateComplete;
+  const chip = el.shadowRoot!.querySelector('[data-date="2026-07-15"] [part="event"]') as HTMLElement;
+  chip.scrollIntoView();
+  const restingImage = getComputedStyle(chip).backgroundImage;
+  const restingColor = getComputedStyle(chip).backgroundColor;
+  expect(restingImage).to.equal('none');
+  const rect = chip.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  try {
+    await sendMouse({ type: 'move', position });
+    const hoveredImage = getComputedStyle(chip).backgroundImage;
+    expect(hoveredImage, 'a hovered chip must paint an overlay').to.not.equal('none');
+    await sendMouse({ type: 'down' });
+    const pressedImage = getComputedStyle(chip).backgroundImage;
+    expect(pressedImage, 'the pressed overlay must be stronger than the hovered one').to.not.equal(
+      hoveredImage,
+    );
+    expect(
+      getComputedStyle(chip).backgroundColor,
+      "the consumer's own fill survives both states",
+    ).to.equal(restingColor);
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
 });
 
 it('does not let CalendarEvent.color inject extra CSS declarations via the event marker style attribute', async () => {
@@ -188,7 +227,7 @@ it('does not accept a non-color CSS value (e.g. url()) as an event marker backgr
   el.events = [{ date: '2026-07-15', title: 'Bad', color: 'url(https://attacker.example/beacon.gif)' }];
   await el.updateComplete;
   const marker = el.shadowRoot!.querySelector('[data-date="2026-07-15"] [part="event"]') as HTMLElement;
-  expect(marker.style.background).to.equal('');
+  expect(marker.style.backgroundColor).to.equal('');
 });
 
 it('renders every event for a day in its cell, in order, and none in event-free cells', async () => {

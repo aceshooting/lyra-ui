@@ -14,6 +14,13 @@ export const styles = css`
     --lr-switch-track-block-size: calc(var(--lr-form-control-height) * 0.5);
     --lr-switch-track-inline-size: calc(var(--lr-switch-track-block-size) * 1.8);
     --lr-switch-thumb-offset: var(--lr-size-2px);
+    /* The track's resting fill, named so the hover and press mixes below have exactly one base to
+       move away from in BOTH states -- the unchecked grey and the checked brand -- rather than two
+       rules each restating a colour. */
+    --lr-switch-track-fill: var(--lr-color-border);
+  }
+  :host([checked]) {
+    --lr-switch-track-fill: var(--lr-color-brand);
   }
   [part='base'] {
     display: inline-flex;
@@ -27,12 +34,19 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* Gives mouse users the same 'this is interactive' cue the :focus-visible ring above already
-     gives keyboard users -- mirrors the generic --lr-hover-brightness lift used by
-     lr-confirm-bar/lr-chat-composer's own button hovers, gated on :host(:not(:disabled)) the same
-     way lr-checkbox's/lr-radio's [part='base']:hover rules are (this control isn't a native
-     button, so a bare [part='base']:hover would otherwise also fire while disabled). */
-  :host(:not(:disabled)) [part='base']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+     gives keyboard users, and a press that reads as deeper than the hover. Gated on
+     :host(:not(:disabled)) the same way lr-checkbox's/lr-radio's [part='base']:hover rules are
+     (this control isn't a native button, so a bare [part='base']:hover would otherwise also fire
+     while disabled).
+     Both land on the TRACK, and both are colour mixes. This was a filter: brightness() lift on
+     [part='base'] before 8.0.0, which was wrong twice over: a filter multiplies every channel, so
+     it moved the track only by luck of its tone, and it applies to the whole subtree, so it faded
+     the label text sitting next to the track as well. */
+  :host(:not(:disabled)) [part='base']:hover [part='track'] {
+    background: color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  :host(:not(:disabled)) [part='base']:active [part='track'] {
+    background: color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   :host(:disabled) [part='base'] {
     cursor: not-allowed;
@@ -45,11 +59,8 @@ export const styles = css`
     inline-size: var(--lr-switch-track-inline-size);
     block-size: var(--lr-switch-track-block-size);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-border);
+    background: var(--lr-switch-track-fill);
     transition: background-color var(--lr-transition-fast);
-  }
-  :host([checked]) [part='track'] {
-    background: var(--lr-color-brand);
   }
 
   [part='thumb'] {

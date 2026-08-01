@@ -5,6 +5,7 @@ import '../combobox/option.js';
 import type { LyraSelect } from './select.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './select.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const basic = () => html`
   <lr-select>
@@ -2312,4 +2313,118 @@ describe('lr-select — the shared size ladder', () => {
       expect(height(el), `size=${size}`).to.equal(px);
     }
   });
+});
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
+// where either is missing -- an unguarded assertion fails on WebKit rather than skipping.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('lr-select validity custom states', () => {
+  const required = () => html`
+    <lr-select required>
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+    </lr-select>
+  `;
+
+  it('publishes required/optional and valid/invalid from the first render', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(required())) as LyraSelect;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    const optional = (await fixture(basic())) as LyraSelect;
+    await optional.updateComplete;
+    expect(optional.matches(':state(optional)')).to.be.true;
+    expect(optional.matches(':state(valid)')).to.be.true;
+  });
+
+  it('withholds user-valid/user-invalid until the user has actually interacted', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(required())) as LyraSelect;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'pristine required must not read as an error').to.be
+      .false;
+
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)'), 'a submit attempt counts as interaction').to.be.true;
+
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)')).to.be.true;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+  });
+
+  it('goes pristine again after a form reset', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <lr-select name="fruit" required>
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
+      </form>
+    `);
+    const el = form.querySelector('lr-select') as LyraSelect;
+    await el.updateComplete;
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)')).to.be.true;
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'reset returns the control to pristine').to.be.false;
+    expect(el.matches(':state(invalid)')).to.be.true;
+  });
+});
+
+describe('lr-select hover and press feedback', () => {
+  const centerOf = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  // --lr-transition-fast is zeroed on each fixture: the trigger transitions its background, so
+  // reading getComputedStyle one frame after the pointer arrives would otherwise catch the
+  // INTERPOLATED colour -- still the resting one at t=0 -- and report a working hover as broken.
+  for (const appearance of ['outlined', 'filled', 'accent'] as const) {
+    it(`presses an appearance="${appearance}" trigger deeper than it hovers it`, async () => {
+      const el = (await fixture(html`
+        <lr-select appearance=${appearance} style="--lr-transition-fast: 0s">
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
+      `)) as LyraSelect;
+      await el.updateComplete;
+      const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+      const resting = getComputedStyle(trigger).backgroundColor;
+      try {
+        await sendMouse({ type: 'move', position: centerOf(trigger) });
+        const hovered = getComputedStyle(trigger).backgroundColor;
+        expect(hovered, `${appearance} hover vs resting`).to.not.equal(resting);
+        await sendMouse({ type: 'down' });
+        expect(getComputedStyle(trigger).backgroundColor, `${appearance} pressed vs hovered`).to.not.equal(
+          hovered,
+        );
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    });
+  }
 });

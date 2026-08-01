@@ -40,6 +40,9 @@ export const styles = css`
   button[part~='item']:hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
   }
+  button[part~='item']:active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   button[part~='item']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

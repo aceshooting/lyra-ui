@@ -8,6 +8,7 @@ import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './select.styles.js';
@@ -160,6 +161,17 @@ export interface LyraSelectEventMap {
  * @event lr-hide - The listbox closed.
  * @event blur - Re-dispatched from the trigger as a bubbling, composed event.
  * @event focus - Re-dispatched from the trigger as a bubbling, composed event.
+ * @cssstate required - Matches while `required` is set. Style with `lr-select:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: picking an option, a
+ * blur, or a `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required select is genuinely invalid, but colouring it red
+ * before the user has done anything is hostile.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
  * @csspart form-control-label - The `<label>` element.
  * @csspart trigger - The trigger button (positioning anchor).
@@ -275,6 +287,13 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // Set on the trigger button's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
   @state() private touched = false;
+  /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
+   *  `user-invalid` custom states. Deliberately separate from `touched` (which drives the visible
+   *  `data-invalid`/`aria-invalid` pair and is set on blur alone): picking an option is an
+   *  interaction the instant it happens, and `reportValidity()` — what a submit attempt runs —
+   *  counts as one too, exactly as it does for native `:user-invalid`. Not `@state`: nothing in
+   *  `render()` reads it. */
+  private hasInteracted = false;
   // `[part]:empty` never matches -- the part always contains a literal
   // `<slot>` child element regardless of assigned content -- so real
   // emptiness is tracked in JS instead (same fix as lr-combobox's
@@ -550,6 +569,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     } else {
       this.validityController.setValidity({});
     }
+    this.reflectValidityStates();
+  }
+
+  /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
+   *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. Called from
+   *  every path that can move either validity or the interaction flag. */
+  private reflectValidityStates(): void {
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.hasInteracted });
   }
 
   private syncFormValue(): void {
@@ -582,6 +609,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   formResetCallback(): void {
     this.touched = false;
+    this.hasInteracted = false;
     this._restoredStateActive = false;
     this.setSelection([...this._defaultSelected], [...this._defaultSelectedOptions]);
   }
@@ -622,6 +650,11 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
+    // point, so it counts as interaction for the `user-*` custom states. `checkValidity()`
+    // deliberately does not: it is the silent query.
+    this.hasInteracted = true;
+    this.reflectValidityStates();
     return this.internals.reportValidity();
   }
 
@@ -791,6 +824,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   private selectOption(option: LyraOption): void {
     if (this.effectiveDisabled || option.disabled) return;
+    this.hasInteracted = true;
     this._restoredStateActive = false;
     if (this.multiple) {
       // Picking a selected row again toggles it back off, the standard multi-select listbox
@@ -848,6 +882,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private onTriggerBlur = (event: FocusEvent): void => {
     event.stopPropagation();
     this.touched = true;
+    this.hasInteracted = true;
+    this.reflectValidityStates();
     // A mouse click outside the element is already handled by
     // onDocPointer/hide(), but that leaves keyboard users with no way to
     // dismiss the listbox short of Escape -- tabbing focus away from the

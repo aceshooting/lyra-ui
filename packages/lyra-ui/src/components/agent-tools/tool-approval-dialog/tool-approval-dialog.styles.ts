@@ -146,6 +146,13 @@ export const styles = css`
   [part='edit-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
+     than hover in both light and dark themes rather than repeating it. The lr-button-hosted
+     Deny/Approve siblings get the equivalent step from lr-button's own styles. */
+  [part='edit-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='edit-button']:disabled {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);

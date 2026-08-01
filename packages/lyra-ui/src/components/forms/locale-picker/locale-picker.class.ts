@@ -5,6 +5,7 @@ import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import {
   getRegisteredLyraLocales,
   subscribeLyraLocaleRegistry,
@@ -165,6 +166,15 @@ export interface LyraLocalePickerEventMap {
  * @cssprop [--lr-locale-picker-option-selected-color=var(--lr-color-brand)] - Selected option text.
  * @cssprop [--lr-locale-picker-option-active-bg=var(--lr-color-brand-quiet)] - Background of a
  *   hovered or keyboard-active option row.
+ * @cssstate required - Matches while `required` is set.
+ * @cssstate optional - Matches while `required` is not set (the complement of `required`).
+ * @cssstate valid - Matches while the control satisfies its constraints.
+ * @cssstate invalid - Matches while it does not — including a pristine required picker with
+ *   nothing committed, exactly like native `:invalid`.
+ * @cssstate user-valid - `valid`, but only after the user has interacted (blurred the trigger, or
+ *   been through a `reportValidity()`/submit attempt).
+ * @cssstate user-invalid - `invalid`, but only after that same interaction — a required picker
+ *   nobody has touched yet is invalid without being styled as an error.
  */
 export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   static formAssociated = true;
@@ -364,9 +374,25 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     } else {
       this.validityController.setValidity({});
     }
+    this.syncCustomStates();
+  }
+
+  /**
+   * Publishes the six validity custom states (`:state(required)`/`optional`, `valid`/`invalid`,
+   * `user-valid`/`user-invalid`). Shared implementation in `internal/custom-states.ts`: this
+   * component drives `ElementInternals` directly rather than through the `FormAssociated` mixin,
+   * so it calls the helper itself instead of inheriting the call. `touched` is its own interaction
+   * flag (set when the trigger blurs), which is what keeps the `user-*` pair off a pristine
+   * control the way native `:user-invalid` does.
+   */
+  private syncCustomStates(): void {
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
   }
 
   formResetCallback(): void {
+    // Pristine again, so the `user-*` states stop matching even though a required picker is
+    // immediately invalid once more. The `value` write below re-runs updateValidity() (and
+    // therefore syncCustomStates()) with this flag already cleared.
     this.touched = false;
     this.value = this._defaultValue;
   }
@@ -385,6 +411,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    // Reporting is what a submit attempt does, and a failed submit is precisely when native
+    // `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
+    // `FormAssociated` mixin.
+    this.touched = true;
+    this.syncCustomStates();
     return this.internals.reportValidity();
   }
 
@@ -471,6 +502,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private onTriggerBlur = (event: FocusEvent): void => {
     event.stopPropagation();
     this.touched = true;
+    // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
+    // leaves, the same instant native `:user-invalid` starts matching.
+    this.syncCustomStates();
     this.hide();
     this.emit('blur');
   };

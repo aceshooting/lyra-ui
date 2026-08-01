@@ -70,12 +70,17 @@ export function readHoverRules(source) {
     if (buffer === '') bufferLine = index + 1;
     buffer += ` ${trimmed}`;
 
-    if (!trimmed.endsWith('{')) {
-      // A selector list spans several lines; keep accumulating until the brace.
+    // A rule written entirely on one line (`[part='x']:hover { color: red; }`) never ends in `{`,
+    // so an earlier version of this parser skipped every one of them -- six real missing pressed
+    // states hid behind that. Take the selector from the first brace wherever it falls.
+    const brace = buffer.indexOf('{');
+    if (brace < 0) {
+      // A selector list spanning several lines; keep accumulating until the brace arrives. A line
+      // that closes or terminates a declaration means we were never inside a selector.
       if (trimmed.endsWith('}') || trimmed.endsWith(';')) buffer = '';
       return;
     }
-    const selector = buffer.replace(/\{$/, '').trim();
+    const selector = buffer.slice(0, brace).trim();
     buffer = '';
     if (/:hover/.test(selector)) {
       rules.push({ selector, line: bufferLine, optedOut: pendingOptOut });

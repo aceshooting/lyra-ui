@@ -135,6 +135,17 @@ export const styles = css`
   [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
     transform: scale(1.2);
   }
+  /* The pressed state is expressed as scale, not as a colour mix, because this part's fill IS the
+     option's colour -- tinting it would misreport the value the swatch exists to show. Pressing
+     pushes the raised swatch back down past its resting size, so the press reads as a physical
+     depress against the hover lift rather than as a second, slightly-larger lift.
+     Deliberately placed AFTER the aria-checked rule above: the two selectors are the same
+     specificity (0,3,0), so ordering is the only thing that lets the already-selected swatch --
+     the one most likely to be pressed again -- show any pressed feedback at all. */
+  [part='swatch']:active [part='swatch-fill'],
+  [part='swatch']:active [part='swatch-icon'] {
+    transform: scale(0.95);
+  }
   [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
     box-shadow: 0 0 var(--lr-swatch-picker-selected-blur) var(--lr-border-width-thick) var(--lr-swatch-picker-selected-color);
     animation: lr-swatch-picker-shine var(--lr-swatch-picker-shine-duration) infinite;

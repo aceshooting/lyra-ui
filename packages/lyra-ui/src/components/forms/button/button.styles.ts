@@ -51,6 +51,38 @@ export const styles = css`
     --lr-button-quiet-text: var(--lr-color-text-quiet);
     --lr-button-accent-fill: var(--lr-color-fill-loud);
     --lr-button-accent-on-fill: var(--lr-color-on-loud);
+    /* Hover and press feedback, as a colour MIX rather than the filter: brightness() multiplier
+       this carried before 8.0.0. A filter multiplies every channel, so it lightened a dark button
+       and darkened a light one only by luck, did nothing whatsoever to a pure white or pure black
+       fill, and -- because filter applies to the whole subtree -- dimmed the label and the icons
+       along with the box. Mixing toward --lr-color-mix-partner (which follows the text colour)
+       always moves, and always in the direction the surface needs.
+       --lr-button-hover-base is the colour the two mixes move AWAY from: the fill the active
+       appearance actually paints. The chrome-less tiers (outlined, plain, quiet, link) paint no
+       fill of their own, so they mix from the page surface they sit on -- quiet's hover used to BE
+       var(--lr-color-surface), i.e. the page background itself, so hovering a quiet button on a
+       default page changed nothing at all. A consumer who tints --lr-button-outlined-fill should
+       point this at the same colour so the pair keeps moving together. */
+    --lr-button-hover-base: var(--lr-color-surface);
+    --lr-button-hover-background: color-mix(
+      in oklab,
+      var(--lr-button-hover-base),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
+    --lr-button-active-background: color-mix(
+      in oklab,
+      var(--lr-button-hover-base),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  /* Each painted tier names its own fill as the mix base, so retuning --lr-button-fill or
+     --lr-button-accent-fill retunes that tier's hover and press with it. */
+  :host([appearance='filled']),
+  :host([appearance='filled-outlined']) {
+    --lr-button-hover-base: var(--lr-button-fill);
+  }
+  :host([appearance='accent']) {
+    --lr-button-hover-base: var(--lr-button-accent-fill);
   }
   /* The one place a variant still needs naming. The four chromatic variants use their loud fill as
      the chrome-less foreground -- brand text on the page surface IS the brand colour. Neutral's
@@ -131,20 +163,24 @@ export const styles = css`
     color: var(--lr-button-quiet-text);
     border-color: var(--lr-button-quiet-border);
   }
-  :host([appearance='quiet']) [part='base']:not(:disabled):hover {
-    background: var(--lr-color-surface);
-  }
   [part='base']:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='base']:not(:disabled) {
-    transition: filter var(--lr-transition-fast), transform var(--lr-transition-fast);
+    transition:
+      background-color var(--lr-transition-fast),
+      color var(--lr-transition-fast),
+      transform var(--lr-transition-fast);
   }
+  /* One hover and one press rule for every appearance -- what moves per tier is the mix BASE
+     declared above, not the rule. Both out-specify each :host([appearance='…']) [part='base']
+     block, so no tier silently loses its pointer feedback. */
   [part='base']:not(:disabled):hover {
-    filter: brightness(var(--lr-button-hover-brightness, 1.08));
+    background: var(--lr-button-hover-background);
   }
   [part='base']:not(:disabled):active {
+    background: var(--lr-button-active-background);
     transform: scale(var(--lr-button-active-scale, 0.9875));
   }
   @media (prefers-reduced-motion: reduce) {
@@ -225,6 +261,18 @@ export const styles = css`
     font: inherit;
     text-decoration: underline;
     text-underline-offset: var(--lr-size-0-15rem);
+  }
+  /* The one appearance whose pointer feedback is NOT a fill. A link has zero chrome and zero
+     padding, so the shared hover/press background would paint a tight rectangle around bare
+     inline text in the middle of a paragraph -- exactly the button-shaped box this appearance
+     exists to avoid. It moves its text by the same two mix tokens instead. */
+  :host([appearance='link']) [part='base']:not(:disabled):hover {
+    background: transparent;
+    color: color-mix(in oklab, var(--lr-button-accent), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  :host([appearance='link']) [part='base']:not(:disabled):active {
+    background: transparent;
+    color: color-mix(in oklab, var(--lr-button-accent), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='spinner'] {
     display: inline-flex;

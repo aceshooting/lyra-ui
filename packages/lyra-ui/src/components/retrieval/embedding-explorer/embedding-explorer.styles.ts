@@ -52,6 +52,16 @@ export const styles = css`
     stroke-width: var(--lr-border-width-medium);
   }
 
+  /* Pressed thickens the same ring the hover/focus rule above draws rather than retinting it: the
+     ring is already --lr-color-text, which is exactly what --lr-color-mix-partner tracks, so a mix
+     toward the partner would resolve back to the colour it started from. Width is the one axis left
+     that reads as visibly stronger. Placed after the hover rule so it wins at equal specificity
+     while the point is both hovered and held. */
+  [part='point']:active .point-marker {
+    stroke: var(--lr-color-text);
+    stroke-width: var(--lr-border-width-thick);
+  }
+
   [part='point'][data-selected='true'] .point-marker {
     stroke: var(--lr-embedding-explorer-selected-stroke, var(--lr-color-brand));
     stroke-width: var(--lr-border-width-medium);

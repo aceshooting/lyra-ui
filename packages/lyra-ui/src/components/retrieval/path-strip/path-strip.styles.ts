@@ -49,6 +49,10 @@ export const styles = css`
   [part='relation']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='node']:active,
+  [part='relation']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='arrow'] {
     display: inline-flex;
     align-items: center;

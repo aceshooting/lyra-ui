@@ -14,6 +14,59 @@ function makeSteps(count: number, overridesFor?: (index: number) => Partial<Tour
   }));
 }
 
+/**
+ * A browser's real :hover/:active pseudo-classes track the physical pointer and cannot be forced
+ * from a dispatched event, so a state rule's value is read off the shipped rule and then *painted*
+ * on a probe inside the component's own shadow root. Every assertion below is on the rendered
+ * result of that paint -- the custom properties resolve exactly as they do in production -- never on
+ * stylesheet text.
+ */
+function declaredValue(root: ShadowRoot, selector: string, property: string): string {
+  const normalize = (text: string) => text.replace(/"/g, "'").replace(/\s+/g, ' ').trim();
+  for (const sheet of root.adoptedStyleSheets ?? []) {
+    for (const rule of sheet.cssRules) {
+      if (rule instanceof CSSStyleRule && normalize(rule.selectorText) === normalize(selector)) {
+        const value = rule.style.getPropertyValue(property);
+        if (value) return value;
+      }
+    }
+  }
+  return '';
+}
+
+function declaredBackground(root: ShadowRoot, selector: string): string {
+  return declaredValue(root, selector, 'background') || declaredValue(root, selector, 'background-color');
+}
+
+function paintProbe(root: ShadowRoot) {
+  const measure = (apply: (probe: HTMLElement) => void, read: (style: CSSStyleDeclaration) => string) => {
+    const probe = document.createElement('span');
+    apply(probe);
+    root.appendChild(probe);
+    const computed = read(getComputedStyle(probe));
+    probe.remove();
+    return computed;
+  };
+  return {
+    /* The zero-percent wrapper forces resting, hovered and pressed through one serialization, so the
+       channel distances compared in the tests are apples-to-apples even though the resting value is
+       a plain token and the two state values are mixes. */
+    render: (value: string) =>
+      measure(
+        (probe) => (probe.style.backgroundColor = `color-mix(in oklab, ${value}, transparent 0%)`),
+        (style) => style.backgroundColor,
+      ),
+    renderFilter: (value: string) => measure((probe) => (probe.style.filter = value), (style) => style.filter),
+  };
+}
+
+function channelDistance(left: string, right: string): number {
+  const channels = (color: string) => (color.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+  const a = channels(left);
+  const b = channels(right);
+  return Math.hypot(...a.map((value, index) => value - (b[index] ?? 0)));
+}
+
 function targetButtons(count: number) {
   return html`${Array.from(
     { length: count },
@@ -1085,7 +1138,7 @@ describe('lr-tour', () => {
     expect(popover.hasAttribute('aria-labelledby')).to.be.false;
   });
 
-  it('lifts the Next button on hover through the shared hover-brightness token', async () => {
+  it('mixes the Next button fill toward the shared partner on hover and further again on press', async () => {
     const el = (await fixture(
       html`<div>
         <lr-tour .steps=${makeSteps(3)} open></lr-tour>
@@ -1094,25 +1147,49 @@ describe('lr-tour', () => {
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
-    const normalize = (text: string) => text.replace(/"/g, "'");
-    let declared = '';
-    for (const sheet of tour.shadowRoot!.adoptedStyleSheets) {
-      for (const rule of sheet.cssRules) {
-        if (
-          rule instanceof CSSStyleRule &&
-          normalize(rule.selectorText) === normalize("[part='next-button']:hover") &&
-          rule.style.filter
-        ) {
-          declared = rule.style.filter;
-        }
-      }
-    }
-    const probe = document.createElement('span');
-    probe.style.filter = declared;
-    tour.shadowRoot!.appendChild(probe);
-    const computed = getComputedStyle(probe).filter;
-    probe.remove();
-    expect(computed).to.equal('brightness(1.08)');
+    const root = tour.shadowRoot!;
+    const probes = paintProbe(root);
+
+    const resting = probes.render(declaredBackground(root, "[part='next-button']"));
+    const hovered = probes.render(declaredBackground(root, "[part='next-button']:hover"));
+    const pressed = probes.render(declaredBackground(root, "[part='next-button']:active"));
+
+    expect(hovered).to.not.equal(resting);
+    expect(pressed).to.not.equal(resting);
+    // The defect this guards: a pressed rule byte-identical to the hover one.
+    expect(pressed).to.not.equal(hovered);
+    expect(channelDistance(pressed, resting)).to.be.greaterThan(channelDistance(hovered, resting));
+
+    // A filter applies to the whole subtree, so it would have dragged the button's own
+    // --lr-color-on-brand label along with the fill. Rendering whatever the rules declare and
+    // reading it back proves none survives.
+    expect(probes.renderFilter(declaredValue(root, "[part='next-button']:hover", 'filter'))).to.equal('none');
+    expect(probes.renderFilter(declaredValue(root, "[part='next-button']:active", 'filter'))).to.equal('none');
+  });
+
+  it('gives the Previous/Skip buttons a pressed fill deeper than their hover fill', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
+        ${targetButtons(3)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const root = tour.shadowRoot!;
+    const probes = paintProbe(root);
+
+    const resting = probes.render(declaredBackground(root, "[part='previous-button'], [part='skip-button'], [part='next-button']"));
+    const hovered = probes.render(
+      declaredBackground(root, ":where([part='previous-button']):hover:where(:not(:disabled)), :where([part='skip-button']):hover"),
+    );
+    const pressed = probes.render(
+      declaredBackground(root, ":where([part='previous-button']):active:where(:not(:disabled)), :where([part='skip-button']):active"),
+    );
+
+    expect(hovered).to.not.equal(resting);
+    expect(pressed).to.not.equal(hovered);
+    expect(channelDistance(pressed, resting)).to.be.greaterThan(channelDistance(hovered, resting));
   });
 
   it('wraps the internal previous-button/skip-button hover rule in :where() so a consumer ::part(...):hover override wins without !important', async () => {

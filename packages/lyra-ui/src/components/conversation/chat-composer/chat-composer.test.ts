@@ -719,11 +719,36 @@ it('dims the base part via the :disabled pseudo-class when disabled only through
   expect(getComputedStyle(base).cursor).to.equal('not-allowed');
 });
 
-/** Render the filter declared on `selector`'s :hover rule (read off the element's own applied
- *  stylesheets) into the component's shadow scope, returning its resolved computed value. Proves both
- *  that the rule is wired to the shared token and that the token resolves — a hardcoded literal or a
- *  broken var() would compute to a different value or `none`. */
-function renderedHoverFilter(el: HTMLElement, selector: string): string {
+/** Resolve a declaration value (var()s, color-mix() and all) for `property` inside the component's
+ *  shadow scope, returning the browser's computed value for `readProperty`. Rendering it rather than
+ *  reading the stylesheet is the point: a broken var() chain or an unregistered token computes to
+ *  something else entirely, and only the browser can tell us which. */
+function resolveInShadow(el: HTMLElement, property: string, value: string, readProperty = property): string {
+  const probe = document.createElement('span');
+  probe.style.setProperty(property, value);
+  el.shadowRoot!.appendChild(probe);
+  const computed = getComputedStyle(probe).getPropertyValue(readProperty);
+  probe.remove();
+  return computed;
+}
+
+/** The computed background `selector`'s own rule paints, resolved in the component's shadow scope. */
+function renderedRuleBackground(el: HTMLElement, selector: string): string {
+  const normalize = (text: string) => text.replace(/"/g, "'");
+  let declared = '';
+  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (rule instanceof CSSStyleRule && normalize(rule.selectorText) === normalize(selector)) {
+        const value = rule.style.getPropertyValue('background') || rule.style.getPropertyValue('background-color');
+        if (value) declared = value;
+      }
+    }
+  }
+  return resolveInShadow(el, 'background', declared, 'background-color');
+}
+
+/** The computed filter `selector`'s own rule applies, resolved the same way. `none` means none. */
+function renderedRuleFilter(el: HTMLElement, selector: string): string {
   const normalize = (text: string) => text.replace(/"/g, "'");
   let declared = '';
   for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
@@ -733,18 +758,45 @@ function renderedHoverFilter(el: HTMLElement, selector: string): string {
       }
     }
   }
-  const probe = document.createElement('span');
-  probe.style.filter = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).filter;
-  probe.remove();
-  return value;
+  return resolveInShadow(el, 'filter', declared);
 }
 
-it('lifts the send button on hover through the shared hover-brightness token', async () => {
+it('escalates the send button from resting to hover to pressed with the shared colour-mix tokens', async () => {
   const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   await el.updateComplete;
-  expect(renderedHoverFilter(el, "[part='action-button']:hover")).to.equal('brightness(1.08)');
+  const resting = resolveInShadow(el, 'background', 'var(--lr-color-brand)', 'background-color');
+  const hovered = renderedRuleBackground(el, "[part='action-button']:hover");
+  const pressed = renderedRuleBackground(el, "[part='action-button']:active");
+
+  // Each step actually moves. The middle assertion is the one that matters most: an :active rule
+  // byte-identical to its :hover rule is the same "no pressed state" defect wearing a costume.
+  expect(hovered).to.not.equal(resting);
+  expect(pressed).to.not.equal(hovered);
+  expect(pressed).to.not.equal(resting);
+
+  // ...and each step is exactly the shared token's mix of the resting brand fill, so hover is the
+  // 12% step and pressed the 22% one -- provably a stronger press, and both retintable at once.
+  expect(hovered).to.equal(
+    resolveInShadow(
+      el,
+      'background',
+      'color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))',
+      'background-color',
+    ),
+  );
+  expect(pressed).to.equal(
+    resolveInShadow(
+      el,
+      'background',
+      'color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+      'background-color',
+    ),
+  );
+
+  // No filter in either state: brightness() applies to the subtree, so it would dim the send glyph
+  // along with the fill -- and does nothing at all to a pure white or pure black brand colour.
+  expect(renderedRuleFilter(el, "[part='action-button']:hover")).to.equal('none');
+  expect(renderedRuleFilter(el, "[part='action-button']:active")).to.equal('none');
 });
 
 it('recolors the busy action-button background via --lr-chat-composer-busy-bg without affecting the textarea placeholder color', async () => {

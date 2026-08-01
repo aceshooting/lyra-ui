@@ -1035,6 +1035,29 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
+  it('resolves a non-accent tone through the carrier the hover/active mix reads', async () => {
+    // Each tone sets one private carrier that the resting background and the hover/active mixes all
+    // read, instead of declaring `background` per tone -- a per-tone background is invisible to the
+    // generic mark[data-lr-highlight-tone]:hover rule, which is why the hover used to be a
+    // subtree-wide filter. This asserts the toned highlight still paints its own colour.
+    const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
+    (globalThis as { Highlight?: unknown }).Highlight = undefined;
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      el.style.setProperty('--lr-docx-viewer-highlight-success-background', 'rgb(10, 20, 30)');
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' }, tone: 'success' }];
+      await el.updateComplete;
+      const toned = el.shadowRoot!.querySelector<HTMLElement>(
+        '[part="content"] mark[data-lr-highlight-tone="success"]',
+      );
+      expect(toned !== null).to.equal(true);
+      expect(getComputedStyle(toned!).backgroundColor).to.equal('rgb(10, 20, 30)');
+    } finally {
+      restore();
+      (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
+    }
+  });
+
   it('gives the clickable <mark>-wrap highlight fallback a :hover rule matching its cursor:pointer affordance', () => {
     // Browser test runners don't synthesize a real :hover pseudo-class from a dispatched event
     // (same constraint documented at tabs.test.ts's identical stylesheet-source check), so this

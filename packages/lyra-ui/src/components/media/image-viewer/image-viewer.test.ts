@@ -4,6 +4,7 @@ import type { LyraImageViewer, ImageRotation } from './image-viewer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.js';
 import { styles } from './image-viewer.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const PNG_SRC = 'https://example.test/photo.png';
 
@@ -238,6 +239,45 @@ describe('region highlights', () => {
     expect((await eventPromise).detail).to.deep.equal({ id: 'h2' });
     await el.updateComplete;
     expect(el.activeHighlightId).to.equal('h2');
+  });
+
+  it('mixes a highlight hover and pressed fill from its own tone, and makes pressed the stronger step', async () => {
+    // The interaction state used to be a brightness filter, which needed no knowledge of the fill
+    // and so could not be got wrong per tone -- but it also dragged [part="highlight-label"]'s text
+    // with it, and did nothing at all to a white fill. A colour mix fixes both and introduces the
+    // one risk worth a test: mixing from the untoned default would flatten every toned box to brand
+    // the moment the pointer arrived.
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} .highlights=${[
+      { id: 'plain', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 15 } } },
+      { id: 'danger', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 20, height: 15 } }, tone: 'danger' },
+    ]}></lr-image-viewer>`)) as LyraImageViewer;
+    const boxes = [...el.shadowRoot!.querySelectorAll('[part="highlight"]')] as HTMLElement[];
+    expect(boxes.length).to.equal(2);
+
+    const plainFill = getComputedStyle(boxes[0]).getPropertyValue('--lr-image-viewer-highlight-fill').trim();
+    const dangerFill = getComputedStyle(boxes[1]).getPropertyValue('--lr-image-viewer-highlight-fill').trim();
+    expect(plainFill, 'the untoned fill is not empty').to.not.equal('');
+    expect(dangerFill, 'the danger tone supplies its own fill for the mixes to read').to.not.equal(plainFill);
+
+    const target = boxes[1];
+    const rect = target.getBoundingClientRect();
+    expect(rect.width, 'the highlight has real geometry to point at').to.be.greaterThan(0);
+    const resting = getComputedStyle(target).backgroundColor;
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      const hovered = getComputedStyle(target).backgroundColor;
+      expect(hovered, 'hover moves the highlight off its resting fill').to.not.equal(resting);
+
+      await sendMouse({ type: 'down' });
+      const pressed = getComputedStyle(target).backgroundColor;
+      expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('positions highlight boxes with physical left/top under dir="rtl" so they stay over the non-mirroring image', async () => {

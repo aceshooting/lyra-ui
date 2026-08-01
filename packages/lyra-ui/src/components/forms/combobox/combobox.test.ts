@@ -7,6 +7,7 @@ import '../select/select.js';
 import '../../layout/segmented/segmented.js';
 import type { ComboboxFilterDetail, LyraCombobox } from './combobox.js';
 import { styles } from './combobox.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const basic = () => html`
   <lr-combobox>
@@ -3051,4 +3052,127 @@ it('ignores option activation entirely while disabled', async () => {
   option.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(el.value).to.equal('');
+});
+
+// The tag remove button's interaction states are a currentColor tint (this part inherits the
+// tag's own text colour, so there is no token to darken), which is a different colour-mix shape
+// from every other part here -- proved through the real pointer rather than the stylesheet text,
+// since an unparseable color-mix() is dropped silently and would still read fine as source.
+// Colour STRINGS are compared, never elements: a DOM node as chai's actual/expected hangs the file.
+it('tints the tag remove button on hover and deepens that tint while it is pressed', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.multiple = true;
+  el.value = ['a'];
+  await el.updateComplete;
+  const remove = el.shadowRoot!.querySelector('[part="tag__remove-button"]') as HTMLElement;
+  const rect = remove.getBoundingClientRect();
+  const centre: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  const rest = getComputedStyle(remove).backgroundColor;
+  try {
+    await sendMouse({ type: 'move', position: centre });
+    const hovered = getComputedStyle(remove).backgroundColor;
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(remove).backgroundColor;
+    await sendMouse({ type: 'up' });
+    expect(hovered, 'hover must tint the resting (transparent) background').to.not.equal(rest);
+    expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(hovered);
+  } finally {
+    await resetMouse();
+  }
+});
+
+// `CustomStateSet` and the `:state()` selector ship separately from each other and from the rest
+// of `ElementInternals` -- these two guards are why the same block passes on WebKit, where a
+// missing `CustomStateSet` would otherwise throw on the very first assertion.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('validity custom states', () => {
+  it('publishes required/optional and valid/invalid from the first update', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`
+      <lr-combobox required name="fruit">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    expect(el.matches(':state(required)'), 'required').to.be.true;
+    expect(el.matches(':state(optional)'), 'optional').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid').to.be.true;
+    expect(el.matches(':state(valid)'), 'valid').to.be.false;
+
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid after a selection').to.be.true;
+    expect(el.matches(':state(invalid)'), 'invalid after a selection').to.be.false;
+
+    el.required = false;
+    await el.updateComplete;
+    expect(el.matches(':state(optional)'), 'optional after clearing required').to.be.true;
+    expect(el.matches(':state(required)'), 'required after clearing required').to.be.false;
+  });
+
+  it('keeps user-valid/user-invalid off a pristine control and turns them on at first interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`
+      <lr-combobox required name="fruit">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    // Invalid, but nobody has had a turn yet: styling this red would be hostile, which is the
+    // whole reason the `user-*` pair exists.
+    expect(el.matches(':state(invalid)'), 'invalid while pristine').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid while pristine').to.be.false;
+    expect(el.matches(':state(user-valid)'), 'user-valid while pristine').to.be.false;
+
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    input.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after blur').to.be.true;
+    expect(el.matches(':state(user-valid)'), 'user-valid after blur').to.be.false;
+
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.matches(':state(user-valid)'), 'user-valid once satisfied').to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid once satisfied').to.be.false;
+  });
+
+  it('counts a reportValidity() call as interaction, and a form reset as going pristine again', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = (await fixture(html`
+      <form>
+        <lr-combobox required name="fruit">
+          <lr-option value="a">Apple</lr-option>
+        </lr-combobox>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid before reporting').to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reporting').to.be.true;
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after reset').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid after reset').to.be.true;
+  });
 });

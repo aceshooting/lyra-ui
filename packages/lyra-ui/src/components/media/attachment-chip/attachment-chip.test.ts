@@ -3,6 +3,7 @@ import './attachment-chip.js';
 import type { LyraAttachmentChip } from './attachment-chip.js';
 import { formatFileSize } from './attachment-chip.js';
 import { styles } from './attachment-chip.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function makeFile(name: string, type: string, sizeBytes = 1): File {
   return new File([new Uint8Array(sizeBytes)], name, { type, lastModified: 1700000000000 });
@@ -497,6 +498,31 @@ describe('remove affordance', () => {
     )) as LyraAttachmentChip;
     expect(el.removable).to.be.false;
     expect(el.shadowRoot!.querySelectorAll('[part="remove-button"]').length).to.equal(0);
+  });
+
+  it('tints the remove button on hover and deepens it while pressed', async () => {
+    // The pressed mix is written from the button's own `transparent` fill, which is the one
+    // color-mix() shape that can silently resolve to nothing at all. Read the rendered colour.
+    const el = (await fixture(html`<lr-attachment-chip name="a.txt"></lr-attachment-chip>`)) as LyraAttachmentChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    const resting = getComputedStyle(btn).backgroundColor;
+    const rect = btn.getBoundingClientRect();
+    expect(rect.width, 'the remove button has real geometry to point at').to.be.greaterThan(0);
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      const hovered = getComputedStyle(btn).backgroundColor;
+      expect(hovered, 'hover tints the transparent button').to.not.equal(resting);
+
+      await sendMouse({ type: 'down' });
+      const pressed = getComputedStyle(btn).backgroundColor;
+      expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('has an aria-label of "Remove {filename}"', async () => {

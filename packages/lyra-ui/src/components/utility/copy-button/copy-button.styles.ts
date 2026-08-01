@@ -32,8 +32,13 @@ export const styles = css`
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
     color: var(--lr-color-text);
   }
-  /* After the hover rule, at equal specificity, so hovering the failed button still changes its
-     background (the interactive affordance) without repainting the failure color away. */
+  :where([part~='base']:not(:disabled)):active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-text);
+  }
+  /* After the hover and pressed rules, at equal specificity, so hovering or holding the failed
+     button still changes its background (the interactive affordance) without repainting the failure
+     color away. */
   [part~='base-error'] {
     color: var(--lr-color-danger);
   }

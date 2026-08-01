@@ -19,6 +19,8 @@ export const styles = css`
      keyboard users a cue that this is the interactive surface; :hover gives mouse users the same
      cue via the editor frame's border, guarded off while disabled so it never implies the frame is
      still interactive. */
+  /* no-pressed-state: the editor frame is a text surface, not a push target -- pointer-down
+     places a caret, and the border cue belongs to hover and :focus-visible. */
   :host(:not(:disabled)) [part='editor']:hover { border-color: var(--lr-color-brand); }
   [part='hint'], [part='error'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='error'] { color: var(--lr-color-danger); }

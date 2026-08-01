@@ -46,6 +46,9 @@ export const styles = css`
   [part='rate-select']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='rate-select']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='rate-select']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -75,6 +78,13 @@ export const styles = css`
   [part='timeline']:hover {
     border-color: var(--lr-color-brand);
   }
+  /* The timeline is itself the seek target (a pointer press scrubs), so it earns a pressed state,
+     and it has to read as more than the hover border alone: the surface shifts under the pointer
+     while the border keeps the hover accent. */
+  [part='timeline']:active {
+    border-color: var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='timeline'] canvas {
     display: block;
     inline-size: 100%;
@@ -85,6 +95,12 @@ export const styles = css`
      highlight-marker tones without hijacking the shared --lr-color-success/warning/danger/brand
      tokens used everywhere else in their theme. Unset, each falls back to the same color-mix()
      this rendered before the hatch existed, so the default rendering is unchanged. */
+  /* Each tone sets --lr-av-player-marker-fill rather than background directly, and the one
+     background declaration below reads it. That indirection is what lets the hover/active rules
+     mix from whichever fill the marker actually has: a background-mix written against the untoned
+     default would flatten every toned marker to brand the moment the pointer touched it, and a
+     per-tone hover/active pair would be ten near-identical rules. The public
+     --lr-av-player-*-bg knobs are untouched -- they are still what each fill falls back through. */
   [part='timeline-marker'] {
     position: absolute;
     inset-block: 0;
@@ -93,15 +109,22 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
-    background: var(--lr-av-player-marker-bg, color-mix(in srgb, var(--lr-color-brand) 35%, transparent));
+    --lr-av-player-marker-fill: var(--lr-av-player-marker-bg, color-mix(in srgb, var(--lr-color-brand) 35%, transparent));
+    background: var(--lr-av-player-marker-fill);
   }
+  /* Was filter: brightness(1.2), which multiplies every channel: it lightened a dark marker,
+     darkened nothing at all on a fully saturated one, did nothing whatsoever to a pure-white fill,
+     and -- because filter applies to the subtree -- dragged the marker's own label with it. */
   [part='timeline-marker']:hover {
-    filter: brightness(1.2);
+    background: color-mix(in oklab, var(--lr-av-player-marker-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
-  [part='timeline-marker'][data-tone='success'] { background: var(--lr-av-player-marker-success-bg, color-mix(in srgb, var(--lr-color-success) 35%, transparent)); }
-  [part='timeline-marker'][data-tone='warning'] { background: var(--lr-av-player-marker-warning-bg, color-mix(in srgb, var(--lr-color-warning) 35%, transparent)); }
-  [part='timeline-marker'][data-tone='danger'] { background: var(--lr-av-player-marker-danger-bg, color-mix(in srgb, var(--lr-color-danger) 35%, transparent)); }
-  [part='timeline-marker'][data-tone='neutral'] { background: var(--lr-av-player-marker-neutral-bg, color-mix(in srgb, var(--lr-color-text) 25%, transparent)); }
+  [part='timeline-marker']:active {
+    background: color-mix(in oklab, var(--lr-av-player-marker-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part='timeline-marker'][data-tone='success'] { --lr-av-player-marker-fill: var(--lr-av-player-marker-success-bg, color-mix(in srgb, var(--lr-color-success) 35%, transparent)); }
+  [part='timeline-marker'][data-tone='warning'] { --lr-av-player-marker-fill: var(--lr-av-player-marker-warning-bg, color-mix(in srgb, var(--lr-color-warning) 35%, transparent)); }
+  [part='timeline-marker'][data-tone='danger'] { --lr-av-player-marker-fill: var(--lr-av-player-marker-danger-bg, color-mix(in srgb, var(--lr-color-danger) 35%, transparent)); }
+  [part='timeline-marker'][data-tone='neutral'] { --lr-av-player-marker-fill: var(--lr-av-player-marker-neutral-bg, color-mix(in srgb, var(--lr-color-text) 25%, transparent)); }
   [part='timeline-marker'][data-active] {
     outline: var(--lr-border-width-medium) solid var(--lr-av-player-marker-active-color, var(--lr-color-brand));
     outline-offset: calc(-1 * var(--lr-border-width-medium));
@@ -141,6 +164,11 @@ export const styles = css`
      specificity-tie source order, even while it's also being hovered. */
   lr-virtual-list::part(cue):hover {
     background: var(--lr-color-brand-quiet);
+  }
+  /* Kept alongside the hover rule, ahead of ::part(cue-current), for the same source-order reason:
+     the current cue's own fill still wins over both transient states. */
+  lr-virtual-list::part(cue):active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   lr-virtual-list::part(cue-current) {
     background: var(--lr-av-player-cue-current-bg, var(--lr-color-brand-quiet));

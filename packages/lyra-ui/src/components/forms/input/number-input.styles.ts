@@ -16,6 +16,9 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     border: none;
+    /* Invisible while the background is none; it exists so the pressed fill below (and the focus
+       ring, which follows the same corner) is a rounded chip rather than a hard rectangle. */
+    border-radius: var(--lr-radius);
     background: none;
     cursor: pointer;
     color: var(--lr-color-text-quiet);
@@ -28,6 +31,15 @@ export const styles = css`
   [part='stepper-down']:hover,
   [part='stepper-up']:hover {
     color: var(--lr-color-text);
+  }
+  /* Pressed. A stepper is the one control here a user holds down and repeats, so the press state
+     doing more than the hover is not decoration: it is the only confirmation that the auto-repeat
+     is running. Same quiet-to-full text step as the hover, plus a fill mixing the page surface
+     toward --lr-color-mix-partner at the stronger active share. */
+  [part='stepper-down']:active,
+  [part='stepper-up']:active {
+    color: var(--lr-color-text);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='stepper-down']:focus-visible,
   [part='stepper-up']:focus-visible {

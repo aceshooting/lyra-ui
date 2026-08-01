@@ -4,6 +4,7 @@ import './time-range.js';
 import type { LyraTimeRange } from './time-range.js';
 import { styles } from './time-range.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('reflects start/end as the range fill width', async () => {
   const el = (await fixture(
@@ -533,9 +534,38 @@ it('dims with opacity/not-allowed cursor when disabled purely via an ancestor fi
   expect(getComputedStyle(startHandle).cursor).to.equal('not-allowed');
 });
 
-it('gives the drag handles hover feedback matching the keyboard focus-visible cue', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part\^='handle'\]:hover\s*\{[^}]*filter:/);
+// Driven through the real pointer rather than the stylesheet text: the `filter: brightness()`
+// this used to assert also satisfies a "there is a hover rule" text match while doing nothing
+// whatsoever on a theme whose brand colour is pure white or pure black, and while washing out the
+// surface-coloured ring that separates the knob from its own track. Reading the painted fill back
+// at each stage is the only assertion that can tell those apart. Colour STRINGS are compared,
+// never elements — a DOM node as chai's actual/expected hangs the whole file.
+it('moves a drag handle’s painted fill on hover, and further again while it is grabbed', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  await el.updateComplete;
+  const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const rect = handle.getBoundingClientRect();
+  const centre: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  const rest = getComputedStyle(handle).backgroundColor;
+  try {
+    await sendMouse({ type: 'move', position: centre });
+    const hovered = getComputedStyle(handle).backgroundColor;
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(handle).backgroundColor;
+    const grabbedCursor = getComputedStyle(handle).cursor;
+    await sendMouse({ type: 'up' });
+    expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(rest);
+    expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(hovered);
+    expect(pressed).to.not.equal(rest);
+    expect(grabbedCursor, 'a grabbed handle shows the closed-hand cursor').to.equal('grabbing');
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe('preset-button hover specificity', () => {

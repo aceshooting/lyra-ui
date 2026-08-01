@@ -46,7 +46,7 @@ export const styles = css`
   :host([size='small']) {
     --lr-phone-input-padding-block: var(--lr-space-xs);
     --lr-phone-input-font-size: var(--lr-font-size-sm);
-    --lr-phone-input-flag-size: var(--lr-font-size-md);
+    --lr-phone-input-flag-size: var(--lr-font-size-m);
     --lr-phone-input-glyph-size: var(--lr-font-size-sm);
   }
   :host([size='l']),
@@ -184,6 +184,19 @@ export const styles = css`
 
   [part='country-select']:not(:disabled):hover + [part='country-trigger'] {
     background: var(--lr-phone-input-country-hover-bg, var(--lr-color-brand-quiet));
+  }
+
+  /* The press lands on the invisible <select> stretched over the trigger, so the pressed tint is
+     driven from the same sibling combinator as the hover above -- styling [part='country-trigger']
+     itself with :active would never match, since it is not the element being pressed. Mixing the
+     hover tint one shared step further toward the text colour keeps a consumer's
+     --lr-phone-input-country-hover-bg override in charge of both states. */
+  [part='country-select']:not(:disabled):active + [part='country-trigger'] {
+    background: color-mix(
+      in oklab,
+      var(--lr-phone-input-country-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
 
   /* The wrapper's focus-within ring marks the whole field; this inner ring additionally marks

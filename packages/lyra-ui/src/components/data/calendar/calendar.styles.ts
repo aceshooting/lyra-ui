@@ -36,6 +36,9 @@ export const styles = css`
   button[part='nav'], [part='day'] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); cursor: pointer; }
   button[part='nav'] { padding-inline: var(--lr-space-s); border-radius: var(--lr-radius); }
   button[part='nav']:hover, [part='agenda-event']:hover { background: var(--lr-color-brand-quiet); }
+  /* Pressed: the same hovered fill carried further toward --lr-color-mix-partner (which follows the
+     text colour), so the step is visible in either theme instead of relying on a fixed lighten. */
+  button[part='nav']:active, [part='agenda-event']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   button[part='nav']:focus-visible, [part='agenda-event']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
@@ -45,6 +48,9 @@ export const styles = css`
      correct behavior while focused. */
   [part='day']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='day']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='day']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -60,7 +66,24 @@ export const styles = css`
   [part='day'][data-selected='true'] { background: var(--lr-calendar-day-selected-bg); }
   [part='date'] { font-weight: var(--lr-font-weight-semibold); }
   [part='event'] { overflow: hidden; box-sizing: border-box; inline-size: 100%; min-inline-size: var(--lr-size-1-5rem); min-block-size: var(--lr-size-1-5rem); margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-  [part='event']:hover { filter: brightness(var(--lr-hover-brightness)); }
+  /* An event chip's fill is per-event data (CalendarEvent.color) written as an inline
+     background-color by calendar.class.ts, and an inline declaration beats every stylesheet rule --
+     so the pointer feedback is painted as a background-IMAGE overlay rather than swapped into
+     background-color. The overlay composites over whatever fill the chip actually carries
+     (including a pure white or pure black one, which the filter: brightness() this replaces left
+     completely unchanged) and paints under the label instead of recolouring it. */
+  [part='event']:hover {
+    background-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+    );
+  }
+  [part='event']:active {
+    background-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+  }
   [part='event']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);

@@ -39,6 +39,10 @@ export const styles = css`
   [part='play-button']:hover {
     border-color: var(--lr-color-brand);
   }
+  [part='play-button']:active {
+    border-color: var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='play-button']:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
@@ -56,8 +60,16 @@ export const styles = css`
      ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
      \`::part(slider):hover\` override ((0,1,1)) without that consumer needing !important. Same
      fix as \`<lr-attachment-trigger>\`'s \`.trigger-button\` hover rule. */
+  /* The visible ink on a native range input is drawn by the UA from accent-color, not from
+     background -- so the interaction states move accent-color. (The old filter: brightness() bought
+     the same visual by multiplying every channel of the whole subtree; it did nothing to a pure
+     white or pure black accent, and it dimmed/lit the input's own focus ring along with the
+     track.) */
   :where([part='slider']):hover:where(:not(:disabled)) {
-    filter: brightness(var(--lr-hover-brightness));
+    accent-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  :where([part='slider']):active:where(:not(:disabled)) {
+    accent-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='slider']:disabled {
     opacity: var(--lr-opacity-disabled);

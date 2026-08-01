@@ -89,8 +89,20 @@ export type ButtonFormMethod = 'get' | 'post' | 'dialog';
  * @cssprop [--lr-button-width=100%] - Inline size of the internal button. The host
  * defaults it to `100%` so the native button follows the host's own width; override to
  * `auto` (or any other value) for a compact inline composition.
- * @cssprop [--lr-button-hover-brightness=1.08] - `filter: brightness()` multiplier applied
- * while hovering a non-disabled button.
+ * @cssprop [--lr-button-hover-base=var(--lr-color-surface)] - The colour the hover and press
+ * mixes move away from. Each painted appearance re-points it at its own fill
+ * (`--lr-button-fill` for `filled`/`filled-outlined`, `--lr-button-accent-fill` for `accent`); the
+ * chrome-less tiers (`outlined`, `plain`, `quiet`, `link`) paint nothing, so they mix from the page
+ * surface. Set it alongside `--lr-button-outlined-fill` when you tint an outlined button.
+ * @cssprop [--lr-button-hover-background=color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ * Background of a non-disabled button while hovered. Replaced the pre-8.0.0
+ * `--lr-button-hover-brightness` multiplier: a `filter` multiplies every channel, so it moved a
+ * mid-toned fill but did nothing at all to a pure white or pure black one, and it dimmed the label
+ * and icons along with the box.
+ * @cssprop [--lr-button-active-background=color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ * Background while a non-disabled button is pressed — the same mix at the stronger
+ * `--lr-color-mix-active` share, so the pressed state reads as more than the hover.
+ * `appearance="link"` moves its text colour by these two shares instead of taking a background.
  * @cssprop [--lr-button-active-scale=0.9875] - `transform: scale()` factor applied while a
  * non-disabled button is pressed.
  * @cssprop [--lr-button-spinner-duration=var(--lr-transition-ambient)] - Timing of the `loading` spinner.
@@ -116,8 +128,8 @@ export type ButtonFormMethod = 'get' | 'post' | 'dialog';
  * @cssprop [--lr-button-outlined-fill=transparent] - Background of `appearance="outlined"`.
  * Transparent by default; set it to tint the button (e.g. a faint surface wash behind the outline)
  * without a `::part(base)` rule. Like `--lr-button-quiet-*`, it is deliberately *not* swapped per
- * `variant`. Note that the `:hover` `filter: brightness()` applies to whatever fill is set, so a
- * tinted outlined button now visibly brightens on hover where a transparent one did not.
+ * `variant`. The hover and press mixes read `--lr-button-hover-base`, which this tier leaves on the
+ * page surface, so set both together when you tint an outlined button.
  * @cssprop [--lr-button-quiet-border=var(--lr-color-border)] - Border color of
  * `appearance="quiet"`.
  * @cssprop [--lr-button-quiet-text=var(--lr-color-text-quiet)] - Text color of

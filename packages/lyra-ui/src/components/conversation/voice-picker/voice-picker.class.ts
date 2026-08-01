@@ -6,6 +6,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './voice-picker.styles.js';
 import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
@@ -75,6 +76,17 @@ export interface LyraVoicePickerEventMap {
  * @customElement lr-voice-picker
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
+ * @cssstate required - Matches while `required` is set. Style with `lr-voice-picker:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: a blur of the
+ * trigger/combobox, or a `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required picker is genuinely invalid, but colouring it red
+ * before the user has done anything is hostile.
  * @event lr-change - `detail: { value: string; inCatalog: boolean }`.
  * @event {Event} change - Fired alongside `lr-change`, mirroring `lr-model-select`'s native-style pair.
  * @event {Event} input - Fired alongside `change`/`lr-change`.
@@ -337,6 +349,17 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     } else {
       this.validityController.setValidity({});
     }
+    this.publishValidityStates();
+  }
+
+  /** Republishes the six validity custom states. Driven from every place validity or interaction
+   *  can move -- {@linkcode updateValidity}, `reportValidity()`, and `updated()` -- because this
+   *  control drives `ElementInternals` directly rather than through the `FormAssociated` mixin,
+   *  which does this for the controls that do use it. `touched` is the interaction flag: it flips
+   *  on the trigger's/input's first blur, and on a `reportValidity()` call, which is what a submit
+   *  attempt runs. */
+  private publishValidityStates(): void {
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
   }
 
   formResetCallback(): void {
@@ -358,6 +381,12 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    // A reportValidity() call is what a submit attempt runs, and it is the moment native controls
+    // start matching :user-invalid -- so it counts as interaction here too. `touched` also gates
+    // the data-invalid/aria-invalid reflection, which is the point: after a rejected submit the
+    // control should read as invalid, not stay pristine.
+    this.touched = true;
+    this.publishValidityStates();
     return this.internals.reportValidity();
   }
 
@@ -427,6 +456,10 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     if (changed.has('required') || changed.has('touched') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
+    // Unconditional, unlike the data-invalid reflection above: it also has to run on the FIRST
+    // update, so a control that is never touched still publishes `optional`/`valid` (or
+    // `required`/`invalid`) for a consumer's :state() rule to match from the moment it mounts.
+    this.publishValidityStates();
     if (this.transferControlFocus) {
       this.transferControlFocus = false;
       (

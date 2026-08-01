@@ -984,6 +984,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               part="bar"
               d=${this.roundedBarPath(rectX, y1, w, h)}
               fill=${color}
+              style=${styleMap({ color })}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
               aria-pressed=${selected ? 'true' : 'false'}
@@ -1007,6 +1008,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               width=${w}
               height=${h}
               fill=${color}
+              style=${styleMap({ color })}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
               aria-pressed=${selected ? 'true' : 'false'}
@@ -1092,6 +1094,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               cy=${yFor(v)}
               r="4"
               fill=${color}
+              style=${styleMap({ color })}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
               aria-pressed=${selected ? 'true' : 'false'}

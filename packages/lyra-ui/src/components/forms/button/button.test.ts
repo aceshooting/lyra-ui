@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './button.js';
 import type { LyraButton } from './button.class.js';
 import { styles } from './button.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-button', () => {
   it('defaults to neutral/accent/m/button with a slotted label', async () => {
@@ -191,16 +192,28 @@ describe('lr-button', () => {
     expect(css).to.include('--lr-button-outlined-border: var(--lr-color-border-strong);');
   });
 
-  it('supports appearance="quiet": muted border/text tokens, transparent until hover', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include("--lr-button-quiet-border: var(--lr-color-border);");
-    expect(css).to.include("--lr-button-quiet-text: var(--lr-color-text-quiet);");
-    expect(css).to.match(
-      /:host\(\[appearance='quiet'\]\) \[part='base'\]\s*\{[^}]*background:\s*transparent;[^}]*color:\s*var\(--lr-button-quiet-text\);[^}]*border-color:\s*var\(--lr-button-quiet-border\);/,
+  it('supports appearance="quiet": muted border/text tokens, transparent until hover', async () => {
+    // Rendered results, not stylesheet text: a selector that never matches reads identically in
+    // the source, and the hover half of this pair shipped for two majors resolving to the page
+    // surface -- i.e. no hover at all -- while a source assertion on it stayed green.
+    const el = (await fixture(html`<lr-button appearance="quiet">Save</lr-button>`)) as LyraButton;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const computed = getComputedStyle(base);
+    expect(computed.backgroundColor, 'quiet is transparent at rest').to.equal('rgba(0, 0, 0, 0)');
+    expect(computed.color, 'quiet text is the muted token, not the body text').to.not.equal(
+      getComputedStyle(el).color,
     );
-    expect(css).to.match(
-      /:host\(\[appearance='quiet'\]\) \[part='base'\]:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--lr-color-surface\);/,
-    );
+    // The two quiet knobs reach the rendered box: re-point each and watch the box follow.
+    const retuned = (await fixture(html`
+      <lr-button appearance="quiet" style="--lr-button-quiet-text: rgb(1, 2, 3); --lr-button-quiet-border: rgb(4, 5, 6);"
+        >Save</lr-button
+      >
+    `)) as LyraButton;
+    await retuned.updateComplete;
+    const retunedBase = getComputedStyle(retuned.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(retunedBase.color).to.equal('rgb(1, 2, 3)');
+    expect(retunedBase.borderTopColor).to.equal('rgb(4, 5, 6)');
   });
 
   it('keeps appearance="quiet"\'s text/border independent of variant (unlike outlined)', async () => {
@@ -219,7 +232,10 @@ describe('lr-button', () => {
 
   it('ships a default :hover/:active treatment on [part="base"], disabled under reduced motion', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='base'\]:not\(:disabled\):hover\s*\{[^}]*filter:/);
+    // The hover/press COLOURS are asserted as rendered results in the hover-and-press-feedback
+    // block below -- a stylesheet-text match cannot tell a fill that moves from one that resolves
+    // to the page surface, which is exactly how the quiet hover shipped broken. What is left here
+    // is the reduced-motion contract, which is a media-query shape rather than a colour.
     expect(css).to.match(/\[part='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*scale\(/);
     expect(css).to.match(
       /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*none[^}]*\}[^]*\}/,
@@ -1358,5 +1374,89 @@ describe('lr-button — the shared styling vocabulary', () => {
     await expect(
       await fixture(html`<lr-button pill variant="danger" appearance="filled">Delete</lr-button>`),
     ).to.be.accessible();
+  });
+});
+
+describe('lr-button hover and press feedback', () => {
+  // Every fixture below zeroes --lr-transition-fast: [part='base'] transitions its background, so
+  // reading getComputedStyle one frame after the pointer arrives would otherwise catch the
+  // INTERPOLATED colour -- still the resting one at t=0 -- and report a working hover as broken.
+  // The colour a fill has to differ FROM, resolved through the same token cascade the component
+  // itself reads. Painted onto a throwaway node inside the button's own shadow root so the value
+  // comes back as a normalised rgb()/color() string -- reading the custom property directly would
+  // hand back the raw token text, which is not comparable to a computed background-color, and
+  // hardcoding a hex would go stale the moment the generated palette moves.
+  function surfaceColor(el: LyraButton): string {
+    const probe = document.createElement('div');
+    probe.style.background = 'var(--lr-color-surface)';
+    el.shadowRoot!.appendChild(probe);
+    const painted = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return painted;
+  }
+
+  const center = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  for (const appearance of ['quiet', 'plain'] as const) {
+    it(`paints a hovered appearance="${appearance}" button something other than the page surface`, async () => {
+      const el = (await fixture(
+        html`<lr-button appearance=${appearance} style="--lr-transition-fast: 0s">Save</lr-button>`,
+      )) as LyraButton;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const surface = surfaceColor(el);
+      const resting = getComputedStyle(base).backgroundColor;
+      try {
+        await sendMouse({ type: 'move', position: center(base) });
+        const hovered = getComputedStyle(base).backgroundColor;
+        // Both hover defaults used to resolve to --lr-color-surface itself, i.e. the page
+        // background, so hovering changed nothing at all on a default page.
+        expect(hovered, `${appearance} hover vs page surface`).to.not.equal(surface);
+        expect(hovered, `${appearance} hover vs resting`).to.not.equal(resting);
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
+
+  it('presses a quiet button to a background stronger than -- and different from -- its hover', async () => {
+    const el = (await fixture(
+      html`<lr-button appearance="quiet" style="--lr-transition-fast: 0s">Save</lr-button>`,
+    )) as LyraButton;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    try {
+      await sendMouse({ type: 'move', position: center(base) });
+      const hovered = getComputedStyle(base).backgroundColor;
+      await sendMouse({ type: 'down' });
+      const pressed = getComputedStyle(base).backgroundColor;
+      expect(pressed, 'pressed vs hovered').to.not.equal(hovered);
+      expect(pressed, 'pressed vs page surface').to.not.equal(surfaceColor(el));
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it('moves an accent button away from its own fill on hover, without the pre-8.0.0 filter', async () => {
+    const el = (await fixture(
+      html`<lr-button appearance="accent" variant="brand" style="--lr-transition-fast: 0s">Save</lr-button>`,
+    )) as LyraButton;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const resting = getComputedStyle(base).backgroundColor;
+    try {
+      await sendMouse({ type: 'move', position: center(base) });
+      const hovered = getComputedStyle(base);
+      expect(hovered.backgroundColor, 'accent hover vs resting').to.not.equal(resting);
+      // A filter applies to the whole subtree, so the old brightness lift dimmed the label with
+      // the box. A background mix leaves everything but the background alone.
+      expect(hovered.filter).to.equal('none');
+    } finally {
+      await resetMouse();
+    }
   });
 });

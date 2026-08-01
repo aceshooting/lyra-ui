@@ -21229,6 +21229,15 @@
             },
             {
               "kind": "field",
+              "name": "hasInteracted",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "inheritedContextObserver",
               "type": {
                 "text": "MutationObserver | undefined"
@@ -22033,6 +22042,17 @@
                 }
               ],
               "description": "Pushes the already-computed snapshot into `ElementInternals`."
+            },
+            {
+              "kind": "method",
+              "name": "syncValidityCustomStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Republishes the six `:state()` validity hooks — see `internal/custom-states.ts`. Called from\n`syncInternals()` (so every validity recomputation carries them) and from `markTouched()` (the\none interaction that changes the answer without touching validity).\n\n`required` here means \"the schema declares at least one required property\", which is the only\nwhole-control reading available: this control's value is an object, so requiredness is per\nproperty, and a consumer styling `lr-tool-param-form:state(required)` is asking \"does this form\ndemand anything of the user\"."
             }
           ],
           "events": [
@@ -22081,6 +22101,32 @@
               },
               "description": "Submission key for the optional native `<form>` participation, reflected synchronously.",
               "fieldName": "name"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "The schema declares at least one required property. Requiredness is per-property here (the value is an object), so this is the whole-control reading: \"this form demands something of the user\".",
+              "name": "required"
+            },
+            {
+              "description": "The schema declares no required property.",
+              "name": "optional"
+            },
+            {
+              "description": "Every field currently satisfies the supported schema subset, whether or not the user has touched anything.",
+              "name": "valid"
+            },
+            {
+              "description": "At least one field, or the schema shape itself, is currently in error.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, and the user has interacted (edited a field, left one, or a `reportValidity()` call — which is what a submit attempt runs).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid`, and the user has interacted. A pristine required field is invalid but deliberately does not match this, so a consumer's `:state(user-invalid)` styling cannot paint the form red before the user has typed anything. A form reset makes it pristine again.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -71432,6 +71478,17 @@
             },
             {
               "kind": "method",
+              "name": "publishValidityStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Republishes the six validity custom states. Driven from every place validity or interaction\ncan move -- updateValidity, `reportValidity()`, and `updated()` for `touched` --\nbecause this control drives `ElementInternals` directly rather than through the\n`FormAssociated` mixin, which does this for the controls that do use it. `touched` is the\ninteraction flag: it flips on the trigger's/input's first blur, and on a `reportValidity()`\ncall, which is what a submit attempt runs."
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -71842,6 +71899,32 @@
               },
               "description": "The current model id (empty string when nothing is selected).",
               "fieldName": "value"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while `required` is set. Style with `lr-model-select:state(required)`.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while `required` is not set — the complement of `required`.",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints, including any `setCustomValidity()` error.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — from the very first render, before the user has touched anything.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted: a blur of the trigger/combobox, or a `reportValidity()` call (which is what a submit attempt runs).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid` after that same interaction. Style validation errors with this rather than `invalid`: a pristine required picker is genuinely invalid, but colouring it red before the user has done anything is hostile.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -82624,6 +82707,17 @@
             },
             {
               "kind": "method",
+              "name": "publishValidityStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Republishes the six validity custom states. Driven from every place validity or interaction\ncan move -- updateValidity, `reportValidity()`, and `updated()` -- because this\ncontrol drives `ElementInternals` directly rather than through the `FormAssociated` mixin,\nwhich does this for the controls that do use it. `touched` is the interaction flag: it flips\non the trigger's/input's first blur, and on a `reportValidity()` call, which is what a submit\nattempt runs."
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -83070,6 +83164,32 @@
               },
               "description": "The current voice id (empty string when nothing is selected).",
               "fieldName": "value"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while `required` is set. Style with `lr-voice-picker:state(required)`.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while `required` is not set — the complement of `required`.",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints, including any `setCustomValidity()` error.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — from the very first render, before the user has touched anything.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted: a blur of the trigger/combobox, or a `reportValidity()` call (which is what a submit attempt runs).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid` after that same interaction. Style validation errors with this rather than `invalid`: a pristine required picker is genuinely invalid, but colouring it red before the user has done anything is hostile.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -93302,6 +93422,15 @@
             },
             {
               "kind": "field",
+              "name": "hasInteracted",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "hint",
               "type": {
                 "text": "string"
@@ -94082,6 +94211,17 @@
                   "text": "void"
                 }
               }
+            },
+            {
+              "kind": "method",
+              "name": "syncValidityCustomStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Republishes the six `:state()` validity hooks — see `internal/custom-states.ts`. Called from\n`syncFormState()` (so every validity recomputation carries them) and from `markTouched()`, the\none interaction that changes the answer without touching validity.\n\n`required` is unconditional: this control has no `required` property to key off because its one\nconstraint never lifts — `computeValidation()` always raises `valueMissing` for an empty\n`startId`, since a path query with no anchor is not runnable."
             }
           ],
           "events": [
@@ -94173,6 +94313,32 @@
                 "text": "string"
               },
               "fieldName": "name"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Always matches. This control's one constraint is unconditional — a query with no start anchor is not runnable — so it always demands something of the user, which is what `lr-graph-query-builder:state(required)` asks.",
+              "name": "required"
+            },
+            {
+              "description": "Never matches, for the same reason: the complement of `required`.",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the query satisfies both constraints (a non-empty `startId` and `minHops <= maxHops`), whether or not the user has touched anything.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — from the very first render, before any interaction, since an empty query has no start anchor.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, and the user has interacted: an edit to any field, a blur of the start-entity input, or a `reportValidity()` call (which is what the Run button runs).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid` after that same interaction. A pristine empty query is invalid but deliberately does not match this, so a consumer's `:state(user-invalid)` styling cannot paint the form red before the user has typed anything. A form reset makes it pristine again.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -107287,9 +107453,19 @@
               "default": "100%"
             },
             {
-              "description": "`filter: brightness()` multiplier applied while hovering a non-disabled button.",
-              "name": "--lr-button-hover-brightness",
-              "default": "1.08"
+              "description": "The colour the hover and press mixes move away from. Each painted appearance re-points it at its own fill (`--lr-button-fill` for `filled`/`filled-outlined`, `--lr-button-accent-fill` for `accent`); the chrome-less tiers (`outlined`, `plain`, `quiet`, `link`) paint nothing, so they mix from the page surface. Set it alongside `--lr-button-outlined-fill` when you tint an outlined button.",
+              "name": "--lr-button-hover-base",
+              "default": "var(--lr-color-surface)"
+            },
+            {
+              "description": "Background of a non-disabled button while hovered. Replaced the pre-8.0.0 `--lr-button-hover-brightness` multiplier: a `filter` multiplies every channel, so it moved a mid-toned fill but did nothing at all to a pure white or pure black one, and it dimmed the label and icons along with the box.",
+              "name": "--lr-button-hover-background",
+              "default": "color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+            },
+            {
+              "description": "Background while a non-disabled button is pressed — the same mix at the stronger `--lr-color-mix-active` share, so the pressed state reads as more than the hover. `appearance=\"link\"` moves its text colour by these two shares instead of taking a background.",
+              "name": "--lr-button-active-background",
+              "default": "color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
             },
             {
               "description": "`transform: scale()` factor applied while a non-disabled button is pressed.",
@@ -107337,7 +107513,7 @@
               "default": "var(--lr-color-border-strong)"
             },
             {
-              "description": "Background of `appearance=\"outlined\"`. Transparent by default; set it to tint the button (e.g. a faint surface wash behind the outline) without a `::part(base)` rule. Like `--lr-button-quiet-*`, it is deliberately *not* swapped per `variant`. Note that the `:hover` `filter: brightness()` applies to whatever fill is set, so a tinted outlined button now visibly brightens on hover where a transparent one did not.",
+              "description": "Background of `appearance=\"outlined\"`. Transparent by default; set it to tint the button (e.g. a faint surface wash behind the outline) without a `::part(base)` rule. Like `--lr-button-quiet-*`, it is deliberately *not* swapped per `variant`. The hover and press mixes read `--lr-button-hover-base`, which this tier leaves on the page surface, so set both together when you tint an outlined button.",
               "name": "--lr-button-outlined-fill",
               "default": "transparent"
             },
@@ -108739,6 +108915,16 @@
             },
             {
               "kind": "field",
+              "name": "hasInteracted",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "Whether the user has acted on this group yet, which is what gates the `user-valid`/\n`user-invalid` custom states. Deliberately separate from `touched` (which drives the visible\n`data-invalid`/`aria-invalid` pair and is set on blur alone): toggling a child checkbox is an\ninteraction the instant it happens, and `reportValidity()` — what a submit attempt runs —\ncounts as one too, exactly as it does for native `:user-invalid`. Not `@state`: nothing in\n`render()` reads it."
+            },
+            {
+              "kind": "field",
               "name": "hasLabelSlot",
               "type": {
                 "text": "boolean"
@@ -109221,6 +109407,17 @@
             },
             {
               "kind": "method",
+              "name": "reflectValidityStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,\n`user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. Called from\nevery path that can move either validity or the interaction flag."
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -109400,6 +109597,32 @@
               "default": "'m'",
               "description": "Size of the group's own chrome, on the library's shared ladder. Accepts both spellings of every\ntier — `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating\neither way is a tag rename. Scales the group's label type size and the gaps around and between\nits options off the same `--lr-form-control-*` values the controls themselves use. It does not\nresize the `<lr-checkbox>` children: each carries its own `size`, so a group can hold options at\nmixed sizes and an explicitly-sized option is never silently overridden by its container. Set\nthe same `size` on the children to scale the whole group.",
               "fieldName": "size"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while `required` is set. Style with `lr-checkbox-group:state(required)`.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while `required` is not set — the complement of `required`.",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the group satisfies its constraints, including any `setCustomValidity()` error.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — from the very first render, before the user has touched anything.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted: toggling one of the group's checkboxes, a blur, or a `reportValidity()` call (which is what a submit attempt runs).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid` after that same interaction. Style validation errors with this rather than `invalid`: a pristine required group is genuinely invalid, but colouring it red before the user has done anything is hostile.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -109688,6 +109911,16 @@
               },
               "static": true,
               "default": "true"
+            },
+            {
+              "kind": "field",
+              "name": "hasInteracted",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "Whether the user has acted on this control yet, which is what gates the `user-valid`/\n`user-invalid` custom states. Deliberately separate from `touched` (which drives the visible\n`data-invalid`/`aria-invalid` pair and is set on blur alone): a toggle is an interaction the\ninstant it happens, and `reportValidity()` — what a submit attempt runs — counts as one too,\nexactly as it does for native `:user-invalid`. Not `@state`: nothing in `render()` reads it."
             },
             {
               "kind": "field",
@@ -110357,6 +110590,32 @@
                 "text": "string"
               },
               "fieldName": "value"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while `required` is set. Style with `lr-checkbox:state(required)`.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while `required` is not set — the complement of `required`.",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints, including any `setCustomValidity()` error.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — from the very first render, before the user has touched anything.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted: a toggle, a blur, or a `reportValidity()` call (which is what a submit attempt runs).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid` after that same interaction. Style validation errors with this rather than `invalid`: a pristine required checkbox is genuinely invalid, but colouring it red before the user has done anything is hostile.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -115011,6 +115270,17 @@
             },
             {
               "kind": "method",
+              "name": "syncCustomStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Publishes the six validity custom states (`:state(required)`/`optional`, `valid`/`invalid`,\n`user-valid`/`user-invalid`). The implementation is shared with every other form-associated\ncontrol in the library — see `internal/custom-states.ts`; this component drives\n`ElementInternals` directly rather than through the `FormAssociated` mixin (its value is a\n`string[]` in `multiple` mode, which that string-value mixin cannot carry), so it calls the\nhelper itself. `touched` is this component's own interaction flag, already set by the filter\ninput's blur, so the `user-*` pair stays off a pristine control the way native\n`:user-invalid` does."
+            },
+            {
+              "kind": "method",
               "name": "syncFormValue",
               "privacy": "private",
               "return": {
@@ -115305,6 +115575,32 @@
               "default": "false",
               "description": "Web Awesome's spelling of clearable, accepted so a mechanical `wa-` → `lr-` rename\ndoes not silently drop the clear button. Prefer `clearable` in new code.",
               "fieldName": "withClear"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while `required` is set, so a consumer can mark the field without duplicating that flag in their own markup.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while `required` is not set (the complement of `required`).",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — including a pristine required-and-empty combobox, exactly like native `:invalid`.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted (blurred the filter input, committed a selection, or been through a `reportValidity()`/submit attempt).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid`, but only after that same interaction — a required combobox nobody has touched yet is invalid without being styled as an error.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -120671,9 +120967,14 @@
               "default": "transparent"
             },
             {
-              "description": "Background fill on hover.",
+              "description": "Background fill on hover. Before 8.0.0 this fell back to `var(--lr-color-surface)` — the page background — so on a default page a hovered icon button painted itself the colour it was already sitting on and showed no hover at all.",
               "name": "--lr-icon-button-background-hover",
-              "default": "var(--lr-color-surface)"
+              "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+            },
+            {
+              "description": "Background fill while pressed: the same mix at the stronger `--lr-color-mix-active` share, so the pressed state is visibly more than the hover.",
+              "name": "--lr-icon-button-background-active",
+              "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
             },
             {
               "description": "Icon/text color of the native button.",
@@ -120686,6 +120987,11 @@
               "default": "var(--lr-icon-button-color, inherit)"
             },
             {
+              "description": "Icon/text color while pressed; falls through to the hover colour when only that is set.",
+              "name": "--lr-icon-button-color-active",
+              "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+            },
+            {
               "description": "Complete border shorthand of the native button.",
               "name": "--lr-icon-button-border",
               "default": "0"
@@ -120694,6 +121000,11 @@
               "description": "Complete border shorthand on hover.",
               "name": "--lr-icon-button-border-hover",
               "default": "var(--lr-icon-button-border, 0)"
+            },
+            {
+              "description": "Complete border shorthand while pressed; falls through to the hover border when only that is set.",
+              "name": "--lr-icon-button-border-active",
+              "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))"
             }
           ],
           "cssParts": [
@@ -127955,6 +128266,17 @@
             },
             {
               "kind": "method",
+              "name": "syncCustomStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Publishes the six validity custom states (`:state(required)`/`optional`, `valid`/`invalid`,\n`user-valid`/`user-invalid`). Shared implementation in `internal/custom-states.ts`: this\ncomponent drives `ElementInternals` directly rather than through the `FormAssociated` mixin,\nso it calls the helper itself instead of inheriting the call. `touched` is its own interaction\nflag (set when the trigger blurs), which is what keeps the `user-*` pair off a pristine\ncontrol the way native `:user-invalid` does."
+            },
+            {
+              "kind": "method",
               "name": "typeAhead",
               "privacy": "private",
               "return": {
@@ -128089,6 +128411,32 @@
               },
               "description": "The current locale tag (empty string when nothing is committed).",
               "fieldName": "value"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while `required` is set.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while `required` is not set (the complement of `required`).",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — including a pristine required picker with nothing committed, exactly like native `:invalid`.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted (blurred the trigger, or been through a `reportValidity()`/submit attempt).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid`, but only after that same interaction — a required picker nobody has touched yet is invalid without being styled as an error.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -131066,6 +131414,20 @@
             },
             {
               "kind": "field",
+              "name": "hasInteracted",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "Whether the user has acted on this radio yet, which is what gates the `user-valid`/\n`user-invalid` custom states: a selection or a blur. A pristine required radio is genuinely\ninvalid, but styling it as an error before the user has done anything is hostile, which is the\nentire reason the `user-*` pair exists. Not `@state`: nothing in `render()` reads it.",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "hasLabel",
               "type": {
                 "text": "boolean"
@@ -131612,6 +131974,21 @@
             },
             {
               "kind": "method",
+              "name": "reflectValidityStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,\n`user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. `required`\nhere is the EFFECTIVE one -- a radio inside a `required` `<lr-radio-group>` is required even\nwith no attribute of its own, and that is what its validity is already computed from.",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -131765,6 +132142,56 @@
             {
               "description": "A standalone radio button was selected. `detail: { checked, value }`. An owning radio group emits its aggregate event instead.",
               "name": "lr-change",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while the control is required, either by its own `required` attribute or by an owning `<lr-radio-group required>`. Style with `lr-radio-button:state(required)`.",
+              "name": "required",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "Matches while it is neither — the complement of `required`.",
+              "name": "optional",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "Matches while the control satisfies its constraints, including any `setCustomValidity()` error.",
+              "name": "valid",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "Matches while it does not — from the very first render, before the user has touched anything.",
+              "name": "invalid",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "`valid`, but only after the user has interacted with this control: selecting it, or blurring it.",
+              "name": "user-valid",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "`invalid` after that same interaction. Style validation errors with this rather than `invalid`: a pristine required control is genuinely invalid, but colouring it red before the user has done anything is hostile.",
+              "name": "user-invalid",
               "inheritedFrom": {
                 "name": "LyraRadio",
                 "module": "src/components/forms/radio/radio.class.ts"
@@ -132929,6 +133356,16 @@
             },
             {
               "kind": "field",
+              "name": "hasInteracted",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "Whether the user has acted on this radio yet, which is what gates the `user-valid`/\n`user-invalid` custom states: a selection or a blur. A pristine required radio is genuinely\ninvalid, but styling it as an error before the user has done anything is hostile, which is the\nentire reason the `user-*` pair exists. Not `@state`: nothing in `render()` reads it."
+            },
+            {
+              "kind": "field",
               "name": "hasLabel",
               "type": {
                 "text": "boolean"
@@ -133375,6 +133812,17 @@
             },
             {
               "kind": "method",
+              "name": "reflectValidityStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,\n`user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. `required`\nhere is the EFFECTIVE one -- a radio inside a `required` `<lr-radio-group>` is required even\nwith no attribute of its own, and that is what its validity is already computed from."
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -133564,6 +134012,32 @@
                 "text": "string"
               },
               "fieldName": "value"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while the radio is required, either by its own `required` attribute or by an owning `<lr-radio-group required>`. Style with `lr-radio:state(required)`.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while it is neither — the complement of `required`.",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints, including any `setCustomValidity()` error.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — from the very first render, before the user has touched anything.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted with this radio: selecting it, or blurring it.",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid` after that same interaction. Style validation errors with this rather than `invalid`: a pristine required radio is genuinely invalid, but colouring it red before the user has done anything is hostile.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -134596,6 +135070,17 @@
             },
             {
               "kind": "method",
+              "name": "syncCustomStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Publishes the six validity custom states (`:state(required)`/`optional`, `valid`/`invalid`,\n`user-valid`/`user-invalid`) through the shared helper in `internal/custom-states.ts` — this\ncomponent attaches `ElementInternals` directly (its value is a whole object, which the\nstring-value `FormAssociated` mixin cannot carry), so it calls that helper itself rather than\ninheriting the call.\n\nTwo mappings are specific to a multi-field rubric. `required` is not a property here but a\nper-key flag, so the host is `:state(required)` exactly when at least one of its keys is —\ni.e. when the rubric cannot be submitted empty. And \"the user has interacted\" is\n`touchedFields` being non-empty: any field visited, or a `reportValidity()`/submit attempt,\nwhich reveals every outstanding error at once."
+            },
+            {
+              "kind": "method",
               "name": "syncFormState",
               "privacy": "private",
               "return": {
@@ -134671,6 +135156,32 @@
                 "text": "boolean"
               },
               "fieldName": "skippable"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while at least one `RubricKey` is `required` — this control has no `required` property of its own, so \"required\" means the rubric cannot be submitted empty.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while no key is required (the complement of `required`).",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while every required key is answered and no key has an unsupported `type`.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — including a pristine rubric with unanswered required keys, exactly like native `:invalid`.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted (visited a field, or been through a `reportValidity()`/Submit attempt, which reveals every outstanding error).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid`, but only after that same interaction — a rubric nobody has touched yet is invalid without being styled as an error.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -135188,6 +135699,16 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasInteracted",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "Whether the user has acted on this control yet, which is what gates the `user-valid`/\n`user-invalid` custom states. Deliberately separate from `touched` (which drives the visible\n`data-invalid`/`aria-invalid` pair and is set on blur alone): picking an option is an\ninteraction the instant it happens, and `reportValidity()` — what a submit attempt runs —\ncounts as one too, exactly as it does for native `:user-invalid`. Not `@state`: nothing in\n`render()` reads it."
             },
             {
               "kind": "field",
@@ -135888,6 +136409,17 @@
             },
             {
               "kind": "method",
+              "name": "reflectValidityStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,\n`user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. Called from\nevery path that can move either validity or the interaction flag."
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -136348,6 +136880,32 @@
               "default": "false",
               "description": "Show a button that empties the selection while there is anything selected.",
               "fieldName": "withClear"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while `required` is set. Style with `lr-select:state(required)`.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while `required` is not set — the complement of `required`.",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints, including any `setCustomValidity()` error.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — from the very first render, before the user has touched anything.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted: picking an option, a blur, or a `reportValidity()` call (which is what a submit attempt runs).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid` after that same interaction. Style validation errors with this rather than `invalid`: a pristine required select is genuinely invalid, but colouring it red before the user has done anything is hostile.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -138583,6 +139141,11 @@
               "description": "Inset of the thumb from the track's edges.",
               "name": "--lr-switch-thumb-offset",
               "default": "var(--lr-size-2px)"
+            },
+            {
+              "description": "Resting fill of `[part='track']`, re-pointed at `var(--lr-color-brand)` while `checked`. The hover and press states mix away from whichever of the two is current, so retinting this retints all four renderings at once.",
+              "name": "--lr-switch-track-fill",
+              "default": "var(--lr-color-border)"
             }
           ],
           "cssParts": [
@@ -138829,6 +139392,16 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasInteracted",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "Whether the user has acted on this control yet, which is what gates the `user-valid`/\n`user-invalid` custom states. Deliberately separate from `touched` (which drives the visible\n`data-invalid`/`aria-invalid` pair and is set on blur alone): a toggle is an interaction the\ninstant it happens, and `reportValidity()` — what a submit attempt runs — counts as one too,\nexactly as it does for native `:user-invalid`. Not `@state`: nothing in `render()` reads it."
             },
             {
               "kind": "field",
@@ -139285,6 +139858,17 @@
             },
             {
               "kind": "method",
+              "name": "reflectValidityStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,\n`user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. Called from\nevery path that can move either validity or the interaction flag."
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -139482,6 +140066,32 @@
                 "text": "string"
               },
               "fieldName": "value"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while `required` is set. Style with `lr-switch:state(required)`.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while `required` is not set — the complement of `required`.",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints, including any `setCustomValidity()` error.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — from the very first render, before the user has touched anything.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted: a toggle, a blur, or a `reportValidity()` call (which is what a submit attempt runs).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid` after that same interaction. Style validation errors with this rather than `invalid`: a pristine required switch is genuinely invalid, but colouring it red before the user has done anything is hostile.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -142949,7 +143559,8 @@
                 "type": {
                   "text": "boolean"
                 }
-              }
+              },
+              "description": "Reporting is what a submit attempt does, and a failed submit is precisely when native\n`:user-invalid` starts matching — so it counts as interaction, exactly as it does in the\n`FormAssociated` mixin."
             },
             {
               "kind": "method",
@@ -143207,6 +143818,32 @@
               "default": "true",
               "description": "Forwarded to both native text inputs using the native explicit `\"true\"`/`\"false\"`\nattribute vocabulary.",
               "fieldName": "spellcheck"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while `required` is set.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while `required` is not set (the complement of `required`).",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — including a pristine required control with no tokens yet, exactly like native `:invalid`.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted (blurred the text input, or been through a `reportValidity()`/submit attempt).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid`, but only after that same interaction — a required control nobody has touched yet is invalid without being styled as an error.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -171391,6 +172028,10 @@
               "default": "color-mix(in srgb, var(--lr-color-text) 25%, transparent)"
             },
             {
+              "description": "The resting fill a `[part=\"timeline-marker\"]` actually renders, resolved per tone from the `--lr-av-player-marker-*-bg` knobs above. Its hover and pressed states are colour mixes taken from this value, so setting it directly retints all three at once for one marker; retint a whole tone through the `-bg` knob instead.",
+              "name": "--lr-av-player-marker-fill"
+            },
+            {
               "description": "Background of the `[part=\"cue\"]` the playhead is currently inside.",
               "name": "--lr-av-player-cue-current-bg",
               "default": "var(--lr-color-brand-quiet)"
@@ -176895,6 +177536,10 @@
             {
               "description": "Neutral-tone highlight fill.",
               "name": "--lr-image-viewer-highlight-neutral-bg"
+            },
+            {
+              "description": "The resting fill a `[part=\"highlight\"]` actually renders, resolved per tone from the `--lr-image-viewer-highlight-*-bg` knobs above. Its hover and pressed states are colour mixes taken from this value, so setting it directly retints all three at once for one highlight; retint a whole tone through the `-bg` knob instead.",
+              "name": "--lr-image-viewer-highlight-fill"
             }
           ],
           "cssParts": [
@@ -195088,6 +195733,16 @@
             },
             {
               "kind": "field",
+              "name": "_hasInteracted",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "Whether the user has driven this control yet — rated it, blurred it, or triggered validation.\nGates the `user-valid`/`user-invalid` custom states: a pristine `required` rating IS invalid,\nbut painting it red before anyone has touched it is hostile. Mirrors the `FormAssociated`\nmixin's own flag; this control drives `ElementInternals` directly (its value is a number, not\nthe string that mixin assumes) so it has to track the flag itself."
+            },
+            {
+              "kind": "field",
               "name": "_max",
               "privacy": "private",
               "default": "5",
@@ -195320,6 +195975,12 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "markInteracted",
+              "privacy": "private",
+              "description": "Idempotent, and an arrow so it can be handed straight to `addEventListener`."
             },
             {
               "kind": "field",
@@ -195907,6 +196568,17 @@
             },
             {
               "kind": "method",
+              "name": "syncValidityStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Publishes the six validity custom states. The implementation lives in\n`internal/custom-states.ts` and is shared with the `FormAssociated` mixin, so a consumer's\n`lr-rating:state(user-invalid)` rule behaves identically to the same rule on `lr-input`."
+            },
+            {
+              "kind": "method",
               "name": "updateValidity",
               "privacy": "private",
               "return": {
@@ -196021,6 +196693,32 @@
               },
               "description": "The current rating. Clamped to `[0, max]` wherever it is read; the raw assignment is kept so\na value set before `max` arrives from markup isn't silently truncated.",
               "fieldName": "value"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "A rating above zero is required. Style with `lr-rating:state(required)`.",
+              "name": "required"
+            },
+            {
+              "description": "No rating is required.",
+              "name": "optional"
+            },
+            {
+              "description": "The control currently satisfies its constraints.",
+              "name": "valid"
+            },
+            {
+              "description": "The control currently fails its constraints — true for a pristine `required` rating that has never been set, which is why validation styling should key off `user-invalid` instead.",
+              "name": "invalid"
+            },
+            {
+              "description": "Valid, and the user has interacted: rated it, blurred it, or triggered validation (a submit attempt runs `reportValidity()`).",
+              "name": "user-valid"
+            },
+            {
+              "description": "Invalid, and the user has interacted. This is the state to paint red; a form reset returns the control to pristine and drops it again.",
+              "name": "user-invalid"
             }
           ],
           "superclass": {
@@ -197077,7 +197775,7 @@
             {
               "description": "Font size of the item, auto-swapped per `size` across the shared six-step ladder.",
               "name": "--lr-toast-font-size",
-              "default": "var(--lr-font-size-md)"
+              "default": "var(--lr-font-size-m)"
             },
             {
               "description": "Opacity/transform transition used while showing.",
@@ -197887,7 +198585,7 @@
             {
               "description": "Font size of a slotted item, auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.",
               "name": "--lr-toast-font-size",
-              "default": "var(--lr-font-size-md)"
+              "default": "var(--lr-font-size-m)"
             },
             {
               "description": "Show transition of a slotted item. Read by `<lr-toast-item>`, so set it on the item.",

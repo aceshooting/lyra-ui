@@ -83,6 +83,14 @@ export const styles = css`
   :host(:not(:disabled)) [part='base']:hover [part='circle'] {
     border-color: var(--lr-color-brand);
   }
+  /* Pressed. A ring rather than a fill, for the same reason <lr-checkbox>'s [part='box'] takes one:
+     the circle's fill IS the state readout (surface unchecked, the dot inside it once checked), so
+     tinting it under the thumb would read as a half-selected radio. Visibly more than the hover's
+     border-colour step, and the same soft-ring vocabulary <lr-slider>'s thumb uses. */
+  :host(:not(:disabled)) [part='base']:active [part='circle'] {
+    border-color: var(--lr-color-brand);
+    box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-color-brand-quiet);
+  }
   :host([checked]) [part='circle'] {
     /* Component-scoped indirection (mirrors lr-checkbox's identical --lr-checkbox-checked-bg/
        -border pair) so a consumer can retint just this control's checked ring without hijacking

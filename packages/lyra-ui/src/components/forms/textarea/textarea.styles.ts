@@ -93,6 +93,10 @@ export const styles = css`
      via :host(:not(:disabled)) rather than a same-selector [part='textarea']:hover:not(:disabled)
      (which would exceed a consumer's ::part(textarea):hover specificity -- see
      lr-attachment-trigger's :where() fix for that class of bug). */
+  /* no-pressed-state: pressing inside a text surface places a caret, it does not actuate anything.
+     The mousedown that would match :active is the same gesture that focuses the field, so a pressed
+     treatment would render for one frame between the hover border and the focus ring and read as a
+     flicker; focus is this control's real "you are acting on me" state. */
   :host(:not(:disabled)) [part='textarea']:hover {
     border-color: var(--lr-color-brand);
   }

@@ -53,6 +53,9 @@ export const styles = css`
     max-inline-size: 100%;
     overflow: auto;
   }
+  /* no-pressed-state: raw-source is a <pre tabindex="0"> horizontal scroll surface, not a control --
+     the tint tells the pointer which cell it is about to scroll, and a mousedown there starts a text
+     selection rather than activating anything. */
   lr-virtual-list::part(raw-source):hover {
     background: var(--lr-color-surface-raised);
   }
@@ -91,6 +94,13 @@ export const styles = css`
   }
   lr-virtual-list::part(output-toggle):hover {
     text-decoration: underline;
+  }
+  /* The toggle is a borderless text button, so there is no fill to deepen: the press keeps the
+     hover's underline and shifts the label itself toward the text colour, which is a stronger and
+     visibly different step rather than a repeat of the hover rule. */
+  lr-virtual-list::part(output-toggle):active {
+    text-decoration: underline;
+    color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   lr-virtual-list::part(output-toggle):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

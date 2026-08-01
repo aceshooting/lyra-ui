@@ -173,6 +173,15 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  /* Pressed drives the hover's quiet brand fill further toward --lr-color-mix-partner (which
+     follows the text colour), so it darkens on a light theme and lightens on a dark one without
+     this rule knowing which is in force -- the property filter: brightness() never had. The glyph
+     colour is restated rather than left to the hover rule because keyboard activation raises
+     :active with no :hover. */
+  [part='close-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-brand);
+  }
   [part='close-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

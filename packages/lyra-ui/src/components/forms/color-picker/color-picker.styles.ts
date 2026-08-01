@@ -106,6 +106,16 @@ export const styles = css`
   [part~='trigger']:hover {
     border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
+  /* Pressed deepens the same edge rather than tinting the box: this part's ::after paints the
+     selected colour across the whole button, so a background mix would sit underneath it -- and
+     mixing that fill would misreport the very value the swatch exists to show. */
+  [part~='trigger']:active {
+    border-color: color-mix(
+      in oklab,
+      var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part~='trigger']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -243,6 +253,18 @@ export const styles = css`
   [part~='slider-handle']:hover {
     border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
+  /* A knob's pressed state is the grab itself: the ring deepens and the cursor closes, which is
+     the whole feedback a drag has before the value starts moving. The handle's own fill is the
+     live colour, so it stays untouched here for the same reason as the trigger above. */
+  [part~='grid-handle']:active,
+  [part~='slider-handle']:active {
+    border-color: color-mix(
+      in oklab,
+      var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    cursor: grabbing;
+  }
   [part~='grid-handle']:focus-visible,
   [part~='slider-handle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -268,6 +290,9 @@ export const styles = css`
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-sm);
   }
+  /* no-pressed-state: pressing a text field places a caret, it does not activate a target -- there
+     is no "did my click register?" gap to fill, and the engaged state it leads to is already drawn
+     by the :focus-visible rule below. Native text inputs have no pressed treatment either. */
   [part~='input']:hover {
     border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
@@ -296,6 +321,18 @@ export const styles = css`
   [part~='eyedropper-button']:hover {
     border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
+  /* These two carry their own surface fill (unlike the swatches), so the pressed state is the
+     shared background mix: the button visibly sinks toward the text colour, on top of the deeper
+     edge, and lands in the same direction whether the theme is light or dark. */
+  [part~='format-button']:active,
+  [part~='eyedropper-button']:active {
+    border-color: color-mix(
+      in oklab,
+      var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part~='format-button']:focus-visible,
   [part~='eyedropper-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -319,6 +356,14 @@ export const styles = css`
   }
   [part~='swatch']:hover {
     border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
+  }
+  /* Edge only, again: ::after paints the palette entry's own colour over this box. */
+  [part~='swatch']:active {
+    border-color: color-mix(
+      in oklab,
+      var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part~='swatch']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

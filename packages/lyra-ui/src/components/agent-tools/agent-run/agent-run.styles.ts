@@ -174,6 +174,14 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
+  /* Both hovers recolour the border and label only, which leaves the pressed step nothing to
+     deepen -- so pressed tints the button's own surface fill toward --lr-color-mix-partner (which
+     follows the text colour) instead. The :hover border/label colours still apply underneath while
+     the pointer is down, so Cancel stays danger-toned and Retry stays brand-toned when pressed. */
+  [part='cancel-button']:active,
+  [part='retry-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='cancel-button']:focus-visible,
   [part='retry-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

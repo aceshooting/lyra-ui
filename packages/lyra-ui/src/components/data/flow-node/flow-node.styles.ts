@@ -132,6 +132,10 @@ export const styles = css`
   [part='toolbar']:has(::slotted(*)) {
     opacity: 0;
   }
+  /* no-pressed-state: the toolbar is not a target -- it is the container the consumer slots the
+     node's own action buttons into, and hovering/focusing the CARD is what reveals it. Pressing it
+     means pressing one of those buttons, which carries its own pressed state; a pressed treatment
+     on the container would fire for every one of them and say nothing about which. */
   :host(:hover) [part='toolbar'],
   :host(:focus-within) [part='toolbar'] {
     opacity: 1;

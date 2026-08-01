@@ -39,6 +39,10 @@ export const styles = css`
      below, so it stays visible above any occluding content, matching the :focus-visible ring's
      own reliably-visible treatment for the exact same real, keyboard-navigable/draggable
      target. */
+  /* no-pressed-state: the cell's real pressed interaction is a drag, which already has its own
+     [data-dragging] treatment below; a plain :active rule would additionally fire for every press
+     landing on the slotted widget's own buttons, since :active matches the ancestors of whatever
+     was pressed. */
   [part="cell"]:hover {
     outline: var(--lr-border-width-thin) solid
       var(
@@ -90,6 +94,16 @@ export const styles = css`
 
   [part="resize-handle"]:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  /* Unlike [part="cell"] above, this handle is a leaf button with nothing slotted inside it, so
+     :active means exactly one thing here: the resize gesture is under way. Pointer capture holds
+     it for the whole drag. */
+  [part="resize-handle"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
 
   :host(:dir(rtl)) [part="resize-handle"] {

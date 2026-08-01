@@ -37,7 +37,7 @@ export const styles = css`
   :host([size='large']),
   :host([size='lg']) {
     --lr-avatar-size: var(--lr-size-2-5rem);
-    --lr-avatar-font-size: var(--lr-font-size-md);
+    --lr-avatar-font-size: var(--lr-font-size-m);
   }
   :host([size='xl']) {
     --lr-avatar-size: var(--lr-size-3rem);

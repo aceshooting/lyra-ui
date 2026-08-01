@@ -6,6 +6,7 @@ import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
@@ -194,6 +195,16 @@ export interface LyraComboboxEventMap {
  *   selected option row.
  * @cssprop [--lr-combobox-option-selected-font-weight=var(--lr-font-weight-semibold)] - Font
  *   weight of the selected option row.
+ * @cssstate required - Matches while `required` is set, so a consumer can mark the field without
+ *   duplicating that flag in their own markup.
+ * @cssstate optional - Matches while `required` is not set (the complement of `required`).
+ * @cssstate valid - Matches while the control satisfies its constraints.
+ * @cssstate invalid - Matches while it does not — including a pristine required-and-empty
+ *   combobox, exactly like native `:invalid`.
+ * @cssstate user-valid - `valid`, but only after the user has interacted (blurred the filter
+ *   input, committed a selection, or been through a `reportValidity()`/submit attempt).
+ * @cssstate user-invalid - `invalid`, but only after that same interaction — a required combobox
+ *   nobody has touched yet is invalid without being styled as an error.
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   static formAssociated = true;
@@ -632,6 +643,21 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     } else {
       this.validityController.setValidity({});
     }
+    this.syncCustomStates();
+  }
+
+  /**
+   * Publishes the six validity custom states (`:state(required)`/`optional`, `valid`/`invalid`,
+   * `user-valid`/`user-invalid`). The implementation is shared with every other form-associated
+   * control in the library — see `internal/custom-states.ts`; this component drives
+   * `ElementInternals` directly rather than through the `FormAssociated` mixin (its value is a
+   * `string[]` in `multiple` mode, which that string-value mixin cannot carry), so it calls the
+   * helper itself. `touched` is this component's own interaction flag, already set by the filter
+   * input's blur, so the `user-*` pair stays off a pristine control the way native
+   * `:user-invalid` does.
+   */
+  private syncCustomStates(): void {
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
   }
 
   private syncFormValue(): void {
@@ -663,6 +689,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   }
 
   formResetCallback(): void {
+    // A reset form is pristine again, so the `user-*` states stop matching even though a required
+    // combobox is immediately invalid once more. The `value` write below re-runs updateValidity()
+    // (and therefore syncCustomStates()) with this flag already cleared.
     this.touched = false;
     this.value = [...this._defaultSelected];
     this.query = '';
@@ -698,6 +727,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    // Reporting is what a submit attempt does, and a failed submit is precisely when native
+    // `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
+    // `FormAssociated` mixin.
+    this.touched = true;
+    this.syncCustomStates();
     return this.internals.reportValidity();
   }
 
@@ -1051,6 +1085,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   private onInputBlur = (): void => {
     this.touched = true;
+    // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
+    // leaves, the same instant native `:user-invalid` starts matching.
+    this.syncCustomStates();
     // A mouse click outside the element is already handled by
     // onDocPointer/hide(), but that leaves keyboard users with no way to
     // dismiss the listbox short of Escape -- tabbing focus away from the

@@ -59,6 +59,10 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  [part='toggle']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-brand);
+  }
   [part='toggle'] .chevron {
     display: inline-flex;
     transition: transform var(--lr-transition-fast);
@@ -131,6 +135,10 @@ export const styles = css`
   }
   [part='copy-button']:hover {
     background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
+  }
+  [part='copy-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     color: var(--lr-color-brand);
   }
   [part='toggle']:focus-visible,
@@ -253,6 +261,9 @@ export const styles = css`
      same fix shape as lr-attachment-trigger's/lr-copy-button's own :where()-wrapped hover rule. */
   :where([part='pre']) :where(button.line, [role='button'].line):hover {
     background: var(--lr-color-brand-quiet);
+  }
+  :where([part='pre']) :where(button.line, [role='button'].line):active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='pre'] button.line:focus-visible,
   [part='pre'] [role='button'].line:focus-visible {

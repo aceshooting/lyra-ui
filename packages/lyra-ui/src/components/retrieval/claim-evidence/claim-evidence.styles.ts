@@ -43,6 +43,9 @@ export const styles = css`
   [part='claim-trigger']:hover {
     background: var(--lr-color-surface-raised);
   }
+  [part='claim-trigger']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='claim-trigger']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);

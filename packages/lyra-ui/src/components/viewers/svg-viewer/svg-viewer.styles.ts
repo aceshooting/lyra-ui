@@ -110,6 +110,16 @@ export const styles = css`
   [part='region-highlight-target']:hover + [part='region-highlight'] {
     background: color-mix(in srgb, var(--_lr-svg-viewer-highlight-color) 20%, transparent);
   }
+  /* Pressed, matching <lr-document-preview>'s identical region overlay: the hovered tint pushed
+     toward the text colour, which both deepens the hue and (the partner being opaque) raises the
+     tint's alpha, so a mousedown on the transparent target button reads as firmer than hovering. */
+  [part='region-highlight-target']:active + [part='region-highlight'] {
+    background: color-mix(
+      in oklab,
+      color-mix(in srgb, var(--_lr-svg-viewer-highlight-color) 20%, transparent),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part='region-highlight-target']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -133,6 +143,9 @@ export const styles = css`
   }
   [part='region-highlight-action']:hover {
     background: var(--lr-color-surface-raised);
+  }
+  [part='region-highlight-action']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='region-highlight-action']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

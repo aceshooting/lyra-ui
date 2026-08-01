@@ -73,6 +73,18 @@ export const styles = css`
   :where([part="tab"]):hover:where(:not([aria-disabled="true"])) {
     color: var(--lr-tab-group-hover-color, var(--lr-color-text));
   }
+  /* Hover lifts only the label colour here, so the pressed state adds a surface to be a visible
+     step past it: the tab's own transparent fill mixed toward --lr-color-mix-partner, which lands
+     as the partner colour at --lr-color-mix-active alpha over whatever the tablist sits on. A
+     disabled tab has pointer-events: none and never reaches it. */
+  :where([part="tab"]):active:where(:not([aria-disabled="true"])) {
+    background: color-mix(
+      in oklab,
+      transparent,
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    color: var(--lr-tab-group-hover-color, var(--lr-color-text));
+  }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor and a :host declaration can never shadow that. Unset, each falls back to the token the
      rule used before the hooks existed, so the rendering is unchanged. */
@@ -98,6 +110,10 @@ export const styles = css`
   [part="panel"] {
     padding-block-start: var(--lr-space-xs);
   }
+  /* no-pressed-state: the panel is a container for whatever the consumer slotted into the tab, not
+     a target -- pressing it activates nothing, and :active matches the ancestors of whatever was
+     pressed, so a click on any control inside the panel would flash this outline around all of
+     it. */
   [part="panel"]:hover {
     outline: var(--lr-border-width-thin) solid var(--lr-color-border);
     outline-offset: var(--lr-focus-ring-offset);

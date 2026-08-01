@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './tree-item.js';
 import type { LyraTreeItem } from './tree-item.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const item = { id: '1', label: 'Root' };
 
@@ -136,4 +137,45 @@ it('is accessible with a realistic, expanded, badged item', async () => {
   await node.updateComplete;
   expect(node.getAttribute('role')).to.equal('treeitem');
   await expect(node).to.be.accessible();
+});
+
+// `:host([aria-selected='true']) [part='row']` is (0,3,0), which a bare `[part='row']:active`
+// ((0,2,0)) cannot reach -- hence the second, :host()-matched arm on the pressed rule. A selected
+// item is the one a user presses next, so it must not be the single row with no press feedback.
+// Rendered assertion only: the selector is exactly the kind of thing that reads correct and matches
+// nothing.
+it('shows a pressed fill on a selected row, and none on a disabled one', async () => {
+  const wrapper = await fixture(
+    html`<div role="tree">
+      <lr-tree-item .item=${{ id: 's', label: 'Selected', selected: true }} .setSize=${2} .posInSet=${1}></lr-tree-item>
+      <lr-tree-item .item=${{ id: 'd', label: 'Disabled', disabled: true }} .setSize=${2} .posInSet=${2}></lr-tree-item>
+    </div>`,
+  );
+  const [selectedItem, disabledItem] = [...wrapper.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  await selectedItem!.updateComplete;
+  await disabledItem!.updateComplete;
+
+  const press = async (host: LyraTreeItem): Promise<{ resting: string; pressed: string }> => {
+    const row = host.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    row.scrollIntoView();
+    const resting = getComputedStyle(row).backgroundColor;
+    const rect = row.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await sendMouse({ type: 'down' });
+      return { resting, pressed: getComputedStyle(row).backgroundColor };
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  };
+
+  const selected = await press(selectedItem!);
+  expect(selected.pressed, 'a selected row must still acknowledge the press').to.not.equal(selected.resting);
+
+  const disabled = await press(disabledItem!);
+  expect(disabled.pressed, 'a disabled row must stay inert under the pointer').to.equal(disabled.resting);
 });

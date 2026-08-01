@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './rubric-form.styles.js';
 import type { SegmentedItem } from '../../layout/segmented/segmented.class.js';
 import type { LyraSelect } from '../select/select.class.js';
@@ -87,6 +88,17 @@ export interface LyraRubricFormEventMap {
  * @csspart skip - The Skip button (only rendered when `skippable`).
  * @csspart empty - The message shown when `keys` has no entries.
  * @csspart unsupported - The fallback note for a key whose `type` is outside the three supported ones.
+ * @cssstate required - Matches while at least one `RubricKey` is `required` — this control has no
+ *   `required` property of its own, so "required" means the rubric cannot be submitted empty.
+ * @cssstate optional - Matches while no key is required (the complement of `required`).
+ * @cssstate valid - Matches while every required key is answered and no key has an unsupported
+ *   `type`.
+ * @cssstate invalid - Matches while it does not — including a pristine rubric with unanswered
+ *   required keys, exactly like native `:invalid`.
+ * @cssstate user-valid - `valid`, but only after the user has interacted (visited a field, or been
+ *   through a `reportValidity()`/Submit attempt, which reveals every outstanding error).
+ * @cssstate user-invalid - `invalid`, but only after that same interaction — a rubric nobody has
+ *   touched yet is invalid without being styled as an error.
  */
 export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   static formAssociated = true;
@@ -341,6 +353,27 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       const message = Object.values(errors)[0] ?? '';
       this.validityController.setValidity(flags, message);
     }
+    this.syncCustomStates();
+  }
+
+  /**
+   * Publishes the six validity custom states (`:state(required)`/`optional`, `valid`/`invalid`,
+   * `user-valid`/`user-invalid`) through the shared helper in `internal/custom-states.ts` — this
+   * component attaches `ElementInternals` directly (its value is a whole object, which the
+   * string-value `FormAssociated` mixin cannot carry), so it calls that helper itself rather than
+   * inheriting the call.
+   *
+   * Two mappings are specific to a multi-field rubric. `required` is not a property here but a
+   * per-key flag, so the host is `:state(required)` exactly when at least one of its keys is —
+   * i.e. when the rubric cannot be submitted empty. And "the user has interacted" is
+   * `touchedFields` being non-empty: any field visited, or a `reportValidity()`/submit attempt,
+   * which reveals every outstanding error at once.
+   */
+  private syncCustomStates(): void {
+    syncValidityStates(this.internals, {
+      required: this._keys.some((key) => Boolean(key.required)),
+      hasInteracted: this.touchedFields.size > 0,
+    });
   }
 
   /** Resynchronizes validity without revealing inline errors. */
@@ -358,13 +391,20 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this.syncFormState();
     if (Object.keys(this._errors).length > 0) {
       this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
+      // Re-published after the reveal, not before: `syncFormState()` above ran while the rubric
+      // was still pristine, so `user-invalid` would otherwise stay off until the next edit.
+      this.syncCustomStates();
     }
     return this.internals.reportValidity();
   }
 
   formResetCallback(): void {
     this.value = {};
+    // Pristine again, so the `user-*` states stop matching even though a rubric with required keys
+    // is immediately invalid once more. Ordered after the `value` write (which runs
+    // `syncFormState()`), so the republish below sees the cleared set.
     this.touchedFields = new Set();
+    this.syncCustomStates();
   }
   formStateRestoreCallback(state: string | File | FormData | null, _mode?: 'restore' | 'autocomplete'): void {
     let restored: RubricValue = {};
@@ -403,6 +443,9 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private markTouched(key: string): void {
     if (this.touchedFields.has(key)) return;
     this.touchedFields = new Set(this.touchedFields).add(key);
+    // The first visited field is what turns the `user-*` states on, and it has to happen
+    // synchronously — `:state(user-invalid)` must be true the instant that field reports.
+    this.syncCustomStates();
   }
 
   private submit(): void {

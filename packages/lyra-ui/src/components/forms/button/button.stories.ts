@@ -262,7 +262,9 @@ export const OutlinedFill: Story = {
         story:
           '`appearance="outlined"` is transparent by default; `--lr-button-outlined-fill` tints it ' +
           'without a `::part(base)` rule. It is not swapped per `variant` (same stance as ' +
-          '`--lr-button-quiet-*`), and the hover `filter: brightness()` visibly affects a tinted fill.',
+          '`--lr-button-quiet-*`). The hover and press states mix away from ' +
+          '`--lr-button-hover-base`, which this appearance leaves on the page surface, so set that ' +
+          'to the same colour when you tint the fill.',
       },
     },
   },

@@ -55,6 +55,11 @@ export const styles = css`
   [part='run']:hover {
     background: var(--lr-color-surface-raised);
   }
+  [part~='slice']:active,
+  [part~='metric']:active,
+  [part='run']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part~='slice']:focus-visible,
   [part~='metric']:focus-visible,
   [part='run']:focus-visible {

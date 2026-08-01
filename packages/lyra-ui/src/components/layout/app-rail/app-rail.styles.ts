@@ -44,6 +44,16 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  /* The fill hover already uses, mixed further toward --lr-color-mix-partner (the text colour), so
+     the pressed step is always deeper than the hover step whichever way the theme runs. */
+  [part='toggle']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    color: var(--lr-color-brand);
+  }
   [part='toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -112,6 +122,15 @@ export const styles = css`
   }
   [part='resizer']:hover [part='resizer-track'] {
     background: var(--lr-color-brand);
+  }
+  /* The drag itself: pointer capture keeps :active on the resizer for the whole gesture, so the
+     track stays at the deeper mix until the pointer is released. */
+  [part='resizer']:active [part='resizer-track'] {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='resizer']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

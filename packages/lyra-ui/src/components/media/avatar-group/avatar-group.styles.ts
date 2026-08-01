@@ -42,7 +42,7 @@ export const styles = css`
   :host([size='lg']) {
     --lr-avatar-group-avatar-size: var(--lr-size-2-5rem);
     --lr-avatar-group-overlap: var(--lr-size-neg-8px);
-    --lr-avatar-group-badge-font-size: var(--lr-font-size-md);
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-m);
   }
   :host([size='xl']) {
     --lr-avatar-group-avatar-size: var(--lr-size-3rem);
@@ -138,6 +138,12 @@ export const styles = css`
   }
   [part='overflow-badge']:hover {
     box-shadow: 0 0 0 var(--lr-avatar-group-ring-width) var(--lr-color-brand);
+  }
+  /* Pressed keeps the hover ring and adds a fill shift, so the two states are never mistaken for
+     each other -- the badge is a real button (it expands the collapsed avatars). */
+  [part='overflow-badge']:active {
+    box-shadow: 0 0 0 var(--lr-avatar-group-ring-width) var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-avatar-group-badge-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='overflow-badge']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -140,6 +140,16 @@ export const styles = css`
   [part='region-highlight-target']:hover + [part='region-highlight'] {
     background: color-mix(in srgb, var(--_lr-document-preview-highlight-color) 20%, transparent);
   }
+  /* Pressed: the hovered tint pushed toward the text colour, which both deepens the hue and (since
+     the partner is opaque) raises the tint's alpha -- so the mousedown on the transparent target
+     button reads as a distinctly firmer press than merely pointing at the region. */
+  [part='region-highlight-target']:active + [part='region-highlight'] {
+    background: color-mix(
+      in oklab,
+      color-mix(in srgb, var(--_lr-document-preview-highlight-color) 20%, transparent),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part='region-highlight-target']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -162,6 +172,9 @@ export const styles = css`
   }
   [part='region-highlight-action']:hover {
     background: var(--lr-color-surface-raised);
+  }
+  [part='region-highlight-action']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='region-highlight-action']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -214,6 +227,14 @@ export const styles = css`
   }
   [part='download-link']:hover {
     background: color-mix(in srgb, var(--lr-color-brand) 85%, var(--lr-color-shadow));
+  }
+  /* Pressed continues the hover's own axis (further toward --lr-color-shadow) rather than toward
+     --lr-color-mix-partner: this button is brand-filled and its label is --lr-color-on-brand, not
+     the page text colour, so mixing the fill toward the page text would lighten it under a dark
+     theme and eat the label's contrast. --lr-color-mix-active still sets the amount, so the pressed
+     step stays themeable alongside every other pressed state in the library. */
+  [part='download-link']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-shadow) var(--lr-color-mix-active));
   }
   [part='download-link']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

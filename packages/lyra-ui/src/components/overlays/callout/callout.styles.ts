@@ -44,6 +44,7 @@ export const styles = css`
      lr-swatch-picker's [part='swatch']/[part='swatch-fill'] split. */
   [part='close-button'] { display: inline-flex; grid-column: 3; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: 0; border-radius: var(--lr-radius-pill); background: transparent; color: inherit; cursor: pointer; }
   [part='close-button']:hover { background: var(--lr-callout-close-hover-bg); }
+  [part='close-button']:active { background: color-mix(in oklab, var(--lr-callout-close-hover-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='close-button']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   :host([inline]) [part='base'] {
     gap: var(--lr-space-xs);
@@ -52,7 +53,7 @@ export const styles = css`
     border-radius: 0;
     background: transparent;
   }
-  :host([inline]) [part='icon'] { font-size: var(--lr-font-size-md); }
+  :host([inline]) [part='icon'] { font-size: var(--lr-font-size-m); }
   :host([inline]) [part='heading'] { margin-block-end: 0; }
   :host([inline]) [part='close-icon'] {
     display: inline-flex;

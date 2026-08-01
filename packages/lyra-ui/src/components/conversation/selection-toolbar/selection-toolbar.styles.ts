@@ -60,6 +60,14 @@ export const styles = css`
     color: var(--lr-color-brand);
   }
 
+  /* Each action is an <lr-button appearance="plain">, which already supplies its own pressed
+     treatment (--lr-button-active-scale) inside its shadow root. What this rule adds is the
+     toolbar's brand accent escalated one step -- a background box on the host would sit behind the
+     button's own transparent base and read as a second, misaligned control. */
+  [part~='action']:active {
+    color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+
   [part~='action']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

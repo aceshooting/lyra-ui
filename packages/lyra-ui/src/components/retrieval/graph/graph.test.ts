@@ -3,7 +3,6 @@ import { select } from 'd3-selection';
 import './graph.js';
 import { LyraGraph } from './graph.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
-import { styles } from './graph.styles.js';
 
 const nodes = [
   { id: 'a', label: 'A' },
@@ -4284,16 +4283,91 @@ describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () =>
 });
 
 describe('styling', () => {
-  // A real browser :hover pseudo-class can't be forced from a dispatched event (it tracks actual
-  // pointer position), so this asserts the stylesheet source the same way this exact remediation
-  // series does for its other siblings (e.g. lr-span-waterfall's identical per-item, variable-fill
-  // `[part='bar']:hover { filter: brightness(...) }`) rather than a rendered computed-style probe.
-  it('gives node/link/hull a hover state alongside their existing :focus-visible rings', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='canvas'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
-    expect(css).to.match(/\[part='node'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
-    expect(css).to.match(/\[part='link'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
-    expect(css).to.match(/\[part='hull'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
+  // A real browser :hover/:active pseudo-class can't be forced from a dispatched event (it tracks
+  // the physical pointer), so each state rule's value is read off the shipped rule and then
+  // *painted* on a probe inside the graph's own shadow root: every --lr-* in the expression resolves
+  // exactly as it does in production and the assertion lands on the painted colour, not on
+  // stylesheet text.
+  function declaredValue(root: ShadowRoot, selector: string, property: string): string {
+    const normalize = (text: string) => text.replace(/"/g, "'").replace(/\s+/g, ' ').trim();
+    for (const sheet of root.adoptedStyleSheets ?? []) {
+      for (const rule of sheet.cssRules) {
+        if (rule instanceof CSSStyleRule && normalize(rule.selectorText) === normalize(selector)) {
+          const value = rule.style.getPropertyValue(property);
+          if (value) return value;
+        }
+      }
+    }
+    return '';
+  }
+
+  function paintProbe(root: ShadowRoot) {
+    const measure = (apply: (probe: HTMLElement) => void, read: (style: CSSStyleDeclaration) => string) => {
+      const probe = document.createElement('span');
+      apply(probe);
+      root.appendChild(probe);
+      const computed = read(getComputedStyle(probe));
+      probe.remove();
+      return computed;
+    };
+    return {
+      // The zero-percent wrapper forces resting, hovered and pressed through one serialization, so
+      // the channel distances below are apples-to-apples even though the resting value is a plain
+      // custom property and the two state values are mixes.
+      render: (value: string) =>
+        measure(
+          (probe) => (probe.style.backgroundColor = `color-mix(in oklab, ${value || 'transparent'}, transparent 0%)`),
+          (style) => style.backgroundColor,
+        ),
+      renderFilter: (value: string) => measure((probe) => (probe.style.filter = value), (style) => style.filter),
+    };
+  }
+
+  function channelDistance(left: string, right: string): number {
+    const channels = (color: string) => (color.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+    const a = channels(left);
+    const b = channels(right);
+    return Math.hypot(...a.map((value, index) => value - (b[index] ?? 0)));
+  }
+
+  it('mixes node/link/hull toward the shared partner on hover and further again on press', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    await el.updateComplete;
+    const root = el.shadowRoot!;
+    const probes = paintProbe(root);
+
+    const assertPressedIsStronger = (part: string, property: string) => {
+      const resting = probes.render(declaredValue(root, `[part='${part}']`, property));
+      const hovered = probes.render(declaredValue(root, `[part='${part}']:hover`, property));
+      const pressed = probes.render(declaredValue(root, `[part='${part}']:active`, property));
+      expect(hovered, `${part} hover must move off its resting ${property}`).to.not.equal(resting);
+      // The defect this guards: a pressed rule byte-identical to the hover one.
+      expect(pressed, `${part} pressed must differ from hovered`).to.not.equal(hovered);
+      expect(channelDistance(pressed, resting)).to.be.greaterThan(channelDistance(hovered, resting));
+    };
+
+    assertPressedIsStronger('node', 'fill');
+    assertPressedIsStronger('link', 'stroke');
+    assertPressedIsStronger('hull', 'fill');
+  });
+
+  it('tints the canvas box on hover rather than filtering the scene painted into it', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    await el.updateComplete;
+    const root = el.shadowRoot!;
+    const probes = paintProbe(root);
+
+    // The <canvas> is cleared to transparent wherever nothing is drawn, so a background tints only
+    // the empty plot area; the drawn nodes, links and labels keep the colours the renderer computed.
+    const resting = probes.render('transparent');
+    const hovered = probes.render(declaredValue(root, "[part='canvas']:hover", 'background'));
+    expect(hovered).to.not.equal(resting);
+
+    // A filter applies to the element's own painted output, so any surviving one would re-tint the
+    // whole scene. Rendering whatever each rule declares and reading it back proves none survives.
+    for (const selector of ["[part='canvas']:hover", "[part='node']:hover", "[part='link']:hover", "[part='hull']:hover"]) {
+      expect(probes.renderFilter(declaredValue(root, selector, 'filter')), selector).to.equal('none');
+    }
   });
 });
 

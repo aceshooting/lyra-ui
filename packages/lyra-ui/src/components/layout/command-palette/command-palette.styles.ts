@@ -122,6 +122,16 @@ export const styles = css`
       var(--lr-color-brand-quiet)
     );
   }
+  /* Same fill as hover (including a consumer's own --lr-command-palette-active-bg), mixed further
+     toward --lr-color-mix-partner so the press reads as a deeper step of the same highlight. Kept
+     at the hover rule's own zeroed specificity for the same reason it was zeroed. */
+  :where([part="command"]):active:where(:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any
      ancestor without a :host declaration shadowing that. ::part(command)[data-active='true'] is
      invalid CSS (an attribute selector cannot follow ::part), so highlighting the active row used to

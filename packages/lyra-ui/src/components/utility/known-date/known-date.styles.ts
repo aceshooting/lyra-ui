@@ -113,7 +113,10 @@ export const styles = css`
     inline-size: var(--lr-known-date-year-field-width);
   }
   /* Mouse-hover parity with the keyboard :focus-visible ring below -- same border-retint
-     treatment as lr-color-picker's own bordered [part='input']:hover. */
+     treatment as lr-color-picker's own bordered [part='input']:hover.
+     no-pressed-state: a press on a number field lands the caret rather than activating a control,
+     so a pressed tint would show only for the length of the mousedown and then be replaced by the
+     :focus-visible ring below, which is the state that actually persists and communicates. */
   [part='field-input']:hover {
     border-color: var(--lr-color-brand);
   }

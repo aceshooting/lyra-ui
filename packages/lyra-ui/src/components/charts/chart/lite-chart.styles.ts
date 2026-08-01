@@ -72,11 +72,25 @@ export const styles = css`
   [data-mark-hit-target] {
     cursor: pointer;
   }
+  /* A mark's resting colour is its own series colour, which varies per dataset and can be anything
+     a consumer passes -- including pure white or pure black. brightness() multiplies every channel,
+     so on those two it is a literal no-op, and on everything else it moves in whichever direction
+     the colour happens to sit rather than the direction the mark needs. Mixing toward
+     --lr-color-mix-partner (which follows the text colour) always moves, and always away from the
+     plot background. The base is currentColor: each mark carries its series colour in an inline
+     'color' alongside its fill attribute precisely so this mix has something to read -- CSS cannot
+     see the value of a fill presentation attribute. */
   :where([part='bar']):hover,
   :where([part='point']):hover,
   :where(.mark-hit-group):hover [part='bar'],
   :where(.mark-hit-group):hover [part='point'] {
-    filter: brightness(var(--lr-hover-brightness));
+    fill: color-mix(in oklab, currentColor, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  :where([part='bar']):active,
+  :where([part='point']):active,
+  :where(.mark-hit-group):active [part='bar'],
+  :where(.mark-hit-group):active [part='point'] {
+    fill: color-mix(in oklab, currentColor, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='bar'][data-selected],
   [part='point'][data-selected] {

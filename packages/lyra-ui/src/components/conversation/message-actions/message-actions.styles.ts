@@ -53,6 +53,11 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
     color: var(--lr-color-text);
   }
+  [part~='regenerate-button']:active,
+  [part~='edit-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-text);
+  }
   [part~='regenerate-button']:focus-visible,
   [part~='edit-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -55,6 +55,13 @@ export const styles = css`
   [part='title']:hover {
     text-decoration: underline;
   }
+  /* Both affordances here are transparent-backed brand-colored text (see the frame='plain' note
+     above), so the pressed signal is a wash mixed from that transparent base -- the label itself has
+     to keep its brand color to stay readable as a link. */
+  [part='title']:active {
+    text-decoration: underline;
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='title']:focus-visible,
   [part='toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -87,6 +94,10 @@ export const styles = css`
   }
   [part='toggle']:hover {
     text-decoration: underline;
+  }
+  [part='toggle']:active {
+    text-decoration: underline;
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='full'] {
     min-inline-size: 0;

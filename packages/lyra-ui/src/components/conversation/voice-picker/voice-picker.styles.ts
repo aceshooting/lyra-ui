@@ -53,6 +53,12 @@ export const styles = css`
   [part='trigger']:hover:not(:disabled) {
     border-color: var(--lr-color-brand);
   }
+  /* Hover recolors the border only; the press additionally fills the trigger, mixing its resting
+     surface toward the text color so the pressed state escalates hover instead of restating it. */
+  [part='trigger']:active:not(:disabled) {
+    border-color: var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='trigger']:focus-visible,
   [part='combobox']:focus-within {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -145,6 +151,9 @@ export const styles = css`
   [part='preview-button']:hover:not(:disabled) {
     background: var(--lr-color-brand-quiet);
   }
+  [part='preview-button']:active:not(:disabled) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='preview-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -220,6 +229,15 @@ export const styles = css`
   [part='option'][data-active] {
     background: var(--lr-voice-picker-option-active-bg, var(--lr-color-brand-quiet));
   }
+  /* Mixes the SAME --lr-voice-picker-option-active-bg the hover/active-descendant rule above uses,
+     so a consumer retinting the highlight gets a matching pressed step for free. */
+  [part='option']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-voice-picker-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part='option'][aria-selected='true'] {
     border-color: var(--lr-voice-picker-option-selected-border, var(--lr-color-brand));
     color: var(--lr-voice-picker-option-selected-color, var(--lr-color-brand));
@@ -276,6 +294,16 @@ export const styles = css`
   }
   [part='option-preview']:hover {
     background: var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
+  }
+  /* Mixes the SAME --lr-voice-picker-preview-hover-bg the rule above uses, so a consumer retinting
+     the hover fill gets a matching pressed step without a second custom property to keep in sync. */
+  [part='option-preview']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
   }
 

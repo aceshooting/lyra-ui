@@ -2,6 +2,7 @@ import { html, nothing, type ComplexAttributeConverter, type TemplateResult } fr
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -48,6 +49,18 @@ interface RadioGroupController {
  * radio group emits its aggregate event instead.
  * @event focus - The internal radio received focus.
  * @event blur - The internal radio lost focus.
+ * @cssstate required - Matches while the radio is required, either by its own `required` attribute
+ * or by an owning `<lr-radio-group required>`. Style with `lr-radio:state(required)`.
+ * @cssstate optional - Matches while it is neither — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything.
+ * @cssstate user-valid - `valid`, but only after the user has interacted with this radio: selecting
+ * it, or blurring it.
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required radio is genuinely invalid, but colouring it red
+ * before the user has done anything is hostile.
  * @csspart base - The interactive radio control.
  * @csspart circle - The circular radio indicator.
  * @csspart dot - The selected indicator.
@@ -108,6 +121,11 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   pill = false;
 
   @state() private hasLabel = false;
+  /** Whether the user has acted on this radio yet, which is what gates the `user-valid`/
+   *  `user-invalid` custom states: a selection or a blur. A pristine required radio is genuinely
+   *  invalid, but styling it as an error before the user has done anything is hostile, which is the
+   *  entire reason the `user-*` pair exists. Not `@state`: nothing in `render()` reads it. */
+  private hasInteracted = false;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
   private _checked = false;
@@ -251,7 +269,9 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   }
 
   formResetCallback(): void {
+    this.hasInteracted = false;
     this.checked = this._defaultChecked;
+    this.reflectValidityStates();
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,
@@ -273,6 +293,18 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       this.effectiveRequired && !this.checked ? { valueMissing: true } : {},
       this.localize('radioRequired'),
     );
+    this.reflectValidityStates();
+  }
+
+  /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
+   *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. `required`
+   *  here is the EFFECTIVE one -- a radio inside a `required` `<lr-radio-group>` is required even
+   *  with no attribute of its own, and that is what its validity is already computed from. */
+  private reflectValidityStates(): void {
+    syncValidityStates(this.internals, {
+      required: this.effectiveRequired,
+      hasInteracted: this.hasInteracted,
+    });
   }
   /** @internal Driven by an owning `<lr-radio-group>`; released when the radio leaves the group's control. */
   setGroupDisabled(value: boolean): void {
@@ -344,6 +376,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   private select(): void {
     const group = this.group();
     if (this.effectiveDisabled || this.checked) return;
+    this.hasInteracted = true;
     if (group) {
       if (!group.selectRadio?.(this)) return;
       this.emit('input');
@@ -370,7 +403,11 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     }
   };
   protected onFocus = (): void => { this.emit('focus'); };
-  protected onBlur = (): void => { this.emit('blur'); };
+  protected onBlur = (): void => {
+    this.hasInteracted = true;
+    this.reflectValidityStates();
+    this.emit('blur');
+  };
   private onSlotChange = (event: Event): void => {
     this.hasLabel = (event.target as HTMLSlotElement).assignedNodes({ flatten: true })
       .some((node) => (node.textContent ?? '').trim().length > 0);

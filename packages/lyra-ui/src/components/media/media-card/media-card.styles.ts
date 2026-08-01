@@ -40,6 +40,15 @@ export const styles = css`
   a[part='base']:hover {
     border-color: var(--lr-color-brand);
   }
+  /* Pressed deepens both the border the hover rule tints and the card's own fill, so the whole-card
+     button reads as depressed rather than merely pointed at. Under frame="plain" the later,
+     higher-specificity chrome reset still wins -- that mode is opting out of card chrome entirely,
+     pressed included. */
+  button[part='base']:active,
+  a[part='base']:active {
+    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -99,6 +108,11 @@ export const styles = css`
   }
   [part='open-button']:hover {
     background: var(--lr-color-surface);
+  }
+  /* Hover only finishes opacifying the translucent scrim, which leaves it with nowhere further to
+     go; pressed mixes that now-solid surface toward --lr-color-mix-partner instead. */
+  [part='open-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='open-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

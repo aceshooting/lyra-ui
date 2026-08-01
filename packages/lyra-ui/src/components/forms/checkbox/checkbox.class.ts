@@ -2,6 +2,7 @@ import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type P
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -128,6 +129,17 @@ export interface LyraCheckboxEventMap {
  * `detail: { checked }`. Not fired for a programmatic `.checked` assignment.
  * @event focus - Re-dispatched from the internal control as a bubbling, composed event.
  * @event blur - Re-dispatched from the internal control as a bubbling, composed event.
+ * @cssstate required - Matches while `required` is set. Style with `lr-checkbox:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: a toggle, a blur, or a
+ * `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required checkbox is genuinely invalid, but colouring it red
+ * before the user has done anything is hostile.
  * @csspart base - The whole interactive control (`role="checkbox"`); wraps the box and label.
  * @csspart box - The small square that shows the checkmark/indeterminate dash.
  * @csspart checkmark - The checkmark (or indeterminate dash) glyph inside the box.
@@ -190,6 +202,12 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // reflection below so validity styling never flashes on first render,
   // mirroring `<lr-combobox>`/`<lr-select>`'s identical `touched` field.
   @state() private touched = false;
+  /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
+   *  `user-invalid` custom states. Deliberately separate from `touched` (which drives the visible
+   *  `data-invalid`/`aria-invalid` pair and is set on blur alone): a toggle is an interaction the
+   *  instant it happens, and `reportValidity()` — what a submit attempt runs — counts as one too,
+   *  exactly as it does for native `:user-invalid`. Not `@state`: nothing in `render()` reads it. */
+  private hasInteracted = false;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -388,6 +406,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // `syncFormState()`/setter shape.
   private reflectInvalid(): void {
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.hasInteracted });
   }
 
   private syncFormState(): void {
@@ -402,6 +421,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   formResetCallback(): void {
     this.checked = this._defaultChecked;
     this.touched = false;
+    this.hasInteracted = false;
     this.reflectInvalid();
   }
   formStateRestoreCallback(
@@ -430,6 +450,11 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
+    // point, so it counts as interaction for the `user-*` custom states. `checkValidity()`
+    // deliberately does not: it is the silent query.
+    this.hasInteracted = true;
+    this.reflectInvalid();
     return this.internals.reportValidity();
   }
 
@@ -452,6 +477,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   private toggle(): void {
     if (this.effectiveDisabled) return;
+    this.hasInteracted = true;
     this.checked = !this.checked;
     this.indeterminate = false;
     this.emit('input');
@@ -490,6 +516,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   private onBlur = (): void => {
     this.touched = true;
+    this.hasInteracted = true;
     this.reflectInvalid();
     this.emit('blur');
   };

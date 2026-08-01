@@ -24,7 +24,7 @@ export const styles = css`
     border: none;
     background: none;
     color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
     cursor: pointer;
     border-radius: var(--lr-radius);
   }
@@ -39,6 +39,17 @@ export const styles = css`
   [part='move-up-button']:hover,
   [part='move-down-button']:hover {
     background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
+  }
+  /* Declared before the :disabled rule below, which restates background/color at equal
+     specificity, so a disabled arrow stays flat whatever the pointer does to it. */
+  [part='move-up-button']:active,
+  [part='move-down-button']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-color-brand);
   }
   [part='move-up-button']:focus-visible,

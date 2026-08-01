@@ -62,7 +62,7 @@ export const styles = css`
   :host([size='xl']) {
     --lr-combobox-trigger-padding: var(--lr-space-m) var(--lr-space-l);
     --lr-combobox-tag-padding: var(--lr-size-0-25rem) var(--lr-size-0-625rem);
-    --lr-combobox-tag-font-size: var(--lr-font-size-md);
+    --lr-combobox-tag-font-size: var(--lr-font-size-m);
   }
   [part='form-control-label'] {
     display: block;
@@ -148,7 +148,7 @@ export const styles = css`
   }
   /* Same compact-chip-remove pattern as lr-chip's [part='remove-button']: the interactive hit
      target meets the shared --lr-icon-button-size floor, while the visible glyph stays a
-     compact 1rem close icon (font-size: var(--lr-font-size-md), independent of the tag's own
+     compact 1rem close icon (font-size: var(--lr-font-size-m), independent of the tag's own
      --lr-combobox-tag-font-size, which shrinks well below that at size="xs"/"s") -- a selected
      tag is a small inline pill, so growing its whole box to 40px would visually balloon the tags
      row. The negative margin pulls the enlarged hit area back in so the *visible* tag footprint
@@ -167,7 +167,7 @@ export const styles = css`
     color: inherit;
     padding: 0;
     line-height: var(--lr-line-height-none);
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
   }
 
   [part='combobox-input'] {
@@ -224,11 +224,23 @@ export const styles = css`
   [part='clear-button']:hover {
     color: var(--lr-color-text);
   }
+  /* Pressed adds what hover cannot: hover has already spent the colour step (quiet -> full text),
+     so the press is a background pad mixed off the row's own surface. Stronger than hover by
+     construction -- --lr-color-mix-active is the larger of the two shared knobs. */
+  [part='clear-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-radius: var(--lr-radius);
+  }
   /* Mirrors <lr-chip>'s own [part='remove-button']:hover -- a currentColor-derived tint rather
      than a fixed token, since this part's rest-state color is 'inherit' (the tag's own text
      color), not a dedicated quiet token to darken. */
   [part='tag__remove-button']:hover {
     background: color-mix(in srgb, currentColor 16%, transparent);
+  }
+  /* Same currentColor idiom as the hover above (this part's rest color is the tag's inherited text
+     color, not a token), taken to the shared pressed strength -- 22% against the hover's 16%. */
+  [part='tag__remove-button']:active {
+    background: color-mix(in srgb, currentColor var(--lr-color-mix-active), transparent);
   }
   [part='clear-button']:focus-visible,
   [part='tag__remove-button']:focus-visible {
@@ -299,6 +311,16 @@ export const styles = css`
   [part='option']:hover,
   [part='option'][data-active] {
     background: var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet));
+  }
+  /* Mixing the hover tint itself (not the bare token) keeps a consumer who retinted
+     --lr-combobox-option-active-bg in charge of both states: the pressed row is always their
+     colour, one shared step further toward the text colour. */
+  [part='option']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='option'][aria-selected='true'] {
     /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset

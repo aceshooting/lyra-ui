@@ -71,6 +71,15 @@ export const styles = css`
   :host(:not(:disabled)) [part='base']:hover [part='box'] {
     border-color: var(--lr-color-brand);
   }
+  /* Pressed. Expressed as a ring around the box rather than as a fill, because the box's own fill
+     is the state readout: it is the page surface while unchecked and the brand while checked, and
+     tinting it under the thumb would either wash out the checkmark or read as a half-toggled box.
+     A ring is unambiguous in both states, and is visibly more than the hover's border-colour step
+     -- same soft-ring pressed vocabulary <lr-slider>'s thumb uses. */
+  :host(:not(:disabled)) [part='base']:active [part='box'] {
+    border-color: var(--lr-color-brand);
+    box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-color-brand-quiet);
+  }
   :host([checked]) [part='box'],
   :host([indeterminate]) [part='box'] {
     /* Component-scoped indirection (mirrors lr-source-picker's identical

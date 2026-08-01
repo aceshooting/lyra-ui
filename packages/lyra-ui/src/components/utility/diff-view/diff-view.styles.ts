@@ -91,6 +91,10 @@ export const styles = css`
   [part='copy-button']:hover {
     border-color: var(--lr-color-brand);
   }
+  [part='copy-button']:active {
+    border-color: var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='copy-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

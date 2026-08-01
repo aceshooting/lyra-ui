@@ -46,9 +46,15 @@ export const styles = css`
       background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
   }
+  /* A background mix, not filter: brightness(): a filter multiplies every channel of the subtree,
+     so it dragged the button's own --lr-color-on-brand label along with the fill and moved neither
+     at all once the brand token was themed to pure white or pure black. Mixing the fill toward
+     --lr-color-mix-partner (which tracks the text color) always moves, and only the fill moves. */
   [part='submit']:hover {
-    background: var(--lr-color-brand);
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='submit']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='submit']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

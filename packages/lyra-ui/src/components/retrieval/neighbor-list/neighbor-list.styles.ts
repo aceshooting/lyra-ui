@@ -50,6 +50,10 @@ export const styles = css`
   lr-virtual-list::part(node-label):hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='node-label']:active,
+  lr-virtual-list::part(node-label):active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='direction'],
   lr-virtual-list::part(direction) {
     flex: 0 0 auto;
@@ -90,6 +94,10 @@ export const styles = css`
   [part='expand-button']:hover,
   lr-virtual-list::part(expand-button):hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+  }
+  [part='expand-button']:active,
+  lr-virtual-list::part(expand-button):active {
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='expand-button']:focus-visible,
   lr-virtual-list::part(expand-button):focus-visible {

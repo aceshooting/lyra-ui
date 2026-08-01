@@ -134,6 +134,16 @@ export const styles = css`
   :host([toggleable]:not([removable])) [part='base']:hover {
     background: color-mix(in srgb, var(--lr-chip-accent) 8%, var(--lr-chip-bg));
   }
+  /* Pressed deepens the hover's own accent wash to the shared --lr-color-mix-active share --
+     roughly triple the hover's 8%, so the press is unmistakably a step past it. The accent, not
+     --lr-color-mix-partner, is the partner here: on every non-neutral variant the chip is a loud
+     accent on a quiet fill, so the accent already IS this surface's contrast partner, while the
+     shared partner follows the page text and would wash the variant's hue out at the exact moment
+     of the click. :active matches here even though the actual button is [part='toggle-button']
+     stretched over the base, because :active applies to the activated element's ancestors too. */
+  :host([toggleable]:not([removable])) [part='base']:active {
+    background: color-mix(in srgb, var(--lr-chip-accent) var(--lr-color-mix-active), var(--lr-chip-bg));
+  }
   [part='toggle-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -220,6 +230,17 @@ export const styles = css`
   }
   [part='remove-button']:hover {
     background: color-mix(in srgb, currentColor 16%, transparent);
+  }
+  /* Pressed lays the shared --lr-color-mix-active share of currentColor over the hover's own
+     scrim, which more than doubles the tint the hover produced -- a step past it, not a repeat.
+     currentColor rather than --lr-color-mix-partner: this button sits INSIDE the pill, whose
+     variant may have painted a loud fill beneath it, so the pill's own ink is the only colour
+     guaranteed to contrast there, while --lr-color-mix-partner follows the PAGE text and would
+     point the opposite way from the hover on a non-neutral chip. The hover value is restated
+     rather than referenced because it is a literal here, not a public custom property (unlike
+     <lr-tag>'s --lr-tag-remove-hover-background). */
+  [part='remove-button']:active {
+    background: color-mix(in srgb, currentColor var(--lr-color-mix-active), color-mix(in srgb, currentColor 16%, transparent));
   }
   [part='remove-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

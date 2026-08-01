@@ -159,6 +159,13 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
+     than hover in both light and dark themes rather than repeating it. */
+  [part='maximize-button']:active,
+  [part='close-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='maximize-button']:focus-visible,
   [part='close-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

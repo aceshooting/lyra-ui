@@ -53,8 +53,12 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     border-color: var(--lr-color-brand);
   }
+  /* Pressed: the hover's tint carried further toward --lr-color-mix-partner (which follows the text
+     colour). This rule used to be byte-identical to the :hover above, which is a pressed state only
+     on paper -- a segment that looks exactly the same held down as hovered tells the user nothing
+     about whether their click landed. */
   [part='base']:active {
-    background: var(--lr-color-brand-quiet);
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     border-color: var(--lr-color-brand);
   }
   :host(:focus-visible) [part='base'],
@@ -73,9 +77,16 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-on-brand);
   }
-  [part~='checked']:hover,
+  /* The checked segment keeps its loud brand fill under the pointer -- the quiet tint the unchecked
+     rules land on would read as a DESELECTION -- but it still has to move, and the press still has
+     to out-read the hover. Both mix the loud fill toward --lr-color-mix-partner, which follows the
+     text colour, so the on-brand label stays legible at either share. */
+  [part~='checked']:hover {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    border-color: var(--lr-color-brand);
+  }
   [part~='checked']:active {
-    background: var(--lr-color-brand);
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     border-color: var(--lr-color-brand);
   }
   [part~='disabled'] {

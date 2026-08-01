@@ -67,6 +67,17 @@ export const styles = css`
   :where([part='base'] button):hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));
   }
+  /* Same shape as the hover rule, so it inherits the same (0,1,0) specificity and a consumer's
+     ::part(zoom-in):active override still wins. The fill is the hovered one carried further toward
+     --lr-color-mix-partner (the text colour), which moves in whichever direction the surface needs
+     rather than always lightening. */
+  :where([part='base'] button):active:where(:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface-hover, var(--lr-color-border)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part='base'] button:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;

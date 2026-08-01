@@ -31,11 +31,25 @@ export const styles = css`
     color: var(--lr-tree-selected-color, var(--lr-color-brand));
     background: var(--lr-tree-selected-bg, var(--lr-color-brand-quiet));
   }
+  /* MUST stay after the selected-row rule above, and the second arm exists so it can: a selected
+     row is matched at (0,3,0) there, which a bare [part='row']:active ((0,2,0)) cannot reach, and
+     the already-selected item is exactly the row a user presses next. Matching it through :host()
+     lands both arms at the same specificity as that rule, so source order decides -- and the
+     :where() keeps the state qualifier itself out of the count. */
+  [part='row']:active,
+  :host(:where([aria-selected='true'])) [part='row']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   :host([aria-disabled='true']) [part='row'] {
     cursor: default;
     opacity: var(--lr-opacity-disabled);
   }
   :host([aria-disabled='true']) [part='row']:hover {
+    background: transparent;
+  }
+  /* A disabled item must stay inert under the pointer for the press as well as the hover -- without
+     this it would light up on mousedown and then do nothing. */
+  :host([aria-disabled='true']) [part='row']:active {
     background: transparent;
   }
   [part='toggle'] {

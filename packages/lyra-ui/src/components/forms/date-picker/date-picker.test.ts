@@ -1086,3 +1086,36 @@ it('chains updated() to super.updated() so a mixin layered under LyraElement wou
     }
   }
 });
+
+// Pressed feedback, driven through the real pointer -- a `:hover` rule alone leaves a repeated
+// action like month paging with nothing to show that the click landed until the grid redraws.
+// Colour STRINGS are compared, never elements: a DOM node as chai's actual/expected hangs the file.
+for (const [label, selector] of [
+  ['a day cell', '[part~="day"]'],
+  ['the next-month button', '[part="next"]'],
+] as const) {
+  it(`paints ${label} one step deeper while it is pressed than while it is merely hovered`, async () => {
+    const el = (await fixture(
+      html`<lr-date-picker value="2026-07-15"></lr-date-picker>`,
+    )) as LyraDatePicker;
+    await el.updateComplete;
+    const target = el.shadowRoot!.querySelector(selector) as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const centre: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    const rest = getComputedStyle(target).backgroundColor;
+    try {
+      await sendMouse({ type: 'move', position: centre });
+      const hovered = getComputedStyle(target).backgroundColor;
+      await sendMouse({ type: 'down' });
+      const pressed = getComputedStyle(target).backgroundColor;
+      await sendMouse({ type: 'up' });
+      expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(rest);
+      expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(hovered);
+    } finally {
+      await resetMouse();
+    }
+  });
+}

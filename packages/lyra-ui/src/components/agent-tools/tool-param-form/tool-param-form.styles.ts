@@ -52,7 +52,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
-    font-size: var(--lr-font-size-md);
+    font-size: var(--lr-font-size-m);
   }
   input.control {
     appearance: textfield;

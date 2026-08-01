@@ -103,6 +103,10 @@ export const styles = css`
   [part='expand-toggle']:hover {
     text-decoration: underline;
   }
+  [part='expand-toggle']:active {
+    text-decoration: underline;
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='item-body'] {
     padding-block-start: var(--lr-space-xs);
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -145,6 +149,11 @@ export const styles = css`
   [part='remove-button']:hover,
   [part='forget-all-button']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='add-button']:active,
+  [part='remove-button']:active,
+  [part='forget-all-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='forget-all-button'] {
     color: var(--lr-color-danger);

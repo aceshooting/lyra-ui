@@ -138,9 +138,17 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
+  /* Hover/press are a background mix, never filter: brightness(). brightness() multiplies every
+     channel, so it lightens a dark fill and darkens a light one only by accident, does nothing at
+     all to a pure white or pure black brand color, and -- because filter applies to the whole
+     subtree -- dims the glyph inside the button along with its fill. Mixing the resting fill toward
+     --lr-color-mix-partner (which tracks the text color) always moves, always in the direction the
+     surface needs, and leaves the icon alone. */
   [part='action-button']:hover {
-    background: var(--lr-color-brand);
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='action-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='action-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

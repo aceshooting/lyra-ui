@@ -39,6 +39,15 @@ export const styles = css`
   [part='base']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  /* The same fill hover uses, mixed further toward --lr-color-mix-partner (the text colour), so a
+     row that is being pressed is always a visible step past the row the pointer merely rests on. */
+  [part='base']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   :host([disabled]) [part='base'] {
     /* Shared library-wide disabled-state token -- see lr-checkbox/lr-select. */
     opacity: var(--lr-opacity-disabled);
@@ -47,11 +56,27 @@ export const styles = css`
   :host([disabled]) [part='base']:hover {
     background: none;
   }
+  /* Suppression, not a treatment: the host is the role="menuitem" target and stays in the DOM as a
+     pressable box while disabled, so without this the pressed mix above would still paint under a
+     pointer that a disabled row must not respond to. */
+  :host([disabled]) [part='base']:active {
+    background: none;
+  }
   :host([destructive]) [part='base'] {
     color: var(--lr-color-danger);
   }
   :host([destructive]) [part='base']:hover {
     background: var(--lr-color-danger-quiet);
+  }
+  /* Same step past hover as the ordinary row above, taken on the danger fill this variant hovers
+     with. Ordered exactly like the :hover rules it mirrors, so the disabled/destructive precedence
+     stays whatever it already was rather than diverging between the two states. */
+  :host([destructive]) [part='base']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-danger-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='icon'] {
     display: inline-flex;

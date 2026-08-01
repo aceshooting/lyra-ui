@@ -84,11 +84,21 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-on-brand);
   }
+  /* Mixing the resting fill toward --lr-color-mix-partner (which follows the text colour) rather
+     than multiplying every channel with filter: brightness(): a filter lightens a dark brand and
+     darkens a light one only by accident, does nothing at all to a pure white or pure black one,
+     and -- because it applies to the whole subtree -- shifted this button's label with it. */
   [part='run-button']:hover {
-    filter: brightness(var(--lr-hover-brightness));
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='run-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='save-button']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='save-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='run-button']:disabled,
   [part='save-button']:disabled,
@@ -165,6 +175,13 @@ export const styles = css`
   [part='saved-load-button']:hover {
     text-decoration: underline;
   }
+  /* The row this button fills has the surface fill, so that -- not the button's own transparent
+     background -- is the base the pressed tint mixes from; an underline alone cannot get "more
+     underlined", and loading a saved query replaces the whole form, which is worth acknowledging. */
+  [part='saved-load-button']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    text-decoration: underline;
+  }
   [part='saved-delete-button'] {
     flex: none;
     display: inline-flex;
@@ -187,6 +204,13 @@ export const styles = css`
   }
   [part='saved-delete-button']:hover {
     color: var(--lr-color-danger);
+  }
+  /* Pressed adds the quiet danger fill behind the already-red glyph rather than only deepening the
+     glyph itself: a colour step on an icon this small is easy to miss, and this is the destructive
+     control in the row. */
+  [part='saved-delete-button']:active {
+    color: color-mix(in oklab, var(--lr-color-danger), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-color-danger-quiet);
   }
 
   [part='saved-empty'] {

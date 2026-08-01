@@ -31,6 +31,9 @@ export const styles = css`
      all. Deliberately a plain border color rather than the focus-ring's own brand color, so hover
      still reads as a preview and the eventual :focus-visible ring stays visually distinct.
      Negative (inward) offset for the same reason as :focus-visible above. */
+  /* no-pressed-state: this is the scroll port, not a target -- pressing it activates nothing, and
+     :active matches the ancestors of whatever was pressed, so clicking any row (or a row action
+     inside one) would flash this outline around the entire list. */
   [part='base']:hover {
     outline: var(--lr-border-width-thin) solid
       var(--lr-virtual-list-hover-outline-color, var(--lr-color-border-strong));
