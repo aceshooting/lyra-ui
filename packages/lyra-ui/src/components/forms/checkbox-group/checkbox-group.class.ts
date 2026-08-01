@@ -431,6 +431,29 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.reflectValidityStates();
     return this.internals.reportValidity();
   }
+
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("that combination of topics is not available") that no client-side constraint can
+   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
+   * group fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`
+   * clears it.
+   *
+   * Clearing restores the group's own computed validity rather than forcing it valid: a required
+   * group with nothing checked stays `valueMissing`. The custom error also survives every
+   * intrinsic recomputation in between (`sync()` re-runs on each child toggle, slot change and
+   * `name`/`required` change) and a form reset, exactly like a native control — only another
+   * `setCustomValidity('')` clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    this.reflectValidityStates();
+    // `aria-invalid` is rendered from `internals.validity`, which the call above just moved.
+    this.requestUpdate();
+  }
   formResetCallback(): void { this.boxes.forEach((box) => { box.checked = box.hasAttribute('checked'); }); this.touched = false; this.hasInteracted = false; this.sync(); }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;

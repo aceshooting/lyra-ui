@@ -1,19 +1,35 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tree-item.js';
 import type { LyraTreeItem } from './tree-item.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const item = { id: '1', label: 'Root' };
 
-// `item` is assigned by `<lr-tree>` in normal use, but the tag is registered publicly, so a bare
-// `document.createElement('lr-tree-item')` must complete its first update cycle (and later ones)
-// without dereferencing the missing item -- it renders as an empty leaf until `item` arrives.
+/** The text a declarative item actually projects into `[part="label"]` -- its own fallback text plus
+ *  whatever the default slot renders. Reads the *rendered* projection, not the light DOM. */
+const renderedLabel = (el: LyraTreeItem): string => {
+  const label = el.shadowRoot!.querySelector('[part="label"]')!;
+  const slot = label.querySelector('slot') as HTMLSlotElement | null;
+  const visible = (nodes: Node[]): string[] =>
+    // Lit's own marker comments live in here too, and a comment's textContent is that marker.
+    nodes
+      .filter((n) => n.nodeType === Node.TEXT_NODE || n.nodeType === Node.ELEMENT_NODE)
+      .map((n) => n.textContent ?? '');
+  const slotted = slot ? visible(slot.assignedNodes({ flatten: true })) : [];
+  const own = visible([...label.childNodes].filter((n) => n.nodeName !== 'SLOT'));
+  return [...own, ...slotted].join('').trim();
+};
+
+// `item` is assigned by `<lr-tree>` in the data-driven model, but the tag is registered publicly, so
+// a bare `document.createElement('lr-tree-item')` must complete its first update cycle (and later
+// ones) without dereferencing the missing item -- it renders as an empty declarative leaf until
+// either a `label`/slotted content or an `item` arrives.
 it('completes its lifecycle without an item, then renders once one is assigned', async () => {
   const el = document.createElement('lr-tree-item') as LyraTreeItem;
   document.body.appendChild(el);
   try {
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="row"]')).to.equal(null);
+    expect(renderedLabel(el)).to.equal('');
     expect(el.getAttribute('role')).to.equal('treeitem');
     expect(el.hasChildren).to.be.false;
 
@@ -23,6 +39,129 @@ it('completes its lifecycle without an item, then renders once one is assigned',
   } finally {
     el.remove();
   }
+});
+
+// The declarative child model. `<lr-tree-item>` mirrors `wa-tree-item`/`sl-tree-item`, whose whole
+// child model is markup: the default slot carries the label and nested `<lr-tree-item>` elements
+// carry the hierarchy. A migration codemod only renames the tag, so markup that arrives with no
+// `.item` object assigned has to render on its own -- these lock that contract.
+describe('tree-item declarative child model', () => {
+  it('renders the label attribute when no item object is assigned', async () => {
+    const el = (await fixture(html`<lr-tree-item label="Docs"></lr-tree-item>`)) as LyraTreeItem;
+    expect(renderedLabel(el)).to.equal('Docs');
+    expect(el.hasChildren).to.be.false;
+  });
+
+  it('renders slotted label content, so mechanically renamed markup is never blank', async () => {
+    const el = (await fixture(html`<lr-tree-item>Docs</lr-tree-item>`)) as LyraTreeItem;
+    expect(renderedLabel(el)).to.equal('Docs');
+  });
+
+  it('projects nested items into the group slot rather than the label, and offers a toggle', async () => {
+    const el = (await fixture(html`
+      <lr-tree-item label="Parent">
+        <lr-tree-item label="Child"></lr-tree-item>
+      </lr-tree-item>
+    `)) as LyraTreeItem;
+
+    expect(renderedLabel(el), 'a nested item must not leak into the label').to.equal('Parent');
+    expect(el.hasChildren).to.be.true;
+    expect(el.getAttribute('aria-expanded')).to.equal('false');
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
+    expect(toggle.hidden).to.be.false;
+    // Never hand chai a DOM node as actual/expected -- compare a boolean instead.
+    expect(el.shadowRoot!.querySelector('[part="group"]') === null, 'collapsed: no group').to.be.true;
+
+    el.expand();
+    await el.updateComplete;
+    const group = el.shadowRoot!.querySelector('[part="group"]')!;
+    expect(group.getAttribute('role')).to.equal('group');
+    const groupSlot = group.querySelector('slot') as HTMLSlotElement;
+    expect(groupSlot.assignedElements().map((child) => child.getAttribute('label'))).to.eql(['Child']);
+    expect(el.getAttribute('aria-expanded')).to.equal('true');
+  });
+
+  it('emits lr-node-toggle and lr-node-select with a generated id for a declarative item', async () => {
+    const el = (await fixture(html`
+      <lr-tree-item label="Parent"><lr-tree-item label="Child"></lr-tree-item></lr-tree-item>
+    `)) as LyraTreeItem;
+    expect(el.nodeId).to.be.a('string').and.to.have.length.greaterThan(0);
+
+    const toggled = oneEvent(el, 'lr-node-toggle');
+    el.expand();
+    expect((await toggled).detail).to.eql({ id: el.nodeId, expanded: true });
+
+    const selected = oneEvent(el, 'lr-node-select');
+    el.select();
+    expect((await selected).detail).to.eql({ id: el.nodeId });
+  });
+
+  it('reflects declarative disabled/selected state into ARIA and keeps a disabled item inert', async () => {
+    const el = (await fixture(html`
+      <lr-tree-item label="Parent" disabled selected><lr-tree-item label="Child"></lr-tree-item></lr-tree-item>
+    `)) as LyraTreeItem;
+
+    expect(el.getAttribute('aria-disabled')).to.equal('true');
+    expect(el.getAttribute('aria-selected')).to.equal('true');
+    expect(el.isDisabled).to.be.true;
+
+    let selections = 0;
+    el.addEventListener('lr-node-select', () => selections++);
+    el.select();
+    el.expand();
+    await el.updateComplete;
+    expect(selections).to.equal(0);
+    expect(el.expanded).to.be.false;
+  });
+
+  it('renders both aria-selected states, never dropping the attribute for an unselected item', async () => {
+    const el = (await fixture(html`<lr-tree-item label="Parent"></lr-tree-item>`)) as LyraTreeItem;
+    expect(el.getAttribute('aria-selected')).to.equal('false');
+    el.selected = true;
+    await el.updateComplete;
+    expect(el.getAttribute('aria-selected')).to.equal('true');
+  });
+
+  it('leaves a host-authored aria-label alone in the declarative model', async () => {
+    const el = (await fixture(
+      html`<lr-tree-item label="Docs" aria-label="Documentation folder"></lr-tree-item>`,
+    )) as LyraTreeItem;
+    expect(el.getAttribute('aria-label')).to.equal('Documentation folder');
+  });
+
+  it('lets an assigned item object win over the declarative attributes', async () => {
+    const el = (await fixture(html`<lr-tree-item label="Declarative"></lr-tree-item>`)) as LyraTreeItem;
+    el.item = { id: 'data', label: 'From data' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('From data');
+    expect(el.nodeId).to.equal('data');
+  });
+
+  it('picks up a nested item appended after the first render', async () => {
+    const el = (await fixture(html`<lr-tree-item label="Parent"></lr-tree-item>`)) as LyraTreeItem;
+    expect(el.hasChildren).to.be.false;
+
+    const child = document.createElement('lr-tree-item') as LyraTreeItem;
+    child.label = 'Late child';
+    el.appendChild(child);
+    await el.updateComplete;
+    expect(el.hasChildren).to.be.true;
+    expect(el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.hidden).to.be.false;
+  });
+
+  it('is accessible as a declarative branch inside a tree', async () => {
+    const wrapper = await fixture(html`
+      <div role="tree" aria-label="Docs">
+        <lr-tree-item label="Parent" expanded>
+          <lr-tree-item label="Child"></lr-tree-item>
+        </lr-tree-item>
+      </div>
+    `);
+    const node = wrapper.querySelector('lr-tree-item') as LyraTreeItem;
+    await node.updateComplete;
+    expect(node.getAttribute('role')).to.equal('treeitem');
+    await expect(node).to.be.accessible();
+  });
 });
 
 // Regression tests for `depth`/`setSize`/`posInSet`: these feed `aria-level`/`aria-setsize`/

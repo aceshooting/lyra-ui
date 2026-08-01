@@ -78,6 +78,9 @@ function starSolid(): SVGTemplateResult {
  * @method click - Forwards activation to the internal slider control.
  * @method checkValidity - Returns whether the control currently satisfies its constraints.
  * @method reportValidity - Same as `checkValidity`, additionally showing the browser's validation UI.
+ * @method setCustomValidity - Sets (or, with `''`, clears) a consumer-supplied validation error.
+ * Survives intrinsic revalidation and a form reset; clearing it restores the computed validity
+ * rather than forcing the control valid.
  * @csspart base - The slider-like rating control.
  * @csspart star - Each visual symbol.
  * @csspart star-fill - The filled overlay inside each symbol, clipped to that
@@ -257,6 +260,25 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // `:user-invalid` starts matching — so it counts as interaction here too.
     this.markInteracted();
     return this.internals.reportValidity();
+  }
+
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a rejection no
+   * client-side constraint can express ("you have already rated this item"). A non-empty `message`
+   * raises `customError` and becomes `validationMessage`, so the control fails `checkValidity()`,
+   * blocks submission, and matches `:state(invalid)`; `''` clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * `required` control that is still unrated stays `valueMissing`. The custom error also survives
+   * every intrinsic recomputation in between (each rating/`max`/`required` change re-runs
+   * `updateValidity()`) and a `form.reset()` — matching a native control, where only another
+   * `setCustomValidity('')` clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncValidityStates();
   }
 
   formResetCallback(): void {

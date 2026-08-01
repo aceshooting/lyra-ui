@@ -758,3 +758,101 @@ describe('lr-checkbox-group validity custom states', () => {
     expect(el.matches(':state(user-invalid)')).to.be.true;
   });
 });
+
+describe('lr-checkbox-group setCustomValidity()', () => {
+  it('blocks form submission and becomes the validationMessage', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-checkbox-group name="topics" label="Topics">
+          <lr-checkbox value="a" checked>A</lr-checkbox>
+        </lr-checkbox-group>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    form.requestSubmit();
+    expect(submits, 'an otherwise-valid group submits').to.equal(1);
+
+    el.setCustomValidity('Pick at least one supported topic');
+    expect(el.validationMessage).to.equal('Pick at least one supported topic');
+    expect(el.validity.customError, 'customError').to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(1);
+  });
+
+  it('survives an intrinsic revalidation', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="topics" required label="Topics">
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    el.setCustomValidity('Server says no');
+    (el.querySelector('lr-checkbox') as LyraCheckbox).click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a']);
+    expect(el.validity.valueMissing, 'valueMissing cleared').to.be.false;
+    expect(el.validity.customError, 'custom error survives the recompute').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // Native `setCustomValidity()` is sticky: `form.reset()` restores values, never the custom
+  // error, which only another `setCustomValidity('')` clears. Matching that here.
+  it('keeps the custom error across a form reset', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-checkbox-group name="topics" label="Topics">
+          <lr-checkbox value="a">A</lr-checkbox>
+        </lr-checkbox-group>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+    el.setCustomValidity('Server says no');
+    form.reset();
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the group valid', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="topics" required label="Topics">
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    el.setCustomValidity('Server says no');
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'custom error cleared').to.be.false;
+    expect(
+      el.validity.valueMissing,
+      'an empty custom error must not force a still-empty required group valid',
+    ).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.not.equal('');
+    (el.querySelector('lr-checkbox') as LyraCheckbox).click();
+    await el.updateComplete;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('drives the valid/invalid custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`
+      <lr-checkbox-group name="topics" label="Topics">
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before').to.be.true;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while a custom error is set').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
+  });
+});

@@ -853,3 +853,333 @@ it("keeps selection and focus together under the default activation=auto", async
   expect(el.active).to.equal("preview");
   expect(tabButtons(el)[1]!.getAttribute("tabindex")).to.equal("0");
 });
+
+// --- scroll controls --------------------------------------------------------------------------
+
+/** Six long labels in a 220px box: wide enough that both 40px controls still measure their full
+ *  hit area, narrow enough that the tab row genuinely overflows. */
+const crowdedTabs = () =>
+  [
+    ["overview", "Overview of everything"],
+    ["activity", "Activity history"],
+    ["artifacts", "Generated artifacts"],
+    ["evaluations", "Evaluations and scores"],
+    ["settings", "Workspace settings"],
+    ["permissions", "Permissions and access"],
+  ].map(
+    ([id, label]) => html`<div slot=${id} label=${label}>${label} panel</div>`
+  );
+
+async function crowded(): Promise<LyraTabGroup> {
+  const el = (await fixture(html`
+    <lr-tab-group style="display: block; max-inline-size: 220px">
+      ${crowdedTabs()}
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await nextFrames();
+  await el.updateComplete;
+  return el;
+}
+
+function scrollControls(el: LyraTabGroup): HTMLButtonElement[] {
+  return [
+    ...el.shadowRoot!.querySelectorAll('[part~="scroll-button"]'),
+  ] as HTMLButtonElement[];
+}
+
+function scrollControl(el: LyraTabGroup, edge: "start" | "end"): HTMLButtonElement {
+  return el.shadowRoot!.querySelector(
+    `[part~="scroll-button-${edge}"]`
+  ) as HTMLButtonElement;
+}
+
+/** Records the `scrollBy()` calls one control makes, restoring the real method afterwards. */
+async function recordScroll(
+  el: LyraTabGroup,
+  edge: "start" | "end"
+): Promise<ScrollToOptions[]> {
+  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const calls: ScrollToOptions[] = [];
+  const original = tablist.scrollBy.bind(tablist);
+  tablist.scrollBy = ((options: ScrollToOptions) => {
+    calls.push(options);
+  }) as typeof tablist.scrollBy;
+  try {
+    scrollControl(el, edge).click();
+    await el.updateComplete;
+  } finally {
+    tablist.scrollBy = original;
+  }
+  return calls;
+}
+
+it("keeps the scroll controls out of layout while the tablist fits", async () => {
+  const el = (await fixture(basic())) as LyraTabGroup;
+  await nextFrames();
+  const displays = scrollControls(el).map(
+    (button) => getComputedStyle(button).display
+  );
+  expect(displays).to.deep.equal(["none", "none"]);
+});
+
+it("shows both scroll controls once the tablist actually overflows", async () => {
+  const el = await crowded();
+  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  expect(tablist.hasAttribute("data-scroll-overflow")).to.equal(true);
+  const displays = scrollControls(el).map(
+    (button) => getComputedStyle(button).display
+  );
+  expect(displays).to.have.lengthOf(2);
+  expect(displays.some((display) => display === "none")).to.equal(false);
+});
+
+it("each scroll control meets the shared 40px minimum hit area", async () => {
+  const el = await crowded();
+  for (const edge of ["start", "end"] as const) {
+    const box = scrollControl(el, edge).getBoundingClientRect();
+    expect(Math.round(box.width), `${edge} control width`).to.be.at.least(40);
+    expect(Math.round(box.height), `${edge} control height`).to.be.at.least(40);
+  }
+});
+
+it("without-scroll-controls removes them entirely, leaving native scrolling and the edge fade", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group without-scroll-controls style="display: block; max-inline-size: 220px">
+      ${crowdedTabs()}
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await nextFrames();
+  expect(scrollControls(el)).to.have.lengthOf(0);
+  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  expect(tablist.hasAttribute("data-scroll-overflow")).to.equal(true);
+  expect(getComputedStyle(tablist).maskImage).to.contain("linear-gradient");
+});
+
+it("accepts the Shoelace spelling no-scroll-controls for the same opt-out", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group no-scroll-controls style="display: block; max-inline-size: 220px">
+      ${crowdedTabs()}
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await nextFrames();
+  expect(el.noScrollControls).to.equal(true);
+  expect(el.withoutScrollControls).to.equal(false);
+  expect(scrollControls(el)).to.have.lengthOf(0);
+});
+
+it("never renders scroll controls for a vertical placement", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group placement="start" style="display: block; max-inline-size: 220px">
+      ${crowdedTabs()}
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await nextFrames();
+  expect(scrollControls(el)).to.have.lengthOf(0);
+});
+
+it("scrolls the tablist toward its inline end, then back, in LTR", async () => {
+  const el = await crowded();
+  const forward = await recordScroll(el, "end");
+  expect(forward).to.have.lengthOf(1);
+  expect(forward[0]!.left).to.be.greaterThan(0);
+  const backward = await recordScroll(el, "start");
+  expect(backward).to.have.lengthOf(1);
+  expect(backward[0]!.left).to.be.lessThan(0);
+});
+
+it("scrolls by a viewport-sized step rather than a fixed pixel amount", async () => {
+  const el = await crowded();
+  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const calls = await recordScroll(el, "end");
+  expect(Math.abs(calls[0]!.left!)).to.be.at.most(tablist.clientWidth);
+  expect(Math.abs(calls[0]!.left!)).to.be.at.least(tablist.clientWidth / 2);
+});
+
+it("flips the physical scroll direction under dir=rtl", async () => {
+  const host = await fixture(html`
+    <div dir="rtl">
+      <lr-tab-group style="display: block; max-inline-size: 220px">
+        ${crowdedTabs()}
+      </lr-tab-group>
+    </div>
+  `);
+  const el = host.querySelector("lr-tab-group") as LyraTabGroup;
+  await nextFrames();
+  await el.updateComplete;
+  // Per the CSSOM View spec scrollLeft runs 0 (inline-start) down to -max in RTL, so "next"
+  // (toward the inline end) is a NEGATIVE delta -- the mirror image of the LTR case above.
+  const forward = await recordScroll(el, "end");
+  expect(forward[0]!.left).to.be.lessThan(0);
+  const backward = await recordScroll(el, "start");
+  expect(backward[0]!.left).to.be.greaterThan(0);
+});
+
+it("scrolls instantly under prefers-reduced-motion", async () => {
+  const el = await crowded();
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: query === "(prefers-reduced-motion: reduce)",
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+  try {
+    const calls = await recordScroll(el, "end");
+    // `instant`, not `auto`: `auto` defers to the stylesheet, so a consumer's own
+    // `scroll-behavior: smooth` would animate the very scroll the preference asks not to animate.
+    expect(calls[0]!.behavior).to.equal("instant");
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
+it("scrolls smoothly when motion is allowed", async () => {
+  const el = await crowded();
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+  try {
+    const calls = await recordScroll(el, "end");
+    expect(calls[0]!.behavior).to.equal("smooth");
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
+it("names both scroll controls with localized strings, overridable through .strings", async () => {
+  const el = await crowded();
+  expect(scrollControl(el, "start").getAttribute("aria-label")).to.equal(
+    "Scroll backward"
+  );
+  expect(scrollControl(el, "end").getAttribute("aria-label")).to.equal(
+    "Scroll forward"
+  );
+  el.strings = { scrollPrevious: "Reculer", scrollNext: "Avancer" };
+  await el.updateComplete;
+  expect(scrollControl(el, "start").getAttribute("aria-label")).to.equal(
+    "Reculer"
+  );
+  expect(scrollControl(el, "end").getAttribute("aria-label")).to.equal(
+    "Avancer"
+  );
+});
+
+it("keeps the scroll controls out of the tab order and the accessibility tree", async () => {
+  const el = await crowded();
+  for (const edge of ["start", "end"] as const) {
+    const button = scrollControl(el, edge);
+    expect(button.getAttribute("aria-hidden"), `${edge} aria-hidden`).to.equal(
+      "true"
+    );
+    expect(button.getAttribute("tabindex"), `${edge} tabindex`).to.equal("-1");
+  }
+});
+
+it("never takes focus off the tabs when a scroll control is pressed", async () => {
+  const el = await crowded();
+  const button = scrollControl(el, "end");
+  const mousedown = new MouseEvent("mousedown", {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+  });
+  button.dispatchEvent(mousedown);
+  expect(mousedown.defaultPrevented).to.equal(true);
+});
+
+it("mirrors the chevron through the wrapping glyph part, never the icon itself", async () => {
+  const ltr = await crowded();
+  const ltrStart = getComputedStyle(
+    scrollControl(ltr, "start").querySelector(
+      '[part="scroll-button-glyph"]'
+    ) as HTMLElement
+  ).transform;
+  const ltrEnd = getComputedStyle(
+    scrollControl(ltr, "end").querySelector(
+      '[part="scroll-button-glyph"]'
+    ) as HTMLElement
+  ).transform;
+  expect(ltrStart).to.not.equal(ltrEnd);
+  // The svg the wrapper holds is never itself transformed -- internal/icons.ts ships one
+  // direction-free glyph and the wrapping part is what points it.
+  const icon = scrollControl(ltr, "start").querySelector("svg") as SVGElement;
+  expect(getComputedStyle(icon).transform).to.equal("none");
+
+  const host = await fixture(html`
+    <div dir="rtl">
+      <lr-tab-group style="display: block; max-inline-size: 220px">
+        ${crowdedTabs()}
+      </lr-tab-group>
+    </div>
+  `);
+  const rtl = host.querySelector("lr-tab-group") as LyraTabGroup;
+  await nextFrames();
+  await rtl.updateComplete;
+  const rtlStart = getComputedStyle(
+    scrollControl(rtl, "start").querySelector(
+      '[part="scroll-button-glyph"]'
+    ) as HTMLElement
+  ).transform;
+  expect(rtlStart).to.not.equal(ltrStart);
+});
+
+it("is accessible while the scroll controls are showing", async () => {
+  const el = await crowded();
+  await expect(el).to.be.accessible();
+});
+
+it("lets a consumer's own ::part(scroll-button) rule beat the internal hidden state", async () => {
+  // The internal "not overflowing, so stay out of layout" rule keeps its qualifier in :where(),
+  // so it never out-specifies the ::part() override a consumer would reach for.
+  const host = await fixture(html`
+    <div>
+      <style>
+        lr-tab-group::part(scroll-button) {
+          display: flex;
+        }
+      </style>
+      <lr-tab-group>
+        <div slot="input" label="Input">Raw input</div>
+        <div slot="preview" label="Preview">Rendered preview</div>
+      </lr-tab-group>
+    </div>
+  `);
+  const el = host.querySelector("lr-tab-group") as LyraTabGroup;
+  await nextFrames();
+  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  expect(tablist.hasAttribute("data-scroll-overflow")).to.equal(false);
+  expect(getComputedStyle(scrollControl(el, "start")).display).to.equal("flex");
+});
+
+it("lays the start control before the tabs in LTR and after them under RTL", async () => {
+  const ltr = await crowded();
+  const ltrTablist = ltr.shadowRoot!.querySelector(
+    '[part="tablist"]'
+  ) as HTMLElement;
+  expect(
+    scrollControl(ltr, "start").getBoundingClientRect().left
+  ).to.be.lessThan(ltrTablist.getBoundingClientRect().left);
+
+  const host = await fixture(html`
+    <div dir="rtl">
+      <lr-tab-group style="display: block; max-inline-size: 220px">
+        ${crowdedTabs()}
+      </lr-tab-group>
+    </div>
+  `);
+  const rtl = host.querySelector("lr-tab-group") as LyraTabGroup;
+  await nextFrames();
+  await rtl.updateComplete;
+  const rtlTablist = rtl.shadowRoot!.querySelector(
+    '[part="tablist"]'
+  ) as HTMLElement;
+  // Logical, not physical: "toward the inline start" is the right-hand edge here, so the same
+  // control moves to the other side of the strip with no :dir() rule involved in the layout.
+  expect(
+    scrollControl(rtl, "start").getBoundingClientRect().left
+  ).to.be.greaterThan(rtlTablist.getBoundingClientRect().left);
+});

@@ -4,6 +4,13 @@ import type { LyraOtpInput } from './otp-input.class.js';
 
 const controlOf = (el: Element): HTMLInputElement => el.shadowRoot!.querySelector('[part="control"]') as HTMLInputElement;
 const segmentsOf = (el: Element): HTMLElement[] => [...el.shadowRoot!.querySelectorAll('[part~="segment"]')] as HTMLElement[];
+/** The glyph a segment actually paints through its `::after`, or `''` when it paints nothing.
+ *  Computed style, not stylesheet text — a rule that never matches reads as `''` here. */
+const maskGlyphOf = (segment: HTMLElement): string => {
+  const content = getComputedStyle(segment, '::after').content;
+  if (content === 'none' || content === 'normal' || content === '') return '';
+  return content.replace(/^["']|["']$/g, '');
+};
 
 const type = async (el: LyraOtpInput, text: string): Promise<void> => {
   const control = controlOf(el);
@@ -117,6 +124,70 @@ it('masks the displayed characters without changing the value', async () => {
   expect(filled[0].getAttribute('part')!.split(/\s+/)).to.include('masked');
 });
 
+it('renders the mask glyph in empty segments under with-mask', async () => {
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="PIN" length="4" mask with-mask></lr-otp-input>`);
+  const [first] = segmentsOf(el);
+  expect(first.getAttribute('part')!.split(/\s+/)).to.include('placeholder-mask');
+  // Rendered result, not stylesheet text: an empty segment must actually paint the glyph, so the
+  // field reads as a fixed-length code before any entry.
+  expect(maskGlyphOf(first), 'empty segment under with-mask').to.equal('•');
+  // The real value stays empty -- the glyph is generated content on an aria-hidden box, so it
+  // can never be read back as part of the field's value.
+  expect(el.value).to.equal('');
+  expect(first.textContent).to.equal('');
+  expect(controlOf(el).value).to.equal('');
+  await expect(el).to.be.accessible();
+});
+
+it('keeps empty segments blank when with-mask is not set', async () => {
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="PIN" length="4" mask></lr-otp-input>`);
+  const [first] = segmentsOf(el);
+  expect(first.getAttribute('part')!.split(/\s+/)).to.not.include('placeholder-mask');
+  expect(maskGlyphOf(first), 'empty segment without with-mask').to.equal('');
+});
+
+it('paints the mask glyph on filled segments too', async () => {
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="PIN" length="4" mask with-mask></lr-otp-input>`);
+  await type(el, '12');
+  const segments = segmentsOf(el);
+  expect(maskGlyphOf(segments[0]), 'filled segment').to.equal('•');
+  expect(maskGlyphOf(segments[2]), 'still-empty segment').to.equal('•');
+});
+
+it('honours a custom mask glyph on both filled and empty segments', async () => {
+  const el = await fixture<LyraOtpInput>(html`
+    <lr-otp-input label="PIN" length="4" mask with-mask style="--lr-otp-input-mask-char: '*'"></lr-otp-input>
+  `);
+  await type(el, '1');
+  const segments = segmentsOf(el);
+  expect(maskGlyphOf(segments[0]), 'filled segment').to.equal('*');
+  expect(maskGlyphOf(segments[1]), 'empty segment').to.equal('*');
+});
+
+it('dims the segments and disables the control inside a disabled fieldset', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <fieldset disabled><lr-otp-input name="code" label="Code" length="4"></lr-otp-input></fieldset>
+    </form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  await el.updateComplete;
+  // A fieldset never mutates the control's own `disabled`, exactly like a native <input>.
+  expect(el.disabled, 'own disabled property').to.equal(false);
+  expect(el.effectiveDisabled, 'effective disabled state').to.equal(true);
+  expect(controlOf(el).disabled, 'the real input').to.equal(true);
+  const [first] = segmentsOf(el);
+  expect(Number(getComputedStyle(first).opacity), 'segment opacity').to.be.lessThan(1);
+  expect(getComputedStyle(controlOf(el)).cursor, 'control cursor').to.equal('not-allowed');
+});
+
+it('dims the segments for its own disabled attribute too', async () => {
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4" disabled></lr-otp-input>`);
+  expect(controlOf(el).disabled).to.equal(true);
+  expect(Number(getComputedStyle(segmentsOf(el)[0]).opacity), 'segment opacity').to.be.lessThan(1);
+  expect(getComputedStyle(controlOf(el)).cursor, 'control cursor').to.equal('not-allowed');
+});
+
 it('marks the next segment active only while focused', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4"></lr-otp-input>`);
   await type(el, '12');
@@ -151,4 +222,105 @@ it('is not editable while readonly but still submits', async () => {
   const el = form.querySelector('lr-otp-input') as LyraOtpInput;
   expect(controlOf(el).readOnly).to.equal(true);
   expect(new FormData(form).get('code')).to.equal('4321');
+});
+
+describe('lr-otp-input custom validity', () => {
+  it('raises and clears a consumer-supplied error', async () => {
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4"></lr-otp-input>`);
+    await type(el, '1234');
+    expect(el.validity.valid).to.equal(true);
+
+    el.setCustomValidity('That code has expired.');
+    expect(el.validity.customError, 'customError').to.equal(true);
+    expect(el.validationMessage).to.equal('That code has expired.');
+    expect(el.checkValidity()).to.equal(false);
+
+    el.setCustomValidity('');
+    expect(el.validity.valid, 'cleared').to.equal(true);
+  });
+
+  it('keeps the custom error across the intrinsic recomputation every keystroke runs', async () => {
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4"></lr-otp-input>`);
+    el.setCustomValidity('That code has expired.');
+    await type(el, '12');
+    expect(el.validity.customError, 'survives an incomplete entry').to.equal(true);
+    await type(el, '1234');
+    expect(el.validity.customError, 'survives a complete entry').to.equal(true);
+    expect(el.validationMessage).to.equal('That code has expired.');
+  });
+
+  it('does not let a cleared custom error mark an intrinsically invalid control valid', async () => {
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4" required></lr-otp-input>`);
+    el.setCustomValidity('Server said no.');
+    el.setCustomValidity('');
+    expect(el.validity.valueMissing, 'still required and empty').to.equal(true);
+    expect(el.validity.valid).to.equal(false);
+  });
+});
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the states are a
+// styling convenience that no-ops where either is missing -- an unguarded assertion fails on
+// WebKit rather than skipping.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('lr-otp-input validity custom states', () => {
+  it('publishes required/optional and valid/invalid from the first render', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4" required></lr-otp-input>`);
+    expect(el.matches(':state(required)'), 'required').to.equal(true);
+    expect(el.matches(':state(optional)'), 'optional').to.equal(false);
+    expect(el.matches(':state(invalid)'), 'invalid').to.equal(true);
+    expect(el.matches(':state(valid)'), 'valid').to.equal(false);
+
+    const optional = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4"></lr-otp-input>`);
+    expect(optional.matches(':state(optional)'), 'optional').to.equal(true);
+    expect(optional.matches(':state(required)'), 'required').to.equal(false);
+    expect(optional.matches(':state(valid)'), 'valid').to.equal(true);
+  });
+
+  it('withholds user-valid/user-invalid until the user has actually typed', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4" required></lr-otp-input>`);
+    expect(el.matches(':state(invalid)')).to.equal(true);
+    expect(el.matches(':state(user-invalid)'), 'pristine required must not read as an error').to.equal(false);
+
+    await type(el, '12');
+    expect(el.matches(':state(user-invalid)'), 'an incomplete code after typing').to.equal(true);
+    await type(el, '1234');
+    expect(el.matches(':state(user-valid)'), 'user-valid once complete').to.equal(true);
+    expect(el.matches(':state(user-invalid)')).to.equal(false);
+  });
+
+  it('counts a reportValidity() call -- what a submit attempt runs -- as interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4" required></lr-otp-input>`);
+    expect(el.matches(':state(user-invalid)')).to.equal(false);
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)')).to.equal(true);
+  });
+
+  it('tracks a custom error in valid/invalid', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4"></lr-otp-input>`);
+    await type(el, '1234');
+    expect(el.matches(':state(valid)')).to.equal(true);
+    el.setCustomValidity('Server said no.');
+    expect(el.matches(':state(invalid)'), 'a custom error is an invalid control').to.equal(true);
+    expect(el.matches(':state(user-invalid)'), 'the user has already typed').to.equal(true);
+  });
 });

@@ -34,7 +34,7 @@ import { styles } from './radio-button.styles.js';
  * @cssstate invalid - Matches while it does not — from the very first render, before the user has
  * touched anything.
  * @cssstate user-valid - `valid`, but only after the user has interacted with this control:
- * selecting it, or blurring it.
+ * selecting it, blurring it, or a `reportValidity()` call (which is what a submit attempt runs).
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required control is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.

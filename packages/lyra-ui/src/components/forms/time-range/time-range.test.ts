@@ -1585,3 +1585,137 @@ it('keeps endpoint hit geometry inside a 320px allocation', async () => {
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.scrollWidth).to.be.at.most(base.clientWidth);
 });
+
+// `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
+// where either is missing -- an unguarded assertion fails on WebKit rather than skipping.
+const supportsCustomStates = (() => {
+  try {
+    return typeof CustomStateSet === 'function';
+  } catch {
+    return false;
+  }
+})();
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+describe('lr-time-range setCustomValidity()', () => {
+  it('blocks form submission and becomes the validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-time-range min="0" max="100" start="20" end="80"></lr-time-range></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    form.requestSubmit();
+    expect(submits, 'an otherwise-valid range submits').to.equal(1);
+
+    el.setCustomValidity('That window overlaps an existing booking');
+    expect(el.validationMessage).to.equal('That window overlaps an existing booking');
+    expect(el.validity.customError, 'customError').to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(1);
+  });
+
+  it('survives an intrinsic revalidation', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    el.setCustomValidity('Server says no');
+    el.start = 30;
+    await el.updateComplete;
+    expect(el.validity.customError, 'custom error survives a value change').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // Native `setCustomValidity()` is sticky: `form.reset()` restores values, never the custom
+  // error, which only another `setCustomValidity('')` clears. Matching that here.
+  it('keeps the custom error across a form reset', async () => {
+    const form = (await fixture(html`
+      <form><lr-time-range min="0" max="100" start="20" end="80"></lr-time-range></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    el.setCustomValidity('Server says no');
+    form.reset();
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // This control has no intrinsic constraints of its own (no `required`, no submitted value), so
+  // "restore the computed validity" resolves to valid here -- the point being that clearing
+  // republishes what the control itself computes rather than latching either answer.
+  it('restores the computed validity when cleared', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    el.setCustomValidity('Server says no');
+    expect(el.checkValidity()).to.be.false;
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'custom error cleared').to.be.false;
+    expect(el.checkValidity()).to.be.true;
+    expect(el.validationMessage).to.equal('');
+  });
+
+  it('drives the valid/invalid custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before').to.be.true;
+    expect(el.matches(':state(optional)'), 'no required constraint of its own').to.be.true;
+    expect(el.matches(':state(required)')).to.be.false;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while a custom error is set').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
+  });
+
+  it('withholds user-invalid until the user has actually moved a handle', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    await el.updateComplete;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)')).to.be.true;
+    expect(el.matches(':state(user-invalid)'), 'pristine control must not read as an error').to.be
+      .false;
+
+    const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(el.start, 'the arrow key moved the handle').to.equal(21);
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after a real interaction').to.be.true;
+  });
+});
+
+it('treats a blur as interaction for the user-* validity states', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  await el.updateComplete;
+  el.setCustomValidity('Server says no');
+  expect(el.matches(':state(user-invalid)'), 'pristine').to.be.false;
+
+  const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  handle.focus();
+  handle.blur();
+  expect(el.matches(':state(user-invalid)'), 'focusout is the observable blur signal').to.be.true;
+  expect(el.start, 'blur alone must not move a handle').to.equal(20);
+});

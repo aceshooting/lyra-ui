@@ -86,22 +86,67 @@ export const ChangeEvent: Story = {
   `,
 };
 
+const crowdedTabs = [
+  ['overview', 'Overview'],
+  ['activity', 'Activity history'],
+  ['artifacts', 'Generated artifacts'],
+  ['evaluations', 'Evaluations'],
+  ['settings', 'Workspace settings'],
+  ['permissions', 'Permissions and access'],
+] as const;
+
+const crowdedPanels = () =>
+  crowdedTabs.map(
+    ([id, label]) => html`<div slot=${id} label=${label} style="padding: 0.75rem 0;">${label} panel</div>`,
+  );
+
 export const ScrollableOverflow: Story = {
-  name: 'Scrollable overflow with edge fades',
+  name: 'Scrollable overflow (scroll controls)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A horizontal tab row that does not fit stays natively scrollable and gains a scroll control at each end, mirroring `wa-tab-group`/`sl-tab-group`. Both the controls and the edge fade appear only while the row genuinely overflows, from the same measurement, so a row that fits gets neither. The controls are pointer affordances: they are `aria-hidden` and out of the tab order, because the roving `tabindex` already puts every tab one arrow key away and focusing a tab scrolls it into view.',
+      },
+    },
+  },
   render: () => html`
     <div style="inline-size: 375px; max-inline-size: 100%;">
-      <lr-tab-group>
-        ${[
-          ['overview', 'Overview'],
-          ['activity', 'Activity history'],
-          ['artifacts', 'Generated artifacts'],
-          ['evaluations', 'Evaluations'],
-          ['settings', 'Workspace settings'],
-          ['permissions', 'Permissions and access'],
-        ].map(
-          ([id, label]) => html`<div slot=${id} label=${label} style="padding: 0.75rem 0;">${label} panel</div>`,
-        )}
-      </lr-tab-group>
+      <lr-tab-group>${crowdedPanels()}</lr-tab-group>
+    </div>
+  `,
+};
+
+export const ScrollableOverflowRtl: Story = {
+  name: 'Scrollable overflow under RTL',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '"Previous" and "next" are logical, so both the controls and their chevrons mirror: the control that scrolls toward the tabs\' inline start sits on the right and points right. The chevron is turned by the wrapping `scroll-button-glyph` part, never by the icon itself.',
+      },
+    },
+  },
+  render: () => html`
+    <div dir="rtl" style="inline-size: 375px; max-inline-size: 100%;">
+      <lr-tab-group>${crowdedPanels()}</lr-tab-group>
+    </div>
+  `,
+};
+
+export const WithoutScrollControls: Story = {
+  name: 'Overflow without scroll controls',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`without-scroll-controls` (Shoelace spells it `no-scroll-controls`; both work and neither is deprecated) leaves the overflowing row natively scrollable with the edge fade as its only affordance.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="inline-size: 375px; max-inline-size: 100%;">
+      <lr-tab-group without-scroll-controls>${crowdedPanels()}</lr-tab-group>
     </div>
   `,
 };

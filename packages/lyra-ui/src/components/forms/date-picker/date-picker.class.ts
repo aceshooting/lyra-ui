@@ -65,6 +65,12 @@ export interface LyraDatePickerEventMap {
  *
  * Value is ISO 8601: `YYYY-MM-DD` (single) or `YYYY-MM-DD/YYYY-MM-DD` (range).
  *
+ * Deliberately does **not** perform implicit form submission on Enter (unlike its `<lr-date-input>`
+ * wrapper, which routes through `internal/submit-on-enter.ts`): Enter selects the focused day in
+ * the calendar grid — the grid's own commit key, the same carve-out `<lr-textarea>` has for a
+ * newline. This element is also not form-associated; the wrapping `<lr-date-input>` is what
+ * participates in a `<form>`.
+ *
  * @customElement lr-date-picker
  * @event change - The user committed a value.
  * @event input - The value changed during interaction (range: after the first click).

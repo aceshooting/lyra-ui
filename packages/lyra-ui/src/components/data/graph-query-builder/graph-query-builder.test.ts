@@ -904,3 +904,125 @@ describe('validity custom states', () => {
     expect(host.matches(':state(user-invalid)')).to.be.true;
   });
 });
+
+describe('setCustomValidity()', () => {
+  // Guarded exactly like the validity-custom-states suite above (and internal/form-associated.test.ts):
+  // not every engine ships CustomStateSet, and not every engine that does also parses `:state()`.
+  const supportsCustomStates = ((): boolean => {
+    try {
+      return typeof CustomStateSet === 'function';
+    } catch {
+      return false;
+    }
+  })();
+  const supportsStateSelector = ((): boolean => {
+    try {
+      document.createElement('div').matches(':state(x)');
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-graph-query-builder name="q"></lr-graph-query-builder></form>`,
+    );
+    const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    el.value = query({ startId: 'node-1' });
+    await el.updateComplete;
+    let submits = 0;
+    // Registered before any requestSubmit() below, so a successful submission can never navigate
+    // the test page.
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+    expect(el.checkValidity(), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('No graph is loaded for that tenant.');
+    expect(el.validity.customError).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('No graph is loaded for that tenant.');
+    expect(form.checkValidity()).to.be.false;
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(0);
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validationMessage).to.equal('');
+    form.requestSubmit();
+    expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('keeps a custom error through an intrinsic revalidation', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    // Every value assignment re-runs syncFormState() -- the traffic that would otherwise wipe the
+    // consumer's error out on each edit.
+    el.value = query({ startId: 'node-1' });
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'the intrinsic error cleared').to.be.false;
+    expect(el.validity.customError, 'the custom error survived the recomputation').to.be.true;
+    expect(el.validationMessage).to.equal('Rejected by the server.');
+    expect(el.checkValidity(), 'checkValidity() re-syncs and must not drop it either').to.be.false;
+  });
+
+  it('keeps a custom error across a form reset, matching native setCustomValidity semantics', async () => {
+    // Native `form.reset()` restores a control's value and pristine-ness, but never clears a
+    // consumer-set custom error -- only another `setCustomValidity('')` does. This control matches.
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-graph-query-builder name="q"></lr-graph-query-builder></form>`,
+    );
+    const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    el.value = query({ startId: 'node-1' });
+    await el.updateComplete;
+    el.setCustomValidity('That query is not permitted here.');
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.value.startId, 'the reset cleared the query').to.equal('');
+    expect(el.validity.customError, 'the custom error outlives the reset').to.be.true;
+    expect(el.validationMessage).to.equal('That query is not permitted here.');
+  });
+
+  it('restores the computed validity when a custom error is cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'an empty query has no start anchor to begin with').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validity.valueMissing, 'the empty query is still missing its start anchor').to.be.true;
+    expect(el.checkValidity(), 'clearing the custom error must not force the control valid').to.be.false;
+    expect(el.validationMessage.length, 'the intrinsic message is republished').to.be.greaterThan(0);
+  });
+
+  it('publishes a custom error through the validity custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    el.value = query({ startId: 'node-1' });
+    await el.updateComplete;
+    const host = el as unknown as HTMLElement;
+    expect(host.matches(':state(valid)'), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(host.matches(':state(invalid)'), 'synchronously, not on the next Lit update').to.be.true;
+    expect(host.matches(':state(valid)')).to.be.false;
+    expect(host.matches(':state(user-invalid)'), 'still pristine until the user has a turn').to.be.false;
+
+    el.reportValidity();
+    expect(host.matches(':state(user-invalid)'), 'a reported validation counts as interaction').to.be.true;
+
+    el.setCustomValidity('');
+    expect(host.matches(':state(valid)')).to.be.true;
+    expect(host.matches(':state(user-valid)')).to.be.true;
+    expect(host.matches(':state(user-invalid)')).to.be.false;
+  });
+});

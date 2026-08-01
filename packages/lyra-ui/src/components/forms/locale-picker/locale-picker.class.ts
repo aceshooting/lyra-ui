@@ -419,6 +419,31 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return this.internals.reportValidity();
   }
 
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("that locale is not enabled for your account") that no client-side constraint can
+   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
+   * control fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`
+   * clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a required
+   * picker with nothing committed stays `valueMissing`. The custom error also survives every
+   * intrinsic recomputation in between (each `value`/`required` change re-runs `updateValidity()`)
+   * and a form reset, exactly like a native control — only another `setCustomValidity('')` clears
+   * it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncCustomStates();
+    // `updated()`'s own `data-invalid` branch only runs for a `touched`/`required`/`value` change,
+    // none of which this is, so the styling hook is written here directly; the `requestUpdate()`
+    // re-renders `aria-invalid`, which reads the same freshly-moved `internals.validity`.
+    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    this.requestUpdate();
+  }
+
   /** `locales` normalized to `{ tag, label }[]`: an explicit non-empty catalog wins outright
    *  (in either the `string[]` or `{tag,label}[]` form); otherwise every locale
    *  `getRegisteredLyraLocales()` currently reports. */

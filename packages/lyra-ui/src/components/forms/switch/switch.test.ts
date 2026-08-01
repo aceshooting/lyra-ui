@@ -919,3 +919,78 @@ describe('lr-switch validity custom states', () => {
     expect(el.matches(':state(invalid)')).to.be.true;
   });
 });
+
+describe('lr-switch setCustomValidity()', () => {
+  it('blocks form submission and becomes the validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-switch name="notify" value="yes" checked>Notify me</lr-switch></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-switch') as LyraSwitch;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    form.requestSubmit();
+    expect(submits, 'an otherwise-valid switch submits').to.equal(1);
+
+    el.setCustomValidity('Notifications are disabled for your plan');
+    expect(el.validationMessage).to.equal('Notifications are disabled for your plan');
+    expect(el.validity.customError, 'customError').to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(1);
+  });
+
+  it('survives an intrinsic revalidation', async () => {
+    const el = (await fixture(html`<lr-switch required>Agree</lr-switch>`)) as LyraSwitch;
+    el.setCustomValidity('Server says no');
+    el.checked = true; // clears valueMissing and re-runs the intrinsic recompute
+    expect(el.validity.valueMissing, 'valueMissing cleared').to.be.false;
+    expect(el.validity.customError, 'custom error survives the recompute').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // Native `setCustomValidity()` is sticky: `form.reset()` restores values, never the custom
+  // error, which only another `setCustomValidity('')` clears. Matching that here.
+  it('keeps the custom error across a form reset', async () => {
+    const form = (await fixture(html`
+      <form><lr-switch name="notify">Notify me</lr-switch></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-switch') as LyraSwitch;
+    el.setCustomValidity('Server says no');
+    form.reset();
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`<lr-switch required>Agree</lr-switch>`)) as LyraSwitch;
+    el.setCustomValidity('Server says no');
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'custom error cleared').to.be.false;
+    expect(
+      el.validity.valueMissing,
+      'an empty custom error must not force a still-unchecked required control valid',
+    ).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.not.equal('');
+    el.checked = true;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('drives the valid/invalid custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-switch>Notify me</lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before').to.be.true;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while a custom error is set').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
+  });
+});

@@ -547,6 +547,28 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return valid;
   }
 
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a rejection the
+   * schema cannot express ("the tool rejected these arguments"). A non-empty `message` raises
+   * `customError` and becomes `validationMessage`, so the form fails `checkValidity()`, blocks
+   * submission, and matches `:state(invalid)`; `''` clears it.
+   *
+   * Two layers, not one: this control already raises `customError` intrinsically for a malformed
+   * schema or an unsupported field type, and `setCustomValidity('')` clears only the consumer's own
+   * layer — a still-malformed schema stays invalid, with its own message restored. Clearing
+   * likewise never forces a form with an unmet `required` property valid, and the consumer's error
+   * survives every intrinsic recomputation in between (each field edit re-runs `syncFormState()`)
+   * and a `form.reset()`, matching a native control.
+   *
+   * Whole-control state: the message is deliberately not added to `errors`, which is keyed by the
+   * schema property a message belongs to. It is caller-supplied content, so it is used verbatim and
+   * never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncValidityCustomStates();
+  }
+
   formResetCallback(): void {
     // Cleared before the `value` assignment below, whose setter is what republishes the custom
     // states — a reset form is pristine again, so `user-valid`/`user-invalid` must drop off it.

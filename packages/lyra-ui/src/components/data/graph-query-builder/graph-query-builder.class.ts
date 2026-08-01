@@ -440,6 +440,27 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     return this.internals.reportValidity();
   }
 
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("no graph is loaded for that tenant") that neither of this control's own two
+   * constraints can express. A non-empty `message` raises `customError` and becomes
+   * `validationMessage`, so the builder fails `checkValidity()`, blocks submission, and matches
+   * `:state(invalid)`; `''` clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a query
+   * with no `startId` stays `valueMissing`. The custom error also survives every intrinsic
+   * recomputation in between (each field edit re-runs `syncFormState()`) and a `form.reset()` —
+   * matching a native control, where only another `setCustomValidity('')` clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here. It is
+   * whole-control state and deliberately does not land in `errors`, which is keyed by the csspart
+   * of the field a message belongs to.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncValidityCustomStates();
+  }
+
   formResetCallback(): void {
     // Cleared before the `value` assignment below, whose setter is what republishes the custom
     // states — a reset control is pristine again, so user-valid/user-invalid must drop off it.

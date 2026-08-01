@@ -52,6 +52,17 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @event input - The value changed.
  * @event change - The value changed and the field settled.
  * @event lr-complete - Every segment is filled. `detail: { value }`.
+ * @cssstate required - Matches while `required` is set. Style with `lr-otp-input:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: typing, a blur, or a
+ * `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required field is genuinely invalid, but colouring it red
+ * before the user has entered a digit is hostile.
  * @csspart base - The outer wrapper.
  * @csspart label - The field label.
  * @csspart field - The row of segments.
@@ -61,8 +72,9 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @csspart separator - A literal separator emitted by `format`.
  * @csspart hint - Supporting text.
  * @csspart error - Validation text.
- * @cssprop [--lr-otp-input-mask-char='•'] - The glyph shown for a masked character. Must be a
- * quoted string, because it is used as CSS `content`.
+ * @cssprop [--lr-otp-input-mask-char='•'] - The glyph shown for a masked character, and for every
+ * empty segment while `with-mask` is set. Must be a quoted string, because it is used as CSS
+ * `content`.
  */
 export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   /** Visible label. Prefer the `label` slot for rich content. */
@@ -84,7 +96,10 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   @property({ reflect: true }) case: OtpInputCase = 'preserve';
   /** Show entered characters as the mask glyph instead of their real value. Display-only. */
   @property({ type: Boolean, reflect: true }) mask = false;
-  /** Also show the mask glyph in empty segments, so the field reads as masked before entry. */
+  /**
+   * Also show the mask glyph in empty segments, so the field reads as a fixed-length code before
+   * any entry. Layers on top of `mask` — display-only, and inert on its own.
+   */
   @property({ type: Boolean, reflect: true, attribute: 'with-mask' }) withMask = false;
   /** Display the value without allowing edits. Unlike `disabled`, it still submits and focuses. */
   @property({ type: Boolean, reflect: true }) readonly = false;

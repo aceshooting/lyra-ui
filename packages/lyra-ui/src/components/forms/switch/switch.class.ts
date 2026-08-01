@@ -380,6 +380,28 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     return this.internals.reportValidity();
   }
 
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("notifications are disabled for your plan") that no client-side constraint can
+   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
+   * control fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`
+   * clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * required-and-unchecked switch whose custom error is cleared stays `valueMissing`. The custom
+   * error also survives every intrinsic recomputation in between (each toggle re-runs
+   * `updateValidity()`) and a form reset, exactly like a native control — only another
+   * `setCustomValidity('')` clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.reflectValidityStates();
+    // `aria-invalid` is rendered from `internals.validity`, which the call above just moved.
+    this.requestUpdate();
+  }
+
   private toggle(): void {
     if (this.effectiveDisabled) return;
     this.hasInteracted = true;

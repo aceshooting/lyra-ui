@@ -50,7 +50,9 @@ export const styles = css`
     opacity: 0;
     cursor: text;
   }
-  :host([disabled]) [part='control'] {
+  /* :disabled, not [disabled] -- only the native pseudo-class tracks disablement cascaded from an
+     ancestor <fieldset disabled>, which never touches this element's own attribute. */
+  :host(:disabled) [part='control'] {
     cursor: not-allowed;
   }
 
@@ -80,7 +82,7 @@ export const styles = css`
   [part~='invalid'] {
     border-color: var(--lr-color-danger);
   }
-  :host([disabled]) [part~='segment'] {
+  :host(:disabled) [part~='segment'] {
     opacity: var(--lr-opacity-disabled);
   }
 
@@ -90,10 +92,16 @@ export const styles = css`
   }
 
   /* Masking is display-only: the real characters stay in value and in the input the screen
-     reader reads, exactly like a password field's dots. */
-  [part~='masked']::after {
+     reader reads, exactly like a password field's dots. Generated content rather than rendered
+     text, so the glyph can never reach an accessible name -- the segment boxes are aria-hidden
+     and ::after content is not exposed to assistive technology in the first place.
+     The placeholder-mask token is the same glyph in a segment that holds nothing yet, so the
+     field reads as a fixed-length code before any entry. */
+  [part~='masked']::after,
+  [part~='placeholder-mask']::after {
     content: var(--lr-otp-input-mask-char);
   }
+  /* An unentered glyph is a placeholder, so it sits quieter than an entered character. */
   [part~='placeholder-mask'] {
     color: var(--lr-color-text-quiet);
   }

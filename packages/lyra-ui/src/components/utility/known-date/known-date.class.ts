@@ -9,6 +9,7 @@ import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './known-date.styles.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { isImplicitSubmission, submitOnEnter } from '../../../internal/submit-on-enter.js';
 
 /** The canonical step a `<lr-known-date>` size resolves to. The library-wide
  *  {@linkcode LyraSizeStep} ladder under this component's own export name; the `size` property
@@ -109,6 +110,10 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  * the field order itself (locale-derived) does not. Locale digits such as
  * Arabic-Indic and Persian numerals are accepted and normalized to the
  * canonical ASCII digits used by the ISO form value.
+ *
+ * Pressing Enter in any of the three fields performs the implicit form submission a native
+ * `<input>` would (see `internal/submit-on-enter.ts` — the fields live in a shadow root and have no
+ * form owner, so the platform can never do it here), flushing any pending `change` first.
  *
  * No resizable text-editing surface exists (three fixed-width digit fields),
  * so resize forwarding doesn't apply, and `spellcheck`/`autocapitalize`/
@@ -531,6 +536,14 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
 
   private onFieldKeydown = (field: LyraKnownDateField, e: KeyboardEvent): void => {
     const input = e.currentTarget as HTMLInputElement;
+    if (isImplicitSubmission(e)) {
+      if (this.effectiveDisabled || this.readonly) return;
+      // The composite value is already current (every keystroke re-runs `commitFromFields()`), but
+      // `change` is normally deferred to a field blur -- and an Enter that submits the form is a
+      // commit, so it is flushed here rather than left to fire after the submission, or not at all.
+      submitOnEnter(this, e, { beforeSubmit: () => this.commitChangeIfNeeded() });
+      return;
+    }
     if (e.key === 'Backspace' && this.textFor(field) === '') {
       e.preventDefault();
       this.focusAdjacentField(field, -1);

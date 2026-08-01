@@ -21992,6 +21992,24 @@
             },
             {
               "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a rejection the\nschema cannot express (\"the tool rejected these arguments\"). A non-empty `message` raises\n`customError` and becomes `validationMessage`, so the form fails `checkValidity()`, blocks\nsubmission, and matches `:state(invalid)`; `''` clears it.\n\nTwo layers, not one: this control already raises `customError` intrinsically for a malformed\nschema or an unsupported field type, and `setCustomValidity('')` clears only the consumer's own\nlayer — a still-malformed schema stays invalid, with its own message restored. Clearing\nlikewise never forces a form with an unmet `required` property valid, and the consumer's error\nsurvives every intrinsic recomputation in between (each field edit re-runs `syncFormState()`)\nand a `form.reset()`, matching a native control.\n\nWhole-control state: the message is deliberately not added to `errors`, which is keyed by the\nschema property a message belongs to. It is caller-supplied content, so it is used verbatim and\nnever localized here."
+            },
+            {
+              "kind": "method",
               "name": "setFieldValue",
               "privacy": "private",
               "return": {
@@ -71687,6 +71705,24 @@
             },
             {
               "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a server-side\nrejection (\"that model was retired by the provider\") that no client-side constraint can\nexpress. A non-empty `message` raises `customError` and becomes `validationMessage`, so the\ncontrol fails `checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears\nit.\n\nClearing restores the control's own computed validity rather than forcing it valid: a\n`required` picker with no value stays `valueMissing`. The custom error also survives every\nintrinsic recomputation in between (each `value`/`required` change re-runs `updateValidity()`)\nand a `form.reset()` — matching a native control, where only another `setCustomValidity('')`\nclears it.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
+            },
+            {
+              "kind": "method",
               "name": "show",
               "privacy": "private",
               "return": {
@@ -82942,6 +82978,24 @@
             },
             {
               "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a server-side\nrejection (\"that voice is not enabled for your account\") that no client-side constraint can\nexpress. A non-empty `message` raises `customError` and becomes `validationMessage`, so the\ncontrol fails `checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears\nit.\n\nClearing restores the control's own computed validity rather than forcing it valid: a\n`required` picker with no value stays `valueMissing`. The custom error also survives every\nintrinsic recomputation in between (each `value`/`required` change re-runs `updateValidity()`)\nand a `form.reset()` — matching a native control, where only another `setCustomValidity('')`\nclears it.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
+            },
+            {
+              "kind": "method",
               "name": "show",
               "privacy": "private",
               "return": {
@@ -94186,6 +94240,24 @@
             },
             {
               "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a server-side\nrejection (\"no graph is loaded for that tenant\") that neither of this control's own two\nconstraints can express. A non-empty `message` raises `customError` and becomes\n`validationMessage`, so the builder fails `checkValidity()`, blocks submission, and matches\n`:state(invalid)`; `''` clears it.\n\nClearing restores the control's own computed validity rather than forcing it valid: a query\nwith no `startId` stays `valueMissing`. The custom error also survives every intrinsic\nrecomputation in between (each field edit re-runs `syncFormState()`) and a `form.reset()` —\nmatching a native control, where only another `setCustomValidity('')` clears it.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here. It is\nwhole-control state and deliberately does not land in `errors`, which is keyed by the csspart\nof the field a message belongs to."
+            },
+            {
+              "kind": "method",
               "name": "setValue",
               "privacy": "private",
               "return": {
@@ -105028,7 +105100,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-tree-item>` — internal recursive renderer for `<lr-tree>`.\n\n`role=\"treeitem\"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/\n`aria-posinset` and the roving `tabindex`, driven by `<lr-tree>`) live on\nthe *host* element, not the internal `[part=\"row\"]` div — that makes this\nnode's own nested children (rendered in *its own* shadow root as further\n`role=\"group\"` content) genuine DOM descendants of the treeitem, which is\nwhat the WAI-ARIA treeitem pattern requires (previously a shadow-root\nsibling).",
+          "description": "`<lr-tree-item>` — one row of `<lr-tree>`, in either of two child models.\n\n**Declarative model** (mirrors `wa-tree-item`/`sl-tree-item`, so that markup renames\nmechanically): the row's label is the default slot's content — or the `label` attribute when the\nslot is empty — and the hierarchy is nested `<lr-tree-item>` elements written as light-DOM\nchildren. Those nested children are moved to the internal `children` slot by this component, so\nan author never writes `slot=` themselves, exactly as `<lr-tab-group>` assigns the slots for its\nown `<lr-tab>`/`<lr-tab-panel>` element model. `expanded`, `disabled` and `selected` are plain\nattributes on each element.\n\n**Data model**: `<lr-tree>` assigns an `item` (a `TreeItem` object) and this element renders that\nobject's whole subtree — icon, description, badges and children — into its own shadow root. An\nassigned `item` always wins: light-DOM children and `label`/`disabled`/`selected` are then\nignored, because the object already carries all of it.\n\nDeliberately **not** mirrored from the upstream tree components, none of which have a lyra\nequivalent to rename to: lazy loading (`lazy`, `sl-lazy-load`, `sl-lazy-change`), checkbox\nmulti-select (`sl-tree`'s `selection=\"multiple\"` and the `checkbox` part), the\n`expand-icon`/`collapse-icon` slots, and the `sl-expand`/`sl-collapse`/`sl-after-*` event\nquartet — `lr-node-toggle` carries the same information in one event with an `expanded` flag.\nPer-row icons, secondary descriptions and badges exist only in the data model.\n\n`role=\"treeitem\"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/\n`aria-posinset` and the roving `tabindex`, driven by `<lr-tree>`) live on\nthe *host* element, not the internal `[part=\"row\"]` div — that makes this\nnode's own nested children (rendered in *its own* shadow root, or projected from the light DOM,\nas further `role=\"group\"` content) genuine DOM descendants of the treeitem, which is\nwhat the WAI-ARIA treeitem pattern requires (previously a shadow-root\nsibling).",
           "name": "LyraTreeItem",
           "cssProperties": [
             {
@@ -105131,6 +105203,16 @@
               "name": "toggle"
             }
           ],
+          "slots": [
+            {
+              "description": "The row's label content, in the declarative model. Nested `<lr-tree-item>` children written here are moved to the `children` slot automatically; the `label` attribute is used when no label content is slotted.",
+              "name": ""
+            },
+            {
+              "description": "Where nested `<lr-tree-item>` children are projected. Assigned by this component — authors write the children in the default slot.",
+              "name": "children"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -105192,6 +105274,15 @@
             },
             {
               "kind": "field",
+              "name": "childObserver",
+              "type": {
+                "text": "MutationObserver | undefined"
+              },
+              "privacy": "private",
+              "description": "`slotchange` alone cannot see a child appended with a `slot` attribute already set while this\nnode is collapsed (the `children` slot is not rendered then), nor a label edited in place — a\nchildList observer sees both, and is the same mechanism `<lr-tab-group>` uses for its own\nlight-DOM child model."
+            },
+            {
+              "kind": "field",
               "name": "deferredAfterUpdate",
               "type": {
                 "text": "Map<string, () => void> | undefined"
@@ -105211,6 +105302,17 @@
               },
               "description": "Nesting depth, 0 = top-level. Feeds `aria-level` (`depth + 1`) in `willUpdate()` below and the\n`--lr-tree-depth` custom property, and is passed down `+ 1` to each rendered child --\nper the ARIA spec `aria-level` must be a positive integer, so a NaN/negative `depth` would\nproduce invalid ARIA output (and, recursively, poison every descendant's own depth too).\nClamped to a finite integer `>= 0` (never negative -- `0` is the legitimate top-level value,\nmatching `aria-level=\"1\"`).",
               "attribute": "depth"
+            },
+            {
+              "kind": "field",
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Removes this item from roving focus and prevents select/toggle activation, in the declarative\nmodel. Ignored when an `item` is assigned (`item.disabled` decides then).",
+              "attribute": "disabled",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -105252,10 +105354,28 @@
             },
             {
               "kind": "field",
+              "name": "generatedId",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "hasChildren",
               "type": {
                 "text": "boolean"
               },
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "hasSlottedLabel",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "description": "Whether the default slot has real label content — any element that is not a nested item, or a\nnon-whitespace text node. Read straight off the light DOM rather than from `slotchange` so the\nvery first render already knows, instead of flashing the `label` fallback under slotted text.\nIndentation whitespace around nested items does not count, which is why the fallback still\nrenders for the (extremely common) `<lr-tree-item label=\"…\">` + nested-children shape.",
               "readonly": true
             },
             {
@@ -105272,10 +105392,30 @@
             },
             {
               "kind": "field",
+              "name": "isDisabled",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether this item is disabled, in whichever child model is in use.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "item",
               "type": {
                 "text": "TreeItem"
-              }
+              },
+              "description": "The data model: the whole subtree as one object, assigned by `<lr-tree>` from its `data`. When\nset it wins over the declarative model — `label`/`disabled`/`selected` and any light-DOM\nchildren are ignored, since the object already describes all of them."
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The row's label in the declarative model, used when no label content is slotted. Ignored when\nan `item` object is assigned (`item.label` is the label then).",
+              "attribute": "label"
             },
             {
               "kind": "field",
@@ -105291,6 +105431,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "nodeId",
+              "type": {
+                "text": "string"
+              },
+              "description": "This item's identity, in whichever child model is in use: `item.id` in the data model, or a\ngenerated, per-element id in the declarative one (where the markup carries no id of its own).\n`<lr-tree>` tracks its roving tabindex by this value, and it is the `id` every `lr-node-toggle`\n/ `lr-node-select` / `lr-reorder` detail carries.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "nodeLabel",
+              "type": {
+                "text": "string"
+              },
+              "description": "This item's spoken name, in whichever child model is in use — used for `<lr-tree>`'s reorder\nannouncements. Falls back through `item.accessibleLabel`/`item.label`, then a host\n`aria-label`, the `label` attribute, and finally the slotted label text (nested items excluded).",
+              "readonly": true
             },
             {
               "kind": "field",
@@ -105317,6 +105475,17 @@
                 "text": "number"
               },
               "description": "Feeds `aria-posinset` directly. Per the ARIA spec this must be a positive integer -- unlike\n`aria-setsize`, there is no \"unknown position\" sentinel, so this is always clamped to a\nfinite integer `>= 1`."
+            },
+            {
+              "kind": "field",
+              "name": "selected",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether this item is the current selection, in the declarative model — it renders the selected\nstate and is exposed as `aria-selected`. Ignored when an `item` is assigned (`item.selected`\ndecides then, and is left off `aria-selected` entirely when undefined).",
+              "attribute": "selected",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -105387,6 +105556,17 @@
             },
             {
               "kind": "method",
+              "name": "assignChildSlots",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Moves nested `<lr-tree-item>` children onto the `children` slot so the default slot can stay\nthe label, the way the upstream markup this mirrors expects. Writing `slot` here rather than\nasking consumers to is what keeps that markup a pure tag rename (same approach as\n`<lr-tab-group>`'s element model), and it is idempotent, so the mutation observer that sees the\nwrite does not re-enter."
+            },
+            {
+              "kind": "method",
               "name": "beginAbortableLoad",
               "privacy": "protected",
               "return": {
@@ -105399,6 +105579,16 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "childItems",
+              "return": {
+                "type": {
+                  "text": "LyraTreeItem[]"
+                }
+              },
+              "description": "This node's child `<lr-tree-item>` elements, in whichever child model is in use: rendered into\nthis node's own shadow root from `item.children` (data model), or authored as its own light-DOM\nchildren (declarative model). Only ever direct children — a grandchild lives inside its own\nparent's shadow root, or under its own parent element."
             },
             {
               "kind": "method",
@@ -105467,6 +105657,24 @@
                 }
               },
               "description": "See `cascadeUpdateComplete` and the matching override on `<lr-tree>`."
+            },
+            {
+              "kind": "method",
+              "name": "isChildItem",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": {
+                    "text": "Node"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -105555,6 +105763,25 @@
             },
             {
               "kind": "method",
+              "name": "renderRow",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "content",
+                  "type": {
+                    "text": "{\n    icon: unknown;\n    label: unknown;\n    description: unknown;\n    badges: unknown;\n  }"
+                  }
+                }
+              ],
+              "description": "The row itself, shared by both child models — same disclosure toggle, hit area, indent\nplumbing and click-to-select behavior either way. `icon`/`description`/`badges` only ever\ncome from the data model; the declarative one passes `nothing` for all three."
+            },
+            {
+              "kind": "method",
               "name": "scheduleAfterUpdate",
               "privacy": "protected",
               "return": {
@@ -105611,12 +105838,30 @@
               "fieldName": "depth"
             },
             {
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Removes this item from roving focus and prevents select/toggle activation, in the declarative\nmodel. Ignored when an `item` is assigned (`item.disabled` decides then).",
+              "fieldName": "disabled"
+            },
+            {
               "name": "expanded",
               "type": {
                 "text": "boolean"
               },
               "default": "false",
               "fieldName": "expanded"
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The row's label in the declarative model, used when no label content is slotted. Ignored when\nan `item` object is assigned (`item.label` is the label then).",
+              "fieldName": "label"
             },
             {
               "name": "locale",
@@ -105630,6 +105875,15 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "name": "selected",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether this item is the current selection, in the declarative model — it renders the selected\nstate and is exposed as `aria-selected`. Ignored when an `item` is assigned (`item.selected`\ndecides then, and is left off `aria-selected` entirely when undefined).",
+              "fieldName": "selected"
             }
           ],
           "superclass": {
@@ -105686,7 +105940,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.\n\nImplements the WAI-ARIA treeitem keyboard pattern: a single roving\n`tabindex` (tracked here as `activeId`, pushed down to every\n`<lr-tree-item>` — including nested ones, recursively) and\nArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated\n`keydown` listener. Native `KeyboardEvent`s are `composed: true` and\nbubble across shadow-DOM boundaries, so a press inside a deeply-nested\n`<lr-tree-item>`'s own shadow root still reaches this listener.\n\nSet `reorderable` to opt into keyboard reordering: Ctrl/Cmd+ArrowUp/ArrowDown on the focused\nnode emits `lr-reorder` — a *request*, exactly like every other event here. `data` is\nhost-owned and never mutated by this component, so nothing moves until the host reassigns a\nreordered `data`; focus then follows the moved node. The keybinding matches\n`<lr-dashboard-grid>`'s `cells-draggable` precedent (Alt+Arrow is browser back/forward on\nWindows/Linux). `<lr-file-tree>` deliberately **opts out**: its `TreeItem[]` is derived from\n`nodes` on every render and keyed by filesystem path, an order it does not own.",
+          "description": "`<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.\n\n**Two child models are accepted.** Nested `<lr-tree-item>` elements written as light-DOM children\nmirror `wa-tree`/`sl-tree`, so that markup renames mechanically; each item carries its own\n`label`/`expanded`/`disabled`/`selected` (see `<lr-tree-item>`). Assigning `data` — a `TreeItem[]`\nof plain objects, which additionally supports per-row icons, descriptions and badges — is this\nlibrary's own original shape and remains fully supported. A tree containing any author-written\n`<lr-tree-item>` child is read purely as the declarative model and `data` is ignored, so the two\nnever interleave ambiguously; the empty state renders only when neither model has any items.\n\nImplements the WAI-ARIA treeitem keyboard pattern: a single roving\n`tabindex` (tracked here as `activeId`, pushed down to every\n`<lr-tree-item>` — including nested ones, recursively) and\nArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated\n`keydown` listener. Native `KeyboardEvent`s are `composed: true` and\nbubble across shadow-DOM boundaries, so a press inside a deeply-nested\n`<lr-tree-item>`'s own shadow root still reaches this listener.\n\nSet `reorderable` to opt into keyboard reordering: Ctrl/Cmd+ArrowUp/ArrowDown on the focused\nnode emits `lr-reorder` — a *request*, exactly like every other event here. `data` is\nhost-owned and never mutated by this component, so nothing moves until the host reassigns a\nreordered `data`; focus then follows the moved node. The keybinding matches\n`<lr-dashboard-grid>`'s `cells-draggable` precedent (Alt+Arrow is browser back/forward on\nWindows/Linux). `<lr-file-tree>` deliberately **opts out**: its `TreeItem[]` is derived from\n`nodes` on every render and keyed by filesystem path, an order it does not own.",
           "name": "LyraTree",
           "cssParts": [
             {
@@ -105694,13 +105948,13 @@
               "name": "base"
             },
             {
-              "description": "The empty-state message shown when `data` is empty.",
+              "description": "The empty-state message shown when neither child model has any items.",
               "name": "empty"
             }
           ],
           "slots": [
             {
-              "description": "`<lr-tree-item>` elements (top-level tree items).",
+              "description": "Top-level `<lr-tree-item>` elements, each nesting its own children — the declarative child model. Leave it empty and assign `data` instead for the object model.",
               "name": ""
             }
           ],
@@ -105726,6 +105980,15 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "childObserver",
+              "type": {
+                "text": "MutationObserver | undefined"
+              },
+              "privacy": "private",
+              "description": "`slotchange` sees an assignment change but not a child that never becomes assigned -- a node\nmoved here still carrying its old parent item's `slot=\"children\"` is exactly that, and\n`refreshAuthoredItems()` is what un-strands it. A childList observer sees the append itself,\nso the two together cover both. Direct children only (no `subtree`): a nested item's own\nchurn is its own parent element's business."
             },
             {
               "kind": "field",
@@ -105775,6 +106038,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "generatedNodes",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new WeakSet<LyraTreeItem>()",
+              "description": "The `<lr-tree-item>` elements `syncNodes()` created from `data`. Everything else among this\nelement's children was written by the author, which is what puts the tree in the declarative\nchild model -- an identity set is the only reliable way to tell the two apart, since a\ngenerated node and an authored one are the same tag."
+            },
+            {
+              "kind": "field",
+              "name": "hasAuthoredItems",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "Whether the tree is being driven by author-written `<lr-tree-item>` children rather than by\n`data` (see the class doc's child-model note). Recomputed from the light DOM, never guessed."
             },
             {
               "kind": "field",
@@ -105828,7 +106109,14 @@
                 "text": "LyraTreeItem[]"
               },
               "privacy": "private",
+              "description": "Top-level items only. Deliberately `:scope >`: in the declarative child model nested items are\nlight-DOM descendants of *this* element too, and a plain descendant query would flatten the\nwhole hierarchy into the top-level set (wrong `aria-setsize`/`aria-posinset`, wrong roving\norder). In the data model the two queries are equivalent, since nested items are rendered into\ntheir own parent's shadow root.",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "onChildrenChanged",
+              "privacy": "private",
+              "description": "Children changed: re-derive which child model is in play, and (via the requested update)\nre-resolve the roving tabindex. Covers author-written items arriving from the HTML parser or\na framework re-render *after* this element first updated -- the case `willUpdate()`'s\nsynchronous read cannot see -- and the active node being removed, which changes nothing\nabout `hasAuthoredItems` and so would otherwise schedule no update at all."
             },
             {
               "kind": "field",
@@ -106064,7 +106352,7 @@
               "privacy": "private",
               "return": {
                 "type": {
-                  "text": "{ parentId: string | null; siblings: TreeItem[]; index: number } | undefined"
+                  "text": "{ parentId: string | null; total: number; index: number } | undefined"
                 }
               },
               "parameters": [
@@ -106090,6 +106378,25 @@
                 }
               ],
               "description": "The sibling list `id` belongs to, plus its position in it and its parent's\nid (`null` at the top level). This is the *sibling* index space, which is\nwhat a reorder operates in -- deliberately not the flattened visible-list\nindex space the arrow keys navigate, since that one crosses parents and\nskips collapsed subtrees."
+            },
+            {
+              "kind": "method",
+              "name": "findSlottedSiblings",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "{ parentId: string | null; total: number; index: number } | undefined"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": {
+                    "text": "LyraTreeItem"
+                  }
+                }
+              ],
+              "description": "The declarative child model's answer to `findSiblings()`: the sibling list is the node's own\nparent element's child items (or the top-level ones), in the same sibling index space."
             },
             {
               "kind": "method",
@@ -106234,6 +106541,17 @@
             },
             {
               "kind": "method",
+              "name": "refreshAuthoredItems",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Recomputed from the DOM rather than tracked incrementally: children can be added by the parser,\nby a framework re-render, or by `syncNodes()` itself, and only the generated-node set is a\nreliable discriminator."
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -106290,6 +106608,17 @@
                 }
               ],
               "description": "Emit a sibling-scoped reorder *request* for `node`, `delta` slots later\n(`+1`) or earlier (`-1`) among its own parent's children.\n\nDeliberately constrained to one sibling list. Ctrl+ArrowDown on the last\nchild of a subtree is otherwise ambiguous -- the visually next row is a\ntop-level uncle, so \"move down\" could mean either \"swap with the next\nsibling\" (there is none) or \"reparent up a level\". Reparenting is a\nstructural edit, not a reorder, and there is no keyboard affordance that\ndistinguishes the two, so a request that would leave the sibling list is\nsimply not made: no event, no announcement, focus stays put -- exactly\nlike a plain ArrowDown on the last visible row."
+            },
+            {
+              "kind": "method",
+              "name": "resolveActiveFromDom",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "The declarative child model's answer to the `data`-driven `activeId` resolution below: there is\nno `data` change to hang it off, so it is re-derived from the DOM on every update instead. If\n`activeId` no longer names a currently *visible* node -- removed, disabled, or hidden inside a\ncollapsed ancestor -- the first visible one takes over, so the tree never ends up with zero\n`tabindex=\"0\"` stops and silently drops out of the tab order. Deliberately in `willUpdate()`\nrather than `updated()`: the nodes are light-DOM children, so they already exist before this\nelement renders, and assigning here folds into the current update instead of scheduling\nanother one."
             },
             {
               "kind": "method",
@@ -109488,6 +109817,24 @@
             },
             {
               "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a server-side\nrejection (\"that combination of topics is not available\") that no client-side constraint can\nexpress. A non-empty `message` raises `customError` and becomes `validationMessage`, so the\ngroup fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`\nclears it.\n\nClearing restores the group's own computed validity rather than forcing it valid: a required\ngroup with nothing checked stays `valueMissing`. The custom error also survives every\nintrinsic recomputation in between (`sync()` re-runs on each child toggle, slot change and\n`name`/`required` change) and a form reset, exactly like a native control — only another\n`setCustomValidity('')` clears it.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
+            },
+            {
+              "kind": "method",
               "name": "sync",
               "privacy": "private",
               "return": {
@@ -110471,6 +110818,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a server-side\nrejection (\"those terms have been superseded\") that no client-side constraint can express. A\nnon-empty `message` raises `customError` and becomes `validationMessage`, so the control fails\n`checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''` clears it.\n\nClearing restores the control's own computed validity rather than forcing it valid: a\nrequired-and-unchecked checkbox whose custom error is cleared stays `valueMissing`. The custom\nerror also survives every intrinsic recomputation in between (each toggle re-runs\n`updateValidity()`) and a form reset, exactly like a native control — only another\n`setCustomValidity('')` clears it.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
             },
             {
               "kind": "method",
@@ -113581,7 +113946,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-combobox>` — a filterable single/multi select that combines a text\ninput with a listbox. Mirrors the core `<wa-combobox>` API under `lr-`.\n\nOptions are `<lr-option value>` children. Emits native-style `change`/`input`\n(like Web Awesome) plus `lr-show`/`lr-hide`/`lr-clear`.\nStandard size tiers share their outer control height with sibling Lyra controls; the decorative\nexpand icon scales inside that allocation without creating an independent action target.",
+          "description": "`<lr-combobox>` — a filterable single/multi select that combines a text\ninput with a listbox. Mirrors the core `<wa-combobox>` API under `lr-`.\n\nOptions are `<lr-option value>` children. Emits native-style `change`/`input`\n(like Web Awesome) plus `lr-show`/`lr-hide`/`lr-clear`.\nEnter commits the highlighted option while the listbox has one; with nothing highlighted it\nperforms the implicit form submission a native text field would (see\n`internal/submit-on-enter.ts` — the internal input is in a shadow root and has no form owner, so\nthe platform can never do it here).\nStandard size tiers share their outer control height with sibling Lyra controls; the decorative\nexpand icon scales inside that allocation without creating an independent action target.",
           "name": "LyraCombobox",
           "cssProperties": [
             {
@@ -115139,6 +115504,24 @@
             },
             {
               "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a rejection no\nclient-side constraint can express (\"that option is no longer available\"). A non-empty\n`message` raises `customError` and becomes `validationMessage`, so the control fails\n`checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears it.\n\nClearing restores the control's own computed validity rather than forcing it valid: a\n`required` combobox with nothing chosen stays `valueMissing`. The custom error also survives\nevery intrinsic recomputation in between (each selection/`required` change re-runs\n`updateValidity()`) and a `form.reset()` — matching a native control, where only another\n`setCustomValidity('')` clears it.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
+            },
+            {
+              "kind": "method",
               "name": "setRangeText",
               "return": {
                 "type": {
@@ -116639,7 +117022,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-date-input>` — a date field with an attached calendar popover.\nMirrors the core `<wa-date-input>` API under `lr-`. Value is ISO 8601\n(`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` in range mode). Form-associated.\n\nThis component uses a single text field; typing accepts ISO or a\nlocale-parseable date.\n\n`size` uses the same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`,\ndefault `m`. The calendar-toggle and clear buttons keep a constant touch-target size at every\ntier (mirroring `lr-input`'s own password-toggle button), so only the field's density scales.",
+          "description": "`<lr-date-input>` — a date field with an attached calendar popover.\nMirrors the core `<wa-date-input>` API under `lr-`. Value is ISO 8601\n(`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` in range mode). Form-associated.\n\nThis component uses a single text field; typing accepts ISO or a\nlocale-parseable date. Enter commits the typed text and then performs the implicit form\nsubmission a native `<input>` would (see `internal/submit-on-enter.ts` — the internal input is\nin a shadow root and has no form owner, so the platform can never do it here); the commit runs\nfirst so the submitted value is the date the field visibly shows.\n\n`size` uses the same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`,\ndefault `m`. The calendar-toggle and clear buttons keep a constant touch-target size at every\ntier (mirroring `lr-input`'s own password-toggle button), so only the field's density scales.",
           "name": "LyraDateInput",
           "cssProperties": [
             {
@@ -116973,6 +117356,16 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "enterCommittedText",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null",
+              "description": "Raw text the Enter key already committed, or `null`. Lets `onInputChange()` recognise -- and\nignore -- the native `change` the browser fires for that very same keystroke, which would\notherwise re-commit the identical text and emit a second `input`/`change` pair."
             },
             {
               "kind": "field",
@@ -118457,7 +118850,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-date-picker>` — an inline month-grid calendar for picking a single date\nor a date range. Mirrors the core `<wa-date-picker>` API under `lr-`.\n\nValue is ISO 8601: `YYYY-MM-DD` (single) or `YYYY-MM-DD/YYYY-MM-DD` (range).",
+          "description": "`<lr-date-picker>` — an inline month-grid calendar for picking a single date\nor a date range. Mirrors the core `<wa-date-picker>` API under `lr-`.\n\nValue is ISO 8601: `YYYY-MM-DD` (single) or `YYYY-MM-DD/YYYY-MM-DD` (range).\n\nDeliberately does **not** perform implicit form submission on Enter (unlike its `<lr-date-input>`\nwrapper, which routes through `internal/submit-on-enter.ts`): Enter selects the focused day in\nthe calendar grid — the grid's own commit key, the same carve-out `<lr-textarea>` has for a\nnewline. This element is also not form-associated; the wrapping `<lr-date-input>` is what\nparticipates in a `<form>`.",
           "name": "LyraDatePicker",
           "cssProperties": [
             {
@@ -121958,7 +122351,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-input>` — a single-line plain-text input primitive, the `lr-*` equivalent of a plain\n`wa-input`, form-associated via the `FormAssociated` mixin (same shape as `<lr-textarea>`).\n\nShips the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lr-textarea>`/\n`<lr-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`\nparts) — left unset, the chrome stays hidden. `size` uses the same `xs`–`xl` scale as\n`<lr-select>`/`<lr-combobox>`, and `appearance` the shared fill/border vocabulary.\n`type=\"password\"` renders a `password-toggle` eye-icon button — opt-in via the\n`password-toggle` attribute — that flips the internal native input between\n`type=\"password\"`/`type=\"text\"` and tracks `passwordVisible`. `type=\"email\"`/`type=\"number\"`\n(with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own\nbrowser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`\n— as do `minlength`/`maxlength`/`pattern`, which constrain the text-bearing types.\n`type=\"search\"`/`type=\"time\"` forward straight through to the native input with no additional\nchrome or validation, the same as `type=\"text\"`.\n\nA host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\n\nForwards the full native selection/editing surface (`selectionStart`/`selectionEnd`,\n`setSelectionRange()`, `setRangeText()`), the same as `<lr-textarea>`, in addition to\n`focus()`/`blur()`/`select()`, `showPicker()`, and `stepUp()`/`stepDown()`.\n\nPressing Enter submits the ancestor `<form>`, the implicit submission a native `<input>`\nperforms — the internal input is inside a shadow root and has no form owner of its own, so the\nplatform can never do it here.",
+          "description": "`<lr-input>` — a single-line plain-text input primitive, the `lr-*` equivalent of a plain\n`wa-input`, form-associated via the `FormAssociated` mixin (same shape as `<lr-textarea>`).\n\nShips the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lr-textarea>`/\n`<lr-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`\nparts) — left unset, the chrome stays hidden. `size` uses the same `xs`–`xl` scale as\n`<lr-select>`/`<lr-combobox>`, and `appearance` the shared fill/border vocabulary.\n`type=\"password\"` renders a `password-toggle` eye-icon button — opt-in via the\n`password-toggle` attribute — that flips the internal native input between\n`type=\"password\"`/`type=\"text\"` and tracks `passwordVisible`. `type=\"email\"`/`type=\"number\"`\n(with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own\nbrowser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`\n— as do `minlength`/`maxlength`/`pattern`, which constrain the text-bearing types.\n`type=\"search\"`/`type=\"time\"` forward straight through to the native input with no additional\nchrome or validation, the same as `type=\"text\"`.\n\nA host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\n\nForwards the full native selection/editing surface (`selectionStart`/`selectionEnd`,\n`setSelectionRange()`, `setRangeText()`), the same as `<lr-textarea>`, in addition to\n`focus()`/`blur()`/`select()`, `showPicker()`, and `stepUp()`/`stepDown()`.\n\nPressing Enter submits the ancestor `<form>`, the implicit submission a native `<input>`\nperforms — the internal input is inside a shadow root and has no form owner of its own, so the\nplatform can never do it here. The form's first enabled submit control becomes\n`SubmitEvent.submitter` (an `<lr-button type=\"submit\">` included, via its own `click()`), a\nmodifier-held or IME-composition Enter is ignored, and a form with no submit button submits only\nfrom a single field — all of it the platform's own rules, shared with every other lyra text\ncontrol through `internal/submit-on-enter.ts`.",
           "name": "LyraInput",
           "cssProperties": [
             {
@@ -122428,7 +122821,7 @@
               "kind": "field",
               "name": "onKeyDown",
               "privacy": "private",
-              "description": "Implicit form submission. A native `<input>` submits its form owner on Enter; the internal\ninput here lives in a shadow root, so it has no form owner and the platform never does it —\nwithout this, Enter in an `<lr-input>` inside a `<form>` silently does nothing, which reads as\na broken form. `requestSubmit()` (not `submit()`) is deliberate: it fires the `submit` event\nand runs interactive constraint validation, so a form with an invalid field is blocked exactly\nas it would be by a real submit button."
+              "description": "Implicit form submission, through the shared `internal/submit-on-enter.ts` gate every other\ntext-bearing control in the library now routes through — so the modifier/IME/veto rules and\nthe submitter resolution (including an `<lr-button type=\"submit\">`, which `requestSubmit()`\nrefuses as a submitter) are one implementation rather than one per component."
             },
             {
               "kind": "field",
@@ -124017,7 +124410,7 @@
               "kind": "field",
               "name": "onKeyDown",
               "privacy": "private",
-              "description": "Implicit form submission. A native `<input>` submits its form owner on Enter; the internal\ninput here lives in a shadow root, so it has no form owner and the platform never does it —\nwithout this, Enter in an `<lr-input>` inside a `<form>` silently does nothing, which reads as\na broken form. `requestSubmit()` (not `submit()`) is deliberate: it fires the `submit` event\nand runs interactive constraint validation, so a form with an invalid field is blocked exactly\nas it would be by a real submit button.",
+              "description": "Implicit form submission, through the shared `internal/submit-on-enter.ts` gate every other\ntext-bearing control in the library now routes through — so the modifier/IME/veto rules and\nthe submitter resolution (including an `<lr-button type=\"submit\">`, which `requestSubmit()`\nrefuses as a submitter) are one implementation rather than one per component.",
               "inheritedFrom": {
                 "name": "LyraInput",
                 "module": "src/components/forms/input/input.class.ts"
@@ -125837,7 +126230,7 @@
               "kind": "field",
               "name": "onKeyDown",
               "privacy": "private",
-              "description": "Implicit form submission. A native `<input>` submits its form owner on Enter; the internal\ninput here lives in a shadow root, so it has no form owner and the platform never does it —\nwithout this, Enter in an `<lr-input>` inside a `<form>` silently does nothing, which reads as\na broken form. `requestSubmit()` (not `submit()`) is deliberate: it fires the `submit` event\nand runs interactive constraint validation, so a form with an invalid field is blocked exactly\nas it would be by a real submit button.",
+              "description": "Implicit form submission, through the shared `internal/submit-on-enter.ts` gate every other\ntext-bearing control in the library now routes through — so the modifier/IME/veto rules and\nthe submitter resolution (including an `<lr-button type=\"submit\">`, which `requestSubmit()`\nrefuses as a submitter) are one implementation rather than one per component.",
               "inheritedFrom": {
                 "name": "LyraInput",
                 "module": "src/components/forms/input/input.class.ts"
@@ -128256,6 +128649,24 @@
             },
             {
               "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a server-side\nrejection (\"that locale is not enabled for your account\") that no client-side constraint can\nexpress. A non-empty `message` raises `customError` and becomes `validationMessage`, so the\ncontrol fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`\nclears it.\n\nClearing restores the control's own computed validity rather than forcing it valid: a required\npicker with nothing committed stays `valueMissing`. The custom error also survives every\nintrinsic recomputation in between (each `value`/`required` change re-runs `updateValidity()`)\nand a form reset, exactly like a native control — only another `setCustomValidity('')` clears\nit.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
+            },
+            {
+              "kind": "method",
               "name": "show",
               "privacy": "private",
               "return": {
@@ -128491,7 +128902,7 @@
           "name": "LyraOtpInput",
           "cssProperties": [
             {
-              "description": "The glyph shown for a masked character. Must be a quoted string, because it is used as CSS `content`.",
+              "description": "The glyph shown for a masked character, and for every empty segment while `with-mask` is set. Must be a quoted string, because it is used as CSS `content`.",
               "name": "--lr-otp-input-mask-char",
               "default": "'•'"
             }
@@ -128940,7 +129351,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "Also show the mask glyph in empty segments, so the field reads as masked before entry.",
+              "description": "Also show the mask glyph in empty segments, so the field reads as a fixed-length code before\nany entry. Layers on top of `mask` — display-only, and inert on its own.",
               "attribute": "with-mask",
               "reflects": true
             },
@@ -129384,8 +129795,34 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "Also show the mask glyph in empty segments, so the field reads as masked before entry.",
+              "description": "Also show the mask glyph in empty segments, so the field reads as a fixed-length code before\nany entry. Layers on top of `mask` — display-only, and inert on its own.",
               "fieldName": "withMask"
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Matches while `required` is set. Style with `lr-otp-input:state(required)`.",
+              "name": "required"
+            },
+            {
+              "description": "Matches while `required` is not set — the complement of `required`.",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints, including any `setCustomValidity()` error.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while it does not — from the very first render, before the user has touched anything.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted: typing, a blur, or a `reportValidity()` call (which is what a submit attempt runs).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid` after that same interaction. Style validation errors with this rather than `invalid`: a pristine required field is genuinely invalid, but colouring it red before the user has entered a digit is hostile.",
+              "name": "user-invalid"
             }
           ],
           "mixins": [
@@ -129442,7 +129879,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-phone-input>` — a country-aware telephone field whose form value is\ncanonical E.164. National formatting and numbering-plan validation are\nsupplied through `adapter`; without one, already-international E.164 input\nremains useful and national input stays editable with `incomplete` validity.\n\nUser edits emit native-style `input` and `change` events. Event detail\nexposes both the canonical `value` and editable `inputValue`; programmatic\nproperty changes are silent. Phone-number text is deliberately LTR while\nthe form chrome and country selector follow the inherited direction. A host\n`aria-label` names the internal telephone input and wins over every derived\nor component-specific fallback.\n\nThe country selector keeps the real, fully accessible native `<select>`\n(full country names in its popup, native mobile pickers, type-ahead) but\nrenders it invisibly over a compact visual trigger — selected alpha-2 code\nplus a design-system chevron — so long localized country names never clip\nthe closed control and the calling code isn't shown twice. With `flags`\nset, the trigger also shows the selected country's `<lr-flag>`; actual flag\nartwork still comes from the optional `@aceshooting/lyra-flags` peer,\nregistered by the consumer via `components/media/flag/flag-peer.js`\nexactly as for a standalone `<lr-flag>` (without that registration the\ntrigger simply omits the image). Native `<option>`s cannot contain\nelements, so the open popup remains text-only by platform design.",
+          "description": "`<lr-phone-input>` — a country-aware telephone field whose form value is\ncanonical E.164. National formatting and numbering-plan validation are\nsupplied through `adapter`; without one, already-international E.164 input\nremains useful and national input stays editable with `incomplete` validity.\n\nUser edits emit native-style `input` and `change` events. Event detail\nexposes both the canonical `value` and editable `inputValue`; programmatic\nproperty changes are silent. Phone-number text is deliberately LTR while\nthe form chrome and country selector follow the inherited direction. A host\n`aria-label` names the internal telephone input and wins over every derived\nor component-specific fallback. Pressing Enter performs the implicit form submission a native\n`<input type=\"tel\">` would (see `internal/submit-on-enter.ts` — the internal input is in a\nshadow root and has no form owner, so the platform can never do it here).\n\nThe country selector keeps the real, fully accessible native `<select>`\n(full country names in its popup, native mobile pickers, type-ahead) but\nrenders it invisibly over a compact visual trigger — selected alpha-2 code\nplus a design-system chevron — so long localized country names never clip\nthe closed control and the calling code isn't shown twice. With `flags`\nset, the trigger also shows the selected country's `<lr-flag>`; actual flag\nartwork still comes from the optional `@aceshooting/lyra-flags` peer,\nregistered by the consumer via `components/media/flag/flag-peer.js`\nexactly as for a standalone `<lr-flag>` (without that registration the\ntrigger simply omits the image). Native `<option>`s cannot contain\nelements, so the open popup remains text-only by platform design.",
           "name": "LyraPhoneInput",
           "cssProperties": [
             {
@@ -130043,6 +130480,12 @@
               "kind": "field",
               "name": "onInput",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onKeyDown",
+              "privacy": "private",
+              "description": "Implicit form submission, through the shared gate in `internal/submit-on-enter.ts` — the\ninternal telephone input lives in a shadow root and has no form owner, so the platform can\nnever run its own. A modifier-held or IME-composition Enter is ignored there, which matters\nmore here than elsewhere: this field's `inputmode=\"tel\"` keyboards are exactly the ones an IME\ncandidate list sits on top of."
             },
             {
               "kind": "field",
@@ -131747,6 +132190,20 @@
             },
             {
               "kind": "method",
+              "name": "checkValidity",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "description": "Whether the radio currently satisfies its constraints — the silent query, so it deliberately\ndoes not count as interaction for the `user-*` custom states.",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "click",
               "return": {
                 "type": {
@@ -132023,6 +132480,20 @@
             },
             {
               "kind": "method",
+              "name": "reportValidity",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "description": "`checkValidity()`, plus the browser's own validation UI on failure.",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "safeAttachInternals",
               "privacy": "private",
               "return": {
@@ -132072,6 +132543,28 @@
                   "text": "void"
                 }
               },
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a server-side\nrejection (\"that plan is no longer available\") that no client-side constraint can express. A\nnon-empty `message` raises `customError` and becomes `validationMessage`, so the control fails\n`checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''` clears it.\n\nClearing restores the control's own computed validity rather than forcing it valid: a\nrequired-and-unselected radio whose custom error is cleared stays `valueMissing`. The custom\nerror also survives every intrinsic recomputation in between (each selection, and every\ngroup-driven `required` change, re-runs `updateValidity()`) and a form reset, exactly like a\nnative control — only another `setCustomValidity('')` clears it.\n\nThis lives on the radio rather than on `<lr-radio-group>` because the group is not itself\nform-associated: it designates one member as the group's validity owner and that radio is what\nparticipates in the owning form.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here.",
               "inheritedFrom": {
                 "name": "LyraRadio",
                 "module": "src/components/forms/radio/radio.class.ts"
@@ -132182,7 +132675,7 @@
               }
             },
             {
-              "description": "`valid`, but only after the user has interacted with this control: selecting it, or blurring it.",
+              "description": "`valid`, but only after the user has interacted with this control: selecting it, blurring it, or a `reportValidity()` call (which is what a submit attempt runs).",
               "name": "user-valid",
               "inheritedFrom": {
                 "name": "LyraRadio",
@@ -133617,6 +134110,16 @@
             },
             {
               "kind": "method",
+              "name": "checkValidity",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "description": "Whether the radio currently satisfies its constraints — the silent query, so it deliberately\ndoes not count as interaction for the `user-*` custom states."
+            },
+            {
+              "kind": "method",
               "name": "click",
               "return": {
                 "type": {
@@ -133857,6 +134360,16 @@
             },
             {
               "kind": "method",
+              "name": "reportValidity",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "description": "`checkValidity()`, plus the browser's own validation UI on failure."
+            },
+            {
+              "kind": "method",
               "name": "safeAttachInternals",
               "privacy": "private",
               "return": {
@@ -133902,6 +134415,24 @@
                   "text": "void"
                 }
               }
+            },
+            {
+              "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a server-side\nrejection (\"that plan is no longer available\") that no client-side constraint can express. A\nnon-empty `message` raises `customError` and becomes `validationMessage`, so the control fails\n`checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''` clears it.\n\nClearing restores the control's own computed validity rather than forcing it valid: a\nrequired-and-unselected radio whose custom error is cleared stays `valueMissing`. The custom\nerror also survives every intrinsic recomputation in between (each selection, and every\ngroup-driven `required` change, re-runs `updateValidity()`) and a form reset, exactly like a\nnative control — only another `setCustomValidity('')` clears it.\n\nThis lives on the radio rather than on `<lr-radio-group>` because the group is not itself\nform-associated: it designates one member as the group's validity owner and that radio is what\nparticipates in the owning form.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
             },
             {
               "kind": "method",
@@ -134032,7 +134563,7 @@
               "name": "invalid"
             },
             {
-              "description": "`valid`, but only after the user has interacted with this radio: selecting it, or blurring it.",
+              "description": "`valid`, but only after the user has interacted with this radio: selecting it, blurring it, or a `reportValidity()` call (which is what a submit attempt runs).",
               "name": "user-valid"
             },
             {
@@ -135026,6 +135557,24 @@
             },
             {
               "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a server-side\nrejection (\"this item was already annotated by someone else\") that no per-key rule can\nexpress. A non-empty `message` raises `customError` and becomes `validationMessage`, so the\nrubric fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`\nclears it.\n\nClearing restores the rubric's own computed validity rather than forcing it valid: unanswered\nrequired keys (and any key with an unsupported `type`) still hold it invalid. The custom error\nalso survives every intrinsic recomputation in between (each `value`/`keys` write re-runs\n`syncFormState()`) and a form reset, exactly like a native control — only another\n`setCustomValidity('')` clears it.\n\nIndependent of the per-key `errors` map, which stays a read-out of this rubric's own field\nrules: a message set here is form-level and is not attributed to any one key.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
+            },
+            {
+              "kind": "method",
               "name": "setFieldValue",
               "privacy": "private",
               "return": {
@@ -135232,7 +135781,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-select>` — a plain closed-list dropdown: a direct `<lr-*>`\ncounterpart to `<wa-select>`/`<wa-option>`. Trigger is a button (not a text\ninput) -- click/Enter/Space/ArrowDown opens it, there's no typing-to-filter.\nA printable keypress instead jumps (or, while closed, directly selects) the\nnext option whose label starts with what's been typed, like a native\n`<select>`'s type-ahead.\n\nOptions are `<lr-option value>` children, the same element `<lr-combobox>`\nuses. Unlike `lr-combobox` there is no filter/source/empty-text/max-render\nsurface -- see `<lr-combobox>` for the filterable case.\n\n`multiple` turns the committed `value` into a `string[]` and renders one\nchip per selection inside the trigger. Because that trigger is a real\n`<button>`, the chips are deliberately non-interactive: a nested remove\nbutton would be invalid interactive-content nesting and unreachable by\nkeyboard or AT anyway, since the outer button intercepts every\nclick/Enter/Space first. Removal instead has three affordances -- pick the\nselected row again to toggle it off, press Backspace/Delete on the trigger\nto drop the last selection, or use the `with-clear` button to drop all of\nthem. `getTag` customizes a chip's content under the same\nnon-interactive-content constraint; `max-options-visible` caps how many\nchips render before the rest collapse behind a localized \"+N\" chip.\n\n`with-clear`'s button renders inside the trigger's inline-end padding,\noutboard of the expand icon, as a sibling of the trigger rather than a child\nof it -- for the same nesting reason.\n\nReuses `lr-combobox`'s popup positioning (`internal/positioner.js`) and\nclick-outside/Escape/Home/End/Arrow-key listbox navigation patterns,\nadapted to a trigger button that keeps DOM focus throughout (the listbox's\n\"active\" row is conveyed via `aria-activedescendant`, never actual focus),\nmatching the WAI-ARIA \"select-only combobox\" pattern.\n\nWhen `autoCommitSingleOption` is set and exactly one option is enabled\n(regardless of how many disabled ones exist alongside it), the popup never\nopens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the trigger\ncommits that sole option directly, and the trigger renders as a plain\n`role=\"button\"` with no chevron/`aria-haspopup`/`aria-expanded` rather than\na combobox with a permanently inert popup state — opening a one-row list to\npick the only available choice is pure friction with no real decision\nbehind it. This never changes `value`/validity defaults on its own — an\nunselected single-option select stays unselected (and a `required` one\nstays invalid) exactly like the multi-option case, until the trigger is\nactually activated. `autoCommitSingleOption` defaults to `false`: by\ndefault a select always renders the normal combobox/listbox/chevron\ntrigger no matter how many options are enabled, matching pre-1.3.0\nbehavior — opt in explicitly if a narrowing-to-one option list should\nauto-commit.",
+          "description": "`<lr-select>` — a plain closed-list dropdown: a direct `<lr-*>`\ncounterpart to `<wa-select>`/`<wa-option>`. Trigger is a button (not a text\ninput) -- click/Enter/Space/ArrowDown opens it, there's no typing-to-filter.\nA printable keypress instead jumps (or, while closed, directly selects) the\nnext option whose label starts with what's been typed, like a native\n`<select>`'s type-ahead.\n\nOptions are `<lr-option value>` children, the same element `<lr-combobox>`\nuses. Unlike `lr-combobox` there is no filter/source/empty-text/max-render\nsurface -- see `<lr-combobox>` for the filterable case.\n\n`multiple` turns the committed `value` into a `string[]` and renders one\nchip per selection inside the trigger. Because that trigger is a real\n`<button>`, the chips are deliberately non-interactive: a nested remove\nbutton would be invalid interactive-content nesting and unreachable by\nkeyboard or AT anyway, since the outer button intercepts every\nclick/Enter/Space first. Removal instead has three affordances -- pick the\nselected row again to toggle it off, press Backspace/Delete on the trigger\nto drop the last selection, or use the `with-clear` button to drop all of\nthem. `getTag` customizes a chip's content under the same\nnon-interactive-content constraint; `max-options-visible` caps how many\nchips render before the rest collapse behind a localized \"+N\" chip.\n\n`with-clear`'s button renders inside the trigger's inline-end padding,\noutboard of the expand icon, as a sibling of the trigger rather than a child\nof it -- for the same nesting reason.\n\nReuses `lr-combobox`'s popup positioning (`internal/positioner.js`) and\nclick-outside/Escape/Home/End/Arrow-key listbox navigation patterns,\nadapted to a trigger button that keeps DOM focus throughout (the listbox's\n\"active\" row is conveyed via `aria-activedescendant`, never actual focus),\nmatching the WAI-ARIA \"select-only combobox\" pattern.\n\nWhen `autoCommitSingleOption` is set and exactly one option is enabled\n(regardless of how many disabled ones exist alongside it), the popup never\nopens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the trigger\ncommits that sole option directly, and the trigger renders as a plain\n`role=\"button\"` with no chevron/`aria-haspopup`/`aria-expanded` rather than\na combobox with a permanently inert popup state — opening a one-row list to\npick the only available choice is pure friction with no real decision\nbehind it. This never changes `value`/validity defaults on its own — an\nunselected single-option select stays unselected (and a `required` one\nstays invalid) exactly like the multi-option case, until the trigger is\nactually activated. `autoCommitSingleOption` defaults to `false`: by\ndefault a select always renders the normal combobox/listbox/chevron\ntrigger no matter how many options are enabled, matching pre-1.3.0\nbehavior — opt in explicitly if a narrowing-to-one option list should\nauto-commit.\n\nDeliberately does **not** perform implicit form submission on Enter (unlike `<lr-input>`/\n`<lr-combobox>`/`<lr-date-input>`, which route through `internal/submit-on-enter.ts`): the\ntrigger is a `role=\"combobox\"` button where Enter opens the listbox and, once open, commits the\nactive option — the ARIA combobox behavior its upstream counterpart follows. Submitting there\nwould shadow the only keyboard way to open the list.",
           "name": "LyraSelect",
           "cssProperties": [
             {
@@ -136599,6 +137148,24 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a rejection no\nclient-side constraint can express (\"that option is no longer available\"). A non-empty\n`message` raises `customError` and becomes `validationMessage`, so the control fails\n`checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears it.\n\nClearing restores the control's own computed validity rather than forcing it valid: a\n`required` select with nothing chosen stays `valueMissing`. The custom error also survives\nevery intrinsic recomputation in between (each selection/`required` change re-runs\n`updateValidity()`) and a `form.reset()` — matching a native control, where only another\n`setCustomValidity('')` clears it.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
             },
             {
               "kind": "method",
@@ -139939,6 +140506,24 @@
             },
             {
               "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a server-side\nrejection (\"notifications are disabled for your plan\") that no client-side constraint can\nexpress. A non-empty `message` raises `customError` and becomes `validationMessage`, so the\ncontrol fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`\nclears it.\n\nClearing restores the control's own computed validity rather than forcing it valid: a\nrequired-and-unchecked switch whose custom error is cleared stays `valueMissing`. The custom\nerror also survives every intrinsic recomputation in between (each toggle re-runs\n`updateValidity()`) and a form reset, exactly like a native control — only another\n`setCustomValidity('')` clears it.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
+            },
+            {
+              "kind": "method",
               "name": "syncFormState",
               "privacy": "private",
               "return": {
@@ -141493,7 +142078,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-time-range>` — a two-handle brush/scrubber over a numeric domain.\nCallers map their own time axis to `[min, max]`; no date logic lives here\n(matches the no-date-library constraint used elsewhere in this library).\n\nOptionally paired with a row of discrete presets (`presets`) — e.g. \"Last\n7 days\" / \"Last 30 days\" — rendered above the track; picking one is just a\nshortcut that sets both handles at once, the continuous brush underneath\nis unaffected and both interaction modes coexist.\n\nForm-associated only for the `<fieldset disabled>` cascade, not for a\nsubmitted value: it attaches `ElementInternals` (like `<lr-combobox>`'s\nminimal pattern, rather than the single-string-value `FormAssociated`\nmixin, which doesn't fit a two-handle range) purely so an ancestor\n`<fieldset disabled>` disables both handles and every preset button\nthrough `effectiveDisabled`, the same way it would a native `<input>`,\nwithout touching the consumer-facing `disabled` property/attribute itself.\nUnlike `<lr-combobox>`, it never calls `internals.setFormValue()` and\nhas no `name` — the selected range is not included in the owning form's\n`FormData` on submit; read `start`/`end` directly (e.g. from `lr-change`)\ninstead of relying on native form submission.\n\nDeliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle\naccessible-name overrides, not visible label text, the same carve-out `<lr-slider>` states for\nits own single-handle `label`; a labeled-field consumer wraps this element in their own layout.",
+          "description": "`<lr-time-range>` — a two-handle brush/scrubber over a numeric domain.\nCallers map their own time axis to `[min, max]`; no date logic lives here\n(matches the no-date-library constraint used elsewhere in this library).\n\nOptionally paired with a row of discrete presets (`presets`) — e.g. \"Last\n7 days\" / \"Last 30 days\" — rendered above the track; picking one is just a\nshortcut that sets both handles at once, the continuous brush underneath\nis unaffected and both interaction modes coexist.\n\nForm-associated for the `<fieldset disabled>` cascade and for validation, not for a submitted\nvalue: it attaches `ElementInternals` (like `<lr-combobox>`'s minimal pattern, rather than the\nsingle-string-value `FormAssociated` mixin, which doesn't fit a two-handle range) so that an\nancestor `<fieldset disabled>` disables both handles and every preset button through\n`effectiveDisabled` the same way it would a native `<input>`, without touching the\nconsumer-facing `disabled` property/attribute itself. Unlike `<lr-combobox>`, it never calls\n`internals.setFormValue()` and has no `name` — the selected range is not included in the owning\nform's `FormData` on submit; read `start`/`end` directly (e.g. from `lr-change`) instead of\nrelying on native form submission.\n\nIt has no constraints of its own — every reachable range is a legal one, so `checkValidity()`\npasses unless a consumer has set an error through `setCustomValidity()`. That method is the\nwhole point of the validity surface here: a range this component cannot know is wrong (an\noverlapping booking, a window the server rejects) still blocks submission of the form the\nelement sits in.\n\nDeliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle\naccessible-name overrides, not visible label text, the same carve-out `<lr-slider>` states for\nits own single-handle `label`; a labeled-field consumer wraps this element in their own layout.",
           "name": "LyraTimeRange",
           "cssProperties": [
             {
@@ -141704,12 +142289,30 @@
             },
             {
               "kind": "field",
+              "name": "form",
+              "type": {
+                "text": "HTMLFormElement | null"
+              },
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "formAssociated",
               "type": {
                 "text": "boolean"
               },
               "static": true,
               "default": "true"
+            },
+            {
+              "kind": "field",
+              "name": "hasInteracted",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "Whether the user has acted on this control yet, which is what gates the `user-valid`/\n`user-invalid` custom states: a committed handle move, a preset pick, a blur, or a\n`reportValidity()` call. A range a consumer has already rejected is genuinely invalid, but\nstyling it as an error before the user has done anything is hostile, which is the entire\nreason the `user-*` pair exists. Not a reactive property: nothing in `render()` reads it."
             },
             {
               "kind": "field",
@@ -141725,12 +142328,28 @@
             },
             {
               "kind": "field",
+              "name": "internals",
+              "type": {
+                "text": "ElementInternals"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "keyboardChanged",
               "type": {
                 "text": "boolean"
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "labels",
+              "type": {
+                "text": "NodeList"
+              },
+              "readonly": true
             },
             {
               "kind": "field",
@@ -141746,6 +142365,11 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "markInteracted",
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -141877,11 +142501,44 @@
             },
             {
               "kind": "field",
+              "name": "validationMessage",
+              "type": {
+                "text": "string"
+              },
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "validity",
+              "type": {
+                "text": "ValidityState"
+              },
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "validityController",
+              "type": {
+                "text": "AnchoredValidityController"
+              },
+              "privacy": "private",
+              "default": "new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR](), )"
+            },
+            {
+              "kind": "field",
               "name": "valueFormatter",
               "type": {
                 "text": "TimeRangeValueFormatter | undefined"
               },
               "description": "Optional human-readable formatter for each handle's `aria-valuetext`. Receives the same\nfinite, clamped number exposed through `aria-valuenow` plus `'start'`/`'end'`; leaving it\nunset preserves the numeric-only slider contract. Return `null`/`undefined` to omit\n`aria-valuetext` for a handle."
+            },
+            {
+              "kind": "field",
+              "name": "willValidate",
+              "type": {
+                "text": "boolean"
+              },
+              "readonly": true
             },
             {
               "kind": "method",
@@ -141960,6 +142617,16 @@
                 }
               },
               "description": "Removes focus from the start handle."
+            },
+            {
+              "kind": "method",
+              "name": "checkValidity",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "description": "Whether the control currently satisfies its constraints — the silent query, so it\ndeliberately does not count as interaction for the `user-*` custom states."
             },
             {
               "kind": "method",
@@ -142194,6 +142861,17 @@
             },
             {
               "kind": "method",
+              "name": "reflectValidityStates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,\n`user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. `required` is\nalways `false` here — this control has no such constraint — so it is permanently\n`:state(optional)`, which is the honest answer rather than a missing one."
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -142228,6 +142906,16 @@
             },
             {
               "kind": "method",
+              "name": "reportValidity",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "description": "`checkValidity()`, plus the browser's own validation UI on failure."
+            },
+            {
+              "kind": "method",
               "name": "scheduleAfterUpdate",
               "privacy": "protected",
               "return": {
@@ -142252,6 +142940,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the only validation channel this control\nhas, since every reachable range is intrinsically legal (see the class comment). A non-empty\n`message` raises `customError` and becomes `validationMessage`, so the control fails\n`checkValidity()`, blocks submission of the form it sits in, and matches `:state(invalid)`;\n`''` clears it and republishes the control's own computed validity.\n\nThe error survives handle moves, preset picks and a form reset, exactly like a native control\n— only another `setCustomValidity('')` clears it. A consumer re-validating a range on every\n`lr-input` therefore calls this with the new message (or `''`) each time rather than relying\non the movement itself to clear it.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
             },
             {
               "kind": "method",
@@ -142383,6 +143089,32 @@
               "fieldName": "step"
             }
           ],
+          "cssStates": [
+            {
+              "description": "Never matches: this control has no `required` constraint of its own. Kept so the six-state vocabulary is the same on every form-associated control in the library.",
+              "name": "required"
+            },
+            {
+              "description": "Always matches — the complement of `required`.",
+              "name": "optional"
+            },
+            {
+              "description": "Matches while the control satisfies its constraints, i.e. unless a `setCustomValidity()` error is set.",
+              "name": "valid"
+            },
+            {
+              "description": "Matches while a `setCustomValidity()` error is set.",
+              "name": "invalid"
+            },
+            {
+              "description": "`valid`, but only after the user has interacted: moving a handle, picking a preset, blurring the control, or a `reportValidity()` call (which is what a submit attempt runs).",
+              "name": "user-valid"
+            },
+            {
+              "description": "`invalid` after that same interaction. Style validation errors with this rather than `invalid`: a range the consumer rejected before the user touched anything is genuinely invalid, but colouring it red on first paint is hostile.",
+              "name": "user-invalid"
+            }
+          ],
           "superclass": {
             "name": "LyraElement",
             "module": "/src/internal/lyra-element.js"
@@ -142431,7 +143163,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-token-input>` — an editable, form-associated list of removable tokens.",
+          "description": "`<lr-token-input>` — an editable, form-associated list of removable tokens.\n\nEnter commits the typed draft into a token while there is one; with the draft empty it performs\nthe implicit form submission a native text field would (see `internal/submit-on-enter.ts` — the\ninternal input is in a shadow root and has no form owner, so the platform can never do it here).\nA `delimiter` keystroke stays purely a commit key and never submits.",
           "name": "LyraTokenInput",
           "cssProperties": [
             {
@@ -143588,6 +144320,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a rejection no\nclient-side constraint can express (\"that tag is reserved\"). A non-empty `message` raises\n`customError` and becomes `validationMessage`, so the control fails `checkValidity()`, blocks\nsubmission, and matches `:state(invalid)`; `''` clears it.\n\nClearing restores the control's own computed validity rather than forcing it valid: a\n`required` control with no tokens stays `valueMissing`. The custom error also survives every\nintrinsic recomputation in between (each token add/remove/edit re-runs `syncValidity()`) and a\n`form.reset()` — matching a native control, where only another `setCustomValidity('')` clears\nit.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
             },
             {
               "kind": "method",
@@ -164525,7 +165275,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-tab-group>` — a tab strip whose panels are direct light-DOM children,\neach carrying `slot=\"<id>\"` (the panel's stable id) and `label=\"<text>\"`\n(the tab button's text). One named `<slot>` is rendered per distinct\n`slot` name found among the current children — a child with no `label`,\nor a name with no matching child, simply never produces a tab.\n\nA tab button's *visible* content can carry a leading icon without ever\nchanging its *accessible name* (which always stays exactly `label`'s\ntext, nothing else): give a tab an extra direct-child sibling of\n`<lr-tab-group>` carrying `slot=\"<id>-icon\"` (that sibling's own content --\nan inline SVG, an emoji span, a custom icon element, anything -- is\nentirely up to the consumer). It's rendered ahead of the label inside\nthat tab's button, wrapped in an `aria-hidden=\"true\"` part so it's\nexcluded from accessible-name computation no matter what it contains. A\ntab with no matching `<id>-icon` sibling renders no icon wrapper at all,\nso existing text-only tabs are completely unaffected. (A named slot,\nrather than a second attribute holding an icon-name lookup, was chosen\nbecause this library's `internal/icons.ts` is a small closed set of\nchrome glyphs for this library's *own* components, not a public\nname-keyed registry -- a slot lets a consumer supply an arbitrary,\ndomain-specific icon instead of being limited to that internal set.)\n\nImplements the WAI-ARIA APG tabs pattern. With the default `activation=\"auto\"`, Left/Right\n(swapped under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection\ntogether; with `activation=\"manual\"` they move focus only and Enter/Space commits, which the APG\nrequires whenever revealing a panel is expensive. Home/End jump to the first/last enabled tab,\nand a roving `tabindex` follows the focused tab.\n\n**Two child models are accepted.** `<lr-tab panel=\"x\">` plus `<lr-tab-panel name=\"x\">` mirrors\n`wa-tab-group`/`sl-tab-group`, so that markup renames mechanically; the group assigns the `slot`\nattributes itself. The attribute model described above is this library's own original shape and\nremains fully supported. A group containing any `<lr-tab>` child is read purely as the element\nmodel, so the two never interleave ambiguously.",
+          "description": "`<lr-tab-group>` — a tab strip whose panels are direct light-DOM children,\neach carrying `slot=\"<id>\"` (the panel's stable id) and `label=\"<text>\"`\n(the tab button's text). One named `<slot>` is rendered per distinct\n`slot` name found among the current children — a child with no `label`,\nor a name with no matching child, simply never produces a tab.\n\nA tab button's *visible* content can carry a leading icon without ever\nchanging its *accessible name* (which always stays exactly `label`'s\ntext, nothing else): give a tab an extra direct-child sibling of\n`<lr-tab-group>` carrying `slot=\"<id>-icon\"` (that sibling's own content --\nan inline SVG, an emoji span, a custom icon element, anything -- is\nentirely up to the consumer). It's rendered ahead of the label inside\nthat tab's button, wrapped in an `aria-hidden=\"true\"` part so it's\nexcluded from accessible-name computation no matter what it contains. A\ntab with no matching `<id>-icon` sibling renders no icon wrapper at all,\nso existing text-only tabs are completely unaffected. (A named slot,\nrather than a second attribute holding an icon-name lookup, was chosen\nbecause this library's `internal/icons.ts` is a small closed set of\nchrome glyphs for this library's *own* components, not a public\nname-keyed registry -- a slot lets a consumer supply an arbitrary,\ndomain-specific icon instead of being limited to that internal set.)\n\nImplements the WAI-ARIA APG tabs pattern. With the default `activation=\"auto\"`, Left/Right\n(swapped under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection\ntogether; with `activation=\"manual\"` they move focus only and Enter/Space commits, which the APG\nrequires whenever revealing a panel is expensive. Home/End jump to the first/last enabled tab,\nand a roving `tabindex` follows the focused tab.\n\n**Two child models are accepted.** `<lr-tab panel=\"x\">` plus `<lr-tab-panel name=\"x\">` mirrors\n`wa-tab-group`/`sl-tab-group`, so that markup renames mechanically; the group assigns the `slot`\nattributes itself. The attribute model described above is this library's own original shape and\nremains fully supported. A group containing any `<lr-tab>` child is read purely as the element\nmodel, so the two never interleave ambiguously.\n\n**Overflow.** A horizontal tab row that does not fit stays natively scrollable and gains two\nscroll controls flanking the tablist inside `[part=\"nav\"]`, mirroring both upstreams. They are\nrendered only for a horizontal `placement` (a vertical strip scrolls in the block direction,\nwhich these controls do not address — the same restriction both upstreams apply) and are laid out\nonly while the tablist genuinely overflows, gated on the measurement the edge fade already uses,\nso a row that fits is never flanked by two dead buttons. `without-scroll-controls` (or Shoelace's\n`no-scroll-controls`) opts out, leaving the pre-8.0.0 behavior: native scrolling plus the fade.\nThe fade is deliberately kept alongside the controls — it says \"the row continues past this\nedge\", which the controls themselves cannot show, and both appear on exactly the same condition.\n\n**The scroll controls are `aria-hidden=\"true\"` and `tabindex=\"-1\"`** — a pointer affordance only,\nmatching upstream. The tablist is already fully keyboard-scrollable without them: the roving\n`tabindex` puts every tab one arrow key away, and focusing a tab scrolls it into view. Adding two\ntab stops in the middle of the strip would therefore buy no capability and cost every keyboard\nuser two extra stops between the tabs and the panel. They still carry a localized `aria-label`,\nso the name is there for automation and for a consumer that chooses to expose them.",
           "name": "LyraTabGroup",
           "cssProperties": [
             {
@@ -164555,8 +165305,28 @@
               "name": "base"
             },
             {
+              "description": "The row wrapping the tablist together with the two overflow scroll controls; mirrors the upstream part of the same name.",
+              "name": "nav"
+            },
+            {
               "description": "A single `role=\"tabpanel\"` wrapper (one per tab, hidden unless active).",
               "name": "panel"
+            },
+            {
+              "description": "Shared part on both overflow scroll controls.",
+              "name": "scroll-button"
+            },
+            {
+              "description": "The control that scrolls the tabs toward their inline end (\"next\" — the left-hand control under RTL).",
+              "name": "scroll-button-end"
+            },
+            {
+              "description": "The chevron wrapper inside a scroll control. This is the element that mirrors under RTL; the icon itself never rotates.",
+              "name": "scroll-button-glyph"
+            },
+            {
+              "description": "The control that scrolls the tabs toward their inline start (\"previous\" — the right-hand control under RTL).",
+              "name": "scroll-button-start"
             },
             {
               "description": "A single tab button.",
@@ -164746,6 +165516,23 @@
             },
             {
               "kind": "field",
+              "name": "noScrollControls",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Shoelace's spelling of `withoutScrollControls`, read alongside it so a consumer arriving from\neither upstream finds their own attribute working. Neither is deprecated.",
+              "attribute": "no-scroll-controls",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "onScrollControlMouseDown",
+              "privacy": "private",
+              "description": "Pressing a control must not pull focus off the tab the user was on: Chromium focuses a button\non mousedown, and focus landing on an `aria-hidden` element leaves assistive technology with\nno focus context at all. Suppressing the default keeps the roving tabindex where it was; the\nclick still fires."
+            },
+            {
+              "kind": "field",
               "name": "onTabListKeyDown",
               "privacy": "private"
             },
@@ -164793,6 +165580,16 @@
             },
             {
               "kind": "field",
+              "name": "scrollControlsSuppressed",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "description": "Whether either upstream's opt-out attribute is set. Both are read; neither wins.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "stopLocaleSubscription",
               "type": {
                 "text": "() => void | undefined"
@@ -164830,6 +165627,17 @@
               },
               "privacy": "private",
               "default": "[]"
+            },
+            {
+              "kind": "field",
+              "name": "withoutScrollControls",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Suppresses the overflow scroll controls, leaving an overflowing tab row natively scrollable\nwith the edge fade as its only affordance. Web Awesome's spelling of the flag.",
+              "attribute": "without-scroll-controls",
+              "reflects": true
             },
             {
               "kind": "method",
@@ -165152,6 +165960,25 @@
             },
             {
               "kind": "method",
+              "name": "renderScrollControl",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult | typeof nothing"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "edge",
+                  "type": {
+                    "text": "'start' | 'end'"
+                  }
+                }
+              ],
+              "description": "One overflow scroll control, or nothing at all when this group cannot have them (see the class\ndoc: vertical placement, or either upstream's opt-out attribute). Whether a *rendered* control\nis laid out is a separate, purely visual question the stylesheet answers from the tablist's own\noverflow measurement."
+            },
+            {
+              "kind": "method",
               "name": "renderTab",
               "privacy": "private",
               "return": {
@@ -165194,6 +166021,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "scrollTabs",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "edge",
+                  "type": {
+                    "text": "'start' | 'end'"
+                  }
+                }
+              ],
+              "description": "Scrolls the tab row one step toward `edge`. Native scrolling does the work -- there is no\nscroll listener and no scroll-position state anywhere in this component.\n\n`edge` is logical, so it is `effectiveDirection` that turns it into a physical delta: per the\nCSSOM View spec (what every browser this library targets implements) `scrollLeft` under RTL\nruns 0 at the inline start down to -max at the inline end, so \"toward the end\" is a *negative*\nleft delta there -- the mirror image of the LTR case, and the reason this cannot be a constant.\n\n`instant` rather than `auto` for the reduced-motion branch: `auto` defers to the stylesheet, so\na consumer's own `scroll-behavior: smooth` on the tablist would animate the very scroll the\npreference asks not to animate."
             },
             {
               "kind": "method",
@@ -165304,6 +166150,15 @@
               }
             },
             {
+              "name": "no-scroll-controls",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Shoelace's spelling of `withoutScrollControls`, read alongside it so a consumer arriving from\neither upstream finds their own attribute working. Neither is deprecated.",
+              "fieldName": "noScrollControls"
+            },
+            {
               "name": "placement",
               "type": {
                 "text": "TabGroupPlacement"
@@ -165311,6 +166166,15 @@
               "default": "'top'",
               "description": "Which edge the tab strip sits on. `start`/`end` are logical and mirror under RTL; both make\nthe tablist vertical, which swaps the navigation keys to Up/Down per the APG.",
               "fieldName": "placement"
+            },
+            {
+              "name": "without-scroll-controls",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Suppresses the overflow scroll controls, leaving an overflowing tab row natively scrollable\nwith the edge fade as its only affordance. Web Awesome's spelling of the flag.",
+              "fieldName": "withoutScrollControls"
             }
           ],
           "superclass": {
@@ -193810,7 +194674,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-popup>` — the low-level anchored-positioning primitive.\n\nIt positions its `popup` slot against an anchor and keeps the two aligned through scroll,\nresize and layout change. That is *all* it does: no dismiss behaviour, no focus management, no\nARIA relationship, no trigger semantics. Those are policy, and policy belongs to the component\nbuilt on top — `<lr-popover>`, `<lr-dropdown>` and `<lr-tooltip>` each layer their own.\n\nReach for it when you need a floating surface the library does not already ship: an anchored\ninline editor, a colour-picker panel, a custom autocomplete list. If you find yourself adding\nlight dismiss and focus return on top, use `<lr-popover>` instead.",
+          "description": "`<lr-popup>` — the low-level anchored-positioning primitive.\n\nIt positions its `popup` slot against an anchor and keeps the two aligned through scroll,\nresize and layout change. That is *all* it does: no dismiss behaviour, no focus management, no\nARIA relationship, no trigger semantics. Those are policy, and policy belongs to the component\nbuilt on top — `<lr-popover>`, `<lr-dropdown>` and `<lr-tooltip>` each layer their own.\n\nReach for it when you need a floating surface the library does not already ship: an anchored\ninline editor, a colour-picker panel, a custom autocomplete list. If you find yourself adding\nlight dismiss and focus return on top, use `<lr-popover>` instead.\n\nTwo defaults deliberately diverge from the upstream primitive this mirrors, because changing\neither would silently move every popup already shipped on top of this element:\n`strategy` defaults to `fixed` rather than `absolute`, and `shift-padding`, when unset, inherits\n`padding` (`8`) rather than falling to `0`. Set `strategy=\"absolute\"` / `shift-padding=\"0\"` to\nget the upstream defaults exactly. `auto-size` likewise narrows an always-on measurement rather\nthan switching one on: this element has always published the available space as\n`--lr-positioner-available-inline-size`/`--lr-positioner-available-block-size` and capped the\npopup with them, so `auto-size` re-measures the named axes against `auto-size-boundary` and\n`auto-size-padding` instead of the shared `padding`.",
           "name": "LyraPopup",
           "cssProperties": [
             {
@@ -193825,8 +194689,12 @@
               "name": "anchor"
             },
             {
-              "description": "The arrow element, rendered only when `arrow` is set.",
+              "description": "The arrow element, rendered only when `arrow` is set. Its part name also carries the resolved side (`arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right`), matching `<lr-popover>` and `<lr-tooltip>`.",
               "name": "arrow"
+            },
+            {
+              "description": "The invisible quad spanning the `distance` gap between anchor and popup, rendered only when `hover-bridge` is set.",
+              "name": "hover-bridge"
             },
             {
               "description": "The positioned floating surface. Carries the resolved side (`top`, `bottom`, `left`, `right`) in its part name, so `::part(popup bottom)` can style one side — state after `::part()` never matches.",
@@ -193907,6 +194775,45 @@
             },
             {
               "kind": "field",
+              "name": "arrowPlacement",
+              "type": {
+                "text": "LyraArrowPlacement"
+              },
+              "default": "'anchor'",
+              "description": "Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre.",
+              "attribute": "arrow-placement"
+            },
+            {
+              "kind": "field",
+              "name": "autoSize",
+              "type": {
+                "text": "PlaceAutoSize | null"
+              },
+              "default": "null",
+              "description": "Re-measures the available space on the named axes against `auto-size-boundary` and\n`auto-size-padding` rather than the shared `padding`. The popup is capped by that measurement\neither way — this narrows or widens the cap, it does not introduce one.",
+              "attribute": "auto-size"
+            },
+            {
+              "kind": "field",
+              "name": "autoSizeBoundary",
+              "type": {
+                "text": "PlaceBoundary | null"
+              },
+              "default": "null",
+              "description": "Element(s) the `auto-size` measurement uses, instead of the popup's clipping ancestors."
+            },
+            {
+              "kind": "field",
+              "name": "autoSizePadding",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "Padding kept clear inside the auto-size boundary, in pixels.",
+              "attribute": "auto-size-padding"
+            },
+            {
+              "kind": "field",
               "name": "deferredAfterUpdate",
               "type": {
                 "text": "Map<string, () => void> | undefined"
@@ -193969,6 +194876,45 @@
             },
             {
               "kind": "field",
+              "name": "flipBoundary",
+              "type": {
+                "text": "PlaceBoundary | null"
+              },
+              "default": "null",
+              "description": "Element(s) `flip` measures overflow against, instead of the popup's clipping ancestors."
+            },
+            {
+              "kind": "field",
+              "name": "flipFallbackPlacements",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Space-delimited placements `flip` tries, in order, instead of just the opposite side —\n`flip-fallback-placements=\"right bottom\"`. Unrecognised entries are ignored.",
+              "attribute": "flip-fallback-placements"
+            },
+            {
+              "kind": "field",
+              "name": "flipFallbackStrategy",
+              "type": {
+                "text": "PlaceFlipFallbackStrategy"
+              },
+              "default": "'best-fit'",
+              "description": "What `flip` settles on when none of the candidate placements fit: `best-fit` takes the\nleast-overflowing one, `initial-placement` keeps `placement` as written.",
+              "attribute": "flip-fallback-strategy"
+            },
+            {
+              "kind": "field",
+              "name": "flipPadding",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "Padding kept clear inside the flip boundary, in pixels.",
+              "attribute": "flip-padding"
+            },
+            {
+              "kind": "field",
               "name": "for",
               "type": {
                 "text": "string"
@@ -193977,6 +194923,25 @@
               "description": "Id of an element elsewhere in the same root to anchor against, instead of the `anchor` slot.\nResolved in this element's own root, so it works inside a shadow tree where an idref could not\ncross the boundary.",
               "attribute": "for",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "hoverBridge",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Renders an invisible quad across the `distance` gap between anchor and popup, so a pointer\ntravelling between them never leaves both at once. Purely geometric — this element owns no\nhover policy of its own; the component built on top reads the hover.",
+              "attribute": "hover-bridge",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "hoverBridgeElement",
+              "type": {
+                "text": "HTMLElement"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -194014,6 +194979,16 @@
               "default": "8",
               "description": "Viewport padding kept clear by `shift` and by the available-size measurement.",
               "attribute": "padding"
+            },
+            {
+              "kind": "field",
+              "name": "parsedFlipFallbackPlacements",
+              "type": {
+                "text": "Placement[] | undefined"
+              },
+              "privacy": "private",
+              "description": "`flip-fallback-placements` is a space-delimited attribute, mirroring the upstream primitive.\nUnrecognised tokens are dropped rather than forwarded — Floating UI would otherwise place\nagainst a placement string it cannot resolve.",
+              "readonly": true
             },
             {
               "kind": "field",
@@ -194068,6 +195043,25 @@
             },
             {
               "kind": "field",
+              "name": "shiftBoundary",
+              "type": {
+                "text": "PlaceBoundary | null"
+              },
+              "default": "null",
+              "description": "Element(s) `shift` measures overflow against, instead of the popup's clipping ancestors."
+            },
+            {
+              "kind": "field",
+              "name": "shiftPadding",
+              "type": {
+                "text": "number | null"
+              },
+              "default": "null",
+              "description": "Padding kept clear inside the shift boundary, in pixels. Unset (`null`) inherits `padding`,\nwhich is what this element did before the knob existed.",
+              "attribute": "shift-padding"
+            },
+            {
+              "kind": "field",
               "name": "skidding",
               "type": {
                 "text": "number"
@@ -194098,6 +195092,17 @@
             },
             {
               "kind": "field",
+              "name": "strategy",
+              "type": {
+                "text": "PlaceStrategy"
+              },
+              "default": "'fixed'",
+              "description": "CSS positioning scheme. `fixed` (the default here) escapes every ancestor's\ntransform/filter/containment context; `absolute` positions against the nearest positioned\nancestor, so the popup scrolls away with the content it belongs to.",
+              "attribute": "strategy",
+              "reflects": true
+            },
+            {
+              "kind": "field",
               "name": "strings",
               "type": {
                 "text": "LyraLocaleStrings"
@@ -194108,6 +195113,16 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "sync",
+              "type": {
+                "text": "PlaceSync | null"
+              },
+              "default": "null",
+              "description": "Copies the anchor's inline size, block size, or both onto the popup.",
+              "attribute": "sync"
             },
             {
               "kind": "field",
@@ -194154,7 +195169,7 @@
             },
             {
               "kind": "method",
-              "name": "applyArrow",
+              "name": "applyArrowSidePart",
               "privacy": "private",
               "return": {
                 "type": {
@@ -194163,18 +195178,13 @@
               },
               "parameters": [
                 {
-                  "name": "placement",
+                  "name": "side",
                   "type": {
-                    "text": "Placement"
-                  }
-                },
-                {
-                  "name": "coords",
-                  "type": {
-                    "text": "{ x?: number; y?: number } | undefined"
+                    "text": "'top' | 'bottom' | 'left' | 'right'"
                   }
                 }
-              ]
+              ],
+              "description": "Same rule as `applySidePart`: the resolved side rides in the part name, never in an\nattribute after `::part()`. Matches `<lr-popover>`/`<lr-tooltip>`'s `arrow-<side>` token."
             },
             {
               "kind": "method",
@@ -194425,6 +195435,33 @@
               "fieldName": "arrowPadding"
             },
             {
+              "name": "arrow-placement",
+              "type": {
+                "text": "LyraArrowPlacement"
+              },
+              "default": "'anchor'",
+              "description": "Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre.",
+              "fieldName": "arrowPlacement"
+            },
+            {
+              "name": "auto-size",
+              "type": {
+                "text": "PlaceAutoSize | null"
+              },
+              "default": "null",
+              "description": "Re-measures the available space on the named axes against `auto-size-boundary` and\n`auto-size-padding` rather than the shared `padding`. The popup is capped by that measurement\neither way — this narrows or widens the cap, it does not introduce one.",
+              "fieldName": "autoSize"
+            },
+            {
+              "name": "auto-size-padding",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "Padding kept clear inside the auto-size boundary, in pixels.",
+              "fieldName": "autoSizePadding"
+            },
+            {
               "name": "distance",
               "type": {
                 "text": "number"
@@ -194443,6 +195480,33 @@
               "fieldName": "flip"
             },
             {
+              "name": "flip-fallback-placements",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Space-delimited placements `flip` tries, in order, instead of just the opposite side —\n`flip-fallback-placements=\"right bottom\"`. Unrecognised entries are ignored.",
+              "fieldName": "flipFallbackPlacements"
+            },
+            {
+              "name": "flip-fallback-strategy",
+              "type": {
+                "text": "PlaceFlipFallbackStrategy"
+              },
+              "default": "'best-fit'",
+              "description": "What `flip` settles on when none of the candidate placements fit: `best-fit` takes the\nleast-overflowing one, `initial-placement` keeps `placement` as written.",
+              "fieldName": "flipFallbackStrategy"
+            },
+            {
+              "name": "flip-padding",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "Padding kept clear inside the flip boundary, in pixels.",
+              "fieldName": "flipPadding"
+            },
+            {
               "name": "for",
               "type": {
                 "text": "string"
@@ -194450,6 +195514,15 @@
               "default": "''",
               "description": "Id of an element elsewhere in the same root to anchor against, instead of the `anchor` slot.\nResolved in this element's own root, so it works inside a shadow tree where an idref could not\ncross the boundary.",
               "fieldName": "for"
+            },
+            {
+              "name": "hover-bridge",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Renders an invisible quad across the `distance` gap between anchor and popup, so a pointer\ntravelling between them never leaves both at once. Purely geometric — this element owns no\nhover policy of its own; the component built on top reads the hover.",
+              "fieldName": "hoverBridge"
             },
             {
               "name": "locale",
@@ -194492,6 +195565,15 @@
               "fieldName": "shift"
             },
             {
+              "name": "shift-padding",
+              "type": {
+                "text": "number | null"
+              },
+              "default": "null",
+              "description": "Padding kept clear inside the shift boundary, in pixels. Unset (`null`) inherits `padding`,\nwhich is what this element did before the knob existed.",
+              "fieldName": "shiftPadding"
+            },
+            {
               "name": "skidding",
               "type": {
                 "text": "number"
@@ -194499,6 +195581,24 @@
               "default": "0",
               "description": "Offset along the anchor's edge, in pixels.",
               "fieldName": "skidding"
+            },
+            {
+              "name": "strategy",
+              "type": {
+                "text": "PlaceStrategy"
+              },
+              "default": "'fixed'",
+              "description": "CSS positioning scheme. `fixed` (the default here) escapes every ancestor's\ntransform/filter/containment context; `absolute` positions against the nearest positioned\nancestor, so the popup scrolls away with the content it belongs to.",
+              "fieldName": "strategy"
+            },
+            {
+              "name": "sync",
+              "type": {
+                "text": "PlaceSync | null"
+              },
+              "default": "null",
+              "description": "Copies the anchor's inline size, block size, or both onto the popup.",
+              "fieldName": "sync"
             }
           ],
           "superclass": {
@@ -194512,9 +195612,57 @@
       "exports": [
         {
           "kind": "js",
+          "name": "LyraArrowPlacement",
+          "declaration": {
+            "name": "LyraArrowPlacement",
+            "module": "src/components/overlays/popup/popup.class.ts"
+          }
+        },
+        {
+          "kind": "js",
           "name": "LyraPopup",
           "declaration": {
             "name": "LyraPopup",
+            "module": "src/components/overlays/popup/popup.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "PlaceAutoSize",
+          "declaration": {
+            "name": "PlaceAutoSize",
+            "module": "src/components/overlays/popup/popup.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "PlaceBoundary",
+          "declaration": {
+            "name": "PlaceBoundary",
+            "module": "src/components/overlays/popup/popup.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "PlaceFlipFallbackStrategy",
+          "declaration": {
+            "name": "PlaceFlipFallbackStrategy",
+            "module": "src/components/overlays/popup/popup.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "PlaceStrategy",
+          "declaration": {
+            "name": "PlaceStrategy",
+            "module": "src/components/overlays/popup/popup.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "PlaceSync",
+          "declaration": {
+            "name": "PlaceSync",
             "module": "src/components/overlays/popup/popup.class.ts"
           }
         }
@@ -196512,6 +197660,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "setCustomValidity",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Sets or clears a consumer-supplied validation error — the standard channel for a rejection no\nclient-side constraint can express (\"you have already rated this item\"). A non-empty `message`\nraises `customError` and becomes `validationMessage`, so the control fails `checkValidity()`,\nblocks submission, and matches `:state(invalid)`; `''` clears it.\n\nClearing restores the control's own computed validity rather than forcing it valid: a\n`required` control that is still unrated stays `valueMissing`. The custom error also survives\nevery intrinsic recomputation in between (each rating/`max`/`required` change re-runs\n`updateValidity()`) and a `form.reset()` — matching a native control, where only another\n`setCustomValidity('')` clears it.\n\nThe message is caller-supplied content, so it is used verbatim and never localized here."
             },
             {
               "kind": "method",
@@ -229762,7 +230928,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-known-date>` — a date a user already knows (a birthdate, a passport\nissue/expiry date) collected as three plain, labeled day/month/year number\nfields in the locale's natural field order, rather than a calendar popup.\nForm-associated; the submitted form value is always canonical ISO 8601\n(`YYYY-MM-DD`), or `''` while any field is blank or the combination isn't a\nreal calendar date. Mirrors Web Awesome's `wa-known-date` API surface under\n`lr-`, with `appearance`/`pill`/`form` dropped and `size` taken from this\nlibrary's shared `2xs`–`xl` ladder, which also accepts the upstream\n`small`/`medium`/`large` spellings — the same ladder every other lyra form\ncontrol sits on.\n\nA field's own `<input>` shows exactly what was typed (never reformatted or\nreverted) -- only the composite `value` is zero-padded. Auto-advance\n(typing a field's last digit moves focus to the next field) and\nbackspace-to-previous-field-when-empty are this library's own additions on\ntop of Web Awesome's bare typing model, which documents no auto-advance;\ndon't remove them to \"restore\" WA parity. Arrow-key field-to-field\nnavigation at a field's text boundary is RTL-aware: the *physical* key that\nmeans \"toward the next field\" flips under an inherited `dir=\"rtl\"`, while\nthe field order itself (locale-derived) does not. Locale digits such as\nArabic-Indic and Persian numerals are accepted and normalized to the\ncanonical ASCII digits used by the ISO form value.\n\nNo resizable text-editing surface exists (three fixed-width digit fields),\nso resize forwarding doesn't apply, and `spellcheck`/`autocapitalize`/\n`autocorrect`/`wrap` don't meaningfully apply to 2–4-digit numeric fields\neither -- the same carve-out `lr-input[type=\"number\"]` already documents.",
+          "description": "`<lr-known-date>` — a date a user already knows (a birthdate, a passport\nissue/expiry date) collected as three plain, labeled day/month/year number\nfields in the locale's natural field order, rather than a calendar popup.\nForm-associated; the submitted form value is always canonical ISO 8601\n(`YYYY-MM-DD`), or `''` while any field is blank or the combination isn't a\nreal calendar date. Mirrors Web Awesome's `wa-known-date` API surface under\n`lr-`, with `appearance`/`pill`/`form` dropped and `size` taken from this\nlibrary's shared `2xs`–`xl` ladder, which also accepts the upstream\n`small`/`medium`/`large` spellings — the same ladder every other lyra form\ncontrol sits on.\n\nA field's own `<input>` shows exactly what was typed (never reformatted or\nreverted) -- only the composite `value` is zero-padded. Auto-advance\n(typing a field's last digit moves focus to the next field) and\nbackspace-to-previous-field-when-empty are this library's own additions on\ntop of Web Awesome's bare typing model, which documents no auto-advance;\ndon't remove them to \"restore\" WA parity. Arrow-key field-to-field\nnavigation at a field's text boundary is RTL-aware: the *physical* key that\nmeans \"toward the next field\" flips under an inherited `dir=\"rtl\"`, while\nthe field order itself (locale-derived) does not. Locale digits such as\nArabic-Indic and Persian numerals are accepted and normalized to the\ncanonical ASCII digits used by the ISO form value.\n\nPressing Enter in any of the three fields performs the implicit form submission a native\n`<input>` would (see `internal/submit-on-enter.ts` — the fields live in a shadow root and have no\nform owner, so the platform can never do it here), flushing any pending `change` first.\n\nNo resizable text-editing surface exists (three fixed-width digit fields),\nso resize forwarding doesn't apply, and `spellcheck`/`autocapitalize`/\n`autocorrect`/`wrap` don't meaningfully apply to 2–4-digit numeric fields\neither -- the same carve-out `lr-input[type=\"number\"]` already documents.",
           "name": "LyraKnownDate",
           "cssProperties": [
             {

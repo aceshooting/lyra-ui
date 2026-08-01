@@ -25,6 +25,14 @@ export interface LyraTreeEventMap {
 /**
  * `<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.
  *
+ * **Two child models are accepted.** Nested `<lr-tree-item>` elements written as light-DOM children
+ * mirror `wa-tree`/`sl-tree`, so that markup renames mechanically; each item carries its own
+ * `label`/`expanded`/`disabled`/`selected` (see `<lr-tree-item>`). Assigning `data` — a `TreeItem[]`
+ * of plain objects, which additionally supports per-row icons, descriptions and badges — is this
+ * library's own original shape and remains fully supported. A tree containing any author-written
+ * `<lr-tree-item>` child is read purely as the declarative model and `data` is ignored, so the two
+ * never interleave ambiguously; the empty state renders only when neither model has any items.
+ *
  * Implements the WAI-ARIA treeitem keyboard pattern: a single roving
  * `tabindex` (tracked here as `activeId`, pushed down to every
  * `<lr-tree-item>` — including nested ones, recursively) and
@@ -46,8 +54,8 @@ export interface LyraTreeEventMap {
  * @event lr-node-select - `detail: { id }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lr-reorder - `detail: { id, parentId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown moved the focused node within its **own parent's** child list (`parentId` is `null` for a top-level item; the indices are sibling-scoped, not flattened-visible-list positions). Only fired while `reorderable`. Never fires at a subtree boundary, so a reorder can never become a reparent.
  * @csspart base - The tree's root wrapper (role="tree").
- * @csspart empty - The empty-state message shown when `data` is empty.
- * @slot - `<lr-tree-item>` elements (top-level tree items).
+ * @csspart empty - The empty-state message shown when neither child model has any items.
+ * @slot - Top-level `<lr-tree-item>` elements, each nesting its own children — the declarative child model. Leave it empty and assign `data` instead for the object model.
  */
 export class LyraTree extends LyraElement<LyraTreeEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -67,17 +75,45 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   @property({ type: Boolean, reflect: true }) reorderable = false;
 
   @state() private activeId: string | null = null;
+  /** Whether the tree is being driven by author-written `<lr-tree-item>` children rather than by
+   *  `data` (see the class doc's child-model note). Recomputed from the light DOM, never guessed. */
+  @state() private hasAuthoredItems = false;
   /** Set by `willUpdate()` when a `data` reassignment displaces the node that currently holds real DOM focus -- either by removing it (refocus the newly-designated `activeId`) or by merely re-indexing it (refocus that same node); consumed by `getUpdateComplete()` once the target is actually focusable again. */
   private pendingFocusId: string | null = null;
+  /** The `<lr-tree-item>` elements `syncNodes()` created from `data`. Everything else among this
+   *  element's children was written by the author, which is what puts the tree in the declarative
+   *  child model -- an identity set is the only reliable way to tell the two apart, since a
+   *  generated node and an authored one are the same tag. */
+  private readonly generatedNodes = new WeakSet<LyraTreeItem>();
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
+  /** Top-level items only. Deliberately `:scope >`: in the declarative child model nested items are
+   *  light-DOM descendants of *this* element too, and a plain descendant query would flatten the
+   *  whole hierarchy into the top-level set (wrong `aria-setsize`/`aria-posinset`, wrong roving
+   *  order). In the data model the two queries are equivalent, since nested items are rendered into
+   *  their own parent's shadow root. */
   private get nodeElements(): LyraTreeItem[] {
-    return [...this.querySelectorAll(tag('tree-item'))] as LyraTreeItem[];
+    return [...this.querySelectorAll(`:scope > ${tag('tree-item')}`)] as LyraTreeItem[];
   }
 
   private childrenOf(node: LyraTreeItem): LyraTreeItem[] {
-    return [...(node.shadowRoot?.querySelectorAll(tag('tree-item')) ?? [])] as LyraTreeItem[];
+    return node.childItems();
+  }
+
+  /** Recomputed from the DOM rather than tracked incrementally: children can be added by the parser,
+   *  by a framework re-render, or by `syncNodes()` itself, and only the generated-node set is a
+   *  reliable discriminator. */
+  private refreshAuthoredItems(): void {
+    let authored = false;
+    for (const node of this.nodeElements) {
+      // A nested item promoted to the top level still carries the `slot` its former parent item
+      // assigned it, and this element has only a default slot -- leaving it there would assign the
+      // node to nothing at all, so it would silently render nowhere while still counting as an item.
+      if (node.hasAttribute('slot')) node.removeAttribute('slot');
+      if (!this.generatedNodes.has(node)) authored = true;
+    }
+    this.hasAuthoredItems = authored;
   }
 
   /**
@@ -97,7 +133,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const acc: LyraTreeItem[] = [];
     const walk = (nodes: LyraTreeItem[]): void => {
       for (const n of nodes) {
-        if (n.item?.disabled) continue;
+        if (n.isDisabled) continue;
         acc.push(n);
         if (n.expanded) walk(this.childrenOf(n));
       }
@@ -167,7 +203,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     id: string,
     items: TreeItem[] = this.data,
     parentId: string | null = null,
-  ): { parentId: string | null; siblings: TreeItem[]; index: number } | undefined {
+  ): { parentId: string | null; total: number; index: number } | undefined {
     const stack: Array<{ items: TreeItem[]; parentId: string | null }> = [{ items, parentId }];
     const seen = new Set<TreeItem[]>();
     while (stack.length > 0) {
@@ -175,13 +211,26 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       if (seen.has(current.items)) continue;
       seen.add(current.items);
       const index = current.items.findIndex((item) => item.id === id);
-      if (index >= 0) return { parentId: current.parentId, siblings: current.items, index };
+      if (index >= 0) return { parentId: current.parentId, total: current.items.length, index };
       for (let i = current.items.length - 1; i >= 0; i--) {
         const item = current.items[i];
         if (item?.children) stack.push({ items: item.children, parentId: item.id });
       }
     }
     return undefined;
+  }
+
+  /** The declarative child model's answer to `findSiblings()`: the sibling list is the node's own
+   *  parent element's child items (or the top-level ones), in the same sibling index space. */
+  private findSlottedSiblings(
+    node: LyraTreeItem,
+  ): { parentId: string | null; total: number; index: number } | undefined {
+    const parent = node.parentElement;
+    const parentItem = parent?.localName === tag('tree-item') ? (parent as LyraTreeItem) : null;
+    const siblings = parentItem ? parentItem.childItems() : this.nodeElements;
+    const index = siblings.indexOf(node);
+    if (index < 0) return undefined;
+    return { parentId: parentItem ? parentItem.nodeId : null, total: siblings.length, index };
   }
 
   /**
@@ -199,15 +248,38 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const active = deepActiveElementIn(document);
     if (!active || active.localName !== tag('tree-item')) return null;
     const node = active as LyraTreeItem;
-    const id = node.item?.id;
-    return id != null && this.visibleNodeElements().some((n) => n.item?.id === id) ? node : null;
+    return this.visibleNodeElements().some((n) => n.nodeId === node.nodeId) ? node : null;
+  }
+
+  /**
+   * The declarative child model's answer to the `data`-driven `activeId` resolution below: there is
+   * no `data` change to hang it off, so it is re-derived from the DOM on every update instead. If
+   * `activeId` no longer names a currently *visible* node -- removed, disabled, or hidden inside a
+   * collapsed ancestor -- the first visible one takes over, so the tree never ends up with zero
+   * `tabindex="0"` stops and silently drops out of the tab order. Deliberately in `willUpdate()`
+   * rather than `updated()`: the nodes are light-DOM children, so they already exist before this
+   * element renders, and assigning here folds into the current update instead of scheduling
+   * another one.
+   */
+  private resolveActiveFromDom(): void {
+    const visible = this.visibleNodeElements();
+    if (visible.some((node) => node.nodeId === this.activeId)) return;
+    this.activeId = visible[0]?.nodeId ?? null;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // The declarative child model owns the hierarchy outright: `data` is ignored (and never
+    // reconciled into the light DOM) for as long as any author-written item is present, so the
+    // two models can never interleave into one ambiguous tree.
+    this.refreshAuthoredItems();
+    if (this.hasAuthoredItems) {
+      this.resolveActiveFromDom();
+      return;
+    }
     if (changed.has('data')) {
       const focused = this.deepFocusedNode();
-      const focusedId = focused?.item?.id ?? null;
+      const focusedId = focused?.nodeId ?? null;
       this.syncNodes();
       const activeItem = this.activeId ? this.findItem(this.data, this.activeId) : undefined;
       if (
@@ -239,14 +311,45 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('activeId') || changed.has('data')) {
-      const count = this.data.length;
-      this.nodeElements.forEach((node, i) => {
+    if (changed.has('activeId') || changed.has('data') || this.hasAuthoredItems) {
+      const nodes = this.nodeElements;
+      const count = this.hasAuthoredItems ? nodes.length : this.data.length;
+      nodes.forEach((node, i) => {
         node.activeId = this.activeId;
         node.setSize = count;
         node.posInSet = i + 1;
+        if (this.hasAuthoredItems) node.depth = 0;
       });
     }
+  }
+
+  /** Children changed: re-derive which child model is in play, and (via the requested update)
+   *  re-resolve the roving tabindex. Covers author-written items arriving from the HTML parser or
+   *  a framework re-render *after* this element first updated -- the case `willUpdate()`'s
+   *  synchronous read cannot see -- and the active node being removed, which changes nothing
+   *  about `hasAuthoredItems` and so would otherwise schedule no update at all. */
+  private onChildrenChanged = (): void => {
+    this.refreshAuthoredItems();
+    this.requestUpdate();
+  };
+
+  /** `slotchange` sees an assignment change but not a child that never becomes assigned -- a node
+   *  moved here still carrying its old parent item's `slot="children"` is exactly that, and
+   *  `refreshAuthoredItems()` is what un-strands it. A childList observer sees the append itself,
+   *  so the two together cover both. Direct children only (no `subtree`): a nested item's own
+   *  churn is its own parent element's business. */
+  private childObserver?: MutationObserver;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.childObserver = new MutationObserver(this.onChildrenChanged);
+    this.childObserver.observe(this, { childList: true });
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.childObserver?.disconnect();
+    this.childObserver = undefined;
   }
 
   /** By-id reconciliation of top-level items: reuses/reorders existing `<lr-tree-item>` elements and removes ones no longer present in `data`. */
@@ -259,7 +362,11 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     let previousSibling: LyraTreeItem | null = null;
     for (const item of this.data) {
       const reused = !seen.has(item.id) ? existingById.get(item.id) : undefined;
-      const node = reused ?? (document.createElement(tag('tree-item')) as LyraTreeItem);
+      let node = reused;
+      if (!node) {
+        node = document.createElement(tag('tree-item')) as LyraTreeItem;
+        this.generatedNodes.add(node);
+      }
       node.item = item;
       node.depth = 0;
       seen.add(item.id);
@@ -276,11 +383,9 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   private focusNode(node: LyraTreeItem | undefined): void {
     if (!node) return;
-    // `item` is `attribute: false`, so a `<lr-tree-item>` written declaratively into this
-    // component's documented slot has none until a host assigns one. Such a node is still
-    // focusable, it just has no identity to make active -- null it rather than leaving the
-    // previous node's id claiming a roving tabindex it no longer owns.
-    this.activeId = node.item?.id ?? null;
+    // `nodeId` resolves in both child models: `item.id` when the tree is data-driven, and the
+    // node's own generated id when it was written declaratively (where the markup carries none).
+    this.activeId = node.nodeId;
     node.focus();
   }
 
@@ -341,10 +446,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       // whose ancestor collapsed in the same update is no longer visible (and
       // has no committed `tabindex`), so fall back to the roving target.
       const visible = this.visibleNodeElements();
-      (
-        visible.find((n) => n.item?.id === id) ??
-        visible.find((n) => n.item?.id === this.activeId)
-      )?.focus();
+      (visible.find((n) => n.nodeId === id) ?? visible.find((n) => n.nodeId === this.activeId))?.focus();
     }
     return result;
   }
@@ -363,19 +465,18 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * like a plain ArrowDown on the last visible row.
    */
   private requestReorder(node: LyraTreeItem, delta: 1 | -1): void {
-    const id = node.item?.id;
-    if (id == null) return;
-    const found = this.findSiblings(id);
+    const id = node.nodeId;
+    const found = this.hasAuthoredItems ? this.findSlottedSiblings(node) : this.findSiblings(id);
     if (!found) return;
-    const { parentId, siblings, index } = found;
+    const { parentId, total, index } = found;
     const toIndex = index + delta;
-    if (toIndex < 0 || toIndex >= siblings.length) return;
+    if (toIndex < 0 || toIndex >= total) return;
     this.emit<LyraTreeEventMap['lr-reorder']['detail']>('lr-reorder', { id, parentId, fromIndex: index, toIndex });
     this.liveRegion?.announce(
       this.localize('treeNodeMoved', undefined, {
-        label: node.item.accessibleLabel || node.item.label,
+        label: node.nodeLabel,
         index: this.formatCount(toIndex + 1),
-        total: this.formatCount(siblings.length),
+        total: this.formatCount(total),
       }),
       // A discrete, user-initiated action: never coalesce it behind the
       // announcer's throttle window the way streaming status text is.
@@ -386,8 +487,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   private onTreeKeyDown = (e: KeyboardEvent): void => {
     const visible = this.visibleNodeElements();
     if (visible.length === 0) return;
-    // `n.item` can be undefined for a declaratively-slotted node -- see `focusNode()`.
-    const currentIndex = visible.findIndex((n) => n.item?.id === this.activeId);
+    // `nodeId` resolves in both child models -- see `focusNode()`.
+    const currentIndex = visible.findIndex((n) => n.nodeId === this.activeId);
     const current = currentIndex >= 0 ? visible[currentIndex] : visible[0];
     if (!current) return; // visible is non-empty (checked above), so current is always defined
     // Ctrl/Cmd+ArrowUp/ArrowDown reorders instead of navigating, matching
@@ -473,7 +574,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const setAll = async (nodes: LyraTreeItem[]): Promise<void> => {
       await Promise.all(
         nodes.map(async (n) => {
-          if (n.item?.disabled) {
+          if (n.isDisabled) {
             n.expanded = false;
             await n.updateComplete;
             return;
@@ -500,13 +601,20 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const setAll = (nodes: LyraTreeItem[]): void => {
       for (const n of nodes) {
         setAll(this.childrenOf(n));
-        if (n.item?.disabled) n.expanded = false;
+        if (n.isDisabled) n.expanded = false;
         else n.collapse();
       }
     };
-    setAll(this.nodeElements);
-    const activeTopLevel = this.data.some((item) => !item.disabled && item.id === this.activeId);
-    if (!activeTopLevel) this.activeId = this.firstEnabledId(this.data);
+    const topLevel = this.nodeElements;
+    setAll(topLevel);
+    const activeTopLevel = this.hasAuthoredItems
+      ? topLevel.some((node) => !node.isDisabled && node.nodeId === this.activeId)
+      : this.data.some((item) => !item.disabled && item.id === this.activeId);
+    if (!activeTopLevel) {
+      this.activeId = this.hasAuthoredItems
+        ? (topLevel.find((node) => !node.isDisabled)?.nodeId ?? null)
+        : this.firstEnabledId(this.data);
+    }
     if (focused) this.pendingFocusId = this.activeId;
   }
 
@@ -520,10 +628,10 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         @lr-node-toggle=${this.onNodeActivate}
         @lr-node-select=${this.onNodeActivate}
       >
-        ${this.data.length === 0
+        ${this.data.length === 0 && !this.hasAuthoredItems
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
           : nothing}
-        <slot></slot>
+        <slot @slotchange=${this.onChildrenChanged}></slot>
       </div>
       ${this.reorderable ? html`<lr-live-region></lr-live-region>` : nothing}
     `;

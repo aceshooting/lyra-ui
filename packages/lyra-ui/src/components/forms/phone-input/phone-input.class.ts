@@ -9,6 +9,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './phone-input.styles.js';
+import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 
 export type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
@@ -195,7 +196,9 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * property changes are silent. Phone-number text is deliberately LTR while
  * the form chrome and country selector follow the inherited direction. A host
  * `aria-label` names the internal telephone input and wins over every derived
- * or component-specific fallback.
+ * or component-specific fallback. Pressing Enter performs the implicit form submission a native
+ * `<input type="tel">` would (see `internal/submit-on-enter.ts` — the internal input is in a
+ * shadow root and has no form owner, so the platform can never do it here).
  *
  * The country selector keeps the real, fully accessible native `<select>`
  * (full country names in its popup, native mobile pickers, type-ahead) but
@@ -599,6 +602,18 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this.emit('change', this.eventDetail);
   };
 
+  /**
+   * Implicit form submission, through the shared gate in `internal/submit-on-enter.ts` — the
+   * internal telephone input lives in a shadow root and has no form owner, so the platform can
+   * never run its own. A modifier-held or IME-composition Enter is ignored there, which matters
+   * more here than elsewhere: this field's `inputmode="tel"` keyboards are exactly the ones an IME
+   * candidate list sits on top of.
+   */
+  private onKeyDown = (event: KeyboardEvent): void => {
+    if (this.effectiveDisabled) return;
+    submitOnEnter(this, event);
+  };
+
   private onFocus = (event: FocusEvent): void => {
     event.stopPropagation();
     this.emit('focus');
@@ -745,6 +760,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             ?disabled=${this.effectiveDisabled}
             @input=${this.onInput}
             @change=${this.onChange}
+            @keydown=${this.onKeyDown}
             @focus=${this.onFocus}
             @blur=${this.onBlur}
           />

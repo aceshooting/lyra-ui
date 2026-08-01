@@ -218,6 +218,24 @@
       "from": "with-clear",
       "to": "with-clear",
       "upstream": "wa-combobox"
+    },
+    {
+      "component": "lr-tree-item",
+      "from": "expanded",
+      "to": "expanded",
+      "upstream": "sl-tree-item"
+    },
+    {
+      "component": "lr-tree-item",
+      "from": "disabled",
+      "to": "disabled",
+      "upstream": "sl-tree-item"
+    },
+    {
+      "component": "lr-tree-item",
+      "from": "selected",
+      "to": "selected",
+      "upstream": "sl-tree-item"
     }
   ]
 }

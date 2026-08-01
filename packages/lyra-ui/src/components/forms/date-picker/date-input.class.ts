@@ -28,6 +28,7 @@ import { LyraDatePicker } from './date-picker.class.js';
 import './date-picker.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { isImplicitSubmission, submitOnEnter } from '../../../internal/submit-on-enter.js';
 
 /** Determines the locale's day/month/year field order from a real formatted
  *  sample (Jan 2, 2026 -- a date where day/month/year are all numerically
@@ -84,7 +85,10 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * (`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` in range mode). Form-associated.
  *
  * This component uses a single text field; typing accepts ISO or a
- * locale-parseable date.
+ * locale-parseable date. Enter commits the typed text and then performs the implicit form
+ * submission a native `<input>` would (see `internal/submit-on-enter.ts` — the internal input is
+ * in a shadow root and has no form owner, so the platform can never do it here); the commit runs
+ * first so the submitted value is the date the field visibly shows.
  *
  * `size` uses the same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`,
  * default `m`. The calendar-toggle and clear buttons keep a constant touch-target size at every
@@ -207,6 +211,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   @property({ attribute: 'dialog-label' }) dialogLabel = 'Choose date';
 
   @query('input[part="input"]') private inputElement?: HTMLInputElement;
+  /** Raw text the Enter key already committed, or `null`. Lets `onInputChange()` recognise -- and
+   *  ignore -- the native `change` the browser fires for that very same keystroke, which would
+   *  otherwise re-commit the identical text and emit a second `input`/`change` pair. */
+  private enterCommittedText: string | null = null;
 
   private cleanupFn?: () => void;
   private popupTrigger?: HTMLElement;
@@ -548,6 +556,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
     this.popupTrigger = undefined;
     this.restorePopupFocusOnClose = false;
+    // One keystroke's worth of transient state; a reconnect starts from a clean slate rather than
+    // carrying a token that could swallow the first `change` after it.
+    this.enterCommittedText = null;
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // stuck `true` across the disconnect, `updated()` never sees it
@@ -594,6 +605,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  whether the text actually committed, so callers can decide whether to
    *  emit `input`/`change` (only a real, user-driven edit does). */
   private applyTypedText(raw: string): boolean {
+    // Any real commit ends the "the Enter key just committed this" window (see `onInputKey`); the
+    // Enter path itself re-arms the token immediately after calling in here.
+    this.enterCommittedText = null;
     const trimmed = raw.trim();
     if (!trimmed) {
       // The mixin's value setter recomputes validity (updateValidity()),
@@ -617,7 +631,19 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   private onInputChange = (e: Event): void => {
-    const committed = this.applyTypedText((e.target as HTMLInputElement).value);
+    const raw = (e.target as HTMLInputElement).value;
+    // The Enter key already committed this text (see `onInputKey`), and the browser fires its own
+    // `change` for that same keystroke -- and again on the following blur, by which point the
+    // re-render has replaced the typed text with the formatted `displayText`. Both are the same
+    // commit, so both are ignored rather than re-emitting `input`/`change` for one edit. Both
+    // conditions describe a no-op commit by construction (the text re-derives the value the
+    // control already holds), so the token can safely outlive the first match; any genuinely
+    // different text falls through, and any real commit clears it in `applyTypedText()`.
+    if (this.enterCommittedText !== null && (raw === this.enterCommittedText || raw === this.displayText)) {
+      return;
+    }
+    this.enterCommittedText = null;
+    const committed = this.applyTypedText(raw);
     if (committed) {
       this.emit('input');
       this.emit('change');
@@ -699,7 +725,26 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (e.altKey && e.key === 'ArrowDown') {
       e.preventDefault();
       this.show();
+      return;
     }
+    if (this.effectiveDisabled || this.readonly) return;
+    if (!isImplicitSubmission(e)) return;
+    // Commit first, submit second. The submitted form value is read synchronously from
+    // `ElementInternals`, and the typed text has not reached it yet -- the native `change` that
+    // would normally commit it fires as part of this keystroke's own default action, i.e. after
+    // this handler. Without this the form would carry the previously committed date (or nothing)
+    // while the field visibly shows the new one.
+    const input = this.inputElement;
+    if (input && input.value !== this.displayText) {
+      const raw = input.value;
+      if (this.applyTypedText(raw)) {
+        this.emit('input');
+        this.emit('change');
+      }
+      // Set after the commit, since `applyTypedText()` clears the token itself.
+      this.enterCommittedText = raw;
+    }
+    submitOnEnter(this, e);
   };
 
   // Attached to the whole form-control, not just the text input, so Escape

@@ -128,6 +128,12 @@ export interface LyraSelectEventMap {
  * behavior — opt in explicitly if a narrowing-to-one option list should
  * auto-commit.
  *
+ * Deliberately does **not** perform implicit form submission on Enter (unlike `<lr-input>`/
+ * `<lr-combobox>`/`<lr-date-input>`, which route through `internal/submit-on-enter.ts`): the
+ * trigger is a `role="combobox"` button where Enter opens the listbox and, once open, commits the
+ * active option — the ARIA combobox behavior its upstream counterpart follows. Submitting there
+ * would shadow the only keyboard way to open the list.
+ *
  * @customElement lr-select
  * @slot - `<lr-option>` elements.
  * @slot label - Custom label content.
@@ -656,6 +662,25 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.hasInteracted = true;
     this.reflectValidityStates();
     return this.internals.reportValidity();
+  }
+
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a rejection no
+   * client-side constraint can express ("that option is no longer available"). A non-empty
+   * `message` raises `customError` and becomes `validationMessage`, so the control fails
+   * `checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * `required` select with nothing chosen stays `valueMissing`. The custom error also survives
+   * every intrinsic recomputation in between (each selection/`required` change re-runs
+   * `updateValidity()`) and a `form.reset()` — matching a native control, where only another
+   * `setCustomValidity('')` clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.reflectValidityStates();
   }
 
   override disconnectedCallback(): void {

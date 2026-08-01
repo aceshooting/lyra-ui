@@ -5,6 +5,7 @@ import {
   loadLibphonenumberAdapter,
 } from './phone-input.js';
 import './phone-input.js';
+import '../button/button.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const adapter: PhoneNumberAdapter = {
@@ -1216,4 +1217,90 @@ it('tints the country trigger while the invisible select over it is hovered, and
   } finally {
     await resetMouse();
   }
+});
+
+describe('lr-phone-input implicit form submission', () => {
+  const enterOn = (el: LyraPhoneInput, init: KeyboardEventInit = {}) =>
+    (el.shadowRoot!.querySelector('input[part="input"]') as HTMLInputElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
+    );
+
+  it('submits the ancestor form when Enter is pressed in the telephone field', async () => {
+    const form = (await fixture(html`
+      <form><lr-phone-input name="tel" value="+35226123456" label="Phone"></lr-phone-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el);
+    expect(submits).to.equal(1);
+  });
+
+  it('submits through an lr-button submitter, which requestSubmit() itself would reject', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-phone-input name="tel" value="+35226123456" label="Phone"></lr-phone-input>
+        <lr-button type="submit" name="action" value="save">Go</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+    await el.updateComplete;
+    let submits = 0;
+    let submitterName = '';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+      submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
+    });
+    enterOn(el);
+    expect(submits).to.equal(1);
+    expect(submitterName, 'the lr-button was the submitter').to.equal('action');
+  });
+
+  it('runs the form\'s constraint validation, so an unparseable number blocks submission', async () => {
+    const form = (await fixture(html`
+      <form><lr-phone-input name="tel" value="not a number" label="Phone"></lr-phone-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    expect(el.checkValidity(), 'an unparseable number is invalid').to.be.false;
+    enterOn(el);
+    expect(submits).to.equal(0);
+  });
+
+  it('never submits while disabled, on a held modifier, during IME composition, or after a veto', async () => {
+    const form = (await fixture(html`
+      <form><lr-phone-input name="tel" value="+35226123456" label="Phone"></lr-phone-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el, { shiftKey: true });
+    enterOn(el, { ctrlKey: true });
+    enterOn(el, { altKey: true });
+    enterOn(el, { metaKey: true });
+    enterOn(el, { isComposing: true });
+    expect(submits).to.equal(0);
+
+    // Capture on the host runs before the internal input's own listener.
+    const veto = (e: Event): void => e.preventDefault();
+    el.addEventListener('keydown', veto, true);
+    enterOn(el);
+    el.removeEventListener('keydown', veto, true);
+    expect(submits).to.equal(0);
+
+    el.disabled = true;
+    await el.updateComplete;
+    enterOn(el);
+    expect(submits, 'a disabled control never submits').to.equal(0);
+
+    el.disabled = false;
+    await el.updateComplete;
+    enterOn(el);
+    expect(submits, 'a bare Enter still submits').to.equal(1);
+  });
 });

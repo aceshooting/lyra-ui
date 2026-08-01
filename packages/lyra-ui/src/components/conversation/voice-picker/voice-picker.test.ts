@@ -1243,3 +1243,113 @@ describe('validity custom states', () => {
     expect(el.matches(':state(invalid)'), 'still invalid, just no longer "the user saw it"').to.be.true;
   });
 });
+
+describe('setCustomValidity()', () => {
+  it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-voice-picker name="voice" label="Voice" .catalog=${CATALOG}></lr-voice-picker></form>`,
+    );
+    const el = form.querySelector('lr-voice-picker') as LyraVoicePicker;
+    await el.updateComplete;
+    let submits = 0;
+    // Registered before any requestSubmit() below, so a successful submission can never navigate
+    // the test page.
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+    expect(el.checkValidity(), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('That voice is no longer offered.');
+    expect(el.validity.customError).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('That voice is no longer offered.');
+    expect(form.checkValidity()).to.be.false;
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(0);
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validationMessage).to.equal('');
+    form.requestSubmit();
+    expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('keeps a custom error through an intrinsic revalidation', async () => {
+    const el = (await fixture(
+      html`<lr-voice-picker label="Voice" required .catalog=${CATALOG}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    await el.updateComplete;
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    // Committing a value re-runs updateValidity() -- the traffic that would otherwise wipe the
+    // consumer's error out on every change.
+    el.value = 'verse';
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'the intrinsic error cleared').to.be.false;
+    expect(el.validity.customError, 'the custom error survived the recomputation').to.be.true;
+    expect(el.validationMessage).to.equal('Rejected by the server.');
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('keeps a custom error across a form reset, matching native setCustomValidity semantics', async () => {
+    // Native `form.reset()` restores a control's value and pristine-ness, but never clears a
+    // consumer-set custom error -- only another `setCustomValidity('')` does. This control matches.
+    const form = await fixture<HTMLFormElement>(
+      html`<form>
+        <lr-voice-picker name="voice" label="Voice" value="verse" .catalog=${CATALOG}></lr-voice-picker>
+      </form>`,
+    );
+    const el = form.querySelector('lr-voice-picker') as LyraVoicePicker;
+    await el.updateComplete;
+    el.value = 'alloy';
+    el.setCustomValidity('That voice is not enabled for your account.');
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.value, 'the reset restored the declarative default').to.equal('verse');
+    expect(el.validity.customError, 'the custom error outlives the reset').to.be.true;
+    expect(el.validationMessage).to.equal('That voice is not enabled for your account.');
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('restores the computed validity when a custom error is cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(
+      html`<lr-voice-picker label="Voice" required .catalog=${CATALOG}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'required and empty to begin with').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validity.valueMissing, 'an empty required picker still has no value').to.be.true;
+    expect(el.checkValidity(), 'clearing the custom error must not force the control valid').to.be.false;
+    expect(el.validationMessage.length, 'the intrinsic message is republished').to.be.greaterThan(0);
+  });
+
+  it('publishes a custom error through the validity custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-voice-picker label="Voice" .catalog=${CATALOG} value="verse"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.matches(':state(invalid)'), 'synchronously, not on the next Lit update').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    expect(el.matches(':state(user-invalid)'), 'still pristine until the user has a turn').to.be.false;
+
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)'), 'a reported validation counts as interaction').to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)')).to.be.true;
+    expect(el.matches(':state(user-valid)')).to.be.true;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+  });
+});

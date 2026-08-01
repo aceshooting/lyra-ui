@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './input.js';
+import '../button/button.js';
 import type { LyraInput } from './input.class.js';
 import { styles } from './input.styles.js';
 
@@ -948,6 +949,63 @@ describe('lr-input showPicker() / stepUp() / stepDown()', () => {
   });
 });
 
+describe('lr-input setCustomValidity()', () => {
+  // Inherited from the `FormAssociated` mixin, but exercised here too: this component overrides
+  // `updateValidity()` to bridge the internal native input's own ValidityState, which is a
+  // different write path than the mixin's default and could have dropped the custom layer.
+  it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-input name="q" value="hi" aria-label="Query"></lr-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-input') as LyraInput;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    expect(el.checkValidity(), 'valid before the custom error').to.be.true;
+
+    el.setCustomValidity('That name is taken.');
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('That name is taken.');
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(0);
+
+    el.setCustomValidity('');
+    form.requestSubmit();
+    expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('survives the native-validity bridge re-running, and a form reset', async () => {
+    const form = (await fixture(html`
+      <form><lr-input name="q" value="a" aria-label="Query"></lr-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-input') as LyraInput;
+    el.setCustomValidity('Rejected by the server.');
+
+    el.value = 'abc';
+    await el.updateComplete;
+    expect(el.validity.customError, 'the custom error survived updateValidity()').to.be.true;
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.value, 'the reset restored the declarative default').to.equal('a');
+    expect(el.validity.customError, 'the custom error outlives the reset').to.be.true;
+    expect(el.validationMessage).to.equal('Rejected by the server.');
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`<lr-input required aria-label="Query"></lr-input>`)) as LyraInput;
+    expect(el.validity.valueMissing, 'required and empty to begin with').to.be.true;
+
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    el.setCustomValidity('');
+    expect(el.validity.customError).to.be.false;
+    expect(el.validity.valueMissing, 'an empty required field is still missing a value').to.be.true;
+    expect(el.checkValidity(), 'clearing must not force the control valid').to.be.false;
+    expect(el.validationMessage.length, 'the intrinsic message is republished').to.be.greaterThan(0);
+  });
+});
+
 describe('lr-input implicit form submission', () => {
   const enterOn = (el: LyraInput, init: KeyboardEventInit = {}) =>
     (el.shadowRoot!.querySelector('input') as HTMLInputElement).dispatchEvent(
@@ -1010,6 +1068,60 @@ describe('lr-input implicit form submission', () => {
 
     enterOn(el);
     expect(submits).to.equal(1);
+  });
+
+  it('submits through an lr-button submitter, which requestSubmit() itself would reject', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-input name="q" value="hi" aria-label="Query"></lr-input>
+        <lr-button id="go" type="submit" name="action" value="save">Go</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    let submits = 0;
+    let submitterName = '';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+      // lr-button routes its own submission through a transient named native submitter, so the
+      // name proves the button was activated rather than the form being submitted behind it.
+      submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
+    });
+    enterOn(form.querySelector('lr-input') as LyraInput);
+    expect(submits).to.equal(1);
+    expect(submitterName, 'the lr-button was the submitter').to.equal('action');
+  });
+
+  it('names the form\'s first enabled native submit button as SubmitEvent.submitter', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-input name="q" value="hi" aria-label="Query"></lr-input>
+        <button type="submit" id="off" disabled>Off</button>
+        <button type="submit" id="go">Go</button>
+      </form>
+    `)) as HTMLFormElement;
+    let submitterId = '';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitterId = ((e as SubmitEvent).submitter as HTMLElement | null)?.id ?? '';
+    });
+    enterOn(form.querySelector('lr-input') as LyraInput);
+    expect(submitterId).to.equal('go');
+  });
+
+  it('never submits on a modifier-held Enter', async () => {
+    const form = (await fixture(html`
+      <form><lr-input name="q" value="hi" aria-label="Query"></lr-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-input') as LyraInput;
+    let submits = 0;
+    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el, { shiftKey: true });
+    enterOn(el, { ctrlKey: true });
+    enterOn(el, { altKey: true });
+    enterOn(el, { metaKey: true });
+    expect(submits).to.equal(0);
+    enterOn(el);
+    expect(submits, 'a bare Enter still submits').to.equal(1);
   });
 
   it('leaves a form-less input alone and ignores non-Enter keys', async () => {

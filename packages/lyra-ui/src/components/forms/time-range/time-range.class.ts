@@ -1,6 +1,8 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
 import { isRtl } from '../../../internal/rtl.js';
 import {
   decimalPlaces,
@@ -85,6 +87,10 @@ function createNoopInternals(): ElementInternals {
     reportValidity(): boolean {
       return true;
     },
+    // A plain `Set<string>` implements every member `CustomStateSet` exposes, so the six validity
+    // custom states stay observable (just not CSS-matchable) in an environment with no real
+    // `ElementInternals` -- mirrors `<lr-radio>`'s/`<lr-rubric-form>`'s identical stand-ins.
+    states: new Set<string>(),
   } as unknown as ElementInternals;
 }
 
@@ -102,17 +108,21 @@ export interface LyraTimeRangeEventMap {
  * shortcut that sets both handles at once, the continuous brush underneath
  * is unaffected and both interaction modes coexist.
  *
- * Form-associated only for the `<fieldset disabled>` cascade, not for a
- * submitted value: it attaches `ElementInternals` (like `<lr-combobox>`'s
- * minimal pattern, rather than the single-string-value `FormAssociated`
- * mixin, which doesn't fit a two-handle range) purely so an ancestor
- * `<fieldset disabled>` disables both handles and every preset button
- * through `effectiveDisabled`, the same way it would a native `<input>`,
- * without touching the consumer-facing `disabled` property/attribute itself.
- * Unlike `<lr-combobox>`, it never calls `internals.setFormValue()` and
- * has no `name` — the selected range is not included in the owning form's
- * `FormData` on submit; read `start`/`end` directly (e.g. from `lr-change`)
- * instead of relying on native form submission.
+ * Form-associated for the `<fieldset disabled>` cascade and for validation, not for a submitted
+ * value: it attaches `ElementInternals` (like `<lr-combobox>`'s minimal pattern, rather than the
+ * single-string-value `FormAssociated` mixin, which doesn't fit a two-handle range) so that an
+ * ancestor `<fieldset disabled>` disables both handles and every preset button through
+ * `effectiveDisabled` the same way it would a native `<input>`, without touching the
+ * consumer-facing `disabled` property/attribute itself. Unlike `<lr-combobox>`, it never calls
+ * `internals.setFormValue()` and has no `name` — the selected range is not included in the owning
+ * form's `FormData` on submit; read `start`/`end` directly (e.g. from `lr-change`) instead of
+ * relying on native form submission.
+ *
+ * It has no constraints of its own — every reachable range is a legal one, so `checkValidity()`
+ * passes unless a consumer has set an error through `setCustomValidity()`. That method is the
+ * whole point of the validity surface here: a range this component cannot know is wrong (an
+ * overlapping booking, a window the server rejects) still blocks submission of the form the
+ * element sits in.
  *
  * Deliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle
  * accessible-name overrides, not visible label text, the same carve-out `<lr-slider>` states for
@@ -128,6 +138,18 @@ export interface LyraTimeRangeEventMap {
  * @csspart handle-end - The end handle.
  * @csspart presets - The preset controls wrapper.
  * @csspart preset-button - A preset button.
+ * @cssstate required - Never matches: this control has no `required` constraint of its own. Kept
+ *   so the six-state vocabulary is the same on every form-associated control in the library.
+ * @cssstate optional - Always matches — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, i.e. unless a
+ *   `setCustomValidity()` error is set.
+ * @cssstate invalid - Matches while a `setCustomValidity()` error is set.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: moving a handle, picking
+ *   a preset, blurring the control, or a `reportValidity()` call (which is what a submit attempt
+ *   runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ *   rather than `invalid`: a range the consumer rejected before the user touched anything is
+ *   genuinely invalid, but colouring it red on first paint is hostile.
  * @cssprop [--lr-time-range-preset-active-bg=var(--lr-color-brand)] - Background of the active
  *   preset button (`[data-active]`, i.e. the preset whose range matches the current value). Declared
  *   as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor
@@ -217,9 +239,96 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   private drags = new Map<number, DragState>();
   private keyboardChanged = false;
 
+  private internals: ElementInternals;
+  private validityController: AnchoredValidityController;
+  /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
+   *  `user-invalid` custom states: a committed handle move, a preset pick, a blur, or a
+   *  `reportValidity()` call. A range a consumer has already rejected is genuinely invalid, but
+   *  styling it as an error before the user has done anything is hostile, which is the entire
+   *  reason the `user-*` pair exists. Not a reactive property: nothing in `render()` reads it. */
+  private hasInteracted = false;
+
   constructor() {
     super();
-    createInternalsSafely(this);
+    this.internals = createInternalsSafely(this);
+    this.validityController = new AnchoredValidityController(this, this.internals, () =>
+      this[VALIDITY_ANCHOR](),
+    );
+    // Blur counts as interaction exactly as it does in the `FormAssociated` mixin. `focusout` is
+    // the observable signal: native `blur` neither bubbles nor crosses the shadow boundary, so a
+    // host-level `blur` listener would never fire for the internal handles. Registered in the
+    // constructor, on the host itself, so reconnecting cannot stack duplicates.
+    this.addEventListener('focusout', this.markInteracted);
+    this.reflectValidityStates();
+  }
+
+  private markInteracted = (): void => {
+    if (this.hasInteracted) return;
+    this.hasInteracted = true;
+    this.reflectValidityStates();
+  };
+
+  /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
+   *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. `required` is
+   *  always `false` here — this control has no such constraint — so it is permanently
+   *  `:state(optional)`, which is the honest answer rather than a missing one. */
+  private reflectValidityStates(): void {
+    syncValidityStates(this.internals, { required: false, hasInteracted: this.hasInteracted });
+  }
+
+  /** @internal The start handle: a real, focusable shadow descendant, so the browser can anchor
+   *  its validation bubble on it rather than falling back to the host. */
+  [VALIDITY_ANCHOR](): HTMLElement | null {
+    return this.renderRoot?.querySelector('[part="handle-start"]') ?? null;
+  }
+
+  get form(): HTMLFormElement | null {
+    return this.internals.form;
+  }
+  get labels(): NodeList {
+    return this.internals.labels;
+  }
+  get validity(): ValidityState {
+    return this.internals.validity;
+  }
+  get validationMessage(): string {
+    return this.internals.validationMessage;
+  }
+  get willValidate(): boolean {
+    return this.internals.willValidate;
+  }
+
+  /** Whether the control currently satisfies its constraints — the silent query, so it
+   *  deliberately does not count as interaction for the `user-*` custom states. */
+  checkValidity(): boolean {
+    return this.internals.checkValidity();
+  }
+
+  /** `checkValidity()`, plus the browser's own validation UI on failure. */
+  reportValidity(): boolean {
+    // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
+    // point, so it counts as interaction for the `user-*` custom states.
+    this.markInteracted();
+    return this.internals.reportValidity();
+  }
+
+  /**
+   * Sets or clears a consumer-supplied validation error — the only validation channel this control
+   * has, since every reachable range is intrinsically legal (see the class comment). A non-empty
+   * `message` raises `customError` and becomes `validationMessage`, so the control fails
+   * `checkValidity()`, blocks submission of the form it sits in, and matches `:state(invalid)`;
+   * `''` clears it and republishes the control's own computed validity.
+   *
+   * The error survives handle moves, preset picks and a form reset, exactly like a native control
+   * — only another `setCustomValidity('')` clears it. A consumer re-validating a range on every
+   * `lr-input` therefore calls this with the new message (or `''`) each time rather than relying
+   * on the movement itself to clear it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.reflectValidityStates();
   }
 
   get disabled(): boolean {
@@ -366,6 +475,9 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     if (clamped === previous) return false;
     if (handle === 'start') this.start = clamped;
     else this.end = clamped;
+    // A handle that actually moved is an interaction the instant it happens, the same way a
+    // toggle is for `<lr-checkbox>` — that is what turns the `user-*` custom states on.
+    this.markInteracted();
     this.emit('lr-input', { start: this.start, end: this.end });
     if (commit) this.emit('lr-change', { start: this.start, end: this.end });
     return true;
@@ -396,6 +508,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     if (nextStart === this.start && nextEnd === this.end) return;
     this.start = nextStart;
     this.end = nextEnd;
+    this.markInteracted();
     this.emit('lr-input', { start: this.start, end: this.end });
     this.emit('lr-change', { start: this.start, end: this.end });
   }

@@ -4,6 +4,8 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { nextId } from '../../../internal/a11y.js';
+import { chevronIcon } from '../../../internal/icons.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { tag } from '../../../internal/prefix.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { styles } from './tab-group.styles.js';
@@ -37,6 +39,12 @@ export type TabGroupActivation = 'auto' | 'manual';
 /** Fallback panel name for an `<lr-tab>` with no `panel` attribute -- keyed by position so it is
  *  stable across re-syncs, and prefixed so it cannot collide with an author-chosen name. */
 const SYNTHETIC_PANEL_PREFIX = 'lr-tab-';
+
+/** How much of the visible tab row one press of a scroll control travels. Short of a full viewport
+ *  on purpose: a whole-width jump leaves nothing on screen that was there before it, so there is no
+ *  landmark to tell you which way you moved. The leftover fifth is that landmark, and it matches
+ *  `lr-scroller`'s own control step. */
+const SCROLL_STEP_RATIO = 0.8;
 
 export interface LyraTabGroupEventMap {
   'lr-tab-show': CustomEvent<{ tabId: string }>;
@@ -77,13 +85,35 @@ export interface LyraTabGroupEventMap {
  * remains fully supported. A group containing any `<lr-tab>` child is read purely as the element
  * model, so the two never interleave ambiguously.
  *
+ * **Overflow.** A horizontal tab row that does not fit stays natively scrollable and gains two
+ * scroll controls flanking the tablist inside `[part="nav"]`, mirroring both upstreams. They are
+ * rendered only for a horizontal `placement` (a vertical strip scrolls in the block direction,
+ * which these controls do not address — the same restriction both upstreams apply) and are laid out
+ * only while the tablist genuinely overflows, gated on the measurement the edge fade already uses,
+ * so a row that fits is never flanked by two dead buttons. `without-scroll-controls` (or Shoelace's
+ * `no-scroll-controls`) opts out, leaving the pre-8.0.0 behavior: native scrolling plus the fade.
+ * The fade is deliberately kept alongside the controls — it says "the row continues past this
+ * edge", which the controls themselves cannot show, and both appear on exactly the same condition.
+ *
+ * **The scroll controls are `aria-hidden="true"` and `tabindex="-1"`** — a pointer affordance only,
+ * matching upstream. The tablist is already fully keyboard-scrollable without them: the roving
+ * `tabindex` puts every tab one arrow key away, and focusing a tab scrolls it into view. Adding two
+ * tab stops in the middle of the strip would therefore buy no capability and cost every keyboard
+ * user two extra stops between the tabs and the panel. They still carry a localized `aria-label`,
+ * so the name is there for automation and for a consumer that chooses to expose them.
+ *
  * @customElement lr-tab-group
  * @slot - Either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with `slot="<id>" label="<text>"` (and optionally `disabled`); one becomes each tab's panel.
  * @slot <id>-icon - Optional sibling direct child supplying a tab's leading icon content, in the attribute model only; excluded from the tab button's accessible name.
  * @event lr-tab-show - `detail: { tabId }`, fired when a tab becomes active via click or keyboard.
  * @event lr-tab-hide - `detail: { tabId }`, fired for the outgoing tab immediately before `lr-tab-show`.
  * @csspart base - The root wrapper around the tablist and panels.
+ * @csspart nav - The row wrapping the tablist together with the two overflow scroll controls; mirrors the upstream part of the same name.
  * @csspart tablist - The `role="tablist"` row of tab buttons.
+ * @csspart scroll-button - Shared part on both overflow scroll controls.
+ * @csspart scroll-button-start - The control that scrolls the tabs toward their inline start ("previous" — the right-hand control under RTL).
+ * @csspart scroll-button-end - The control that scrolls the tabs toward their inline end ("next" — the left-hand control under RTL).
+ * @csspart scroll-button-glyph - The chevron wrapper inside a scroll control. This is the element that mirrors under RTL; the icon itself never rotates.
  * @csspart tab - A single tab button.
  * @csspart tab-icon - The optional leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling.
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
@@ -116,6 +146,16 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   /** `auto` (the default) moves selection with focus. `manual` moves focus only and waits for
    *  Enter or Space — the APG requirement for panels that are expensive to reveal. */
   @property({ reflect: true }) activation: TabGroupActivation = 'auto';
+
+  /** Suppresses the overflow scroll controls, leaving an overflowing tab row natively scrollable
+   *  with the edge fade as its only affordance. Web Awesome's spelling of the flag. */
+  @property({ type: Boolean, attribute: 'without-scroll-controls', reflect: true })
+  withoutScrollControls = false;
+
+  /** Shoelace's spelling of `withoutScrollControls`, read alongside it so a consumer arriving from
+   *  either upstream finds their own attribute working. Neither is deprecated. */
+  @property({ type: Boolean, attribute: 'no-scroll-controls', reflect: true })
+  noScrollControls = false;
 
   @state() private tabs: TabDef[] = [];
   /** Where keyboard focus currently sits under `activation="manual"`, which is allowed to differ
@@ -383,6 +423,63 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     return `${slotName}-tab`;
   }
 
+  /** Whether either upstream's opt-out attribute is set. Both are read; neither wins. */
+  private get scrollControlsSuppressed(): boolean {
+    return this.withoutScrollControls || this.noScrollControls;
+  }
+
+  /**
+   * Scrolls the tab row one step toward `edge`. Native scrolling does the work -- there is no
+   * scroll listener and no scroll-position state anywhere in this component.
+   *
+   * `edge` is logical, so it is `effectiveDirection` that turns it into a physical delta: per the
+   * CSSOM View spec (what every browser this library targets implements) `scrollLeft` under RTL
+   * runs 0 at the inline start down to -max at the inline end, so "toward the end" is a *negative*
+   * left delta there -- the mirror image of the LTR case, and the reason this cannot be a constant.
+   *
+   * `instant` rather than `auto` for the reduced-motion branch: `auto` defers to the stylesheet, so
+   * a consumer's own `scroll-behavior: smooth` on the tablist would animate the very scroll the
+   * preference asks not to animate.
+   */
+  private scrollTabs(edge: 'start' | 'end'): void {
+    const tablist = this.renderRoot.querySelector('[part="tablist"]');
+    if (!(tablist instanceof HTMLElement)) return;
+    const step = Math.max(1, tablist.clientWidth * SCROLL_STEP_RATIO);
+    const towardEnd = edge === 'end' ? 1 : -1;
+    const physical = this.effectiveDirection === 'rtl' ? -towardEnd : towardEnd;
+    tablist.scrollBy({
+      left: step * physical,
+      behavior: prefersReducedMotion() ? 'instant' : 'smooth',
+    });
+  }
+
+  /** One overflow scroll control, or nothing at all when this group cannot have them (see the class
+   *  doc: vertical placement, or either upstream's opt-out attribute). Whether a *rendered* control
+   *  is laid out is a separate, purely visual question the stylesheet answers from the tablist's own
+   *  overflow measurement. */
+  private renderScrollControl(edge: 'start' | 'end'): TemplateResult | typeof nothing {
+    if (this.isVertical || this.scrollControlsSuppressed) return nothing;
+    const part =
+      edge === 'start' ? 'scroll-button scroll-button-start' : 'scroll-button scroll-button-end';
+    return html`<button
+      type="button"
+      part=${part}
+      tabindex="-1"
+      aria-hidden="true"
+      aria-label=${edge === 'start' ? this.localize('scrollPrevious') : this.localize('scrollNext')}
+      @mousedown=${this.onScrollControlMouseDown}
+      @click=${() => this.scrollTabs(edge)}
+    ><span part="scroll-button-glyph" aria-hidden="true">${chevronIcon()}</span></button>`;
+  }
+
+  /** Pressing a control must not pull focus off the tab the user was on: Chromium focuses a button
+   *  on mousedown, and focus landing on an `aria-hidden` element leaves assistive technology with
+   *  no focus context at all. Suppressing the default keeps the roving tabindex where it was; the
+   *  click still fires. */
+  private onScrollControlMouseDown = (event: MouseEvent): void => {
+    event.preventDefault();
+  };
+
   private renderTab(tab: TabDef): TemplateResult {
     const selected = tab.slotName === this.active;
     return html`<button
@@ -428,14 +525,18 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // additions/removals anywhere in the list.
     return html`
       <div part="base">
-        <div
-          part="tablist"
-          role="tablist"
-          aria-label=${this.accessibleLabel || nothing}
-          aria-orientation=${this.isVertical ? 'vertical' : 'horizontal'}
-          @keydown=${this.onTabListKeyDown}
-        >
-          ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderTab(tab))}
+        <div part="nav">
+          ${this.renderScrollControl('start')}
+          <div
+            part="tablist"
+            role="tablist"
+            aria-label=${this.accessibleLabel || nothing}
+            aria-orientation=${this.isVertical ? 'vertical' : 'horizontal'}
+            @keydown=${this.onTabListKeyDown}
+          >
+            ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderTab(tab))}
+          </div>
+          ${this.renderScrollControl('end')}
         </div>
         ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderPanel(tab))}
       </div>

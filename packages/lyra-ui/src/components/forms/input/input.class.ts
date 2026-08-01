@@ -10,6 +10,7 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 
 export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time' | 'search';
 /** Alias of the canonical six-step size ladder. The `size` property itself accepts
@@ -60,7 +61,11 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *
  * Pressing Enter submits the ancestor `<form>`, the implicit submission a native `<input>`
  * performs — the internal input is inside a shadow root and has no form owner of its own, so the
- * platform can never do it here.
+ * platform can never do it here. The form's first enabled submit control becomes
+ * `SubmitEvent.submitter` (an `<lr-button type="submit">` included, via its own `click()`), a
+ * modifier-held or IME-composition Enter is ignored, and a form with no submit button submits only
+ * from a single field — all of it the platform's own rules, shared with every other lyra text
+ * control through `internal/submit-on-enter.ts`.
  *
  * @customElement lr-input
  * @event input - Native-style composed event fired on every user-driven edit.
@@ -465,24 +470,14 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   };
 
   /**
-   * Implicit form submission. A native `<input>` submits its form owner on Enter; the internal
-   * input here lives in a shadow root, so it has no form owner and the platform never does it —
-   * without this, Enter in an `<lr-input>` inside a `<form>` silently does nothing, which reads as
-   * a broken form. `requestSubmit()` (not `submit()`) is deliberate: it fires the `submit` event
-   * and runs interactive constraint validation, so a form with an invalid field is blocked exactly
-   * as it would be by a real submit button.
+   * Implicit form submission, through the shared `internal/submit-on-enter.ts` gate every other
+   * text-bearing control in the library now routes through — so the modifier/IME/veto rules and
+   * the submitter resolution (including an `<lr-button type="submit">`, which `requestSubmit()`
+   * refuses as a submitter) are one implementation rather than one per component.
    */
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== 'Enter') return;
-    // A listener above this one already claimed the keystroke (an autocomplete panel committing a
-    // selection, a consumer's own shortcut) -- honour that veto rather than submitting behind it.
-    if (event.defaultPrevented) return;
-    // An IME composition step (confirming a Japanese/Chinese/Korean candidate) is not "the user
-    // pressed Enter to submit"; keyCode 229 is the defense-in-depth fallback for browsers that
-    // report isComposing inconsistently on the compositionend-adjacent keydown.
-    if (event.isComposing || event.keyCode === 229) return;
     if (this.effectiveDisabled || this.readonly) return;
-    this.closest('form')?.requestSubmit();
+    submitOnEnter(this, event);
   };
 
   private onTogglePasswordVisible = (): void => {

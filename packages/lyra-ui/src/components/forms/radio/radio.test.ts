@@ -1160,3 +1160,92 @@ describe('lr-radio validity custom states', () => {
     expect(el.matches(':state(invalid)'), 'unchecked again, so intrinsically invalid').to.be.true;
   });
 });
+
+describe('lr-radio setCustomValidity()', () => {
+  it('blocks form submission and becomes the validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-radio name="plan" value="pro" checked>Pro</lr-radio></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-radio') as LyraRadio;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    form.requestSubmit();
+    expect(submits, 'an otherwise-valid radio submits').to.equal(1);
+
+    el.setCustomValidity('That plan is no longer available');
+    expect(el.validationMessage).to.equal('That plan is no longer available');
+    expect(el.validity.customError, 'customError').to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(1);
+  });
+
+  it('survives an intrinsic revalidation', async () => {
+    const el = (await fixture(html`<lr-radio required value="pro">Pro</lr-radio>`)) as LyraRadio;
+    el.setCustomValidity('Server says no');
+    el.checked = true; // clears valueMissing and re-runs the intrinsic recompute
+    expect(el.validity.valueMissing, 'valueMissing cleared').to.be.false;
+    expect(el.validity.customError, 'custom error survives the recompute').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // Native `setCustomValidity()` is sticky: `form.reset()` restores values, never the custom
+  // error, which only another `setCustomValidity('')` clears. Matching that here.
+  it('keeps the custom error across a form reset', async () => {
+    const form = (await fixture(html`
+      <form><lr-radio name="plan" value="pro">Pro</lr-radio></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-radio') as LyraRadio;
+    el.setCustomValidity('Server says no');
+    form.reset();
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`<lr-radio required value="pro">Pro</lr-radio>`)) as LyraRadio;
+    el.setCustomValidity('Server says no');
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'custom error cleared').to.be.false;
+    expect(
+      el.validity.valueMissing,
+      'an empty custom error must not force a still-unchecked required control valid',
+    ).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.not.equal('');
+    el.checked = true;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('drives the valid/invalid custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-radio value="pro">Pro</lr-radio>`)) as LyraRadio;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before').to.be.true;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while a custom error is set').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
+  });
+
+  // `<lr-radio-group>` is not itself form-associated -- it delegates validity to the radio it
+  // designates as the group's validity owner -- so the consumer-facing method lives on the item.
+  it('is the item, not the group, that carries the method', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group name="plan" label="Plan">
+        <lr-radio value="pro">Pro</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    expect((group as unknown as { setCustomValidity?: unknown }).setCustomValidity).to.equal(undefined);
+    const radio = group.querySelector('lr-radio') as LyraRadio;
+    radio.setCustomValidity('Server says no');
+    expect(radio.validity.customError).to.be.true;
+  });
+});

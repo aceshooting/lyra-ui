@@ -398,6 +398,30 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     return this.internals.reportValidity();
   }
 
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("this item was already annotated by someone else") that no per-key rule can
+   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
+   * rubric fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`
+   * clears it.
+   *
+   * Clearing restores the rubric's own computed validity rather than forcing it valid: unanswered
+   * required keys (and any key with an unsupported `type`) still hold it invalid. The custom error
+   * also survives every intrinsic recomputation in between (each `value`/`keys` write re-runs
+   * `syncFormState()`) and a form reset, exactly like a native control — only another
+   * `setCustomValidity('')` clears it.
+   *
+   * Independent of the per-key `errors` map, which stays a read-out of this rubric's own field
+   * rules: a message set here is form-level and is not attributed to any one key.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncCustomStates();
+    this.requestUpdate();
+  }
+
   formResetCallback(): void {
     this.value = {};
     // Pristine again, so the `user-*` states stop matching even though a rubric with required keys

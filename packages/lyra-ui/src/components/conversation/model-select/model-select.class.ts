@@ -444,6 +444,26 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     return this.internals.reportValidity();
   }
 
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("that model was retired by the provider") that no client-side constraint can
+   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
+   * control fails `checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears
+   * it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * `required` picker with no value stays `valueMissing`. The custom error also survives every
+   * intrinsic recomputation in between (each `value`/`required` change re-runs `updateValidity()`)
+   * and a `form.reset()` — matching a native control, where only another `setCustomValidity('')`
+   * clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.publishValidityStates();
+  }
+
   /** `catalog`, normalized to `{ id, label }[]` regardless of the plain-string-array shorthand. */
   private get normalizedCatalog(): LyraModelCatalogEntry[] {
     return normalizeCatalog<LyraModelCatalogEntry>(this.catalog);

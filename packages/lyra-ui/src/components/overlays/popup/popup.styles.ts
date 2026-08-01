@@ -22,7 +22,26 @@ export const styles = css`
     display: none;
   }
 
-  [part='arrow'] {
+  [part~='hover-bridge'] {
+    /* A viewport-sized transparent box clipped down to the quad internal/positioner.ts writes
+       between the anchor and the popup, so a pointer crossing the distance gap never leaves
+       both at once. The coordinates are physical viewport pixels — a polygon spanning two
+       different boxes has no logical-property spelling — and land here as custom properties. */
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-popover)) - 1);
+    clip-path: polygon(
+      var(--lr-positioner-hover-bridge-top-left-x, 0) var(--lr-positioner-hover-bridge-top-left-y, 0),
+      var(--lr-positioner-hover-bridge-top-right-x, 0) var(--lr-positioner-hover-bridge-top-right-y, 0),
+      var(--lr-positioner-hover-bridge-bottom-right-x, 0) var(--lr-positioner-hover-bridge-bottom-right-y, 0),
+      var(--lr-positioner-hover-bridge-bottom-left-x, 0) var(--lr-positioner-hover-bridge-bottom-left-y, 0)
+    );
+  }
+  [part~='hover-bridge']:not([data-active]) {
+    display: none;
+  }
+
+  [part~='arrow'] {
     position: absolute;
     inline-size: calc(2 * var(--lr-popup-arrow-size, var(--lr-size-0-375rem)));
     block-size: calc(2 * var(--lr-popup-arrow-size, var(--lr-size-0-375rem)));

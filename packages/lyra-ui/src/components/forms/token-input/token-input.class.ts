@@ -6,6 +6,7 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
+import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
@@ -75,6 +76,11 @@ const delimiterConverter = {
 };
 
 /** `<lr-token-input>` — an editable, form-associated list of removable tokens.
+ *
+ * Enter commits the typed draft into a token while there is one; with the draft empty it performs
+ * the implicit form submission a native text field would (see `internal/submit-on-enter.ts` — the
+ * internal input is in a shadow root and has no form owner, so the platform can never do it here).
+ * A `delimiter` keystroke stays purely a commit key and never submits.
  * @customElement lr-token-input
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
@@ -301,6 +307,27 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    *  `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
    *  `FormAssociated` mixin. */
   reportValidity(): boolean { this.touched = true; this.syncValidity(); return this.internals.reportValidity(); }
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a rejection no
+   * client-side constraint can express ("that tag is reserved"). A non-empty `message` raises
+   * `customError` and becomes `validationMessage`, so the control fails `checkValidity()`, blocks
+   * submission, and matches `:state(invalid)`; `''` clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * `required` control with no tokens stays `valueMissing`. The custom error also survives every
+   * intrinsic recomputation in between (each token add/remove/edit re-runs `syncValidity()`) and a
+   * `form.reset()` — matching a native control, where only another `setCustomValidity('')` clears
+   * it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    // Republishes `data-invalid` and the six validity custom states from the now-current effective
+    // validity. The intrinsic recomputation this also runs is idempotent and, by construction,
+    // never touches the custom layer the line above just set.
+    this.syncValidity();
+  }
   override focus(options?: FocusOptions): void { this.inputEl?.focus(options); }
   override blur(): void { this.inputEl?.blur(); }
   /** Focuses the draft text input, mirroring what a real click on the token row would land on --
@@ -477,7 +504,13 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private onInput = (event: Event): void => { this.draft = (event.target as HTMLInputElement).value; };
   private onKeyDown = (event: KeyboardEvent): void => {
     if (this.effectiveDisabled) return;
-    if (event.key === 'Enter' || (this.delimiter !== null && event.key === this.delimiter)) { if (this.draft.trim()) { event.preventDefault(); this.addDraft(); } }
+    if (event.key === 'Enter' || (this.delimiter !== null && event.key === this.delimiter)) {
+      if (this.draft.trim()) { event.preventDefault(); this.addDraft(); }
+      // No draft to commit, so Enter means what it means in any other text field: implicit
+      // submission of the ancestor form. Only Enter -- a delimiter keystroke is this component's
+      // own commit key, never a submit key.
+      else if (event.key === 'Enter') submitOnEnter(this, event);
+    }
     else if (event.key === 'Tab') { if (this.draft.trim()) this.addDraft(); }
     // An open token editor owns Backspace: the destructive "remove the last token" shortcut must
     // not fire for a keystroke that was aimed at the text being edited.

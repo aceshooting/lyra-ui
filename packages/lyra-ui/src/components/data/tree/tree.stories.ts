@@ -27,6 +27,29 @@ export const Default: Story = {
   render: () => html`<lr-tree style="max-width: 20rem" label="File explorer" .data=${data}></lr-tree>`,
 };
 
+/**
+ * The declarative child model: nested `<lr-tree-item>` elements, no `data` property anywhere. Each
+ * item's label is its own slotted content (or its `label` attribute), and `expanded`/`disabled`/
+ * `selected` are plain attributes. This is the shape `wa-tree`/`sl-tree` markup renames into.
+ */
+export const DeclarativeItems: Story = {
+  render: () => html`
+    <lr-tree style="max-width: 20rem" label="Documentation">
+      <lr-tree-item expanded>
+        Guides
+        <lr-tree-item selected>Installation</lr-tree-item>
+        <lr-tree-item>Theming</lr-tree-item>
+        <lr-tree-item disabled>Coming soon</lr-tree-item>
+      </lr-tree-item>
+      <lr-tree-item label="Components">
+        <lr-tree-item label="lr-button"></lr-tree-item>
+        <lr-tree-item label="lr-tree"></lr-tree-item>
+      </lr-tree-item>
+      <lr-tree-item>Changelog</lr-tree-item>
+    </lr-tree>
+  `,
+};
+
 export const RichRows: Story = {
   render: () => html`
     <lr-tree

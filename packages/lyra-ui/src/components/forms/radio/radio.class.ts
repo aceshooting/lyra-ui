@@ -57,7 +57,7 @@ interface RadioGroupController {
  * @cssstate invalid - Matches while it does not — from the very first render, before the user has
  * touched anything.
  * @cssstate user-valid - `valid`, but only after the user has interacted with this radio: selecting
- * it, or blurring it.
+ * it, blurring it, or a `reportValidity()` call (which is what a submit attempt runs).
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required radio is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
@@ -340,6 +340,46 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.setGroupDisabled(false);
     this.setGroupTabbable(true);
   }
+
+  /** Whether the radio currently satisfies its constraints — the silent query, so it deliberately
+   *  does not count as interaction for the `user-*` custom states. */
+  checkValidity(): boolean {
+    return this.internals.checkValidity();
+  }
+
+  /** `checkValidity()`, plus the browser's own validation UI on failure. */
+  reportValidity(): boolean {
+    // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
+    // point, so it counts as interaction for the `user-*` custom states.
+    this.hasInteracted = true;
+    this.reflectValidityStates();
+    return this.internals.reportValidity();
+  }
+
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
+   * rejection ("that plan is no longer available") that no client-side constraint can express. A
+   * non-empty `message` raises `customError` and becomes `validationMessage`, so the control fails
+   * `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''` clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * required-and-unselected radio whose custom error is cleared stays `valueMissing`. The custom
+   * error also survives every intrinsic recomputation in between (each selection, and every
+   * group-driven `required` change, re-runs `updateValidity()`) and a form reset, exactly like a
+   * native control — only another `setCustomValidity('')` clears it.
+   *
+   * This lives on the radio rather than on `<lr-radio-group>` because the group is not itself
+   * form-associated: it designates one member as the group's validity owner and that radio is what
+   * participates in the owning form.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.reflectValidityStates();
+    this.requestUpdate();
+  }
+
   override click(): void {
     this[VALIDITY_ANCHOR]()?.click();
   }

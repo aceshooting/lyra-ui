@@ -1023,3 +1023,78 @@ describe('lr-checkbox hover and press feedback', () => {
     }
   });
 });
+
+describe('lr-checkbox setCustomValidity()', () => {
+  it('blocks form submission and becomes the validationMessage', async () => {
+    const form = (await fixture(html`
+      <form><lr-checkbox name="terms" value="yes" checked>Agree</lr-checkbox></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-checkbox') as LyraCheckbox;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    form.requestSubmit();
+    expect(submits, 'an otherwise-valid checkbox submits').to.equal(1);
+
+    el.setCustomValidity('That box is spoken for');
+    expect(el.validationMessage).to.equal('That box is spoken for');
+    expect(el.validity.customError, 'customError').to.be.true;
+    expect(el.checkValidity()).to.be.false;
+
+    form.requestSubmit();
+    expect(submits, 'a custom error blocks submission').to.equal(1);
+  });
+
+  it('survives an intrinsic revalidation', async () => {
+    const el = (await fixture(html`<lr-checkbox required>Agree</lr-checkbox>`)) as LyraCheckbox;
+    el.setCustomValidity('Server says no');
+    el.checked = true; // clears valueMissing and re-runs the intrinsic recompute
+    expect(el.validity.valueMissing, 'valueMissing cleared').to.be.false;
+    expect(el.validity.customError, 'custom error survives the recompute').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  // Native `setCustomValidity()` is sticky: `form.reset()` restores values, never the custom
+  // error, which only another `setCustomValidity('')` clears. Matching that here.
+  it('keeps the custom error across a form reset', async () => {
+    const form = (await fixture(html`
+      <form><lr-checkbox name="terms">Agree</lr-checkbox></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-checkbox') as LyraCheckbox;
+    el.setCustomValidity('Server says no');
+    form.reset();
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+    const el = (await fixture(html`<lr-checkbox required>Agree</lr-checkbox>`)) as LyraCheckbox;
+    el.setCustomValidity('Server says no');
+    el.setCustomValidity('');
+    expect(el.validity.customError, 'custom error cleared').to.be.false;
+    expect(
+      el.validity.valueMissing,
+      'an empty custom error must not force a still-empty required control valid',
+    ).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.not.equal('');
+    el.checked = true;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('drives the valid/invalid custom states', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-checkbox>Agree</lr-checkbox>`)) as LyraCheckbox;
+    await el.updateComplete;
+    expect(el.matches(':state(valid)'), 'valid before').to.be.true;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while a custom error is set').to.be.true;
+    expect(el.matches(':state(valid)')).to.be.false;
+    el.setCustomValidity('');
+    expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
+  });
+});

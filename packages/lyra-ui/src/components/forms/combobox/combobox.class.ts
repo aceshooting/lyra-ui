@@ -7,6 +7,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
+import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
@@ -108,6 +109,10 @@ export interface LyraComboboxEventMap {
  *
  * Options are `<lr-option value>` children. Emits native-style `change`/`input`
  * (like Web Awesome) plus `lr-show`/`lr-hide`/`lr-clear`.
+ * Enter commits the highlighted option while the listbox has one; with nothing highlighted it
+ * performs the implicit form submission a native text field would (see
+ * `internal/submit-on-enter.ts` — the internal input is in a shadow root and has no form owner, so
+ * the platform can never do it here).
  * Standard size tiers share their outer control height with sibling Lyra controls; the decorative
  * expand icon scales inside that allocation without creating an independent action target.
  *
@@ -735,6 +740,25 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return this.internals.reportValidity();
   }
 
+  /**
+   * Sets or clears a consumer-supplied validation error — the standard channel for a rejection no
+   * client-side constraint can express ("that option is no longer available"). A non-empty
+   * `message` raises `customError` and becomes `validationMessage`, so the control fails
+   * `checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears it.
+   *
+   * Clearing restores the control's own computed validity rather than forcing it valid: a
+   * `required` combobox with nothing chosen stays `valueMissing`. The custom error also survives
+   * every intrinsic recomputation in between (each selection/`required` change re-runs
+   * `updateValidity()`) and a `form.reset()` — matching a native control, where only another
+   * `setCustomValidity('')` clears it.
+   *
+   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncCustomStates();
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
@@ -1140,7 +1164,13 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         if (this.open && this.activeIndex >= 0 && activeRow) {
           e.preventDefault();
           this.pickRow(activeRow);
+          break;
         }
+        // Nothing highlighted to commit, so the keystroke means what it means in any other text
+        // field: implicit submission of the ancestor form. The internal input lives in a shadow
+        // root and has no form owner, so the platform can never do it here.
+        if (this.effectiveDisabled) break;
+        submitOnEnter(this, e);
         break;
       }
       case 'Escape':

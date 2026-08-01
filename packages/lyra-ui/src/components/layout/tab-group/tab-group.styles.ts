@@ -9,6 +9,15 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-s);
   }
+  /* The tablist plus its two overflow controls. A row of its own so the controls can flank the
+     scroll container without ever becoming children of role="tablist" (whose only legal children
+     are the tabs). min-inline-size: 0 is what lets the tablist shrink below its content width and
+     therefore scroll at all. */
+  [part="nav"] {
+    display: flex;
+    align-items: stretch;
+    min-inline-size: 0;
+  }
   [part="tablist"] {
     display: flex;
     align-items: stretch;
@@ -16,6 +25,79 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     overflow-x: auto;
     overflow-y: hidden;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+  [part~="scroll-button"] {
+    /* Never shrinks: at the narrow allocations that produce overflow in the first place, a
+       shrinkable control would be squeezed straight through the WCAG 2.5.8 floor. */
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
+    inline-size: var(--lr-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: 0;
+    appearance: none;
+    background: none;
+    border: none;
+    /* Continues the tablist's own rule across the control, so the line under the strip runs
+       unbroken from edge to edge instead of stopping short at each control. */
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    color: var(--lr-color-text-quiet);
+    cursor: pointer;
+    transition: color var(--lr-transition-fast),
+      background var(--lr-transition-fast);
+  }
+  /* The controls exist in the DOM for an overflow that may not exist yet, so they are taken out of
+     layout (and out of the accessibility tree with it) until the tablist is measured as actually
+     overflowing -- the same ScrollOverflowController measurement the edge fade above is gated on,
+     so the two affordances can never disagree. :has() on the wrapper is what lets the *preceding*
+     control react to the tablist's own state attribute: CSS has no previous-sibling combinator.
+     The whole qualifier sits in :where() so it contributes no specificity, leaving this rule at
+     (0,1,0) -- it beats the display above by order alone, and a consumer's own
+     ::part(scroll-button) ((0,1,1)) still outranks it without needing !important. */
+  :where([part="nav"]:not(:has([part="tablist"][data-scroll-overflow])))
+    [part~="scroll-button"] {
+    display: none;
+  }
+  /* Same treatment as [part="tab"], so the controls read as part of the strip rather than as two
+     foreign buttons bolted to its ends. */
+  :where([part~="scroll-button"]):hover {
+    color: var(--lr-color-text);
+  }
+  :where([part~="scroll-button"]):active {
+    background: color-mix(
+      in oklab,
+      transparent,
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    color: var(--lr-color-text);
+  }
+  /* Reachable only by script (the controls are tabindex="-1"), but a consumer that focuses one must
+     still see where focus went. */
+  [part~="scroll-button"]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    border-radius: var(--lr-radius);
+  }
+  [part="scroll-button-glyph"] {
+    display: inline-flex;
+    align-items: center;
+  }
+  /* internal/icons.ts ships one direction-free chevron pointing right; the *wrapping part* points
+     it, never the svg. LTR: the start control points left, the end control right. RTL: the whole
+     row is mirrored by flex layout, so the meanings swap with it -- "toward the inline start" is
+     physically rightward. Hence the mirror moves from one control to the other rather than being
+     added to both. */
+  [part~="scroll-button-start"] [part="scroll-button-glyph"] {
+    transform: scaleX(-1);
+  }
+  :host(:dir(rtl)) [part~="scroll-button-start"] [part="scroll-button-glyph"] {
+    transform: none;
+  }
+  :host(:dir(rtl)) [part~="scroll-button-end"] [part="scroll-button-glyph"] {
+    transform: scaleX(-1);
   }
   /* Edge affordance, gated on the tablist actually overflowing -- ScrollOverflowController toggles
      data-scroll-overflow from a real scrollWidth/clientWidth measurement; scrolling itself stays
@@ -125,7 +207,8 @@ export const styles = css`
     border-radius: var(--lr-radius);
   }
   @media (prefers-reduced-motion: reduce) {
-    [part="tab"] {
+    [part="tab"],
+    [part~="scroll-button"] {
       transition: none !important;
     }
   }
@@ -136,9 +219,17 @@ export const styles = css`
   :host([placement='bottom']) [part='base'] {
     flex-direction: column-reverse;
   }
-  :host([placement='bottom']) [part='tablist'] {
+  :host([placement='bottom']) [part='tablist'],
+  :host([placement='bottom']) [part~='scroll-button'] {
     border-block-end: none;
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+  /* A vertical strip renders no scroll controls at all, so [part='nav'] is a bare wrapper here --
+     it must hand the tablist's own intrinsic width straight through to [part='base']'s row rather
+     than shrinking it. */
+  :host([placement='start']) [part='nav'],
+  :host([placement='end']) [part='nav'] {
+    flex: 0 0 auto;
   }
   :host([placement='start']) [part='base'],
   :host([placement='end']) [part='base'] {
