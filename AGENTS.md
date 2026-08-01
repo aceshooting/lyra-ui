@@ -140,6 +140,36 @@ Full rules, incidents, and patterns:
   paths) in comments or shipped docs — the npm tarball publishes them verbatim.
 - License: MIT. TypeScript strict.
 
+## Upstream parity and the shared vocabulary — digest
+
+Binds every component whose README `Mirrors` cell names a `wa-*`/`sl-*` tag, plus the styling
+vocabulary every component shares. Full rules:
+**[docs/agents/upstream-parity.md](docs/agents/upstream-parity.md)**.
+
+- Mirroring a tag obliges its whole documented surface — attributes, slots, parts, events, CSS
+  custom properties, methods — and every deliberate omission carries a stated reason (the class
+  JSDoc, or `scripts/fixtures/upstream-tags.json`'s `noCounterpart`); silence is the defect.
+- Never rename a mirrored member: add the upstream name as a second token
+  (`part="base button"`, a compatibility alias property read alongside the canonical one), not a
+  swap that breaks shipped consumers to help migrating ones.
+- The two upstreams disagree on names (`with-clear`/`clearable`, `image`/`src`) — accept both,
+  deprecate neither, and test that both reach the same behavior.
+- A rename never inverts polarity (`light-dismiss` → `no-light-dismiss`) and a mirror never changes
+  a default; `check-migration-coverage.mjs` gates the first, nothing gates the second.
+- README `Mirrors` cells are executable rewrite rules (`migrate-wa.mjs`'s `buildMirrorMap`, the
+  generated `llms/migration.md`) — `check-migration-coverage.mjs` fails uncovered, fictional,
+  dangling and polarity-inverted rows.
+- A capability an upstream exposes publicly never lives only in `src/internal/`.
+- Refresh `scripts/fixtures/upstream-tags.json` from upstream's own published manifest, bumping the
+  pinned version in the same change; tag names, versions and behavior prose are the only things
+  that cross the boundary — never upstream source, stylesheets, or token values.
+- One property name, one meaning: `src/internal/variants.ts` owns `variant`/`appearance`/`frame`/
+  `size`; `check-style-vocabulary.mjs` fails a local re-declaration of a shared member set.
+- Adornment slots are `start`/`end`, form chrome is `label`/`hint`, glyph overrides are
+  `<purpose>-icon` — binding on lyra-original components too.
+- A surface change lands JSDoc + test + story + `llms/<family>.md` + manifest/editor-data together;
+  `check-component-coverage.mjs` only proves the *tag* has a story and a test, never the new member.
+
 ## i18n, RTL, and theming — digest
 
 Cross-cutting, verified across every component — a gap is a bug. Full rules:
