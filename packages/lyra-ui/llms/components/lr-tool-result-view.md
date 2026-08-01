@@ -59,9 +59,8 @@ fallback view). `fallback-text` — the `<pre>` element for the `fallback="text"
 result text (only present in that mode). `fallback-copy` — the `<lr-copy-button>` shown when
 `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
 
-**Themeable custom properties:** `--lr-tool-result-view-font` (default `ui-monospace,
-SFMono-Regular, Menlo, Consolas, monospace` — component-specific since no shared monospace token
-exists, matching `<lr-json-viewer>`'s own `--lr-json-viewer-font` convention) — only used by the
+**Themeable custom properties:** `--lr-tool-result-view-font` (default `var(--lr-font-mono)`, the
+library's shared monospace stack, so a `--lr-theme-font-mono` override reaches it) — only used by the
 `fallback="text"` kind's `[part='fallback-text']`. Otherwise none — the component's own styling is
 deliberately minimal; all visible styling comes from whatever renderer/`<lr-skeleton>`/
 `<lr-json-viewer>`/`<lr-copy-button>` child is currently mounted.

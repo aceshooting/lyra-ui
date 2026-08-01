@@ -100,9 +100,9 @@ so a consumer can target `lr-markdown [part='content'][data-fallback]` to style 
 `<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered inline or block math span,
 carrying `data-display="inline"|"block"`)
 
-**Themeable custom properties:** `--lr-markdown-font-mono` (default `ui-monospace, SFMono-Regular,
-Menlo, Consolas, monospace` — the code/code-block font; component-specific since no shared
-`--lr-*` monospace token exists), `--lr-code-block-tab-size` (default `2` — tab width inside a
+**Themeable custom properties:** `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
+code/code-block font, resolving through the library's shared monospace stack so a
+`--lr-theme-font-mono` override reaches it), `--lr-code-block-tab-size` (default `2` — tab width inside a
 rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/-m/-l`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`, `--lr-color-text-quiet`,
 `--lr-radius`.
@@ -443,7 +443,13 @@ sit inline at the tail end of streamed text still being appended to).
 - `variant: TypingIndicatorVariant = 'dots'` (`'dots' | 'pulse' | 'cursor'`, reflected)
 - `label: string = 'Thinking…'` — the accessible name, exposed via `role="status"`; not re-announced
   on every animation frame, only on mount and on any later change to this property
-- `size: TypingIndicatorSize = 'md'` (`'sm' | 'md'`, reflected) — compact sizing for dense layouts
+- `size: TypingIndicatorSize = 'm'` (reflected) — visual size on the library-wide ladder;
+  `TypingIndicatorSize` is an alias of the shared `LyraSize`, so it accepts `2xs`/`xs`/`s`/`m`/`l`/
+  `xl` plus the `small`/`medium`/`large` spellings of `s`/`m`/`l`. A presence cue has three usefully
+  distinguishable sizes rather than six, so the ladder renders as three tiers: `2xs`/`xs`/`s`/
+  `small` are compact (for dense layouts, e.g. inline with a message bubble), `m`/`medium` is the
+  default standalone status-line size, and `l`/`large`/`xl` are roomy. Every accepted value matches a
+  rule — none is silently inert
 
 **Events:** none — purely presentational.
 
@@ -453,10 +459,12 @@ sit inline at the tail end of streamed text still being appended to).
 (each of the three dots in the `dots` variant), `pulse` (the single pulsing dot in the `pulse`
 variant), `cursor` (the blinking bar in the `cursor` variant)
 
-**Themeable custom properties:** `--lr-typing-dot-size` (default `0.5rem`, `0.375rem` at
-`size="sm"`), `--lr-typing-gap` (default `0.25rem`, `0.1875rem` at `size="sm"`),
-`--lr-typing-cursor-width` (default `0.125rem`, `0.09375rem` at `size="sm"`),
-`--lr-typing-cursor-height` (default `1em`, unaffected by `size`),
+**Themeable custom properties:** `--lr-typing-dot-size` (default `var(--lr-space-s)`, i.e. `0.5rem`;
+`0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one), `--lr-typing-gap` (default
+`var(--lr-space-xs)`, i.e. `0.25rem`; `0.1875rem` compact, `var(--lr-space-s)` roomy),
+`--lr-typing-cursor-width` (default `var(--lr-size-0-125rem)`, i.e. `0.125rem`; `0.09375rem`
+compact, `0.1875rem` roomy), `--lr-typing-cursor-height` (default `var(--lr-size-1em)`, i.e. `1em`,
+unaffected by `size`),
 `--lr-typing-dot-stagger-1` (default `600ms`, second dot), `--lr-typing-dot-stagger-2` (default
 `1200ms`, third dot), and `--lr-typing-duration` (default `var(--lr-transition-ambient)`, i.e.
 `1.8s ease-in-out`) — the compound duration/timing-function token every variant uses as its
@@ -469,7 +477,7 @@ off it — untouched.
 
 ```html
 <lr-typing-indicator label="Assistant is responding…"></lr-typing-indicator>
-<lr-typing-indicator variant="pulse" size="sm"></lr-typing-indicator>
+<lr-typing-indicator variant="pulse" size="s"></lr-typing-indicator>
 <lr-typing-indicator variant="cursor"></lr-typing-indicator>
 <lr-typing-indicator
   style="--lr-typing-duration: 900ms ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms"
@@ -495,9 +503,13 @@ decorative; `label` is the entire accessible content, nothing narrates individua
   compound `duration timing-function` value and cannot be divided with `calc()`. When retiming it,
   override both stagger properties alongside it to preserve the default one-third/two-thirds dot
   phasing, as shown above.
-- `size="sm"` shrinks the dot size, gap, and cursor width, but **not** `--lr-typing-cursor-height`
-  (still `1em` at any size) — the cursor bar's height is meant to track surrounding text size via
-  `1em`, not the component's own `size` property.
+- the compact tier (`2xs`/`xs`/`s`/`small`) shrinks the dot size, gap, and cursor width, but **not**
+  `--lr-typing-cursor-height` (still `1em` at any size) — the cursor bar's height is meant to track
+  surrounding text size via `1em`, not the component's own `size` property.
+- the six-step ladder collapses onto three rendered tiers here, so `2xs` and `s` look identical, as
+  do `l` and `xl`. That is deliberate: six distinguishable dot diameters do not exist inside a `1em`
+  line box, and accepting a value no selector matches would leave it quietly rendering at the
+  default tier.
 
 ---
 
@@ -523,10 +535,13 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
 - `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`
 - `status: ChatComposerStatus = 'idle'` (reflected) — `'idle' | 'sending' | 'streaming'`; drives the
   built-in button's icon/label (send vs. stop) and whether Enter still submits
-- `appearance: ChatComposerAppearance = 'card'` (reflected) — `'card' | 'plain'`; `'plain'` drops
-  `[part="base"]`'s border, background, padding and corner radius so a composer docked inside a chat
-  panel, dialog footer or toolbar that already draws its own border doesn't double the frame. The
-  focus affordance is swapped, not dropped — see **Known gotchas**
+- `frame: ChatComposerFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`; `ChatComposerFrame` is an alias of the shared `LyraFrame`).
+  `'plain'` drops `[part="base"]`'s border, background, padding and corner radius so a composer
+  docked inside a chat panel, dialog footer or toolbar that already draws its own border doesn't
+  double it. Named `frame`, not `appearance`: `appearance` is the library's vocabulary for how a
+  *control fills itself*, and one property name cannot mean both. The focus affordance is swapped,
+  not dropped — see **Known gotchas**
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
@@ -634,8 +649,8 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
 - `[part="chips"]`/`[part="leading"]` are hidden via a JS-tracked `[hidden]` attribute rather than a
   CSS `:empty` selector, because each always contains a literal `<slot>` child regardless of
   assigned content.
-- Under `appearance="card"` the only focus affordance is a border-color shift on `[part="base"]`
-  (the internal `<textarea>` sets `outline: none`). `appearance="plain"` removes that border, so it
+- Under `frame="card"` the only focus affordance is a border-color shift on `[part="base"]`
+  (the internal `<textarea>` sets `outline: none`). `frame="plain"` removes that border, so it
   swaps in a different affordance rather than losing focus visibility: an underline across the whole
   input row, drawn as an inset `box-shadow` from `--lr-focus-ring-width`/`--lr-focus-ring-color` so
   it costs no layout. If you restyle `[part="base"]` under `plain`, keep a focus indicator.
@@ -965,9 +980,14 @@ emitting `lr-change`.
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `open: boolean = false` (reflected)
-- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size; same `xs`–`xl` scale as
-  `<lr-select>`'s own `size`, scaling `[part="trigger"]`/`[part="combobox"]`'s padding/min-height/
-  font-size and `[part="expand-icon"]`'s box size (see the themeable custom properties below).
+- `size: LyraSize = 'm'` (reflected) — visual size on the library-wide ladder: `2xs`/`xs`/`s`/`m`/
+  `l`/`xl`, plus `small`/`medium`/`large` as accepted spellings of `s`/`m`/`l`, so markup migrated
+  from Web Awesome or Shoelace needs no attribute rewrite. It scales
+  `[part="trigger"]`/`[part="combobox"]`'s padding/min-height/font-size through the shared
+  `--lr-form-control-*` knobs, so a model select sits at the same height as the `lr-select`,
+  `lr-input` or `lr-button` beside it in a toolbar row at every tier, plus `[part="expand-icon"]`'s
+  box size (see the themeable custom properties below). The exported alias `LyraModelSelectSize`
+  names the canonical step (`LyraSizeStep`) a size resolves to.
 - `value: string` — getter/setter (hand-rolled, not the `FormAssociated` mixin); the current model id,
   `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously. A named,
   untouched model-select contributes `''` to `FormData` instead of omitting its key.
@@ -982,6 +1002,16 @@ combobox `<input>`: unlike a genuine pointer click, `HTMLElement.click()` never 
 `mousedown` side effect the browser applies only to real pointer interaction), and this mode's open
 behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` handler on the input
 itself.
+
+`checkValidity()` / `reportValidity()` behave as on any form-associated control.
+`setCustomValidity(message: string)` is the standard channel for a server-side rejection ("that
+model was retired by the provider") that no client-side constraint can express: a non-empty
+`message` raises `customError` and becomes `validationMessage`, so the control fails
+`checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears it. Clearing
+restores the control's own computed validity rather than forcing it valid — a `required` picker with
+no value stays `valueMissing` — and the custom error survives every intrinsic recomputation in
+between (each `value`/`required` change) and a `form.reset()`, matching a native control. The
+message is caller-supplied content, used verbatim and never localized.
 
 **Mode switching:** `closedMode` (private) is `true` whenever `normalizedCatalog.length > 0 &&
 !allowCustom` — a non-empty `catalog` with `allowCustom` left `false` renders the closed dropdown
@@ -1026,16 +1056,19 @@ both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badg
 stale-value row), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
 message), `error` (the error message)
 
-**Themeable custom properties:** `--lr-model-select-trigger-padding` (default `var(--lr-space-xs)
-var(--lr-space-s)`) — `[part="trigger"]`/`[part="combobox"]`'s padding shorthand.
-`--lr-model-select-trigger-min-height` (default `var(--lr-size-2-5rem)`) — their block-size floor.
-`--lr-model-select-font-size` (default `var(--lr-font-size-md)`) — their font size.
-`--lr-model-select-expand-size` (default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s
-decorative box size (clamped against `--lr-icon-button-size` via `min()`). All four are declared on
-`:host` at these `size="m"` (the default) values and re-declared inside each
-`:host([size="xs"|"s"|"l"|"xl"])` block at that tier's own value — same xs–xl scale `<lr-select>`
-uses — so `size` is the primary lever; override the cssprop directly only to retune a single tier or
-step outside the scale entirely. `--lr-model-select-option-active-bg` (default
+**Themeable custom properties:** `--lr-model-select-trigger-padding` (default
+`var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`) —
+`[part="trigger"]`/`[part="combobox"]`'s padding shorthand.
+`--lr-model-select-trigger-min-height` (default `var(--lr-form-control-height)`) — their block-size
+floor. `--lr-model-select-font-size` (default `var(--lr-form-control-font-size)`) — their font size.
+Those three are indirections onto the shared `--lr-form-control-*` scale rather than literal values:
+the public property surface is unchanged, but the numbers come from the one ladder every other
+control sizes against, so a tier is restated in exactly one place. `--lr-model-select-expand-size`
+(default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s decorative box size (clamped against
+`--lr-icon-button-size` via `min()`); this one is a glyph box rather than a control metric, so the
+shared ladder has no equivalent and its per-tier values stay local. `size` is the primary lever;
+override a cssprop directly only to retune a single element or step outside the scale entirely.
+`--lr-model-select-option-active-bg` (default
 `var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
 declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. The
 selected row (`[part="option"][aria-selected="true"]`) has the matching set
@@ -1117,8 +1150,10 @@ of the stream arrives.
 
 **CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`)
 
-**Themeable custom properties:** `--lr-streaming-text-cursor-width` (default `0.125rem` — the
-cursor bar's inline size), `--lr-streaming-text-cursor-height` (default `1em`) — both
+**Themeable custom properties:** `--lr-streaming-text-cursor-width` (default
+`var(--lr-size-0-125rem)`, i.e. `0.125rem` — the cursor bar's inline size),
+`--lr-streaming-text-cursor-height` (default `var(--lr-size-1em)`, i.e.
+`1em`, so the bar tracks the surrounding text size) — both
 component-specific, since no shared "inline cursor bar" token exists, the same pattern
 `<lr-typing-indicator>`'s own `--lr-typing-cursor-width`/`-height` use, plus shared
 `--lr-space-xs` (cursor's `margin-inline-start`) and `--lr-transition-ambient` (blink animation
@@ -1345,8 +1380,7 @@ are both set)
 
 **Themeable custom properties:** `--lr-code-block-max-height` (default `none` — the consumer-tunable
 scroll cap; only takes effect once `max-height` is set), `--lr-code-block-font` (default
-`ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` — no shared `--lr-*` monospace
-token exists to resolve through), `--lr-code-block-tab-size` (default `2` — tab width for the
+`var(--lr-font-mono)`, the library's shared monospace stack), `--lr-code-block-tab-size` (default `2` — tab width for the
 rendered code, applied to `[part='pre']`), `--lr-code-block-active-line-outline-color` (default
 `var(--lr-color-brand)` — the outline around the line marked active by `active-highlight-id`), plus shared tokens `--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
@@ -1642,9 +1676,9 @@ canvas resolves token values at paint time and cannot inherit `var()` directly).
 **CSS parts:** `base` (the root wrapper) and `canvas` (the drawing surface, `aria-hidden`; the host
 itself carries `role="img"` and the accessible name).
 
-**Themeable custom properties:** `--lr-audio-visualizer-color` (default `--lr-color-brand` —
+**Themeable custom properties:** `--lr-audio-visualizer-color` (default `var(--lr-color-brand)` —
 active bar/waveform color), `--lr-audio-visualizer-quiet-color` (default
-`--lr-color-brand-quiet` — inactive/idle color), and `--lr-audio-visualizer-height` (default
+`var(--lr-color-brand-quiet)` — inactive/idle color), and `--lr-audio-visualizer-height` (default
 `var(--lr-size-3rem)` — the host's block size).
 
 ## `lr-branch-picker`
@@ -2157,8 +2191,12 @@ the inline confirm when `confirmRestore` is on. Not cancelable.
 glyph), `label`, `timestamp`, `restore-button` (only while `restorable`), `confirm-group`,
 `confirm-prompt`, `confirm-button`, `cancel-button`.
 
-**Themeable custom properties:** `--lr-checkpoint-spin-duration` (default `1s`) — duration of one
-restoring-spinner rotation; stopped under reduced motion.
+**Themeable custom properties:** `--lr-checkpoint-spin-duration` (default
+`var(--lr-transition-ambient)`, the library's compound duration/timing-function token for infinite
+"still alive" motion) — the restoring spinner's rotation cycle. Because that value carries a timing
+function as well as a duration, it can only be spliced into the `animation` shorthand, never
+assigned to `animation-duration` alone. The spinner stops outright under
+`prefers-reduced-motion: reduce`.
 
 ```html
 <lr-checkpoint checkpoint-id="ck_18" label="Before refactor" .timestamp=${t}
@@ -2297,7 +2335,14 @@ identically-named properties.
 
 **Form association:** hand-rolled via `attachInternals()`, mirroring `lr-model-select`: `value`
 getter/setter (the current voice id, `''` when nothing is selected), `name` (reflected), `disabled`
-(reflected), `required` (reflected — enforced via `internals.setValidity()`).
+(reflected), `required` (reflected — enforced via `internals.setValidity()`), plus
+`checkValidity()`/`reportValidity()` and `setCustomValidity(message: string)`. The last is the
+standard channel for a server-side rejection ("that voice is not enabled for your account") no
+client-side constraint can express: a non-empty `message` raises `customError` and becomes
+`validationMessage`, so the control fails `checkValidity()`, blocks submission, and matches
+`:state(invalid)`; `''` clears only that consumer layer, leaving a `required` picker with no value
+still `valueMissing`. The custom error survives every intrinsic recomputation in between and a
+`form.reset()`, matching a native control, and the message is used verbatim, never localized.
 
 **Methods:** `click()` (override) — same forwarding contract as `lr-model-select`'s own `click()`
 override (see that section for the full rationale): closed-dropdown mode forwards a real `.click()`

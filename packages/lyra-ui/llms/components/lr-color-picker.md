@@ -41,6 +41,12 @@ visually-hidden span spelling the current value out in text, the panel shows it 
 field, and the selected palette swatch is marked with `aria-pressed` plus a check mark rather than
 a tint alone.
 
+**Not the same control as `lr-swatch-picker`.** This one is freeform: `swatches` is a shortcut row
+*beside* a saturation grid, a hue ramp and a text field, and the committed value can be any colour
+the browser parses. `<lr-swatch-picker>` offers exactly its `options` and nothing else, with
+`radiogroup` semantics rather than a popover. Reach for it when the answer must be one of N
+designer-chosen colours; reach for this when it must not.
+
 **Properties:** the shared
 form properties `name`, `value`, `disabled`, and `required`, plus `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), and `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'`

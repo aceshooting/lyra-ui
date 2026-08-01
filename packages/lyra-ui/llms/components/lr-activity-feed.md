@@ -20,11 +20,12 @@ instead. Implements the shared follow (stick-to-bottom) contract. At/above `virt
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
 
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
-text: string; icon?: string; timestamp?: Date | string; tone?: ActivityEntryTone }` (exported here).
+text: string; icon?: string; timestamp?: Date | string; variant?: LyraVariant }` (exported here).
 `icon` is a literal glyph hint (e.g. an emoji), the same convention `lr-tool-call-chip.icon` uses; a
-small tone dot renders in its place when omitted. `ActivityEntryTone = 'neutral' | 'brand' |
-'success' | 'warning' | 'danger'` (the same vocabulary as `ContextMeterTone`). An invalid
-`timestamp` string is treated as unset. `mode: 'live' | 'post-hoc' =
+small variant dot renders in its place when omitted. `LyraVariant = 'neutral' | 'brand' | 'success'
+| 'warning' | 'danger'` is the library-wide semantic vocabulary, so an entry is toned with the same
+five values as every other `variant` in the library; the exported alias `ActivityEntryTone` is
+retained as a name for it. An invalid `timestamp` string is treated as unset. `mode: 'live' | 'post-hoc' =
 'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
 `label: string = 'Activity'`, `showTimestamps: boolean = false` (attribute `show-timestamps`),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
@@ -39,17 +40,18 @@ rather than augmenting it, and `virtualizeThreshold: number = 200` (attribute
 
 **CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`),
 `summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries
-`data-tone`), `entry-icon`, `tone-dot` (the dot rendered inside `entry-icon` when the entry sets no
-literal `icon`), `tone-dot-neutral`/`tone-dot-brand`/`tone-dot-success`/`tone-dot-warning`/
-`tone-dot-danger` (each also carries `tone-dot`), `entry-text`, and `entry-timestamp` (only while
-`showTimestamps` and a valid `timestamp` is set). Every entry-level part is reachable in both
-rendering paths, virtualized or not.
+`data-variant`), `entry-icon`, `variant-dot` (the dot rendered inside `entry-icon` when the entry
+sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-success`/
+`variant-dot-warning`/`variant-dot-danger` (each also carries `variant-dot`), `entry-text`, and
+`entry-timestamp` (only while `showTimestamps` and a valid `timestamp` is set). Every entry-level
+part is reachable in both rendering paths, virtualized or not.
 
 **Themeable custom properties:** `--lr-activity-feed-max-height` (default `16rem`) — cap on how
 tall the expanded body grows before it scrolls internally.
 
 **Known gotchas:**
-- The tone dot's color is selected by its *part name*, not by `[data-tone]`: `::part()` cannot be
-  followed by an attribute selector, so `lr-activity-feed::part(tone-dot)[data-tone='success']`
-  never matches. Target `lr-activity-feed::part(tone-dot-success)` instead. `data-tone` remains on
-  both the entry and the dot for DOM queries.
+- The variant dot's color is selected by its *part name*, not by `[data-variant]`: `::part()` cannot
+  be followed by an attribute selector, so
+  `lr-activity-feed::part(variant-dot)[data-variant='success']` never matches. Target
+  `lr-activity-feed::part(variant-dot-success)` instead. `data-variant` remains on both the entry
+  and the dot for DOM queries.

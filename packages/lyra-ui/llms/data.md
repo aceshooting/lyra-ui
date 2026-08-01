@@ -51,6 +51,11 @@ line, `type="area"` only).
 
 KPI/stat card — value + unit + label + optional icon/trend/caption.
 
+**Renamed in 8.0.0 — breaking:** `appearance` is now `frame`. Library-wide, `appearance` means only
+"how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";
+this property was always the second. There is no alias — `appearance` on `<lr-stat>` is an unknown
+attribute now, so a stat left on `appearance="plain"` silently renders full card chrome again.
+
 **Properties:**
 - `label: string = ''`
 - `value: string = ''`
@@ -59,7 +64,10 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
   URL schemes keep the stat non-interactive
 - `target?: string` — forwarded to the anchor while `href` is active; a nonempty target derives
   `rel="noopener noreferrer"` rather than exposing a separately settable `rel`
-- `variant: 'neutral'|'success'|'warning'|'danger' = 'neutral'` (reflected)
+- `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'neutral'` (reflected) — the library's
+  one semantic-tone vocabulary, tinting `[part="value"]`. **`brand` is new in 8.0.0**, so a stat
+  whose headline is the primary metric no longer has to borrow `emphasis` (which is a card-chrome
+  accent) to read as branded
 - `trend: number = NaN` (a `NaN` sentinel hides the trend pill entirely — set an actual number to
   show it)
 - `caption: string = ''`
@@ -86,8 +94,8 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
   hides `[part="unit"]`, for rendering a loading/status message in place of a numeric value
 - `compact: boolean = false` (reflected) — tighter card padding; same convention as `lr-empty`'s and
   `lr-widget`'s `compact`
-- `appearance: 'card'|'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
+- `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
+  vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
   parent; `'plain'` removes the border, background, padding, corner radius **and** the
   `block-size: 100%` stretch, so the stat can sit inline in prose, a toolbar, or a table cell.
   `plain` wins over `compact` when both are set (there is no padding left to tighten), and it drops
@@ -123,11 +131,12 @@ transparent)`) — text/background of `[part="trend"]` when its polarity (per `g
 (default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
 counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
 so retinting the trend pill doesn't also recolor the value, and vice versa.
+`--lr-stat-value-brand-color` (default `var(--lr-color-brand)`),
 `--lr-stat-value-success-color` (default `var(--lr-color-success)`),
 `--lr-stat-value-warning-color` (default `var(--lr-color-warning)`), and
 `--lr-stat-value-danger-color` (default `var(--lr-color-danger)`) independently color the headline
 value for each non-neutral `variant`. `--lr-color-brand` still drives `emphasis`'s accent edge and
-value tint.
+its own value tint.
 
 **Optional peer deps:** none.
 
@@ -565,7 +574,12 @@ after the host applies a requested page. The component owns no data fetching and
   internal navigation landmark
 - `withSummary: boolean = false` (attribute `with-summary`, reflected) — renders the built-in range
   summary while retaining the controls. Opt-in since 8.0.0; see the rename note above
-- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — changes control height and type size
+- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — control footprint, on the library's shared
+  six-step ladder: `--lr-pagination-control-size` and `--lr-pagination-font-size` read the same
+  `--lr-form-control-height`/`--lr-form-control-font-size` knobs `lr-button`/`lr-input`/`lr-select`
+  sit on, so a pager in a toolbar row lines up with its neighbours at every tier.
+  `'small'`/`'medium'`/`'large'` are accepted as exact synonyms of `'s'`/`'m'`/`'l'` — no attribute
+  rewrite when migrating from an upstream that spells them that way
 - `format: 'standard'|'compact' = 'standard'` (reflected) — `standard` renders the numbered page
   list; `compact` replaces it with the single page-jump input and a `/ pageCount` readout, for a
   toolbar or card footer. Previous/next and the `with-edges` buttons render in both
@@ -1245,9 +1259,36 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 
 ## `lr-tree` / `lr-tree-item`
 
-An expand/collapse hierarchy (document/graph navigation tree). `lr-tree` owns the data and
-imperatively creates/reconciles light-DOM `<lr-tree-item>` children by `id`; `lr-tree-item`
-recursively renders itself and its own nested children.
+An expand/collapse hierarchy (document/graph navigation tree). Mirrors `wa-tree`/`wa-tree-item` and
+`sl-tree`/`sl-tree-item`.
+
+**Renamed in 8.0.0 — breaking:** the child element is `<lr-tree-item>` (class `LyraTreeItem`), not
+`<lr-tree-node>`/`LyraTreeNode`. It was the only child element in the library whose tag diverged
+from both upstreams, so `wa-tree-item`/`sl-tree-item` markup had nothing to rename to. The shared
+data types (`TreeItem`, `TreeBadge`, `TreeBadgeTone`) moved to `tree-types.ts` to free the name and
+are still re-exported from `tree.js`. A leftover `<lr-tree-node>` is an unregistered tag: it never
+upgrades, `<lr-tree>` does not count it as an item at all, and the tree renders its empty state
+with the stale markup sitting inert in the light DOM — no error anywhere.
+
+**Two child models are accepted, and they never interleave.**
+
+- **Declarative** (mirrors the upstream markup, so a tag rename is the whole migration): write
+  nested `<lr-tree-item>` elements as light-DOM children, each carrying its own
+  `label`/`expanded`/`disabled`/`selected` attributes. `<lr-tree-item>` moves its nested children
+  onto an internal `children` slot itself, so you never write `slot=`.
+- **Data**: leave `<lr-tree>` empty and assign `data`, a `TreeItem[]` of plain objects. This is this
+  library's own original shape and is where per-row icons, secondary descriptions and badges live —
+  the declarative model has none of those. `<lr-tree>` creates and reconciles the
+  `<lr-tree-item>` children by `id`, and each item renders its own subtree into its own shadow root.
+
+A tree containing any author-written `<lr-tree-item>` child is read purely as the declarative model
+and `data` is ignored. The empty state renders only when neither model has any items.
+
+Deliberately **not** mirrored, because there is no lyra equivalent to rename to: lazy loading
+(`lazy`, `sl-lazy-load`, `sl-lazy-change`), checkbox multi-select (`sl-tree`'s
+`selection="multiple"` and its `checkbox` part), the `expand-icon`/`collapse-icon` slots, and the
+`sl-expand`/`sl-collapse`/`sl-after-expand`/`sl-after-collapse` quartet — `lr-node-toggle` carries
+the same information in one event with an `expanded` flag.
 
 ### `lr-tree`
 
@@ -1258,7 +1299,8 @@ ArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated `keydown` 
 deeply-nested node's own shadow root still reaches it).
 
 **Properties:**
-- `data: TreeItem[] = []` (attribute: false) — `TreeItem { id: string; label: string; children?:
+- `data: TreeItem[] = []` (attribute: false) — the object child model; ignored while any
+  author-written `<lr-tree-item>` child is present. `TreeItem { id: string; label: string; children?:
   TreeItem[]; selected?: boolean; disabled?: boolean; badge?: string | number; badges?: TreeBadge[];
   icon?: unknown; description?: string; accessibleLabel?: string }`. `TreeBadge` is `{ text:
   string; tone?: TreeBadgeTone; label?: string }`, where `TreeBadgeTone` is
@@ -1301,9 +1343,12 @@ is simply not made: no event, no announcement, focus stays put. Otherwise this e
 nothing directly (see `lr-tree-item` below — those bubble up and are also observed internally to keep
 the roving `activeId` in sync with clicks).
 
-**Slots:** default (holds the `<lr-tree-item>` elements it manages).
+**Slots:** default — top-level `<lr-tree-item>` elements, each nesting its own children (the
+declarative model). Leave it empty and assign `data` for the object model; the same slot then holds
+the items `<lr-tree>` generates.
 
-**CSS parts:** `base`, `empty` (the empty-state message shown when `data` is empty)
+**CSS parts:** `base`, `empty` (the empty-state message, shown when neither child model has any
+items)
 
 **Themeable custom properties:** shared tokens `--lr-space-xs`/`-s`, `--lr-color-brand-quiet`,
 `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-text`, `--lr-radius`,
@@ -1314,26 +1359,61 @@ itself is the focusable `role="treeitem"`).
 
 ### `lr-tree-item`
 
-Normally set internally by `lr-tree`, but a public element. `role="treeitem"` (plus
-`aria-expanded`/`aria-level`/`aria-setsize`/`aria-posinset` and the roving `tabindex`, driven by
-`<lr-tree>`) live on the *host* element itself, not an internal row `<div>` — so this node's own
-nested children (rendered in its own shadow root as further `role="group"` content) are genuine DOM
-descendants of the treeitem, matching the WAI-ARIA treeitem pattern's containment expectation.
+One row of the tree, in either child model. `role="treeitem"` (plus
+`aria-expanded`/`aria-level`/`aria-setsize`/`aria-posinset`/`aria-selected` and the roving
+`tabindex`, driven by `<lr-tree>`) live on the *host* element itself, not an internal row `<div>` —
+so this node's own nested children (whether rendered in its own shadow root or projected from the
+light DOM, as further `role="group"` content) are genuine DOM descendants of the treeitem, matching
+the WAI-ARIA treeitem pattern's containment expectation.
 
-**Properties:**
-- `item: TreeItem` (required, attribute: false)
-- `depth: number = 0`
+**Properties — declarative model** (write these as attributes; each is ignored once an `item` object
+is assigned, because that object already carries the same information):
+- `label: string = ''` — the row's label, used only when nothing is slotted into the default slot
+- `disabled: boolean = false` (reflected) — removes the item from roving focus and blocks
+  select/toggle activation
+- `selected: boolean = false` (reflected) — renders the selected state and is exposed as
+  `aria-selected`
+
+**Properties — data model:**
+- `item: TreeItem` (attribute: false) — the whole subtree as one object, normally assigned by
+  `<lr-tree>` from its `data`. An assigned `item` **wins**: `label`/`disabled`/`selected` and any
+  light-DOM children are ignored. `item.selected` is tri-state — `undefined` means "this tree does
+  not express selection" and leaves `aria-selected` off the host entirely
+- `ancestry: TreeItem[] = []` (attribute: false) — the ancestor object identities used to stop a
+  cyclic `TreeItem` graph before it recurses; pushed down by the parent item
+
+**Properties — shared:**
 - `expanded: boolean = false` (reflected)
+- `depth: number = 0` — nesting depth, `0` at top level; feeds `aria-level` (`depth + 1`) and the
+  `--lr-tree-depth` indent. Clamped to a finite integer `>= 0`
 - `activeId: string | null = null` (attribute: false) — the id of the tree's roving-tabindex-focused
   item, pushed down from `<lr-tree>`; normally set internally, not by consumers
 - `setSize: number = 1`, `posInSet: number = 1` (attribute: false) — this node's `aria-setsize`/
   `aria-posinset` values among its siblings, pushed down from `<lr-tree>`; normally set internally,
-  not by consumers
-- `hasChildren: boolean` (read-only getter) — reports whether `item.children` contains at least one
-  child; leaf nodes never expose `aria-expanded` and cannot expand or collapse
+  not by consumers. `setSize` passes `-1` through unchanged (ARIA's "set size unknown" sentinel) and
+  clamps everything else to a finite integer `>= 1`
 
-**Methods:** `expand()`, `collapse()` (each a no-op if already in that state, or a leaf), `select()`
-(fires `lr-node-select`).
+**Read-only getters** — each answers for whichever child model is in use, which is what lets
+`<lr-tree>` drive both with one implementation:
+- `nodeId: string` — this item's identity: `item.id` in the data model, or a generated per-element
+  id in the declarative one (where the markup carries no id of its own). It is the `id` every
+  `lr-node-toggle` / `lr-node-select` / `lr-reorder` detail carries, and what the tree tracks its
+  roving tabindex by
+- `isDisabled: boolean` — `item.disabled` in the data model, the `disabled` property in the
+  declarative one
+- `nodeLabel: string` — this item's spoken name, used for the tree's reorder announcements:
+  `item.accessibleLabel || item.label` in the data model; a host `aria-label`, then the `label`
+  attribute, then the slotted label text (nested items excluded) in the declarative one
+- `hasChildren: boolean` — whether this node has at least one child in whichever model is in use.
+  Leaf nodes never expose `aria-expanded` and cannot expand or collapse. It also reports `false`
+  past a nesting depth of 64, which is what stops a runaway recursion; a `TreeItem` graph that
+  contains itself is caught earlier by `ancestry`
+
+**Methods:** `expand()`, `collapse()` (each a no-op if already in that state, disabled, or a leaf),
+`select()` (fires `lr-node-select`; a no-op while disabled). `childItems(): LyraTreeItem[]` returns
+this node's **direct** child `<lr-tree-item>` elements — from its own shadow root in the data model,
+from its own light-DOM children in the declarative one. A grandchild is not included; it lives under
+its own parent.
 
 **Events:** `lr-node-toggle` (`detail: { id, expanded }`, fired by `expand()`/`collapse()` — via
 the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { id }`, fired by `select()`
@@ -1341,13 +1421,17 @@ the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { id }`, 
 bubble/compose up
 through `lr-tree`'s light DOM.
 
-**Slots:** none.
+**Slots:** default — the row's label content in the declarative model. `children` — where nested
+`<lr-tree-item>` children are projected; **assigned by the component**, so write the nested items in
+the default slot and never set `slot="children"` yourself. Neither slot is used in the data model.
 
 **CSS parts:** `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`. `badge`
-is applied to the legacy singular badge and to every `badges` chip; additive chips carry
+is applied to the legacy singular `item.badge` and to every `item.badges` chip; additive chips carry
 `data-tone="neutral|brand|success|warning|danger"`. `icon` is `aria-hidden="true"`; `content`
 groups the primary label and optional wrapping secondary description while preserving one
-interactive treeitem per row.
+interactive treeitem per row. `icon`, `description` and `badge` render only in the data model —
+the declarative model has no icon/description/badge inputs, so a row written as markup renders
+`row`/`toggle`/`content`/`label` (and `group` while expanded) and nothing else.
 
 **Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for indentation);
 `--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row; and paired
@@ -1360,6 +1444,8 @@ badge property falls back to its corresponding shared semantic token. The expand
 and `--lr-tree-badge-danger-bg`.
 
 **Optional peer deps:** none.
+
+The data model — icons, descriptions and badges live here:
 
 ```html
 <lr-tree></lr-tree>
@@ -1375,6 +1461,18 @@ and `--lr-tree-badge-danger-bg`.
     },
   ];
 </script>
+```
+
+The declarative model — the same shape a renamed `wa-tree`/`sl-tree` subtree lands in, with no
+`slot=` anywhere and no `data` assignment:
+
+```html
+<lr-tree label="Documents">
+  <lr-tree-item label="Root" expanded>
+    <lr-tree-item label="Child A"></lr-tree-item>
+    <lr-tree-item label="Child B" disabled></lr-tree-item>
+  </lr-tree-item>
+</lr-tree>
 ```
 
 **Known gotchas:**
@@ -1394,12 +1492,13 @@ and `--lr-tree-badge-danger-bg`.
   `role="treeitem"` interaction target and preserves the APG keyboard model.
 - `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `TreeItem[]` is derived
   from `nodes` on every render and keyed by filesystem path, an order it does not own.
-
-**Additional API surface:**
-
-- `--lr-tree-selected-color` — Selected-node text color.
-- `--lr-tree-selected-bg` — Selected-node background.
-- `ancestry` — Ancestor object identities used to stop cyclic caller graphs before recursive rendering. Type: `TreeItem[]`.
+- in the declarative model, appending a child while the parent is collapsed still registers: a
+  `childList` MutationObserver assigns the `children` slot and requests an update, because
+  `slotchange` alone cannot see a child added to a slot that is not currently rendered. Editing a
+  label in place is picked up the same way.
+- a declarative row whose default slot holds only whitespace around its nested items still shows the
+  `label` attribute — indentation does not count as slotted label content, which is what makes the
+  common `<lr-tree-item label="…">` + nested-children shape render its label.
 
 ---
 
@@ -1666,11 +1765,13 @@ no editing commands live here.
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
 - `hideLock: boolean = false` (attribute `hide-lock`) — omits the lock/unlock toggle button
-- `appearance: FlowControlsAppearance = 'card'` (reflected) — `'card' | 'plain'`; `'plain'` drops
-  `[part="base"]`'s border, background, padding, corner radius and its floating-surface `box-shadow`,
-  for a cluster placed in a host toolbar or panel that already draws its own surface. There is
-  deliberately no `compact`: the padding is already the smallest spacing step and the only remaining
-  room is the buttons' `--lr-icon-button-size` hit-area floor
+- `frame: 'card' | 'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
+  vocabulary. `'plain'` drops `[part="base"]`'s border, background, padding, corner radius and its
+  floating-surface `box-shadow`, for a cluster placed in a host toolbar or panel that already draws
+  its own surface. There is deliberately no `compact`: the padding is already the smallest spacing
+  step and the only remaining room is the buttons' `--lr-icon-button-size` hit-area floor.
+  **Renamed from `appearance` in 8.0.0**, with no alias — the type is still exported as
+  `FlowControlsAppearance` so existing type imports keep resolving
 
 **Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
 `zoomOut()`/`fit()`, or toggles its `locked` property.
@@ -1678,10 +1779,10 @@ no editing commands live here.
 **Slots:** default — extra host buttons appended to the cluster, styled by the same group.
 
 **CSS parts:** `base` (the `role="group"` wrapper; drops its floating-surface chrome under
-`appearance="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).
+`frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).
 
 **Themeable custom properties:** shared tokens only — `--lr-icon-button-size` (each button's minimum
-hit area, unchanged by `appearance`), `--lr-shadow`, `--lr-color-surface`, `--lr-color-border`,
+hit area, unchanged by `frame`), `--lr-shadow`, `--lr-color-surface`, `--lr-color-border`,
 `--lr-radius`, `--lr-space-2xs`, `--lr-focus-ring-width`/`-color`/`-offset`.
 
 **Optional peer deps:** none.
@@ -1696,7 +1797,7 @@ hit area, unchanged by `appearance`), `--lr-shadow`, `--lr-color-surface`, `--lr
 - `for` resolution is identical to `lr-flow-minimap`/`lr-flow-run-overlay`: an explicit id, else
   the nearest ancestor canvas — none of the three companions import `LyraFlowCanvas` as a value, only
   its types, so registration order between them and the canvas never matters.
-- `appearance="plain"` drops the `box-shadow` along with the border and background — unlike most
+- `frame="plain"` drops the `box-shadow` along with the border and background — unlike most
   `plain` escapes in this library, which only reset the border/background/padding/radius. A lift
   shadow with no surface under it reads as a stray smudge, so the whole floating-surface treatment
   goes together (same as `lr-flow-run-overlay`'s `plain`).
@@ -1717,10 +1818,12 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
 - `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
   complete" strip, keeping only the decoration push
 - `label: string = ''` — accessible name for the summary strip
-- `appearance: 'card'|'plain' = 'card'` (reflected) — `'plain'` removes the border, background,
-  shadow, padding and radius, so a summary strip dropped straight into a host toolbar that already
-  draws its own frame does not double it. `'card'` is the standalone floating-strip presentation and
-  is unchanged.
+- `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
+  vocabulary. `'plain'` removes the border, background, shadow, padding and radius, so a summary
+  strip dropped straight into a host toolbar that already draws its own frame does not double it.
+  `'card'` is the standalone floating-strip presentation and is unchanged. **Renamed from
+  `appearance` in 8.0.0**, with no alias — the type is still exported as
+  `FlowRunOverlayAppearance` so existing type imports keep resolving.
 
 **Events:** none dispatched directly.
 
@@ -2008,8 +2111,21 @@ relationship and node-type filters, hop limits, validation, and saved queries.
 
 **Properties:** `value`, `label`, `labels`, `name`, `disabled`, `effectiveDisabled`, `nodeTypeOptions`,
 `relationshipTypeOptions`, `hopLimit`, `savedQueries`, `errors`, `form`, `validity`,
-`validationMessage`, `willValidate`, `checkValidity`, `reportValidity`, `formDisabledCallback`,
-`formResetCallback`, `formStateRestoreCallback`. **Events:** `lr-input`, `lr-validity-change`,
+`validationMessage`, `willValidate`, `checkValidity`, `reportValidity`, `setCustomValidity`,
+`formDisabledCallback`, `formResetCallback`, `formStateRestoreCallback`.
+
+`setCustomValidity(message)` (new in 8.0.0) is the standard channel for a server-side rejection
+("no graph is loaded for that tenant") that neither of the control's own constraints can express. A
+non-empty `message` raises `customError` and becomes `validationMessage`, so the builder fails
+`checkValidity()`, blocks submission and matches `:state(invalid)`; `''` clears it. Clearing
+restores the control's own computed validity rather than forcing it valid — a query with no
+`startId` stays `valueMissing` — and the custom error survives both intrinsic recomputation (every
+field edit) and `form.reset()`, exactly like a native control, where only another
+`setCustomValidity('')` clears it. The message is caller-supplied and is used verbatim, never
+localized, and it is whole-control state: it does not land in `errors`, which is keyed by the
+csspart of the field a message belongs to.
+
+**Events:** `lr-input`, `lr-validity-change`,
 `lr-query-run`, `lr-query-save`, `lr-query-load`, `lr-query-delete`. **Slots:** `actions`. **CSS
 parts:** `base`, `label`, `hint`, `error` (the three form-control chrome parts every
 form-associated control in this library exposes — see `lr-select`), `path-fields`, `start-input`,

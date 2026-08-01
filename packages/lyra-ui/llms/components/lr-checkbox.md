@@ -6,7 +6,7 @@
 - **Class** `LyraCheckbox`, also available unregistered from `@aceshooting/lyra-ui/components/forms/checkbox/checkbox.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,12 +27,21 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked` (a native checkbox
   submits nothing at all, not even an empty string, while unchecked)
+- `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
+  `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the box and its checkmark off
+  the same values `lr-input`/`lr-select`/`lr-button` read, so controls of one `size` line up in a
+  row. The slotted label keeps the library's standard control-label type size at every tier —
+  restyle it through `::part(label)` if you want it to track the control.
 
 **Events:** user toggles emit bubbling/composed `input`, then `change`, then the compatibility
 `lr-change` alias (`detail: { checked: boolean }`). Programmatic `.checked` assignments are
 silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control.
+`setCustomValidity(message)` sets or clears a consumer-supplied error ("those terms have been
+superseded"): a non-empty message raises `customError` and blocks submission, `''` restores the
+control's own computed validity so a required-and-unchecked box goes back to `valueMissing`. It
+survives every toggle and a form reset; only another `setCustomValidity('')` clears it.
 
 **Slots:** default — label text, rendered next to the box. Clicking it toggles the checkbox, the
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
@@ -49,26 +58,38 @@ unset.
 showing the checkmark/indeterminate dash), `checkmark` (the checkmark or indeterminate-dash glyph),
 `label` (wrapper around the default slot)
 
-**Themeable custom properties:** `--lr-checkbox-label-indent` (below), plus shared tokens —
-`--lr-space-s`, `--lr-icon-button-size`,
+**Themeable custom properties:** `--lr-checkbox-box-size` and `--lr-checkbox-label-indent` (both
+below), plus shared tokens — `--lr-space-s`, `--lr-icon-button-size`,
 `--lr-color-border/-surface/-on-brand/-brand/-text/-danger`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
+**`--lr-checkbox-box-size`** — the edge length of `[part='box']`, defaulting to
+`min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`. Derived from the
+active `size` tier's shared control height, so the box lines up with an
+`lr-input`/`lr-select`/`lr-button` of the same `size` instead of carrying a scale of its own; at the
+default `m` tier it resolves to `1.75rem`, exactly what the control shipped with before it had a
+`size` at all. The `--lr-icon-button-size` cap is kept, so a consumer compacting that theme token
+compacts this control with it. Set it to pin the box independently of the tier.
+
 **`--lr-checkbox-label-indent`** — the inline distance from the control's start edge to the start of
-the label text: the box's own floor plus the gap beside it. It defaults to
-`calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`, and the rendered gap is
+the label text: the box plus the gap beside it. It defaults to
+`calc(var(--lr-checkbox-box-size) + var(--lr-space-s))`, and the rendered gap is
 *derived* from it, so the advertised value and the real label offset cannot drift. Setting it on
 the element (or on `lr-checkbox` in your own stylesheet) moves the label.
 
 It is published so you can align your own per-option hint text under the label without re-deriving
 that formula by reading the shadow styles. **But custom properties inherit down, not sideways**, so
 a *sibling* node in your tree cannot read it off the checkbox. Align a sibling by computing the
-same formula from the `--lr-theme-*` inputs you control:
+same formula from the `--lr-theme-*` inputs you control — the tier below is the default `m`;
+substitute the one you actually use:
 
 ```css
 .checkbox-hint {
   padding-inline-start: calc(
-    min(var(--lr-theme-icon-button-size, 2.5rem), 1.75rem) + var(--lr-theme-space-s, 0.5rem)
+    min(
+      var(--lr-theme-icon-button-size, 2.5rem),
+      calc(var(--lr-theme-form-control-height-m, 2.5rem) * 0.7)
+    ) + var(--lr-theme-space-s, 0.5rem)
   );
 }
 ```

@@ -42,7 +42,14 @@ identically-named properties.
 
 **Form association:** hand-rolled via `attachInternals()`, mirroring `lr-model-select`: `value`
 getter/setter (the current voice id, `''` when nothing is selected), `name` (reflected), `disabled`
-(reflected), `required` (reflected — enforced via `internals.setValidity()`).
+(reflected), `required` (reflected — enforced via `internals.setValidity()`), plus
+`checkValidity()`/`reportValidity()` and `setCustomValidity(message: string)`. The last is the
+standard channel for a server-side rejection ("that voice is not enabled for your account") no
+client-side constraint can express: a non-empty `message` raises `customError` and becomes
+`validationMessage`, so the control fails `checkValidity()`, blocks submission, and matches
+`:state(invalid)`; `''` clears only that consumer layer, leaving a `required` picker with no value
+still `valueMissing`. The custom error survives every intrinsic recomputation in between and a
+`form.reset()`, matching a native control, and the message is used verbatim, never localized.
 
 **Methods:** `click()` (override) — same forwarding contract as `lr-model-select`'s own `click()`
 override (see that section for the full rationale): closed-dropdown mode forwards a real `.click()`

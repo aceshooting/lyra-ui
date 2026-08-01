@@ -13,12 +13,23 @@
 
 ## `lr-rating`
 
-A keyboard-accessible star rating control with slider semantics, form-associated through
-`ElementInternals`.
+A keyboard-accessible star rating control with slider semantics. It is a **form-associated control**
+that lives in this family rather than in `components/forms/` — if you came looking for it among the
+form controls, this is its section. Everything the "Form association" section says about `name`,
+submission, validity and the `user-*` custom states applies to it.
+
+It is form-associated through `ElementInternals` directly rather than through the shared
+`FormAssociated` mixin, because its `value` is a number and the mixin's contract assumes a plain
+string — routing through it would force every consumer into string round-tripping for what is
+natively a numeric score. The submitted entry is the clamped value stringified (`"0"` while
+unrated), and `required` reports `valueMissing` until a rating above zero is set. As on a native
+`<input>`, the `value` *content attribute* is the reset default that `form.reset()` restores, while
+the `value` IDL property is the live score and is deliberately not reflected.
 
 **Properties:** `value: number = 0`, `max: number = 5`, `precision: number = 1`,
 `readonly: boolean = false` (reflected), `disabled`, `required`, `name`,
-`size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — rewrites `--lr-rating-size`; the `m` default
+`size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — rewrites `--lr-rating-size` from a type ramp
+rather than the shared control ladder, since a rating has no control frame to size; the `m` default
 reproduces the treatment this component had before `size` existed), plus two separate naming knobs:
 `accessibleLabel: string = ''` (attribute **`aria-label`**) and `label: string = ''` (attribute
 `label`). `label` is an accessible-name fallback used when the host carries no `aria-label` — it is
@@ -44,8 +55,28 @@ text, never as markup. Left unset, the built-in star outline/solid pair is uncha
   so an interrupted gesture never leaves the preview frozen. A disconnect or a disablement drops the
   preview silently, with no `end` phase — that teardown wasn't user-driven.
 
-**Methods:** `focus()`, `blur()` and `click()` forward to the internal rating control;
-`checkValidity()`/`reportValidity()` behave as on a native form control.
+**Methods:** `focus()`, `blur()` and `click()` forward to the internal rating control.
+`checkValidity()` and `reportValidity()` behave as on a native form control — `reportValidity()`
+additionally shows the browser's validation UI, and counts as interaction, so a failed submit is
+what starts `user-invalid` matching. `setCustomValidity(message: string)` sets a consumer-supplied
+rejection no client-side constraint can express ("you have already rated this item"): a non-empty
+message raises `customError` and becomes `validationMessage`, so the control fails
+`checkValidity()`, blocks submission and matches `:state(invalid)`. It is caller-supplied content,
+so it is used verbatim and never localized. `setCustomValidity('')` clears it and restores the
+control's *computed* validity rather than forcing it valid — a `required` control that is still
+unrated stays `valueMissing`. Like a native control, the custom error survives every intrinsic
+recomputation in between (each `value`/`max`/`required` change re-runs validation) and a
+`form.reset()`; only another `setCustomValidity('')` clears it.
+
+**Reset and state restore.** `form.reset()` restores the `value` *content attribute*, drops any
+in-flight hover preview, and returns the control to pristine, so the `user-valid`/`user-invalid`
+states stop matching even though a required-and-unrated control is still `invalid`. Browser session
+restore (`formStateRestoreCallback`) reinstates the previously submitted numeric value; a
+non-string restored state falls back to `0` rather than producing NaN geometry.
+
+**Custom states:** `required`, `optional`, `valid`, `invalid`, `user-valid`, `user-invalid` —
+`lr-rating:state(user-invalid)` is the one to paint red. Plain `invalid` matches a pristine
+`required` rating that has never been set.
 
 **CSS parts:** `base` (the `role="slider"` control), `star` (each rendered symbol), `star-fill` (the
 filled overlay inside each symbol, clipped to that symbol's filled fraction — 0%, a partial

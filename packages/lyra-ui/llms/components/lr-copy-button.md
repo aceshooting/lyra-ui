@@ -16,7 +16,7 @@
 A standalone icon-only copy-to-clipboard button for a plain text `value` — swaps its icon to a
 checkmark for ~1.5s once the clipboard write resolves, or to a distinct failure glyph if it doesn't.
 Takes no positioning opinion of its own; a consumer wraps/positions the host element (e.g.
-absolutely positioned in the corner of a `wa-textarea` or a read-only output field). Unlike
+absolutely positioned in the corner of an `lr-textarea` or a read-only output field). Unlike
 `lr-code-block`'s or `lr-json-viewer`'s own built-in copy buttons, this has no code/JSON content
 model to adopt just to reuse the copy affordance.
 

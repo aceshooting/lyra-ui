@@ -54,14 +54,20 @@ native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
 `--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
 `--lr-input-fill`, and `--lr-input-border-color` (all
-but `--lr-input-control-height` swap per `size`; that one stays undeclared until you pin an exact
-row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance`, and
-`--lr-input-gap`/`--lr-input-radius` — like `--lr-button-gap`/`-radius` — never
-vary by `size` at all).
+but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` tier;
+`--lr-input-control-height` stays undeclared until you pin an exact
+row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
+and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder).
 
 `showPicker()` (inherited) is the supported way to open the browser's own time picker
 programmatically; it is a no-op without user activation, while `disabled`, while `readonly`, and in
 engines that don't implement it, rather than throwing.
+
+`stepUp(steps = 1)` / `stepDown(steps = 1)` (inherited) do work here — a native time input has an
+allowed value step, so they move the value by `steps` × `step` **seconds** with the platform's own
+`min`/`max` clamping. Like on `lr-input` they are **silent**: `value`, the submitted form value and
+validity all update, but no `input`/`change` is emitted. `step="any"`, `disabled` and `readonly`
+each make them no-ops.
 
 **Known gotchas:** the same two as `lr-number-input` — the inert clear/password surface, and `type`
 only being re-forced on connect. The native `type="time"` UI (spinners, AM/PM, picker) is the

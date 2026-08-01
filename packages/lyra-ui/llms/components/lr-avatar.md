@@ -16,8 +16,8 @@
 A small, fixed-size identity marker: default-slotted icon/glyph content, an image, an
 `icon`-slotted fallback glyph, or a fallback of initials text — in that priority order, whichever is
 set takes over from the next. Mirrors `wa-avatar` / `sl-avatar` (`image`, `initials`, `loading`,
-`shape`, the `icon` slot, the image-load error event) and adds this library's own `size`/`tone`
-vocabulary. Purely presentational, with no built-in interactivity; wrap it in a
+`shape`, the `icon` slot, the image-load error event) and adds this library's shared `size` and
+`variant` vocabulary. Purely presentational, with no built-in interactivity; wrap it in a
 `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
 **Properties:**
@@ -39,17 +39,22 @@ vocabulary. Purely presentational, with no built-in interactivity; wrap it in a
   which is worth setting for avatars far down a long list and never for one above the fold. It only
   reaches the DOM while the image tier is the one rendering; the default matches the native default,
   so an avatar that never sets it behaves exactly as it did before the property existed.
-- `size: 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg' = 'medium'` (reflected) — 2rem at
-  `medium`, 1.5rem at `small`, 2.5rem at `large` (which matches `--lr-icon-button-size`). **8.0.0
-  added the canonical `small`/`medium`/`large` spellings** shared with the rest of the library and
-  made `medium` the default; `sm`/`md`/`lg` remain accepted aliases that render identically tier for
-  tier, and the attribute reflects back whichever spelling was set (`size="lg"` stays `"lg"`).
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg'
+  = 'medium'` (reflected) — the library's shared six-step ladder, in either the `s`/`m`/`l` or the
+  `small`/`medium`/`large` spelling, plus this component's own older `sm`/`md`/`lg` shorthands.
+  Every one of the six tiers renders a distinct diameter — 1rem (`2xs`), 1.25rem (`xs`), 1.5rem
+  (`s`/`small`/`sm`), 2rem (`m`/`medium`/`md`, the default), 2.5rem (`l`/`large`/`lg`, which matches
+  `--lr-icon-button-size`), 3rem (`xl`) — and the initials font size steps alongside it. The three
+  spellings of a tier render identically, and the attribute reflects back whichever one was set
+  (`size="lg"` stays `"lg"`). **8.0.0 widened this from `sm`/`md`/`lg` to the full shared ladder**
+  and made `medium` the default.
 - `shape: 'circle' | 'rounded' | 'square' = 'circle'` (reflected) — three distinct corner radii:
   `circle` (the pill radius), `rounded` (the shared `--lr-radius`), `square` (no radius at all).
   **`rounded` is new in 8.0.0.**
-- `tone: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) — recolors
-  the initials-fallback background/text, mirroring `lr-chip`'s `tone` vocabulary; `neutral` (the
-  default) reads as a plain, unaccented circle.
+- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
+  recolors the initials-fallback background/text on the library's one semantic-tone vocabulary;
+  `neutral` (the default) reads as a plain, unaccented circle. **Renamed from `tone` in 8.0.0**,
+  with no alias: `tone="brand"` is an unknown attribute now and renders the neutral circle.
 
 **Events:** `lr-error` (`detail: { image: string }`, new in 8.0.0) — the image failed to load;
 `detail.image` carries the URL that failed, so a consumer can retry or report it. Bubbling,
@@ -73,23 +78,27 @@ icon-slot content), `image` (the `<img>`, only rendered while `image` is set, ha
 default-slot glyph is provided), `initials` (the initials text, only rendered once every glyph and
 image tier ahead of it in the priority order has been ruled out).
 
-**Themeable custom properties:** `--lr-avatar-size` (default `var(--lr-size-2rem)`, swapped to
-`var(--lr-size-1-5rem)`/`var(--lr-size-2-5rem)` per `size="small"`/`"large"` — and equally per the
-`"sm"`/`"lg"` aliases), `--lr-avatar-bg` (default
-`var(--lr-color-border)`, swapped per non-neutral `tone` to that tone's `-quiet` fill; there is no
-`--lr-color-surface-alt` token in this library, despite what older copies of this page claimed),
-`--lr-avatar-color` (default `var(--lr-color-text)`, swapped per non-neutral `tone` to that tone's
-loud color), `--lr-avatar-font-size` (default
-`var(--lr-font-size-sm)`) — the font size of the initials fallback, and of any `em`-sized slotted
-glyph. `size` swaps it per tier too (`var(--lr-font-size-xs)` at `small`, `var(--lr-font-size-md)`
-at `large`), so the initials track the circle instead of staying one fixed size across every tier;
-override it on the element for a size the built-in scale doesn't cover. Plus shared tokens
-`--lr-radius`/`-pill`, `--lr-font-size-sm`, `--lr-font-weight-semibold`.
+**Themeable custom properties:** `--lr-avatar-size` (default `var(--lr-size-2rem)`, stepped across
+the ladder from `var(--lr-size-1rem)` at `2xs` to `var(--lr-size-3rem)` at `xl` — every spelling of
+a tier selects the same declarations), `--lr-avatar-bg` (default `var(--lr-color-border)`, swapped
+per non-neutral `variant` to that variant's `-quiet` fill; there is no `--lr-color-surface-alt`
+token in this library, despite what older copies of this page claimed), `--lr-avatar-color`
+(default `var(--lr-color-text)`, swapped per non-neutral `variant` to that variant's loud color),
+`--lr-avatar-font-size` (default `var(--lr-font-size-sm)`) — the font size of the initials fallback,
+and of any `em`-sized slotted glyph. `size` steps it alongside the diameter (`--lr-font-size-2xs` at
+`2xs`/`xs`, `--lr-font-size-xs` at `s`, `--lr-font-size-m` at `l`, `--lr-font-size-lg` at `xl`), so
+the initials track the circle instead of staying one fixed size across every tier; override it on
+the element for a size the built-in scale doesn't cover. Plus shared tokens `--lr-radius`/`-pill`,
+`--lr-font-weight-semibold`.
+
+The variant colors are deliberately **not** the library's generic quiet-fill/on-quiet-text pairing:
+an avatar's initials *are* the accent, so they read in the variant's own loud color on that
+variant's quiet tint.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-avatar initials="JS" tone="brand"></lr-avatar>
+<lr-avatar initials="JS" variant="brand"></lr-avatar>
 <lr-avatar image="/users/42/photo.jpg" alt="Jane Smith" size="large" shape="rounded"></lr-avatar>
 <lr-avatar alt="Assistant"><svg viewBox="0 0 24 24"><!-- role glyph --></svg></lr-avatar>
 
@@ -107,7 +116,8 @@ override it on the element for a size the built-in scale doesn't cover. Plus sha
 **Known gotchas:**
 - a leftover `src="…"` from a pre-8.0.0 avatar is now inert: nothing errors, the attribute is simply
   not observed, and the avatar renders the `icon` slot or the initials as though no image were set.
-  Grep migrated markup for `<lr-avatar` carrying `src`, and rename it to `image`.
+  Grep migrated markup for `<lr-avatar` carrying `src`, and rename it to `image`. A leftover
+  `tone="…"` fails the same silent way — rename it to `variant`.
 - an image load failure falls back to the `icon` slot when it has content, otherwise to `initials`.
   Changing `image` clears the failure state so the replacement URL gets its own load attempt,
   including when a later transition returns to a URL that failed previously.

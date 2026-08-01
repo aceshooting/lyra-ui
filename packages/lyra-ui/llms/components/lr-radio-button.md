@@ -6,7 +6,7 @@
 - **Class** `LyraRadioButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio-button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 6 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,7 +27,11 @@ automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-typ
 and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
 
 **Properties and methods:** identical to `lr-radio` — `checked`, `disabled`, `name`, `required`,
-`value`; `click()`, `focus()`, `blur()`.
+`value`, `size`, `pill`; `click()`, `focus()`, `blur()`, `setCustomValidity()`. `size` is where this
+chrome differs most visibly: the shared ladder drives the button's height (floored at `1.5rem`),
+inline padding and font size, so a `size="small"` radio button sits at the same height as a
+`size="small"` `lr-button` beside it. `pill` is the one inherited property that does *more* here
+than on a plain `lr-radio` — see the radius note below.
 
 **Events:** identical to `lr-radio` — `input` and `change` on selection; `lr-change`
 (`detail: { checked, value }`) only for a *standalone* button, since an owning `lr-radio-group`
@@ -40,14 +44,22 @@ control's own do not cross the shadow boundary.
 additional part tokens (`::part(base checked)`), because an attribute selector after `::part()`
 never matches.
 
-Because this is a subclass, the manifest also lists `lr-radio`'s own `circle` and `dot` parts and its
-`--lr-radio-label-indent`, `--lr-radio-checked-border-color` and `--lr-radio-checked-dot-color`
-custom properties. **This element renders none of them** — it draws a button, not a circle and dot —
-so styling them here has no effect. They are inherited declarations, not surface.
+**Themeable custom properties:** `--lr-radio-radius` is the one inherited knob this element really
+uses. `lr-radio` points it at `--lr-radius-pill` for its circular indicator; this subclass re-points
+it at `--lr-form-control-radius` — the active `size` tier's shared corner radius — and `pill` swaps
+it back to `--lr-radius-pill`. Only the *outer* corners of a run take it: consecutive siblings
+collapse their shared borders, so the radius lands on the first button's leading corners and the
+last button's trailing ones. Everything else is shared tokens — `--lr-color-brand` /
+`--lr-color-on-brand` / `--lr-color-brand-quiet` (selected and hover fills),
+`--lr-color-surface-raised`, `--lr-color-border`, and the `--lr-form-control-*` ladder values behind
+the height, padding and font size.
 
-**Themeable custom properties:** shared tokens only — `--lr-color-brand` / `--lr-color-on-brand` /
-`--lr-color-brand-quiet` (selected and hover fills), `--lr-color-surface-raised`,
-`--lr-color-border`, `--lr-radius`, `--lr-icon-button-size` (the WCAG 2.5.8 hit-area floor).
+Because this is a subclass, the manifest also lists `lr-radio`'s own `circle` and `dot` parts and
+its `--lr-radio-circle-size`, `--lr-radio-dot-size`, `--lr-radio-label-indent`,
+`--lr-radio-checked-border-color` and `--lr-radio-checked-dot-color` custom properties. **This
+element renders none of those** — it draws a button, not a circle and dot — so styling them here has
+no effect. They are inherited declarations, not surface. `--lr-radio-radius` is the exception, and
+the only one of the set worth setting on this tag.
 
 ```html
 <lr-radio-group name="view" label="View">

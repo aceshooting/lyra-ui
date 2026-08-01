@@ -70,8 +70,10 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
 - `open: boolean = false` (reflected)
-- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — same scale as `lr-input`/`lr-combobox`'s
-  `size`, for compact toolbar placements that don't fit the default trigger height)
+- `size: LyraSize = 'm'` (reflected — the shared control ladder, same scale as
+  `lr-input`/`lr-combobox`/`lr-button`, for compact toolbar placements that don't fit the default
+  trigger height. Both spellings of every tier are accepted: `2xs`/`xs`/`s`/`m`/`l`/`xl` and
+  `small`/`medium`/`large`)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
   (reflected) — the library's shared field-surface vocabulary. `outlined` (the default) is a
   bordered surface; `filled` swaps the border for a raised fill; `filled-outlined` keeps both;
@@ -99,7 +101,8 @@ exactly like the multi-option case, until the trigger is actually activated.
   the chips — so pressing it clears the selection without opening the listbox
 - `clearable: boolean = false` — Shoelace's spelling of `withClear`; either one renders the same
   button. Present so a mechanical `sl-select` → `lr-select` rename keeps the clear control
-- `getTag?: (option: LyraOption, index: number) => unknown` (attribute: false) — renders one
+- `getTag?: LyraSelectTagRenderer` (attribute: false) — `(option: LyraOption, index: number) =>
+  unknown`, exported under that name from the component's own module, renders one
   selected option's chip in `multiple` mode. Whatever it returns replaces the whole built-in
   `[part="tag"]` element, so re-declare `part="tag"` on your own root node to keep the default
   styling hooks. A returned **string renders as text, never as markup** (it lands in an ordinary
@@ -111,6 +114,12 @@ exactly like the multi-option case, until the trigger is actually activated.
   is selected), a `string[]` in `multiple` mode
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
+`setCustomValidity(message)` carries a rejection no client-side constraint can express ("that option
+is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
+blocks submission; `''` clears it and restores the control's own computed validity, so a `required`
+select with nothing chosen goes back to `valueMissing` rather than to valid. The message survives
+every selection change and a `form.reset()` — like a native control, only another
+`setCustomValidity('')` clears it — and is used verbatim, never localized.
 
 **Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
 selection change — a native `<select>` doesn't meaningfully distinguish the two either), and
@@ -149,9 +158,12 @@ get no heading),
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
 `--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
 `lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use. `--lr-select-gap` (default
-`--lr-space-xs`, the gap inside `[part='trigger']`) and `--lr-select-radius` (default `--lr-radius`,
-its corner radius) are both retunable without a `::part(trigger)` rule but, unlike the four above,
-do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern. `--lr-select-tag-padding`
+`--lr-space-xs`, the gap inside `[part='trigger']`) is retunable without a `::part(trigger)` rule
+and does not vary by `size` — the adornment gap a field wants is looser than the icon-beside-label
+gap the ladder is tuned for. `--lr-select-radius` (default `--lr-form-control-radius`, the corner
+radius) is retunable the same way but *does* follow the tier: the two tightest tiers take a smaller
+radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` re-assigns it to
+`--lr-radius-pill`. `--lr-select-tag-padding`
 (default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
 `var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius they are declared once on
 `:host` and do **not** vary by `size` tier.

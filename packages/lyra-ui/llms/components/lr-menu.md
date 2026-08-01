@@ -128,6 +128,14 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
 **Properties:**
 - `value: string = ''` — an id/value echoed back in the parent `<lr-menu>`'s `lr-menu-select`
   detail
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected, new
+  in 8.0.0) — row density on the library's shared size ladder, the same one `<lr-input>`/
+  `<lr-select>`/`<lr-button>` use, so a menu sitting under a compact toolbar can match it. It scales
+  the row's height, inline/block padding, font size and corner radius together; both spellings of
+  every tier are accepted. Every tier still floors the row at the shared 24px pointer-target
+  minimum, so even `2xs` stays tappable. The size lives on the **item**, not on `<lr-menu>`, so a
+  single compact row inside an otherwise default menu needs no wrapper — and, conversely, sizing a
+  whole menu means setting it on every item
 - `disabled: boolean = false` (reflected — disables selection and excludes this item from
   `<lr-menu>`'s roving-tabindex navigation entirely)
 - `destructive: boolean = false` (reflected — tints the row with `--lr-color-danger`, for a
@@ -194,9 +202,9 @@ wrapper rather than by swapping the glyph)
 ### `lr-dropdown-item`
 
 Compatibility naming alias for `<lr-menu-item>`, mirroring `wa-dropdown-item`. It is a subclass of
-the same implementation, so `value`, `disabled`, `destructive`, `type`, `checked`, `select()`,
-`hasSubmenu`/`submenuOpen`, `openSubmenu()`/`closeSubmenu()`, checkbox events, and menu roving focus
-behave identically.
+the same implementation, so `value`, `size` (including the `small`/`medium`/`large` spellings),
+`disabled`, `destructive`, `type`, `checked`, `select()`, `hasSubmenu`/`submenuOpen`,
+`openSubmenu()`/`closeSubmenu()`, checkbox events, and menu roving focus behave identically.
 
 **Slots:** default label content, optional `icon`, and `submenu` — the same nested-`<lr-menu>` slot
 `<lr-menu-item>` documents above.
@@ -300,11 +308,14 @@ ArrowDown, Home/End and type-ahead inside a submenu stay inside that submenu and
 outer menu's roving highlight. A selection anywhere in the chain closes every level and returns
 focus to the outermost trigger.
 
-**Pointer.** Hovering a submenu parent opens its submenu after a short intent delay, so sweeping the
-cursor down a list opens nothing; leaving closes it after a deliberately longer one, which is the
-tolerance that lets the cursor cut diagonally across the rows in between on its way to the panel.
-Hover never moves focus — the pointer opens a submenu, it does not claim the keyboard. A pointerdown
-on the row that owns an open submenu is not treated as an outside click.
+**Pointer.** Hovering a submenu parent opens its submenu after a short intent delay (150 ms), so
+sweeping the cursor down a list opens nothing; leaving closes it after a deliberately longer one
+(300 ms), which is the tolerance that lets the cursor cut diagonally across the rows in between on
+its way to the panel — and, because the close delay outlasts the open delay, crossing a *sibling*
+submenu parent in transit neither dismisses the open submenu nor opens the sibling's. Hover never
+moves focus — the pointer opens a submenu, it does not claim the keyboard. A pointerdown on the row
+that owns an open submenu is not treated as an outside click. In a test, wait past both delays with
+real timers rather than stubbing them.
 
 **Placement and lifecycle.** A submenu prefers the inline-end side of its row, mirrored under RTL
 and flipped to the other side by the positioner when the preferred one would overflow. At most one

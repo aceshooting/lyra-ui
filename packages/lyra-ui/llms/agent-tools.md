@@ -142,9 +142,8 @@ fallback view). `fallback-text` — the `<pre>` element for the `fallback="text"
 result text (only present in that mode). `fallback-copy` — the `<lr-copy-button>` shown when
 `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
 
-**Themeable custom properties:** `--lr-tool-result-view-font` (default `ui-monospace,
-SFMono-Regular, Menlo, Consolas, monospace` — component-specific since no shared monospace token
-exists, matching `<lr-json-viewer>`'s own `--lr-json-viewer-font` convention) — only used by the
+**Themeable custom properties:** `--lr-tool-result-view-font` (default `var(--lr-font-mono)`, the
+library's shared monospace stack, so a `--lr-theme-font-mono` override reaches it) — only used by the
 `fallback="text"` kind's `[part='fallback-text']`. Otherwise none — the component's own styling is
 deliberately minimal; all visible styling comes from whatever renderer/`<lr-skeleton>`/
 `<lr-json-viewer>`/`<lr-copy-button>` child is currently mounted.
@@ -334,10 +333,12 @@ the footer row itself is hidden via `[hidden]` when nothing is slotted)
 tool name/status/duration), `tool-name`, `status`, `duration`, `header-actions`, `maximize-button`,
 `close-button`, `body`, `footer`
 
-**Themeable custom properties:** `--lr-tool-result-dialog-overlay-color` (default `rgb(0 0 0 /
-0.5)` — the backdrop scrim color; component-specific since no shared overlay token exists),
-`--lr-tool-result-dialog-maximized-inset` (default `var(--lr-space-l)` — inset applied to the
-panel while `[maximized]`, overridable e.g. to leave a persistent app rail visible), and
+**Themeable custom properties:** `--lr-tool-result-dialog-overlay-color` (default
+`var(--lr-color-overlay)` — the backdrop scrim color, the shared token `<lr-dialog>` and
+`<lr-widget>` also read, so one theme override restyles every scrim in the app),
+`--lr-tool-result-dialog-maximized-inset` (default `max(var(--lr-space-l),
+var(--lr-safe-area-*))` on each side — the inset applied to the panel while `[maximized]`, so the
+panel clears a notch or home indicator; overridable e.g. to leave a persistent app rail visible), and
 `--lr-tool-result-dialog-spin` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`,
 and effectively stopped under reduced motion because that token collapses to `0.001ms linear`), plus shared
 tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-success-quiet/
@@ -463,9 +464,9 @@ assigned elements.
 `category-count`, `category-list`, `tool-row`, `tool-checkbox`, `tool-name`, `tool-icon`,
 `tool-description`, `tool-disabled-reason`, `footer`
 
-**Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default `rgb(0 0 0 / 0.5)` —
-the backdrop scrim color; component-specific since no shared overlay token exists, mirrors
-`<lr-dialog>`'s/`<lr-tool-result-dialog>`'s identical pattern), plus shared `--lr-space-*`,
+**Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default
+`var(--lr-color-overlay)` — the backdrop scrim color, the same shared token
+`<lr-dialog>`/`<lr-tool-result-dialog>` read), plus shared `--lr-space-*`,
 `--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`, `--lr-shadow`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
@@ -546,8 +547,9 @@ jump-to-latest action of its own.
 
 **CSS parts:** `base`, `header`, `label`, `duration`, `toggle`, `body`
 
-**Themeable custom properties:** `--lr-thinking-panel-max-block-size` (default `16rem` —
-consumer-overridable cap on how tall `[part="body"]` grows before it scrolls internally; not
+**Themeable custom properties:** `--lr-thinking-panel-max-block-size` (default
+`var(--lr-size-16rem)`, i.e. `16rem` — consumer-overridable cap on how tall `[part="body"]` grows
+before it scrolls internally; not
 exposed as a component property since it's a pure layout knob, not something a template branches
 on), and `--lr-thinking-panel-pending-color` (default `var(--lr-color-brand)`) — the live-mode
 pending duration/toggle accent without changing the shared brand token. Plus shared
@@ -619,11 +621,12 @@ invention (no Web Awesome equivalent).
 - `maxHeight: string = ''` (attribute: `max-height`) — caps the rendered block size and enables an
   internal scrollbar once content exceeds it (any valid CSS length). Empty string (the default)
   grows with content.
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` keeps the bordered, filled, padded box. `'plain'` removes the
-  border, background, padding and corner radius, so a trace nested inside an
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`). `'card'` keeps the bordered, filled, padded box. `'plain'` removes
+  the border, background, padding and corner radius, so a trace nested inside an
   `lr-result-card`/`lr-agent-run` — which already draws a border — doesn't double the frame. The
-  `max-height` scroll cap and the copy/frame affordances are unaffected either way.
+  `max-height` scroll cap and the copy/frame affordances are unaffected either way. The exported
+  alias `StackTraceAppearance` is retained as a name for the same union.
 
 **Events:**
 - `lr-frame-select` (`detail: { file?: string; line?: number; column?: number; raw: string }`) —
@@ -635,7 +638,7 @@ invention (no Web Awesome equivalent).
 **Slots:** none.
 
 **CSS parts:** `base` (the root wrapper; respects `max-height`, and drops its card chrome under
-`appearance="plain"`), `message` (the leading error
+`frame="plain"`), `message` (the leading error
 message text for a group), `group` (one chained-error group of frames), `frame` (a single frame
 button; carries `data-internal` for internal frames), `frame-function` (the frame's function
 name), `frame-location` (the frame's `file:line:col` text), `internal-toggle` (the collapse/expand
@@ -750,9 +753,10 @@ rendered before the built-in Deny/Edit/Approve buttons.
 `exportparts`; `edit-button` stays a plain `<button>`, unaffected by this).
 
 **Themeable custom properties:** `--lr-tool-approval-dialog-overlay-color` (default
-`rgb(0 0 0 / 0.5)` — the backdrop scrim color; component-specific since no shared overlay token
-exists), `--lr-tool-approval-dialog-mono-font` (default `ui-monospace, SFMono-Regular, Menlo,
-Consolas, monospace` — used by both `tool-name` and the raw-JSON editor), plus shared tokens
+`var(--lr-color-overlay)` — the backdrop scrim color, the same shared token `<lr-dialog>` and
+`<lr-tool-select-dialog>` read), `--lr-tool-approval-dialog-mono-font` (default
+`var(--lr-font-mono)`, the library's shared monospace stack — used by both `tool-name` and the
+raw-JSON editor), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-radius`,
 `--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
 `--lr-color-text`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
@@ -807,8 +811,9 @@ shared composed-tree focus traversal used by the other modal families.
   `autocorrect="off"`, and `autocomplete="off"` because its content is JSON, never prose. These
   native editing-assistance values remain configurable through the corresponding properties for
   integrations that intentionally need different browser behavior.
-- `deny-button`/`approve-button` are `<lr-button>` hosts (`variant="neutral"`/`"brand"` — this
-  component has no `tone` property) — `--lr-button-*` theming reaches them directly. A consumer
+- `deny-button`/`approve-button` are `<lr-button>` hosts (`variant="neutral"`/`"brand"` — the dialog
+  itself has no `variant` property, unlike its in-flow sibling `<lr-confirm-bar>`, so the Approve
+  button is always `brand` here) — `--lr-button-*` theming reaches them directly. A consumer
   previously styling `::part(deny-button)`/`::part(approve-button)` for
   padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
   `deny-button-base`/`approve-button-base` sub-parts instead. `edit-button` is unaffected and stays
@@ -875,6 +880,17 @@ and makes the form invalid instead of being silently accepted.
   `ElementInternals.reportValidity()`. If `required` contains an unmet key absent from
   `properties`, there is no generated control to focus, so a localized, programmatically focusable
   root error names that dangling key instead.
+- `setCustomValidity(message: string): void` — the standard channel for a rejection the schema
+  cannot express ("the tool rejected these arguments"). A non-empty `message` raises `customError`
+  and becomes `validationMessage`, so the form fails `checkValidity()`, blocks submission, and
+  matches `:state(invalid)`; `''` clears it. Two independent layers: this control already raises
+  `customError` intrinsically for a malformed schema or an unsupported field type, and
+  `setCustomValidity('')` clears only the consumer's layer — a still-malformed schema stays invalid
+  with its own message restored, and clearing never forces a form with an unmet `required` property
+  valid. The consumer's error survives every intrinsic recomputation in between (each field edit
+  re-runs the validity sync) and a `form.reset()`, matching a native control. The message is
+  whole-control state, so it is deliberately absent from `errors`, which is keyed by schema
+  property; it is caller-supplied content and is used verbatim, never localized.
 
 **Events:** `lr-input` (`detail: { value: Record<string, unknown> }` — the full current value
 object, every property with defaults resolved, not just the field that changed), `lr-validity-change`
@@ -991,13 +1007,15 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
   block of `lr-result-field` rows with no natural heading).
 - `compact: boolean = false` (reflected) — tighter header/body padding for dense contexts (a card
   rendered as a row in a transcript or result list), same convention as `<lr-agent-run>`'s own
-  `compact`. Purely a density knob: the border and background stay, so use `appearance="plain"`
+  `compact`. Purely a density knob: the border and background stay, so use `frame="plain"`
   instead to drop the chrome entirely.
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — mirrors `lr-card`'s/`<lr-agent-run>`'s
-  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled box. `'plain'` removes
-  the border, background, and corner radius, so a card nested inside a host frame that already draws
-  a border (e.g. `<lr-tool-result-view>`'s own chrome) doesn't double it. `plain` wins over `compact`
-  when both are set (nothing left to tighten).
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`), the same property `<lr-agent-run>`/`<lr-card>` carry. `'card'`
+  (the default) keeps the bordered, filled box. `'plain'` removes the border, background, and corner
+  radius, so a card nested inside a host frame that already draws a border (e.g.
+  `<lr-tool-result-view>`'s own chrome) doesn't double it. `plain` wins over `compact` when both are
+  set (nothing left to tighten). The exported alias `ResultCardAppearance` is retained as a name for
+  the same union.
 
 **Events:** none.
 
@@ -1054,7 +1072,7 @@ around either the slotted content or the plain `value` text).
   <lr-result-field label="Status" value="200 OK"></lr-result-field>
   <lr-result-field label="Duration" value="340ms"></lr-result-field>
   <lr-result-field label="Provider">
-    <lr-chip tone="success">OpenWeather</lr-chip>
+    <lr-chip variant="success">OpenWeather</lr-chip>
   </lr-result-field>
 </lr-result-card>
 ```
@@ -1171,10 +1189,11 @@ line; `children` is exactly **one** level of sub-steps — a child's own `childr
 `collapsible: boolean = true`. `compact: boolean = false` (reflected) — tighter header/body padding
 and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
 convention as `<lr-agent-run>`'s/`<lr-source-card>`'s `compact`; purely a density knob, the border
-and background stay. `appearance: 'card' | 'plain' = 'card'` (reflected) — mirrors `lr-card`'s
-`appearance` vocabulary; `'plain'` removes `[part="base"]`'s border, background, and corner radius so
-a list embedded in a frame that already draws a border (an agent-run panel, a message bubble) doesn't
-double it.
+and background stay. `frame: LyraFrame = 'card'` (reflected) — container treatment, in the
+library-wide `frame` vocabulary (`'card' | 'plain'`); `'plain'` removes `[part="base"]`'s border,
+background, and corner radius so a list embedded in a container that already draws a border (an
+agent-run panel, a message bubble) doesn't double it. The exported alias `TaskListAppearance` is
+retained as a name for the same union.
 
 **Slots:** `detail-<id>` — dynamic, one per item id (e.g. `slot="detail-step-3"`); rich detail under
 that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
@@ -1258,6 +1277,41 @@ falls back to (e.g. `accent`'s `--lr-color-brand-quiet` is also the copy/downloa
 so retinting one tone doesn't repaint the other surface reading that token, and from any
 `::part('line')` stylesheet override — the background is applied inline, so a stylesheet rule can't
 beat it without `!important`.
+
+**The ANSI/SGR palette is two token sets, not one.** SGR gives the sixteen colour names two
+different jobs, and each job is themed separately:
+
+- `--lr-terminal-color-<name>` — **foregrounds**, i.e. `CSI 30`–`37` and `CSI 90`–`97`, drawn *on*
+  the terminal panel.
+- `--lr-terminal-bg-<name>` — **backgrounds**, i.e. `CSI 40`–`47` and `CSI 100`–`107`, drawn *under*
+  the panel's text.
+
+`<name>` is `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white` and their
+`bright-` counterparts — 32 tokens in all, each with its own `--lr-theme-terminal-color-*` /
+`--lr-theme-terminal-bg-*` retheme hook, and each with a separate light- and dark-mode value.
+
+The two sets exist because each is solved against a different reference, which is what makes the two
+cases a program cannot avoid legible:
+
+1. every `--lr-terminal-color-*` clears 4.5:1 against `--lr-color-surface-raised` — the panel
+   `<lr-terminal>` paints for itself — so **any foreground is legible on the panel**;
+2. every `--lr-terminal-bg-*` clears 4.5:1 against the panel's default text colour, which is the
+   foreground actually in effect whenever a program sets a background and no explicit colour, so
+   **the default foreground is legible on any background**.
+
+A single shared set could not do both: foregrounds solved against a light panel are all dark, so
+`ESC[41m` would paint a near-black red behind near-black text. An *explicit* foreground+background
+pair (`ESC[30;47m`) is the emitting program's choice and is not guaranteed here, exactly as in a
+native terminal — sixteen against sixteen is 256 combinations, several degenerate by construction.
+
+Each colour keeps its canonical ANSI hue (a terminal's red has to look like red, or escape sequences
+stop meaning what every other terminal makes them mean); only lightness is solved for. The
+consequence worth stating: on a light panel every background is a light tint, so `ESC[40m` ("black
+background") renders as the darkest tint that still leaves the default text readable rather than as
+literal black. Extended-colour sequences follow the same split: 256-colour indices 0–15 resolve to
+the role-matching named token (so `ESC[48;5;1m` gets the background red, not the foreground one),
+while indices 16–255 and truecolor become literal `rgb()` values — those are content-supplied rather
+than token-driven, and carry no contrast guarantee.
 
 **Additional API surface:**
 
@@ -1343,11 +1397,12 @@ instead. Implements the shared follow (stick-to-bottom) contract. At/above `virt
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
 
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
-text: string; icon?: string; timestamp?: Date | string; tone?: ActivityEntryTone }` (exported here).
+text: string; icon?: string; timestamp?: Date | string; variant?: LyraVariant }` (exported here).
 `icon` is a literal glyph hint (e.g. an emoji), the same convention `lr-tool-call-chip.icon` uses; a
-small tone dot renders in its place when omitted. `ActivityEntryTone = 'neutral' | 'brand' |
-'success' | 'warning' | 'danger'` (the same vocabulary as `ContextMeterTone`). An invalid
-`timestamp` string is treated as unset. `mode: 'live' | 'post-hoc' =
+small variant dot renders in its place when omitted. `LyraVariant = 'neutral' | 'brand' | 'success'
+| 'warning' | 'danger'` is the library-wide semantic vocabulary, so an entry is toned with the same
+five values as every other `variant` in the library; the exported alias `ActivityEntryTone` is
+retained as a name for it. An invalid `timestamp` string is treated as unset. `mode: 'live' | 'post-hoc' =
 'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
 `label: string = 'Activity'`, `showTimestamps: boolean = false` (attribute `show-timestamps`),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
@@ -1362,20 +1417,21 @@ rather than augmenting it, and `virtualizeThreshold: number = 200` (attribute
 
 **CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`),
 `summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries
-`data-tone`), `entry-icon`, `tone-dot` (the dot rendered inside `entry-icon` when the entry sets no
-literal `icon`), `tone-dot-neutral`/`tone-dot-brand`/`tone-dot-success`/`tone-dot-warning`/
-`tone-dot-danger` (each also carries `tone-dot`), `entry-text`, and `entry-timestamp` (only while
-`showTimestamps` and a valid `timestamp` is set). Every entry-level part is reachable in both
-rendering paths, virtualized or not.
+`data-variant`), `entry-icon`, `variant-dot` (the dot rendered inside `entry-icon` when the entry
+sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-success`/
+`variant-dot-warning`/`variant-dot-danger` (each also carries `variant-dot`), `entry-text`, and
+`entry-timestamp` (only while `showTimestamps` and a valid `timestamp` is set). Every entry-level
+part is reachable in both rendering paths, virtualized or not.
 
 **Themeable custom properties:** `--lr-activity-feed-max-height` (default `16rem`) — cap on how
 tall the expanded body grows before it scrolls internally.
 
 **Known gotchas:**
-- The tone dot's color is selected by its *part name*, not by `[data-tone]`: `::part()` cannot be
-  followed by an attribute selector, so `lr-activity-feed::part(tone-dot)[data-tone='success']`
-  never matches. Target `lr-activity-feed::part(tone-dot-success)` instead. `data-tone` remains on
-  both the entry and the dot for DOM queries.
+- The variant dot's color is selected by its *part name*, not by `[data-variant]`: `::part()` cannot
+  be followed by an attribute selector, so
+  `lr-activity-feed::part(variant-dot)[data-variant='success']` never matches. Target
+  `lr-activity-feed::part(variant-dot-success)` instead. `data-variant` remains on both the entry
+  and the dot for DOM queries.
 
 ## `lr-commit-card`
 
@@ -1391,11 +1447,12 @@ number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []`
 boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean = true` (reflected).
 `compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
 row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,
-so pair it with `appearance="plain"` to drop the chrome entirely. `appearance: 'card' | 'plain' =
-'card'` (reflected) — mirrors `lr-card`'s/`<lr-agent-run>`'s `appearance` vocabulary: `'card'` keeps
-the bordered, padded box, `'plain'` removes the border, padding, and corner radius so a commit nested
-in a host list that already draws its own row chrome doesn't double it; `plain` wins over `compact`
-when both are set.
+so pair it with `frame="plain"` to drop the chrome entirely. `frame: LyraFrame = 'card'` (reflected)
+— container treatment, in the library-wide `frame` vocabulary (`'card' | 'plain'`), the same
+property `<lr-agent-run>`/`<lr-card>` carry: `'card'` keeps the bordered, padded box, `'plain'`
+removes the border, padding, and corner radius so a commit nested in a host list that already draws
+its own row chrome doesn't double it; `plain` wins over `compact` when both are set. The exported
+alias `CommitCardAppearance` is retained as a name for the same union.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
@@ -1490,7 +1547,11 @@ free-form heading override for non-tool proposals; wins over `toolName`. `args: 
 (attribute: false) — shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when
 defined. `decision: 'approved' | 'denied' | null = null` (reflected) — decided state, set by the
 component on activation and host-writable (an externally-resolved decision renders identically but
-emits nothing). `tone: 'neutral' | 'danger' = 'neutral'` (reflected). `compact: boolean = false`
+emits nothing). `variant: ConfirmBarVariant = 'neutral'` (reflected) — `'neutral' | 'danger'`, a
+genuine two-member subset of the library-wide `LyraVariant` vocabulary (spelled as an `Extract` of
+it, so the two can never drift): a confirmation is either routine or destructive, and
+`brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. The exported alias
+`ConfirmBarTone` is retained as a name for the same union. `compact: boolean = false`
 (reflected) — collapses the bar from a full card (bordered, padded, `display: block` surface) to a
 single inline row with no chrome of its own, for a confirmation that has to live inside an existing
 container: a table cell, a card's action row, a toolbar. The host becomes `inline-flex`, and the
@@ -1541,8 +1602,11 @@ repainting everything else that reads them.
 - `[part="status"]` is always rendered and must never be given `display: none`. Deciding moves focus
   to it synchronously, before the Deny/Approve buttons unmount, so hiding it would drop focus to
   `<body>`. The shipped `:empty` rule on it has never matched, and that is load-bearing.
-- `[part="deny-button"]`/`[part="approve-button"]` are `<lr-button>` hosts (`variant="neutral"`/
-  `"brand"`, `"danger"` under `tone="danger"`) — `--lr-button-*` theming reaches them directly. A
+- `[part="deny-button"]`/`[part="approve-button"]` are `<lr-button>` hosts. Deny is
+  `variant="neutral" appearance="outlined"`; Approve is `variant="brand"` (`"danger"` under this
+  component's own `variant="danger"`) at `lr-button`'s default `appearance="accent"`, so the
+  destructive-or-primary action is the loud one and the safe action recedes. `--lr-button-*` theming
+  reaches both directly. A
   consumer previously styling `::part(deny-button)`/`::part(approve-button)` for
   padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
   `deny-button-base`/`approve-button-base` sub-parts instead — the outer part now resolves to the
@@ -1722,13 +1786,15 @@ cancelable. Retry is available for `error` and `cancelled`.
 - `compact: boolean = false` (reflected) — tighter root padding and header/body gap for dense
   contexts (a run rendered as a row in a list, or in a side panel); same convention as `lr-empty`'s
   `compact`. Purely a density knob: the border and background stay, so reach for
-  `appearance="plain"` instead when the goal is to drop the chrome entirely
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` keeps the bordered, filled, padded box; `'plain'` removes the
-  border, background, padding and corner radius, so a run nested inside a host frame that already
-  draws a border doesn't double it. `plain` wins over `compact` when both are set — there is no
-  padding left to tighten. The built-in Cancel/Retry buttons draw their own border and background
-  and stay visibly interactive either way
+  `frame="plain"` instead when the goal is to drop the chrome entirely
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`), the same property `<lr-card>` and every other card-shaped
+  component carries. `'card'` keeps the bordered, filled, padded box; `'plain'` removes the
+  border, background, padding and corner radius, so a run nested inside a host container that
+  already draws a border doesn't double it. `plain` wins over `compact` when both are set — there is
+  no padding left to tighten. The built-in Cancel/Retry buttons draw their own border and background
+  and stay visibly interactive either way. The exported alias `AgentRunAppearance` is retained as a
+  name for the same union
 
 **Events:** `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
 `@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-retry`

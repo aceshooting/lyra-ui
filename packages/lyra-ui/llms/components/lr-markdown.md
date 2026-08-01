@@ -113,9 +113,9 @@ so a consumer can target `lr-markdown [part='content'][data-fallback]` to style 
 `<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered inline or block math span,
 carrying `data-display="inline"|"block"`)
 
-**Themeable custom properties:** `--lr-markdown-font-mono` (default `ui-monospace, SFMono-Regular,
-Menlo, Consolas, monospace` — the code/code-block font; component-specific since no shared
-`--lr-*` monospace token exists), `--lr-code-block-tab-size` (default `2` — tab width inside a
+**Themeable custom properties:** `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
+code/code-block font, resolving through the library's shared monospace stack so a
+`--lr-theme-font-mono` override reaches it), `--lr-code-block-tab-size` (default `2` — tab width inside a
 rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/-m/-l`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`, `--lr-color-text-quiet`,
 `--lr-radius`.

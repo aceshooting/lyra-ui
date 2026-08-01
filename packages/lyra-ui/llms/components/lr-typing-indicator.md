@@ -26,7 +26,13 @@ sit inline at the tail end of streamed text still being appended to).
 - `variant: TypingIndicatorVariant = 'dots'` (`'dots' | 'pulse' | 'cursor'`, reflected)
 - `label: string = 'Thinking…'` — the accessible name, exposed via `role="status"`; not re-announced
   on every animation frame, only on mount and on any later change to this property
-- `size: TypingIndicatorSize = 'md'` (`'sm' | 'md'`, reflected) — compact sizing for dense layouts
+- `size: TypingIndicatorSize = 'm'` (reflected) — visual size on the library-wide ladder;
+  `TypingIndicatorSize` is an alias of the shared `LyraSize`, so it accepts `2xs`/`xs`/`s`/`m`/`l`/
+  `xl` plus the `small`/`medium`/`large` spellings of `s`/`m`/`l`. A presence cue has three usefully
+  distinguishable sizes rather than six, so the ladder renders as three tiers: `2xs`/`xs`/`s`/
+  `small` are compact (for dense layouts, e.g. inline with a message bubble), `m`/`medium` is the
+  default standalone status-line size, and `l`/`large`/`xl` are roomy. Every accepted value matches a
+  rule — none is silently inert
 
 **Events:** none — purely presentational.
 
@@ -36,10 +42,12 @@ sit inline at the tail end of streamed text still being appended to).
 (each of the three dots in the `dots` variant), `pulse` (the single pulsing dot in the `pulse`
 variant), `cursor` (the blinking bar in the `cursor` variant)
 
-**Themeable custom properties:** `--lr-typing-dot-size` (default `0.5rem`, `0.375rem` at
-`size="sm"`), `--lr-typing-gap` (default `0.25rem`, `0.1875rem` at `size="sm"`),
-`--lr-typing-cursor-width` (default `0.125rem`, `0.09375rem` at `size="sm"`),
-`--lr-typing-cursor-height` (default `1em`, unaffected by `size`),
+**Themeable custom properties:** `--lr-typing-dot-size` (default `var(--lr-space-s)`, i.e. `0.5rem`;
+`0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one), `--lr-typing-gap` (default
+`var(--lr-space-xs)`, i.e. `0.25rem`; `0.1875rem` compact, `var(--lr-space-s)` roomy),
+`--lr-typing-cursor-width` (default `var(--lr-size-0-125rem)`, i.e. `0.125rem`; `0.09375rem`
+compact, `0.1875rem` roomy), `--lr-typing-cursor-height` (default `var(--lr-size-1em)`, i.e. `1em`,
+unaffected by `size`),
 `--lr-typing-dot-stagger-1` (default `600ms`, second dot), `--lr-typing-dot-stagger-2` (default
 `1200ms`, third dot), and `--lr-typing-duration` (default `var(--lr-transition-ambient)`, i.e.
 `1.8s ease-in-out`) — the compound duration/timing-function token every variant uses as its
@@ -52,7 +60,7 @@ off it — untouched.
 
 ```html
 <lr-typing-indicator label="Assistant is responding…"></lr-typing-indicator>
-<lr-typing-indicator variant="pulse" size="sm"></lr-typing-indicator>
+<lr-typing-indicator variant="pulse" size="s"></lr-typing-indicator>
 <lr-typing-indicator variant="cursor"></lr-typing-indicator>
 <lr-typing-indicator
   style="--lr-typing-duration: 900ms ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms"
@@ -78,8 +86,12 @@ decorative; `label` is the entire accessible content, nothing narrates individua
   compound `duration timing-function` value and cannot be divided with `calc()`. When retiming it,
   override both stagger properties alongside it to preserve the default one-third/two-thirds dot
   phasing, as shown above.
-- `size="sm"` shrinks the dot size, gap, and cursor width, but **not** `--lr-typing-cursor-height`
-  (still `1em` at any size) — the cursor bar's height is meant to track surrounding text size via
-  `1em`, not the component's own `size` property.
+- the compact tier (`2xs`/`xs`/`s`/`small`) shrinks the dot size, gap, and cursor width, but **not**
+  `--lr-typing-cursor-height` (still `1em` at any size) — the cursor bar's height is meant to track
+  surrounding text size via `1em`, not the component's own `size` property.
+- the six-step ladder collapses onto three rendered tiers here, so `2xs` and `s` look identical, as
+  do `l` and `xl`. That is deliberate: six distinguishable dot diameters do not exist inside a `1em`
+  line box, and accepting a value no selector matches would leave it quietly rendering at the
+  default tier.
 
 ---

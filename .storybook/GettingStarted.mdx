@@ -106,17 +106,33 @@ complete contract for that component.
 
 ### Family entry points
 
-Three families ship an "everything in this family" entry, which is a useful middle ground while
-building a whole agent or chat surface:
+Every one of the eleven families ships an "everything in this family" entry —
+`@aceshooting/lyra-ui/components/<family>`, with no trailing path:
 
 ```js
-import '@aceshooting/lyra-ui/components/conversation';
-import '@aceshooting/lyra-ui/components/agent-tools';
-import '@aceshooting/lyra-ui/components/retrieval';
+import '@aceshooting/lyra-ui/components/conversation'; // every conversation element
+import '@aceshooting/lyra-ui/components/forms';        // every form control
 ```
 
-These register and export the complete family. Granular entries are still the smallest bundle and
-remain the recommendation for production.
+The eleven keys are `agent-tools`, `charts`, `conversation`, `data`, `forms`, `layout`, `media`,
+`overlays`, `retrieval`, `utility` and `viewers` — the same segments the granular paths use. Each
+entry registers *and* re-exports the complete family. (Only three of these were documented before
+8.0.0, which made the other eight effectively unreachable even though they were in the `exports`
+map.)
+
+A family barrel is **side-effectful by design**: importing it registers every tag in that family,
+exactly as the root barrel registers all of them. Reach for one when you genuinely use most of a
+family and want a single import; reach for the granular
+`@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` path — which is what every example in
+these guides uses — when you do not, **because a barrel cannot be tree-shaken down to the two
+elements you actually render**. Granular entries remain the recommendation for production.
+
+One difference from the root barrel: a family entry **does** register the peer-gated tags its family
+owns — the whole chart family under `charts`, `<lr-map>` under `media`, `<lr-graph>` and
+`<lr-knowledge-graph-explorer>` under `retrieval`, `<lr-geojson-view>` under `viewers`. That still
+costs nothing up front, because every peer is loaded by a dynamic import at render time; registering
+a tag never pulls Chart.js, MapLibre or d3 into your first-paint bundle. It does mean the tag exists
+and will fail closed with a localized error if you render it without installing its peer.
 
 ## Importing a class without registering a tag
 
@@ -147,10 +163,33 @@ Beyond `components/*`, the package publishes a small set of focused entries:
 | `@aceshooting/lyra-ui/ai` | Provider-neutral types and stream adapters for the agentic components. |
 | `@aceshooting/lyra-ui/utilities` | The curated, semver-covered helper surface (also importable one module at a time, e.g. `utilities/positioner`). |
 | `@aceshooting/lyra-ui/testing` | happy-dom shims so form-associated controls are constructible in a non-browser test DOM. |
+| `@aceshooting/lyra-ui/translations/<locale>.js` | One of the eight shipped locale catalogs, as a side-effect-only import. |
 
 `theme.js`, `localization.js` and `events` are deliberately free of component imports, so an
 application can set up theming, locales and event typing without pulling the component graph into
 its first-paint bundle.
+
+### Installing the theme
+
+`theme.css` is optional — every component renders correctly with no theme configured, because each
+internal token falls back to a built-in value. Import it once at the application root when you want
+the ready-made light and dark palettes:
+
+```css
+@import '@aceshooting/lyra-ui/theme.css';
+:root { --lr-theme-color-brand-fill-loud: #7c3aed; }
+```
+
+**The order you load it in does not matter.** `theme.css` declares its own cascade layers up front
+(`@layer lr-base, lr-theme, lr-utilities, lr-overrides;`) and puts its tokens in `lr-theme`. Any
+declaration you write *outside* a layer beats every layered one, whatever its specificity and
+whatever the source order — so the `:root` override above wins even if your stylesheet is bundled
+before `theme.css`, and it needs no `!important`. `lr-utilities` and `lr-overrides` are named so you
+can opt your own layers into a defined position relative to Lyra's rather than inventing one.
+
+Switch modes with `class="lr-light"` / `class="lr-dark"` (or `data-lr-theme="light"` / `"dark"`) on
+any ancestor. [Theming](?path=/docs/guides-theming--docs) covers the token layers, how far an
+override reaches, and the `theme.js` runtime for persisting the choice.
 
 ## Optional peers
 

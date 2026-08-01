@@ -23,6 +23,8 @@ back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
 percentage (and nothing at all while `indeterminate`).
 **CSS parts:** `base`, `track`, `indicator`, `label`.
-**Themeable custom properties:** `--lr-progress-ring-size` (default `--lr-size-2-5rem` — the
-ring's inline and block size) and `--lr-progress-duration` (default `1.2s` — the indeterminate spin
-period, shared with `lr-progress-bar`'s sweep).
+**Themeable custom properties:** `--lr-progress-ring-size` (default `var(--lr-size-2-5rem)` — the
+ring's inline and block size) and `--lr-progress-duration` (default
+`var(--lr-transition-ambient)` — the indeterminate spin period, the same token and the same default
+as `lr-progress-bar`'s sweep, so it flattens under `prefers-reduced-motion: reduce` with the rest of
+the ambient motion).

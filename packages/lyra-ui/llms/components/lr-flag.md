@@ -33,13 +33,13 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 - `variant?: 'compact' | 'standard' | 'detailed'` (attribute `variant`, not reflected — picks a
   fidelity tier for the ~65 codes whose source art embeds a coat of arms/seal/emblem; every other
   code resolves to the same file regardless of `variant`. `'compact'` = a tiny WebP raster for
-  icon-scale use (menus, language pickers, ~12–28px); `'standard'` (the effective default, when both
-  `variant` and `detailed` are unset) = the icon-optimized vector for card/row sizes (~28–96px);
-  `'detailed'` = the pristine full-fidelity vector for hero-scale display. Takes precedence over the
-  deprecated `detailed` below. No effect when `src` is set.)
-- `detailed: boolean = false` (reflected — **deprecated: use `variant="detailed"` instead**. Kept as
-  an alias for one minor cycle — when `variant` is left unset, `detailed` still maps to the detailed
-  tier — scheduled for removal in the next major. No effect when `src` is set.)
+  icon-scale use (menus, language pickers, ~12–28px); `'standard'` (the effective default, when
+  `variant` is unset) = the icon-optimized vector for card/row sizes (~28–96px); `'detailed'` = the
+  pristine full-fidelity vector for hero-scale display. No effect when `src` is set.)
+
+**Removed in 8.0.0:** the boolean `detailed` attribute. `variant="detailed"` selects the same tier.
+A leftover `detailed` is now an unknown attribute — it renders the `standard` tier silently, so
+rewrite it rather than leaving it in place.
 
 **Events:** none.
 
@@ -161,10 +161,7 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   icon-optimized vector for card/row sizes, ~65% smaller on average than the pristine source for the
   65 affected codes with no visible fidelity loss at that scale; `"detailed"` — the pristine
   full-fidelity vector, for hero-scale display where the extra illustrative detail is actually
-  visible. The other 184 codes resolve to the same file regardless of `variant` — a safe no-op. The
-  older boolean `detailed` attribute predates `variant` and is now **deprecated**
-  (`variant="detailed"` is the replacement); left unset, `variant` falls back to honoring `detailed`
-  for one more minor version before removal.
+  visible. The other 184 codes resolve to the same file regardless of `variant` — a safe no-op.
 
 **Additional API surface:**
 

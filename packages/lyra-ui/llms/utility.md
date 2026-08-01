@@ -106,7 +106,7 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
 A standalone icon-only copy-to-clipboard button for a plain text `value` — swaps its icon to a
 checkmark for ~1.5s once the clipboard write resolves, or to a distinct failure glyph if it doesn't.
 Takes no positioning opinion of its own; a consumer wraps/positions the host element (e.g.
-absolutely positioned in the corner of a `wa-textarea` or a read-only output field). Unlike
+absolutely positioned in the corner of an `lr-textarea` or a read-only output field). Unlike
 `lr-code-block`'s or `lr-json-viewer`'s own built-in copy buttons, this has no code/JSON content
 model to adopt just to reuse the copy affordance.
 
@@ -1053,7 +1053,12 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
 - `min: string = ''`, `max: string = ''` — inclusive `YYYY-MM-DD` bounds, surfaced as
   `rangeUnderflow`/`rangeOverflow`
 - `readonly: boolean = false` (reflected) — also suspends all validity flags
-- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — control density on the library's
+  shared six-step ladder, scaling each field's height floor, padding, font size and corner radius
+  together so a birthdate field lines up with the `lr-input`/`lr-date-input` beside it at the same
+  declared size. `'small'`/`'medium'`/`'large'` are accepted as exact synonyms of `'s'`/`'m'`/`'l'`,
+  so migrating from an upstream that spells them that way needs no attribute rewrite. Every tier
+  resolves to at least the 24px pointer-target floor, so even `'2xs'` stays usable
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`)
 - `locale: string = ''` — BCP-47 override for field order and per-field label sampling only
   (redeclared non-reflecting over the base `locale`, like `lr-date-input`)
@@ -1086,10 +1091,16 @@ block, repeated three times, `data-field="day"|"month"|"year"`), `field-input` (
 small per-field text label), `hint`, `error` (`role="alert"`).
 
 **Themeable custom properties:** `--lr-known-date-field-padding-block`,
-`--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size`,
-`--lr-known-date-field-min-height` (all four rewritten by
-each `:host([size])` rule; `m` defaults `--lr-space-s`/`--lr-space-s`/`--lr-font-size-md-sm`/
-`--lr-size-2-5rem`), `--lr-known-date-field-height`,
+`--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size` and
+`--lr-known-date-field-min-height` all read the shared control ladder rather than a hand-kept copy
+of the scale — respectively `--lr-form-control-padding-block`, `--lr-form-control-padding-inline`,
+`--lr-form-control-font-size`, and `max(var(--lr-form-control-height), var(--lr-size-24px))`, each
+of which the ladder re-points per `size` tier. That is what keeps the three fields the same height
+as an `<lr-input>`/`<lr-date-input>` in the same form row at every tier; the
+`--lr-known-date-field-*` names are unchanged and are still the documented override point. The
+min-height resolves to 24px at `2xs`/`xs` (WCAG 2.2 SC 2.5.8's pointer-target floor, above the
+ladder's own 1.25rem/1.5rem there), 1.875rem at `s`, 2.5rem at `m`, 3rem at `l`, 3.5rem at `xl`.
+Also `--lr-known-date-field-height`,
 `--lr-known-date-field-gap` (default `--lr-space-s` — gap between the three field blocks),
 `--lr-known-date-day-field-width` / `--lr-known-date-month-field-width` (default `--lr-size-3-5em`)
 and `--lr-known-date-year-field-width` (default `--lr-size-5em`) — the per-field input widths, not
@@ -1101,9 +1112,10 @@ without repainting every other component that reads the same shared danger token
 The two height knobs work as a pair on `[part='field-input']`, the same way
 `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input` expose theirs:
 
-- `--lr-known-date-field-min-height` is a **floor**, re-assigned per `size` tier. Every tier's
-  default sits below the field's own padding/font-driven height, so raising it is what makes it
-  visible; lowering it changes nothing.
+- `--lr-known-date-field-min-height` is a **floor**, re-pointed per `size` tier through the shared
+  ladder. At the small tiers it exceeds the field's own padding/font-driven height and is what
+  actually pins the rendered box — that is how `2xs`/`xs` keep a 24px pointer target; at `l`/`xl`
+  the content height already clears it, so it is inert there and only raising it changes anything.
 - `--lr-known-date-field-height` pins an **exact** height (both floors and caps), so the three
   inputs can line up with a neighbouring control of a known height. It is **undeclared by
   default** — the field grows to fit its content. Never set it to `auto`: `auto` is a valid

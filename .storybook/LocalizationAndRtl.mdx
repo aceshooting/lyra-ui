@@ -1,0 +1,203 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Guides/Localization and RTL" />
+
+# Localization and RTL
+
+Every string the library renders on its own — button labels, accessible names, hints, validation
+messages, status announcements, empty and loading states — resolves through one locale runtime. Your
+own data and anything you slot in is never touched.
+
+Two things are worth separating up front, because they are independent:
+
+- **Language** decides which strings render, and which locale `Intl` formats dates, numbers, bytes
+  and relative times with.
+- **Direction** decides which way the layout flows. It comes from `dir`, not from the locale, and
+  the two are set separately.
+
+## Registering a locale
+
+```ts
+import { registerLyraLocale, setLyraLocale } from '@aceshooting/lyra-ui/localization.js';
+
+registerLyraLocale('fr', { close: 'Fermer', retry: 'Réessayer' });
+setLyraLocale('fr');
+```
+
+`registerLyraLocale(locale, strings)` is additive and partial catalogs are fine — register three
+keys and the rest keep falling back to English. Calling it again for the same locale merges into
+what is already registered rather than replacing it.
+
+`@aceshooting/lyra-ui/localization.js` is deliberately free of component imports and has no side
+effects on import, so an application can set up locales without pulling the component graph into its
+first-paint bundle. It exports `registerLyraLocale`, `setLyraLocale`, `getLyraLocale`,
+`getRegisteredLyraLocales`, `subscribeLyraLocaleRegistry`, `resolveLyraLocale`,
+`resolveLyraDirection`, `resolveLyraString` and `LYRA_DEFAULT_STRINGS`, plus the types
+`LyraLocaleStrings`, `LyraMessage`, `LyraMessageKey`, `LyraPluralCategory` and `LyraPluralMessage`.
+
+**`LYRA_DEFAULT_STRINGS` is the authoritative key list** — it *is* the English catalog, and its keys
+are exactly the `LyraMessageKey` union. Read it to find the key you need rather than guessing a name;
+an unrecognized key is simply never looked up.
+
+## The shipped catalogs
+
+Eight complete catalogs ship with the package, as side-effect-only modules — each one calls
+`registerLyraLocale()` for you, so a bare import is the whole setup and there is nothing to read
+back from it:
+
+```js
+import '@aceshooting/lyra-ui/translations/fr.js';
+```
+
+| Locale | Import |
+| --- | --- |
+| Arabic | `@aceshooting/lyra-ui/translations/ar.js` |
+| German | `@aceshooting/lyra-ui/translations/de.js` |
+| Spanish | `@aceshooting/lyra-ui/translations/es.js` |
+| French | `@aceshooting/lyra-ui/translations/fr.js` |
+| Japanese | `@aceshooting/lyra-ui/translations/ja.js` |
+| Portuguese (Brazil) | `@aceshooting/lyra-ui/translations/pt-BR.js` |
+| Russian | `@aceshooting/lyra-ui/translations/ru.js` |
+| Chinese (Simplified) | `@aceshooting/lyra-ui/translations/zh-CN.js` |
+
+Import only the ones you ship. Each is a plain module, so a dynamic `import()` is a perfectly good
+way to load a catalog when the user picks that language.
+
+**A catalog registers strings, not direction.** Importing `ar.js` does not flip your layout — see
+[RTL and direction](#rtl-and-direction) below.
+
+## Which locale a component uses
+
+Resolution walks outward from the element and takes the first answer it finds:
+
+1. the element's own `locale` attribute, then its own `lang`;
+2. the nearest ancestor with `locale` or `lang`, crossing shadow boundaries;
+3. `<html lang>`;
+4. whatever `setLyraLocale()` last set;
+5. `'en'`.
+
+So `<html lang="fr">` is enough on its own, and it takes precedence over `setLyraLocale()` when both
+are present. Reach for `setLyraLocale()` when the page language attribute is not yours to control.
+
+Message lookup then falls back **exact locale → base language → English**, per key. A component
+running under `fr-CA` reads an `fr-CA` catalog first, then `fr`, then the built-in English string —
+which is why a partial catalog never renders a blank label.
+
+## Overriding strings on one element
+
+Every `lr-*` element inherits two knobs from the base class, so they are not repeated on individual
+component pages:
+
+| Member | Type | Notes |
+| --- | --- | --- |
+| `locale` | `string` (reflected attribute, default `''`) | Per-instance locale override. Empty means "inherit". |
+| `strings` | `LyraLocaleStrings` (property only, no attribute) | Per-instance message overrides, merged over the registered catalog. |
+
+```js
+document.querySelector('lr-toast').strings = { close: 'Fermer' };
+```
+
+```html
+<!-- Lit -->
+<lr-toast .strings=${{ close: 'Fermer' }}></lr-toast>
+```
+
+`strings` is a property with no attribute, because its value is an object — see
+[Getting started](?path=/docs/guides-getting-started--docs) on why complex values must be
+property-bound.
+
+## Plural messages
+
+A message whose wording depends on a count is authored as an object with one string per CLDR plural
+category, instead of a single string:
+
+```ts
+registerLyraLocale('ru', {
+  jsonItemCount: {
+    one: '{count} элемент',
+    few: '{count} элемента',
+    many: '{count} элементов',
+    other: '{count} элемента',
+  },
+});
+```
+
+The rules:
+
+- The categories are `zero`, `one`, `two`, `few`, `many` and `other`. **`other` is mandatory**; the
+  rest are optional, and you author only the ones your language actually needs. English and German
+  use `one`/`other`, Russian `one`/`few`/`many`/`other`, Japanese and Chinese only `other`, Arabic
+  all six.
+- Selection runs `new Intl.PluralRules(<the element's effective locale>).select(count)` against the
+  `count` value you interpolate — so the category is picked by the language's own grammar, not by
+  `count === 1`.
+- A category you did not author widens to a grammatical neighbour before falling back to `other`:
+  `two` looks to `few`, then `many`; `few` looks to `many`; `many` looks to `few`. That reads better
+  than jumping straight to `other`, which in Russian is reserved for fractional counts.
+- Where a component must display a locale-grouped, pre-formatted `{count}` (`'1,024'` cannot select
+  a category), it passes the raw number as `pluralCount` alongside it. A non-finite or absent
+  selector value resolves to `other`.
+
+A plain string stays a plain string — the object form is opt-in per key, and mixing the two shapes
+in one catalog is normal.
+
+## Enumerating the registry
+
+```ts
+import {
+  getRegisteredLyraLocales,
+  subscribeLyraLocaleRegistry,
+} from '@aceshooting/lyra-ui/localization.js';
+
+getRegisteredLyraLocales(); // → every locale with strings registered, plus 'en', sorted
+const stop = subscribeLyraLocaleRegistry(() => renderLanguageMenu());
+```
+
+`subscribeLyraLocaleRegistry()` fires whenever *any* locale is registered, including one that is not
+currently active — which is what a language switcher needs. The page-level subscription components
+use internally is deliberately narrower: it only fires for the active locale's own string changes,
+because a registration for a locale nobody is using cannot change what they render.
+`<lr-locale-picker>`
+(`@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.js`) is the built-in consumer of
+both, if you would rather not build the menu yourself.
+
+## Formatting
+
+Dates, numbers, byte sizes, relative times and calendars all go through `Intl`, always with the
+element's effective locale — never a hardcoded `'en'`. Setting the locale therefore changes number
+grouping, decimal separators, month names and week start along with the strings, with nothing extra
+to configure.
+
+## RTL and direction
+
+**Components never set their own `dir`.** Direction is inherited from the document, exactly as it is
+for native elements:
+
+```html
+<html lang="ar" dir="rtl">
+```
+
+Setting `dir` on any ancestor — the `<html>` element, a wrapper, or a single component — is all that
+is needed. Layout mirrors through CSS logical properties (`inset-inline-*`, `margin-inline-*`,
+`text-align: start/end`), so there is no separate RTL stylesheet to load and no flag to set.
+
+Where physical maths is unavoidable — drag ratios, arrow-key direction, anchored placement —
+components resolve direction at run time and swap the `left`/`right` half of the value. A
+`placement="bottom-start"` menu opens toward the inline start in both directions, and ArrowLeft /
+ArrowRight swap their "previous/next" meaning under RTL, matching platform behaviour.
+
+If your own code needs the same answer a component would compute, `resolveLyraDirection(element)`
+is exported from `@aceshooting/lyra-ui/localization.js` and returns `'ltr'` or `'rtl'`. It reads an
+explicit `dir` attribute on the element first, then the computed CSS `direction`, so it agrees with
+what the browser is actually laying out — internally, components read the same value through
+`effectiveDirection`.
+
+**Test both directions.** Anything with horizontal order, start/end placement, drag deltas or
+previous/next navigation has a mirrored code path. The toolbar at the top of this site has an LTR /
+RTL switch for exactly that.
+
+## Where to go next
+
+- [Theming](?path=/docs/guides-theming--docs) — the token layers, light/dark, and how far an
+  override reaches.
+- [Forms](?path=/docs/guides-forms--docs) — validation messages and the shared field chrome.

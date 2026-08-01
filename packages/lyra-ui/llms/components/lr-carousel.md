@@ -13,9 +13,12 @@
 
 ## `lr-carousel`
 
-Accessible carousel for arbitrary slotted slide elements. It shows one assigned element at a time,
-adds slide semantics and localized position labels, and provides keyboard, button, and indicator
-navigation.
+Accessible carousel for arbitrary slotted slide elements. Mirrors `wa-carousel` / `sl-carousel`. It
+shows one assigned element at a time and provides keyboard, button, and indicator navigation. Slide
+semantics (`role="group"`, a localized "slide" role description, and a localized "Slide N of M"
+label) are added only to `<lr-carousel-item>` children — an arbitrary slotted element keeps its own
+native or authored semantics untouched, and an explicit `role`/`aria-label` on an
+`<lr-carousel-item>` wins over the generated one.
 
 **Properties:**
 - `index: number = 0` (attribute `index`, reflected) — active slide index

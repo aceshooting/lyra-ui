@@ -100,8 +100,9 @@ while `zoomable`; image format only)
 
 **Themeable custom properties:** `--lr-document-preview-max-height` (default `none`) — the
 consumer-tunable scroll cap on `[part="body"]`, set from `max-height`; `none` means the preview grows
-with its content until a caller opts in. `--lr-document-preview-font` (default `ui-monospace,
-SFMono-Regular, Menlo, Consolas, monospace`) and `--lr-document-preview-spin-duration` (default
+with its content until a caller opts in. `--lr-document-preview-font` (default
+`var(--lr-font-mono)`, so a themed monospace stack reaches plain-text previews with no
+per-component override) and `--lr-document-preview-spin-duration` (default
 `var(--lr-transition-ambient)`, stopped under reduced motion). `--lr-document-preview-progress`
 (default `0`) — a unitless
 0–100 number the determinate spinner's `conic-gradient` fill reads; written inline on the ring by

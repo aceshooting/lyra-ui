@@ -6,7 +6,7 @@
 - **Class** `LyraDetails`, also available unregistered from `@aceshooting/lyra-ui/components/layout/details/details.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 3 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-accordion`, `lr-accordion-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -14,13 +14,23 @@
 
 ## `lr-details`, `lr-accordion`, and `lr-accordion-item`
 
-`lr-details` is a native-semantics disclosure panel. `lr-accordion` coordinates slotted
-details panels and closes siblings unless `multiple` is true. `lr-accordion-item` is an
-accordion-compatible alias — the same class under a second tag name, so every property, method,
-event, slot and part documented for `lr-details` applies to it verbatim.
+`lr-details` is a native-semantics disclosure panel; it mirrors `wa-details` / `sl-details`.
+`lr-accordion` coordinates slotted details panels and closes siblings unless `multiple` is true,
+mirroring `wa-accordion`. `lr-accordion-item` is the `wa-accordion-item`-compatible alias — the same
+class under a second tag name, so every property, method, event, slot and part documented for
+`lr-details` applies to it verbatim.
 
-**Properties:** `open: boolean = false` (reflected), `disabled: boolean = false` (reflected), and
-`summary: string = ''` on details/items; `multiple: boolean = false` (reflected) on accordion.
+**Properties:** `open: boolean = false` (reflected), `disabled: boolean = false` (reflected),
+`summary: string = ''`, and `size` on details/items; `multiple: boolean = false` (reflected) on
+accordion.
+
+`size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected, new
+in 8.0.0) is the library's shared size ladder, so a disclosure scales with the controls around it
+instead of being the one fixed-density element in a compact panel. Both spellings of every tier are
+accepted — `s`/`small`, `m`/`medium`, `l`/`large` — so markup migrated from either upstream needs no
+attribute rewrite. `m` is the default and reproduces the disclosure this component had before `size`
+existed. The tier drives two custom properties (below) rather than any `::part()` rule, so a tier
+the ladder doesn't cover is a two-line override rather than a fork.
 
 **Methods (details/items, new in 8.0.0):** `show()` expands the panel; `hide()` collapses it. Each
 is a no-op when the panel is already in that state, and `show()` is additionally a no-op while
@@ -49,7 +59,15 @@ shows the localized `"Details"` fallback.
 **CSS parts:** `base` (the native `<details>`), `summary` (the summary control), `content` (the
 panel body) on details/items; `base` on accordion.
 
-**Themeable custom properties:** shared tokens only — the disclosure marker animates through
+**Themeable custom properties:** `--lr-details-font-size` (default
+`var(--lr-form-control-font-size)`) — the text size of both the summary and the panel.
+`--lr-details-spacing` (default `var(--lr-form-control-padding-inline)`) — the block rhythm: the
+summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads
+evenly. Each `size` tier sets both from the shared ladder, and both are declared on `:host`, so an
+override has to target the element itself — an ancestor rule is shadowed. Note that the spacing knob
+deliberately reads the ladder's *inline*-padding value: a stacked panel wants generous block rhythm,
+whereas the ladder's own block padding exists to fit text inside a fixed control height and would
+collapse the summary row. Otherwise shared tokens — the disclosure marker animates through
 `--lr-transition-fast`, which the token layer flattens under `prefers-reduced-motion`, so the
 `lr-after-*` events still settle promptly in that branch.
 

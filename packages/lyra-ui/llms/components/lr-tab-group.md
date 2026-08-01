@@ -6,7 +6,7 @@
 - **Class** `LyraTabGroup`, also available unregistered from `@aceshooting/lyra-ui/components/layout/tab-group/tab-group.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 5 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -14,6 +14,15 @@
 ## `lr-tab-group`
 
 A tab strip. Mirrors `wa-tab-group` / `sl-tab-group`.
+
+**Renamed in 8.0.0.** This element used to be `<lr-tabs>`. The tag is now `<lr-tab-group>`, its
+single `lr-tabs-change` event is now the `lr-tab-hide` → `lr-tab-show` pair below, and every
+`--lr-tabs-*` custom property is now spelled `--lr-tab-group-*` (`--lr-tabs-selected-color` →
+`--lr-tab-group-selected-color`, and so on). Neither old spelling survives as an alias, and all
+three fail silently: `<lr-tabs>` is an unknown element that renders its children unstyled,
+`lr-tabs-change` never fires, and a `--lr-tabs-*` declaration is inert. Rename all three in the same
+change. The rename is what lets `<lr-tab>` and `<lr-tab-panel>` (below) exist as a family, which is
+what makes migrating from either upstream a pure tag rename.
 
 **Two child models are accepted**, and a group is read as one or the other — never a mix.
 
@@ -56,6 +65,31 @@ wrapper at all, so existing text-only tabs are unaffected.
   moves focus only and waits for Enter or Space. Use `manual` whenever revealing a panel is
   expensive: automatic activation would reveal every panel the user arrows past. Under `manual` the
   roving `tabindex="0"` sits on the *focused* tab, which may differ from the selected one.
+- `withoutScrollControls: boolean = false` (reflected, attribute `without-scroll-controls`) and
+  `noScrollControls: boolean = false` (reflected, attribute `no-scroll-controls`) — the same opt-out
+  under Web Awesome's spelling and Shoelace's. Both are read, either one suppresses the overflow
+  scroll controls described below, and neither is deprecated: a consumer arriving from either
+  upstream finds their own attribute working. Left unset, an overflowing horizontal strip gets the
+  controls.
+
+**Overflow and scrolling.** The tablist is a native scroll container (`overflow-x: auto`) — there is
+no scroll listener and no scroll-position state anywhere in this component. A horizontal row that
+does not fit additionally gets **two scroll-control buttons flanking it inside `[part="nav"]`**,
+mirroring both upstreams, plus a fade at each edge. Both affordances are gated on the same
+measurement of the tablist's real overflow, so a row that fits is never flanked by two dead buttons
+and never dimmed. The controls are rendered only for a horizontal `placement`: a `start`/`end` strip
+scrolls in the block direction, which these controls do not address (the same restriction both
+upstreams apply), and the edge fade is switched off there too because it measures the inline axis.
+One press travels 80% of the visible row — short of a full viewport on purpose, so something that
+was on screen before the press is still on screen after it — smoothly, or instantly under
+`prefers-reduced-motion`. Under RTL the whole row mirrors and the step direction inverts with it.
+
+The controls are `aria-hidden="true"` and `tabindex="-1"`: a pointer affordance only, matching
+upstream. The strip is already fully keyboard-scrollable without them — the roving `tabindex` puts
+every tab one arrow key away and focusing a tab scrolls it into view — so two extra tab stops in the
+middle of the strip would buy no capability. They still carry a localized `aria-label`, so the name
+is there for automation and for a consumer that chooses to expose them. Pressing one does not move
+focus off the tab the user was on.
 
 **Events:**
 - `lr-tab-show` (`detail: { tabId: string }`) — a tab became active via click or keyboard. Not fired
@@ -80,16 +114,27 @@ excluded from the tab button's accessible name.
 </lr-tab-group>
 ```
 
-**CSS parts:** `base` (root wrapper around the tablist and panels), `tablist` (the `role="tablist"`
-row of tab buttons), `tab` (a single tab button), `tab-icon` (the optional leading-icon wrapper
-inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling), `panel` (a
-single `role="tabpanel"` wrapper, one per tab, hidden unless active)
+**CSS parts:** `base` (root wrapper around the tablist and panels), `nav` (the row wrapping the
+tablist together with the two overflow scroll controls; mirrors the upstream part of the same name),
+`tablist` (the `role="tablist"` row of tab buttons, and the scroll container), `scroll-button`
+(shared by both overflow controls), `scroll-button-start` and `scroll-button-end` (the individual
+controls that scroll the tabs toward their inline start and end — under RTL "start" is the
+right-hand one), `scroll-button-glyph` (the chevron wrapper inside a control; this wrapper is what
+mirrors under RTL, never the icon), `tab` (a single tab button), `tab-icon` (the optional
+leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon`
+sibling), `panel` (a single `role="tabpanel"` wrapper, one per tab, hidden unless active).
+The two controls exist in the DOM whenever the group can have them at all (horizontal `placement`,
+no opt-out) and are taken out of layout while the tablist is not overflowing — the qualifier that
+hides them is wrapped in `:where()`, so a consumer's own `::part(scroll-button)` rule outranks it
+without `!important`.
 
-**Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the static
-mask fade at each horizontal scroll edge of the tablist. `--lr-tab-group-selected-color` (default
+**Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
+at each inline scroll edge of the tablist, painted only while the tablist actually overflows and
+only for a horizontal `placement`. `--lr-tab-group-selected-color` (default
 `var(--lr-color-brand)`) — text color of the selected tab, scoped to `[aria-selected='true']` only,
 so it never repaints a hovered unselected tab. `--lr-tab-group-indicator-color` (default
-`var(--lr-color-brand)`) — the selected tab's underline, themeable independently of its text color.
+`var(--lr-color-brand)`) — the selected tab's indicator rule, themeable independently of its text
+color (an underline on a `top`/`bottom` strip, an inline edge on a vertical one).
 `--lr-tab-group-hover-color` (default `var(--lr-color-text)`) — text color of a hovered, non-disabled
 tab, independent of the two selected-state hooks. All three are declared as inline `var()` fallbacks
 at the point of use rather than on `:host`, so each can be set on the element *or on any ancestor* —
@@ -122,7 +167,12 @@ before, so rendering is unchanged. Otherwise shared tokens —
 - If two children share the same `slot` name, the *first* one wins for the tab button's label
   (matches native slot assignment: both would render into the one panel, but only one label can back
   the button).
-- Left/Right are swapped under RTL (read via `internal/rtl.ts`'s `isRtl()`); Up/Down are not used —
-  this is a horizontal strip only.
+- The navigation keys follow `placement`, not the writing mode: a `top`/`bottom` strip uses
+  Left/Right (swapped under RTL via `internal/rtl.ts`'s `isRtl()`), and a `start`/`end` strip uses
+  Up/Down with no RTL swap, because block flow does not reverse. Only one pair is live at a time —
+  there is no set of keys that works for both placements.
+- The two overflow controls are `aria-hidden`, so an automated check that looks for a *focusable*
+  "scroll tabs" button will not find one. Assert on `[part~="scroll-button"]` (and on the tablist's
+  `scrollLeft` moving) instead.
 
 ---

@@ -74,9 +74,9 @@ assigned elements.
 `category-count`, `category-list`, `tool-row`, `tool-checkbox`, `tool-name`, `tool-icon`,
 `tool-description`, `tool-disabled-reason`, `footer`
 
-**Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default `rgb(0 0 0 / 0.5)` —
-the backdrop scrim color; component-specific since no shared overlay token exists, mirrors
-`<lr-dialog>`'s/`<lr-tool-result-dialog>`'s identical pattern), plus shared `--lr-space-*`,
+**Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default
+`var(--lr-color-overlay)` — the backdrop scrim color, the same shared token
+`<lr-dialog>`/`<lr-tool-result-dialog>` read), plus shared `--lr-space-*`,
 `--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`, `--lr-shadow`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 

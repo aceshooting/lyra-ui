@@ -8,9 +8,13 @@ shared `FormAssociated` mixin — see gotchas).
 
 **Properties:**
 - `multiple: boolean = false` (reflected)
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`;
-  also scales the "+N" overflow tag and decorative expand icon; `size="s"` shares its outer
-  control height with `lr-input`, `lr-select`, and `lr-segmented` without part overrides)
+- `size: LyraSize = 'm'` (reflected — the shared control ladder, so both `2xs`/`xs`/`s`/`m`/`l`/`xl`
+  and the `small`/`medium`/`large` spellings are accepted; also scales the "+N" overflow tag and
+  decorative expand icon; `size="s"` shares its outer control height with `lr-input`, `lr-select`,
+  and `lr-segmented` without part overrides)
+- `pill: boolean = false` (reflected) — rounds the trigger row's corners to a full pill, mirroring
+  `lr-input`'s own `pill`. It only re-assigns `--lr-combobox-radius` to `--lr-radius-pill`, so a
+  consumer setting that property directly still wins for a bespoke shape
 - `placeholder: string = ''`
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`; also reflected as
@@ -69,6 +73,12 @@ shared `FormAssociated` mixin — see gotchas).
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
+`setCustomValidity(message)` carries a rejection no client-side constraint can express ("that option
+is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
+blocks submission; `''` clears it and restores the control's own computed validity, so a `required`
+combobox with nothing chosen goes back to `valueMissing` rather than to valid. The message survives
+every selection change and a `form.reset()` — like a native control, only another
+`setCustomValidity('')` clears it — and is used verbatim, never localized.
 
 `ComboboxSourceRow = { value: string; label: string; sub?: string; icon?: unknown; badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
@@ -337,8 +347,10 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
 - `open: boolean = false` (reflected)
-- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — same scale as `lr-input`/`lr-combobox`'s
-  `size`, for compact toolbar placements that don't fit the default trigger height)
+- `size: LyraSize = 'm'` (reflected — the shared control ladder, same scale as
+  `lr-input`/`lr-combobox`/`lr-button`, for compact toolbar placements that don't fit the default
+  trigger height. Both spellings of every tier are accepted: `2xs`/`xs`/`s`/`m`/`l`/`xl` and
+  `small`/`medium`/`large`)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
   (reflected) — the library's shared field-surface vocabulary. `outlined` (the default) is a
   bordered surface; `filled` swaps the border for a raised fill; `filled-outlined` keeps both;
@@ -366,7 +378,8 @@ exactly like the multi-option case, until the trigger is actually activated.
   the chips — so pressing it clears the selection without opening the listbox
 - `clearable: boolean = false` — Shoelace's spelling of `withClear`; either one renders the same
   button. Present so a mechanical `sl-select` → `lr-select` rename keeps the clear control
-- `getTag?: (option: LyraOption, index: number) => unknown` (attribute: false) — renders one
+- `getTag?: LyraSelectTagRenderer` (attribute: false) — `(option: LyraOption, index: number) =>
+  unknown`, exported under that name from the component's own module, renders one
   selected option's chip in `multiple` mode. Whatever it returns replaces the whole built-in
   `[part="tag"]` element, so re-declare `part="tag"` on your own root node to keep the default
   styling hooks. A returned **string renders as text, never as markup** (it lands in an ordinary
@@ -378,6 +391,12 @@ exactly like the multi-option case, until the trigger is actually activated.
   is selected), a `string[]` in `multiple` mode
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
+`setCustomValidity(message)` carries a rejection no client-side constraint can express ("that option
+is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
+blocks submission; `''` clears it and restores the control's own computed validity, so a `required`
+select with nothing chosen goes back to `valueMissing` rather than to valid. The message survives
+every selection change and a `form.reset()` — like a native control, only another
+`setCustomValidity('')` clears it — and is used verbatim, never localized.
 
 **Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
 selection change — a native `<select>` doesn't meaningfully distinguish the two either), and
@@ -416,9 +435,12 @@ get no heading),
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
 `--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
 `lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use. `--lr-select-gap` (default
-`--lr-space-xs`, the gap inside `[part='trigger']`) and `--lr-select-radius` (default `--lr-radius`,
-its corner radius) are both retunable without a `::part(trigger)` rule but, unlike the four above,
-do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern. `--lr-select-tag-padding`
+`--lr-space-xs`, the gap inside `[part='trigger']`) is retunable without a `::part(trigger)` rule
+and does not vary by `size` — the adornment gap a field wants is looser than the icon-beside-label
+gap the ladder is tuned for. `--lr-select-radius` (default `--lr-form-control-radius`, the corner
+radius) is retunable the same way but *does* follow the tier: the two tightest tiers take a smaller
+radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` re-assigns it to
+`--lr-radius-pill`. `--lr-select-tag-padding`
 (default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
 `var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius they are declared once on
 `:host` and do **not** vary by `size` tier.
@@ -611,10 +633,14 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the internal date input
 - `autocomplete: string = ''`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
   (`enterkeyhint`) — forwarded to the internal `<input>`.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size, matching
-  `lr-input`/`lr-select`/`lr-combobox`'s shared scale. Governs the field's padding and font-size;
+- `size: LyraSize = 'm'` (reflected) — visual size on the shared control ladder, matching
+  `lr-input`/`lr-select`/`lr-combobox`/`lr-button`; both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
+  `small`/`medium`/`large` are accepted. Governs the field's padding and font-size;
   the calendar-toggle and clear buttons keep a constant, accessible touch target at every size.
   The default `m` tier is unchanged from this component's pre-`size` rendering.
+- `pill: boolean = false` (reflected) — rounds the input row's corners to a full pill, mirroring
+  `lr-input`'s own `pill`. It only re-assigns `--lr-date-input-radius` to `--lr-radius-pill`, so a
+  consumer setting that property directly still wins for a bespoke shape
 
 **Methods:** `show()`, `hide()`, `clear()`, `focus(options?)`, `blur()`, `select()`,
 `setSelectionRange()`, `setRangeText()` (all of the focus/selection methods forward to the internal
@@ -642,10 +668,12 @@ the internal `<input>`'s own `blur`, bubbling and composed unlike the native eve
 **Themeable custom properties:** `--lr-date-input-padding-block` (default `--lr-space-xs`) and
 `--lr-date-input-padding-inline` (default `--lr-space-s`) — the `input-wrapper`'s padding;
 `--lr-date-input-font-size` (default `inherit`) — the `input` part's font size;
-`--lr-date-input-control-min-height` (default `--lr-size-2-5rem`) — the `input-wrapper`'s block-size
+`--lr-date-input-control-min-height` (default `--lr-form-control-height`, i.e. `2.5rem` at the
+default `m` tier) — the `input-wrapper`'s block-size
 floor. All four are declared on `:host` and auto-swapped per `size`
 (`2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` defaults), using the same per-`size` values
-`lr-input` uses. Plus shared tokens.
+`lr-input` uses. `pill` re-assigns `--lr-date-input-radius` to `--lr-radius-pill`. Plus shared
+tokens.
 
 `--lr-date-input-control-height` pins an **exact** `input-wrapper` height (both floors and caps it).
 It is **undeclared by default**, so the row grows to fit its content — see "exact-height hatches"
@@ -767,8 +795,9 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | `value` | `value` | `string` | `''` | The current text value. |
 | `rows` | `rows` | `number` | `3` | Visible text rows. |
 | `resize` | `resize` | `'none' \| 'vertical' \| 'horizontal' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`. |
-| `size` | `size` | `'2xs' \| 'xs' \| 's' \| 'm' \| 'l' \| 'xl'` | `'m'` | Visual size — the same scale as `lr-input`/`lr-select`. Governs the field's padding and font size. Reflected. |
+| `size` | `size` | `LyraSize` | `'m'` | Visual size on the shared control ladder — the same scale as `lr-input`/`lr-select`/`lr-button`, and both spellings of every tier are accepted (`2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`). Governs the field's padding, font size and corner radius. Reflected. |
 | `appearance` | `appearance` | `'accent' \| 'filled' \| 'outlined' \| 'filled-outlined' \| 'plain'` | `'filled-outlined'` | Visual treatment of the field, with the same meanings as `lr-input`'s `appearance`: `filled-outlined` draws both fill and border, `outlined` drops the fill, `filled` drops the border, `plain` drops both, `accent` tints both with the brand color. Each value does nothing but swap `--lr-textarea-fill`/`--lr-textarea-border-color`. Reflected. |
+| `pill` | `pill` | `boolean` | `false` | Fully rounded field corners, matching `lr-input`'s/`lr-select`'s own `pill` — both upstreams ship it on their textarea, so a mechanical tag rename must not drop it. It only re-assigns `--lr-textarea-radius` to `--lr-radius-pill`, so that property stays the single corner-radius knob and a consumer override still wins. Most useful on a one- or two-row field: a tall multi-line surface with fully rounded ends wastes its first and last line's inline space, which is why it is opt-in rather than tied to `size`. Reflected. |
 | `withCount` | `with-count` | `boolean` | `false` | Renders a character count below the field, inside `[part="footer"]`. With `maxlength` set it counts *down* the remaining characters instead of up from zero. Reflected. |
 | `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
 | `readonly` | `readonly` | `boolean` | `false` | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected. |
@@ -887,9 +916,12 @@ dropped rather than rendered as `NaN`, and the count counts up from zero instead
 - `--lr-textarea-max-block-size` (default `none`) — bounds `resize="auto"`; content beyond the
   bound scrolls inside the native textarea. Auto-resize remeasures after user edits, programmatic
   `value`/`rows` changes, range edits, and container-width changes.
-- `--lr-textarea-padding` (default `var(--lr-space-s)`) and `--lr-textarea-font-size` (default
-  `var(--lr-font-size-md-sm)`) — the native textarea's padding and font size, both auto-swapped per
-  `size` tier (`2xs`…`xl`); the documented defaults are the `m` tier's.
+- `--lr-textarea-padding` (default `var(--lr-form-control-padding-inline)`),
+  `--lr-textarea-font-size` (default `var(--lr-form-control-font-size)`) and
+  `--lr-textarea-radius` (default `var(--lr-form-control-radius)`) — the native textarea's padding,
+  font size and corner radius. All three read the active `size` tier of the shared control ladder,
+  so they follow the tier with no per-tier rule of their own; the two tightest tiers take a smaller
+  radius. `pill` re-assigns `--lr-textarea-radius` to `--lr-radius-pill`.
 - `--lr-textarea-fill` (default `var(--lr-color-surface)`) and `--lr-textarea-border-color` (default
   `var(--lr-color-border)`) — the field's background and border color, both swapped per
   `appearance` rather than per `size`. The documented defaults are `appearance="filled-outlined"`'s
@@ -931,21 +963,31 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `download?: string` — native anchor `download` attribute, used only while `href` resolves to a
   link. Ignored in `<button>` mode
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected)
-- `appearance: 'accent' | 'filled' | 'outlined' | 'plain' | 'quiet' | 'link' = 'filled'` (reflected)
-  — `'accent'` is a
-  loud, high-contrast filled tier,
-  distinct from `'filled'` for `variant="neutral"` specifically (`'filled'` reads the ambient
-  surface color there; `'accent'` reads a solid neutral fill). `'quiet'` is a de-emphasized tier:
-  transparent background with a bordered, muted-text chrome that fills to `--lr-color-surface` on
-  hover; its text/border tokens are **not** variant-swapped, so `variant` has no effect on it.
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' | 'quiet' | 'link' =
+  'accent'` (reflected) — the library's shared fill vocabulary plus this component's own two extra
+  tiers. **Breaking in 8.0.0: the default moved from `'filled'` to `'accent'`**, so a bare
+  `<lr-button>` now paints the loud fill it used to need `appearance="accent"` for. The two are no
+  longer near-duplicates: `'accent'` takes the active `variant`'s **loud** fill
+  (`--lr-button-accent-fill`) with the foreground guaranteed legible on it, while `'filled'` takes
+  that variant's **quiet** tint (`--lr-button-fill`) — a secondary-action fill that still reads as a
+  fill rather than as the page surface. Before 8.0.0 every chromatic variant's `'filled'` and
+  `'accent'` resolved to the same loud token and rendered identically, while `variant="neutral"`'s
+  `'filled'` was the page surface, i.e. no fill at all. `'filled-outlined'` is `'filled'`'s fill and
+  foreground carrying the outlined tier's border colour, for a filled button that must still read as
+  bounded on a same-toned surface. `'quiet'` is a de-emphasized tier:
+  transparent background with a bordered, muted-text chrome; its text/border tokens are **not**
+  variant-swapped, so `variant` has no effect on it.
   `'link'` is a true inline-link tier:
   zero chrome (no padding, border, border-radius, or `min-block-size` floor), underlined
   (`text-underline-offset: var(--lr-size-0-15rem)`), colored from `--lr-button-accent` (the same token `'plain'`
   uses, so `variant` still selects the link color) and inheriting the surrounding font-size/weight
   — for a text link that flows within a sentence rather than a button-shaped control. Declared
   after the per-`size` rules, so it overrides them whatever `size` is set
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — `'2xs'` is the tightest tier,
-  below `'xs'`, for dense chrome; `'m'` is the standard one
+- `size: LyraSize = 'm'` (reflected) — the shared control ladder. `'2xs'` is the tightest tier,
+  below `'xs'`, for dense chrome; `'m'` is the standard one. Both spellings of every tier are
+  accepted — `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` — and the same ladder drives
+  `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input`, so same-`size` controls share a height by
+  construction rather than by two lists agreeing
 - `pill: boolean = false` (reflected) — fully rounded ends. It re-assigns `--lr-button-radius` to
   `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so that property stays the
   single corner-radius knob and a consumer override still wins. `appearance="link"` renders with
@@ -991,8 +1033,7 @@ one. While that stand-in exists it *is* the form's submitter, so **`SubmitEvent.
 transient native button, not this host**. With none of those properties set, submission stays a
 plain `requestSubmit()` with a `null` submitter, and all of it is inert in link mode.
 
-The shared `m` size uses `--lr-font-size-m`. The internal button follows the host's inline size through `--lr-button-width` (default
-`100%`), and each size tier's `min-block-size` floor is exposed as its own token (see below).
+Each size tier's `min-block-size` floor is exposed as its own token (see below).
 
 **Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal base
 element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
@@ -1007,40 +1048,72 @@ unmodified; disabled while `disabled` or `loading`).
 link), `label`, `start`, `end`, `caret` (the decorative dropdown chevron, present only while
 `with-caret` is set), `spinner` (present only while `loading`).
 
-**Themeable custom properties:** `--lr-button-width`, `--lr-button-accent`, `--lr-button-fill`,
-`--lr-button-on-fill`, `--lr-button-border` (each swapped by the active `variant`, default
-`neutral` falls back to plain text/surface/border tokens), `--lr-button-accent-fill`,
-`--lr-button-accent-on-fill` (the `appearance="accent"` fill/foreground pair; `neutral` falls
-back to `--lr-color-neutral`/`--lr-color-on-neutral`, every other variant reuses that variant's own
-loud fill token), `--lr-button-outlined-border` (default `--lr-color-border-strong`, the
-`appearance="outlined"` border color — variant-independent, unlike `--lr-button-border`),
-`--lr-button-quiet-text` (default `--lr-color-text-quiet`) and `--lr-button-quiet-border` (default
-`--lr-color-border`) — the `appearance="quiet"` foreground/border pair, also variant-independent,
-`--lr-button-hover-brightness` (default `1.08`, the `:hover` filter intensity),
-`--lr-button-active-scale` (default `0.9875`, the `:active` press-scale, disabled under
-`prefers-reduced-motion`), `--lr-button-spinner-duration` (default `var(--lr-transition-ambient)`, i.e.
-`1.8s ease-in-out`, the `loading` spinner's rotation period; that token itself collapses to
-`0.001ms linear` under `prefers-reduced-motion`, so the spinner effectively stops),
-`--lr-button-outlined-fill` (default `transparent`, the `appearance="outlined"` background — also
-variant-independent; set it to tint an outlined button with, say, a faint surface wash behind the
-outline, without a `::part(base)` rule. Note that the `:hover` `filter: brightness()` applies to
-whatever fill is set, so a tinted outlined button visibly brightens on hover where a transparent
-one did not),
-and the per-`size`
-`min-block-size` floors `--lr-button-size-2xs` (`var(--lr-size-1-25rem)`, 1.25rem),
-`--lr-button-size-xs` (`var(--lr-size-1-5rem)`, 1.5rem), `--lr-button-size-s`
-(`var(--lr-size-1-875rem)`, 1.875rem), `--lr-button-size-m` (`var(--lr-size-2-5rem)`, 2.5rem),
-`--lr-button-size-l` (`var(--lr-size-3rem)`, 3rem), `--lr-button-size-xl`
-(`var(--lr-size-3-5rem)`, 3.5rem) — each read only by its own `size` tier, and all ignored by
-`appearance="link"`. The `s`/`m`/`l`/`xl` floors are deliberately at or above the
-`--lr-icon-button-size` (2.5rem) hit-area minimum from `m` upward; they resolve through shared
-`--lr-size-*` tokens rather than literal rem values, so a retheme moves them together. `--lr-button-gap` (default `--lr-space-2xs`, the gap between the icon/label
-and any slotted content) and `--lr-button-radius` (default `--lr-radius`, the corner radius) are
-both retunable without a `::part(base)` rule but — unlike the four size knobs below — do not vary
-by `size` tier; `appearance="link"` ignores `--lr-button-radius` (it renders with zero radius), and
-`pill` re-assigns it to `--lr-radius-pill`. `--lr-button-caret-size` (default
-`var(--lr-size-0-75em)`) is the `with-caret` chevron's font size — declared in `em`, so it tracks
-every `size` tier through the button's own font size instead of needing a per-tier value.
+**Themeable custom properties.** The colour slots below are re-pointed at the active `variant`'s row
+of the library's shared semantic colour grid, so the component carries no `:host([variant='…'])`
+block of its own — the ones marked variant-independent are the exceptions:
+
+- `--lr-button-accent` (default `--lr-color-fill-loud`) — text/glyph colour for the chrome-less
+  tiers (`outlined`, `plain`, `link`), i.e. the variant's loud fill borrowed as a foreground.
+  `variant="neutral"` is the one exception: its loud fill is a mid grey picked to carry *light*
+  text, so reusing it as dark-on-surface text would wash out every plain and link button — neutral
+  keeps `--lr-color-text` instead.
+- `--lr-button-fill` (default `--lr-color-fill-quiet`) and `--lr-button-on-fill` (default
+  `--lr-color-on-quiet`) — the `appearance="filled"`/`"filled-outlined"` fill and its
+  guaranteed-legible foreground.
+- `--lr-button-accent-fill` (default `--lr-color-fill-loud`) and `--lr-button-accent-on-fill`
+  (default `--lr-color-on-loud`) — the same pair for `appearance="accent"`, the default tier. The
+  accent fill is also that tier's border colour.
+- `--lr-button-border` (default `--lr-color-border-normal`) — the border colour, from the active
+  variant's row.
+- `--lr-button-outlined-border` (default `--lr-color-border-strong`) — the border colour of
+  `appearance="outlined"` *and* `"filled-outlined"`, overriding `--lr-button-border`. Deliberately
+  variant-independent.
+- `--lr-button-outlined-fill` (default `transparent`) — the `appearance="outlined"` background, also
+  variant-independent. Set it to tint an outlined button (a faint surface wash behind the outline)
+  without a `::part(base)` rule, and point `--lr-button-hover-base` at the same colour so the hover
+  and press states keep moving away from what is actually painted.
+- `--lr-button-quiet-text` (default `--lr-color-text-quiet`) and `--lr-button-quiet-border` (default
+  `--lr-color-border`) — the `appearance="quiet"` foreground/border pair, variant-independent too.
+
+Hover and press are **colour mixes, not a filter** — `--lr-button-hover-base` (default
+`--lr-color-surface`) is the colour both move away from, and each painted tier re-points it at the
+fill it actually paints (`--lr-button-fill` for `filled`/`filled-outlined`, `--lr-button-accent-fill`
+for `accent`); the chrome-less tiers paint nothing, so they mix from the page surface.
+`--lr-button-hover-background` (default `color-mix(in oklab, var(--lr-button-hover-base),
+var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) is the hovered background and
+`--lr-button-active-background` the same mix at the stronger `--lr-color-mix-active` share, so a
+press reads as more than a hover. `appearance="link"` moves its text colour by those two shares
+instead of taking a background. **Breaking in 8.0.0:** this replaced `--lr-button-hover-brightness`,
+which no longer exists — a `filter: brightness()` multiplies every channel, so it moved a mid-toned
+fill but did nothing at all to a pure white or pure black one, and it dimmed the label and icons
+along with the box. Retuning `--lr-button-fill` or `--lr-button-accent-fill` now retunes that tier's
+hover and press with it.
+
+`--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's
+own width; override it to `auto` for a compact inline composition. `--lr-button-active-scale`
+(default `0.9875`) is the `:active` press-scale, dropped under `prefers-reduced-motion`.
+`--lr-button-spinner-duration` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`) is
+the `loading` spinner's rotation period; that token itself collapses to `0.001ms linear` under
+`prefers-reduced-motion`, so the spinner effectively stops.
+
+The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-size-xs`,
+`--lr-button-size-s`, `--lr-button-size-m`, `--lr-button-size-l` and
+`--lr-button-size-xl`. Each defaults to the matching tier of the shared form-control ladder
+(`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem), so a
+button is the same height as an input, select, combobox or date input of the same tier *by
+construction* rather than by two hand-maintained lists agreeing — which is exactly how they drifted
+apart before 8.0.0. Each is read only by its own tier (`--lr-button-size-s` also serves
+`size="small"`, and so on for the other two aliases), and all are ignored by `appearance="link"`.
+Retheming `--lr-theme-form-control-height-*` moves every control on the ladder together.
+
+`--lr-button-gap` (default `--lr-form-control-gap`, the gap between the icon/label and any slotted
+content) does not vary by tier. `--lr-button-radius` (default `--lr-form-control-radius`, the corner
+radius) *does* follow the tier — the two tightest tiers take a smaller radius, since a 6px corner on
+a 20px-tall control reads as a lozenge. Both are retunable without a `::part(base)` rule;
+`appearance="link"` ignores the radius (it renders with zero), and `pill` re-assigns it to
+`--lr-radius-pill`. `--lr-button-caret-size` (default `var(--lr-size-0-75em)`) is the `with-caret`
+chevron's font size — declared in `em`, so it tracks every `size` tier through the button's own font
+size instead of needing a per-tier value.
 `--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
 byte-identical to before this property existed — set it to add a drop shadow (e.g. an
 elevated/floating action button) without a `::part(base)` rule.
@@ -1049,14 +1122,14 @@ elevated/floating action button) without a `::part(base)` rule.
 the active tier's geometry, and every `:host([size='…'])` rule does nothing but re-assign them — no
 per-tier rule ever declares a property on `[part='base']`. Overriding one therefore retunes
 whatever tier is active (e.g. pinning a `size="s"` button into a compact toolbar row), the same
-pattern `lr-input`/`lr-select`/`lr-combobox`/`lr-segmented`/`lr-date-input` follow. Their defaults
-below are the `m` tier's values, because `size` reflects and defaults to `m`, so the `:host`
-declarations *are* the `m` tier:
+pattern `lr-input`/`lr-select`/`lr-combobox`/`lr-segmented`/`lr-date-input` follow. Each defaults to
+the shared ladder's value for the active tier, which at the default `m` tier resolves to the values
+in brackets:
 
-- `--lr-button-padding-block` (default `--lr-space-xs`)
-- `--lr-button-padding-inline` (default `--lr-space-m`)
-- `--lr-button-font-size` (default `--lr-font-size-m`)
-- `--lr-button-min-height` (default `--lr-button-size-m`) — the active tier's `min-block-size`
+- `--lr-button-padding-block` (default `--lr-form-control-padding-block`; `--lr-space-xs` at `m`)
+- `--lr-button-padding-inline` (default `--lr-form-control-padding-inline`; `--lr-space-m` at `m`)
+- `--lr-button-font-size` (default `--lr-form-control-font-size`; `--lr-font-size-m` at `m`)
+- `--lr-button-min-height` (default `--lr-form-control-height`) — the active tier's `min-block-size`
   floor, re-assigned per tier to that tier's own `--lr-button-size-*` token, and used as the
   fallback when `--lr-button-height` is unset.
 - `--lr-button-height` — an **exact** height (both floor and cap), for pinning the button to a
@@ -1070,8 +1143,10 @@ box no matter what tier or override is in play.
 **Optional peer deps:** none.
 
 ```html
-<lr-button variant="brand" appearance="filled">Save</lr-button>
-<lr-button variant="neutral" appearance="accent">Save</lr-button>
+<!-- appearance defaults to "accent": the loud fill, for the one primary action in a view. -->
+<lr-button variant="brand">Save</lr-button>
+<!-- "filled" is the quiet tint of the same tone, for a secondary action beside it. -->
+<lr-button variant="brand" appearance="filled">Save a copy</lr-button>
 <lr-button appearance="plain" aria-label="Close dialog"><svg slot="start">...</svg></lr-button>
 <p>The message failed. <lr-button appearance="link" variant="brand">Retry</lr-button></p>
 
@@ -1173,17 +1248,31 @@ that several other components size their icon-only controls against), so overrid
 above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-radius`) is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
-counterpart to it. `--lr-icon-button-background` (default `transparent`) tints the
-`[part='button']` background, `--lr-icon-button-background-hover` (default `--lr-color-surface`)
-its hover-state background, `--lr-icon-button-color` (default `inherit`) its icon/text color,
-`--lr-icon-button-color-hover` (default `var(--lr-icon-button-color, inherit)`) its hover-state
-foreground, and `--lr-icon-button-border` (default `0`) the complete native-button border
-shorthand. `--lr-icon-button-border-hover` (default
-`var(--lr-icon-button-border, 0)`) replaces that complete shorthand on hover. These are the same
-per-component indirection `lr-button`'s
+counterpart to it.
+
+The rest come in resting/hover/pressed triples, each falling through to the next-quieter state so
+setting only one still behaves:
+
+- `--lr-icon-button-background` (default `transparent`),
+  `--lr-icon-button-background-hover` (default `color-mix(in oklab, var(--lr-color-surface),
+  var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) and
+  `--lr-icon-button-background-active` (the same mix at the stronger `--lr-color-mix-active` share,
+  so a press reads as more than a hover) — the `[part='button']` background in each state. The
+  hover fallback used to be `--lr-color-surface` itself, i.e. the page background, so hovering an
+  icon button on a default page changed nothing at all.
+- `--lr-icon-button-color` (default `inherit`), `--lr-icon-button-color-hover` (default
+  `var(--lr-icon-button-color, inherit)`) and `--lr-icon-button-color-active` (default
+  `var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))`) — the icon/text colour.
+- `--lr-icon-button-border` (default `0`), `--lr-icon-button-border-hover` (default
+  `var(--lr-icon-button-border, 0)`) and `--lr-icon-button-border-active` (default
+  `var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))`) — the *complete* native
+  border shorthand, replaced wholesale in each state rather than merged.
+
+These are the same per-component indirection `lr-button`'s
 `--lr-button-fill`/`--lr-button-on-fill` provide, letting a single button be bordered and tinted
-without a `::part(button)` rule. Left unset, each falls back to the original value, so rendering is
-unchanged.
+without a `::part(button)` rule. All nine are undeclared by default and read as inline `var()`
+fallbacks, so setting only the resting value carries through hover and press, and setting none of
+them leaves rendering unchanged.
 
 ## `lr-input`
 
@@ -1192,15 +1281,12 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 `label`/`hint`/`errorText` form-control chrome as `lr-textarea`/`lr-select`, and the same
 `size` scale as `lr-select`/`lr-combobox`.
 
-Pressing Enter submits the ancestor `<form>` — the implicit submission a native `<input>` performs.
-The internal input lives in a shadow root and has no form owner of its own, so the platform can
-never do it here. It goes through `requestSubmit()` (not `submit()`), so the `submit` event fires
-and interactive constraint validation runs; it is suppressed while `disabled` or `readonly`, during
-IME composition, and when the keydown was already `defaultPrevented` by a listener above.
+Pressing Enter submits the ancestor `<form>` — the implicit submission a native `<input>` performs;
+see "Enter-to-submit" below for the exact rules and for which controls deliberately opt out.
 
 **Properties:**
-- `type: 'text' | 'password' | 'email' | 'number' | 'time' | 'search' = 'text'`
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
+- `type: LyraInputType = 'text'` — `'text' | 'password' | 'email' | 'number' | 'time' | 'search'`
+- `size: LyraSize = 'm'` (reflected — see "Shared form vocabulary" below)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
   (reflected) — the shared field-surface vocabulary. `filled-outlined` (the default) draws both a
   surface fill and a border; `outlined` drops the fill, `filled` drops the border, `plain` drops
@@ -1284,8 +1370,10 @@ Three more native passthroughs:
   effective `step`, through the native `<input>`'s own `stepUp()`/`stepDown()`, so `min`/`max`
   clamping and decimal handling stay the platform's. **Silent, like the native methods**: they
   update `value`, the submitted form value and validity, but emit no `input`/`change`. A
-  non-finite `steps` falls back to `1`; `0` is a no-op, as is a `type` with no allowed value step
-  (every non-numeric type, and `step="any"`), while `disabled` and while `readonly`.
+  non-finite `steps` falls back to `1`; `0` is a no-op, as is `step="any"`, as is any `type` the
+  platform gives no allowed value step (it throws `InvalidStateError` for those, which is swallowed
+  here), and as is `disabled` or `readonly`. `type="number"` and `type="time"` are the two that step
+  — on a time field the unit is seconds, matching its `step`.
   `<lr-number-input>`'s stepper buttons build on these and *do* emit, because a button press is a
   user edit.
 
@@ -1309,11 +1397,14 @@ input and built-in actions).
 `--lr-input-control-height` pins an **exact** outer control-row height (both floors and caps it) —
 for example to pixel-match an `<lr-select>` or `<lr-combobox>` in the same toolbar row. It is
 undeclared by default, leaving `--lr-input-control-min-height` as a floor only and the row free to
-grow. `--lr-input-gap` (default `--lr-space-xs`, the gap inside `[part='input-wrapper']`) and
-`--lr-input-radius` (default `--lr-radius`, its corner radius) are both retunable without a
-`::part(input-wrapper)` rule but, unlike the four properties above, do not vary by `size` — the same
-`--lr-button-gap`/`-radius` pattern; `lr-number-input`/`lr-time-input` inherit both unchanged.
-`pill` re-assigns `--lr-input-radius` to `--lr-radius-pill`.
+grow. `--lr-input-gap` (default `--lr-space-xs`, the gap inside `[part='input-wrapper']`) is
+retunable without a `::part(input-wrapper)` rule and, unlike the four properties above, does not
+vary by `size` — the adornment gap a text field wants between an adornment and the caret is looser
+than the icon-beside-label gap the ladder is tuned for. `--lr-input-radius` (default
+`--lr-form-control-radius`, its corner radius) is retunable the same way but *does* follow the tier:
+the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall control reads as a
+lozenge. `pill` re-assigns it to `--lr-radius-pill`. `lr-number-input`/`lr-time-input` inherit both
+unchanged.
 
 `--lr-input-fill` (default `var(--lr-color-surface)`) is the control row's background and
 `--lr-input-border-color` (default `var(--lr-color-border)`) its border color. Both are swapped by
@@ -1321,6 +1412,78 @@ grow. `--lr-input-gap` (default `--lr-space-xs`, the gap inside `[part='input-wr
 values (they are also declared bare on `:host`, so an element whose `appearance` attribute hasn't
 reflected yet still paints the committed default). Setting either directly retunes the surface
 without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
+
+### Shared form vocabulary — `size`, `appearance`, `pill`, `setCustomValidity()`
+
+Four things every form control in this family now spells the same way. They are documented here
+because `lr-input` is where a reader meets all four at once; each component's own list restates only
+what is specific to it.
+
+- **`size` accepts both spellings of every tier.** The canonical ladder is
+  `2xs`/`xs`/`s`/`m`/`l`/`xl`, and `small`/`medium`/`large` — Web Awesome's and Shoelace's names —
+  are accepted as exact synonyms for `s`/`m`/`l`. Nothing is normalized away in JS: the shared
+  stylesheet matches both spellings in the same selector list, so `size="small"` costs nothing and
+  `el.size` reads back whatever you wrote. A migration off either upstream is a tag rename with no
+  attribute rewrite. One ladder now drives `lr-button`, `lr-input`, `lr-select`, `lr-combobox`,
+  `lr-date-input`, `lr-textarea`, `lr-checkbox`, `lr-radio`, `lr-switch` and `lr-slider`, so
+  same-`size` controls line up in a toolbar row by construction. Retune a whole tier from one place
+  with `--lr-theme-form-control-height-*` rather than per component.
+- **`appearance` is the fill vocabulary and nothing else.** `accent` (the loud semantic fill),
+  `filled` (a quiet tint of the same tone), `outlined` (a border, no fill), `filled-outlined`
+  (both) and `plain` (neither). It used to double as a *container* treatment on other components;
+  that meaning moved to `frame` (`card`/`plain`) in 8.0.0, so `appearance` means one thing
+  library-wide. `lr-button` adds two tiers of its own on top (`quiet` and `link`). Text fields
+  default to `filled-outlined`, `lr-select` to `outlined`, `lr-button` to `accent`.
+- **`pill` rounds the control's ends.** Available on `lr-input`, `lr-number-input`, `lr-time-input`,
+  `lr-textarea`, `lr-select`, `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input`,
+  `lr-button` and `lr-radio-button`. In every case it does exactly one thing — re-assign that
+  component's own `--lr-*-radius` knob to `--lr-radius-pill` — rather than declaring a radius on a
+  part, so the knob stays the single corner-radius override point and a consumer's own value still
+  wins over it.
+- **`setCustomValidity(message)` is on every form-associated *value* control here** — every one
+  that submits something, whether it drives `ElementInternals` through the shared mixin or by hand.
+  (`lr-button` and `lr-icon-button` are form-associated so an ancestor `<fieldset disabled>` and
+  `form.elements` reach them, but they carry no value or validity, so they have no such method.) It
+  is the standard channel for a rejection no client-side constraint can express — a server-side
+  "that email is already registered". A non-empty message raises `customError` and becomes
+  `validationMessage`, so the control fails `checkValidity()`, blocks submission, and matches
+  `:invalid`/`:state(invalid)`.
+  `''` clears it and republishes the control's *own* computed validity rather than forcing it valid:
+  a required-and-empty field goes back to `valueMissing`. The message survives every intrinsic
+  recomputation and a `form.reset()`, exactly like a native control — only another
+  `setCustomValidity('')` clears it — and is used verbatim, never localized, because it is
+  caller-supplied content.
+
+### Enter-to-submit
+
+Pressing Enter in a single-line text control submits the ancestor `<form>`, the implicit submission
+a native `<input>` performs. The internal input lives in a shadow root and has no form owner of its
+own, so the platform can never run it here; the component does, following the platform's own rules
+rather than an approximation of them:
+
+- The keystroke must be a **bare** Enter — any of Ctrl/Cmd/Alt/Shift held makes it an application
+  shortcut (send-and-keep-open, insert-newline, open-in-new-tab), never a submission.
+- An Enter **during IME composition** commits the highlighted candidate; submitting there would
+  throw away the word being typed, so it is skipped.
+- A keydown already `defaultPrevented` by a listener above stays vetoed.
+- The **submitter is resolved, not skipped**: the form's default button is the first enabled submit
+  control in `form.elements`, so its `name`/`value` entry and its
+  `formaction`/`formmethod`/`formnovalidate` overrides all reach the submission. A native button
+  goes through `form.requestSubmit(submitter)`; an `<lr-button type="submit">` is a form-associated
+  custom element, which `requestSubmit()` rejects with a `TypeError`, so it is activated through its
+  own `click()` — the same path a real click takes.
+- A form with **no** submit button submits implicitly only when it holds at most one field that
+  blocks implicit submission, matching the platform.
+- It runs through `requestSubmit()`, never `submit()`, so the `submit` event fires and interactive
+  constraint validation blocks an invalid form exactly as a real submit button would. Each control
+  also gates on its own `disabled`/`readonly` first.
+
+**Deliberately not wired everywhere.** Enter means something else in several controls, and implicit
+submission must never shadow it: `lr-textarea` and `lr-code-editor` insert a newline, which is the
+whole point of a multi-line surface; `lr-select`'s `role="combobox"` trigger opens the listbox (and
+then commits the active option), per the ARIA pattern; and `lr-date-picker` selects the focused day
+in the calendar grid. The controls that *do* wire it are `lr-input` (and its `lr-number-input`/
+`lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input` and `lr-token-input`.
 
 ### Exact-height hatches — the one rule that applies to all of them
 
@@ -1462,10 +1625,10 @@ component ever renders.
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
 `--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
 `--lr-input-fill`, and `--lr-input-border-color` (all
-but `--lr-input-control-height` swap per `size`; that one stays undeclared until you pin an exact
-row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance`, and
-`--lr-input-gap`/`--lr-input-radius` — like `--lr-button-gap`/`-radius` — never
-vary by `size` at all). The steppers take their font size from `--lr-input-font-size` and their
+but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` tier;
+`--lr-input-control-height` stays undeclared until you pin an exact
+row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
+and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder). The steppers take their font size from `--lr-input-font-size` and their
 minimum box from `--lr-icon-button-size`.
 
 ```html
@@ -1535,14 +1698,20 @@ native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
 `--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
 `--lr-input-fill`, and `--lr-input-border-color` (all
-but `--lr-input-control-height` swap per `size`; that one stays undeclared until you pin an exact
-row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance`, and
-`--lr-input-gap`/`--lr-input-radius` — like `--lr-button-gap`/`-radius` — never
-vary by `size` at all).
+but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` tier;
+`--lr-input-control-height` stays undeclared until you pin an exact
+row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
+and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder).
 
 `showPicker()` (inherited) is the supported way to open the browser's own time picker
 programmatically; it is a no-op without user activation, while `disabled`, while `readonly`, and in
 engines that don't implement it, rather than throwing.
+
+`stepUp(steps = 1)` / `stepDown(steps = 1)` (inherited) do work here — a native time input has an
+allowed value step, so they move the value by `steps` × `step` **seconds** with the platform's own
+`min`/`max` clamping. Like on `lr-input` they are **silent**: `value`, the submitted form value and
+validity all update, but no `input`/`change` is emitted. `step="any"`, `disabled` and `readonly`
+each make them no-ops.
 
 **Known gotchas:** the same two as `lr-number-input` — the inert clear/password surface, and `type`
 only being re-forced on connect. The native `type="time"` UI (spinners, AM/PM, picker) is the
@@ -1611,9 +1780,13 @@ interface PhoneNumberAdapter {
   `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once; without that registration the
   trigger simply omits the image. The open popup list stays text-only — a native `<option>` cannot
   contain elements.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-input`'s
-  `size`; scales input padding, font size, and wrapper min-height; `size="s"` shares its outer
-  control height with `lr-input`, `lr-select`, and `lr-combobox` without part overrides)
+- `size: LyraSize = 'm'` (reflected — the shared control ladder, so both `2xs`/`xs`/`s`/`m`/`l`/`xl`
+  and `small`/`medium`/`large` are accepted; scales input padding, font size, and wrapper
+  min-height; `size="s"` shares its outer control height with `lr-input`, `lr-select`, and
+  `lr-combobox` without part overrides)
+- `pill: boolean = false` (reflected) — rounds the field's corners to a full pill, mirroring
+  `lr-input`'s own `pill`. It re-assigns `--lr-phone-input-radius` to `--lr-radius-pill`, and the
+  country trigger's leading corners follow, since both read that one knob
 - `country: string` — current uppercase ISO alpha-2 selection; falls back to `defaultCountry`, then
   the first explicit/adapter country. Changing the country reparses the editable number.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
@@ -1795,6 +1968,14 @@ call `.focus()` on `::part(handle-end)` yourself if you need the other. Without 
 host's own `focus()`/`blur()`/`click()` are no-ops, because the real control lives in the shadow
 root.
 
+`setCustomValidity(message)` is this control's **only** validation channel: every reachable range is
+intrinsically legal, so there is no constraint for it to compute. A non-empty message raises
+`customError`, becomes `validationMessage`, and blocks submission of the form it sits in; `''`
+clears it. The error survives handle moves, preset picks and a form reset, exactly like a native
+control — so a consumer re-validating a range on every `lr-input` calls this with the new message
+(or `''`) each time rather than expecting the movement itself to clear it. The message is
+caller-supplied and is used verbatim, never localized.
+
 **Slots:** none.
 
 **CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`
@@ -1889,8 +2070,10 @@ A single-select picker over a small, fixed set of color swatches with the WAI-AR
 `radiogroup` contract built in: `role="radiogroup"`/`role="radio"`, roving tabindex, automatic
 activation (click or arrow-key move both select immediately, like a native radio group), cyclic
 Arrow/Home/End navigation. First-party invention (no Web Awesome equivalent). Distinct from
-`lr-color-picker`'s freeform native color input — this picks exactly one of N designer-chosen
-named colors, the shape apps otherwise hand-roll as a row of round accent-color buttons.
+`lr-color-picker`, which is a freeform picker over the whole colour space — this picks exactly one
+of N designer-chosen named colors, the shape apps otherwise hand-roll as a row of round
+accent-color buttons. Its `options` are the *only* choices; a `lr-color-picker`'s `swatches` are a
+shortcut list alongside a grid, a hue ramp and a text field that can still express any colour.
 
 **Properties:**
 - `options: SwatchOption[] = []` (attribute: false) — `SwatchOption { value: string; color: string;
@@ -2016,12 +2199,21 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked` (a native checkbox
   submits nothing at all, not even an empty string, while unchecked)
+- `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
+  `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the box and its checkmark off
+  the same values `lr-input`/`lr-select`/`lr-button` read, so controls of one `size` line up in a
+  row. The slotted label keeps the library's standard control-label type size at every tier —
+  restyle it through `::part(label)` if you want it to track the control.
 
 **Events:** user toggles emit bubbling/composed `input`, then `change`, then the compatibility
 `lr-change` alias (`detail: { checked: boolean }`). Programmatic `.checked` assignments are
 silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control.
+`setCustomValidity(message)` sets or clears a consumer-supplied error ("those terms have been
+superseded"): a non-empty message raises `customError` and blocks submission, `''` restores the
+control's own computed validity so a required-and-unchecked box goes back to `valueMissing`. It
+survives every toggle and a form reset; only another `setCustomValidity('')` clears it.
 
 **Slots:** default — label text, rendered next to the box. Clicking it toggles the checkbox, the
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
@@ -2038,26 +2230,38 @@ unset.
 showing the checkmark/indeterminate dash), `checkmark` (the checkmark or indeterminate-dash glyph),
 `label` (wrapper around the default slot)
 
-**Themeable custom properties:** `--lr-checkbox-label-indent` (below), plus shared tokens —
-`--lr-space-s`, `--lr-icon-button-size`,
+**Themeable custom properties:** `--lr-checkbox-box-size` and `--lr-checkbox-label-indent` (both
+below), plus shared tokens — `--lr-space-s`, `--lr-icon-button-size`,
 `--lr-color-border/-surface/-on-brand/-brand/-text/-danger`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
+**`--lr-checkbox-box-size`** — the edge length of `[part='box']`, defaulting to
+`min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`. Derived from the
+active `size` tier's shared control height, so the box lines up with an
+`lr-input`/`lr-select`/`lr-button` of the same `size` instead of carrying a scale of its own; at the
+default `m` tier it resolves to `1.75rem`, exactly what the control shipped with before it had a
+`size` at all. The `--lr-icon-button-size` cap is kept, so a consumer compacting that theme token
+compacts this control with it. Set it to pin the box independently of the tier.
+
 **`--lr-checkbox-label-indent`** — the inline distance from the control's start edge to the start of
-the label text: the box's own floor plus the gap beside it. It defaults to
-`calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`, and the rendered gap is
+the label text: the box plus the gap beside it. It defaults to
+`calc(var(--lr-checkbox-box-size) + var(--lr-space-s))`, and the rendered gap is
 *derived* from it, so the advertised value and the real label offset cannot drift. Setting it on
 the element (or on `lr-checkbox` in your own stylesheet) moves the label.
 
 It is published so you can align your own per-option hint text under the label without re-deriving
 that formula by reading the shadow styles. **But custom properties inherit down, not sideways**, so
 a *sibling* node in your tree cannot read it off the checkbox. Align a sibling by computing the
-same formula from the `--lr-theme-*` inputs you control:
+same formula from the `--lr-theme-*` inputs you control — the tier below is the default `m`;
+substitute the one you actually use:
 
 ```css
 .checkbox-hint {
   padding-inline-start: calc(
-    min(var(--lr-theme-icon-button-size, 2.5rem), 1.75rem) + var(--lr-theme-space-s, 0.5rem)
+    min(
+      var(--lr-theme-icon-button-size, 2.5rem),
+      calc(var(--lr-theme-form-control-height-m, 2.5rem) * 0.7)
+    ) + var(--lr-theme-space-s, 0.5rem)
   );
 }
 ```
@@ -2121,6 +2325,11 @@ control's visible, clickable label (same as `<lr-checkbox>`).
 - `hint: string = ''` — hint text below the switch. Unset: no hint chrome renders.
 - `errorText: string = ''` (attribute `error-text`) — error text below the switch (overridden by
   slotted `error` content). Unset: no error chrome renders.
+- `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
+  `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the track and thumb off the
+  same values `lr-input`/`lr-select`/`lr-button` read, so controls of one `size` line up in a row.
+  The slotted label keeps the library's standard control-label type size at every tier — restyle it
+  through `::part(label)` if you want it to track the control.
 
 **Events:** a user toggle (click, Space/Enter, or the programmatic `click()` activation path) emits
 `input`, then `change`, then `lr-change` (`detail: { checked: boolean }`) — in that order, matching
@@ -2133,6 +2342,10 @@ assignment, `form.reset()`, or session-state restoration. The internal control's
 `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
+`setCustomValidity(message)` sets or clears a consumer-supplied error ("notifications are disabled
+for your plan"): a non-empty message raises `customError` and blocks submission, `''` restores the
+control's own computed validity so a required-and-unchecked switch goes back to `valueMissing`. It
+survives every toggle and a form reset; only another `setCustomValidity('')` clears it.
 
 **Slots:**
 - default — label text, rendered next to the track. Clicking it toggles the switch, the same as
@@ -2146,10 +2359,19 @@ whole interactive control, `role="switch"`), `track` (the pill-shaped background
 circular knob that slides across the track), `label` (wrapper around the default slot), `hint` (the
 hint message), `error` (the error message)
 
-**Themeable custom properties:** `--lr-switch-track-inline-size` (default `2.25rem`),
-`--lr-switch-track-block-size` (default `1.25rem`), `--lr-switch-thumb-offset` (default
-`2px`) — component-local geometry knobs, set on `:host`, since a fully-rounded pill/thumb needs
-a radius well past the shared `--lr-radius` default — plus shared tokens
+**Themeable custom properties:** `--lr-switch-track-block-size` (default
+`calc(var(--lr-form-control-height) * 0.5)`), `--lr-switch-track-inline-size` (default
+`calc(var(--lr-switch-track-block-size) * 1.8)`, the 1.8:1 aspect ratio the control has always had)
+and `--lr-switch-thumb-offset` (default `var(--lr-size-2px)`) — component-local geometry knobs set
+on `:host`, since a fully-rounded pill/thumb needs a radius well past the shared `--lr-radius`
+default. Both track dimensions ride the shared `size` ladder, so at the default `m` tier they
+resolve to exactly the `1.25rem` × `2.25rem` the switch shipped with before it had a `size` at all.
+
+`--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s resting fill,
+re-pointed at `--lr-color-brand` while `checked`. Hover and press are colour **mixes** away from
+whichever of the two is current — `--lr-color-mix-partner` at the `--lr-color-mix-hover` and
+`--lr-color-mix-active` shares — so retinting this one property retints all four renderings at
+once, and neither state touches the label text beside the track. Plus shared tokens
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
@@ -2227,6 +2449,11 @@ single-value submission.
 - `readonly: boolean = false` (reflected) — the value is displayed but not changeable. Unlike
   `disabled`, a read-only slider stays focusable, fully legible, and **still submits its value**; it
   renders `aria-readonly` in both states and withdraws the grab cursor
+- `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
+  `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the track, the filled
+  indicator, the tick marks and the handles off the same values `lr-input`/`lr-select`/`lr-button`
+  read, so controls of one `size` line up in a row. The handle's transparent drag area keeps its own
+  1.75rem/28px floor at every tier, so a small slider is still a conformant pointer target
 - `withMarkers: boolean = false` (attribute `with-markers`, reflected) — draws a tick mark at every
   `step` position along the track. Purely decorative (`aria-hidden`). Nothing is drawn for an
   unstepped grid (`step` ≤ 0) or for one implying more than 100 intervals — ten million ticks would
@@ -2298,7 +2525,21 @@ hint region).
 **Breaking in 8.0.0:** the `fill` part was **renamed to `indicator`**, matching `wa-slider`. A
 `::part(fill)` rule silently matches nothing now — rename it.
 
-**Themeable custom properties:** `--lr-slider-track-length` (default `var(--lr-size-10rem)`) is the
+**Themeable custom properties:** three geometry knobs ride the shared `size` ladder, so a tier moves
+them all without a per-tier rule, and the values in brackets are what they resolve to at the default
+`m`:
+
+- `--lr-slider-thumb-size` (default `calc(var(--lr-form-control-height) * 0.4)`; `1rem`) — the
+  diameter of each draggable handle. The transparent drag area around it never drops below
+  1.75rem/28px whatever this is set to, so shrinking the visible dot cannot cost you the pointer
+  target.
+- `--lr-slider-track-thickness` (default `calc(var(--lr-slider-thumb-size) * 0.25)`; `0.25rem`) —
+  the thickness of the track, the filled `indicator`, and (scaled from it) the `with-markers` ticks.
+- `--lr-slider-row-size` (default `calc(var(--lr-form-control-height) * 0.6)`; `1.5rem`) — the
+  cross-axis extent of `[part="base"]`: its block size when horizontal, its inline size when
+  vertical.
+
+`--lr-slider-track-length` (default `var(--lr-size-10rem)`) is the
 track's length in `orientation="vertical"`; a horizontal track fills its container instead, so the
 token is inert there. It is declared as an inline `var()` fallback and never on `:host`, so a
 consumer value set on any ancestor is never shadowed. Everything else is shared tokens —
@@ -2370,11 +2611,12 @@ native range input either.
 - `with-markers` silently draws nothing when `step` is 0/negative or when the domain implies more
   than 100 intervals. That is a deliberate ceiling, not a bug — check the rendered `[part="marker"]`
   count rather than assuming the ticks are there.
-- The visible thumb is a 16px dot, deliberately below the library's usual 40px icon-button floor: a
-  transparent 28px `::before` carries the hit/drag area, which clears WCAG 2.5.8's 24px minimum,
-  while a 40px *visible* thumb would make two range handles overlap across 40px of track and hijack
-  track clicks. The pseudo-element has no DOM node of its own, so a pointerdown inside it still
-  reports the thumb as `e.target`.
+- The visible thumb is deliberately below the library's usual 40px icon-button floor — 16px at the
+  default `m` tier, and smaller at the tighter ones. A transparent `::before` carries the hit/drag
+  area at `max(28px, calc(var(--lr-slider-thumb-size) * 1.75))`, which clears WCAG 2.5.8's 24px
+  minimum at **every** tier, while a 40px *visible* thumb would make two range handles overlap
+  across 40px of track and hijack track clicks. The pseudo-element has no DOM node of its own, so a
+  pointerdown inside it still reports the thumb as `e.target`.
 
 ---
 
@@ -2388,6 +2630,24 @@ An empty `name` is canonicalized to an omitted attribute rather than reappearing
 `effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
 `blur()`, and `click()` forward to the internal radio control.
 
+- `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
+  `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the indicator off the same
+  values `lr-input`/`lr-select`/`lr-button` read, so controls of one `size` line up in a row. The
+  slotted label keeps the standard control-label type size at every tier — restyle it through
+  `::part(label)` to make it track the control.
+- `pill: boolean = false` (reflected) — rounds the control's own chrome into a pill instead of the
+  shared control radius. A plain `<lr-radio>`'s indicator is a circle at every setting, so this is
+  visible on `<lr-radio-button>`, which inherits this class and renders rectangular chrome; it is
+  declared here so both tags carry one property with one meaning.
+
+`setCustomValidity(message)` sets or clears a consumer-supplied error ("that plan is no longer
+available"): a non-empty message raises `customError` and blocks submission, `''` restores the
+control's own computed validity so a required-and-unselected radio goes back to `valueMissing`. It
+survives every selection, every group-driven `required` change, and a form reset. It lives on the
+radio rather than on `<lr-radio-group>` because the group is not itself form-associated — it
+designates one member as the group's validity owner, and that radio is what participates in the
+owning form.
+
 **Events:** native-style composed `input` and `change`. A standalone radio also emits `lr-change`
 with `{ checked, value }`. An owned radio suppresses that child alias at its source; its group emits
 the sole aggregate `lr-change` described below, so capture and bubble listeners cannot observe two
@@ -2398,13 +2658,25 @@ bubbling, composed host events.
 
 **CSS parts:** `base`, `circle`, `dot`, `label`.
 
-**Themeable custom properties:** `--lr-radio-label-indent` — the inline distance from the control's
-start edge to the start of the label text, i.e. the circle's own floor plus the gap beside it,
-defaulting to `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`. The rendered
-gap is derived from it, so the advertised value and the real offset cannot drift; setting it on the
-element (or on `lr-radio` in your own stylesheet) moves the label. Exactly the same knob, defaults,
-purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` — see `lr-checkbox` above
-for the formula to align a sibling hint element.
+**Themeable custom properties:**
+
+- `--lr-radio-circle-size` (default `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height)
+  * 0.7))`; `1.75rem` at the default `m` tier) — the edge length of `[part='circle']`, derived from
+  the active `size` tier's shared control height so a radio lines up with an
+  `lr-input`/`lr-select`/`lr-button` of the same `size`.
+- `--lr-radio-dot-size` (default `min(calc(var(--lr-radio-circle-size) * 0.5),
+  calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge length of `[part='dot']`,
+  capped at half the circle so it can never outgrow its ring, whatever is done to either the ladder
+  or the `--lr-icon-button-size` cap.
+- `--lr-radio-radius` (default `--lr-radius-pill`) — the corner radius of the control's own chrome.
+  A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at
+  the shared control radius and `pill` swaps it back to a pill.
+- `--lr-radio-label-indent` (default `calc(var(--lr-radio-circle-size) + var(--lr-space-s))`) — the
+  inline distance from the control's start edge to the start of the label text, i.e. the circle plus
+  the gap beside it. The rendered gap is derived from it, so the advertised value and the real offset
+  cannot drift; setting it on the element (or on `lr-radio` in your own stylesheet) moves the label.
+  Exactly the same knob, purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` —
+  see `lr-checkbox` above for the formula to align a sibling hint element.
 
 `--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
 (default `var(--lr-color-brand)`) recolor `[part='circle']`'s border and `[part='dot']`'s background
@@ -2432,7 +2704,11 @@ automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-typ
 and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
 
 **Properties and methods:** identical to `lr-radio` — `checked`, `disabled`, `name`, `required`,
-`value`; `click()`, `focus()`, `blur()`.
+`value`, `size`, `pill`; `click()`, `focus()`, `blur()`, `setCustomValidity()`. `size` is where this
+chrome differs most visibly: the shared ladder drives the button's height (floored at `1.5rem`),
+inline padding and font size, so a `size="small"` radio button sits at the same height as a
+`size="small"` `lr-button` beside it. `pill` is the one inherited property that does *more* here
+than on a plain `lr-radio` — see the radius note below.
 
 **Events:** identical to `lr-radio` — `input` and `change` on selection; `lr-change`
 (`detail: { checked, value }`) only for a *standalone* button, since an owning `lr-radio-group`
@@ -2445,14 +2721,22 @@ control's own do not cross the shadow boundary.
 additional part tokens (`::part(base checked)`), because an attribute selector after `::part()`
 never matches.
 
-Because this is a subclass, the manifest also lists `lr-radio`'s own `circle` and `dot` parts and its
-`--lr-radio-label-indent`, `--lr-radio-checked-border-color` and `--lr-radio-checked-dot-color`
-custom properties. **This element renders none of them** — it draws a button, not a circle and dot —
-so styling them here has no effect. They are inherited declarations, not surface.
+**Themeable custom properties:** `--lr-radio-radius` is the one inherited knob this element really
+uses. `lr-radio` points it at `--lr-radius-pill` for its circular indicator; this subclass re-points
+it at `--lr-form-control-radius` — the active `size` tier's shared corner radius — and `pill` swaps
+it back to `--lr-radius-pill`. Only the *outer* corners of a run take it: consecutive siblings
+collapse their shared borders, so the radius lands on the first button's leading corners and the
+last button's trailing ones. Everything else is shared tokens — `--lr-color-brand` /
+`--lr-color-on-brand` / `--lr-color-brand-quiet` (selected and hover fills),
+`--lr-color-surface-raised`, `--lr-color-border`, and the `--lr-form-control-*` ladder values behind
+the height, padding and font size.
 
-**Themeable custom properties:** shared tokens only — `--lr-color-brand` / `--lr-color-on-brand` /
-`--lr-color-brand-quiet` (selected and hover fills), `--lr-color-surface-raised`,
-`--lr-color-border`, `--lr-radius`, `--lr-icon-button-size` (the WCAG 2.5.8 hit-area floor).
+Because this is a subclass, the manifest also lists `lr-radio`'s own `circle` and `dot` parts and
+its `--lr-radio-circle-size`, `--lr-radio-dot-size`, `--lr-radio-label-indent`,
+`--lr-radio-checked-border-color` and `--lr-radio-checked-dot-color` custom properties. **This
+element renders none of those** — it draws a button, not a circle and dot — so styling them here has
+no effect. They are inherited declarations, not surface. `--lr-radio-radius` is the exception, and
+the only one of the set worth setting on this tag.
 
 ```html
 <lr-radio-group name="view" label="View">
@@ -2520,8 +2804,14 @@ engaged with the field.
 A labeled, keyboard-navigable group of `lr-radio` controls. Arrow keys, Home, and End move
 focus; arrow navigation selects the next enabled radio.
 
-**Properties:** `label`, `hint`, `errorText` (`error-text`), `name`, `required`, `disabled`, and
-`aria-label` (through `accessibleLabel`).
+**Properties:** `label`, `hint`, `errorText` (`error-text`), `name`, `required`, `disabled`,
+`aria-label` (through `accessibleLabel`), and `size: LyraSize = 'm'` (reflected) — the size of the
+group's **own** chrome, on the shared ladder and accepting both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
+`small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
+options off the same values the controls themselves use. It deliberately does **not** resize the
+`<lr-radio>`/`<lr-radio-button>` children: each carries its own `size`, so a group can hold options
+at mixed sizes and an explicitly-sized option is never silently overridden by its container. Set the
+same `size` on the children to scale the whole group.
 
 **Events:** exactly one group-owned `lr-change` with `{ value, radio }` per owned selection,
 including keyboard activation. The selected child does not emit its standalone alias. Ownership is
@@ -2532,18 +2822,37 @@ routes the event to the new group without waiting for a mutation-observer turn.
 
 **CSS parts:** `base`, `label`, `hint`, `error`.
 
+**Themeable custom properties:** `--lr-radio-group-row-gap` (default
+`calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
+options and its messages, scaled by `size` through the shared control ladder.
+
 ## `lr-checkbox-group`
 
 A form-associated collection of `<lr-checkbox>` children. Its `value` is a `string[]`; each
 selected value is submitted under `name` and `required` requires at least one selection.
 
-**Properties:** `label`, `hint`, `errorText`, `value`, `name`, `required`, `disabled`, and
-`accessibleLabel` (`aria-label`). **Slots:** default checkboxes, `label`, `hint`, `error`.
+**Properties:** `label`, `hint`, `errorText`, `value`, `name`, `required`, `disabled`,
+`accessibleLabel` (`aria-label`), and `size: LyraSize = 'm'` (reflected) — the size of the group's
+**own** chrome, on the shared ladder and accepting both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
+`small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
+options, and deliberately does **not** resize the `<lr-checkbox>` children: each carries its own
+`size`, so a group can hold options at mixed sizes and an explicitly-sized option is never silently
+overridden by its container. Set the same `size` on the children to scale the whole group.
+**Slots:** default checkboxes, `label`, `hint`, `error`.
 **Events:** a user toggle emits exactly one group-owned `input`, then `change`, then `lr-change`;
 all three carry `{ value: string[] }`. The owned child's corresponding events are consumed at the
 group boundary, so an ancestor does not receive a second, differently shaped sequence.
 Programmatic child/property synchronization is silent.
+**Methods:** `setCustomValidity(message)` sets or clears a consumer-supplied error ("that
+combination of topics is not available"): a non-empty message raises `customError` and blocks
+submission, `''` restores the group's own computed validity so a required group with nothing checked
+goes back to `valueMissing`. It survives every child toggle, slot change and form reset.
 **CSS parts:** `form-control`, `form-control-label`, `options`, `hint`, `error`.
+**Themeable custom properties:** `--lr-checkbox-group-row-gap` (default
+`calc(var(--lr-form-control-height) * 0.1)`), the vertical gap between the group's label, options
+and messages, and `--lr-checkbox-group-option-gap` (default
+`calc(var(--lr-form-control-height) * 0.2)`), the gap between adjacent options — both scaled by
+`size` through the shared control ladder.
 
 **`value` is a read-out of child state, not an input.** The children are the single source of
 truth. An internal sync recomputes `value` from them and reassigns it on every child toggle,
@@ -2575,7 +2884,11 @@ input), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCo
 (attribute `autocorrect`) — all three native text-entry hints are forwarded to both the draft input
 and the inline token editor — `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected —
 same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
-tiers; the remove button's hit area stays fixed at `40px` across all sizes), `allowDuplicates`
+tiers, and both `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` are accepted; the remove
+button's hit area stays fixed at `40px` across all sizes), `pill` (reflected, default `false` —
+rounds the token row's corners to a full pill by re-assigning `--lr-token-input-radius` to
+`--lr-radius-pill`; the chips share that knob with the row, so they round with it),
+`allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
 **Slots:** `label`, `hint`, `error`.
@@ -2591,7 +2904,10 @@ token's text, doubling as the roving-focus edit trigger — rendered only while 
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
 glyph), `input`, `hint`, `error`. `focus()`, `blur()`, and `click()` forward to the internal text
-input.
+input. `setCustomValidity(message)` carries a rejection no client-side constraint can express
+("that tag is reserved"): a non-empty message raises `customError` and blocks submission, `''`
+restores the control's own computed validity so a `required` control with no tokens goes back to
+`valueMissing`. It survives every token add, removal and edit, and a `form.reset()`.
 
 **`editable` — editing a token in place.** Off by default, in which case the token row renders
 exactly as it does without the feature and stays non-focusable. Turn it on and each token becomes a
@@ -2731,6 +3047,12 @@ Colour is never the only channel carrying state: the trigger's `aria-describedby
 visually-hidden span spelling the current value out in text, the panel shows it in an editable
 field, and the selected palette swatch is marked with `aria-pressed` plus a check mark rather than
 a tint alone.
+
+**Not the same control as `lr-swatch-picker`.** This one is freeform: `swatches` is a shortcut row
+*beside* a saturation grid, a hue ramp and a text field, and the committed value can be any colour
+the browser parses. `<lr-swatch-picker>` offers exactly its `options` and nothing else, with
+`radiogroup` semantics rather than a popover. Reach for it when the answer must be one of N
+designer-chosen colours; reach for this when it must not.
 
 **Properties:** the shared
 form properties `name`, `value`, `disabled`, and `required`, plus `label`, `hint`, `errorText`
@@ -3010,6 +3332,13 @@ string>` is the current per-key validation-message state.
 fired only on an actual change), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
 (`detail: { itemId }`, `skippable` only).
 
+**Methods:** `setCustomValidity(message)` sets or clears a form-level error no per-key rule can
+express ("this item was already annotated by someone else"): a non-empty message raises
+`customError` and blocks submission, `''` restores the rubric's own computed validity — unanswered
+required keys, and any key with an unsupported `type`, still hold it invalid. It is independent of
+the per-key `errors` map, which stays a read-out of this rubric's own field rules, so a message set
+here is never attributed to one key. It survives every `value`/`keys` write and a form reset.
+
 **CSS parts:** `base` (the outer wrapper), `field` (one key's wrapper), `label`, `description`,
 `scale` (the rendered score/category/comment control's wrapper), `error` (a field-level validation
 message), `footer`, `submit`, `skip` (only rendered when `skippable`), `empty` (shown when `keys` has
@@ -3061,7 +3390,11 @@ active locale untouched, so a host can persist the choice first and apply it lat
 re-dispatched from the internal trigger as bubbling, composed events.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` — all forward to the internal trigger
-button, same convention as `lr-select`'s identical trio.
+button, same convention as `lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
+a consumer-supplied error ("that locale is not enabled for your account"): a non-empty message
+raises `customError` and blocks submission, `''` restores the picker's own computed validity so a
+required picker with nothing committed goes back to `valueMissing`. It survives every
+`value`/`required` change and a form reset.
 
 **Slots:** `label`, `hint`, `error`.
 

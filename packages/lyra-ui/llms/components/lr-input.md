@@ -18,15 +18,12 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 `label`/`hint`/`errorText` form-control chrome as `lr-textarea`/`lr-select`, and the same
 `size` scale as `lr-select`/`lr-combobox`.
 
-Pressing Enter submits the ancestor `<form>` — the implicit submission a native `<input>` performs.
-The internal input lives in a shadow root and has no form owner of its own, so the platform can
-never do it here. It goes through `requestSubmit()` (not `submit()`), so the `submit` event fires
-and interactive constraint validation runs; it is suppressed while `disabled` or `readonly`, during
-IME composition, and when the keydown was already `defaultPrevented` by a listener above.
+Pressing Enter submits the ancestor `<form>` — the implicit submission a native `<input>` performs;
+see "Enter-to-submit" below for the exact rules and for which controls deliberately opt out.
 
 **Properties:**
-- `type: 'text' | 'password' | 'email' | 'number' | 'time' | 'search' = 'text'`
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
+- `type: LyraInputType = 'text'` — `'text' | 'password' | 'email' | 'number' | 'time' | 'search'`
+- `size: LyraSize = 'm'` (reflected — see "Shared form vocabulary" below)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
   (reflected) — the shared field-surface vocabulary. `filled-outlined` (the default) draws both a
   surface fill and a border; `outlined` drops the fill, `filled` drops the border, `plain` drops
@@ -110,8 +107,10 @@ Three more native passthroughs:
   effective `step`, through the native `<input>`'s own `stepUp()`/`stepDown()`, so `min`/`max`
   clamping and decimal handling stay the platform's. **Silent, like the native methods**: they
   update `value`, the submitted form value and validity, but emit no `input`/`change`. A
-  non-finite `steps` falls back to `1`; `0` is a no-op, as is a `type` with no allowed value step
-  (every non-numeric type, and `step="any"`), while `disabled` and while `readonly`.
+  non-finite `steps` falls back to `1`; `0` is a no-op, as is `step="any"`, as is any `type` the
+  platform gives no allowed value step (it throws `InvalidStateError` for those, which is swallowed
+  here), and as is `disabled` or `readonly`. `type="number"` and `type="time"` are the two that step
+  — on a time field the unit is seconds, matching its `step`.
   `<lr-number-input>`'s stepper buttons build on these and *do* emit, because a button press is a
   user edit.
 
@@ -135,11 +134,14 @@ input and built-in actions).
 `--lr-input-control-height` pins an **exact** outer control-row height (both floors and caps it) —
 for example to pixel-match an `<lr-select>` or `<lr-combobox>` in the same toolbar row. It is
 undeclared by default, leaving `--lr-input-control-min-height` as a floor only and the row free to
-grow. `--lr-input-gap` (default `--lr-space-xs`, the gap inside `[part='input-wrapper']`) and
-`--lr-input-radius` (default `--lr-radius`, its corner radius) are both retunable without a
-`::part(input-wrapper)` rule but, unlike the four properties above, do not vary by `size` — the same
-`--lr-button-gap`/`-radius` pattern; `lr-number-input`/`lr-time-input` inherit both unchanged.
-`pill` re-assigns `--lr-input-radius` to `--lr-radius-pill`.
+grow. `--lr-input-gap` (default `--lr-space-xs`, the gap inside `[part='input-wrapper']`) is
+retunable without a `::part(input-wrapper)` rule and, unlike the four properties above, does not
+vary by `size` — the adornment gap a text field wants between an adornment and the caret is looser
+than the icon-beside-label gap the ladder is tuned for. `--lr-input-radius` (default
+`--lr-form-control-radius`, its corner radius) is retunable the same way but *does* follow the tier:
+the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall control reads as a
+lozenge. `pill` re-assigns it to `--lr-radius-pill`. `lr-number-input`/`lr-time-input` inherit both
+unchanged.
 
 `--lr-input-fill` (default `var(--lr-color-surface)`) is the control row's background and
 `--lr-input-border-color` (default `var(--lr-color-border)`) its border color. Both are swapped by
@@ -147,6 +149,78 @@ grow. `--lr-input-gap` (default `--lr-space-xs`, the gap inside `[part='input-wr
 values (they are also declared bare on `:host`, so an element whose `appearance` attribute hasn't
 reflected yet still paints the committed default). Setting either directly retunes the surface
 without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
+
+### Shared form vocabulary — `size`, `appearance`, `pill`, `setCustomValidity()`
+
+Four things every form control in this family now spells the same way. They are documented here
+because `lr-input` is where a reader meets all four at once; each component's own list restates only
+what is specific to it.
+
+- **`size` accepts both spellings of every tier.** The canonical ladder is
+  `2xs`/`xs`/`s`/`m`/`l`/`xl`, and `small`/`medium`/`large` — Web Awesome's and Shoelace's names —
+  are accepted as exact synonyms for `s`/`m`/`l`. Nothing is normalized away in JS: the shared
+  stylesheet matches both spellings in the same selector list, so `size="small"` costs nothing and
+  `el.size` reads back whatever you wrote. A migration off either upstream is a tag rename with no
+  attribute rewrite. One ladder now drives `lr-button`, `lr-input`, `lr-select`, `lr-combobox`,
+  `lr-date-input`, `lr-textarea`, `lr-checkbox`, `lr-radio`, `lr-switch` and `lr-slider`, so
+  same-`size` controls line up in a toolbar row by construction. Retune a whole tier from one place
+  with `--lr-theme-form-control-height-*` rather than per component.
+- **`appearance` is the fill vocabulary and nothing else.** `accent` (the loud semantic fill),
+  `filled` (a quiet tint of the same tone), `outlined` (a border, no fill), `filled-outlined`
+  (both) and `plain` (neither). It used to double as a *container* treatment on other components;
+  that meaning moved to `frame` (`card`/`plain`) in 8.0.0, so `appearance` means one thing
+  library-wide. `lr-button` adds two tiers of its own on top (`quiet` and `link`). Text fields
+  default to `filled-outlined`, `lr-select` to `outlined`, `lr-button` to `accent`.
+- **`pill` rounds the control's ends.** Available on `lr-input`, `lr-number-input`, `lr-time-input`,
+  `lr-textarea`, `lr-select`, `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input`,
+  `lr-button` and `lr-radio-button`. In every case it does exactly one thing — re-assign that
+  component's own `--lr-*-radius` knob to `--lr-radius-pill` — rather than declaring a radius on a
+  part, so the knob stays the single corner-radius override point and a consumer's own value still
+  wins over it.
+- **`setCustomValidity(message)` is on every form-associated *value* control here** — every one
+  that submits something, whether it drives `ElementInternals` through the shared mixin or by hand.
+  (`lr-button` and `lr-icon-button` are form-associated so an ancestor `<fieldset disabled>` and
+  `form.elements` reach them, but they carry no value or validity, so they have no such method.) It
+  is the standard channel for a rejection no client-side constraint can express — a server-side
+  "that email is already registered". A non-empty message raises `customError` and becomes
+  `validationMessage`, so the control fails `checkValidity()`, blocks submission, and matches
+  `:invalid`/`:state(invalid)`.
+  `''` clears it and republishes the control's *own* computed validity rather than forcing it valid:
+  a required-and-empty field goes back to `valueMissing`. The message survives every intrinsic
+  recomputation and a `form.reset()`, exactly like a native control — only another
+  `setCustomValidity('')` clears it — and is used verbatim, never localized, because it is
+  caller-supplied content.
+
+### Enter-to-submit
+
+Pressing Enter in a single-line text control submits the ancestor `<form>`, the implicit submission
+a native `<input>` performs. The internal input lives in a shadow root and has no form owner of its
+own, so the platform can never run it here; the component does, following the platform's own rules
+rather than an approximation of them:
+
+- The keystroke must be a **bare** Enter — any of Ctrl/Cmd/Alt/Shift held makes it an application
+  shortcut (send-and-keep-open, insert-newline, open-in-new-tab), never a submission.
+- An Enter **during IME composition** commits the highlighted candidate; submitting there would
+  throw away the word being typed, so it is skipped.
+- A keydown already `defaultPrevented` by a listener above stays vetoed.
+- The **submitter is resolved, not skipped**: the form's default button is the first enabled submit
+  control in `form.elements`, so its `name`/`value` entry and its
+  `formaction`/`formmethod`/`formnovalidate` overrides all reach the submission. A native button
+  goes through `form.requestSubmit(submitter)`; an `<lr-button type="submit">` is a form-associated
+  custom element, which `requestSubmit()` rejects with a `TypeError`, so it is activated through its
+  own `click()` — the same path a real click takes.
+- A form with **no** submit button submits implicitly only when it holds at most one field that
+  blocks implicit submission, matching the platform.
+- It runs through `requestSubmit()`, never `submit()`, so the `submit` event fires and interactive
+  constraint validation blocks an invalid form exactly as a real submit button would. Each control
+  also gates on its own `disabled`/`readonly` first.
+
+**Deliberately not wired everywhere.** Enter means something else in several controls, and implicit
+submission must never shadow it: `lr-textarea` and `lr-code-editor` insert a newline, which is the
+whole point of a multi-line surface; `lr-select`'s `role="combobox"` trigger opens the listbox (and
+then commits the active option), per the ARIA pattern; and `lr-date-picker` selects the focused day
+in the calendar grid. The controls that *do* wire it are `lr-input` (and its `lr-number-input`/
+`lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input` and `lr-token-input`.
 
 ### Exact-height hatches — the one rule that applies to all of them
 

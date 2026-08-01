@@ -281,9 +281,11 @@ used is still a `--lr-*` token reference, never a raw literal.
   `.remove()` itself. Because the close event is cancelable, `confirm()` waits through the full
   dispatch and remains pending/mounted when a listener calls `preventDefault()`.
 - The neutral confirm button pairs `--lr-color-on-brand` with `--lr-color-brand`; the danger
-  tone pairs `--lr-color-on-danger` with `--lr-color-danger`. Each token chains through Web
-  Awesome's matching `*-on-loud` semantic role and has contrast-tested standalone light/dark
-  fallbacks.
+  tone pairs `--lr-color-on-danger` with `--lr-color-danger`. Each of those resolves through its
+  variant's row of the semantic grid (`--lr-color-<variant>-fill-loud` /
+  `--lr-color-<variant>-on-loud`), which in turn reads the matching `--lr-theme-color-*` hook and
+  falls back to the shared neutral ramp — so retheming the grid retints the confirm button with no
+  `::part()` rule, in light and dark alike.
 - Importing `confirm` alone is enough to register `<lr-dialog>` — `confirm.ts` imports
   `./dialog.js` for its side effect, so a consumer doesn't need a separate import for the dialog
   element.

@@ -34,11 +34,12 @@ a live example, source code, and API reference.
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
 </p>
-<p align="center"><sub>A few of 268 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+<p align="center"><sub>A few of 275 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Upgrading from 7.x](#upgrading-from-7x)
 - [Principles & Guidelines](#principles--guidelines)
 - [Components](#components)
 - [Theming, internationalization & RTL](#theming-internationalization--rtl)
@@ -111,6 +112,13 @@ pnpm docs         # Storybook docs site demoing every component
 
 Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS.md).
 
+## Upgrading from 7.x
+
+8.0.0 is mostly renames — two tags, a handful of attributes whose polarity or default was wrong, and
+one styling vocabulary in place of three. The full list, with what each one changes and what to
+search for, is in the package README:
+[`packages/lyra-ui/README.md#upgrading-from-7x`](./packages/lyra-ui/README.md#upgrading-from-7x).
+
 ## Principles & Guidelines
 
 | Principle | Description |
@@ -130,12 +138,13 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-268 custom elements across eleven component families. Every tag has a live, interactive example on the
+275 custom elements across eleven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
 
-The family name is also the import path — `@aceshooting/lyra-ui/components/<family>/<name>`.
+The family name is also the import path — `@aceshooting/lyra-ui/components/<family>/<name>` for one
+element, or `@aceshooting/lyra-ui/components/<family>` to register the whole family at once.
 
 | Family | Highlights |
 |---|---|
@@ -153,7 +162,7 @@ The family name is also the import path — `@aceshooting/lyra-ui/components/<fa
 
 ## Theming, internationalization & RTL
 
-Every one of the 268 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 275 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn.

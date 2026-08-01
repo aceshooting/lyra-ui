@@ -115,11 +115,39 @@ when Chart.js is loaded. Numeric datasets retain the compact one-column-per-seri
 Point datasets expand into `<series> x`, `<series> y`, and, when present, `<series> r` and
 `<series> label` columns so radius and per-point labels are not flattened away.
 
-The instance method `seriesPalette(): string[]` resolves the categorical series ramp
-(`--lr-color-chart-1..8`) through `getComputedStyle` and returns the concrete, theme-aware colors —
-the exact same values the chart hands any series that sets no `color` of its own. Each internal
-token resolves through the matching application input (`--lr-theme-color-chart-1..8`), so theme
-overrides are included.
+**The categorical series ramp.** Eight tokens, `--lr-color-chart-1` … `--lr-color-chart-8`, with a
+separate set of values for light and dark mode. A series that sets no `color` of its own is assigned
+one of them by index.
+
+The ramp is **generated, not hand-picked**, by a search that maximises worst-case separation between
+every pair of series under all three dichromacies, over a candidate pool that already clears 3:1
+against the surface (WCAG 1.4.11 — a chart series is a non-text graphical object conveying data).
+The consequence worth designing around: the ramp separates on **lightness** as well as hue. Hue is
+exactly the channel colour-vision deficiency collapses, so two series that differ only in hue become
+the same series under red-green colour blindness; lightness is the channel every form of colour
+blindness preserves. That is also why the eight colours are not evenly lit — an evenly-lit
+categorical ramp cannot satisfy the constraint at all.
+
+The separation guarantee is *pairwise across all eight*, so any subset of the ramp — and any
+ordering of it — inherits it; you can pick entries 1 and 5 as freely as 1 and 2. What forfeits the
+guarantee is supplying your own colours through `Series.color` or replacing the ramp with a set
+chosen by hue alone. An eight-hue set at one lightness looks tidier on screen and is unreadable to
+the ~8% of men with red-green colour-vision deficiency.
+
+**`--lr-theme-color-chart-1` … `-8` is the retheme hook.** Each internal `--lr-color-chart-N` reads
+the matching `--lr-theme-color-chart-N` application input and falls back to the generated value, so
+setting the theme inputs once at `:root` recolours every chart in the app with no per-component
+override and no `::part()` rule. Charts are canvas-rendered, so a live theme change is picked up by
+the built-in `ThemeWatcher` (or `refreshTheme()`) rather than by CSS alone.
+
+Under `forced-colors: active` the ramp deliberately collapses onto the three system colors the mode
+actually guarantees (`Highlight`/`LinkText`/`CanvasText`, cycling), so more than three series stop
+being distinguishable by colour there — a chart that must stay readable in forced colors needs a
+non-colour channel (dashes, point styles, direct labels via `dataLabels`) as well.
+
+The instance method `seriesPalette(): string[]` resolves that ramp through `getComputedStyle` and
+returns the concrete, theme-aware colors — the exact same values the chart hands an uncolored
+series, with any `--lr-theme-color-chart-*` override already applied.
 
 The module also exports `seriesPalette(scope?: Element | null): string[]`, which can run before a
 chart exists. Omit `scope` to read `document.documentElement`, pass an element to resolve its theme

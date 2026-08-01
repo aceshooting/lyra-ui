@@ -52,10 +52,12 @@ the footer row itself is hidden via `[hidden]` when nothing is slotted)
 tool name/status/duration), `tool-name`, `status`, `duration`, `header-actions`, `maximize-button`,
 `close-button`, `body`, `footer`
 
-**Themeable custom properties:** `--lr-tool-result-dialog-overlay-color` (default `rgb(0 0 0 /
-0.5)` — the backdrop scrim color; component-specific since no shared overlay token exists),
-`--lr-tool-result-dialog-maximized-inset` (default `var(--lr-space-l)` — inset applied to the
-panel while `[maximized]`, overridable e.g. to leave a persistent app rail visible), and
+**Themeable custom properties:** `--lr-tool-result-dialog-overlay-color` (default
+`var(--lr-color-overlay)` — the backdrop scrim color, the shared token `<lr-dialog>` and
+`<lr-widget>` also read, so one theme override restyles every scrim in the app),
+`--lr-tool-result-dialog-maximized-inset` (default `max(var(--lr-space-l),
+var(--lr-safe-area-*))` on each side — the inset applied to the panel while `[maximized]`, so the
+panel clears a notch or home indicator; overridable e.g. to leave a persistent app rail visible), and
 `--lr-tool-result-dialog-spin` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`,
 and effectively stopped under reduced motion because that token collapses to `0.001ms linear`), plus shared
 tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-success-quiet/

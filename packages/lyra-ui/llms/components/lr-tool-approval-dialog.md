@@ -84,9 +84,10 @@ rendered before the built-in Deny/Edit/Approve buttons.
 `exportparts`; `edit-button` stays a plain `<button>`, unaffected by this).
 
 **Themeable custom properties:** `--lr-tool-approval-dialog-overlay-color` (default
-`rgb(0 0 0 / 0.5)` — the backdrop scrim color; component-specific since no shared overlay token
-exists), `--lr-tool-approval-dialog-mono-font` (default `ui-monospace, SFMono-Regular, Menlo,
-Consolas, monospace` — used by both `tool-name` and the raw-JSON editor), plus shared tokens
+`var(--lr-color-overlay)` — the backdrop scrim color, the same shared token `<lr-dialog>` and
+`<lr-tool-select-dialog>` read), `--lr-tool-approval-dialog-mono-font` (default
+`var(--lr-font-mono)`, the library's shared monospace stack — used by both `tool-name` and the
+raw-JSON editor), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-radius`,
 `--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
 `--lr-color-text`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
@@ -141,8 +142,9 @@ shared composed-tree focus traversal used by the other modal families.
   `autocorrect="off"`, and `autocomplete="off"` because its content is JSON, never prose. These
   native editing-assistance values remain configurable through the corresponding properties for
   integrations that intentionally need different browser behavior.
-- `deny-button`/`approve-button` are `<lr-button>` hosts (`variant="neutral"`/`"brand"` — this
-  component has no `tone` property) — `--lr-button-*` theming reaches them directly. A consumer
+- `deny-button`/`approve-button` are `<lr-button>` hosts (`variant="neutral"`/`"brand"` — the dialog
+  itself has no `variant` property, unlike its in-flow sibling `<lr-confirm-bar>`, so the Approve
+  button is always `brand` here) — `--lr-button-*` theming reaches them directly. A consumer
   previously styling `::part(deny-button)`/`::part(approve-button)` for
   padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
   `deny-button-base`/`approve-button-base` sub-parts instead. `edit-button` is unaffected and stays

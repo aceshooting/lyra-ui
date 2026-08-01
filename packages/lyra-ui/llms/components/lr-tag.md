@@ -78,13 +78,14 @@ win over whatever `variant`/`appearance` resolved: `--lr-badge-background` (fall
 (falls back to `--lr-badge-text`).
 
 *Palette — what `variant` chooses* (new in 8.0.0): `--lr-badge-tint` (default
-`var(--lr-color-surface)`, the quiet fill; each non-neutral variant sets it to that variant's
-`-quiet` tint), `--lr-badge-solid` (default `var(--lr-color-neutral)`, the loud fill used by
-`appearance="accent"`), `--lr-badge-edge` (default `var(--lr-color-border)`, the border color),
-`--lr-badge-ink` (default `var(--lr-color-text)`, the text color) and `--lr-badge-on-solid` (default
-`var(--lr-color-on-neutral)`, the text color that stays legible on `--lr-badge-solid`). Neutral is
-the only variant whose border and text colors differ, which is why `-edge` and `-ink` are separate
-slots rather than one loud color.
+`var(--lr-color-surface)`, the quiet fill; each non-neutral variant sets it to
+`var(--lr-color-fill-quiet)`, which the shared variants sheet has already re-pointed at that
+variant's row of the semantic grid), `--lr-badge-solid` (default `var(--lr-color-fill-loud)`, the
+loud fill used by `appearance="accent"`), `--lr-badge-edge` (default `var(--lr-color-border)`, the
+border color), `--lr-badge-ink` (default `var(--lr-color-text)`, the text color) and
+`--lr-badge-on-solid` (default `var(--lr-color-on-loud)`, the text color that stays legible on
+`--lr-badge-solid`). Neutral is the only variant whose border and text colors differ, which is why
+`-edge` and `-ink` are separate slots rather than one loud color.
 
 *Surface — what `appearance` routes onto the box* (new in 8.0.0): `--lr-badge-fill` (default
 `var(--lr-badge-tint)`), `--lr-badge-stroke` (default `var(--lr-badge-edge)`) and `--lr-badge-text`

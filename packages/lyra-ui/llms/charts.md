@@ -102,11 +102,39 @@ when Chart.js is loaded. Numeric datasets retain the compact one-column-per-seri
 Point datasets expand into `<series> x`, `<series> y`, and, when present, `<series> r` and
 `<series> label` columns so radius and per-point labels are not flattened away.
 
-The instance method `seriesPalette(): string[]` resolves the categorical series ramp
-(`--lr-color-chart-1..8`) through `getComputedStyle` and returns the concrete, theme-aware colors —
-the exact same values the chart hands any series that sets no `color` of its own. Each internal
-token resolves through the matching application input (`--lr-theme-color-chart-1..8`), so theme
-overrides are included.
+**The categorical series ramp.** Eight tokens, `--lr-color-chart-1` … `--lr-color-chart-8`, with a
+separate set of values for light and dark mode. A series that sets no `color` of its own is assigned
+one of them by index.
+
+The ramp is **generated, not hand-picked**, by a search that maximises worst-case separation between
+every pair of series under all three dichromacies, over a candidate pool that already clears 3:1
+against the surface (WCAG 1.4.11 — a chart series is a non-text graphical object conveying data).
+The consequence worth designing around: the ramp separates on **lightness** as well as hue. Hue is
+exactly the channel colour-vision deficiency collapses, so two series that differ only in hue become
+the same series under red-green colour blindness; lightness is the channel every form of colour
+blindness preserves. That is also why the eight colours are not evenly lit — an evenly-lit
+categorical ramp cannot satisfy the constraint at all.
+
+The separation guarantee is *pairwise across all eight*, so any subset of the ramp — and any
+ordering of it — inherits it; you can pick entries 1 and 5 as freely as 1 and 2. What forfeits the
+guarantee is supplying your own colours through `Series.color` or replacing the ramp with a set
+chosen by hue alone. An eight-hue set at one lightness looks tidier on screen and is unreadable to
+the ~8% of men with red-green colour-vision deficiency.
+
+**`--lr-theme-color-chart-1` … `-8` is the retheme hook.** Each internal `--lr-color-chart-N` reads
+the matching `--lr-theme-color-chart-N` application input and falls back to the generated value, so
+setting the theme inputs once at `:root` recolours every chart in the app with no per-component
+override and no `::part()` rule. Charts are canvas-rendered, so a live theme change is picked up by
+the built-in `ThemeWatcher` (or `refreshTheme()`) rather than by CSS alone.
+
+Under `forced-colors: active` the ramp deliberately collapses onto the three system colors the mode
+actually guarantees (`Highlight`/`LinkText`/`CanvasText`, cycling), so more than three series stop
+being distinguishable by colour there — a chart that must stay readable in forced colors needs a
+non-colour channel (dashes, point styles, direct labels via `dataLabels`) as well.
+
+The instance method `seriesPalette(): string[]` resolves that ramp through `getComputedStyle` and
+returns the concrete, theme-aware colors — the exact same values the chart hands an uncolored
+series, with any `--lr-theme-color-chart-*` override already applied.
 
 The module also exports `seriesPalette(scope?: Element | null): string[]`, which can run before a
 chart exists. Omit `scope` to read `document.documentElement`, pass an element to resolve its theme
@@ -361,7 +389,10 @@ blank instead of reporting a misleading zero.
 **Themeable custom properties:** `--lr-chart-height` (same host-level property as `lr-chart`);
 `--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token
 *names* as `lr-chart`, so a host already theming `lr-chart` themes this for free;
-`--lr-lite-chart-selected-outline-color` (default `var(--lr-color-brand)`) — the stroke drawn on
+`--lr-chart-color-1` … `--lr-chart-color-8` (each defaulting to the matching
+`var(--lr-color-chart-N)` ramp entry) — the per-series colors, so one element can be recolored
+without moving the library-wide ramp; `--lr-lite-chart-selected-outline-color` (default
+`var(--lr-color-brand)`) — the stroke drawn on
 selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndex`.
 Unlike `lr-chart` (canvas-rendered, needs `getComputedStyle`-based re-theming on every draw), this
 is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolution step, and no
@@ -385,9 +416,11 @@ is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolutio
 - No `horizontal` mode (unlike `lr-chart`) — deliberately cut from scope, not a stub: bars are
   always vertical.
 - No dual y-axis (`Series.axis: 'y2'`) — every series shares one y-axis/domain.
-- Series colors default to a fixed built-in 8-color categorical palette (round-robin by dataset
-  index) when `color` is unset or invalid — not configurable beyond passing a valid CSS `color`
-  per series.
+- Series colors default to the shared categorical ramp (round-robin by dataset index) when `color`
+  is unset or invalid — the same eight `--lr-color-chart-1..8` tokens `lr-chart` uses, so both
+  chart implementations agree on the palette and both follow a `--lr-theme-color-chart-*` retheme.
+  Being plain SVG, they resolve through native `var()` at paint time, so a theme or color-scheme
+  change needs no JS-side redraw pass here.
 - Bar/point elements are real focusable DOM nodes (`role="button"` with one roving `tabindex="0"`);
   each native SVG `<title>` is the mark's sole accessible name and tooltip. The `<svg>` itself uses
   `role="group"`, not `role="img"` — an image role would conflict with genuinely interactive
@@ -573,7 +606,9 @@ instead of `canvas` when the optional box-plot peer fails to load)
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text` — same host-level mechanism, token names, and defaults as `lr-chart`
 (also `getComputedStyle`-resolved on every draw), but declared in its own stylesheet, not a
-re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here.
+re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `BoxPlotSeries`
+that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` ramp `lr-chart` uses,
+so `--lr-theme-color-chart-*` retheming reaches box plots too.
 
 **Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` plus `chart.js`; Chart.js is obtained
 through the same cached `chart-loader.ts` used by `lr-chart`.

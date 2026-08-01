@@ -6,7 +6,7 @@
 - **Class** `LyraSlider`, also available unregistered from `@aceshooting/lyra-ui/components/forms/slider/slider.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 12 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -57,6 +57,11 @@ single-value submission.
 - `readonly: boolean = false` (reflected) — the value is displayed but not changeable. Unlike
   `disabled`, a read-only slider stays focusable, fully legible, and **still submits its value**; it
   renders `aria-readonly` in both states and withdraws the grab cursor
+- `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
+  `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the track, the filled
+  indicator, the tick marks and the handles off the same values `lr-input`/`lr-select`/`lr-button`
+  read, so controls of one `size` line up in a row. The handle's transparent drag area keeps its own
+  1.75rem/28px floor at every tier, so a small slider is still a conformant pointer target
 - `withMarkers: boolean = false` (attribute `with-markers`, reflected) — draws a tick mark at every
   `step` position along the track. Purely decorative (`aria-hidden`). Nothing is drawn for an
   unstepped grid (`step` ≤ 0) or for one implying more than 100 intervals — ten million ticks would
@@ -128,7 +133,21 @@ hint region).
 **Breaking in 8.0.0:** the `fill` part was **renamed to `indicator`**, matching `wa-slider`. A
 `::part(fill)` rule silently matches nothing now — rename it.
 
-**Themeable custom properties:** `--lr-slider-track-length` (default `var(--lr-size-10rem)`) is the
+**Themeable custom properties:** three geometry knobs ride the shared `size` ladder, so a tier moves
+them all without a per-tier rule, and the values in brackets are what they resolve to at the default
+`m`:
+
+- `--lr-slider-thumb-size` (default `calc(var(--lr-form-control-height) * 0.4)`; `1rem`) — the
+  diameter of each draggable handle. The transparent drag area around it never drops below
+  1.75rem/28px whatever this is set to, so shrinking the visible dot cannot cost you the pointer
+  target.
+- `--lr-slider-track-thickness` (default `calc(var(--lr-slider-thumb-size) * 0.25)`; `0.25rem`) —
+  the thickness of the track, the filled `indicator`, and (scaled from it) the `with-markers` ticks.
+- `--lr-slider-row-size` (default `calc(var(--lr-form-control-height) * 0.6)`; `1.5rem`) — the
+  cross-axis extent of `[part="base"]`: its block size when horizontal, its inline size when
+  vertical.
+
+`--lr-slider-track-length` (default `var(--lr-size-10rem)`) is the
 track's length in `orientation="vertical"`; a horizontal track fills its container instead, so the
 token is inert there. It is declared as an inline `var()` fallback and never on `:host`, so a
 consumer value set on any ancestor is never shadowed. Everything else is shared tokens —
@@ -200,10 +219,11 @@ native range input either.
 - `with-markers` silently draws nothing when `step` is 0/negative or when the domain implies more
   than 100 intervals. That is a deliberate ceiling, not a bug — check the rendered `[part="marker"]`
   count rather than assuming the ticks are there.
-- The visible thumb is a 16px dot, deliberately below the library's usual 40px icon-button floor: a
-  transparent 28px `::before` carries the hit/drag area, which clears WCAG 2.5.8's 24px minimum,
-  while a 40px *visible* thumb would make two range handles overlap across 40px of track and hijack
-  track clicks. The pseudo-element has no DOM node of its own, so a pointerdown inside it still
-  reports the thumb as `e.target`.
+- The visible thumb is deliberately below the library's usual 40px icon-button floor — 16px at the
+  default `m` tier, and smaller at the tighter ones. A transparent `::before` carries the hit/drag
+  area at `max(28px, calc(var(--lr-slider-thumb-size) * 1.75))`, which clears WCAG 2.5.8's 24px
+  minimum at **every** tier, while a 40px *visible* thumb would make two range handles overlap
+  across 40px of track and hijack track clicks. The pseudo-element has no DOM node of its own, so a
+  pointerdown inside it still reports the thumb as `e.target`.
 
 ---

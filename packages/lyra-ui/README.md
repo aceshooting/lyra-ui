@@ -27,7 +27,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 268 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 275 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -100,6 +100,22 @@ custom-element registry.
 </lr-combobox>
 ```
 
+Each of the eleven families also has an entry point that registers every element in it —
+`@aceshooting/lyra-ui/components/forms`, `.../components/overlays`, and so on for `agent-tools`,
+`charts`, `conversation`, `data`, `layout`, `media`, `retrieval`, `utility` and `viewers`:
+
+```js
+import '@aceshooting/lyra-ui/components/forms';                 // every form control
+import '@aceshooting/lyra-ui/components/forms/input/input.js';  // just <lr-input>
+```
+
+A family entry point is **side-effectful by design**: importing it registers every tag in that
+family, the same way the root barrel registers all of them — including the peer-gated tags the root
+barrel leaves out (see below), whose optional peers still load lazily, on first use. Reach for one
+when you genuinely use most of a family and want a single import; reach for the granular path — which
+is what every example in these docs uses — when you don't, because a barrel cannot be tree-shaken
+down to the two elements you actually render.
+
 …or pull the whole library:
 
 ```js
@@ -159,15 +175,143 @@ Claude the same reference as a skill, plus `/lyra-ui:migrate-from-wa`,
 **Contributing to this repo itself?** See [`../../AGENTS.md`](../../AGENTS.md) instead — that's a
 contributor guide for agents working *on* lyra-ui, not the same document as the above.
 
+## Upgrading from 7.x
+
+8.0.0 removes accidents rather than adding surface: property names that meant two different things,
+colors that were only ever solved for light mode, and mirrored attributes whose polarity or default
+had drifted from the upstream they claim to mirror. Almost every break below is a find-and-replace,
+and where a default flips it flips to the upstream one — an attribute renamed into its own negation
+is the most expensive mistake available here, because the renamed markup parses cleanly and every
+instance that doesn't carry it silently adopts the opposite behavior.
+
+### Tag renames
+
+| 7.x | 8.0.0 | Also |
+|---|---|---|
+| `<lr-tabs>` | `<lr-tab-group>` | The `lr-tabs-change` event splits into `lr-tab-hide` (outgoing tab) then `lr-tab-show` (incoming), and `--lr-tabs-*` custom properties become `--lr-tab-group-*`. The group now also accepts `<lr-tab>` / `<lr-tab-panel>` children; the library's own `slot`/`label` panel shape still works unchanged. |
+| `<lr-tree-node>` | `<lr-tree-item>` | |
+
+Neither old name is registered as an alias. A tag that silently keeps working under its old name is
+how a rename looks finished while half of it is inert.
+
+### Attribute and property renames
+
+Each row is a mechanical rewrite in your own markup or CSS. Three of them also change what happens
+when the attribute is *absent*, so grep for the tag as well as for the old attribute.
+
+| 7.x | 8.0.0 | What to check |
+|---|---|---|
+| `<lr-dialog no-light-dismiss>` | `<lr-dialog light-dismiss>` | Polarity un-inverted, so the default flips: a backdrop click no longer dismisses a dialog unless you opt in. `<lr-drawer>` inherits this. |
+| `<lr-pagination hide-summary>` | `<lr-pagination with-summary>` | Same flip: the localized "showing X–Y of Z" row is now opt-in. |
+| `<lr-pagination total-items>` | `<lr-pagination total>` | Leaving `total` unset renders the empty state, so a missed rename is visible rather than silent. |
+| `<lr-avatar src>` | `<lr-avatar image>` | |
+| `<lr-drawer placement>` | default `start` → `end` | A drawer with no `placement` now enters from the logical end edge; write `placement="start"` to keep the old side. |
+| `<lr-slider>` `::part(fill)` | `::part(indicator)` | Rename the selector in your own CSS; the old part name matches nothing and fails silently. |
+| `<lr-flag detailed>` | `<lr-flag variant="detailed">` | The deprecated boolean is gone. |
+| `<lr-attachment-chip size>`, `<lr-file-icon size>` | `bytes` | These were byte counts wearing the name of the size ladder. |
+| `<lr-dock-panel size>` / `min-size` / `max-size` | `extent` / `min-extent` / `max-extent` | Same reason: a CSS length along the docked axis, not a size step. |
+
+`<lr-combobox>`'s `with-clear` is no longer marked deprecated. Both upstream spellings of the clear
+button — `with-clear` and `clearable` — are now first-class on `<lr-input>`, `<lr-select>` and
+`<lr-combobox>` alike, so there is nothing to rewrite in either direction.
+
+### One styling vocabulary
+
+`variant`, `tone` and `kind` used to mean the same thing on different components, and `appearance`
+meant two unrelated things. There is now one name per concept, library-wide.
+
+- **`tone` → `variant`** on `<lr-avatar>`, `<lr-avatar-group>`, `<lr-chip>` and `<lr-confirm-bar>`,
+  and on `<lr-activity-feed>`'s entry objects — along with its `tone-dot*` CSS parts, now
+  `variant-dot*`. No alias for any of them.
+- **`appearance="card|plain"` → `frame="card|plain"`** on the thirteen container components that had
+  it (`<lr-stat>`, `<lr-agent-run>`, `<lr-task-list>`, `<lr-result-card>`, `<lr-commit-card>`,
+  `<lr-stack-trace>`, `<lr-entity-card>`, `<lr-source-card>`, `<lr-community-card>`,
+  `<lr-media-card>`, `<lr-chat-composer>`, `<lr-flow-controls>`, `<lr-flow-run-overlay>`).
+  `appearance` now means how a control fills itself and nothing else:
+  `accent | filled | outlined | filled-outlined | plain`.
+- **`<lr-button>`'s default `appearance` is now `accent`**, and `filled` is a genuinely quieter tier.
+  The two used to render identically for every variant except neutral.
+- **`size` accepts both ladders everywhere** — this library's `2xs|xs|s|m|l|xl` and the upstream
+  `small|medium|large` — so a migrated `size="small"` needs no rewrite.
+- **`<lr-badge>`, `<lr-tag>` and `<lr-chip>` are no longer unconditionally pill-shaped.** They
+  default to a rounded rectangle; add `pill` for the old fully-rounded ends.
+
+### Tokens and theming
+
+- **`theme.css` now declares cascade layers**: `@layer lr-base, lr-theme, lr-utilities, lr-overrides`,
+  with the tokens in `lr-theme`. Any *unlayered* declaration of yours now beats every Lyra one
+  regardless of specificity or load order, so a plain `:root { --lr-theme-… }` override always wins
+  with no `!important`. If you already wrap your overrides in your own `@layer`, they now sort
+  relative to `lr-theme` rather than losing to an unlayered `:root` — name your layer in an
+  `@layer` statement after importing `theme.css`, or move those rules out of a layer entirely.
+- **`--lr-font-size-md` is removed**; use `--lr-font-size-m`. The two were the same value under two
+  names, which is why `<lr-button>` rendered `size="m"` and `size="l"` at identical text sizes.
+- **Compound motion tokens are split into duration and easing** (`--lr-duration-*` +
+  `--lr-easing-*`). The compound `--lr-transition-*` tokens still resolve, composed from the two.
+- **Shadows are five tiered steps** (`--lr-shadow-xs` … `--lr-shadow-xl`), declared per mode with
+  much heavier dark-mode alphas, because a single near-black step against a near-black surface is not
+  a luminance difference at all. `--lr-shadow` still resolves (to the `m` step) and a theme that set
+  `--lr-theme-shadow-color` keeps working; a theme that overrode `--lr-shadow` directly should move to
+  the step it meant.
+- **Hover and press are a color mix, not `filter: brightness()`** — tune them library-wide with
+  `--lr-color-mix-hover` / `--lr-color-mix-active` against `--lr-color-mix-partner`.
+  `--lr-hover-brightness` still resolves but no component reads it.
+- **New `--lr-color-surface-overlay`** for modal panels (the page surface in light mode, lighter than
+  the page in dark), a **new `--lr-terminal-bg-*` set** for ANSI background colors, and a new
+  `--lr-form-control-*` tier (`height`, `font-size`, `padding-inline`, `padding-block`, `gap`,
+  `radius`) — one ladder shared by every control, retuned per `size` step.
+- Colors moved where the generated ramp put them, including the brand seed. Restoring the old hex
+  values by hand would reintroduce the contrast failures the ramp exists to prevent.
+- The value-named `--lr-size-<value>` tokens are unchanged and still resolve, but the family is
+  frozen: existing entries may disappear as call sites find a semantic home, and none will be added.
+  Don't build new theming on them — reach for `--lr-space-*`, `--lr-radius*`, `--lr-font-size-*` or
+  `--lr-form-control-*` instead.
+
+### Localization
+
+**Pluralized messages are now CLDR category objects** selected through `Intl.PluralRules`, replacing
+the paired `<key>` + `<key>Plural` convention. A catalog passed to `registerLyraLocale()`, or a
+per-instance `.strings`, that used the old pair must be rewritten — with that locale's real
+categories, which for Russian is four and for Arabic six:
+
+```ts
+// 7.x
+registerLyraLocale('en', { toolCount: '{count} tool', toolCountPlural: '{count} tools' });
+
+// 8.0.0
+registerLyraLocale('en', { toolCount: { one: '{count} tool', other: '{count} tools' } });
+```
+
+Eight translation catalogs now ship as side-effect-only modules, so a common locale no longer needs a
+hand-written catalog at all:
+
+```js
+import '@aceshooting/lyra-ui/translations/fr.js'; // also ar, de, es, ja, pt-BR, ru, zh-CN
+```
+
+### Packaging
+
+- **`@aceshooting/lyra-ui/internal/*` is no longer a published subpath.** The supported helpers moved
+  to `@aceshooting/lyra-ui/utilities/*` (one module per helper, or the whole set from
+  `@aceshooting/lyra-ui/utilities`), which now also carries `FormAssociated` and `groupByRecency` —
+  previously reachable only through the side-effectful root barrel. Rewrite
+  `@aceshooting/lyra-ui/internal/positioner.js` as `@aceshooting/lyra-ui/utilities/positioner.js`,
+  and likewise for `a11y`, `announcer`, `icons`, `layered-layout`, `lyra-element`,
+  `overlay-manager`, `prefix` and `scroll-lock`. Anything else that lived under `internal/` was never
+  a public API and has no replacement subpath.
+
 ## Migrating from Web Awesome or Shoelace
 
 For a component marked with a `wa-*` counterpart in the "Mirrors" column, Lyra keeps the documented
 public vocabulary where practical: attributes, slots, events, CSS parts, and custom properties use
 the same names under the `lr-` prefix. This makes many migrations a predictable import and tag-name
-change, while the component notes remain authoritative for intentional differences. For example,
-Where the two upstreams disagree on a name, Lyra accepts both rather than forcing a rewrite: the
-clear button is spelled `with-clear` by Web Awesome and `clearable` by Shoelace, and
-`lr-input`, `lr-select` and `lr-combobox` each honour either spelling.
+change, while the component notes remain authoritative for intentional differences.
+
+Where the two upstreams disagree on a name for the same thing, Lyra accepts both spellings rather
+than forcing a rewrite. The clear button is the clearest case: Web Awesome spells it `with-clear`,
+Shoelace spells it `clearable`, and `<lr-input>`, `<lr-select>` and `<lr-combobox>` each honour both.
+Neither spelling is deprecated, and neither needs rewriting in either direction — whichever one your
+markup already carries keeps working.
 
 ```
 <wa-combobox value="x" multiple with-clear>  →  <lr-combobox value="x" multiple with-clear>
@@ -252,8 +396,12 @@ Applications can override any `--lr-theme-*` input directly:
 }
 ```
 
-See `internal/tokens.styles.ts` for the complete shared token list. Component-specific `--lr-*`
-custom properties remain available for local overrides.
+`theme.css` declares `@layer lr-base, lr-theme, lr-utilities, lr-overrides` and puts its own tokens
+in `lr-theme`, so an *unlayered* rule of yours — like the `:root` block above — wins over every Lyra
+declaration regardless of specificity or which stylesheet the bundler emitted first. The three other
+layer names are there so an application can opt its own layers into a defined position rather than
+inventing one. See [`llms/tokens.md`](./llms/tokens.md) for the complete shared token list.
+Component-specific `--lr-*` custom properties remain available for local overrides.
 
 **Frontend quality guarantees.** Every component is designed as a native custom element and tested
 for the contract that applies to its shape: semantic roles and accessible names inside shadow DOM,
@@ -379,7 +527,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 268 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 275 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 

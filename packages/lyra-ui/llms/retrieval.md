@@ -359,11 +359,12 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
   dossier rendered in a sidebar, a result list) — the same convention as `lr-empty`'s `compact` and
   as this component's sibling `lr-community-card`. Purely a density knob: the border and background
   stay. `false` (the default) keeps the full card padding.
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'`
-  removes the border, background, padding and corner radius, so a card nested inside a container
-  that already draws a border doesn't double the frame. `plain` wins over `compact` when both are
-  set — there is nothing left to tighten.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
+  `'plain'` removes the border, background, padding and corner radius, so a card nested inside a
+  container that already draws a border doesn't double it. `plain` wins over `compact` when both are
+  set — there is nothing left to tighten. The exported alias `EntityCardAppearance` is retained as a
+  name for the same union.
 
 **Events:** `lr-entity-activate` (`detail: { id }`, the built-in focus button was activated).
 
@@ -552,11 +553,12 @@ graph or membership fetching — `lr-drill` asks the host to load members/subgra
 - `maxMembers: number = 8` (attribute `max-members`) — remaining members collapse into a "+N"
   overflow chip
 - `compact: boolean = false` (reflected) — omits the summary excerpt and member chips
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary and this component's sibling `lr-entity-card`'s identical property.
-  `'card'` (the default) keeps the bordered, filled, padded box; `'plain'` removes the border,
-  background, and padding, so a card nested inside a container that already draws a border doesn't
-  double the frame.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`), the same property this component's sibling `lr-entity-card`
+  carries. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'` removes the
+  border, background, and padding, so a card nested inside a container that already draws a border
+  doesn't double it. The exported alias `CommunityCardAppearance` is retained as a name for the same
+  union.
 
 **Events:** `lr-drill` (`detail: { id }`, the drill button, header, or overflow chip — all three
 mean "show me this whole community"), `lr-entity-activate` (`detail: { id }`, a member chip was
@@ -985,12 +987,13 @@ while collapsed).
 - `compact: boolean = false` (reflected) — tighter root padding and row gap, for the dense citation
   lists these cards usually render in — the same convention as `lr-empty`'s `compact`. Purely a
   density knob: the border and background stay. `false` (the default) keeps the full card padding.
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'`
-  removes the border, background, padding and corner radius, so a card inside a `<lr-source-list>`
-  (or any container already drawing its own border/dividers) doesn't double the frame. `plain` wins
-  over `compact` when both are set — nothing left to tighten. The title and toggle keep their brand
-  color and hover underline under `plain`, since neither ever depended on the card chrome.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
+  `'plain'` removes the border, background, padding and corner radius, so a card inside a
+  `<lr-source-list>` (or any container already drawing its own border/dividers) doesn't double it.
+  `plain` wins over `compact` when both are set — nothing left to tighten. The title and toggle keep
+  their brand color and hover underline under `plain`, since neither ever depended on the card
+  chrome. The exported alias `SourceCardAppearance` is retained as a name for the same union.
 
 **Events:**
 - `lr-expand` (`detail: { sourceId: string; expanded: boolean }`) — the per-card "Show

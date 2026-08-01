@@ -72,10 +72,10 @@ component ever renders.
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
 `--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
 `--lr-input-fill`, and `--lr-input-border-color` (all
-but `--lr-input-control-height` swap per `size`; that one stays undeclared until you pin an exact
-row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance`, and
-`--lr-input-gap`/`--lr-input-radius` — like `--lr-button-gap`/`-radius` — never
-vary by `size` at all). The steppers take their font size from `--lr-input-font-size` and their
+but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` tier;
+`--lr-input-control-height` stays undeclared until you pin an exact
+row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
+and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder). The steppers take their font size from `--lr-input-font-size` and their
 minimum box from `--lr-icon-button-size`.
 
 ```html

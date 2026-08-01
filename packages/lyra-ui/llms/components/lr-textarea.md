@@ -6,7 +6,7 @@
 - **Class** `LyraTextarea`, also available unregistered from `@aceshooting/lyra-ui/components/forms/textarea/textarea.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 8 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -37,8 +37,9 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | `value` | `value` | `string` | `''` | The current text value. |
 | `rows` | `rows` | `number` | `3` | Visible text rows. |
 | `resize` | `resize` | `'none' \| 'vertical' \| 'horizontal' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`. |
-| `size` | `size` | `'2xs' \| 'xs' \| 's' \| 'm' \| 'l' \| 'xl'` | `'m'` | Visual size — the same scale as `lr-input`/`lr-select`. Governs the field's padding and font size. Reflected. |
+| `size` | `size` | `LyraSize` | `'m'` | Visual size on the shared control ladder — the same scale as `lr-input`/`lr-select`/`lr-button`, and both spellings of every tier are accepted (`2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`). Governs the field's padding, font size and corner radius. Reflected. |
 | `appearance` | `appearance` | `'accent' \| 'filled' \| 'outlined' \| 'filled-outlined' \| 'plain'` | `'filled-outlined'` | Visual treatment of the field, with the same meanings as `lr-input`'s `appearance`: `filled-outlined` draws both fill and border, `outlined` drops the fill, `filled` drops the border, `plain` drops both, `accent` tints both with the brand color. Each value does nothing but swap `--lr-textarea-fill`/`--lr-textarea-border-color`. Reflected. |
+| `pill` | `pill` | `boolean` | `false` | Fully rounded field corners, matching `lr-input`'s/`lr-select`'s own `pill` — both upstreams ship it on their textarea, so a mechanical tag rename must not drop it. It only re-assigns `--lr-textarea-radius` to `--lr-radius-pill`, so that property stays the single corner-radius knob and a consumer override still wins. Most useful on a one- or two-row field: a tall multi-line surface with fully rounded ends wastes its first and last line's inline space, which is why it is opt-in rather than tied to `size`. Reflected. |
 | `withCount` | `with-count` | `boolean` | `false` | Renders a character count below the field, inside `[part="footer"]`. With `maxlength` set it counts *down* the remaining characters instead of up from zero. Reflected. |
 | `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
 | `readonly` | `readonly` | `boolean` | `false` | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected. |
@@ -157,9 +158,12 @@ dropped rather than rendered as `NaN`, and the count counts up from zero instead
 - `--lr-textarea-max-block-size` (default `none`) — bounds `resize="auto"`; content beyond the
   bound scrolls inside the native textarea. Auto-resize remeasures after user edits, programmatic
   `value`/`rows` changes, range edits, and container-width changes.
-- `--lr-textarea-padding` (default `var(--lr-space-s)`) and `--lr-textarea-font-size` (default
-  `var(--lr-font-size-md-sm)`) — the native textarea's padding and font size, both auto-swapped per
-  `size` tier (`2xs`…`xl`); the documented defaults are the `m` tier's.
+- `--lr-textarea-padding` (default `var(--lr-form-control-padding-inline)`),
+  `--lr-textarea-font-size` (default `var(--lr-form-control-font-size)`) and
+  `--lr-textarea-radius` (default `var(--lr-form-control-radius)`) — the native textarea's padding,
+  font size and corner radius. All three read the active `size` tier of the shared control ladder,
+  so they follow the tier with no per-tier rule of their own; the two tightest tiers take a smaller
+  radius. `pill` re-assigns `--lr-textarea-radius` to `--lr-radius-pill`.
 - `--lr-textarea-fill` (default `var(--lr-color-surface)`) and `--lr-textarea-border-color` (default
   `var(--lr-color-border)`) — the field's background and border color, both swapped per
   `appearance` rather than per `size`. The documented defaults are `appearance="filled-outlined"`'s

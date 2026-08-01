@@ -42,7 +42,12 @@ after the host applies a requested page. The component owns no data fetching and
   internal navigation landmark
 - `withSummary: boolean = false` (attribute `with-summary`, reflected) — renders the built-in range
   summary while retaining the controls. Opt-in since 8.0.0; see the rename note above
-- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — changes control height and type size
+- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — control footprint, on the library's shared
+  six-step ladder: `--lr-pagination-control-size` and `--lr-pagination-font-size` read the same
+  `--lr-form-control-height`/`--lr-form-control-font-size` knobs `lr-button`/`lr-input`/`lr-select`
+  sit on, so a pager in a toolbar row lines up with its neighbours at every tier.
+  `'small'`/`'medium'`/`'large'` are accepted as exact synonyms of `'s'`/`'m'`/`'l'` — no attribute
+  rewrite when migrating from an upstream that spells them that way
 - `format: 'standard'|'compact' = 'standard'` (reflected) — `standard` renders the numbered page
   list; `compact` replaces it with the single page-jump input and a `/ pageCount` readout, for a
   toolbar or card footer. Previous/next and the `with-edges` buttons render in both

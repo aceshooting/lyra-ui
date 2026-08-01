@@ -26,7 +26,12 @@ prevents activation.
 
 **Events:** none — the owning group emits `lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's
 visible content). **CSS parts:** none; style the group's `tab` part instead.
-**Themeable custom properties:** none.
+
+**Themeable custom properties:** none of its own, and the group's are not settable here. The button
+this tab is projected into lives in `<lr-tab-group>`'s shadow root, so it inherits
+`--lr-tab-group-selected-color`, `--lr-tab-group-indicator-color` and `--lr-tab-group-hover-color`
+from the group host or an ancestor of it. Declaring one on the `<lr-tab>` itself does nothing: this
+element is *inside* that button in the flattened tree, and inheritance only runs the other way.
 
 The group writes this element's `slot` attribute itself. A tab with no `panel` still gets a stable
 synthetic name from its position, so an unpaired tab renders a button with an empty panel rather
