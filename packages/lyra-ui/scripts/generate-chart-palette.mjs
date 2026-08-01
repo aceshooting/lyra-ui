@@ -242,6 +242,18 @@ for (const [mode, hexes] of Object.entries(ramps)) {
   output = output.replace(pattern, `$1${block}$2`);
 }
 writeFileSync(themePath, output, 'utf8');
+// The chart component keeps its own JS copy of the light ramp, reached when the tokens cannot be
+// resolved at all (no DOM, or an unparseable custom property). Hand-written, it silently outlived
+// two regenerations of the CSS ramp and went on shipping colours that fail both the contrast and
+// the colour-vision-deficiency guarantees this script exists to hold. Generated, it cannot.
+const fallbackPath = join(packageDir, 'src', 'components', 'charts', 'chart', 'chart-colors.ts');
+const fallbackBlock = ramps.light.map((hex) => `  '${hex}',`).join('\n');
+const fallbackText = readFileSync(fallbackPath, 'utf8');
+const fallbackPattern =
+  /(\/\* chart fallback: generated -- see scripts\/generate-chart-palette\.mjs \*\/\nconst FALLBACK_SERIES_PALETTE = \[\n)[\s\S]*?(\n\] as const;)/;
+if (!fallbackPattern.test(fallbackText)) throw new Error('missing chart-fallback markers in chart-colors.ts');
+writeFileSync(fallbackPath, fallbackText.replace(fallbackPattern, `$1${fallbackBlock}$2`), 'utf8');
+
 writeTokenFallbacks(
   tokensPath,
   Object.fromEntries(

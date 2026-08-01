@@ -233,6 +233,28 @@ for (const [mode, grid] of [
   }
 }
 
+// --- the chart component's own JS fallback ------------------------------------------------------
+//
+// `chart-colors.ts` carries a literal copy of the light ramp for the case where the tokens cannot
+// be resolved at all. It is shipped, so it is subject to the same two guarantees -- but it lives in
+// a .ts file, so every check below read straight past it. Hand-maintained, it went on shipping the
+// pre-8.0.0 ramp (worst 1.54:1, and entries 5-8 tints of 1-4) through two regenerations of the CSS
+// ramp it was supposed to mirror.
+{
+  const source = readFileSync(join(packageDir, 'src', 'components', 'charts', 'chart', 'chart-colors.ts'), 'utf8');
+  const block = source.match(/const FALLBACK_SERIES_PALETTE = \[([\s\S]*?)\] as const;/);
+  if (!block) throw new Error('could not read FALLBACK_SERIES_PALETTE from chart-colors.ts');
+  const fallback = [...block[1].matchAll(/'(#[0-9a-f]{6})'/gi)].map((match) => match[1]);
+  const expected = [...chart.light.values()];
+  if (fallback.length !== expected.length || fallback.some((hex, i) => hex !== expected[i])) {
+    findings.push(
+      `chart-colors.ts's FALLBACK_SERIES_PALETTE has drifted from the generated light ramp — ` +
+        `run \`node scripts/generate-chart-palette.mjs\`.\n    file:  ${fallback.join(' ')}\n    ramp:  ${expected.join(' ')}`,
+    );
+  }
+  checks += 1;
+}
+
 // --- the theme.css ramps -----------------------------------------------------------------------
 
 // A chart series is a non-text graphical object identifying data, so SC 1.4.11's 3:1 applies
