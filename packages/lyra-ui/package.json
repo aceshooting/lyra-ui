@@ -64,6 +64,7 @@
   "exports": {
     ".": "./dist/lyra.js",
     "./components/*": "./dist/components/*",
+    "./translations/*": "./dist/translations/*",
     "./components/agent-tools": "./dist/components/agent-tools/index.js",
     "./components/conversation": "./dist/components/conversation/index.js",
     "./components/retrieval": "./dist/components/retrieval/index.js",
@@ -378,6 +379,14 @@
     "./dist/components/viewers/svg-viewer/svg-viewer.js",
     "./dist/components/viewers/xml-viewer/xml-viewer.js",
     "./dist/lyra.js",
+    "./dist/translations/ar.js",
+    "./dist/translations/de.js",
+    "./dist/translations/es.js",
+    "./dist/translations/fr.js",
+    "./dist/translations/ja.js",
+    "./dist/translations/pt-BR.js",
+    "./dist/translations/ru.js",
+    "./dist/translations/zh-CN.js",
     "./src/components/agent-tools/activity-feed/activity-feed.ts",
     "./src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.ts",
     "./src/components/agent-tools/agent-run/agent-run.ts",
@@ -667,7 +676,15 @@
     "./src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
     "./src/components/viewers/svg-viewer/svg-viewer.ts",
     "./src/components/viewers/xml-viewer/xml-viewer.ts",
-    "./src/lyra.ts"
+    "./src/lyra.ts",
+    "./src/translations/ar.ts",
+    "./src/translations/de.ts",
+    "./src/translations/es.ts",
+    "./src/translations/fr.ts",
+    "./src/translations/ja.ts",
+    "./src/translations/pt-BR.ts",
+    "./src/translations/ru.ts",
+    "./src/translations/zh-CN.ts"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -713,9 +730,10 @@
     "llms-freshness": "node scripts/check-llms-freshness.mjs",
     "migrate-wa": "node scripts/migrate-wa.mjs",
     "test:migrate-wa": "node scripts/migrate-wa.test.mjs",
-    "contract-policy": "pnpm run check:script-paths && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && node scripts/check-contrast.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run llms-freshness && pnpm run llms:check && pnpm run test:architecture && pnpm run check-side-effects && pnpm run check:form-associated && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:cycles && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:numeric-guards && pnpm run check:default-strings && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps",
+    "contract-policy": "pnpm run check:script-paths && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && node scripts/check-contrast.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run llms-freshness && pnpm run llms:check && pnpm run test:architecture && pnpm run check-side-effects && pnpm run check:form-associated && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:cycles && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:numeric-guards && pnpm run check:default-strings && pnpm run check:translations && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps",
     "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types",
-    "prepack": "pnpm run build && pnpm run manifest && pnpm run generate-editor-data && pnpm run llms"
+    "prepack": "pnpm run build && pnpm run manifest && pnpm run generate-editor-data && pnpm run llms",
+    "check:translations": "node scripts/check-translations.mjs"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.8.0",
