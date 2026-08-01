@@ -90,6 +90,25 @@ it('scales the emoji item box across every tier, floored at the 24px primary-con
   }
 });
 
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  const measure = async (size: string): Promise<string> => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    el.setAttribute('size', size);
+    await el.updateComplete;
+    const emoji = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLElement;
+    return getComputedStyle(emoji).blockSize;
+  };
+  for (const [alias, step] of pairs) {
+    expect(await measure(alias), `emoji block-size for ${alias}`).to.equal(await measure(step));
+  }
+});
+
 it('defaults to size "m" and reflects a size attribute', async () => {
   const el = await connectEmojiPicker();
   expect(el.size).to.equal('m');

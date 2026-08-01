@@ -376,6 +376,44 @@ it('reflects size="2xs" as a host attribute', async () => {
   expect(el.getAttribute('size')).to.equal('2xs');
 });
 
+it('renders the same trigger height at every tier as before the shared ladder', async () => {
+  const expected: ReadonlyArray<readonly [string, string]> = [
+    ['2xs', '20px'],
+    ['xs', '24px'],
+    ['s', '30px'],
+    ['m', '40px'],
+    ['l', '48px'],
+    ['xl', '56px'],
+  ];
+  for (const [size, px] of expected) {
+    const el = await fixture(html`<lr-locale-picker size=${size}></lr-locale-picker>`);
+    const triggerEl = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+    expect(getComputedStyle(triggerEl).minBlockSize, `size=${size}`).to.equal(px);
+  }
+});
+
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  const box = (el: Element) => el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  for (const [alias, step] of pairs) {
+    const aliasEl = await fixture(html`<lr-locale-picker size=${alias}></lr-locale-picker>`);
+    const stepEl = await fixture(html`<lr-locale-picker size=${step}></lr-locale-picker>`);
+    expect(getComputedStyle(box(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
+      getComputedStyle(box(stepEl)).minBlockSize,
+    );
+    expect(getComputedStyle(box(aliasEl)).fontSize, `font-size for ${alias}`).to.equal(
+      getComputedStyle(box(stepEl)).fontSize,
+    );
+    expect(box(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
+      box(stepEl).getBoundingClientRect().height,
+    );
+  }
+});
+
 // Obligation 12: unset-regression.
 it('unset (only locales, or nothing) renders deterministically with no other new property touched', async () => {
   const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;

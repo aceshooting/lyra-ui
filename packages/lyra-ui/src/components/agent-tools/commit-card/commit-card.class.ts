@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
@@ -8,9 +9,8 @@ import type { GitStatus } from '../../data/file-tree/file-tree.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
-/** Visual chrome for `<lr-commit-card>`'s root, mirroring `lr-card`'s (and `<lr-agent-run>`'s own)
- *  `appearance` vocabulary. */
-export type CommitCardAppearance = 'card' | 'plain';
+/** Visual chrome for `<lr-commit-card>`'s root — the library's shared container-frame vocabulary. */
+export type CommitCardAppearance = LyraFrame;
 
 export interface CommitFileChange {
   path: string;
@@ -54,9 +54,9 @@ export interface LyraCommitCardEventMap {
 /**
  * `<lr-commit-card>` — compact commit summary (subject, author/time, diffstat, per-file changes)
  * that links file rows out to a diff view. Set `compact` (tighter padding) and/or
- * `appearance="plain"` (no border/padding at all) when embedding one as a row in a commit list or
+ * `frame="plain"` (no border/padding at all) when embedding one as a row in a commit list or
  * PR timeline, so the built-in card chrome doesn't double up against the list's own — same
- * convention as `<lr-agent-run>`'s own `compact`/`appearance`.
+ * convention as `<lr-agent-run>`'s own `compact`/`frame`.
  *
  * @customElement lr-commit-card
  * @event lr-file-select - `detail: { path }` — a file row was activated.
@@ -100,16 +100,16 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   /** Tighter root padding for dense contexts (a commit rendered as a row in a list or PR
    *  timeline) -- same convention as `<lr-agent-run>`'s own `compact`. Defaults to `false`, i.e.
-   *  the full card padding. Purely a density knob: the border stays, so use `appearance="plain"`
+   *  the full card padding. Purely a density knob: the border stays, so use `frame="plain"`
    *  instead to drop the chrome entirely. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
-  /** Visual chrome, mirroring `lr-card`'s (and `<lr-agent-run>`'s own) `appearance` vocabulary.
-   *  `'card'` (the default) keeps the bordered, padded box. `'plain'` removes the border, padding
-   *  and corner radius, so a commit nested inside a host list that already draws its own row
-   *  chrome doesn't double it. `plain` wins over `compact` when both are set (nothing left to
-   *  tighten). */
-  @property({ reflect: true }) appearance: CommitCardAppearance = 'card';
+  /** Visual chrome, in the library's shared container-frame vocabulary (the same `frame` property
+   *  `<lr-agent-run>` carries). `'card'` (the default) keeps the bordered, padded box. `'plain'`
+   *  removes the border, padding and corner radius, so a commit nested inside a host list that
+   *  already draws its own row chrome doesn't double it. `plain` wins over `compact` when both are
+   *  set (nothing left to tighten). */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @state() private justCopied = false;
   private copyTimeoutId?: ReturnType<typeof setTimeout>;

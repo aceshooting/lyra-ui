@@ -8,7 +8,7 @@ import { styles } from './avatar-group.styles.js';
 // Type-only import — erased at build. Importing the value module (`avatar.ts`/`avatar.js`) here
 // would side-effect-register `<lr-avatar>` just from importing `<lr-avatar-group>`, which this
 // component must not do: consumers register `lr-avatar` themselves.
-import type { AvatarSize, AvatarShape, AvatarTone, LyraAvatar } from '../avatar/avatar.class.js';
+import type { AvatarSize, AvatarShape, AvatarVariant, LyraAvatar } from '../avatar/avatar.class.js';
 
 export interface AvatarGroupOverflowClickDetail {
   hiddenCount: number;
@@ -28,7 +28,7 @@ export interface LyraAvatarGroupEventMap {
  * panels / `<lr-source-list>`'s cards / `<lr-chip-group>`'s chips already use, not a
  * `.items` array prop.
  *
- * **`size`/`shape`/`tone` do not cascade onto slotted avatars.** They drive only this
+ * **`size`/`shape`/`variant` do not cascade onto slotted avatars.** They drive only this
  * component's own ring, overlap amount, and the overflow badge's rendering — they cannot resize
  * or reshape the `<lr-avatar>` children themselves, since each avatar's own `--lr-avatar-size`
  * lives inside *its own* shadow-scoped `:host` block and unconditionally overrides anything of
@@ -66,8 +66,9 @@ export interface LyraAvatarGroupEventMap {
  * @csspart overflow-badge - The "+N" button. Only rendered while `max` is actively causing an
  * overflow.
  * @cssprop [--lr-avatar-group-avatar-size=var(--lr-size-2rem)] - Sizes the overflow badge to
- * match the slotted avatars. Does not resize the avatars themselves (see class doc) — set a
- * matching `size` on each `<lr-avatar>` child directly for that.
+ * match the slotted avatars, tier for tier with `<lr-avatar>`'s own `--lr-avatar-size`. Does not
+ * resize the avatars themselves (see class doc) — set a matching `size` on each `<lr-avatar>`
+ * child directly for that.
  * @cssprop [--lr-avatar-group-overlap=var(--lr-size-neg-6px)] - Horizontal overlap between
  * consecutive avatars (a logical `margin-inline-start`, so it auto-mirrors under `dir="rtl"`).
  * Setting this to `0` or a positive length is a supported escape hatch that turns the stack into
@@ -76,13 +77,12 @@ export interface LyraAvatarGroupEventMap {
  * drawn around every avatar and the overflow badge.
  * @cssprop [--lr-avatar-group-ring-width=var(--lr-border-width-medium)] - Ring thickness.
  * @cssprop [--lr-avatar-group-badge-bg=var(--lr-color-border)] - Overflow badge background.
- * Tone-driven; see `tone`.
+ * Variant-driven; see `variant`.
  * @cssprop [--lr-avatar-group-badge-color=var(--lr-color-text)] - Overflow badge text color.
- * Tone-driven; see `tone`.
+ * Variant-driven; see `variant`.
  * @cssprop [--lr-avatar-group-badge-font-size=var(--lr-font-size-sm)] - Font size of the "+N"
- * badge label. `size` swaps it to `var(--lr-font-size-xs)` (`sm`) or `var(--lr-font-size-md)`
- * (`lg`), matching `<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars
- * it caps read at the same optical weight.
+ * badge label. `size` steps it across the same six-step ladder as `<lr-avatar>`'s own
+ * `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight.
  */
 export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -104,10 +104,11 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     this.requestUpdate('max', old);
   }
 
-  /** Visual size, reused verbatim from `<lr-avatar>`'s own `AvatarSize` union. Drives the
-   *  overflow badge's size and the overlap amount — does not resize slotted avatars (see class
-   *  doc). */
-  @property({ reflect: true }) size: AvatarSize = 'md';
+  /** Visual size, reused verbatim from `<lr-avatar>`'s own `AvatarSize` union — the shared
+   *  `LyraSize` ladder plus the `sm`/`md`/`lg` shorthands — and defaulting to the same `'medium'`
+   *  tier, so a group and the avatars inside it read as one vocabulary. Drives the overflow
+   *  badge's size and the overlap amount — does not resize slotted avatars (see class doc). */
+  @property({ reflect: true }) size: AvatarSize = 'medium';
 
   /** `'circle'` (the default) or `'square'`, reused verbatim from `<lr-avatar>`'s own
    *  `AvatarShape` union. Drives the overflow badge's shape — does not reshape slotted avatars
@@ -115,9 +116,9 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
    *  attribute independently. */
   @property({ reflect: true }) shape: AvatarShape = 'circle';
 
-  /** Recolors the overflow badge, reused verbatim from `<lr-avatar>`'s own `AvatarTone` union.
+  /** Recolors the overflow badge, reused verbatim from `<lr-avatar>`'s own `AvatarVariant` union.
    *  `'neutral'` (the default) reads as a plain, unaccented badge. */
-  @property({ reflect: true }) tone: AvatarTone = 'neutral';
+  @property({ reflect: true }) variant: AvatarVariant = 'neutral';
 
   /** The group's own accessible name (`role="group"`'s `aria-label`). A host-level `aria-label`
    *  wins if both are set. Unset (the default) renders no `aria-label` at all — a screen reader

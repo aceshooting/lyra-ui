@@ -720,8 +720,10 @@ describe('lr-textarea size', () => {
     const xsEl = await fixture<LyraTextarea>(html`<lr-textarea size="xs" aria-label="b"></lr-textarea>`);
     const m = getComputedStyle(fieldOf(mEl));
     const xs = getComputedStyle(fieldOf(xsEl));
-    expect(m.paddingTop).to.equal('8px');
-    expect(m.fontSize).to.equal('14px');
+    // The default tier's values now come from the shared form-control ladder rather than this
+    // component's own copy of the scale, so they match lr-input's `m` tier exactly.
+    expect(m.paddingTop).to.equal('12px');
+    expect(m.fontSize).to.equal('16px');
     expect(parseFloat(xs.paddingTop)).to.be.below(parseFloat(m.paddingTop));
     expect(parseFloat(xs.fontSize)).to.be.below(parseFloat(m.fontSize));
   });
@@ -909,9 +911,48 @@ describe('lr-textarea unset-regression for the 8.0 opt-ins', () => {
     expect(el.shadowRoot!.querySelectorAll('[aria-live]').length).to.equal(0);
     expect(getComputedStyle(el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement).display).to.equal('none');
     const cs = getComputedStyle(textarea);
-    expect(cs.paddingTop).to.equal('8px');
-    expect(cs.fontSize).to.equal('14px');
+    expect(cs.paddingTop).to.equal('12px');
+    expect(cs.fontSize).to.equal('16px');
     expect(cs.borderTopWidth).to.equal('1px');
     expect(textarea.style.resize).to.equal('vertical');
   });
+});
+
+describe('lr-textarea — the shared size ladder and pill', () => {
+  const field = (el: LyraTextarea) => el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+  it('renders the Web Awesome size spellings at the same geometry as the canonical steps', async () => {
+    for (const [alias, step] of [['small', 's'], ['medium', 'm'], ['large', 'l']] as const) {
+      const aliasEl = await fixture<LyraTextarea>(
+        html`<lr-textarea size=${alias} aria-label="Notes"></lr-textarea>`,
+      );
+      const stepEl = await fixture<LyraTextarea>(
+        html`<lr-textarea size=${step} aria-label="Notes"></lr-textarea>`,
+      );
+      expect(getComputedStyle(field(aliasEl)).fontSize, `size=${alias} font-size`).to.equal(
+        getComputedStyle(field(stepEl)).fontSize,
+      );
+      expect(getComputedStyle(field(aliasEl)).paddingTop, `size=${alias} padding`).to.equal(
+        getComputedStyle(field(stepEl)).paddingTop,
+      );
+    }
+  });
+
+  it('rounds the field to a pill, and leaves the corner radius alone when pill is unset', async () => {
+    const plain = await fixture<LyraTextarea>(html`<lr-textarea aria-label="Notes"></lr-textarea>`);
+    expect(plain.pill).to.equal(false);
+    expect(getComputedStyle(field(plain)).borderTopLeftRadius).to.equal('6px');
+
+    const pilled = await fixture<LyraTextarea>(html`<lr-textarea pill aria-label="Notes"></lr-textarea>`);
+    expect(pilled.pill).to.equal(true);
+    expect(pilled.getAttribute('pill')).to.equal('');
+    expect(getComputedStyle(field(pilled)).borderTopLeftRadius).to.equal('999px');
+  });
+});
+
+it('is accessible with the pill treatment applied', async () => {
+  const el = await fixture<LyraTextarea>(
+    html`<lr-textarea pill label="Notes" hint="Optional"></lr-textarea>`,
+  );
+  await expect(el).to.be.accessible();
 });

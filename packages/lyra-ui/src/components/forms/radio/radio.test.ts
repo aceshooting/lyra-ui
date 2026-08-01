@@ -729,7 +729,8 @@ it('floors the circle with min-* sizing instead of hard-sizing it, so the indica
   await el.updateComplete;
   const circle = el.shadowRoot!.querySelector('[part="circle"]') as HTMLElement;
 
-  // Default tokens: min(--lr-icon-button-size 2.5rem, --lr-size-1-75rem) === 1.75rem === 28px,
+  // Default tokens at the default "m" tier:
+  // min(--lr-icon-button-size 2.5rem, --lr-form-control-height 2.5rem * 0.7) === 1.75rem === 28px,
   // comfortably above the WCAG 2.2 SC 2.5.8 24x24 minimum. For a label-less radio the circle *is*
   // the whole tap target -- [part='base'] contributes no box of its own.
   const floored = circle.getBoundingClientRect();
@@ -739,7 +740,7 @@ it('floors the circle with min-* sizing instead of hard-sizing it, so the indica
   // A hard `inline-size`/`block-size` cannot grow for its own content: enlarging the dot would clip
   // it and leave the circle at 28px. `min-inline-size`/`min-block-size` (the form <lr-checkbox>'s
   // [part='box'] already uses) is a floor, so the circle grows to contain the indicator instead.
-  el.style.setProperty('--lr-size-0-75rem', '3rem');
+  el.style.setProperty('--lr-radio-dot-size', '3rem');
   const grown = circle.getBoundingClientRect();
   expect(grown.width).to.be.at.least(48);
   expect(grown.height).to.be.at.least(48);
@@ -944,4 +945,135 @@ it('fires input and change for arrow-key selection, matching click and Space', a
   expect(seen).to.include('input');
   expect(seen).to.include('change');
   expect(seen).to.include('lr-change');
+});
+
+describe('size', () => {
+  async function circleOf(markup: unknown): Promise<DOMRect> {
+    const el = (await fixture(markup as never)) as LyraRadio;
+    await el.updateComplete;
+    const circle = el.shadowRoot!.querySelector('[part="circle"]') as HTMLElement;
+    return circle.getBoundingClientRect();
+  }
+
+  it('defaults to the "m" tier and reflects it', async () => {
+    const el = (await fixture(html`<lr-radio value="a">Alpha</lr-radio>`)) as LyraRadio;
+    await el.updateComplete;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+  });
+
+  it('grows the rendered circle from size="s" to size="l"', async () => {
+    const small = await circleOf(html`<lr-radio size="s" value="a">Alpha</lr-radio>`);
+    const large = await circleOf(html`<lr-radio size="l" value="a">Alpha</lr-radio>`);
+    expect(large.width).to.be.greaterThan(small.width);
+    expect(large.height).to.be.greaterThan(small.height);
+  });
+
+  it('renders "small"/"large" at the same geometry as "s"/"l"', async () => {
+    const s = await circleOf(html`<lr-radio size="s" value="a">Alpha</lr-radio>`);
+    const small = await circleOf(html`<lr-radio size="small" value="a">Alpha</lr-radio>`);
+    const l = await circleOf(html`<lr-radio size="l" value="a">Alpha</lr-radio>`);
+    const large = await circleOf(html`<lr-radio size="large" value="a">Alpha</lr-radio>`);
+    expect(small.width).to.be.closeTo(s.width, 0.5);
+    expect(large.width).to.be.closeTo(l.width, 0.5);
+  });
+
+  it('keeps the selected dot inside the circle at every tier', async () => {
+    let previousCircle = 0;
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+      const el = (await fixture(
+        html`<lr-radio size=${size} value="a" checked>Alpha</lr-radio>`,
+      )) as LyraRadio;
+      await el.updateComplete;
+      const circle = (el.shadowRoot!.querySelector('[part="circle"]') as HTMLElement).getBoundingClientRect();
+      const dot = (el.shadowRoot!.querySelector('[part="dot"]') as HTMLElement).getBoundingClientRect();
+      expect(dot.width, `${size} dot fits`).to.be.lessThan(circle.width);
+      expect(dot.width, `${size} dot visible`).to.be.greaterThan(0);
+      expect(circle.width, `${size} circle grows with the tier`).to.be.greaterThan(previousCircle);
+      previousCircle = circle.width;
+    }
+  });
+
+  it('is accessible at a non-default tier', async () => {
+    const el = (await fixture(html`<lr-radio size="l" value="a">Alpha</lr-radio>`)) as LyraRadio;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('pill', () => {
+  it('defaults to false and reflects when set', async () => {
+    const el = (await fixture(html`<lr-radio value="a">Alpha</lr-radio>`)) as LyraRadio;
+    await el.updateComplete;
+    expect(el.pill).to.equal(false);
+    expect(el.hasAttribute('pill')).to.equal(false);
+    el.pill = true;
+    await el.updateComplete;
+    expect(el.hasAttribute('pill')).to.equal(true);
+  });
+
+  it('leaves the indicator fully round, which it already is', async () => {
+    const el = (await fixture(html`<lr-radio pill value="a">Alpha</lr-radio>`)) as LyraRadio;
+    await el.updateComplete;
+    const circle = el.shadowRoot!.querySelector('[part="circle"]') as HTMLElement;
+    const radius = Number.parseFloat(getComputedStyle(circle).borderStartStartRadius);
+    expect(radius).to.be.at.least(circle.getBoundingClientRect().width / 2);
+  });
+});
+
+describe('lr-radio-group size', () => {
+  async function group(size: string): Promise<LyraRadioGroup> {
+    const el = (await fixture(html`
+      <lr-radio-group name="plan" label="Plan" size=${size}>
+        <lr-radio value="a">Alpha</lr-radio>
+        <lr-radio value="b">Bravo</lr-radio>
+        <lr-radio value="c">Charlie</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('defaults to the "m" tier and reflects it', async () => {
+    const el = (await fixture(html`<lr-radio-group name="plan" label="Plan"></lr-radio-group>`)) as LyraRadioGroup;
+    await el.updateComplete;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+  });
+
+  it('grows the rendered group box from size="s" to size="l"', async () => {
+    const small = await group('s');
+    const large = await group('l');
+    expect(large.getBoundingClientRect().height).to.be.greaterThan(small.getBoundingClientRect().height);
+  });
+
+  it('renders "small"/"large" at the same geometry as "s"/"l"', async () => {
+    const s = await group('s');
+    const small = await group('small');
+    const l = await group('l');
+    const large = await group('large');
+    expect(small.getBoundingClientRect().height).to.be.closeTo(s.getBoundingClientRect().height, 0.5);
+    expect(large.getBoundingClientRect().height).to.be.closeTo(l.getBoundingClientRect().height, 0.5);
+  });
+
+  it('leaves an explicitly-sized option alone', async () => {
+    const el = (await fixture(html`
+      <lr-radio-group name="plan" label="Plan" size="l">
+        <lr-radio value="a" size="s">Alpha</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await el.updateComplete;
+    const circle = el.querySelector('lr-radio')!.shadowRoot!.querySelector('[part="circle"]') as HTMLElement;
+    const standalone = (await fixture(html`<lr-radio size="s">Alpha</lr-radio>`)) as HTMLElement;
+    const standaloneCircle = standalone.shadowRoot!.querySelector('[part="circle"]') as HTMLElement;
+    expect(circle.getBoundingClientRect().width).to.be.closeTo(
+      standaloneCircle.getBoundingClientRect().width,
+      0.5,
+    );
+  });
+
+  it('is accessible at a non-default tier', async () => {
+    const el = await group('l');
+    await expect(el).to.be.accessible();
+  });
 });

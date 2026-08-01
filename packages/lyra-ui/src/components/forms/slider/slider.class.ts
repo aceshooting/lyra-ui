@@ -2,6 +2,8 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { isRtl } from '../../../internal/rtl.js';
 import {
   decimalPlaces,
@@ -157,9 +159,17 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @cssprop [--lr-slider-track-length=var(--lr-size-10rem)] - Length of the track in
  *   `orientation="vertical"`; the horizontal track fills its container instead. Declared as an
  *   inline `var()` fallback (never on `:host`), so a consumer override at any ancestor wins.
+ * @cssprop [--lr-slider-row-size=calc(var(--lr-form-control-height) * 0.6)] - Cross-axis extent of
+ * the control's interactive row: its block size when horizontal, its inline size when vertical.
+ * Scales off the shared form-control ladder, so a size tier moves it without a per-tier rule.
+ * @cssprop [--lr-slider-thumb-size=calc(var(--lr-form-control-height) * 0.4)] - Diameter of each
+ *   draggable handle, derived from the `size` tier's shared control height. The transparent drag
+ *   area around it never drops below 1.75rem/28px, whatever this is set to.
+ * @cssprop [--lr-slider-track-thickness=calc(var(--lr-slider-thumb-size) * 0.25)] - Thickness of
+ *   the track, the filled indicator and (scaled from it) the `with-markers` ticks.
  */
 export class LyraSlider extends FormAssociated(LyraSliderBase) {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   // These accessors sanitize the live value synchronously when a range
   // setting changes. Keeping the properties `noAccessor` prevents Lit's
@@ -175,7 +185,18 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     range: { type: Boolean, reflect: true, noAccessor: true },
     minValue: { type: Number, attribute: 'min-value', noAccessor: true },
     maxValue: { type: Number, attribute: 'max-value', noAccessor: true },
+    size: { reflect: true },
   };
+
+  /**
+   * Control size, on the library's shared ladder. Accepts both spellings of every tier —
+   * `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating either way
+   * is a tag rename. Scales the track, the filled indicator, the tick marks and the handles off the
+   * same `--lr-form-control-*` values `<lr-input>`/`<lr-select>`/`<lr-button>` use, so controls of
+   * one `size` line up in a row. The handle's transparent drag area keeps its own 1.75rem/28px
+   * floor at every tier, so a small slider is still a conformant pointer target.
+   */
+  size: LyraSize = 'm';
 
   private _min = 0;
   private _max = 100;

@@ -5,8 +5,15 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     container-type: inline-size;
-    --lr-pagination-control-size: var(--lr-size-2-5rem);
-    --lr-pagination-font-size: var(--lr-font-size-md-sm);
+    /* Both knobs read the shared control ladder (internal/sizes.styles.ts), which owns every tier
+       and matches both the s/m/l and the small/medium/large spelling of each in one selector list.
+       Keeping the public --lr-pagination-* names in front of it means a consumer still retunes
+       this component alone with a one-line override, while the VALUES come from one place.
+       The literal fallbacks are the ladder's own "m" tier, so this sheet still resolves to the
+       resting control footprint on its own -- which is what lets scripts/check-hit-area.mjs prove
+       the 40px floor from stylesheet text without the shared sheet in hand. */
+    --lr-pagination-control-size: var(--lr-form-control-height, var(--lr-size-2-5rem));
+    --lr-pagination-font-size: var(--lr-form-control-font-size, var(--lr-font-size-m));
     --lr-pagination-control-radius: var(--lr-radius);
     /* Inner padding of the nav buttons and the page input. Exposed as a single knob (previously
        a hardcoded var(--lr-space-xs) repeated at both sites) so a consumer can adjust the icon /
@@ -37,22 +44,6 @@ export const styles = css`
   :host([appearance='accent']) {
     --lr-pagination-control-bg: var(--lr-color-brand-quiet);
     --lr-pagination-control-border-color: var(--lr-color-brand);
-  }
-  :host([size='xs']) {
-    --lr-pagination-control-size: var(--lr-size-1-75rem);
-    --lr-pagination-font-size: var(--lr-font-size-xs);
-  }
-  :host([size='s']) {
-    --lr-pagination-control-size: var(--lr-size-2-25rem);
-    --lr-pagination-font-size: var(--lr-font-size-sm);
-  }
-  :host([size='l']) {
-    --lr-pagination-control-size: var(--lr-size-3rem);
-    --lr-pagination-font-size: var(--lr-font-size-md);
-  }
-  :host([size='xl']) {
-    --lr-pagination-control-size: var(--lr-size-3-5rem);
-    --lr-pagination-font-size: var(--lr-font-size-lg);
   }
   [part='base'] {
     display: flex;

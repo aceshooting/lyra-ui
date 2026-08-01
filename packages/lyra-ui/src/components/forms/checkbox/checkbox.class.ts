@@ -3,6 +3,8 @@ import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox.styles.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
@@ -130,22 +132,27 @@ export interface LyraCheckboxEventMap {
  * @csspart box - The small square that shows the checkmark/indeterminate dash.
  * @csspart checkmark - The checkmark (or indeterminate dash) glyph inside the box.
  * @csspart label - The wrapper around the default slot.
- * @cssprop [--lr-checkbox-label-indent=calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))] -
+ * @cssprop [--lr-checkbox-label-indent=calc(var(--lr-checkbox-box-size) + var(--lr-space-s))] -
  * The inline distance from the control's start edge to the start of the label text, i.e. the box's
- * own floor plus the gap next to it. Published so a consumer composing per-option hint text under
- * the label can align it without re-deriving that formula from the shadow styles, and used as the
- * source of the real gap so the two cannot drift. Setting it on the element (or on `lr-checkbox` in
- * your own stylesheet) moves the label; because custom properties inherit down and not sideways, it
- * is *not* readable from a sibling node in your tree — align a sibling by computing the same formula
- * from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control.
+ * own floor plus the gap next to it — so it tracks `size` along with the box. Published so a
+ * consumer composing per-option hint text under the label can align it without re-deriving that
+ * formula from the shadow styles, and used as the source of the real gap so the two cannot drift.
+ * Setting it on the element (or on `lr-checkbox` in your own stylesheet) moves the label; because
+ * custom properties inherit down and not sideways, it is *not* readable from a sibling node in your
+ * tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size`,
+ * `--lr-theme-form-control-height-*` and `--lr-theme-space-s`, which you control.
  * @cssprop [--lr-checkbox-checked-bg=var(--lr-color-brand)] - Background of `[part='box']` while
  * `checked` or `indeterminate`. Retint just this control's checked fill without touching the shared
  * `--lr-color-brand` token every other component also reads.
  * @cssprop [--lr-checkbox-checked-border=var(--lr-color-brand)] - Border color of `[part='box']`
  * while `checked` or `indeterminate`.
+ * @cssprop [--lr-checkbox-box-size=min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))] -
+ * Edge length of `[part='box']`. Derived from the `size` tier's shared control height, so the box
+ * lines up with an `<lr-input>`/`<lr-select>`/`<lr-button>` of the same `size`; set it to pin the box
+ * independently of the tier.
  */
 export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
   static formAssociated = true;
 
   static override properties = {
@@ -154,8 +161,19 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
+    size: { reflect: true },
     value: { noAccessor: true },
   };
+
+  /**
+   * Control size, on the library's shared ladder. Accepts both spellings of every tier —
+   * `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating either way
+   * is a tag rename. Scales the box and its checkmark off the same `--lr-form-control-*` values
+   * `<lr-input>`/`<lr-select>`/`<lr-button>` use, so controls of one `size` line up in a row. The
+   * slotted label keeps the library's standard control-label type size at every tier; restyle it
+   * through `::part(label)` if you want it to track the control.
+   */
+  size: LyraSize = 'm';
 
   // Visual-only mixed state, matching native `<input type="checkbox">`
   // semantics: it does not affect `checked`'s own value, and a user

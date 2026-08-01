@@ -1435,6 +1435,22 @@ it('scales the drag-handle hit-area proportionally, floored at 24px', async () =
   }
 });
 
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  const hit = async (size: string): Promise<string> => {
+    const el = await fixture(html`<lr-time-range size=${size}></lr-time-range>`);
+    const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    return getComputedStyle(handle, '::before').inlineSize;
+  };
+  for (const [alias, step] of pairs) {
+    expect(await hit(alias), `handle hit-area for ${alias}`).to.equal(await hit(step));
+  }
+});
+
 it('exposes independent handle, hit-area, track, and base size hooks', async () => {
   const el = (await fixture(html`
     <lr-time-range

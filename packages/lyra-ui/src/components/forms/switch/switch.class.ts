@@ -2,6 +2,8 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './switch.styles.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
@@ -89,15 +91,17 @@ export interface LyraSwitchEventMap {
  * @csspart label - The wrapper around the default slot.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
- * @cssprop [--lr-switch-track-inline-size=var(--lr-size-2-25rem)] - Inline size of the track, and
- *   (with the block size) the distance the thumb travels when checked.
- * @cssprop [--lr-switch-track-block-size=var(--lr-size-1-25rem)] - Block size of the track; the
- *   thumb's diameter is derived from it minus twice `--lr-switch-thumb-offset`.
+ * @cssprop [--lr-switch-track-inline-size=calc(var(--lr-switch-track-block-size) * 1.8)] - Inline
+ *   size of the track, and (with the block size) the distance the thumb travels when checked.
+ *   Derived from the block size, so re-sizing the track keeps its aspect ratio.
+ * @cssprop [--lr-switch-track-block-size=calc(var(--lr-form-control-height) * 0.5)] - Block size of
+ *   the track, half the `size` tier's shared control height; the thumb's diameter is derived from
+ *   it minus twice `--lr-switch-thumb-offset`.
  * @cssprop [--lr-switch-thumb-offset=var(--lr-size-2px)] - Inset of the thumb from the track's
  *   edges.
  */
 export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
   static formAssociated = true;
 
   static override properties = {
@@ -105,8 +109,19 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
+    size: { reflect: true },
     value: { noAccessor: true },
   };
+
+  /**
+   * Control size, on the library's shared ladder. Accepts both spellings of every tier —
+   * `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating either way
+   * is a tag rename. Scales the track and thumb off the same `--lr-form-control-*` values
+   * `<lr-input>`/`<lr-select>`/`<lr-button>` use, so controls of one `size` line up in a row. The
+   * slotted label keeps the library's standard control-label type size at every tier; restyle it
+   * through `::part(label)` if you want it to track the control.
+   */
+  size: LyraSize = 'm';
 
   /** Hint text below the switch. Unset: no hint chrome renders. */
   @property() hint = '';

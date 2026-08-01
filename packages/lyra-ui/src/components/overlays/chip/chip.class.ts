@@ -2,10 +2,18 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
+import type { LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
+import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './chip.styles.js';
 
-export type ChipTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
-export type ChipSize = '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** The library's one semantic-tone vocabulary. */
+export type ChipVariant = LyraVariant;
+/** The name this vocabulary carried while the property was called `tone`, kept exported so a
+ *  consumer's own `import type { ChipTone }` keeps resolving to the same five values. */
+export type ChipTone = LyraVariant;
+/** The shared six-step ladder plus one step below it: a chip is the library's smallest labelled
+ *  surface and needs a tier that fits inside a table cell, which no other component does. */
+export type ChipSize = LyraSizeStep | '3xs';
 
 export interface ChipRemoveDetail {
   value?: string;
@@ -28,14 +36,18 @@ export interface LyraChipEventMap {
  * one carries no domain assumptions at all, just a label and an optional
  * leading icon/dot.
  *
- * `tone` tints the whole pill using the same loud-color-on-quiet-tint
+ * `variant` tints the whole pill using the same loud-color-on-quiet-tint
  * convention `<lr-tool-call-chip>`/`<lr-citation-badge>` already
- * establish for status coloring: background is the tone's `-quiet` tint,
- * text/icon is the tone's loud color. `neutral` (the default) has no
- * dedicated token pair of its own, so it falls back to a plain
- * bordered-surface look — the same "no signal" treatment
- * `<lr-citation-badge>`'s `default` status and `<lr-tool-call-chip>`'s
- * `pending` status already use.
+ * establish for status coloring: background is the variant's quiet fill,
+ * text/icon is its loud fill, both read from the shared semantic grid.
+ * `neutral` (the default) deliberately opts out of that grid's own neutral
+ * row and falls back to a plain bordered-surface look — the same "no signal"
+ * treatment `<lr-citation-badge>`'s `default` status and
+ * `<lr-tool-call-chip>`'s `pending` status already use.
+ *
+ * This property was called `tone` before 8.0.0. It is `variant` now, with no
+ * alias: the library spells one concept one way, and `<lr-badge>`,
+ * `<lr-callout>` and `<lr-toast-item>` all already spelled it `variant`.
  *
  * This is a controlled component: clicking the remove (×) button only fires
  * `lr-remove` — the chip never removes itself from the DOM on its own
@@ -65,18 +77,19 @@ export interface LyraChipEventMap {
  * @csspart toggle-button - The real toggle control, rendered over the non-interactive label when
  * toggle mode is active.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
- * @cssprop [--lr-chip-accent=var(--lr-color-text)] - Text/icon color of the pill. Each `tone` sets
- * it to that tone's loud color.
- * @cssprop [--lr-chip-bg=var(--lr-color-surface)] - Background of the pill. Each `tone` sets it to
- * that tone's `-quiet` tint.
+ * @cssprop [--lr-chip-accent=var(--lr-color-text)] - Text/icon color of the pill. Each non-neutral
+ * `variant` sets it to that variant's loud fill.
+ * @cssprop [--lr-chip-bg=var(--lr-color-surface)] - Background of the pill. Each non-neutral
+ * `variant` sets it to that variant's quiet fill.
  * @cssprop [--lr-chip-border=var(--lr-color-border)] - Border color of the pill. Every non-neutral
- * `tone` sets it to `transparent`.
+ * `variant` sets it to `transparent`.
  * @cssprop [--lr-chip-font-size=var(--lr-font-size-sm)] - Label font size. Each `size` sets it to
  * that step's font size.
  * @cssprop [--lr-chip-gap=var(--lr-space-xs)] - Gap between the icon, label, and remove button.
  * Each `size` sets it to that step's gap.
- * @cssprop [--lr-chip-radius=var(--lr-radius-pill)] - Corner radius of the pill and of the remove
- * button, kept in sync so retuning one retunes both. Does not vary by `size` tier.
+ * @cssprop [--lr-chip-radius=var(--lr-radius)] - Corner radius of the pill and of the remove
+ * button, kept in sync so retuning one retunes both. `pill` raises it to
+ * `var(--lr-radius-pill)`. Does not vary by `size` tier.
  * @cssprop [--lr-chip-icon-size=var(--lr-font-size-sm)] - Font size of the `icon` slot wrapper.
  * Each `size` sets it to that step's icon size.
  * @cssprop [--lr-chip-padding-block=var(--lr-size-0-25rem)] - Block padding of the pill. Each
@@ -95,16 +108,20 @@ export interface LyraChipEventMap {
  * is selected, independently themeable from the label/icon color.
  */
 export class LyraChip extends LyraElement<LyraChipEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, variants, styles];
 
   /** Visual density. `m` preserves the original chip dimensions. */
   @property({ reflect: true }) size: ChipSize = 'm';
 
   /** Status/emphasis color. `neutral` (the default) reads as plain/unstyled. */
-  @property({ reflect: true }) tone: ChipTone = 'neutral';
+  @property({ reflect: true }) variant: ChipVariant = 'neutral';
 
   /** Shows the remove (×) button. */
   @property({ type: Boolean, reflect: true }) removable = false;
+
+  /** Draws fully-rounded ends instead of the default rounded rectangle, matching
+   *  `<lr-badge>`/`<lr-tag>`'s identical property. */
+  @property({ type: Boolean, reflect: true }) pill = false;
 
   /** Opt-in toggle/pressed mode -- the current pressed value. Setting `selected` (to `true`, the
    *  common way to start a chip already pressed) opts the chip into toggle mode automatically, so

@@ -24,12 +24,15 @@ export const styles = css`
        surface without every (variant, appearance) pair needing its own rule. Neutral is the
        default set declared here: it is the only variant whose border color and text color differ
        (a plain bordered surface reading as "no signal"), which is why -edge and -ink are separate
-       slots rather than one loud color. */
+       slots rather than one loud color.
+       -solid and -on-solid read the shared variants sheet's generic slots unconditionally, because
+       neutral's own values there already ARE the grid's neutral row; only -tint, -edge and -ink
+       need the non-neutral rule below. */
     --lr-badge-tint: var(--lr-color-surface);
-    --lr-badge-solid: var(--lr-color-neutral);
+    --lr-badge-solid: var(--lr-color-fill-loud);
     --lr-badge-edge: var(--lr-color-border);
     --lr-badge-ink: var(--lr-color-text);
-    --lr-badge-on-solid: var(--lr-color-on-neutral);
+    --lr-badge-on-solid: var(--lr-color-on-loud);
 
     /* --- Surface: what the 'appearance' axis chooses from that palette. ----------------------
        Kept separate from the public --lr-badge-background/-border/-color trio so those three stay
@@ -98,34 +101,18 @@ export const styles = css`
     white-space: nowrap;
   }
 
-  /* --- variant: the palette ---------------------------------------------------------------- */
-  :host([variant='brand']) {
-    --lr-badge-tint: var(--lr-color-brand-quiet);
-    --lr-badge-solid: var(--lr-color-brand);
-    --lr-badge-edge: var(--lr-color-brand);
-    --lr-badge-ink: var(--lr-color-brand);
-    --lr-badge-on-solid: var(--lr-color-on-brand);
-  }
-  :host([variant='success']) {
-    --lr-badge-tint: var(--lr-color-success-quiet);
-    --lr-badge-solid: var(--lr-color-success);
-    --lr-badge-edge: var(--lr-color-success);
-    --lr-badge-ink: var(--lr-color-success);
-    --lr-badge-on-solid: var(--lr-color-on-success);
-  }
-  :host([variant='warning']) {
-    --lr-badge-tint: var(--lr-color-warning-quiet);
-    --lr-badge-solid: var(--lr-color-warning);
-    --lr-badge-edge: var(--lr-color-warning);
-    --lr-badge-ink: var(--lr-color-warning);
-    --lr-badge-on-solid: var(--lr-color-on-warning);
-  }
-  :host([variant='danger']) {
-    --lr-badge-tint: var(--lr-color-danger-quiet);
-    --lr-badge-solid: var(--lr-color-danger);
-    --lr-badge-edge: var(--lr-color-danger);
-    --lr-badge-ink: var(--lr-color-danger);
-    --lr-badge-on-solid: var(--lr-color-on-danger);
+  /* --- variant: the palette ----------------------------------------------------------------
+     One rule for all four non-neutral variants, in place of the four near-identical blocks that
+     stood here: the shared variants sheet has already re-pointed --lr-color-fill-* at the active
+     variant's row of the semantic grid, so the badge reads generic slots and never names a
+     variant. Neutral is excluded rather than mapped, because it keeps the ambient
+     surface/border/text "no signal" treatment declared on :host above instead of the grid's grey
+     neutral row. Matching [variant] as well as :not([variant='neutral']) keeps a host that has not
+     yet reflected its default attribute on the same neutral values. */
+  :host([variant]:not([variant='neutral'])) {
+    --lr-badge-tint: var(--lr-color-fill-quiet);
+    --lr-badge-edge: var(--lr-color-fill-loud);
+    --lr-badge-ink: var(--lr-color-fill-loud);
   }
 
   /* --- appearance: palette to surface ------------------------------------------------------

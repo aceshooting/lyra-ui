@@ -1,13 +1,17 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement, type LyraEventMap } from '../../../internal/lyra-element.js';
+import type { LyraAppearance, LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
+import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './badge.styles.js';
 
-export type BadgeVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
-export type BadgeSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** The library's one semantic-tone vocabulary. */
+export type BadgeVariant = LyraVariant;
+/** The library's one size ladder. */
+export type BadgeSize = LyraSizeStep;
 /** Visual treatment of a labelled surface: how much of the variant palette is spent on fill,
- *  border, and text. Shared vocabulary across the library's labelled surfaces. */
-export type BadgeAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain';
+ *  border, and text. The library's one `appearance` vocabulary. */
+export type BadgeAppearance = LyraAppearance;
 /** Opt-in attention-seeking animation. Every value other than `none` stops outright under
  *  `prefers-reduced-motion: reduce`. */
 export type BadgeAttention = 'none' | 'pulse' | 'bounce';
@@ -15,8 +19,11 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
 /**
  * `<lr-badge>` — a compact status label.
  *
- * Two independent visual axes: `variant` picks the semantic palette (neutral through danger), and
- * `appearance` decides how much of that palette lands on the fill, the border, and the text.
+ * Two independent visual axes: `variant` picks the semantic palette (neutral through danger, read
+ * from the library's shared semantic grid), and `appearance` decides how much of that palette
+ * lands on the fill, the border, and the text. `variant="neutral"` deliberately opts out of the
+ * grid's own neutral row and keeps the ambient surface/border/text treatment, so a badge with no
+ * status to signal reads as plain rather than grey-tinted.
  * `pill` switches the rounded rectangle for fully-rounded ends, and `attention` adds an opt-in,
  * reduced-motion-aware animation for a badge that has to be noticed.
  *
@@ -38,14 +45,14 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * @cssprop [--lr-badge-color=var(--lr-badge-text)] - Explicit override for the badge's text color,
  * on the same terms as `--lr-badge-background`.
  * @cssprop [--lr-badge-tint=var(--lr-color-surface)] - Palette slot: the variant's quiet fill.
- * Each non-neutral `variant` sets it to that variant's `-quiet` tint.
- * @cssprop [--lr-badge-solid=var(--lr-color-neutral)] - Palette slot: the variant's loud fill,
+ * Each non-neutral `variant` sets it to that variant's quiet fill from the shared semantic grid.
+ * @cssprop [--lr-badge-solid=var(--lr-color-fill-loud)] - Palette slot: the variant's loud fill,
  * used by `appearance="accent"`.
  * @cssprop [--lr-badge-edge=var(--lr-color-border)] - Palette slot: the variant's border color.
- * Each non-neutral `variant` sets it to that variant's loud color.
+ * Each non-neutral `variant` sets it to that variant's loud fill.
  * @cssprop [--lr-badge-ink=var(--lr-color-text)] - Palette slot: the variant's text color. Each
- * non-neutral `variant` sets it to that variant's loud color.
- * @cssprop [--lr-badge-on-solid=var(--lr-color-on-neutral)] - Palette slot: the text color that
+ * non-neutral `variant` sets it to that variant's loud fill.
+ * @cssprop [--lr-badge-on-solid=var(--lr-color-on-loud)] - Palette slot: the text color that
  * stays legible on `--lr-badge-solid`.
  * @cssprop [--lr-badge-fill=var(--lr-badge-tint)] - Surface slot: which palette entry `appearance`
  * routed onto the background. Set it to retune a single appearance without touching the palette.
@@ -75,7 +82,7 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * `attention="bounce"` hop.
  */
 export class LyraBadge<Events = LyraEventMap> extends LyraElement<Events> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, variants, styles];
 
   /** Semantic palette. */
   @property({ reflect: true }) variant: BadgeVariant = 'neutral';

@@ -11,6 +11,8 @@ import {
   setLyraLocale,
 } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
@@ -82,8 +84,9 @@ interface NormalizedLocaleEntry {
   country?: string;
 }
 
-/** Visual size, same `2xs`–`xl` scale as `<lr-select>`'s `size`. */
-export type LyraLocalePickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraLocalePickerSize = LyraSizeStep;
 
 export interface LyraLocalePickerEventMap {
   'lr-change': CustomEvent<{ value: string; previousValue: string }>;
@@ -145,11 +148,14 @@ export interface LyraLocalePickerEventMap {
  * @csspart hint - The hint message.
  * @csspart error - The error message.
  * @cssprop --lr-locale-picker-trigger-padding - Trigger padding shorthand, scaled by `size`.
- * @cssprop --lr-locale-picker-trigger-min-height - Trigger block-size floor, scaled by `size`.
+ * @cssprop [--lr-locale-picker-trigger-min-height=var(--lr-form-control-height)] - Trigger
+ *   block-size floor. Reads the shared form-control height ladder, so retuning
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.
  * @cssprop --lr-locale-picker-trigger-height - Exact trigger height. Unset by default (a floor
  *   only via `-trigger-min-height`); set a length to both floor and cap the trigger, e.g. to
  *   pixel-match a sibling field in the same toolbar row.
- * @cssprop --lr-locale-picker-font-size - Trigger font size, scaled by `size`.
+ * @cssprop [--lr-locale-picker-font-size=var(--lr-form-control-font-size)] - Trigger font size,
+ *   from the shared form-control size ladder.
  * @cssprop --lr-locale-picker-expand-size - Decorative expand-icon box size, scaled by `size`.
  * @cssprop [--lr-locale-picker-gap=var(--lr-space-xs)] - Trigger and option child gap.
  * @cssprop [--lr-locale-picker-radius=var(--lr-radius)] - Trigger/listbox/option corner radius.
@@ -162,7 +168,7 @@ export interface LyraLocalePickerEventMap {
  */
 export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -186,8 +192,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `2xs`–`xl` scale as `lr-select`'s `size`. */
-  @property({ reflect: true }) size: LyraLocalePickerSize = 'm';
+  /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-select`. The Web Awesome /
+   *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
+   *  tag rename with no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   @state() private activeIndex = -1;
   @state() private touched = false;

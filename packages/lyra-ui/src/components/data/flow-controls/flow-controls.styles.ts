@@ -19,7 +19,7 @@ export const styles = css`
   :host([orientation='vertical']) [part='base'] {
     flex-direction: column;
   }
-  /* Chrome-less escape, mirroring lr-card's appearance="plain" (and lr-callout's [inline]): the
+  /* Chrome-less escape, mirroring the shared LyraFrame vocabulary's frame="plain" (and lr-callout's [inline]): the
      cluster is often placed directly inside a host toolbar or panel that already draws its own
      border/background, where this floating-surface chrome doubles the frame. The box-shadow goes
      with the rest of the box decoration, exactly as lr-flow-run-overlay's plain does -- a lift
@@ -31,7 +31,7 @@ export const styles = css`
      [part='base'], i.e. equal specificity, so source order alone decides. Only flex-direction vs.
      box decoration is set today, so nothing collides -- keeping this last preserves plain as the
      stronger statement ("no chrome at all") if either rule grows. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;

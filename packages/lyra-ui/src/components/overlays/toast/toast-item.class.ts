@@ -5,10 +5,14 @@ import { closeIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
+import type { LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
+import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './toast-item.styles.js';
 
-export type ToastVariant = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
-export type ToastSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+/** The library's one semantic-tone vocabulary. */
+export type ToastVariant = LyraVariant;
+/** The library's one size ladder. */
+export type ToastSize = LyraSizeStep;
 
 function parseTime(value: string): number {
   const trimmed = value.trim();
@@ -48,18 +52,20 @@ export interface LyraToastItemEventMap {
  * @csspart close-button - The dismiss button.
  * @cssprop [--lr-toast-accent-width=var(--lr-size-4px)] - Width of the accent bar, and the extra
  *   inline-start padding reserved for it.
- * @cssprop [--lr-toast-accent-color=var(--lr-color-border)] - Color of the accent bar and the icon,
- *   auto-swapped per `variant`.
- * @cssprop [--lr-toast-padding=var(--lr-space-m)] - Padding of the item, auto-swapped per `size`.
+ * @cssprop [--lr-toast-accent-color=var(--lr-color-border)] - Color of the accent bar and the icon.
+ *   Each non-neutral `variant` sets it to that variant's loud fill from the shared semantic grid;
+ *   `neutral` keeps the plain border color, so an informational toast reads as unaccented.
+ * @cssprop [--lr-toast-padding=var(--lr-space-m)] - Padding of the item, auto-swapped per `size`
+ *   across the shared six-step ladder.
  * @cssprop [--lr-toast-font-size=var(--lr-font-size-md)] - Font size of the item, auto-swapped per
- *   `size`.
+ *   `size` across the shared six-step ladder.
  * @cssprop [--lr-toast-show-duration=var(--lr-transition-base, 180ms ease-out)] - Opacity/transform
  *   transition used while showing.
  * @cssprop [--lr-toast-hide-duration=var(--lr-transition-base, 180ms ease-out)] - Opacity/transform
  *   transition used while hiding.
  */
 export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, variants, styles];
 
   /** Auto-dismiss delay in ms. Set to `Infinity` (or <= 0) to disable. */
   @property({ type: Number }) duration = 5000;

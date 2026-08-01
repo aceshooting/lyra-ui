@@ -76,12 +76,12 @@ export const NarrowAllocation: Story = {
 };
 
 export const PlainInToolbar: Story = {
-  name: 'appearance="plain" (embedded in a host toolbar)',
+  name: 'frame="plain" (embedded in a host toolbar)',
   parameters: {
     docs: {
       description: {
         story:
-          'With `appearance="plain"` the strip drops its own border/background/shadow so it reads as part of a host toolbar that already draws its own frame, instead of a doubled floating card.',
+          'With `frame="plain"` the strip drops its own border/background/shadow so it reads as part of a host toolbar that already draws its own frame, instead of a doubled floating card.',
       },
     },
   },
@@ -90,7 +90,7 @@ export const PlainInToolbar: Story = {
       style="display:flex; align-items:center; gap:0.75rem; padding:0.5rem 0.75rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface);"
     >
       <strong style="font-size:0.8125rem;">Run</strong>
-      <lr-flow-run-overlay appearance="plain" .decorations=${decorations}></lr-flow-run-overlay>
+      <lr-flow-run-overlay frame="plain" .decorations=${decorations}></lr-flow-run-overlay>
     </div>
   `,
 };

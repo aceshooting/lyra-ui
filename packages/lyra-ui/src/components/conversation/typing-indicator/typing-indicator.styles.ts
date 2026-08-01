@@ -45,10 +45,25 @@ export const styles = css`
     --lr-typing-dot-stagger-1: 600ms;
     --lr-typing-dot-stagger-2: 1200ms;
   }
-  :host([size='sm']) {
+  /* The shared six-step size ladder renders here as three tiers: a presence cue is a few pixels of
+     decoration, and six distinguishable dot diameters inside a 1em line box do not exist. Every
+     step of the ladder still matches a rule -- a value the type accepts and no selector matches
+     would quietly render at the default tier, which nothing in this repo can detect. Both
+     spellings of each tier are listed, so migrating markup never loses its sizing. */
+  :host([size='2xs']),
+  :host([size='xs']),
+  :host([size='s']),
+  :host([size='small']) {
     --lr-typing-dot-size: var(--lr-size-0-375rem);
     --lr-typing-gap: var(--lr-size-0-1875rem);
     --lr-typing-cursor-width: var(--lr-size-0-09375rem);
+  }
+  :host([size='l']),
+  :host([size='large']),
+  :host([size='xl']) {
+    --lr-typing-dot-size: var(--lr-space-m);
+    --lr-typing-gap: var(--lr-space-s);
+    --lr-typing-cursor-width: var(--lr-size-0-1875rem);
   }
 
   [part='base'] {

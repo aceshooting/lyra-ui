@@ -93,7 +93,11 @@ export interface LyraToolApprovalDialogEventMap {
  * Cancel button — rather than the inert dialog panel, which would need an
  * extra Tab press before *any* action is reachable at all.
  *
- * Deny/Approve are `<lr-button>`s (`variant="neutral"`/`"brand"`; this component has no `tone`
+ * Deny/Approve are `<lr-button>`s. Deny is `variant="neutral" appearance="outlined"`, Approve is
+ * `variant="brand"` at lr-button's default `appearance="accent"`, so the primary action is the loud
+ * one and the safe action recedes. Both appearances are stated rather than inherited: a dialog whose
+ * look depends on another component's default changes silently when that default does.
+ * (This component has no `tone`
  * property, unlike `<lr-confirm-bar>`), re-exporting `lr-button`'s own `base`/`label`/`start`/
  * `end`/`spinner` parts under `{deny,approve}-button-{base,label,start,end,spinner}`. An
  * `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while its
@@ -439,6 +443,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
           <lr-button
             part="deny-button"
             variant="neutral"
+            appearance="outlined"
             type="button"
             ?loading=${this.pending === 'deny'}
             ?disabled=${this.pending === 'approve'}

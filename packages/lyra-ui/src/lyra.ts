@@ -566,7 +566,7 @@ export type {
 } from './components/agent-tools/tool-result-dialog/tool-result-dialog.js';
 export { LyraChatComposer } from './components/conversation/chat-composer/chat-composer.js';
 export type {
-  ChatComposerAppearance,
+  ChatComposerFrame,
   ChatComposerStatus,
   ChatComposerWrap,
   ChatComposerSelectionDirection,
@@ -752,7 +752,7 @@ export type {
   RecencyBucket,
 } from './internal/group-by-recency.js';
 export { LyraAvatar } from './components/media/avatar/avatar.js';
-export type { AvatarSize, AvatarShape, AvatarTone, AvatarLoading, LyraAvatarEventMap } from './components/media/avatar/avatar.js';
+export type { AvatarSize, AvatarShape, AvatarVariant, AvatarLoading, LyraAvatarEventMap } from './components/media/avatar/avatar.js';
 export { LyraCard } from './components/layout/card/card.js';
 export { LyraCarousel } from './components/layout/carousel/carousel.js';
 export type { LyraCarouselEventMap } from './components/layout/carousel/carousel.js';

@@ -1,15 +1,19 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { styles } from './avatar.styles.js';
 
 /**
- * Canonical size vocabulary (`'small' | 'medium' | 'large'`) plus the `'sm' | 'md' | 'lg'`
- * shorthand spellings, which remain accepted and render identically tier for tier.
+ * The shared six-step {@linkcode LyraSize} ladder (in either the `s`/`m`/`l` or the
+ * `small`/`medium`/`large` spelling) plus the `'sm' | 'md' | 'lg'` shorthands this component
+ * already accepted. Every member renders a distinct diameter; the three spellings of each tier
+ * render identically.
  */
-export type AvatarSize = 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg';
+export type AvatarSize = LyraSize | 'sm' | 'md' | 'lg';
 export type AvatarShape = 'circle' | 'rounded' | 'square';
-export type AvatarTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+/** Semantic tone — an alias of the shared {@linkcode LyraVariant}, so there is one definition. */
+export type AvatarVariant = LyraVariant;
 export type AvatarLoading = 'eager' | 'lazy';
 
 export interface LyraAvatarEventMap {
@@ -21,7 +25,7 @@ export interface LyraAvatarEventMap {
  * image, an `icon`-slotted fallback glyph, or an initials fallback, in that priority order
  * (whichever's set takes over from the next). Mirrors `wa-avatar`'s public surface
  * (`image`/`initials`/`loading`/`shape`, the `icon` slot, the image-load error event) and adds
- * this library's own `size`/`tone` vocabulary. Purely presentational, no built-in interactivity;
+ * this library's own `size`/`variant` vocabulary. Purely presentational, no built-in interactivity;
  * a consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a user-menu affordance.
  *
  * @customElement lr-avatar
@@ -44,15 +48,15 @@ export interface LyraAvatarEventMap {
  * @csspart initials - The initials text, only rendered once every glyph and image fallback ahead of
  *   it in the priority order has been ruled out.
  * @cssprop [--lr-avatar-size=var(--lr-size-2rem)] - Inline and block size of the container. `size`
- *   swaps it to `var(--lr-size-1-5rem)` (`small`) or `var(--lr-size-2-5rem)` (`large`).
- * @cssprop [--lr-avatar-bg=var(--lr-color-border)] - Container background. Each non-neutral `tone`
- *   sets it to that tone's `-quiet` tint.
- * @cssprop [--lr-avatar-color=var(--lr-color-text)] - Initials/glyph color. Each non-neutral `tone`
- *   sets it to that tone's loud color.
+ *   steps it across the shared six-step ladder, from `var(--lr-size-1rem)` (`2xs`) to
+ *   `var(--lr-size-3rem)` (`xl`); the default `medium`/`m` tier is `var(--lr-size-2rem)`.
+ * @cssprop [--lr-avatar-bg=var(--lr-color-border)] - Container background. Each non-neutral
+ *   `variant` sets it to that variant's `-quiet` tint.
+ * @cssprop [--lr-avatar-color=var(--lr-color-text)] - Initials/glyph color. Each non-neutral
+ *   `variant` sets it to that variant's loud color.
  * @cssprop [--lr-avatar-font-size=var(--lr-font-size-sm)] - Font size of the initials fallback (and
- *   of any `em`-sized slotted glyph). `size` swaps it to `var(--lr-font-size-xs)` (`small`) or
- *   `var(--lr-font-size-md)` (`large`), so the initials track the circle instead of staying at one
- *   fixed size across every tier.
+ *   of any `em`-sized slotted glyph). `size` steps it alongside the diameter, so the initials track
+ *   the circle instead of staying at one fixed size across every tier.
  */
 export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -77,18 +81,18 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
    *  the viewport — worth setting for avatars far down a long list, never for one above the fold. */
   @property() loading: AvatarLoading = 'eager';
 
-  /** Visual size. `'large'` matches `--lr-icon-button-size` (2.5rem); `'medium'` (the default) is
-   *  2rem. `'sm'`/`'md'`/`'lg'` are accepted aliases of the three canonical spellings and render
-   *  identically. */
+  /** Visual size, on the shared six-step ladder. `'large'`/`'l'` matches `--lr-icon-button-size`
+   *  (2.5rem); `'medium'`/`'m'` (the default) is 2rem. `'sm'`/`'md'`/`'lg'` are accepted aliases of
+   *  `'small'`/`'medium'`/`'large'` and render identically. */
   @property({ reflect: true }) size: AvatarSize = 'medium';
 
   /** `'circle'` (the default), `'rounded'` (the shared medium corner radius), or `'square'` (no
    *  corner radius at all). */
   @property({ reflect: true }) shape: AvatarShape = 'circle';
 
-  /** Recolors the initials-fallback background/text, mirroring `lr-chip`'s `tone` vocabulary.
+  /** Recolors the initials-fallback background/text, on the library's shared `variant` vocabulary.
    *  `'neutral'` (the default) reads as a plain, unaccented circle. */
-  @property({ reflect: true }) tone: AvatarTone = 'neutral';
+  @property({ reflect: true }) variant: AvatarVariant = 'neutral';
 
   @state() private failedSrc?: string;
 

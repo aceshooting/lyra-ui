@@ -162,12 +162,28 @@ export const Link: Story = {
   `,
 };
 
-export const NeutralAccentVsFilled: Story = {
-  name: 'Neutral: accent vs. filled',
+export const AccentVsFilled: Story = {
+  name: 'Accent vs. filled, every variant',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`appearance="accent"` (the default) is the active `variant`’s **loud** fill; ' +
+          '`appearance="filled"` is the same tone one emphasis step down, its **quiet** tint. The two ' +
+          'resolve against different rows of the shared semantic grid, so they differ for every ' +
+          'variant — including `neutral`, whose filled tier used to be the page surface, i.e. no fill ' +
+          'at all.',
+      },
+    },
+  },
   render: () => html`
-    <div style="display: flex; gap: 0.5rem;">
-      <lr-button variant="neutral" appearance="accent">Accent (loud fill)</lr-button>
-      <lr-button variant="neutral" appearance="filled">Filled (ambient surface)</lr-button>
+    <div style="display: grid; grid-template-columns: repeat(2, max-content); gap: 0.5rem;">
+      ${['neutral', 'brand', 'success', 'warning', 'danger'].map(
+        (variant) => html`
+          <lr-button variant=${variant} appearance="accent">${variant} accent</lr-button>
+          <lr-button variant=${variant} appearance="filled">${variant} filled</lr-button>
+        `,
+      )}
     </div>
   `,
 };
@@ -175,11 +191,38 @@ export const NeutralAccentVsFilled: Story = {
 export const Sizes: Story = {
   render: () => html`
     <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <lr-button size="2xs">2XS</lr-button>
       <lr-button size="xs">XS</lr-button>
       <lr-button size="s">S</lr-button>
       <lr-button size="m">M</lr-button>
       <lr-button size="l">L</lr-button>
       <lr-button size="xl">XL</lr-button>
+    </div>
+  `,
+};
+
+export const SizeSpellings: Story = {
+  name: 'Both size spellings',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Every tier of the shared form-control ladder matches both its canonical step and Web ' +
+          'Awesome’s/Shoelace’s name for it, so migrating markup that says `size="small"` renders ' +
+          'exactly what `size="s"` renders — same height, padding and font size — with no attribute ' +
+          'rewrite. The same ladder backs `<lr-input>`, `<lr-select>` and `<lr-textarea>`, so ' +
+          'same-tier controls line up in a toolbar row.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; grid-template-columns: repeat(2, max-content); gap: 0.5rem; align-items: center;">
+      <lr-button size="s">size="s"</lr-button>
+      <lr-button size="small">size="small"</lr-button>
+      <lr-button size="m">size="m"</lr-button>
+      <lr-button size="medium">size="medium"</lr-button>
+      <lr-button size="l">size="l"</lr-button>
+      <lr-button size="large">size="large"</lr-button>
     </div>
   `,
 };
@@ -190,8 +233,9 @@ export const CompactToolbarTier: Story = {
     docs: {
       description: {
         story:
-          'Each `size` tier is expressed as `--lr-button-padding-block`, `--lr-button-padding-inline`, ' +
-          '`--lr-button-font-size` and `--lr-button-min-height`, so a toolbar can retune a tier — or pin ' +
+          'Each `size` tier reaches the button through `--lr-button-padding-block`, ' +
+          '`--lr-button-padding-inline`, `--lr-button-font-size` and `--lr-button-min-height` — all ' +
+          'four pointed at the shared form-control ladder — so a toolbar can retune a tier — or pin ' +
           'an exact row height with `--lr-button-height` — without a `::part(base)` rule. ' +
           '`--lr-button-height` is undeclared by default, which is what keeps each tier’s min-height ' +
           'floor working when it is unset.',

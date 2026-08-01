@@ -2,6 +2,13 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
+    /* Every dimension below rides the shared size ladder (internal/sizes.styles.ts) so a slider
+       lines up with an lr-input/lr-select/lr-button of the same size. At the default "m" tier the
+       three knobs resolve to exactly the 1rem thumb, 0.25rem track and 1.5rem row the control
+       shipped with before it had a size at all. */
+    --lr-slider-thumb-size: calc(var(--lr-form-control-height) * 0.4);
+    --lr-slider-track-thickness: calc(var(--lr-slider-thumb-size) * 0.25);
+    --lr-slider-row-size: calc(var(--lr-form-control-height) * 0.6);
     display: flex;
     align-items: center;
     /* The hint is a full-basis flex item, so it wraps onto its own line
@@ -14,23 +21,23 @@ export const styles = css`
   [part='base'] {
     position: relative;
     flex: 1 1 auto;
-    block-size: var(--lr-size-1-5rem);
+    block-size: var(--lr-slider-row-size);
   }
   [part='track'] {
     position: absolute;
     inset-inline: 0;
     inset-block-start: 50%;
-    block-size: var(--lr-size-4px);
+    block-size: var(--lr-slider-track-thickness);
     transform: translateY(-50%);
-    border-radius: var(--lr-size-2px);
+    border-radius: calc(var(--lr-slider-track-thickness) * 0.5);
     background: var(--lr-color-border);
   }
   [part='indicator'] {
     position: absolute;
     inset-block-start: 50%;
-    block-size: var(--lr-size-4px);
+    block-size: var(--lr-slider-track-thickness);
     transform: translateY(-50%);
-    border-radius: var(--lr-size-2px);
+    border-radius: calc(var(--lr-slider-track-thickness) * 0.5);
     background: var(--lr-color-brand);
   }
   /* Tick marks for with-markers. Painted in the surface color so they stay
@@ -43,8 +50,8 @@ export const styles = css`
   [part='marker'] {
     position: absolute;
     inset-block-start: 50%;
-    inline-size: var(--lr-size-2px);
-    block-size: var(--lr-size-6px);
+    inline-size: calc(var(--lr-slider-track-thickness) * 0.5);
+    block-size: calc(var(--lr-slider-track-thickness) * 1.5);
     transform: translate(-50%, -50%);
     border-radius: var(--lr-radius-xs);
     background: var(--lr-color-surface);
@@ -52,8 +59,8 @@ export const styles = css`
   [part~='thumb'] {
     position: absolute;
     inset-block-start: 50%;
-    inline-size: var(--lr-size-16px);
-    block-size: var(--lr-size-16px);
+    inline-size: var(--lr-slider-thumb-size);
+    block-size: var(--lr-slider-thumb-size);
     border-radius: 50%;
     background: var(--lr-color-brand);
     border: var(--lr-border-width-medium) solid var(--lr-color-surface);
@@ -73,9 +80,9 @@ export const styles = css`
   :host(:dir(rtl)) [part='marker'] {
     transform: translate(50%, -50%);
   }
-  /* The visible dot is 16px, under the ~24px touch-target minimum. Widen the
-     hit/drag area with a transparent ::before instead of growing the thumb
-     itself — onPointerMove never reads the thumb's own
+  /* The visible dot is 16px at the default tier and smaller below it, under the ~24px
+     touch-target minimum. Widen the hit/drag area with a transparent ::before instead of growing
+     the thumb itself — onPointerMove never reads the thumb's own
      getBoundingClientRect() (only [part="track"]'s rect and the pointer
      coordinate), and a pointerdown inside the ::before still reports
      e.target as the thumb element (pseudo-elements have no separate DOM
@@ -86,8 +93,10 @@ export const styles = css`
     position: absolute;
     inset-block-start: 50%;
     inset-inline-start: 50%;
-    inline-size: var(--lr-size-28px);
-    block-size: var(--lr-size-28px);
+    /* A floor, not a fixed size: the drag area never drops below 28px however small the tier
+       makes the visible dot, and grows past it at the larger tiers. */
+    inline-size: max(var(--lr-size-28px), calc(var(--lr-slider-thumb-size) * 1.75));
+    block-size: max(var(--lr-size-28px), calc(var(--lr-slider-thumb-size) * 1.75));
     transform: translate(-50%, -50%);
     border-radius: 50%;
   }
@@ -112,7 +121,8 @@ export const styles = css`
   :host(:not(:disabled):not([readonly])) [part~='thumb']:hover {
     /* Same elevation tier as the resting thumb -- hover adds the ring, it must not also change
        how high the thumb reads. */
-    box-shadow: var(--lr-shadow-s), 0 0 0 var(--lr-size-4px) var(--lr-color-brand-quiet);
+    box-shadow: var(--lr-shadow-s), 0 0 0 var(--lr-slider-track-thickness)
+      var(--lr-color-brand-quiet);
   }
   [part~='thumb']:active {
     cursor: grabbing;
@@ -174,21 +184,21 @@ export const styles = css`
   }
   :host([orientation='vertical']) [part='base'] {
     flex: 0 0 auto;
-    inline-size: var(--lr-size-1-5rem);
+    inline-size: var(--lr-slider-row-size);
     block-size: var(--lr-slider-track-length, var(--lr-size-10rem));
   }
   :host([orientation='vertical']) [part='track'] {
     inset-inline: auto;
     inset-inline-start: 50%;
     inset-block: 0;
-    inline-size: var(--lr-size-4px);
+    inline-size: var(--lr-slider-track-thickness);
     block-size: auto;
     transform: translateX(-50%);
   }
   :host([orientation='vertical']) [part='indicator'] {
     inset-block-start: auto;
     inset-inline-start: 50%;
-    inline-size: var(--lr-size-4px);
+    inline-size: var(--lr-slider-track-thickness);
     transform: translateX(-50%);
   }
   :host([orientation='vertical']) [part~='thumb'] {
@@ -199,8 +209,8 @@ export const styles = css`
   :host([orientation='vertical']) [part='marker'] {
     inset-block-start: auto;
     inset-inline-start: 50%;
-    inline-size: var(--lr-size-6px);
-    block-size: var(--lr-size-2px);
+    inline-size: calc(var(--lr-slider-track-thickness) * 1.5);
+    block-size: calc(var(--lr-slider-track-thickness) * 0.5);
     transform: translate(-50%, 50%);
   }
   :host([orientation='vertical']) [part~='tooltip'] {

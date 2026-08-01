@@ -180,7 +180,7 @@ describe('lr-memory-panel', () => {
 
     const confirmBar = (await readyConfirmBar(row)) as HTMLElement & { tone: string; heading: string };
     expect(confirmBar).to.exist;
-    expect(confirmBar.tone).to.equal('neutral');
+    expect(confirmBar.variant).to.equal('neutral');
     expect(confirmBar.heading).to.equal('Add this to long-term memory?');
     expect(row.querySelector('[part="add-button"]')).to.not.exist;
     expect(row.querySelector('[part="remove-button"]')).to.not.exist;
@@ -203,7 +203,7 @@ describe('lr-memory-panel', () => {
     await el.updateComplete;
 
     const confirmBar = (await readyConfirmBar(row)) as HTMLElement & { tone: string };
-    expect(confirmBar.tone).to.equal('danger');
+    expect(confirmBar.variant).to.equal('danger');
 
     const listener = oneEvent(el, 'lr-remove');
     (confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
@@ -262,7 +262,7 @@ describe('lr-memory-panel', () => {
       tone: string;
       heading: string;
     };
-    expect(confirmBar.tone).to.equal('danger');
+    expect(confirmBar.variant).to.equal('danger');
     expect(confirmBar.heading).to.equal('Forget all long-term memories?');
     expect(confirmBar.textContent).to.include('2');
 

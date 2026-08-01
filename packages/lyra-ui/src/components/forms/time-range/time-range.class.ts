@@ -10,6 +10,7 @@ import {
   finiteRatio,
   isSliderKey,
 } from '../../../internal/numbers.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './time-range.styles.js';
 
 export type TimeRangeHandle = 'start' | 'end';
@@ -42,7 +43,9 @@ interface DragState {
  *  interactions (and native `<input type=range>`). */
 const PAGE_STEP_MULTIPLIER = 10;
 
-export type LyraTimeRangeSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraTimeRangeSize = LyraSizeStep;
 
 /** A single discrete-preset option for the `presets` property. */
 export interface TimeRangePreset {
@@ -176,8 +179,10 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   @property({ type: Number }) step = 1;
   /** Visual size — proportionally scales the handle, track, and preset buttons via a single
    *  multiplier; the drag hit-area never shrinks below 24px (WCAG 2.5.8). Not pixel-matched to
-   *  `lr-input`'s row-height scale -- this component's own dimensions aren't on that ladder. */
-  @property({ reflect: true }) size: LyraTimeRangeSize = 'm';
+   *  `lr-input`'s row-height scale -- this component's own dimensions aren't on that ladder. The Web Awesome / Shoelace spellings
+   *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
+   *  attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Accessible name for the start handle, used as its `aria-label`.
    *  Overridable for i18n/custom copy; defaults to the same literal text
    *  this component always rendered before the property existed. */

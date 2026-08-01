@@ -28,7 +28,7 @@ export const styles = css`
      and plain. plain is the stronger statement ("no chrome at all"), so it goes last. The title and
      toggle affordances are brand-colored text with a hover underline, never a border, so they stay
      legible with no chrome behind them. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;

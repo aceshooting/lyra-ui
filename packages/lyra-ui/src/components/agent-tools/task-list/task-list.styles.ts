@@ -28,12 +28,12 @@ export const styles = [
       gap: var(--lr-task-list-compact-gap, var(--lr-space-2xs));
       padding: var(--lr-task-list-compact-body-padding, var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s));
     }
-    /* Chrome escape -- same convention as lr-agent-run/lr-source-card's appearance="plain": drops
-       the outer border/background/radius so a list nested inside a host frame that already draws a
-       border (an agent-run panel, a message bubble) doesn't double it. The header/body's own
-       internal divider and padding are layout, not outer chrome, so they're untouched -- matching
-       how agent-run's plain rule leaves its own Cancel/Retry button chrome alone. */
-    :host([appearance='plain']) [part='base'] {
+    /* Chrome escape -- same convention as lr-agent-run/lr-source-card's frame="plain": drops
+       the outer border/background/radius so a list nested inside a host container that already
+       draws a border (an agent-run panel, a message bubble) doesn't double it. The header/body's
+       own internal divider and padding are layout, not outer chrome, so they're untouched --
+       matching how agent-run's plain rule leaves its own Cancel/Retry button chrome alone. */
+    :host([frame='plain']) [part='base'] {
       border: 0;
       border-radius: 0;
       background: transparent;

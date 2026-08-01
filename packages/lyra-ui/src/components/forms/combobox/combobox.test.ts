@@ -1948,6 +1948,79 @@ it('folds the filter query and option labels through locale-aware toLocaleLowerC
 });
 
 describe('size', () => {
+  // Locked to literal pixels rather than to each other: adopting the shared form-control ladder
+  // moved where these numbers are DECLARED, and the whole point is that it did not move the
+  // numbers. A relative assertion would have passed either way.
+  const TIER_HEIGHTS: ReadonlyArray<readonly [string, string]> = [
+    ['2xs', '20px'],
+    ['xs', '24px'],
+    ['s', '30px'],
+    ['m', '40px'],
+    ['l', '48px'],
+    ['xl', '56px'],
+  ];
+
+  it('renders the same trigger height at every tier as before the shared ladder', async () => {
+    for (const [size, px] of TIER_HEIGHTS) {
+      const el = await fixture(html`<lr-combobox size=${size} label="Tags"></lr-combobox>`);
+      const trigger = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+      expect(getComputedStyle(trigger).minBlockSize, `min-block-size at size=${size}`).to.equal(px);
+    }
+  });
+
+  it('renders the same laid-out trigger box at every tier as before the shared ladder', async () => {
+    // 2xs/xs are the two tiers whose CONTENT, not the floor, decides the height, so a padding or
+    // font-size drift there would show up here and nowhere else.
+    const expected: ReadonlyArray<readonly [string, number]> = [
+      ['2xs', 20],
+      ['xs', 25],
+      ['s', 30],
+      ['m', 40],
+      ['l', 48],
+      ['xl', 56],
+    ];
+    for (const [size, px] of expected) {
+      const el = await fixture(html`<lr-combobox size=${size} label="Tags"></lr-combobox>`);
+      const trigger = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+      expect(trigger.getBoundingClientRect().height, `laid-out height at size=${size}`).to.equal(px);
+    }
+  });
+
+  it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+    const pairs: ReadonlyArray<readonly [string, string]> = [
+      ['small', 's'],
+      ['medium', 'm'],
+      ['large', 'l'],
+    ];
+    for (const [alias, step] of pairs) {
+      const aliasEl = await fixture(html`<lr-combobox size=${alias} label="Tags"></lr-combobox>`);
+      const stepEl = await fixture(html`<lr-combobox size=${step} label="Tags"></lr-combobox>`);
+      const box = (el: Element) => el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+      expect(getComputedStyle(box(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
+        getComputedStyle(box(stepEl)).minBlockSize,
+      );
+      expect(getComputedStyle(box(aliasEl)).fontSize, `font-size for ${alias}`).to.equal(
+        getComputedStyle(box(stepEl)).fontSize,
+      );
+      expect(box(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
+        box(stepEl).getBoundingClientRect().height,
+      );
+    }
+  });
+
+  it('rounds the trigger row to a pill without a ::part() rule', async () => {
+    const plain = (await fixture(basic())) as LyraCombobox;
+    const pill = (await fixture(html`
+      <lr-combobox pill><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    const radius = (el: LyraCombobox) =>
+      getComputedStyle(el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement).borderStartStartRadius;
+    expect(pill.pill).to.be.true;
+    expect(pill.getAttribute('pill')).to.equal('');
+    expect(radius(pill)).to.not.equal(radius(plain));
+    expect(Number.parseFloat(radius(pill))).to.be.greaterThan(Number.parseFloat(radius(plain)));
+  });
+
   it('defaults to size="m" and reflects the attribute', async () => {
     const el = (await fixture(basic())) as LyraCombobox;
     expect(el.size).to.equal('m');

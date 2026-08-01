@@ -132,6 +132,9 @@ export const styles = css`
     color: var(--lr-stat-trend-bad-color, var(--lr-color-danger));
     background: var(--lr-stat-trend-bad-bg, color-mix(in srgb, var(--lr-color-danger) 8%, transparent));
   }
+  :host([variant='brand']) [part='value'] {
+    color: var(--lr-stat-value-brand-color, var(--lr-color-brand));
+  }
   :host([variant='success']) [part='value'] {
     color: var(--lr-stat-value-success-color, var(--lr-color-success));
   }
@@ -231,7 +234,7 @@ export const styles = css`
      a chrome-less stat sits at its content height so it can be dropped inline in prose or a
      toolbar. The emphasis accent edge is card chrome too and goes with the rest of the border;
      the emphasis brand value tint is unaffected and still applies. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -241,11 +244,11 @@ export const styles = css`
   /* The card's interactive affordance is a border-color shift plus a lift shadow, and neither
      reads on a border-less, background-less box — a linked plain stat underlines its headline
      value instead. The :focus-visible outline above needs no border and still applies as-is. */
-  :host([appearance='plain']) [part='base'][href]:hover {
+  :host([frame='plain']) [part='base'][href]:hover {
     box-shadow: none;
   }
-  :host([appearance='plain']) [part='base'][href]:hover [part='value'],
-  :host([appearance='plain']) [part='base'][href]:focus-visible [part='value'] {
+  :host([frame='plain']) [part='base'][href]:hover [part='value'],
+  :host([frame='plain']) [part='base'][href]:focus-visible [part='value'] {
     text-decoration: underline;
   }
   :host([orientation='horizontal']) [part='base'] {

@@ -11,38 +11,59 @@ export const styles = css`
     --lr-avatar-group-badge-bg: var(--lr-color-border);
     --lr-avatar-group-badge-color: var(--lr-color-text);
     /* Mirrors lr-avatar's own --lr-avatar-font-size scale exactly, so a "+N" badge and the
-       avatars it caps read at the same optical weight at every tier. The 'md' default is the
-       single font-size the badge used to use at every tier, so an unset group is byte-identical. */
+       avatars it caps read at the same optical weight at every tier. The 'm'/'medium' default is
+       the single font-size the badge used to use at every tier, so an unset group is
+       byte-identical. */
     --lr-avatar-group-badge-font-size: var(--lr-font-size-sm);
   }
-  /* Both spellings of each tier: lr-avatar's canonical vocabulary is now small|medium|large, with
-     sm|md|lg kept as accepted aliases. The group has to match, or a size="small" group type-checks
-     and then silently renders at the medium tier. */
-  :host([size='sm']),
-  :host([size='small']) {
+  /* Every spelling of every tier, matching lr-avatar's own ladder declaration for declaration --
+     the group's badge has to be the same diameter as the avatars it caps, so a tier lr-avatar
+     renders and lr-avatar-group ignores would produce a visibly mismatched "+N" circle. Both
+     components accept the canonical LyraSize ladder plus the older sm|md|lg shorthands. */
+  :host([size='2xs']) {
+    --lr-avatar-group-avatar-size: var(--lr-size-1rem);
+    --lr-avatar-group-overlap: var(--lr-size-neg-4px);
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-2xs);
+  }
+  :host([size='xs']) {
+    --lr-avatar-group-avatar-size: var(--lr-size-1-25rem);
+    --lr-avatar-group-overlap: var(--lr-size-neg-4px);
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-2xs);
+  }
+  :host([size='s']),
+  :host([size='small']),
+  :host([size='sm']) {
     --lr-avatar-group-avatar-size: var(--lr-size-1-5rem);
     --lr-avatar-group-overlap: var(--lr-size-neg-4px);
     --lr-avatar-group-badge-font-size: var(--lr-font-size-xs);
   }
-  :host([size='lg']),
-  :host([size='large']) {
+  :host([size='l']),
+  :host([size='large']),
+  :host([size='lg']) {
     --lr-avatar-group-avatar-size: var(--lr-size-2-5rem);
     --lr-avatar-group-overlap: var(--lr-size-neg-8px);
     --lr-avatar-group-badge-font-size: var(--lr-font-size-md);
   }
-  :host([tone='brand']) {
+  :host([size='xl']) {
+    --lr-avatar-group-avatar-size: var(--lr-size-3rem);
+    --lr-avatar-group-overlap: var(--lr-size-neg-8px);
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-lg);
+  }
+  /* Same colour mapping lr-avatar uses (the variant's quiet tint behind its loud colour), not the
+     shared internal/variants.styles.ts grid pairing -- see the note in avatar.styles.ts. */
+  :host([variant='brand']) {
     --lr-avatar-group-badge-bg: var(--lr-color-brand-quiet);
     --lr-avatar-group-badge-color: var(--lr-color-brand);
   }
-  :host([tone='success']) {
+  :host([variant='success']) {
     --lr-avatar-group-badge-bg: var(--lr-color-success-quiet);
     --lr-avatar-group-badge-color: var(--lr-color-success);
   }
-  :host([tone='warning']) {
+  :host([variant='warning']) {
     --lr-avatar-group-badge-bg: var(--lr-color-warning-quiet);
     --lr-avatar-group-badge-color: var(--lr-color-warning);
   }
-  :host([tone='danger']) {
+  :host([variant='danger']) {
     --lr-avatar-group-badge-bg: var(--lr-color-danger-quiet);
     --lr-avatar-group-badge-color: var(--lr-color-danger);
   }

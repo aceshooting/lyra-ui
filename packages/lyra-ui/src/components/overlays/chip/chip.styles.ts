@@ -5,13 +5,13 @@ export const styles = css`
     display: inline-flex;
     max-inline-size: 100%;
     vertical-align: middle;
-    /* One custom-property trio swapped by the :host([tone]) rules below,
-       rather than repeating background/color/border per part per tone —
+    /* One custom-property trio swapped by the single non-neutral rule below,
+       rather than repeating background/color/border per part per variant —
        mirrors lr-tool-call-chip's/lr-attachment-chip's identical
-       -accent/-bg/-border trio so a chip's tone vocabulary reads the same
-       everywhere in the library. 'neutral' has no dedicated token pair (see
-       the class doc), so it falls back to plain surface/border/text instead
-       of inventing a sixth tint. */
+       -accent/-bg/-border trio so a chip's colour vocabulary reads the same
+       everywhere in the library. These are the 'neutral' values: neutral
+       deliberately opts out of the semantic grid's own neutral row (see the
+       class doc) and reads as a plain bordered surface instead. */
     --lr-chip-accent: var(--lr-color-text);
     --lr-chip-bg: var(--lr-color-surface);
     --lr-chip-border: var(--lr-color-border);
@@ -24,8 +24,11 @@ export const styles = css`
     /* Doesn't vary by size tier, so it's declared once here rather than re-assigned per
        :host([size='…']) block -- same precedent as lr-button's --lr-button-radius. Consumed on
        both [part='base'] and [part='remove-button'] below so a consumer retuning the chip's
-       corner shape gets a consistent remove-button corner too, not a mismatched one. */
-    --lr-chip-radius: var(--lr-radius-pill);
+       corner shape gets a consistent remove-button corner too, not a mismatched one.
+       The rounded rectangle is the default and the pill is opt-in via [pill] below, matching
+       lr-badge/lr-tag: while this was unconditionally --lr-radius-pill, a 'pill' attribute would
+       have been indistinguishable from its own absence. */
+    --lr-chip-radius: var(--lr-radius);
     /* Component density floor. Interactive controls also enforce the shared
        --lr-icon-button-size hit target; non-interactive display chips get no floor. */
     --lr-chip-min-height: var(--lr-size-1-5rem);
@@ -34,6 +37,10 @@ export const styles = css`
        any value for it (even 'auto') would make those fallback arms unreachable and turn
        --lr-chip-min-height into dead code. Left undeclared, both arms stay live: the per-tier
        floor falls out of the fallback, and setting the property pins an exact height. */
+  }
+
+  :host([pill]) {
+    --lr-chip-radius: var(--lr-radius-pill);
   }
 
   :host([size='3xs']) {
@@ -84,24 +91,16 @@ export const styles = css`
     --lr-chip-min-height: var(--lr-size-2rem);
   }
 
-  :host([tone='brand']) {
-    --lr-chip-accent: var(--lr-color-brand);
-    --lr-chip-bg: var(--lr-color-brand-quiet);
-    --lr-chip-border: transparent;
-  }
-  :host([tone='success']) {
-    --lr-chip-accent: var(--lr-color-success);
-    --lr-chip-bg: var(--lr-color-success-quiet);
-    --lr-chip-border: transparent;
-  }
-  :host([tone='warning']) {
-    --lr-chip-accent: var(--lr-color-warning);
-    --lr-chip-bg: var(--lr-color-warning-quiet);
-    --lr-chip-border: transparent;
-  }
-  :host([tone='danger']) {
-    --lr-chip-accent: var(--lr-color-danger);
-    --lr-chip-bg: var(--lr-color-danger-quiet);
+  /* One rule for all four non-neutral variants, in place of the four near-identical blocks that
+     stood here: the shared variants sheet has already re-pointed --lr-color-fill-* at the active
+     variant's row of the semantic grid, so the chip reads generic slots and never names a variant.
+     Neutral is excluded rather than mapped, because it keeps the plain bordered-surface "no
+     signal" treatment declared on :host above instead of the grid's grey neutral row. Matching
+     [variant] as well as :not([variant='neutral']) keeps a host that has not yet reflected its
+     default attribute on the same neutral values. */
+  :host([variant]:not([variant='neutral'])) {
+    --lr-chip-accent: var(--lr-color-fill-loud);
+    --lr-chip-bg: var(--lr-color-fill-quiet);
     --lr-chip-border: transparent;
   }
 
@@ -145,7 +144,7 @@ export const styles = css`
        resting background sets --lr-chip-pressed-bg directly. */
     background: var(--lr-chip-pressed-bg, var(--lr-chip-bg));
     /* Falls back to --lr-chip-accent (today's exact value) so every
-       existing consumer, including all 4 \`tone\` variants, renders
+       existing consumer, including all four non-neutral variants, renders
        byte-identical when unset. A consumer with a per-item arbitrary
        color sets --lr-chip-pressed-border directly, leaving
        --lr-chip-accent (and therefore the label text color) untouched. */

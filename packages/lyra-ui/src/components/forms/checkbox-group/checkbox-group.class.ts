@@ -3,6 +3,8 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { nextId } from '../../../internal/a11y.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox-group.styles.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.class.js';
 
@@ -88,17 +90,33 @@ export interface LyraCheckboxGroupEventMap {
  * @csspart options - Checkbox collection.
  * @csspart hint - Supporting text.
  * @csspart error - Validation message.
+ * @cssprop [--lr-checkbox-group-row-gap=calc(var(--lr-form-control-height) * 0.1)] - Vertical gap
+ * between the group's label, options and messages, scaled by `size`.
+ * @cssprop [--lr-checkbox-group-option-gap=calc(var(--lr-form-control-height) * 0.2)] - Gap between
+ * adjacent options, scaled by `size`.
  */
 export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
+    size: { reflect: true },
     value: { attribute: false, noAccessor: true },
   };
+
+  /**
+   * Size of the group's own chrome, on the library's shared ladder. Accepts both spellings of every
+   * tier — `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating
+   * either way is a tag rename. Scales the group's label type size and the gaps around and between
+   * its options off the same `--lr-form-control-*` values the controls themselves use. It does not
+   * resize the `<lr-checkbox>` children: each carries its own `size`, so a group can hold options at
+   * mixed sizes and an explicitly-sized option is never silently overridden by its container. Set
+   * the same `size` on the children to scale the whole group.
+   */
+  size: LyraSize = 'm';
 
   @property() label = '';
   @property() hint = '';

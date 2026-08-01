@@ -37,6 +37,11 @@ export const styles = css`
     --lr-swatch-picker-fill-size: var(--lr-size-1-5rem);
     --lr-swatch-picker-gap: var(--lr-space-xs);
   }
+  /* A swatch is a square tap target in a wrapping grid, not a form-control row, so this is the
+     component's own ladder rather than the shared --lr-form-control-height one: the two agree from
+     m upwards, but the shared 2xs/xs steps (20/24px) would put a swatch at or under the WCAG 2.5.8
+     minimum with no margin. It still matches both spellings of every tier, the same way
+     internal/sizes.styles.ts does, so size="small" is honoured here too. */
   :host([size='2xs']) {
     --lr-swatch-picker-hit-size: var(--lr-size-1-5rem);
     --lr-swatch-picker-fill-size: var(--lr-size-0-75rem);
@@ -45,11 +50,13 @@ export const styles = css`
     --lr-swatch-picker-hit-size: var(--lr-size-1-75rem);
     --lr-swatch-picker-fill-size: var(--lr-size-1rem);
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-swatch-picker-hit-size: var(--lr-size-2rem);
     --lr-swatch-picker-fill-size: var(--lr-size-1-25rem);
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-swatch-picker-hit-size: var(--lr-size-3rem);
     --lr-swatch-picker-fill-size: var(--lr-size-1-75rem);
   }

@@ -6,6 +6,8 @@ import { FormAssociated } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
@@ -14,9 +16,11 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 export type TextareaResize = 'none' | 'vertical' | 'horizontal' | 'both' | 'auto';
 export type TextareaWrap = 'hard' | 'soft' | 'off';
 export type TextareaSelectionDirection = 'forward' | 'backward' | 'none';
-export type TextareaSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
-/** Shared visual-treatment vocabulary for the library's field-shaped controls. */
-export type TextareaAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain';
+/** Alias of the canonical six-step size ladder. The `size` property itself accepts
+ *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
+export type TextareaSize = LyraSizeStep;
+/** Alias of the library's one `appearance` (fill-treatment) vocabulary. */
+export type TextareaAppearance = LyraAppearance;
 
 /** Scroll offsets read from, or written to, the internal native `<textarea>`. */
 export interface TextareaScrollPosition {
@@ -85,15 +89,27 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @csspart hint - The hint message.
  * @csspart error - The error message.
  * @cssprop [--lr-textarea-max-block-size=none] - Maximum auto-grown block size before the textarea scrolls.
- * @cssprop --lr-textarea-padding - Padding of the native textarea, scaled by `size`.
- * @cssprop --lr-textarea-font-size - Font size of the native textarea, scaled by `size`.
+ * @cssprop [--lr-textarea-padding=var(--lr-form-control-padding-inline)] - Padding of the native
+ * textarea on all four sides, from the active `size` tier of the shared form-control ladder
+ * (`internal/sizes.styles.ts`). The ladder's *inline* gutter is used on every side deliberately:
+ * its block padding is `0` at the two tightest tiers because a control row's height floor supplies
+ * the space there, and a textarea has no such floor -- the first line of text would sit on the
+ * border.
+ * @cssprop [--lr-textarea-font-size=var(--lr-form-control-font-size)] - Font size of the native
+ * textarea, from the active `size` tier of the shared ladder.
+ * @cssprop [--lr-textarea-radius=var(--lr-form-control-radius)] - Corner radius of the field, from
+ * the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius).
+ * `pill` swaps it to `--lr-radius-pill`.
  * @cssprop [--lr-textarea-fill=var(--lr-color-surface)] - Background of the field. Swapped per
  * `appearance`; the documented default is `appearance="filled-outlined"`'s value.
  * @cssprop [--lr-textarea-border-color=var(--lr-color-border)] - Border color of the field,
  * swapped per `appearance` in the same way as `--lr-textarea-fill`.
  */
 export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
-  static override styles = [LyraElement.styles, styles];
+  // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
+  // so the padding/font-size/radius knobs point at the active tier's value -- and so both spellings
+  // of every tier (`s` and `small`, ...) work with no per-component rule.
+  static override styles = [LyraElement.styles, sizes, styles];
 
   /** Visible text rows. */
   // numeric-guard-exempt: forwarded only to the native <textarea rows> attribute (see the
@@ -106,13 +122,23 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    *  handle (mirrors `wa-textarea`'s `resize="auto"`). An invalid runtime value falls back to
    *  `'vertical'`. */
   @property() resize: TextareaResize = 'vertical';
-  /** Visual size — the same `2xs`–`xl` scale as `<lr-input>`/`<lr-select>`. Governs the field's
-   *  padding and font size; `'m'` (the default) is the committed rendering. */
-  @property({ reflect: true }) size: TextareaSize = 'm';
+  /** Visual size on the library's one control ladder, shared with `<lr-input>`/`<lr-select>`.
+   *  Accepts both the canonical `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's
+   *  `'small'`/`'medium'`/`'large'` spellings of `s`/`m`/`l`; the two render identically. Governs
+   *  the field's padding and font size — a textarea's own height comes from `rows`/`resize`, not
+   *  from the ladder's control-height floor. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Visual treatment of the field, from the library's shared vocabulary and with the same
    *  meanings as `<lr-input>`'s `appearance`. Each value only swaps
    *  `--lr-textarea-fill`/`--lr-textarea-border-color`. */
-  @property({ reflect: true }) appearance: TextareaAppearance = 'filled-outlined';
+  @property({ reflect: true }) appearance: LyraAppearance = 'filled-outlined';
+  /** Fully rounded field corners, matching `<lr-input>`'s/`<lr-select>`'s own `pill` — Shoelace and
+   *  Web Awesome both ship it on their textarea, so a mechanical tag rename must not drop it.
+   *  Re-assigns `--lr-textarea-radius` to `--lr-radius-pill` rather than declaring a radius on
+   *  `[part="textarea"]`, so a consumer's own `--lr-textarea-radius` stays the single corner-radius
+   *  knob. Most useful on a one-or-two-row field; a tall multi-line surface with fully rounded ends
+   *  wastes its first and last line's inline space, so this is opt-in rather than tied to `size`. */
+  @property({ type: Boolean, reflect: true }) pill = false;
   /** Renders a character count below the field. With `maxlength` set it counts down the remaining
    *  characters instead of up from zero. */
   @property({ attribute: 'with-count', type: Boolean, reflect: true }) withCount = false;

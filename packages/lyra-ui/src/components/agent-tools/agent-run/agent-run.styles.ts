@@ -27,10 +27,10 @@ export const styles = css`
   }
   /* MUST stay after :host([compact]): both selectors are :host([x]) [part='base'], i.e. equal
      specificity, so source order alone decides which padding/gap wins when a run is both compact
-     and plain. plain is the stronger statement ("no chrome at all"), so it goes last. The built-in
+     and frame="plain". plain is the stronger statement ("no chrome at all"), so it goes last. The built-in
      Cancel/Retry buttons keep their own border/background -- that chrome is theirs, not the card's,
      so a chrome-less run still has a visible interactive affordance. */
-  :host([appearance='plain']) [part='base'] {
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;

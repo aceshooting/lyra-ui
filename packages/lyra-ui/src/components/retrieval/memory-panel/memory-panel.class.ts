@@ -4,7 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraProvenance } from '../provenance-panel/provenance-panel.class.js';
-import type { ConfirmBarTone } from '../../agent-tools/confirm-bar/confirm-bar.class.js';
+import type { ConfirmBarVariant } from '../../agent-tools/confirm-bar/confirm-bar.class.js';
 import '../provenance-panel/provenance-panel.class.js';
 import '../../agent-tools/confirm-bar/confirm-bar.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -405,7 +405,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   private renderItemConfirm(p: ItemPending): TemplateResult {
     return html`
       <lr-confirm-bar
-        tone=${p.kind === 'add' ? ('neutral' as ConfirmBarTone) : ('danger' as ConfirmBarTone)}
+        variant=${p.kind === 'add' ? ('neutral' as ConfirmBarVariant) : ('danger' as ConfirmBarVariant)}
         heading=${this.localize(CONFIRM_HEADING_KEY[p.kind])}
         @keydown=${(e: KeyboardEvent) => this.onConfirmKeyDown(e, () => this.resolveItemDecision(p, false))}
         @lr-approve=${(e: CustomEvent) => {
@@ -495,7 +495,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
       return html`
         <lr-confirm-bar
           part="forget-all-confirm"
-          tone="danger"
+          variant="danger"
           heading=${this.localize('memoryPanelConfirmForgetHeading')}
           @keydown=${(e: KeyboardEvent) =>
             this.onConfirmKeyDown(e, () => this.resolveForgetAllDecision(forgetPending, false))}

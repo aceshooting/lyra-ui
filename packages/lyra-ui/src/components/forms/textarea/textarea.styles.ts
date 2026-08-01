@@ -4,32 +4,24 @@ export const styles = css`
   :host {
     display: block;
     --lr-textarea-max-block-size: none;
-    --lr-textarea-padding: var(--lr-space-s);
-    --lr-textarea-font-size: var(--lr-font-size-md-sm);
+    /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, pulled in ahead of
+       this sheet by textarea.class.ts), so this field's scale and lr-input's are the same scale
+       rather than two copies. The ladder's INLINE gutter is used on all four sides on purpose: its
+       block padding is 0 at the two tightest tiers because a control row's height floor supplies
+       the space there, and a textarea has no floor -- the first line would sit on the border. */
+    --lr-textarea-padding: var(--lr-form-control-padding-inline);
+    --lr-textarea-font-size: var(--lr-form-control-font-size);
+    --lr-textarea-radius: var(--lr-form-control-radius);
     /* Fill/border pair swapped per appearance below; declared here too so a host whose appearance
        attribute has not reflected yet still paints the committed filled-outlined treatment. */
     --lr-textarea-fill: var(--lr-color-surface);
     --lr-textarea-border-color: var(--lr-color-border);
   }
-  :host([size='2xs']) {
-    --lr-textarea-padding: var(--lr-space-2xs);
-    --lr-textarea-font-size: var(--lr-font-size-2xs);
-  }
-  :host([size='xs']) {
-    --lr-textarea-padding: var(--lr-space-2xs);
-    --lr-textarea-font-size: var(--lr-font-size-xs);
-  }
-  :host([size='s']) {
-    --lr-textarea-padding: var(--lr-space-xs);
-    --lr-textarea-font-size: var(--lr-font-size-sm);
-  }
-  :host([size='l']) {
-    --lr-textarea-padding: var(--lr-space-m);
-    --lr-textarea-font-size: var(--lr-font-size-lg);
-  }
-  :host([size='xl']) {
-    --lr-textarea-padding: var(--lr-space-l);
-    --lr-textarea-font-size: var(--lr-font-size-xl);
+  /* Retunes the shared radius knob rather than declaring border-radius on [part='textarea'], so
+     that one consumption point below stays the only place a corner radius is read -- and a
+     consumer's own --lr-textarea-radius override still wins over it. */
+  :host([pill]) {
+    --lr-textarea-radius: var(--lr-radius-pill);
   }
   :host([appearance='filled-outlined']) {
     --lr-textarea-fill: var(--lr-color-surface);
@@ -82,7 +74,7 @@ export const styles = css`
     box-sizing: border-box;
     padding: var(--lr-textarea-padding);
     border: var(--lr-border-width-thin) solid var(--lr-textarea-border-color);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-textarea-radius);
     background: var(--lr-textarea-fill);
     color: var(--lr-color-text);
     font: inherit;

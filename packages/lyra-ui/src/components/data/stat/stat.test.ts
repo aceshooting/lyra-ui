@@ -785,13 +785,13 @@ it('leaves the card rendering untouched when both new axes are left unset (they 
     value="12.4"
     unit="k€"
     caption="Last 30 days"
-    appearance="card"
+    frame="card"
     orientation="vertical"
   ></lr-stat>`)) as LyraStat;
 
-  expect(implicit.appearance).to.equal('card');
+  expect(implicit.frame).to.equal('card');
   expect(implicit.orientation).to.equal('vertical');
-  expect(implicit.getAttribute('appearance')).to.equal('card');
+  expect(implicit.getAttribute('frame')).to.equal('card');
   expect(implicit.getAttribute('orientation')).to.equal('vertical');
 
   // Explicitly restating the defaults must not change a single chrome declaration…
@@ -812,15 +812,15 @@ it('leaves the card rendering untouched when both new axes are left unset (they 
   );
 });
 
-it('drops border, background, padding and the block-size stretch under appearance="plain"', async () => {
+it('drops border, background, padding and the block-size stretch under frame="plain"', async () => {
   const el = (await fixture(html`<lr-stat
-    appearance="plain"
+    frame="plain"
     label="Revenue"
     value="12.4"
     unit="k€"
     caption="Last 30 days"
   ></lr-stat>`)) as LyraStat;
-  expect(el.getAttribute('appearance')).to.equal('plain');
+  expect(el.getAttribute('frame')).to.equal('plain');
 
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const s = getComputedStyle(base);
@@ -838,10 +838,10 @@ it('drops border, background, padding and the block-size stretch under appearanc
   expect(getComputedStyle(base).blockSize).to.not.equal('200px');
 });
 
-it('orders :host([appearance="plain"]) after :host([compact]) so the equal-specificity padding reset wins', () => {
+it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity padding reset wins', () => {
   const css = styles.cssText;
   const compactAt = css.indexOf(":host([compact])");
-  const plainAt = css.indexOf(":host([appearance='plain'])");
+  const plainAt = css.indexOf(":host([frame='plain'])");
   expect(compactAt).to.be.greaterThan(-1);
   expect(plainAt).to.be.greaterThan(-1);
   expect(plainAt).to.be.greaterThan(compactAt);
@@ -850,7 +850,7 @@ it('orders :host([appearance="plain"]) after :host([compact]) so the equal-speci
 it('lets plain win over compact when both are set (equal specificity, source order decides)', async () => {
   const el = (await fixture(html`<lr-stat
     compact
-    appearance="plain"
+    frame="plain"
     label="Revenue"
     value="12.4"
   ></lr-stat>`)) as LyraStat;
@@ -865,11 +865,11 @@ it("gives a linked plain stat a text-underline hover/focus affordance, since it 
   // The card affordance is a border-color shift, which is invisible once `plain` removes the
   // border — a linked plain stat must still look interactive.
   expect(css).to.include(
-    ":host([appearance='plain']) [part='base'][href]:hover [part='value'], :host([appearance='plain']) [part='base'][href]:focus-visible [part='value'] { text-decoration: underline; }",
+    ":host([frame='plain']) [part='base'][href]:hover [part='value'], :host([frame='plain']) [part='base'][href]:focus-visible [part='value'] { text-decoration: underline; }",
   );
   // …and the card's lift shadow is suppressed, since there is no card to lift.
   expect(css).to.include(
-    ":host([appearance='plain']) [part='base'][href]:hover { box-shadow: none; }",
+    ":host([frame='plain']) [part='base'][href]:hover { box-shadow: none; }",
   );
 });
 
@@ -886,12 +886,12 @@ it("wraps the internal [part='base'][href]:hover rule in :where() so a consumer 
 
 it('keeps the focus ring on a linked plain stat (an outline needs no border)', async () => {
   const el = (await fixture(html`<lr-stat
-    appearance="plain"
+    frame="plain"
     label="Memories"
     value="128"
     href="/memories"
   ></lr-stat>`)) as LyraStat;
-  expect(el.appearance).to.equal('plain');
+  expect(el.frame).to.equal('plain');
   const anchor = el.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
   expect(anchor.localName).to.equal('a');
   const css = styles.cssText.replace(/\s+/g, ' ');
@@ -1018,7 +1018,7 @@ it('keeps aria-labelledby resolving to the visible label once a label is set aft
 
 it("drops emphasis's accent edge under plain (it is card chrome) while keeping its brand value tint", async () => {
   const el = (await fixture(html`<lr-stat
-    appearance="plain"
+    frame="plain"
     emphasis
     label="Revenue"
     value="12.4"
@@ -1036,7 +1036,7 @@ it("drops emphasis's accent edge under plain (it is card chrome) while keeping i
 
 it('is accessible in the populated plain/horizontal state', async () => {
   const el = (await fixture(html`<lr-stat
-    appearance="plain"
+    frame="plain"
     orientation="horizontal"
     label="Checks"
     value="87"
@@ -1081,4 +1081,68 @@ it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wi
   } finally {
     proto.willUpdate = original;
   }
+});
+
+it('tints the headline value with the brand tone under variant="brand"', async () => {
+  const neutral = (await fixture(html`<lr-stat label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
+  const brand = (await fixture(
+    html`<lr-stat variant="brand" label="Revenue" value="12.4"></lr-stat>`,
+  )) as LyraStat;
+  // `emphasis` on a neutral stat already paints [part='value'] with --lr-color-brand, so it pins
+  // the new variant to the same *resolved* token rather than to a literal colour string that a
+  // palette regeneration would invalidate.
+  const emphasized = (await fixture(
+    html`<lr-stat emphasis label="Revenue" value="12.4"></lr-stat>`,
+  )) as LyraStat;
+  const valueColor = (el: LyraStat) =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).color;
+
+  expect(brand.variant).to.equal('brand');
+  expect(brand.getAttribute('variant')).to.equal('brand');
+  expect(valueColor(brand)).to.not.equal(valueColor(neutral));
+  expect(valueColor(brand)).to.equal(valueColor(emphasized));
+});
+
+it('lets --lr-stat-value-brand-color retint just the brand headline, like its success/warning/danger siblings', async () => {
+  const el = (await fixture(
+    html`<lr-stat variant="brand" label="Revenue" value="12.4"></lr-stat>`,
+  )) as LyraStat;
+  el.style.setProperty('--lr-stat-value-brand-color', 'rgb(1, 2, 3)');
+  await el.updateComplete;
+  expect(
+    getComputedStyle(el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).color,
+  ).to.equal('rgb(1, 2, 3)');
+});
+
+it('keeps card chrome under frame="card" and drops it under frame="plain"', async () => {
+  const card = (await fixture(
+    html`<lr-stat frame="card" label="Revenue" value="12.4"></lr-stat>`,
+  )) as LyraStat;
+  const plain = (await fixture(
+    html`<lr-stat frame="plain" label="Revenue" value="12.4"></lr-stat>`,
+  )) as LyraStat;
+
+  expect(card.frame).to.equal('card');
+  expect(plain.frame).to.equal('plain');
+  expect(plain.getAttribute('frame')).to.equal('plain');
+
+  const cardChrome = baseChrome(card);
+  expect(cardChrome.borderTopWidth).to.equal('1px');
+  expect(cardChrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+
+  const plainChrome = baseChrome(plain);
+  expect(plainChrome.borderTopWidth).to.equal('0px');
+  expect(plainChrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(plainChrome.paddingTop).to.equal('0px');
+  expect(plainChrome.borderTopLeftRadius).to.equal('0px');
+});
+
+it('no longer answers to the pre-8.0.0 appearance attribute — frame replaced it outright', async () => {
+  const legacy = (await fixture(
+    html`<lr-stat appearance="plain" label="Revenue" value="12.4"></lr-stat>`,
+  )) as LyraStat;
+  expect(legacy.frame).to.equal('card');
+  const chrome = baseChrome(legacy);
+  expect(chrome.borderTopWidth).to.equal('1px');
+  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });

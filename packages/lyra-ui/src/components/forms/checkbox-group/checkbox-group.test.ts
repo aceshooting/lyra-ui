@@ -637,3 +637,63 @@ describe('ElementInternals fallback', () => {
     });
   });
 });
+
+describe('size', () => {
+  async function group(size: string): Promise<LyraCheckboxGroup> {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="pick" label="Pick some" size=${size}>
+        <lr-checkbox value="a">Alpha</lr-checkbox>
+        <lr-checkbox value="b">Bravo</lr-checkbox>
+        <lr-checkbox value="c">Charlie</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('defaults to the "m" tier and reflects it', async () => {
+    const el = (await fixture(html`<lr-checkbox-group name="pick" label="Pick"></lr-checkbox-group>`)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+  });
+
+  it('grows the rendered group box from size="s" to size="l"', async () => {
+    const small = await group('s');
+    const large = await group('l');
+    const smallOptions = (small.shadowRoot!.querySelector('[part="options"]') as HTMLElement).getBoundingClientRect();
+    const largeOptions = (large.shadowRoot!.querySelector('[part="options"]') as HTMLElement).getBoundingClientRect();
+    expect(largeOptions.height).to.be.greaterThan(smallOptions.height);
+    expect(large.getBoundingClientRect().height).to.be.greaterThan(small.getBoundingClientRect().height);
+  });
+
+  it('renders "small"/"large" at the same geometry as "s"/"l"', async () => {
+    const s = await group('s');
+    const small = await group('small');
+    const l = await group('l');
+    const large = await group('large');
+    expect(small.getBoundingClientRect().height).to.be.closeTo(s.getBoundingClientRect().height, 0.5);
+    expect(large.getBoundingClientRect().height).to.be.closeTo(l.getBoundingClientRect().height, 0.5);
+  });
+
+  it('leaves an explicitly-sized option alone', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="pick" label="Pick some" size="l">
+        <lr-checkbox value="a" size="s">Alpha</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    const box = el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    const standalone = (await fixture(html`<lr-checkbox size="s">Alpha</lr-checkbox>`)) as HTMLElement;
+    const standaloneBox = standalone.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    expect(box.getBoundingClientRect().width).to.be.closeTo(
+      standaloneBox.getBoundingClientRect().width,
+      0.5,
+    );
+  });
+
+  it('is accessible at a non-default tier', async () => {
+    const el = await group('l');
+    await expect(el).to.be.accessible();
+  });
+});

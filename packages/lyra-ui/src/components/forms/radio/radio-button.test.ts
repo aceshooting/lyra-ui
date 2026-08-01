@@ -94,3 +94,45 @@ it('is not a keyboard stop while disabled', async () => {
   expect(base.getAttribute('tabindex')).to.equal('-1');
   expect(base.getAttribute('part')!.split(/\s+/)).to.include('disabled');
 });
+
+describe('size and pill', () => {
+  async function baseOf(markup: unknown): Promise<HTMLElement> {
+    const el = (await fixture(markup as never)) as HTMLElement & { updateComplete: Promise<unknown> };
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  }
+
+  it('grows the rendered button from size="s" to size="l"', async () => {
+    const small = (await baseOf(html`<lr-radio-button size="s" value="a">Alpha</lr-radio-button>`)).getBoundingClientRect();
+    const large = (await baseOf(html`<lr-radio-button size="l" value="a">Alpha</lr-radio-button>`)).getBoundingClientRect();
+    expect(large.height).to.be.greaterThan(small.height);
+    expect(large.width).to.be.greaterThan(small.width);
+  });
+
+  it('accepts the Web Awesome size spellings', async () => {
+    const s = (await baseOf(html`<lr-radio-button size="s" value="a">Alpha</lr-radio-button>`)).getBoundingClientRect();
+    const small = (await baseOf(html`<lr-radio-button size="small" value="a">Alpha</lr-radio-button>`)).getBoundingClientRect();
+    expect(small.height).to.be.closeTo(s.height, 0.5);
+  });
+
+  it('keeps every tier at or above the WCAG 2.5.8 24px target height', async () => {
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+      const base = await baseOf(html`<lr-radio-button size=${size} value="a">A</lr-radio-button>`);
+      expect(base.getBoundingClientRect().height, `${size} height`).to.be.at.least(24);
+    }
+  });
+
+  it('rounds the outer corners into a pill when pill is set', async () => {
+    const plain = await baseOf(html`<lr-radio-button value="a">Alpha</lr-radio-button>`);
+    const pill = await baseOf(html`<lr-radio-button pill value="a">Alpha</lr-radio-button>`);
+    const plainRadius = Number.parseFloat(getComputedStyle(plain).borderStartStartRadius);
+    const pillRadius = Number.parseFloat(getComputedStyle(pill).borderStartStartRadius);
+    expect(pillRadius).to.be.greaterThan(plainRadius);
+    expect(pillRadius).to.be.at.least(pill.getBoundingClientRect().height / 2);
+  });
+
+  it('is accessible as a pill at a non-default tier', async () => {
+    const el = await fixture(html`<lr-radio-button pill size="l" value="a">Alpha</lr-radio-button>`);
+    await expect(el).to.be.accessible();
+  });
+});

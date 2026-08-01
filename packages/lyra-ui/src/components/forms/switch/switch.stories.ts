@@ -95,3 +95,25 @@ export const NativeFormEvents: Story = {
     <p id="switch-native-log" style="font-family: monospace; margin-top: 0.5rem;">form saw:</p>
   `,
 };
+
+export const Sizes: StoryObj = {
+  name: 'Size ladder',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`size` is the library\'s shared ladder, so a `size` set here matches an `<lr-input>`, `<lr-select>` or `<lr-button>` of the same `size` in the same row. Both spellings of every tier are accepted — `s`/`m`/`l` and Web Awesome\'s `small`/`medium`/`large` — so a migration is a tag rename with no attribute rewrite.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); justify-items: start;">
+      <lr-switch size="2xs">Size 2xs</lr-switch>
+      <lr-switch size="xs">Size xs</lr-switch>
+      <lr-switch size="s">Size s</lr-switch>
+      <lr-switch size="m">Size m</lr-switch>
+      <lr-switch size="l">Size l</lr-switch>
+      <lr-switch size="xl">Size xl</lr-switch>
+    </div>
+  `,
+};

@@ -4,8 +4,12 @@ export const styles = css`
   :host {
     display: block;
     --lr-locale-picker-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
-    --lr-locale-picker-trigger-min-height: var(--lr-size-2-5rem);
-    --lr-locale-picker-font-size: var(--lr-font-size-md);
+    /* Height and text size come from the ONE shared form-control ladder (internal/sizes.styles.ts)
+       rather than a private copy of the same six values. The ladder matches both spellings of every
+       tier in one selector list, so size="small" and size="s" resolve identically here with no
+       per-component alias rules. */
+    --lr-locale-picker-trigger-min-height: var(--lr-form-control-height);
+    --lr-locale-picker-font-size: var(--lr-form-control-font-size);
     --lr-locale-picker-expand-size: var(--lr-size-1-75rem);
     --lr-locale-picker-gap: var(--lr-space-xs);
     --lr-locale-picker-radius: var(--lr-radius);
@@ -14,33 +18,30 @@ export const styles = css`
        var() fallback on [part='trigger'] below, so leaving it genuinely undeclared keeps that
        fallback arm live. */
   }
+  /* What remains per tier is this component's OWN geometry -- trigger density and the decorative
+     expand glyph -- which is not a form-control height/text ladder and so is not part of the shared
+     one. Each tier matches both spellings for the same reason sizes.styles.ts does: the shared
+     ladder accepts size="small", and a trigger whose density silently ignored it would be worse than
+     one that never accepted it. */
   :host([size='2xs']) {
     --lr-locale-picker-trigger-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
-    --lr-locale-picker-trigger-min-height: var(--lr-size-1-25rem);
-    --lr-locale-picker-font-size: var(--lr-font-size-2xs);
     --lr-locale-picker-expand-size: var(--lr-size-1rem);
   }
   :host([size='xs']) {
     --lr-locale-picker-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    --lr-locale-picker-trigger-min-height: var(--lr-size-1-5rem);
-    --lr-locale-picker-font-size: var(--lr-font-size-xs);
     --lr-locale-picker-expand-size: var(--lr-size-1rem);
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-locale-picker-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
-    --lr-locale-picker-trigger-min-height: var(--lr-size-1-875rem);
-    --lr-locale-picker-font-size: var(--lr-font-size-sm);
     --lr-locale-picker-expand-size: var(--lr-size-1-25rem);
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-locale-picker-trigger-padding: var(--lr-space-s) var(--lr-space-m);
-    --lr-locale-picker-trigger-min-height: var(--lr-size-3rem);
-    --lr-locale-picker-font-size: var(--lr-font-size-lg);
   }
   :host([size='xl']) {
     --lr-locale-picker-trigger-padding: var(--lr-space-m) var(--lr-space-l);
-    --lr-locale-picker-trigger-min-height: var(--lr-size-3-5rem);
-    --lr-locale-picker-font-size: var(--lr-font-size-xl);
   }
 
   [part='form-control-label'] {

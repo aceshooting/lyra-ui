@@ -8,16 +8,22 @@ export const styles = css`
     --lr-date-picker-header-gap: var(--lr-space-s);
     --lr-date-picker-radius: var(--lr-radius);
   }
+  /* A calendar day cell is a square in a 7-column grid, not a form-control row, so this is the
+     component's own ladder rather than the shared --lr-form-control-height one (whose 2xs/xs steps
+     would put a tappable cell under 24px). It still matches both spellings of every tier, the same
+     way internal/sizes.styles.ts does, so size="small" is honoured here too. */
   :host([size='2xs']) {
     --lr-cell-size: var(--lr-size-1-5rem);
   }
   :host([size='xs']) {
     --lr-cell-size: var(--lr-size-1-75rem);
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-cell-size: var(--lr-size-2rem);
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-cell-size: var(--lr-size-2-5rem);
   }
   :host([size='xl']) {

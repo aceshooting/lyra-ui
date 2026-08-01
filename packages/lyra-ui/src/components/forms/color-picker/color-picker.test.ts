@@ -165,6 +165,30 @@ it('defaults to size "m" and scales the trigger across every tier', async () => 
   }
 });
 
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  for (const [alias, step] of pairs) {
+    const aliasEl = (await fixture(
+      html`<lr-color-picker size=${alias} aria-label="Color"></lr-color-picker>`,
+    )) as LyraColorPicker;
+    const stepEl = (await fixture(
+      html`<lr-color-picker size=${step} aria-label="Color"></lr-color-picker>`,
+    )) as LyraColorPicker;
+    await aliasEl.updateComplete;
+    await stepEl.updateComplete;
+    expect(getComputedStyle(part(aliasEl, 'trigger')).blockSize, `block-size for ${alias}`).to.equal(
+      getComputedStyle(part(stepEl, 'trigger')).blockSize,
+    );
+    expect(getComputedStyle(part(aliasEl, 'trigger')).inlineSize, `inline-size for ${alias}`).to.equal(
+      getComputedStyle(part(stepEl, 'trigger')).inlineSize,
+    );
+  }
+});
+
 it('gives every interactive part its own hover and focus-visible treatment', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   for (const name of ['trigger', 'swatch', 'format-button', 'eyedropper-button']) {

@@ -799,3 +799,36 @@ it('wraps a long page list into a narrow allocation instead of overflowing it', 
   expect(el.shadowRoot!.querySelectorAll('[part~="page"]').length).to.be.greaterThan(4);
   expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
 });
+
+describe('the shared size ladder', () => {
+  const baseFontSize = async (size: string): Promise<string> => {
+    const el = await pagination(
+      html`<lr-pagination size=${size} total="95" page-size="10"></lr-pagination>`,
+    );
+    return getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).fontSize;
+  };
+
+  it('accepts the Web Awesome / Shoelace spellings as exact synonyms of s/m/l', async () => {
+    expect(await baseFontSize('s')).to.equal(await baseFontSize('small'));
+    expect(await baseFontSize('m')).to.equal(await baseFontSize('medium'));
+    expect(await baseFontSize('l')).to.equal(await baseFontSize('large'));
+  });
+
+  it('carries the full six-step ladder, 2xs included, with every step distinct from the default', async () => {
+    const medium = await baseFontSize('m');
+    for (const size of ['2xs', 'xs', 's', 'l', 'xl'] as const) {
+      expect(await baseFontSize(size), size).to.not.equal(medium);
+    }
+  });
+
+  it('keeps every control at the shared hit-area floor even at the smallest new tier', async () => {
+    const el = await pagination(
+      html`<lr-pagination size="2xs" total="95" page-size="10" with-edges></lr-pagination>`,
+    );
+    for (const part of ['first-button', 'previous-button', 'next-button', 'last-button']) {
+      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      expect(button.getBoundingClientRect().width, part).to.be.at.least(40);
+      expect(button.getBoundingClientRect().height, part).to.be.at.least(40);
+    }
+  });
+});

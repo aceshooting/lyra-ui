@@ -463,6 +463,30 @@ describe('lr-swatch-picker', () => {
     }
   });
 
+  it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+      ['small', 's'],
+      ['medium', 'm'],
+      ['large', 'l'],
+    ];
+    const swatchOf = (el: Element) => el.shadowRoot!.querySelector('[part="swatch"]') as HTMLElement;
+    const fillOf = (el: Element) => el.shadowRoot!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    for (const [alias, step] of pairs) {
+      const aliasEl = await fixture(
+        html`<lr-swatch-picker size=${alias} .options=${options()}></lr-swatch-picker>`,
+      );
+      const stepEl = await fixture(
+        html`<lr-swatch-picker size=${step} .options=${options()}></lr-swatch-picker>`,
+      );
+      expect(getComputedStyle(swatchOf(aliasEl)).minBlockSize, `hit size for ${alias}`).to.equal(
+        getComputedStyle(swatchOf(stepEl)).minBlockSize,
+      );
+      expect(getComputedStyle(fillOf(aliasEl)).blockSize, `fill size for ${alias}`).to.equal(
+        getComputedStyle(fillOf(stepEl)).blockSize,
+      );
+    }
+  });
+
   it('defaults to size "m" and reflects a size attribute', async () => {
     const defaultEl = (await fixture(
       html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`,

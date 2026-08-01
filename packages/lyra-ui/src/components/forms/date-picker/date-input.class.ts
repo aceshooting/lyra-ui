@@ -21,6 +21,8 @@ import {
   normalizeWeekdayFormat,
   type WeekdayFormat,
 } from './calendar-core.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './date-input.styles.js';
 import { LyraDatePicker } from './date-picker.class.js';
 import './date-picker.class.js';
@@ -61,7 +63,9 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
 };
 
 export type LyraDateInputSelectionDirection = 'forward' | 'backward' | 'none';
-export type LyraDateInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraDateInputSize = LyraSizeStep;
 
 export interface LyraDateInputEventMap {
   'lr-show': CustomEvent<undefined>;
@@ -114,12 +118,14 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @cssprop [--lr-date-input-font-size=inherit] - Font size of the text input, scaled by `size`.
  * @cssprop [--lr-date-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @cssprop [--lr-date-input-gap=var(--lr-space-xs)] - Gap between input-row children.
- * @cssprop [--lr-date-input-radius=var(--lr-radius)] - Input-row corner radius.
+ * @cssprop [--lr-date-input-radius=var(--lr-radius)] - Input-row corner radius. The `pill`
+ *   attribute swaps it for `--lr-radius-pill`.
  * @cssprop [--lr-date-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
- * @cssprop [--lr-date-input-control-min-height=var(--lr-size-2-5rem)] - Minimum block size of the
- *   input row, scaled by `size` to mirror `lr-input`'s own min-height scale. Each default sits
- *   below the row's transitively-pinned height, so it is dead until a consumer raises it -- the
- *   unset render is unchanged.
+ * @cssprop [--lr-date-input-control-min-height=var(--lr-form-control-height)] - Minimum block size
+ *   of the input row, read from the shared form-control height ladder so retuning
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together. Each
+ *   default sits below the row's transitively-pinned height, so it is dead until a consumer raises
+ *   it -- the unset render is unchanged.
  * @cssprop --lr-date-input-control-height - Exact block size of the input row. Undeclared by
  *   default, so the row grows to fit its content (floored by `--lr-date-input-control-min-height`).
  *   Set it to pin a fixed height; the calendar toggle keeps its own 24x24 touch target even when
@@ -132,7 +138,7 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   calendar toggle — so consumer content never sits outboard of the calendar button.
  */
 export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     mode: { noAccessor: true },
@@ -145,9 +151,15 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
-  /** Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`.
-   *  `'2xs'` is the tightest tier, for dense toolbar-embedded fields. */
-  @property({ reflect: true }) size: LyraDateInputSize = 'm';
+  /** Visual size — the library-wide `2xs`–`xl` ladder shared with
+   *  `lr-input`/`lr-select`/`lr-combobox`. `'2xs'` is the tightest tier, for dense
+   *  toolbar-embedded fields. The Web Awesome / Shoelace spellings `small`/`medium`/`large` are
+   *  accepted for `s`/`m`/`l`, so a migration is a tag rename with no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Rounds the input row's corners to a full pill, mirroring `lr-input`'s own `pill`. It is a
+   *  single override of `--lr-date-input-radius`, so a consumer setting that property directly
+   *  still wins for a bespoke shape. */
+  @property({ type: Boolean, reflect: true }) pill = false;
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';

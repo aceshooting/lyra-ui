@@ -230,6 +230,45 @@ it('applies distinct visual sizing per the `size` property', async () => {
   expect(xlPadding, 'xl padding should render larger than xs').to.be.greaterThan(xsPadding);
 });
 
+it('covers the whole shared six-step ladder, including the 2xs step the local union used to omit', async () => {
+  const measured: { font: number; padding: number }[] = [];
+  for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+    const el = (await fixture(
+      html`<lr-toast-item size=${size} duration="0">a</lr-toast-item>`,
+    )) as LyraToastItem;
+    const box = getComputedStyle(el.shadowRoot!.querySelector('[part="toast-item"]') as HTMLElement);
+    measured.push({ font: parseFloat(box.fontSize), padding: parseFloat(box.paddingBlockStart) });
+  }
+  for (let i = 1; i < measured.length; i += 1) {
+    expect(measured[i]!.font, `font tier ${i}`).to.be.greaterThan(measured[i - 1]!.font);
+    expect(measured[i]!.padding, `padding tier ${i}`).to.be.at.least(measured[i - 1]!.padding);
+  }
+});
+
+it('drives the accent bar from the shared semantic grid for every non-neutral variant', async () => {
+  // The four per-variant blocks are gone; the accent now resolves through the shared `variants`
+  // sheet's generic slots. Assert the rendered colours, which a slot that never resolved would
+  // leave equal to the neutral border.
+  const neutral = (await fixture(
+    html`<lr-toast-item duration="0">a</lr-toast-item>`,
+  )) as LyraToastItem;
+  const neutralAccent = getComputedStyle(
+    neutral.shadowRoot!.querySelector('[part="accent"]') as HTMLElement,
+  ).backgroundColor;
+  const seen = new Set<string>();
+  for (const variant of ['brand', 'success', 'warning', 'danger'] as const) {
+    const el = (await fixture(
+      html`<lr-toast-item variant=${variant} duration="0">a</lr-toast-item>`,
+    )) as LyraToastItem;
+    const accent = getComputedStyle(
+      el.shadowRoot!.querySelector('[part="accent"]') as HTMLElement,
+    ).backgroundColor;
+    expect(accent, `${variant} accent must leave the neutral default`).to.not.equal(neutralAccent);
+    seen.add(accent);
+  }
+  expect(seen.size, 'all four variants must resolve to distinct accents').to.equal(4);
+});
+
 it('updates the ARIA role live when `variant` changes after creation', async () => {
   const el = (await fixture(
     html`<lr-toast-item variant="neutral" duration="0">progress</lr-toast-item>`,

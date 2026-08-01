@@ -7,20 +7,26 @@ import {
   syncAriaControlsElements,
   syncAriaDescribedByElements,
 } from '../../../internal/aria-controls.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import { variants } from '../../../internal/variants.styles.js';
+import type {
+  LyraAppearance,
+  LyraSize,
+  LyraSizeStep,
+  LyraVariant,
+} from '../../../internal/variants.js';
 import { styles } from './button.styles.js';
 
-export type ButtonVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+/** Alias of the library's one semantic-tone vocabulary, kept as an exported name so existing
+ *  imports of `ButtonVariant` keep resolving while `internal/variants.ts` holds the only
+ *  definition. */
+export type ButtonVariant = LyraVariant;
 /** The shared appearance vocabulary (`accent`/`filled`/`outlined`/`filled-outlined`/`plain`) plus
  *  this component's two own tiers, `link` and `quiet`. */
-export type ButtonAppearance =
-  | 'accent'
-  | 'filled'
-  | 'outlined'
-  | 'filled-outlined'
-  | 'plain'
-  | 'link'
-  | 'quiet';
-export type ButtonSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+export type ButtonAppearance = LyraAppearance | 'link' | 'quiet';
+/** Alias of the canonical six-step size ladder. The `size` property itself accepts
+ *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
+export type ButtonSize = LyraSizeStep;
 export type ButtonType = 'button' | 'submit' | 'reset';
 /** Native `formenctype` vocabulary, applied to the submission this button triggers. */
 export type ButtonFormEnctype =
@@ -88,18 +94,23 @@ export type ButtonFormMethod = 'get' | 'post' | 'dialog';
  * @cssprop [--lr-button-active-scale=0.9875] - `transform: scale()` factor applied while a
  * non-disabled button is pressed.
  * @cssprop [--lr-button-spinner-duration=var(--lr-transition-ambient)] - Timing of the `loading` spinner.
- * @cssprop [--lr-button-accent=var(--lr-color-text)] - Text/glyph color for the chrome-less
- * appearances (`outlined`, `plain`, `link`). Swapped per `variant` to that variant's semantic color.
- * @cssprop [--lr-button-fill=var(--lr-color-surface)] - Background of `appearance="filled"`.
- * Swapped per `variant` to that variant's semantic color.
- * @cssprop [--lr-button-on-fill=var(--lr-color-text)] - Text color on top of `--lr-button-fill`.
- * Swapped per `variant` to that variant's `on-*` color.
- * @cssprop [--lr-button-accent-fill=var(--lr-color-neutral)] - Background of
- * `appearance="accent"` (and its border color). Swapped per `variant` to that variant's semantic color.
- * @cssprop [--lr-button-accent-on-fill=var(--lr-color-on-neutral)] - Text color on top of
- * `--lr-button-accent-fill`. Swapped per `variant` to that variant's `on-*` color.
- * @cssprop [--lr-button-border=var(--lr-color-border)] - Border color of the internal button.
- * Swapped per `variant` to that variant's semantic color.
+ * @cssprop [--lr-button-accent=var(--lr-color-fill-loud)] - Text/glyph color for the chrome-less
+ * appearances (`outlined`, `plain`, `link`), i.e. the active `variant`'s loud fill used as a
+ * foreground. `variant="neutral"` is the one exception: its loud fill is a mid grey picked to carry
+ * light text, so borrowing it as text on the page surface would wash out every plain and link
+ * button — neutral keeps `--lr-color-text`.
+ * @cssprop [--lr-button-fill=var(--lr-color-fill-quiet)] - Background of `appearance="filled"`:
+ * the active `variant`'s quiet tint, i.e. a secondary-action fill that is visibly a fill rather
+ * than the page surface. Follows `variant` through the shared semantic grid.
+ * @cssprop [--lr-button-on-fill=var(--lr-color-on-quiet)] - Text color on top of
+ * `--lr-button-fill`, the grid's guaranteed-legible foreground for that tint.
+ * @cssprop [--lr-button-accent-fill=var(--lr-color-fill-loud)] - Background of
+ * `appearance="accent"` (and its border color): the active `variant`'s loud fill, the one primary
+ * action in a view.
+ * @cssprop [--lr-button-accent-on-fill=var(--lr-color-on-loud)] - Text color on top of
+ * `--lr-button-accent-fill`, the grid's guaranteed-legible foreground for that fill.
+ * @cssprop [--lr-button-border=var(--lr-color-border-normal)] - Border color of the internal
+ * button, from the active `variant`'s row of the shared semantic grid.
  * @cssprop [--lr-button-outlined-border=var(--lr-color-border-strong)] - Border color of
  * `appearance="outlined"` and `appearance="filled-outlined"`, which overrides `--lr-button-border`.
  * @cssprop [--lr-button-outlined-fill=transparent] - Background of `appearance="outlined"`.
@@ -111,39 +122,41 @@ export type ButtonFormMethod = 'get' | 'post' | 'dialog';
  * `appearance="quiet"`.
  * @cssprop [--lr-button-quiet-text=var(--lr-color-text-quiet)] - Text color of
  * `appearance="quiet"`.
- * @cssprop [--lr-button-size-2xs=var(--lr-size-1-25rem)] - `min-block-size` at `size="2xs"`.
- * @cssprop [--lr-button-size-xs=var(--lr-size-1-5rem)] - `min-block-size` at `size="xs"`.
- * @cssprop [--lr-button-size-s=var(--lr-size-1-875rem)] - `min-block-size` at `size="s"`. Matches
- * `lr-input`/`lr-select`/`lr-combobox`'s own `size="s"` control height.
- * @cssprop [--lr-button-size-m=var(--lr-size-2-5rem)] - `min-block-size` at `size="m"`. Matches
- * `lr-input`/`lr-select`/`lr-combobox`'s own default control height, so a default-size button sitting
- * next to a default-size input/select/combobox in the same row lines up.
- * @cssprop [--lr-button-size-l=var(--lr-size-3rem)] - `min-block-size` at `size="l"`. Matches
- * `lr-input`/`lr-select`/`lr-combobox`'s own `size="l"` control height.
- * @cssprop [--lr-button-size-xl=var(--lr-size-3-5rem)] - `min-block-size` at `size="xl"`. Matches
- * `lr-input`/`lr-select`/`lr-combobox`'s own `size="xl"` control height.
- * @cssprop [--lr-button-padding-block=var(--lr-space-xs)] - Block padding of the internal button,
- * re-assigned per `size` tier (the default is the `m` tier's value). Override it to retune a tier
- * without a `::part(base)` rule; `appearance="link"` ignores it (it renders with zero padding).
- * @cssprop [--lr-button-padding-inline=var(--lr-space-m)] - Inline padding of the internal button,
- * re-assigned per `size` tier (the default is the `m` tier's value). `appearance="link"` ignores it.
- * @cssprop [--lr-button-font-size=var(--lr-font-size-m)] - Font size of the internal button,
- * re-assigned per `size` tier (the default is the `m` tier's value). `appearance="link"` ignores it
- * and inherits the ambient font instead.
- * @cssprop [--lr-button-min-height=var(--lr-button-size-m)] - The active tier's `min-block-size`
- * floor. Re-assigned per `size` tier to that tier's own `--lr-button-size-*` token, and used as the
- * fallback when `--lr-button-height` is unset.
+ * @cssprop [--lr-button-size-2xs=var(--lr-form-control-height-2xs)] - `min-block-size` at
+ * `size="2xs"`. Since 8.0.0 the whole scale comes from the shared form-control ladder
+ * (`internal/sizes.styles.ts`), so a button is the same height as an input, select, combobox or
+ * date input of the same tier by construction rather than by two lists agreeing.
+ * @cssprop [--lr-button-size-xs=var(--lr-form-control-height-xs)] - `min-block-size` at `size="xs"`.
+ * @cssprop [--lr-button-size-s=var(--lr-form-control-height-s)] - `min-block-size` at `size="s"`
+ * (and at the `size="small"` spelling).
+ * @cssprop [--lr-button-size-m=var(--lr-form-control-height-m)] - `min-block-size` at `size="m"`
+ * (and at `size="medium"`), the default tier.
+ * @cssprop [--lr-button-size-l=var(--lr-form-control-height-l)] - `min-block-size` at `size="l"`
+ * (and at `size="large"`).
+ * @cssprop [--lr-button-size-xl=var(--lr-form-control-height-xl)] - `min-block-size` at `size="xl"`.
+ * @cssprop [--lr-button-padding-block=var(--lr-form-control-padding-block)] - Block padding of the
+ * internal button, taken from the active `size` tier of the shared ladder. Override it to retune a
+ * tier without a `::part(base)` rule; `appearance="link"` ignores it (it renders with zero padding).
+ * @cssprop [--lr-button-padding-inline=var(--lr-form-control-padding-inline)] - Inline padding of
+ * the internal button, from the active `size` tier. `appearance="link"` ignores it.
+ * @cssprop [--lr-button-font-size=var(--lr-form-control-font-size)] - Font size of the internal
+ * button, from the active `size` tier. `appearance="link"` ignores it and inherits the ambient font
+ * instead.
+ * @cssprop [--lr-button-min-height=var(--lr-form-control-height)] - The active tier's
+ * `min-block-size` floor, resolved through that tier's own `--lr-button-size-*` token, and used as
+ * the fallback when `--lr-button-height` is unset.
  * @cssprop --lr-button-height - Exact height of the internal button. **Undeclared by default** — so
  * the button keeps the active tier's `min-block-size` floor and an `auto` height, exactly as
  * before. Set it (e.g. to pin the button to a fixed toolbar row) to both floor *and* cap the
  * height. Never declare it as `auto`: a declared value wins over the `var()` fallback arm and would
  * make every tier's floor dead code. `appearance="link"` ignores it.
- * @cssprop [--lr-button-gap=var(--lr-space-2xs)] - Gap between the icon/label and any slotted
- * content in the internal button. Unlike the size knobs above it does not vary by `size` tier.
- * Override it to retune without a `::part(base)` rule.
- * @cssprop [--lr-button-radius=var(--lr-radius)] - Corner radius of the internal button. Does not
- * vary by `size` tier. `appearance="link"` ignores it (it renders with zero radius). `pill`
- * re-assigns it to `--lr-radius-pill`.
+ * @cssprop [--lr-button-gap=var(--lr-form-control-gap)] - Gap between the icon/label and any
+ * slotted content in the internal button. Constant across the ladder's tiers. Override it to retune
+ * without a `::part(base)` rule.
+ * @cssprop [--lr-button-radius=var(--lr-form-control-radius)] - Corner radius of the internal
+ * button, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller
+ * radius, since a 6px corner on a 20px-tall control reads as a lozenge). `appearance="link"`
+ * ignores it (it renders with zero radius). `pill` re-assigns it to `--lr-radius-pill`.
  * @cssprop [--lr-button-caret-size=var(--lr-size-0-75em)] - Font size of the `with-caret` chevron,
  * i.e. its rendered glyph box. Relative to the button's own font size, so it follows every `size`
  * tier without a per-tier rule.
@@ -152,7 +165,11 @@ export type ButtonFormMethod = 'get' | 'post' | 'dialog';
  * an elevated/floating action button) without a `::part(base)` rule.
  */
 export class LyraButton extends LyraElement {
-  static override styles = [LyraElement.styles, styles];
+  // `sizes` supplies the one form-control ladder (both the `s`/`m`/`l` and the `small`/`medium`/
+  // `large` spellings of every tier); `variants` re-points the nine generic colour slots at the
+  // active `variant`'s row of the semantic grid. Between them this component needs no per-tier and
+  // no per-variant block of its own.
+  static override styles = [LyraElement.styles, sizes, variants, styles];
   // A button is form-associated so it is discoverable through form.elements. The generic
   // FormAssociated mixin is intentionally not used: action buttons do not have its value,
   // name, or required semantics. `disabled` is still hardened the same way the mixin-based
@@ -233,14 +250,17 @@ export class LyraButton extends LyraElement {
   @property({ attribute: 'aria-controls' }) private triggerControls: string | null = null;
   @property({ attribute: 'aria-describedby' }) private triggerDescribedBy: string | null = null;
 
-  /** Tone vocabulary shared with `<lr-chip>`/`<lr-avatar>`'s own `tone` property, named
-   *  `variant` here (not `tone`) to keep the component's semantic tone vocabulary consistent. */
-  @property({ reflect: true }) variant: ButtonVariant = 'neutral';
-  /** `'filled'` (the default) reads `--lr-button-fill`, which for `variant="neutral"` is the
-   *  ambient `--lr-color-surface` -- matching this component's own container, by design, for a
-   *  low-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every
-   *  variant, including `neutral`. `'filled-outlined'` is `'filled'` plus `'outlined'`'s border
-   *  color, for a filled button that still has to read against a same-toned surface.
+  /** Semantic tone, from the library's one `variant` vocabulary — the same five values every other
+   *  `variant` in the library takes. Selects which row of the semantic colour grid every fill,
+   *  border and foreground token below resolves against. */
+  @property({ reflect: true }) variant: LyraVariant = 'neutral';
+  /** `'accent'` (the default, matching the upstream default) is the loud tier: the active
+   *  `variant`'s solid fill with its guaranteed-legible foreground, for the one primary action in a
+   *  view. `'filled'` is the same tone one emphasis step down — a quiet tint, for a secondary
+   *  action; it is deliberately a real fill rather than the page surface, so the two tiers never
+   *  paint the same button. `'outlined'` is a border with no fill, `'plain'` neither.
+   *  `'filled-outlined'` is `'filled'` plus `'outlined'`'s border color, for a filled button that
+   *  still has to read against a same-toned surface.
    *  `'link'` is zero-chrome inline text — no padding, border, or
    *  min-height, underlined, colored from `--lr-button-accent` (the same token `'plain'` uses)
    *  and inheriting the surrounding font — for a text link that flows inline in a sentence rather
@@ -248,11 +268,14 @@ export class LyraButton extends LyraElement {
    *  toolbar-style icon+label action — its border/text read fixed `--lr-color-border`/`--lr-color-text-quiet`
    *  tokens regardless of `variant`, unlike `'outlined'`'s variant-tinted text, so it stays
    *  visually muted at rest. */
-  @property({ reflect: true }) appearance: ButtonAppearance = 'filled';
-  /** Visual size, `'2xs'`–`'xl'`. `'2xs'` is the tightest tier — a sub-`xs` size for dense,
-   *  toolbar-embedded controls (e.g. beside a native `<input type="search">` in a compact dialog
-   *  header). `'m'` (the default) is the standard size. */
-  @property({ reflect: true }) size: ButtonSize = 'm';
+  @property({ reflect: true }) appearance: ButtonAppearance = 'accent';
+  /** Visual size on the library's one control ladder. Accepts both the canonical `'2xs'`–`'xl'`
+   *  steps and Web Awesome's/Shoelace's `'small'`/`'medium'`/`'large'` spellings of `s`/`m`/`l`, so
+   *  a migration is a tag rename with no attribute rewrite; the two spellings render identically.
+   *  `'2xs'` is the tightest tier — a sub-`xs` size for dense, toolbar-embedded controls (e.g.
+   *  beside a native `<input type="search">` in a compact dialog header). `'m'` (the default) is
+   *  the standard size. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Fully rounded ends, for a pill-shaped control. Re-assigns `--lr-button-radius` to
    *  `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so a consumer's own
    *  `--lr-button-radius` stays the single corner-radius knob. `appearance="link"` still renders

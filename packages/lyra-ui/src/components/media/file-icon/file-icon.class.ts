@@ -22,6 +22,11 @@ const ICON_LABELS: Record<LyraFileTypeIcon, LyraMessageKey> = {
   video: 'fileTypeVideo',
 };
 
+/**
+ * How much of the badge is rendered. Deliberately NOT the shared `LyraVariant`: these are two
+ * render modes (glyph only vs. glyph plus its localized label), not semantic tones, so they share
+ * only the property name with the rest of the library's `variant`.
+ */
 export type LyraFileIconVariant = 'icon' | 'label';
 
 /**
@@ -31,7 +36,7 @@ export type LyraFileIconVariant = 'icon' | 'label';
  * @csspart base - The outer presentation wrapper.
  * @csspart icon - The format badge.
  * @csspart label - The localized format label in `variant="label"` mode.
- * @csspart size - The formatted `size`, shown alongside `label` in `variant="label"` mode when `size` is known.
+ * @csspart size - The formatted `bytes` count, shown alongside `label` in `variant="label"` mode when `bytes` is non-zero.
  * @cssprop [--lr-file-icon-size=var(--lr-size-2rem)] - Inline/block size of the format badge.
  */
 export class LyraFileIcon extends LyraElement {
@@ -41,8 +46,11 @@ export class LyraFileIcon extends LyraElement {
   @property({ attribute: 'mime-type' }) mimeType = '';
   /** Optional filename used for fallback detection with an empty or generic MIME type. */
   @property() name = '';
-  /** File size in bytes, shown alongside the label in `variant="label"` mode. `0` (the default) renders no size — matches `<lr-attachment-chip>`'s `size` convention. */
-  @property({ type: Number }) size = 0;
+  /** File size **in bytes**, shown alongside the label in `variant="label"` mode. `0` (the default)
+   *  renders no size. Named `bytes`, not `size`: everywhere else in this library `size` names a tier
+   *  on the shared size ladder, and a numeric byte count answering to the same property name is the
+   *  kind of collision a consumer only discovers at runtime. */
+  @property({ type: Number }) bytes = 0;
   /** Whether the badge is decorative and hidden from assistive technology. */
   @property({ type: Boolean, reflect: true }) decorative = false;
   /** Shows only the icon or the icon together with its localized label. */
@@ -53,14 +61,14 @@ export class LyraFileIcon extends LyraElement {
   override render(): TemplateResult {
     const metadata = getFileTypeMetadata(this.mimeType, this.name);
     const localizedLabel = this.label || this.localize(ICON_LABELS[metadata.icon]);
-    // A NaN/negative `size` (e.g. an invalid `size` attribute) would otherwise make `size > 0`
+    // A NaN/negative `bytes` (e.g. an invalid `bytes` attribute) would otherwise make `bytes > 0`
     // false anyway (so no crash), but normalizing here keeps it explicit and consistent with
     // this library's other numeric guards, rather than relying on that comparison quirk.
-    const size = finiteRange(this.size, 0, 0);
+    const bytes = finiteRange(this.bytes, 0, 0);
     const sizeText =
-      size > 0
+      bytes > 0
         ? formatFileSize(
-            size,
+            bytes,
             (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
             (value) => getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 1 }).format(value),
           )

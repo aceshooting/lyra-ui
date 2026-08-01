@@ -513,6 +513,33 @@ describe('size', () => {
     const smallFontSize = getComputedStyle(input).fontSize;
     expect(smallFontSize).to.not.equal(fontSize);
   });
+
+  // The tiers come from the library's one shared ladder, which matches both spellings of each
+  // step in the same selector list -- so migrating from an upstream that spells them
+  // small/medium/large is an attribute-value no-op rather than a rewrite.
+  it('accepts the small/medium/large spellings at the same rendered field height as s/m/l', async () => {
+    const heightOf = async (size: string): Promise<string> => {
+      const el = (await fixture(html`<lr-known-date size=${size}></lr-known-date>`)) as LyraKnownDate;
+      await el.updateComplete;
+      return getComputedStyle(fieldFor(el, 'day')).minBlockSize;
+    };
+    for (const [alias, step] of [
+      ['small', 's'],
+      ['medium', 'm'],
+      ['large', 'l'],
+    ]) {
+      expect(await heightOf(alias), alias).to.equal(await heightOf(step));
+    }
+  });
+
+  // The shared ladder's own 2xs height is 1.25rem/20px; a text field is a pointer target, so the
+  // per-tier floor clamps at WCAG 2.2 SC 2.5.8's 24px minimum rather than following it down.
+  it('supports the 2xs tier, floored at the 24px pointer-target minimum', async () => {
+    const el = (await fixture(html`<lr-known-date size="2xs"></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    expect(el.getAttribute('size')).to.equal('2xs');
+    expect(getComputedStyle(fieldFor(el, 'day')).minBlockSize).to.equal('24px');
+  });
 });
 
 describe('accessibility', () => {

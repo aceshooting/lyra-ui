@@ -1061,7 +1061,7 @@ it('exports the real viewport and hook wrappers as externally styleable parts', 
         style="block-size:400px"
         grouping="none"
         .threads=${threads.slice(0, 1)}
-        .renderLeading=${() => html`<lr-chip tone="brand">Purpose</lr-chip>`}
+        .renderLeading=${() => html`<lr-chip variant="brand">Purpose</lr-chip>`}
         .renderMeta=${() => html`<span>Meta</span>`}
         .renderRowContent=${() => html`<span>Content</span>`}
         .renderActions=${() => html`<button type="button">Action</button>`}

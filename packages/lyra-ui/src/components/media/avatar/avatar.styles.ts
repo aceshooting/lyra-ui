@@ -13,33 +13,55 @@ export const styles = css`
        characters overflow a 1.5rem 'small' circle and look lost in a 2.5rem 'large' one. */
     --lr-avatar-font-size: var(--lr-font-size-sm);
   }
-  /* Both spellings of every tier select the same declarations: 'small'/'medium'/'large' is the
-     canonical vocabulary shared with the rest of the library, and 'sm'/'md'/'lg' stays accepted
-     so neither existing markup nor markup migrated from a shorthand-sized library silently loses
-     its sizing. */
+  /* Every spelling of every tier selects the same declarations. The canonical ladder is the
+     library-wide LyraSize one ('2xs'..'xl', with 'small'/'medium'/'large' as the accepted Web
+     Awesome / Shoelace spellings of 's'/'m'/'l'), and this component's own older 'sm'/'md'/'lg'
+     shorthands stay accepted so existing markup doesn't silently lose its sizing. Each of the six
+     tiers gets a real diameter -- a value the type accepts but the stylesheet ignores would render
+     at the default tier with nothing anywhere reporting it. */
+  :host([size='2xs']) {
+    --lr-avatar-size: var(--lr-size-1rem);
+    --lr-avatar-font-size: var(--lr-font-size-2xs);
+  }
+  :host([size='xs']) {
+    --lr-avatar-size: var(--lr-size-1-25rem);
+    --lr-avatar-font-size: var(--lr-font-size-2xs);
+  }
+  :host([size='s']),
   :host([size='small']),
   :host([size='sm']) {
     --lr-avatar-size: var(--lr-size-1-5rem);
     --lr-avatar-font-size: var(--lr-font-size-xs);
   }
+  :host([size='l']),
   :host([size='large']),
   :host([size='lg']) {
     --lr-avatar-size: var(--lr-size-2-5rem);
     --lr-avatar-font-size: var(--lr-font-size-md);
   }
-  :host([tone='brand']) {
+  :host([size='xl']) {
+    --lr-avatar-size: var(--lr-size-3rem);
+    --lr-avatar-font-size: var(--lr-font-size-lg);
+  }
+  /* Deliberately NOT the shared internal/variants.styles.ts sheet. That sheet re-points the
+     generic slots at the 45-slot semantic grid's contrast-checked pairing, where text on a quiet
+     fill is on-quiet (a near-black/near-white). An avatar's initials are the accent itself --
+     they read in the variant's own loud colour on that variant's quiet tint -- so adopting the
+     grid pairing here would repaint every non-neutral avatar, and the neutral default (a
+     --lr-color-border circle, not a neutral-fill-quiet one) with it. */
+  :host([variant='brand']) {
     --lr-avatar-bg: var(--lr-color-brand-quiet);
     --lr-avatar-color: var(--lr-color-brand);
   }
-  :host([tone='success']) {
+  :host([variant='success']) {
     --lr-avatar-bg: var(--lr-color-success-quiet);
     --lr-avatar-color: var(--lr-color-success);
   }
-  :host([tone='warning']) {
+  :host([variant='warning']) {
     --lr-avatar-bg: var(--lr-color-warning-quiet);
     --lr-avatar-color: var(--lr-color-warning);
   }
-  :host([tone='danger']) {
+  :host([variant='danger']) {
     --lr-avatar-bg: var(--lr-color-danger-quiet);
     --lr-avatar-color: var(--lr-color-danger);
   }

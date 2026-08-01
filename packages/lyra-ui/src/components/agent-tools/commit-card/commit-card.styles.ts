@@ -23,8 +23,8 @@ export const styles = css`
   }
   /* MUST stay after :host([compact]): both selectors are :host([x]) [part='base'], i.e. equal
      specificity, so source order alone decides which padding wins when a card is both compact and
-     plain. plain is the stronger statement ("no chrome at all"), so it goes last. */
-  :host([appearance='plain']) [part='base'] {
+     frame="plain". plain is the stronger statement ("no chrome at all"), so it goes last. */
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;

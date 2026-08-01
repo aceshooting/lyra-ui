@@ -16,8 +16,8 @@ export const styles = css`
   }
   /* Strips the card chrome for a community card nested inside an already-bordered/backgrounded
      container -- same escape hatch as this component's own sibling lr-entity-card's identical
-     appearance='plain' rule. */
-  :host([appearance='plain']) [part='base'] {
+     frame='plain' rule. */
+  :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;

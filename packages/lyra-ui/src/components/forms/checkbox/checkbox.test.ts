@@ -854,3 +854,61 @@ describe('ElementInternals fallback (lr-checkbox)', () => {
     );
   });
 });
+
+describe('size', () => {
+  async function boxOf(markup: unknown): Promise<DOMRect> {
+    const el = (await fixture(markup as never)) as LyraCheckbox;
+    await el.updateComplete;
+    const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    return box.getBoundingClientRect();
+  }
+
+  it('defaults to the "m" tier and reflects it', async () => {
+    const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
+    await el.updateComplete;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+  });
+
+  it('grows the rendered box from size="s" to size="l"', async () => {
+    const small = await boxOf(html`<lr-checkbox size="s">Label</lr-checkbox>`);
+    const large = await boxOf(html`<lr-checkbox size="l">Label</lr-checkbox>`);
+    expect(large.width).to.be.greaterThan(small.width);
+    expect(large.height).to.be.greaterThan(small.height);
+  });
+
+  it('renders "small"/"large" at the same geometry as "s"/"l"', async () => {
+    const s = await boxOf(html`<lr-checkbox size="s">Label</lr-checkbox>`);
+    const small = await boxOf(html`<lr-checkbox size="small">Label</lr-checkbox>`);
+    const l = await boxOf(html`<lr-checkbox size="l">Label</lr-checkbox>`);
+    const large = await boxOf(html`<lr-checkbox size="large">Label</lr-checkbox>`);
+    expect(small.width).to.be.closeTo(s.width, 0.5);
+    expect(large.width).to.be.closeTo(l.width, 0.5);
+  });
+
+  it('keeps the rendered label indent in step with the box at every tier', async () => {
+    // The published --lr-checkbox-label-indent promises "box floor + gap"; measure that the label
+    // really starts there rather than trusting the declaration, and that the promise survives every
+    // tier now that the box is no longer a constant.
+    let previous = 0;
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+      const el = (await fixture(html`<lr-checkbox size=${size}>Label</lr-checkbox>`)) as LyraCheckbox;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+      const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+      const gap = Number.parseFloat(getComputedStyle(base).columnGap);
+      const boxWidth = box.getBoundingClientRect().width;
+      const measured = label.getBoundingClientRect().left - base.getBoundingClientRect().left;
+      expect(measured, `${size} indent`).to.be.closeTo(boxWidth + gap, 0.5);
+      expect(boxWidth, `${size} box grows with the tier`).to.be.greaterThan(previous);
+      previous = boxWidth;
+    }
+  });
+
+  it('is accessible at a non-default tier', async () => {
+    const el = (await fixture(html`<lr-checkbox size="l">Label</lr-checkbox>`)) as LyraCheckbox;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

@@ -49,13 +49,23 @@ export const LocaleFieldOrder: Story = {
 };
 
 export const Sizes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The shared six-step ladder. `small`/`medium`/`large` are accepted as synonyms of `s`/`m`/`l`, so markup migrated from an upstream that spells them that way needs no attribute rewrite. The two smallest tiers floor at the 24px pointer-target minimum rather than shrinking below it.',
+      },
+    },
+  },
   render: () => html`
     <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
+      <lr-known-date size="2xs" label="2x extra small" value="2007-03-27"></lr-known-date>
       <lr-known-date size="xs" label="Extra small" value="2007-03-27"></lr-known-date>
       <lr-known-date size="s" label="Small" value="2007-03-27"></lr-known-date>
       <lr-known-date size="m" label="Medium (default)" value="2007-03-27"></lr-known-date>
       <lr-known-date size="l" label="Large" value="2007-03-27"></lr-known-date>
       <lr-known-date size="xl" label="Extra large" value="2007-03-27"></lr-known-date>
+      <lr-known-date size="large" label='size="large" — same tier as "l"' value="2007-03-27"></lr-known-date>
     </div>
   `,
 };

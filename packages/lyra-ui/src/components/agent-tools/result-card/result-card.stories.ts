@@ -66,7 +66,7 @@ export const RichSlottedValue: Story = {
   render: () => html`
     <lr-result-card title="Deployment" style="max-inline-size:20rem;">
       <lr-result-field label="Status">
-        <lr-chip tone="success">Live</lr-chip>
+        <lr-chip variant="success">Live</lr-chip>
       </lr-result-field>
       <lr-result-field label="Environment" value="production"></lr-result-field>
       <lr-result-field label="Version" value="v2.4.1"></lr-result-field>

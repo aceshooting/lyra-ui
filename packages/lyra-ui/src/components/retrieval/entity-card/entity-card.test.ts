@@ -128,16 +128,16 @@ const baseChrome = (el: LyraEntityCard) => {
   };
 };
 
-it('defaults to compact=false and appearance="card", rendering identically to those values restated', async () => {
+it('defaults to compact=false and frame="card", rendering identically to those values restated', async () => {
   const implicit = (await fixture(html`<lr-entity-card .entity=${entity}></lr-entity-card>`)) as LyraEntityCard;
   const explicit = (await fixture(
-    html`<lr-entity-card appearance="card" .compact=${false} .entity=${entity}></lr-entity-card>`,
+    html`<lr-entity-card frame="card" .compact=${false} .entity=${entity}></lr-entity-card>`,
   )) as LyraEntityCard;
 
   expect(implicit.compact).to.be.false;
-  expect(implicit.appearance).to.equal('card');
+  expect(implicit.frame).to.equal('card');
   expect(implicit.hasAttribute('compact')).to.be.false;
-  expect(implicit.getAttribute('appearance')).to.equal('card');
+  expect(implicit.getAttribute('frame')).to.equal('card');
 
   expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
   const chrome = baseChrome(implicit);
@@ -168,11 +168,9 @@ it('lets a consumer retune the compact values through --lr-entity-card-compact-*
   expect(chrome.rowGap).to.equal('5px');
 });
 
-it('drops border, background, padding and radius under appearance="plain"', async () => {
-  const el = (await fixture(
-    html`<lr-entity-card appearance="plain" .entity=${entity}></lr-entity-card>`,
-  )) as LyraEntityCard;
-  expect(el.getAttribute('appearance')).to.equal('plain');
+it('drops border, background, padding and radius under frame="plain"', async () => {
+  const el = (await fixture(html`<lr-entity-card frame="plain" .entity=${entity}></lr-entity-card>`)) as LyraEntityCard;
+  expect(el.getAttribute('frame')).to.equal('plain');
   const chrome = baseChrome(el);
   expect(chrome.borderTopWidth).to.equal('0px');
   expect(chrome.borderTopLeftRadius).to.equal('0px');
@@ -181,10 +179,25 @@ it('drops border, background, padding and radius under appearance="plain"', asyn
   expect(chrome.paddingLeft).to.equal('0px');
 });
 
-it('orders :host([appearance="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
+// The container treatment moved off `appearance` (which now means only how a control FILLS
+// itself) onto `frame` in 8.0.0, with no attribute alias. A stale `appearance="plain"` must
+// therefore render as an untouched card -- asserted on the rendered box, because a renamed
+// selector that still matched the old attribute would be invisible to every other assertion here.
+it('ignores a stale appearance="plain", leaving the card chrome intact', async () => {
+  const stale = (await fixture(
+    html`<lr-entity-card appearance="plain" .entity=${entity}></lr-entity-card>`,
+  )) as LyraEntityCard;
+  expect(stale.frame).to.equal('card');
+  const chrome = baseChrome(stale);
+  expect(chrome.paddingTop).to.equal('12px'); // --lr-space-m, i.e. the untouched card padding
+  expect(chrome.borderTopWidth).to.equal('1px');
+  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
   const css = styles.cssText;
   const compactAt = css.indexOf(':host([compact])');
-  const plainAt = css.indexOf(":host([appearance='plain'])");
+  const plainAt = css.indexOf(":host([frame='plain'])");
   expect(compactAt).to.be.greaterThan(-1);
   expect(plainAt).to.be.greaterThan(-1);
   expect(plainAt).to.be.greaterThan(compactAt);
@@ -192,7 +205,7 @@ it('orders :host([appearance="plain"]) after :host([compact]) so the equal-speci
 
 it('lets plain win over compact when both are set', async () => {
   const el = (await fixture(
-    html`<lr-entity-card compact appearance="plain" .entity=${entity}></lr-entity-card>`,
+    html`<lr-entity-card compact frame="plain" .entity=${entity}></lr-entity-card>`,
   )) as LyraEntityCard;
   const chrome = baseChrome(el);
   expect(chrome.paddingTop).to.equal('0px');
@@ -207,7 +220,7 @@ it('is accessible in the populated compact and plain states', async () => {
 
   const plainEl = (await fixture(
     html`<lr-entity-card
-      appearance="plain"
+      frame="plain"
       .entity=${entity}
       .types=${types}
       community-label="Nobel laureates"

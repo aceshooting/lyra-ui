@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraVariant } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat, getPluralRules } from '../../../internal/intl-cache.js';
@@ -11,18 +12,19 @@ import type { LyraVirtualList, VirtualListRange } from '../../layout/virtual-lis
 import { styles } from './activity-feed.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
-export type ActivityEntryTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+/** Retained name for the shared semantic vocabulary an entry's `variant` is drawn from. */
+export type ActivityEntryTone = LyraVariant;
 
 export interface ActivityEntry {
   id: string;
   text: string;
-  /** Literal icon hint (e.g. an emoji), like `<lr-tool-call-chip>`'s `icon`. A small tone dot
+  /** Literal icon hint (e.g. an emoji), like `<lr-tool-call-chip>`'s `icon`. A small variant dot
    *  renders in its place when omitted. */
   icon?: string;
   /** Invalid strings are treated as unset. */
   timestamp?: Date | string;
-  /** Token-mapped, same vocabulary as `ContextMeterTone`. */
-  tone?: ActivityEntryTone;
+  /** Token-mapped, the library's shared `variant` vocabulary. */
+  variant?: LyraVariant;
 }
 
 export type ActivityFeedMode = 'live' | 'post-hoc';
@@ -44,24 +46,25 @@ export interface LyraActivityFeedEventMap {
  *  value and rationale to `<lr-thinking-panel>`'s `NEAR_BOTTOM_PX`. */
 const NEAR_BOTTOM_PX = 48;
 
-/** The tone dot's `part` list: the shared `tone-dot` name plus a tone-specific one. Shadow Parts
- *  forbids an attribute selector after `::part()`, so `::part(tone-dot)[data-tone='success']` is
- *  invalid CSS and the tone would be unstylable once the entry renders inside
- *  `<lr-virtual-list>`'s shadow root. A part *list* carries the state in the part name instead
- *  (`::part()` matches with `part~=` semantics, so both names select the same element).
- *  Spelled as a ternary over literals rather than a lookup table so every rendered part name stays
- *  statically resolvable from this file, the same shape `<lr-code-block-core>`'s line parts use. */
-function toneDotPart(tone: ActivityEntryTone): string {
+/** The variant dot's `part` list: the shared `variant-dot` name plus a variant-specific one. Shadow
+ *  Parts forbids an attribute selector after `::part()`, so
+ *  `::part(variant-dot)[data-variant='success']` is invalid CSS and the variant would be unstylable
+ *  once the entry renders inside `<lr-virtual-list>`'s shadow root. A part *list* carries the state
+ *  in the part name instead (`::part()` matches with `part~=` semantics, so both names select the
+ *  same element). Spelled as a ternary over literals rather than a lookup table so every rendered
+ *  part name stays statically resolvable from this file, the same shape `<lr-code-block-core>`'s
+ *  line parts use. */
+function variantDotPart(variant: LyraVariant): string {
   const part =
-    tone === 'brand'
-      ? 'tone-dot tone-dot-brand'
-      : tone === 'success'
-        ? 'tone-dot tone-dot-success'
-        : tone === 'warning'
-          ? 'tone-dot tone-dot-warning'
-          : tone === 'danger'
-            ? 'tone-dot tone-dot-danger'
-            : 'tone-dot tone-dot-neutral';
+    variant === 'brand'
+      ? 'variant-dot variant-dot-brand'
+      : variant === 'success'
+        ? 'variant-dot variant-dot-success'
+        : variant === 'warning'
+          ? 'variant-dot variant-dot-warning'
+          : variant === 'danger'
+            ? 'variant-dot variant-dot-danger'
+            : 'variant-dot variant-dot-neutral';
   return part;
 }
 
@@ -104,17 +107,17 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   (`post-hoc`).
  * @csspart toggle - The chevron indicator inside the header.
  * @csspart body - The scrollable region containing the entries (or the internal virtual-list).
- * @csspart entry - One entry row; carries `data-tone`.
- * @csspart entry-icon - The literal `icon` hint, or a tone dot when unset.
- * @csspart tone-dot - The tone dot rendered inside `entry-icon` when the entry sets no literal
- *   `icon`. Its own named part rather than an internal class, so it stays styleable in both the
- *   plain and virtualized rendering paths and reachable from a consumer's `::part()`. Also carries
- *   a tone-specific name, since `::part()` cannot be qualified by `[data-tone]`.
- * @csspart tone-dot-neutral - An untoned entry's dot (also carries `tone-dot`).
- * @csspart tone-dot-brand - A `brand`-tone entry's dot (also carries `tone-dot`).
- * @csspart tone-dot-success - A `success`-tone entry's dot (also carries `tone-dot`).
- * @csspart tone-dot-warning - A `warning`-tone entry's dot (also carries `tone-dot`).
- * @csspart tone-dot-danger - A `danger`-tone entry's dot (also carries `tone-dot`).
+ * @csspart entry - One entry row; carries `data-variant`.
+ * @csspart entry-icon - The literal `icon` hint, or a variant dot when unset.
+ * @csspart variant-dot - The variant dot rendered inside `entry-icon` when the entry sets no
+ *   literal `icon`. Its own named part rather than an internal class, so it stays styleable in both
+ *   the plain and virtualized rendering paths and reachable from a consumer's `::part()`. Also
+ *   carries a variant-specific name, since `::part()` cannot be qualified by `[data-variant]`.
+ * @csspart variant-dot-neutral - An entry with no `variant`'s dot (also carries `variant-dot`).
+ * @csspart variant-dot-brand - A `brand`-variant entry's dot (also carries `variant-dot`).
+ * @csspart variant-dot-success - A `success`-variant entry's dot (also carries `variant-dot`).
+ * @csspart variant-dot-warning - A `warning`-variant entry's dot (also carries `variant-dot`).
+ * @csspart variant-dot-danger - A `danger`-variant entry's dot (also carries `variant-dot`).
  * @csspart entry-text - The entry's `text`. Not rendered while `renderText` is set — its returned
  *   content replaces this part entirely.
  * @csspart entry-timestamp - The formatted timestamp, only rendered while `showTimestamps` and a
@@ -313,11 +316,11 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private entryTemplate(entry: ActivityEntry, ownRole: boolean): TemplateResult {
     const ts = this.normalizedTimestamp(entry.timestamp);
     const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
-    const tone = entry.tone ?? 'neutral';
-    const dotPart = toneDotPart(tone);
+    const variant = entry.variant ?? 'neutral';
+    const dotPart = variantDotPart(variant);
     return html`
-      <div part="entry" role=${ownRole ? 'listitem' : nothing} data-tone=${tone}>
-        <span part="entry-icon" aria-hidden="true">${entry.icon ? entry.icon : html`<span part=${dotPart} data-tone=${tone}></span>`}</span>
+      <div part="entry" role=${ownRole ? 'listitem' : nothing} data-variant=${variant}>
+        <span part="entry-icon" aria-hidden="true">${entry.icon ? entry.icon : html`<span part=${dotPart} data-variant=${variant}></span>`}</span>
         ${this.renderText ? this.renderText(entry) : html`<span part="entry-text">${entry.text}</span>`}
         ${this.showTimestamps && ts
           ? html`<time part="entry-timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>`
@@ -358,7 +361,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
         >
           ${virtualized
             ? html`<lr-virtual-list
-                exportparts="entry:entry, entry-icon:entry-icon, tone-dot:tone-dot, tone-dot-neutral:tone-dot-neutral, tone-dot-brand:tone-dot-brand, tone-dot-success:tone-dot-success, tone-dot-warning:tone-dot-warning, tone-dot-danger:tone-dot-danger, entry-text:entry-text, entry-timestamp:entry-timestamp"
+                exportparts="entry:entry, entry-icon:entry-icon, variant-dot:variant-dot, variant-dot-neutral:variant-dot-neutral, variant-dot-brand:variant-dot-brand, variant-dot-success:variant-dot-success, variant-dot-warning:variant-dot-warning, variant-dot-danger:variant-dot-danger, entry-text:entry-text, entry-timestamp:entry-timestamp"
                 .items=${this.entries}
                 .renderItem=${(item: unknown) => this.entryTemplate(item as ActivityEntry, false)}
                 .keyFunction=${(item: unknown) => (item as ActivityEntry).id}

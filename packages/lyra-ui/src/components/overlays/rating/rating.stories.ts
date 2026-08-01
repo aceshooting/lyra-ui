@@ -17,7 +17,7 @@ export const HalfStarPrecision: StoryObj = {
 export const Sizes: StoryObj = {
   render: () => html`
     <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: start;">
-      ${(['xs', 's', 'm', 'l', 'xl'] as const).map(
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
         (size) => html`<lr-rating size=${size} value="3" label=${`Satisfaction (${size})`}></lr-rating>`,
       )}
     </div>

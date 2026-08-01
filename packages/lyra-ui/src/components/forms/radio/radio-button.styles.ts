@@ -2,21 +2,30 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
+    /* Rectangular chrome, so unlike <lr-radio>'s circular indicator this re-points the inherited
+       radius knob at the shared control radius -- and swaps it for a pill when the pill property
+       is set. Same one name on both tags, so a consumer overriding it does not have to know which
+       of the two they are looking at. */
+    --lr-radio-radius: var(--lr-form-control-radius);
     display: inline-flex;
+  }
+  :host([pill]) {
+    --lr-radio-radius: var(--lr-radius-pill);
   }
   [part='base'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--lr-space-xs);
-    /* WCAG 2.5.8: the whole button is the target, so it carries the same floor every other
-       interactive part in the library does. */
-    min-block-size: var(--lr-icon-button-size);
-    padding-inline: var(--lr-space-m);
+    /* WCAG 2.5.8: the whole button is the target. The size ladder drives the height, floored at
+       1.5rem/24px so even the 2xs tier stays a conformant target. */
+    min-block-size: max(var(--lr-form-control-height), var(--lr-size-1-5rem));
+    padding-inline: var(--lr-form-control-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface-raised);
     color: var(--lr-color-text);
     font: inherit;
+    font-size: var(--lr-form-control-font-size);
     line-height: var(--lr-line-height-snug);
     cursor: pointer;
     transition: background var(--lr-transition-fast), border-color var(--lr-transition-fast);
@@ -29,12 +38,12 @@ export const styles = css`
     border-radius: 0;
   }
   :host(:first-of-type) [part='base'] {
-    border-start-start-radius: var(--lr-radius);
-    border-end-start-radius: var(--lr-radius);
+    border-start-start-radius: var(--lr-radio-radius);
+    border-end-start-radius: var(--lr-radio-radius);
   }
   :host(:last-of-type) [part='base'] {
-    border-start-end-radius: var(--lr-radius);
-    border-end-end-radius: var(--lr-radius);
+    border-start-end-radius: var(--lr-radio-radius);
+    border-end-end-radius: var(--lr-radio-radius);
   }
   :host(:not(:first-of-type)) [part='base'] {
     margin-inline-start: calc(-1 * var(--lr-border-width-thin));

@@ -11,6 +11,8 @@ import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/a
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './select.styles.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { LyraOption } from '../combobox/option.class.js';
 import '../combobox/option.class.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -50,12 +52,14 @@ function createNoopInternals(): ElementInternals {
   } as unknown as ElementInternals;
 }
 
-export type LyraSelectSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the canonical six-step size ladder. The `size` property itself accepts
+ *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
+export type LyraSelectSize = LyraSizeStep;
 
 /** Visual treatment of the trigger surface. `outlined` (the default) is a bordered surface;
  *  `filled` swaps the border for a raised fill; `filled-outlined` keeps both; `accent` paints the
  *  loud brand fill; `plain` drops border and fill entirely. */
-export type LyraSelectAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain';
+export type LyraSelectAppearance = LyraAppearance;
 
 /** Renders one selected option's chip in `multiple` mode. Whatever it returns replaces the
  *  built-in `[part='tag']` chip for that option, so a caller that wants the default styling
@@ -177,15 +181,22 @@ export interface LyraSelectEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart error - The error message.
  * @csspart hint - The hint message.
- * @cssprop --lr-select-expand-size - Decorative expand-icon box size, scaled by `size`.
+ * @cssprop --lr-select-expand-size - Decorative expand-icon box size, scaled by `size`. The one
+ *   piece of this component's geometry the shared ladder does not own: it sizes a glyph, not the
+ *   control row.
  * @cssprop --lr-select-gap - Gap between the trigger's start adornment, label, end adornment, and
  *   expand icon. Doesn't vary by `size`.
- * @cssprop --lr-select-radius - Trigger corner radius. Doesn't vary by `size`.
- * @cssprop --lr-select-trigger-padding - Trigger padding shorthand, scaled by `size`.
- * @cssprop --lr-select-trigger-min-height - Trigger block-size floor, scaled by `size`, and live
- *   at every tier including the default `m` (`2.5rem`, matching `<lr-input>`/`<lr-combobox>` at
- *   that tier).
- * @cssprop --lr-select-font-size - Trigger font size, scaled by `size`.
+ * @cssprop [--lr-select-radius=var(--lr-form-control-radius)] - Trigger corner radius, from the
+ *   active `size` tier of the shared form-control ladder (the two tightest tiers take a smaller
+ *   radius).
+ * @cssprop --lr-select-trigger-padding - Trigger padding shorthand. Defaults to the active `size`
+ *   tier's `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)` from the
+ *   shared ladder.
+ * @cssprop [--lr-select-trigger-min-height=var(--lr-form-control-height)] - Trigger block-size
+ *   floor, from the active `size` tier of the shared ladder, and live at every tier including the
+ *   default `m` -- so a select is exactly as tall as an `<lr-button>`/`<lr-input>` of that tier.
+ * @cssprop [--lr-select-font-size=var(--lr-form-control-font-size)] - Trigger font size, from the
+ *   active `size` tier.
  * @cssprop --lr-select-tag-padding - Padding inside a `multiple`-mode chip. Doesn't vary by `size`.
  * @cssprop --lr-select-tag-font-size - Chip text size. Doesn't vary by `size`.
  * @cssprop [--lr-select-option-active-bg=var(--lr-color-brand-quiet)] - Background of the
@@ -209,7 +220,10 @@ export interface LyraSelectEventMap {
  */
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own
+  // sheet so every `--lr-select-*` geometry knob points at the active tier's value -- and so both
+  // spellings of every tier (`s` and `small`, ...) work with no per-component rule.
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     multiple: { type: Boolean, reflect: true, noAccessor: true },
@@ -225,10 +239,13 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-combobox`/`lr-locale-picker`'s own `size`. */
-  @property({ reflect: true }) size: LyraSelectSize = 'm';
+  /** Visual size on the library's one control ladder — shared with `lr-button`/`lr-input`/
+   *  `lr-combobox`/`lr-locale-picker`, so same-tier controls line up in a toolbar row. Accepts both
+   *  the canonical `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's `'small'`/`'medium'`/`'large'`
+   *  spellings of `s`/`m`/`l`; the two render identically. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Visual treatment of the trigger surface. */
-  @property({ reflect: true }) appearance: LyraSelectAppearance = 'outlined';
+  @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
   /** Fully-rounded trigger corners. Retunes `--lr-select-radius`, so a consumer override of that
    *  property still wins. */
   @property({ type: Boolean, reflect: true }) pill = false;

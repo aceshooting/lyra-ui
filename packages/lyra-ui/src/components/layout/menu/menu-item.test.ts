@@ -209,6 +209,80 @@ it('is accessible with an icon, disabled and destructive states', async () => {
   await expect(wrapper).to.be.accessible();
 });
 
+describe('size', () => {
+  const rowHeight = (el: LyraMenuItem): number =>
+    (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getBoundingClientRect().height;
+
+  // Every assertion below measures the RENDERED row, never the stylesheet: the ladder reaches this
+  // component through custom properties declared on :host by a shared sheet, so a wrong import
+  // order or a shadowed knob shows up only in the resolved box.
+  it('defaults to size="m", reflected, and renders identically to that tier restated', async () => {
+    const implicit = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
+    const explicit = (await fixture(html`<lr-menu-item size="m">Rename</lr-menu-item>`)) as LyraMenuItem;
+    expect(implicit.size).to.equal('m');
+    expect(implicit.getAttribute('size')).to.equal('m');
+    expect(rowHeight(implicit)).to.equal(rowHeight(explicit));
+  });
+
+  it('grows the rendered row measurably from size="s" through "m" to "l"', async () => {
+    const small = (await fixture(html`<lr-menu-item size="s">Rename</lr-menu-item>`)) as LyraMenuItem;
+    const medium = (await fixture(html`<lr-menu-item size="m">Rename</lr-menu-item>`)) as LyraMenuItem;
+    const large = (await fixture(html`<lr-menu-item size="l">Rename</lr-menu-item>`)) as LyraMenuItem;
+    expect(rowHeight(medium)).to.be.greaterThan(rowHeight(small));
+    expect(rowHeight(large)).to.be.greaterThan(rowHeight(medium));
+  });
+
+  it('accepts the small/medium/large spellings at the same heights as s/m/l', async () => {
+    for (const [alias, step] of [
+      ['small', 's'],
+      ['medium', 'm'],
+      ['large', 'l'],
+    ]) {
+      const aliased = (await fixture(html`<lr-menu-item size=${alias}>Rename</lr-menu-item>`)) as LyraMenuItem;
+      const stepped = (await fixture(html`<lr-menu-item size=${step}>Rename</lr-menu-item>`)) as LyraMenuItem;
+      expect(rowHeight(aliased), alias).to.equal(rowHeight(stepped));
+    }
+  });
+
+  // WCAG 2.2 SC 2.5.8 (Target Size (Minimum)). The bottom two tiers of the shared ladder resolve
+  // below 24px on their own -- a menu row is a pointer target, so it floors there instead.
+  it('keeps every tier at or above the 24px pointer-target floor', async () => {
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl']) {
+      const el = (await fixture(html`<lr-menu-item size=${size}>Rename</lr-menu-item>`)) as LyraMenuItem;
+      expect(rowHeight(el), size).to.be.at.least(24);
+    }
+  });
+
+  it('leaves the submenu contract untouched at a non-default tier', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item size="s" value="share" id="sized-share">
+          Share
+          <lr-menu slot="submenu">
+            <lr-menu-item value="email">Email</lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#sized-share') as LyraMenuItem;
+    await item.updateComplete;
+    expect(item.hasSubmenu).to.be.true;
+    expect(item.getAttribute('aria-haspopup')).to.equal('menu');
+    expect(item.getAttribute('aria-expanded')).to.equal('false');
+    item.openSubmenu('first');
+    await item.updateComplete;
+    expect(item.submenuOpen).to.be.true;
+    expect(item.getAttribute('aria-expanded')).to.equal('true');
+  });
+
+  it('is accessible at the smallest and largest tiers', async () => {
+    const smallest = await fixtureInMenu(html`<lr-menu-item size="2xs" value="rename">Rename</lr-menu-item>`);
+    await expect(smallest).to.be.accessible();
+    const largest = await fixtureInMenu(html`<lr-menu-item size="xl" value="rename">Rename</lr-menu-item>`);
+    await expect(largest).to.be.accessible();
+  });
+});
+
 describe('submenu parent', () => {
   const withSubmenu = () => html`
     <div role="menu" aria-label="Actions">

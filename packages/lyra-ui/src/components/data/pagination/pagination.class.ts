@@ -7,16 +7,16 @@ import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './pagination.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 
-export type LyraPaginationSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+/** The canonical size ladder. Kept as a local name so existing imports keep resolving; the
+ *  `size` property itself accepts the upstream `small`/`medium`/`large` spellings too. */
+export type LyraPaginationSize = LyraSizeStep;
 /** `standard` renders the numbered page list; `compact` collapses it to the page-jump field. */
 export type LyraPaginationFormat = 'standard' | 'compact';
-export type LyraPaginationAppearance =
-  | 'accent'
-  | 'filled'
-  | 'outlined'
-  | 'filled-outlined'
-  | 'plain';
+/** The shared fill vocabulary. Kept as a local name so existing imports keep resolving. */
+export type LyraPaginationAppearance = LyraAppearance;
 
 export interface LyraPaginationEventMap {
   'lr-page-change': CustomEvent<{ page: number }>;
@@ -142,7 +142,7 @@ function paginationItems(
  *   `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`).
  */
 export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   /** The currently applied page. Controlled; this component never mutates it. */
   @property({ type: Number, reflect: true }) page = 1;
@@ -159,7 +159,10 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
    *  matching `wa-pagination`. It used to be `hide-summary`, an opt-*out* whose default showed the
    *  summary, so a mechanical rename silently added a row to every migrated pager. */
   @property({ type: Boolean, attribute: 'with-summary', reflect: true }) withSummary = false;
-  @property({ reflect: true }) size: LyraPaginationSize = 'm';
+  /** Control footprint, on the library-wide six-step ladder. Web Awesome's and Shoelace's
+   *  `small`/`medium`/`large` spellings are accepted as exact synonyms of `s`/`m`/`l`, so
+   *  migrating from either is a tag rename with no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** `standard` renders the numbered page list; `compact` swaps it for the editable page jump,
    *  which fits a toolbar or a card footer where a full list would not. */
   @property({ reflect: true }) format: LyraPaginationFormat = 'standard';
@@ -176,7 +179,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   @property({ attribute: 'href-template' }) hrefTemplate: string | ((page: number) => string) = '';
   /** Resting look of every control. The applied page stays a solid brand chip in all of them, so
    *  it is never the appearance that decides whether the current page is identifiable. */
-  @property({ reflect: true }) appearance: LyraPaginationAppearance = 'outlined';
+  @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
 
   /** Optional item noun used in the summary. Empty uses the localized `item`/`items` keys. */
   @property({ attribute: 'item-label' }) itemLabel = '';

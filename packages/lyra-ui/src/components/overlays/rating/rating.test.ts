@@ -298,7 +298,8 @@ it('leaves the default star rendering untouched while getSymbol is unset (unset 
 // -- size -----------------------------------------------------------------
 
 it('scales the stars through `size` while the unset default reproduces the m treatment', async () => {
-  const sizes = ['xs', 's', 'm', 'l', 'xl'] as const;
+  // The full shared six-step ladder, including the `2xs` step the local union used to omit.
+  const sizes = ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const;
   const unset = (await fixture(html`<lr-rating></lr-rating>`)) as LyraRating;
   expect(unset.size).to.equal('m');
   const measured: number[] = [];
@@ -307,7 +308,7 @@ it('scales the stars through `size` while the unset default reproduces the m tre
     measured.push(parseFloat(getComputedStyle(starsOf(el)[0]!).fontSize));
   }
   const unsetSize = parseFloat(getComputedStyle(starsOf(unset)[0]!).fontSize);
-  expect(unsetSize, 'unset === m').to.equal(measured[2]);
+  expect(unsetSize, 'unset === m').to.equal(measured[3]);
   for (let i = 1; i < measured.length; i += 1) {
     expect(measured[i], `${sizes[i]} > ${sizes[i - 1]}`).to.be.greaterThan(measured[i - 1]!);
   }

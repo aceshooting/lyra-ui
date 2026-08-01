@@ -562,6 +562,41 @@ it("matches lr-input's own row height at every shared size tier", async () => {
   }
 });
 
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  const row = (el: Element) => el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  for (const [alias, step] of pairs) {
+    const aliasEl = await fixture(html`<lr-phone-input size=${alias}></lr-phone-input>`);
+    const stepEl = await fixture(html`<lr-phone-input size=${step}></lr-phone-input>`);
+    expect(getComputedStyle(row(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
+      getComputedStyle(row(stepEl)).minBlockSize,
+    );
+    expect(getComputedStyle(row(aliasEl)).fontSize, `font-size for ${alias}`).to.equal(
+      getComputedStyle(row(stepEl)).fontSize,
+    );
+    expect(row(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
+      row(stepEl).getBoundingClientRect().height,
+    );
+  }
+});
+
+it('rounds the field to a pill without a ::part() rule', async () => {
+  const plain = (await fixture(html`<lr-phone-input></lr-phone-input>`)) as LyraPhoneInput;
+  const pill = (await fixture(html`<lr-phone-input pill></lr-phone-input>`)) as LyraPhoneInput;
+  const radius = (el: LyraPhoneInput) =>
+    Number.parseFloat(
+      getComputedStyle(el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement)
+        .borderStartStartRadius,
+    );
+  expect(pill.pill).to.be.true;
+  expect(pill.getAttribute('pill')).to.equal('');
+  expect(radius(pill)).to.be.greaterThan(radius(plain));
+});
+
 it('scales the flag and expand glyphs with the phone-input size tier', async () => {
   const small = (await fixture(html`
     <lr-phone-input size="2xs" flags default-country="LU" .adapter=${adapter}></lr-phone-input>

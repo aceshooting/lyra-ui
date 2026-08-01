@@ -743,3 +743,55 @@ describe('ElementInternals fallback (lr-switch)', () => {
     );
   });
 });
+
+describe('size', () => {
+  async function trackOf(markup: unknown): Promise<DOMRect> {
+    const el = (await fixture(markup as never)) as LyraSwitch;
+    await el.updateComplete;
+    const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+    return track.getBoundingClientRect();
+  }
+
+  it('defaults to the "m" tier and reflects it', async () => {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+  });
+
+  it('grows the rendered track from size="s" to size="l"', async () => {
+    const small = await trackOf(html`<lr-switch size="s">Label</lr-switch>`);
+    const large = await trackOf(html`<lr-switch size="l">Label</lr-switch>`);
+    expect(large.width).to.be.greaterThan(small.width);
+    expect(large.height).to.be.greaterThan(small.height);
+  });
+
+  it('renders "small"/"large" at the same geometry as "s"/"l"', async () => {
+    const s = await trackOf(html`<lr-switch size="s">Label</lr-switch>`);
+    const small = await trackOf(html`<lr-switch size="small">Label</lr-switch>`);
+    const l = await trackOf(html`<lr-switch size="l">Label</lr-switch>`);
+    const large = await trackOf(html`<lr-switch size="large">Label</lr-switch>`);
+    expect(small.width).to.be.closeTo(s.width, 0.5);
+    expect(large.width).to.be.closeTo(l.width, 0.5);
+  });
+
+  it('keeps the thumb inside the track and travelling its full width at every tier', async () => {
+    let previous = 0;
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+      const el = (await fixture(html`<lr-switch size=${size} checked>Label</lr-switch>`)) as LyraSwitch;
+      await el.updateComplete;
+      const track = (el.shadowRoot!.querySelector('[part="track"]') as HTMLElement).getBoundingClientRect();
+      const thumb = (el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement).getBoundingClientRect();
+      expect(thumb.height, `${size} thumb fits`).to.be.lessThan(track.height);
+      expect(thumb.right, `${size} thumb stays inside`).to.be.at.most(track.right + 0.5);
+      expect(track.width, `${size} track grows with the tier`).to.be.greaterThan(previous);
+      previous = track.width;
+    }
+  });
+
+  it('is accessible at a non-default tier', async () => {
+    const el = (await fixture(html`<lr-switch size="l">Label</lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

@@ -4,11 +4,16 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { nextId } from '../../../internal/a11y.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './known-date.styles.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 
-export type LyraKnownDateSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+/** The canonical step a `<lr-known-date>` size resolves to. The library-wide
+ *  {@linkcode LyraSizeStep} ladder under this component's own export name; the `size` property
+ *  itself takes the wider {@linkcode LyraSize}, which also accepts `small`/`medium`/`large`. */
+export type LyraKnownDateSize = LyraSizeStep;
 export type LyraKnownDateField = 'day' | 'month' | 'year';
 
 /** Parse `YYYY-MM-DD` into a local Date, or null if invalid (calendar-invalid
@@ -88,9 +93,10 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  * Form-associated; the submitted form value is always canonical ISO 8601
  * (`YYYY-MM-DD`), or `''` while any field is blank or the combination isn't a
  * real calendar date. Mirrors Web Awesome's `wa-known-date` API surface under
- * `lr-`, with `appearance`/`pill`/`form` dropped and `size` normalized to
- * this library's own `xs`–`xl` scale, matching every other lyra form control
- * mirrored from a Web Awesome counterpart.
+ * `lr-`, with `appearance`/`pill`/`form` dropped and `size` taken from this
+ * library's shared `2xs`–`xl` ladder, which also accepts the upstream
+ * `small`/`medium`/`large` spellings — the same ladder every other lyra form
+ * control sits on.
  *
  * A field's own `<input>` shows exactly what was typed (never reformatted or
  * reverted) -- only the composite `value` is zero-padded. Auto-advance
@@ -134,18 +140,20 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  * @csspart field-label - The small visible per-field text label ("Day"/"Month"/"Year").
  * @csspart hint - The hint message.
  * @csspart error - The validation message.
- * @cssprop [--lr-known-date-field-padding-block=var(--lr-space-s)] - Block padding of each
- *   `field-input`, auto-swapped per `size`.
- * @cssprop [--lr-known-date-field-padding-inline=var(--lr-space-s)] - Inline padding of each
- *   `field-input`, auto-swapped per `size`.
- * @cssprop [--lr-known-date-field-font-size=var(--lr-font-size-md-sm)] - Font size of each
- *   `field-input`, auto-swapped per `size`.
- * @cssprop [--lr-known-date-field-min-height=var(--lr-size-2-5rem)] - Minimum block size of each
- *   `field-input`, auto-swapped per `size` (`xs`→`1.5rem`, `s`→`1.875rem`, `l`→`3rem`,
- *   `xl`→`3.5rem`) -- matches `lr-input`'s/`lr-date-input`'s own min-height scale, so a birthdate
- *   field sitting in a form row next to those controls renders at the same height. At `xs`/`s`/`m`
- *   the floor now exceeds the field's own content height and actively pins the rendered box; at
- *   `l`/`xl` the content height already exceeds the floor, so those two tiers are unaffected.
+ * @cssprop [--lr-known-date-field-padding-block=var(--lr-form-control-padding-block)] - Block
+ *   padding of each `field-input`, auto-swapped per `size` by the shared ladder.
+ * @cssprop [--lr-known-date-field-padding-inline=var(--lr-form-control-padding-inline)] - Inline
+ *   padding of each `field-input`, auto-swapped per `size` by the shared ladder.
+ * @cssprop [--lr-known-date-field-font-size=var(--lr-form-control-font-size)] - Font size of each
+ *   `field-input`, auto-swapped per `size` by the shared ladder.
+ * @cssprop [--lr-known-date-field-min-height=max(var(--lr-form-control-height),var(--lr-size-24px))]
+ *   - Minimum block size of each `field-input`, auto-swapped per `size` (`2xs`/`xs`→`24px`,
+ *   `s`→`1.875rem`, `m`→`2.5rem`, `l`→`3rem`, `xl`→`3.5rem`) -- the same shared control-height
+ *   ladder `lr-input`/`lr-date-input` sit on, so a birthdate field in a form row beside those
+ *   controls renders at the same height. The `max()` floors the two smallest tiers at WCAG 2.2
+ *   SC 2.5.8's 24px pointer-target minimum. At the small tiers the floor exceeds the field's own
+ *   content height and actively pins the rendered box; at `l`/`xl` the content height stays under
+ *   it, so those two tiers are unaffected.
  * @cssprop --lr-known-date-field-height - Exact block size of each `field-input`. Undeclared by
  *   default, so the field grows to fit its content, floored by `--lr-known-date-field-min-height`.
  *   Set it to pin a fixed height.
@@ -158,7 +166,9 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  *   `field-input` while `:host([data-invalid])` is set.
  */
 export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
-  static override styles = [LyraElement.styles, styles];
+  // The shared ladder sits before this component's own sheet so the per-tier `--lr-form-control-*`
+  // knobs are already declared by the time the `--lr-known-date-field-*` surface reads them.
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     min: { noAccessor: true },
@@ -166,7 +176,12 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     readonly: { type: Boolean, reflect: true, noAccessor: true },
   };
 
-  @property({ reflect: true }) size: LyraKnownDateSize = 'm';
+  /** Control density, on the library's shared six-step ladder — `'m'` by default. Scales each
+   *  field's height floor, padding, font size and corner radius together, so a birthdate field
+   *  lines up with the `lr-input`/`lr-date-input` beside it at the same declared size.
+   *  `'small'`/`'medium'`/`'large'` are accepted as synonyms of `'s'`/`'m'`/`'l'`. Every tier
+   *  resolves to at least the 24px pointer-target floor, so even `'2xs'` stays usable. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';

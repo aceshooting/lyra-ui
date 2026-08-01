@@ -9,20 +9,30 @@ export const styles = css`
        delegation, so it always hugs the visible row rather than any
        host-level margin/inline layout quirks. */
     outline: none;
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-form-control-radius);
   }
   :host(:focus-visible) [part='base'] {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   [part='base'] {
+    box-sizing: border-box;
     display: flex;
     align-items: center;
+    /* Deliberately NOT --lr-form-control-gap: that knob is the 2px rhythm between an input's own
+       inline affordances, and at this size it collides the leading icon with the label of a menu
+       row. The icon/label/chevron rhythm is constant across tiers here; only the box scales. */
     gap: var(--lr-space-xs);
-    padding: var(--lr-space-xs) var(--lr-space-s);
-    border-radius: var(--lr-radius);
+    /* max() rather than the bare ladder value: the ladder's bottom two tiers resolve to 20px/24px,
+       and a menu row is a pointer target, so it floors at the WCAG 2.2 SC 2.5.8 minimum. Above
+       that floor the row tracks the same heights every other control in a toolbar row uses. */
+    min-block-size: max(var(--lr-form-control-height), var(--lr-size-24px));
+    padding-block: var(--lr-form-control-padding-block);
+    padding-inline: var(--lr-form-control-padding-inline);
+    border-radius: var(--lr-form-control-radius);
     cursor: pointer;
     font: inherit;
+    font-size: var(--lr-form-control-font-size);
     color: inherit;
     line-height: var(--lr-line-height-snug);
   }

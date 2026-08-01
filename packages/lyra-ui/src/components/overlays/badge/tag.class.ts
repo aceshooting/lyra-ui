@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
+import { variants } from '../../../internal/variants.styles.js';
 import { LyraBadge } from './badge.class.js';
 import { styles as badgeStyles } from './badge.styles.js';
 import { styles as tagStyles } from './tag.styles.js';
@@ -38,7 +39,7 @@ export interface LyraTagEventMap {
  * Background of the remove button on hover.
  */
 export class LyraTag extends LyraBadge<LyraTagEventMap> {
-  static override styles = [LyraElement.styles, badgeStyles, tagStyles];
+  static override styles = [LyraElement.styles, variants, badgeStyles, tagStyles];
 
   /** Renders the remove affordance. */
   @property({ attribute: 'with-remove', type: Boolean, reflect: true }) withRemove = false;

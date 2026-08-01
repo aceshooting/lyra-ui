@@ -4,8 +4,12 @@ export const styles = css`
   :host {
     display: block;
     --lr-combobox-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
-    --lr-combobox-trigger-min-height: var(--lr-size-2-5rem);
-    --lr-combobox-font-size: var(--lr-font-size-md);
+    /* Height and text size come from the ONE shared form-control ladder (internal/sizes.styles.ts)
+       rather than a sixth private copy of the same six values. The ladder matches both spellings of
+       every tier in one selector list, so size="small" and size="s" resolve identically here with
+       no per-component alias rules. */
+    --lr-combobox-trigger-min-height: var(--lr-form-control-height);
+    --lr-combobox-font-size: var(--lr-form-control-font-size);
     --lr-combobox-tag-padding: var(--lr-size-0-1rem) var(--lr-size-0-4rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-sm);
     --lr-combobox-expand-size: var(--lr-size-1-75rem);
@@ -22,41 +26,41 @@ export const styles = css`
        setting the property from anywhere (inline style, an ancestor, an outer-tree rule) pins an
        exact height. */
   }
+  :host([pill]) {
+    --lr-combobox-radius: var(--lr-radius-pill);
+  }
+  /* What remains per tier is this component's OWN geometry -- the selected-tag chip and the
+     decorative expand glyph -- which is not a form-control height/text ladder and so is not part of
+     the shared one. Each tier matches both spellings for the same reason sizes.styles.ts does: the
+     shared ladder accepts size="small", and a control whose tags silently ignored it would be worse
+     than one that never accepted it. */
   :host([size='2xs']) {
     --lr-combobox-trigger-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
-    --lr-combobox-trigger-min-height: var(--lr-size-1-25rem);
-    --lr-combobox-font-size: var(--lr-font-size-2xs);
     --lr-combobox-tag-padding: 0 var(--lr-size-0-25rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-2xs);
     --lr-combobox-expand-size: var(--lr-size-1rem);
   }
   :host([size='xs']) {
     --lr-combobox-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    --lr-combobox-trigger-min-height: var(--lr-size-1-5rem);
-    --lr-combobox-font-size: var(--lr-font-size-xs);
     --lr-combobox-tag-padding: 0 var(--lr-size-0-25rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-2xs);
     --lr-combobox-expand-size: var(--lr-size-1rem);
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-combobox-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
-    --lr-combobox-trigger-min-height: var(--lr-size-1-875rem);
-    --lr-combobox-font-size: var(--lr-font-size-sm);
     --lr-combobox-tag-padding: var(--lr-size-0-05rem) var(--lr-size-0-3125rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-xs);
     --lr-combobox-expand-size: var(--lr-size-1-25rem);
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-combobox-trigger-padding: var(--lr-space-s) var(--lr-space-m);
-    --lr-combobox-trigger-min-height: var(--lr-size-3rem);
-    --lr-combobox-font-size: var(--lr-font-size-lg);
     --lr-combobox-tag-padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-md-sm);
   }
   :host([size='xl']) {
     --lr-combobox-trigger-padding: var(--lr-space-m) var(--lr-space-l);
-    --lr-combobox-trigger-min-height: var(--lr-size-3-5rem);
-    --lr-combobox-font-size: var(--lr-font-size-xl);
     --lr-combobox-tag-padding: var(--lr-size-0-25rem) var(--lr-size-0-625rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-md);
   }

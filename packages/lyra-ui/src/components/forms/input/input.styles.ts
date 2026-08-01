@@ -3,21 +3,27 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lr-input-padding-block: var(--lr-space-s);
-    --lr-input-padding-inline: var(--lr-space-s);
-    --lr-input-font-size: var(--lr-font-size-md-sm);
-    --lr-input-control-min-height: var(--lr-size-2-5rem);
+    /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, pulled in ahead of
+       this sheet by input.class.ts): one scale for lr-button/lr-input/lr-select/lr-combobox/
+       lr-date-input instead of five hand-maintained copies that had already drifted (this
+       component's own l and xl tiers used to overshoot their declared floor by 2px and 5px, so an
+       input never actually lined up with the button beside it). The ladder matches both spellings
+       of every tier in one selector list, so size="small" is size="s" here for free. */
+    --lr-input-padding-block: var(--lr-form-control-padding-block);
+    --lr-input-padding-inline: var(--lr-form-control-padding-inline);
+    --lr-input-font-size: var(--lr-form-control-font-size);
+    --lr-input-control-min-height: var(--lr-form-control-height);
     /* --lr-input-control-height is intentionally NOT declared here. It is a consumer-facing escape
        hatch consumed only through the two var() fallbacks on [part='input-wrapper'] below;
        declaring any value for it (even 'auto') would make those fallback arms unreachable and
        silently turn --lr-input-control-min-height into dead code. Left undeclared, both arms stay
        live: the per-tier floor falls out of the fallback, and setting the property from anywhere
        (inline style, an ancestor, an outer-tree rule) pins an exact height. */
-    /* Gap and radius don't vary by size tier (unlike the four knobs above), so each is declared
-       once here rather than re-assigned per :host([size='…']) block -- mirrors lr-button's
-       --lr-button-gap/--lr-button-radius. */
+    /* The adornment gap is deliberately NOT taken from the ladder: it does not vary by tier there
+       either, and the ladder's value is tuned for a button's icon-beside-label spacing, which is
+       tighter than a text field wants between an adornment and the caret. */
     --lr-input-gap: var(--lr-space-xs);
-    --lr-input-radius: var(--lr-radius);
+    --lr-input-radius: var(--lr-form-control-radius);
     /* Fill/border pair swapped per appearance below. Declared here as well so an element whose
        appearance attribute hasn't reflected yet (or was removed by hand) still paints the
        committed filled-outlined treatment rather than an unstyled box. */
@@ -49,36 +55,6 @@ export const styles = css`
   }
   :host([pill]) {
     --lr-input-radius: var(--lr-radius-pill);
-  }
-  :host([size='2xs']) {
-    --lr-input-padding-block: var(--lr-size-0-0625rem);
-    --lr-input-padding-inline: var(--lr-space-2xs);
-    --lr-input-font-size: var(--lr-font-size-2xs);
-    --lr-input-control-min-height: var(--lr-size-1-25rem);
-  }
-  :host([size='xs']) {
-    --lr-input-padding-block: var(--lr-size-0-125rem);
-    --lr-input-padding-inline: var(--lr-space-xs);
-    --lr-input-font-size: var(--lr-font-size-xs);
-    --lr-input-control-min-height: var(--lr-size-1-5rem);
-  }
-  :host([size='s']) {
-    --lr-input-padding-block: var(--lr-space-xs);
-    --lr-input-padding-inline: var(--lr-space-xs);
-    --lr-input-font-size: var(--lr-font-size-sm);
-    --lr-input-control-min-height: var(--lr-size-1-875rem);
-  }
-  :host([size='l']) {
-    --lr-input-padding-block: var(--lr-space-m);
-    --lr-input-padding-inline: var(--lr-space-m);
-    --lr-input-font-size: var(--lr-font-size-lg);
-    --lr-input-control-min-height: var(--lr-size-3rem);
-  }
-  :host([size='xl']) {
-    --lr-input-padding-block: var(--lr-space-l);
-    --lr-input-padding-inline: var(--lr-space-l);
-    --lr-input-font-size: var(--lr-font-size-xl);
-    --lr-input-control-min-height: var(--lr-size-3-5rem);
   }
   [part='form-control-label'] {
     display: block;

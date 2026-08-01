@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { LyraRadio } from './radio.class.js';
 import { styles } from './radio-button.styles.js';
 
@@ -29,9 +30,12 @@ import { styles } from './radio-button.styles.js';
  * @csspart prefix - The leading-content wrapper.
  * @csspart label - The default slot wrapper.
  * @csspart suffix - The trailing-content wrapper.
+ * @cssprop [--lr-radio-radius=var(--lr-form-control-radius)] - Corner radius of the outer edges of
+ * the button row. Inherited from `<lr-radio>` and re-pointed here at the shared control radius;
+ * `pill` swaps it for `--lr-radius-pill`.
  */
 export class LyraRadioButton extends LyraRadio {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   override render(): TemplateResult {
     const disabled = this.effectiveDisabled;

@@ -37,12 +37,12 @@ export const IconOnly: Story = {
   },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
-      <lr-avatar tone="brand" alt="AI assistant">
+      <lr-avatar variant="brand" alt="AI assistant">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4L12 2z"></path>
         </svg>
       </lr-avatar>
-      <lr-avatar tone="neutral" alt="You">
+      <lr-avatar variant="neutral" alt="You">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
@@ -88,17 +88,23 @@ export const Sizes: Story = {
     docs: {
       description: {
         story:
-          'The canonical spellings are `small`/`medium`/`large`. The shorthand `sm`/`md`/`lg` remains accepted as an alias of the same three tiers (bottom row), so existing markup and markup migrated from a shorthand-sized library keep their sizing.',
+          '`size` runs the library-wide six-step ladder, `2xs` through `xl` (top row). `small`/`medium`/`large` are the accepted Web Awesome / Shoelace spellings of `s`/`m`/`l`, and this component\'s older `sm`/`md`/`lg` shorthands still resolve to the same three tiers (bottom row), so existing markup keeps its sizing.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
+      <lr-avatar initials="XS" size="2xs"></lr-avatar>
+      <lr-avatar initials="XS" size="xs"></lr-avatar>
+      <lr-avatar initials="SM" size="s"></lr-avatar>
+      <lr-avatar initials="MD" size="m"></lr-avatar>
+      <lr-avatar initials="LG" size="l"></lr-avatar>
+      <lr-avatar initials="XL" size="xl"></lr-avatar>
+    </div>
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.75rem;">
       <lr-avatar initials="SM" size="small"></lr-avatar>
       <lr-avatar initials="MD" size="medium"></lr-avatar>
       <lr-avatar initials="LG" size="large"></lr-avatar>
-    </div>
-    <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.75rem;">
       <lr-avatar initials="SM" size="sm"></lr-avatar>
       <lr-avatar initials="MD" size="md"></lr-avatar>
       <lr-avatar initials="LG" size="lg"></lr-avatar>
@@ -142,7 +148,7 @@ export const IconSlotFallback: Story = {
           <circle cx="12" cy="7" r="4"></circle>
         </svg>
       </lr-avatar>
-      <lr-avatar alt="Unassigned" tone="brand" image="https://example.invalid/nonexistent.png">
+      <lr-avatar alt="Unassigned" variant="brand" image="https://example.invalid/nonexistent.png">
         <svg slot="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
@@ -165,14 +171,14 @@ export const LazyLoading: Story = {
   render: () => html`<lr-avatar image=${IMAGE_SRC} alt="A. Bee" initials="AB" loading="lazy"></lr-avatar>`,
 };
 
-export const Tones: Story = {
+export const Variants: Story = {
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
-      <lr-avatar initials="NE" tone="neutral"></lr-avatar>
-      <lr-avatar initials="BR" tone="brand"></lr-avatar>
-      <lr-avatar initials="SU" tone="success"></lr-avatar>
-      <lr-avatar initials="WA" tone="warning"></lr-avatar>
-      <lr-avatar initials="DA" tone="danger"></lr-avatar>
+      <lr-avatar initials="NE" variant="neutral"></lr-avatar>
+      <lr-avatar initials="BR" variant="brand"></lr-avatar>
+      <lr-avatar initials="SU" variant="success"></lr-avatar>
+      <lr-avatar initials="WA" variant="warning"></lr-avatar>
+      <lr-avatar initials="DA" variant="danger"></lr-avatar>
     </div>
   `,
 };
@@ -192,7 +198,7 @@ export const ImageFallback: Story = {
       image="https://example.invalid/nonexistent.png"
       alt="A. Bee"
       initials="AB"
-      tone="brand"
+      variant="brand"
       @lr-error=${(e: CustomEvent<{ image: string }>) => {
         const out = document.getElementById('avatar-error-log');
         if (out) out.textContent = `lr-error: ${e.detail.image}`;
@@ -208,7 +214,7 @@ export const InitialsFontSize: Story = {
     docs: {
       description: {
         story:
-          'The initials fallback scales with `size` through `--lr-avatar-font-size` (`small` → `--lr-font-size-xs`, `medium` → `--lr-font-size-sm`, `large` → `--lr-font-size-md`). Set the property directly to override any tier — useful for single-character initials, which can carry a larger glyph than a two-character pair in the same circle.',
+          'The initials fallback scales with `size` through `--lr-avatar-font-size` (`s`/`small` → `--lr-font-size-xs`, `m`/`medium` → `--lr-font-size-sm`, `l`/`large` → `--lr-font-size-md`). Set the property directly to override any tier — useful for single-character initials, which can carry a larger glyph than a two-character pair in the same circle.',
       },
     },
   },
@@ -217,7 +223,7 @@ export const InitialsFontSize: Story = {
       <lr-avatar initials="AB" size="small"></lr-avatar>
       <lr-avatar initials="AB" size="medium"></lr-avatar>
       <lr-avatar initials="AB" size="large"></lr-avatar>
-      <lr-avatar initials="A" tone="brand" style="--lr-avatar-font-size: 1.25rem;"></lr-avatar>
+      <lr-avatar initials="A" variant="brand" style="--lr-avatar-font-size: 1.25rem;"></lr-avatar>
     </div>
   `,
 };

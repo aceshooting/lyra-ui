@@ -2,8 +2,11 @@
 // from `tree.class.ts` (which imports `LyraTreeItem`'s type back from tree-item) -- that pair was a
 // type-only import cycle. `tree.class.ts` re-exports these, so every public path is unchanged.
 
-/** Tone for a `TreeBadge` chip; the same closed set as `ButtonVariant`. */
-export type TreeBadgeTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+import type { LyraVariant } from '../../../internal/variants.js';
+
+/** Tone for a `TreeBadge` chip — the shared semantic tone. Kept as a local name so existing
+ *  imports keep resolving. */
+export type TreeBadgeTone = LyraVariant;
 
 export interface TreeBadge {
   text: string;

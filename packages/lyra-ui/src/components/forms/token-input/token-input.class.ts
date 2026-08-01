@@ -5,9 +5,13 @@ import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/a
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
 
-export type LyraTokenInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraTokenInputSize = LyraSizeStep;
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -100,13 +104,16 @@ const delimiterConverter = {
  * @cssprop --lr-token-input-token-padding - Per-token chip padding, scaled by `size`.
  * @cssprop [--lr-token-input-gap=var(--lr-space-xs)] - Gap between form/row children.
  * @cssprop [--lr-token-input-token-gap=var(--lr-space-2xs)] - Gap inside token chips.
- * @cssprop [--lr-token-input-radius=var(--lr-radius)] - Row/token corner radius.
+ * @cssprop [--lr-token-input-radius=var(--lr-radius)] - Row/token corner radius. The `pill`
+ *   attribute swaps it for `--lr-radius-pill`.
  * @cssprop [--lr-token-input-token-bg=var(--lr-color-brand-quiet)] - Token chip background.
  * @cssprop [--lr-token-input-action-hover-bg=var(--lr-color-brand-quiet)] - Edit/remove hover background.
  * @cssprop [--lr-token-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
  * @cssprop [--lr-token-input-invalid-border-color=var(--lr-color-danger)] - Invalid row border color.
  * @cssprop --lr-token-input-font-size - Input-wrapper/token font size, scaled by `size`.
- * @cssprop --lr-token-input-control-min-height - Input-wrapper block-size floor, scaled by `size`.
+ * @cssprop [--lr-token-input-control-min-height=var(--lr-form-control-height)] - Input-wrapper
+ *   block-size floor. Reads the shared form-control height ladder, so retuning
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.
  * @cssprop --lr-token-input-control-height - Exact input-wrapper height. Unset by default, which
  *   leaves `--lr-token-input-control-min-height` as a floor only; set it to a length to both floor
  *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
@@ -115,7 +122,7 @@ const delimiterConverter = {
  */
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     name: { reflect: true, noAccessor: true },
@@ -136,8 +143,14 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    *  The camel-cased property avoids the boolean `HTMLElement.autocorrect` DOM typing. */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
-  /** Visual size — same `2xs`–`xl` scale as `lr-input`'s own `size`. */
-  @property({ reflect: true }) size: LyraTokenInputSize = 'm';
+  /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`. The Web Awesome /
+   *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
+   *  tag rename with no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Rounds the token row's corners to a full pill, mirroring `lr-input`'s own `pill`. It is a
+   *  single override of `--lr-token-input-radius`, which the tokens share with the row, so the
+   *  chips round with it. */
+  @property({ type: Boolean, reflect: true }) pill = false;
   @property({ attribute: 'allow-duplicates', type: Boolean }) allowDuplicates = false;
   /** Allow editing an existing token in place: each token becomes a roving tab stop that opens an
    *  inline editor on click, Enter, or F2. Defaults to `false`, in which case the token row renders

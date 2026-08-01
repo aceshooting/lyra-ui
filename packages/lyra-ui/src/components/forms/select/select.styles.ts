@@ -3,15 +3,19 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lr-select-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
-    --lr-select-trigger-min-height: var(--lr-size-2-5rem);
-    --lr-select-font-size: var(--lr-font-size-md);
+    /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, pulled in ahead of
+       this sheet by select.class.ts): one scale for lr-button/lr-input/lr-select/lr-combobox/
+       lr-date-input instead of five hand-maintained copies. The ladder matches both spellings of
+       every tier in one selector list, so size="small" is size="s" here for free. */
+    --lr-select-trigger-padding: var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline);
+    --lr-select-trigger-min-height: var(--lr-form-control-height);
+    --lr-select-font-size: var(--lr-form-control-font-size);
     --lr-select-expand-size: var(--lr-size-1-75rem);
-    /* Gap and radius don't vary by size tier (unlike the four knobs above), so each is declared
-       once here rather than re-assigned per :host([size='…']) block -- same fix as lr-button's
-       identical --lr-button-gap/--lr-button-radius (button.styles.ts). */
+    /* The trigger's own adornment gap is deliberately NOT taken from the ladder: it does not vary
+       by tier there either, and the ladder's value is tuned for a button's icon-beside-label
+       spacing, which is tighter than a field wants between an adornment and its label. */
     --lr-select-gap: var(--lr-space-xs);
-    --lr-select-radius: var(--lr-radius);
+    --lr-select-radius: var(--lr-form-control-radius);
     --lr-select-tag-padding: var(--lr-space-2xs) var(--lr-space-xs);
     --lr-select-tag-font-size: var(--lr-font-size-sm);
     /* --lr-select-trigger-height is intentionally NOT declared here. It is a consumer-facing
@@ -22,33 +26,17 @@ export const styles = css`
        extra specificity rules, and setting the property from anywhere (inline style, an ancestor,
        an outer-tree rule) pins an exact height. */
   }
-  :host([size='2xs']) {
-    --lr-select-trigger-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
-    --lr-select-trigger-min-height: var(--lr-size-1-25rem);
-    --lr-select-font-size: var(--lr-font-size-2xs);
-    --lr-select-expand-size: var(--lr-size-1rem);
-  }
+  /* Only the decorative expand glyph still needs per-tier rules: it sizes an icon box, not the
+     control row, so the shared ladder has nothing to say about it. Both spellings of the aliased
+     tier are matched here exactly as the ladder does, so size="small" can never take the s tier's
+     padding with the default tier's chevron. */
+  :host([size='2xs']),
   :host([size='xs']) {
-    --lr-select-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    --lr-select-trigger-min-height: var(--lr-size-1-5rem);
-    --lr-select-font-size: var(--lr-font-size-xs);
     --lr-select-expand-size: var(--lr-size-1rem);
   }
-  :host([size='s']) {
-    --lr-select-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
-    --lr-select-trigger-min-height: var(--lr-size-1-875rem);
-    --lr-select-font-size: var(--lr-font-size-sm);
+  :host([size='s']),
+  :host([size='small']) {
     --lr-select-expand-size: var(--lr-size-1-25rem);
-  }
-  :host([size='l']) {
-    --lr-select-trigger-padding: var(--lr-space-s) var(--lr-space-m);
-    --lr-select-trigger-min-height: var(--lr-size-3rem);
-    --lr-select-font-size: var(--lr-font-size-lg);
-  }
-  :host([size='xl']) {
-    --lr-select-trigger-padding: var(--lr-space-m) var(--lr-space-l);
-    --lr-select-trigger-min-height: var(--lr-size-3-5rem);
-    --lr-select-font-size: var(--lr-font-size-xl);
   }
   [part='form-control-label'] {
     display: block;

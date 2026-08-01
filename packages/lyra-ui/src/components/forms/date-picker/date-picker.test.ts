@@ -52,6 +52,29 @@ it('scales day-cell size across every tier, floored at the 24px WCAG minimum', a
   }
 });
 
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  const cell = (el: Element) => el.shadowRoot!.querySelector('[part~="day"]') as HTMLElement;
+  for (const [alias, step] of pairs) {
+    const aliasEl = await fixture(
+      html`<lr-date-picker size=${alias} value="2026-07-15"></lr-date-picker>`,
+    );
+    const stepEl = await fixture(
+      html`<lr-date-picker size=${step} value="2026-07-15"></lr-date-picker>`,
+    );
+    expect(getComputedStyle(cell(aliasEl)).blockSize, `day block-size for ${alias}`).to.equal(
+      getComputedStyle(cell(stepEl)).blockSize,
+    );
+    expect(getComputedStyle(cell(aliasEl)).inlineSize, `day inline-size for ${alias}`).to.equal(
+      getComputedStyle(cell(stepEl)).inlineSize,
+    );
+  }
+});
+
 it('defaults to size "m" and reflects a size attribute', async () => {
   const defaultEl = (await fixture(
     html`<lr-date-picker value="2026-07-15"></lr-date-picker>`,

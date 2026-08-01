@@ -73,9 +73,9 @@ export interface LyraAttachmentChipEventMap {
  *
  * Two independent ways to populate it, matching the two points in a message's
  * lifecycle this is used at:
- *  - Set `file` to a real `File` (fresh from a picker/drop) — `name`, `size`,
+ *  - Set `file` to a real `File` (fresh from a picker/drop) — `name`, `bytes`,
  *    `mime-type` and the image thumbnail are all auto-derived from it.
- *  - Set the plain `name`/`size`/`mime-type`/`thumbnail-src` props instead,
+ *  - Set the plain `name`/`bytes`/`mime-type`/`thumbnail-src` props instead,
  *    for reconstructing a chip from server-persisted attachment metadata
  *    (e.g. after a page reload, when no real `File` object exists any more).
  *
@@ -112,9 +112,10 @@ export interface LyraAttachmentChipEventMap {
  * @event lr-preview - The user activated the preview button. `detail: { id, name, mimeType, src }`.
  * @csspart base - The chip's root container.
  * @csspart thumbnail - The leading image thumbnail / generic file glyph.
- * @csspart meta - Wrapper around `name` and `size`.
+ * @csspart meta - Wrapper around the filename and the formatted file size.
  * @csspart name - The filename (ellipsis-truncated via CSS; the untruncated name is always available via the native `title` tooltip).
- * @csspart size - The human-readable formatted file size. Hidden when no size is known.
+ * @csspart size - The human-readable formatted file size, from `bytes` (or the `file`'s own byte
+ * count). Hidden when no size is known.
  * @csspart status-text - The visible text twin of the status accent color — carries the state in text, not just color. Empty/hidden for `pending`/`done`. Gets `role="alert"` for `status="error"` only, so a screen-reader user not already focused on the chip still hears an upload failure; the ticking `'uploading'` readout deliberately stays out of the accessibility tree the same way `<lr-generation-status>`'s per-second elapsed/token readout does — a live region re-announcing every progress tick would be noise, not information, while a one-shot failure is exactly the kind of infrequent, actionable transition a live region exists for.
  * @csspart progress - The numeric upload progress bar (`role="progressbar"`), shown only while `status="uploading"` and `progress` is a meaningful (>0) number.
  * @csspart progress-fill - The filled portion of `progress`.
@@ -143,16 +144,18 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   static override styles = [LyraElement.styles, styles];
 
   /** A real `File`, e.g. fresh from `<lr-file-input>`'s `lr-files` event.
-   *  When set, `name`/`size`/`mime-type`/the image thumbnail are all derived
+   *  When set, `name`/`bytes`/`mime-type`/the image thumbnail are all derived
    *  from it, taking precedence over the independent props below. */
   @property({ attribute: false }) file?: File;
 
   /** Filename, used only while `file` is unset. */
   @property() name = '';
 
-  /** File size in bytes, used only while `file` is unset. NaN/negative normalize to `0` (renders
-   *  as "unknown size", same as an unset size) via `effectiveSize` -- see that getter. */
-  @property({ type: Number }) size = 0;
+  /** File size as a raw byte count, used only while `file` is unset. Named for what it holds
+   *  rather than `size`, which everywhere else in this library names a size *tier*
+   *  (`small`/`medium`/`large`, `xs`...`xl`). NaN/negative normalize to `0` (renders as "unknown
+   *  size", same as an unset byte count) via `effectiveSize` -- see that getter. */
+  @property({ type: Number }) bytes = 0;
 
   /** MIME type, used only while `file` is unset. */
   @property({ attribute: 'mime-type' }) mimeType = '';
@@ -237,9 +240,9 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
 
   private get effectiveSize(): number {
-    // `File.size` is always a genuine finite non-negative number; only the independent `size`
+    // `File.size` is always a genuine finite non-negative number; only the independent `bytes`
     // prop (a plain reactive property, so a caller could pass NaN/negative) needs guarding.
-    return this.file ? this.file.size : finiteRange(this.size, 0, 0);
+    return this.file ? this.file.size : finiteRange(this.bytes, 0, 0);
   }
 
   private get effectiveMimeType(): string {

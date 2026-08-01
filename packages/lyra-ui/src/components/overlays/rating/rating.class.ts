@@ -5,6 +5,7 @@ import { finiteCount, finiteNumber, finiteRange } from '../../../internal/number
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import type { LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './rating.styles.js';
 
 const DEFAULT_MAX = 5;
@@ -16,8 +17,8 @@ const DEFAULT_PRECISION = 1;
  *  comfortably positive and no coarser than the star count itself. */
 const MIN_PRECISION = 0.01;
 
-/** Visual density of the rendered symbols. */
-export type LyraRatingSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Visual density of the rendered symbols, on the library's one size ladder. */
+export type LyraRatingSize = LyraSizeStep;
 
 /** Which point of a hover gesture an `lr-hover` event describes. */
 export type LyraRatingHoverPhase = 'start' | 'move' | 'end';

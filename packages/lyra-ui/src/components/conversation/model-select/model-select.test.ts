@@ -1270,7 +1270,7 @@ describe('size', () => {
   });
 
   it('enforces --lr-model-select-trigger-min-height at each non-default size (closed-dropdown mode)', async () => {
-    const expected: Record<string, string> = { xs: '24px', s: '30px', l: '48px', xl: '56px' };
+    const expected: Record<string, string> = { '2xs': '20px', xs: '24px', s: '30px', l: '48px', xl: '56px' };
     for (const [size, px] of Object.entries(expected)) {
       const el = (await fixture(
         html`<lr-model-select size=${size} .catalog=${CATALOG}></lr-model-select>`,
@@ -1282,6 +1282,40 @@ describe('size', () => {
   it('enforces --lr-model-select-trigger-min-height at the default "m" size too (40px)', async () => {
     const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
     expect(getComputedStyle(trigger(el)).minBlockSize).to.equal('40px');
+  });
+
+  it('accepts the small/medium/large spellings as aliases of s/m/l', async () => {
+    // The shared size ladder emits both spellings in one selector list, so migrating markup from a
+    // library that spells its tiers out needs no attribute rewrite. Assert the RENDERED height:
+    // a spelling the type accepts and the stylesheet ignores would fall back to the default tier.
+    const heightAt = async (size: string): Promise<string> => {
+      const el = (await fixture(
+        html`<lr-model-select size=${size} .catalog=${CATALOG}></lr-model-select>`,
+      )) as LyraModelSelect;
+      return getComputedStyle(trigger(el)).minBlockSize;
+    };
+    expect(await heightAt('small'), 'small === s').to.equal(await heightAt('s'));
+    expect(await heightAt('medium'), 'medium === m').to.equal(await heightAt('m'));
+    expect(await heightAt('large'), 'large === l').to.equal(await heightAt('l'));
+    expect(await heightAt('small'), 'small is not silently the default tier').to.not.equal(await heightAt('m'));
+  });
+
+  it('sizes its trigger off the shared --lr-form-control-* ladder rather than a private copy', async () => {
+    const el = (await fixture(
+      html`<lr-model-select size="l" .catalog=${CATALOG}></lr-model-select>`,
+    )) as LyraModelSelect;
+    const hostStyle = getComputedStyle(el);
+    expect(hostStyle.getPropertyValue('--lr-model-select-trigger-min-height').trim()).to.equal(
+      hostStyle.getPropertyValue('--lr-form-control-height').trim(),
+    );
+    expect(hostStyle.getPropertyValue('--lr-model-select-font-size').trim()).to.equal(
+      hostStyle.getPropertyValue('--lr-form-control-font-size').trim(),
+    );
+    // The public knob is still an override point -- adopting the shared ladder moved the values,
+    // not the surface.
+    el.style.setProperty('--lr-model-select-trigger-min-height', '77px');
+    await el.updateComplete;
+    expect(getComputedStyle(trigger(el)).minBlockSize).to.equal('77px');
   });
 });
 

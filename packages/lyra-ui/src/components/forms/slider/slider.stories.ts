@@ -278,3 +278,25 @@ export const ProgrammaticValueAsNumber: Story = {
     </div>
   `,
 };
+
+export const Sizes: StoryObj = {
+  name: 'Size ladder',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`size` is the library\'s shared ladder, so a `size` set here matches an `<lr-input>`, `<lr-select>` or `<lr-button>` of the same `size` in the same row. Both spellings of every tier are accepted — `s`/`m`/`l` and Web Awesome\'s `small`/`medium`/`large` — so a migration is a tag rename with no attribute rewrite.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); justify-items: start;">
+      <lr-slider size="2xs" label="Size 2xs" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="xs" label="Size xs" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="s" label="Size s" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="m" label="Size m" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="l" label="Size l" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="xl" label="Size xl" show-value style="inline-size: 18rem"></lr-slider>
+    </div>
+  `,
+};

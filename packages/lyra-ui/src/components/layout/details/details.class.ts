@@ -1,7 +1,12 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraSize } from '../../../internal/variants.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { styles } from './details.styles.js';
+
+/** The library's one size ladder, in either spelling. */
+export type LyraDetailsSize = LyraSize;
 
 export interface LyraDetailsEventMap {
   'lr-show': CustomEvent<undefined>;
@@ -36,9 +41,16 @@ export interface LyraDetailsEventMap {
  * @csspart base - The native details element.
  * @csspart summary - The summary control.
  * @csspart content - The panel content.
+ * @cssprop [--lr-details-font-size=var(--lr-form-control-font-size)] - Text size of the summary
+ *   and the panel. Each `size` tier sets it from the library's shared size ladder.
+ * @cssprop [--lr-details-spacing=var(--lr-form-control-padding-inline)] - Block rhythm: the
+ *   summary's block padding and the panel's trailing padding, kept equal so a stack of
+ *   disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding
+ *   knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text
+ *   inside a fixed control height and would collapse the summary row.
  */
 export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   private _open = false;
 
@@ -62,6 +74,13 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   }
 
   @property({ type: Boolean, reflect: true }) disabled = false;
+
+  /** Visual density, on the library's shared ladder. Both spellings of every tier are accepted
+   *  (`s`/`small`, `m`/`medium`, `l`/`large`), so markup migrated from Web Awesome or Shoelace
+   *  needs no attribute rewrite. `m` reproduces the disclosure this component had before `size`
+   *  existed. */
+  @property({ reflect: true }) size: LyraDetailsSize = 'm';
+
   @property() summary = '';
 
   // `[part='summary']:empty` never matches because the part always contains a literal `<slot>`

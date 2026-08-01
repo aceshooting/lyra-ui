@@ -98,6 +98,33 @@ export const Appearance: Story = {
   `,
 };
 
+/** `size` runs the library-wide six-step ladder. Web Awesome's and Shoelace's
+ *  `small`/`medium`/`large` are accepted as exact synonyms of `s`/`m`/`l`, so a migrated pager
+ *  needs no attribute rewrite. Every control still clears the shared 40px hit-area floor at the
+ *  smallest tiers -- only the type scale tightens. */
+export const Sizes: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; justify-items: start;">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`<lr-pagination
+          size=${size}
+          total="200"
+          page-size="20"
+          page="3"
+        ></lr-pagination>`,
+      )}
+      ${(['small', 'medium', 'large'] as const).map(
+        (size) => html`<lr-pagination
+          size=${size}
+          total="200"
+          page-size="20"
+          page="3"
+        ></lr-pagination>`,
+      )}
+    </div>
+  `,
+};
+
 /** With `href-template`, each page renders as a real link, so the pager works before hydration and
  *  is crawlable. The current page deliberately has no `href` -- the reader is already there. */
 export const Links: Story = {

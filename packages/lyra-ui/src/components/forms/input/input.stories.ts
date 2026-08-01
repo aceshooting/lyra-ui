@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './input.js';
+import '../button/button.js';
 
 const meta: Meta = {
   title: 'Input',
@@ -50,6 +51,35 @@ export const ClearableWithAdornments: Story = {
       <span slot="start" aria-hidden="true">⌕</span>
       <kbd slot="end">⌘K</kbd>
     </lr-input>
+  `,
+};
+
+/**
+ * `size` walks the library's one form-control ladder. Every tier matches both its canonical step
+ * and Web Awesome's/Shoelace's name for it, so migrating markup that says `size="small"` renders
+ * exactly what `size="s"` renders. The same ladder backs `<lr-button>`, `<lr-select>` and
+ * `<lr-textarea>`, so same-tier controls are the same height in a toolbar row.
+ */
+export const Sizes: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; max-inline-size: 24rem">
+      ${['2xs', 'xs', 's', 'm', 'l', 'xl'].map(
+        (size) => html`<lr-input size=${size} label=${size} placeholder="Name"></lr-input>`,
+      )}
+    </div>
+  `,
+};
+
+/** The `small`/`medium`/`large` spellings render exactly what `s`/`m`/`l` render. */
+export const SizeSpellings: Story = {
+  name: 'Both size spellings',
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+      <lr-input size="s" aria-label="s" placeholder='size="s"'></lr-input>
+      <lr-input size="small" aria-label="small" placeholder='size="small"'></lr-input>
+      <lr-button size="s">size="s"</lr-button>
+      <lr-button size="small">size="small"</lr-button>
+    </div>
   `,
 };
 

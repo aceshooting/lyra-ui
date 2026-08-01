@@ -7,6 +7,8 @@ import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './combobox.styles.js';
 import { LyraOption } from './option.class.js';
 import './option.class.js';
@@ -50,7 +52,9 @@ function createNoopInternals(): ElementInternals {
 }
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
-export type LyraComboboxSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraComboboxSize = LyraSizeStep;
 
 export interface ComboboxSourceRow {
   value: string;
@@ -159,7 +163,9 @@ export interface LyraComboboxEventMap {
  * @csspart error - The error message.
  * @csspart hint - The hint message.
  * @cssprop --lr-combobox-trigger-padding - Padding inside the input container.
- * @cssprop --lr-combobox-trigger-min-height - Minimum input-container block size, scaled by `size`.
+ * @cssprop [--lr-combobox-trigger-min-height=var(--lr-form-control-height)] - Minimum
+ *   input-container block size. Reads the shared form-control height ladder, so retuning
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.
  * @cssprop --lr-combobox-trigger-height - Exact input-container height. Unset by default, which
  *   leaves `--lr-combobox-trigger-min-height` as a floor only; set it to a length to both floor and
  *   cap the row (e.g. to pixel-match `<lr-input>`/`<lr-select>` in the same toolbar). Because it is
@@ -167,7 +173,8 @@ export interface LyraComboboxEventMap {
  *   well as inline on the element. Intended for a single-row combobox: in `multiple` mode a tag row
  *   long enough to wrap overflows the pinned box visibly (nothing is clipped or made unreachable),
  *   so leave it unset there.
- * @cssprop --lr-combobox-font-size - Input text size.
+ * @cssprop [--lr-combobox-font-size=var(--lr-form-control-font-size)] - Input text size, from the
+ *   shared form-control size ladder.
  * @cssprop --lr-combobox-tag-padding - Selected-tag padding.
  * @cssprop --lr-combobox-tag-font-size - Selected-tag text size.
  * @cssprop --lr-combobox-expand-size - Decorative expand-icon box size, scaled by `size`.
@@ -175,7 +182,8 @@ export interface LyraComboboxEventMap {
  *   and filter input inside the trigger row. Unlike the size knobs above it does not vary by
  *   `size` tier. Override it to retune without a `::part(combobox)` rule.
  * @cssprop [--lr-combobox-radius=var(--lr-radius)] - Corner radius of the trigger row
- *   (`[part='combobox']`). Does not vary by `size` tier.
+ *   (`[part='combobox']`). Does not vary by `size` tier; the `pill` attribute swaps it for
+ *   `--lr-radius-pill`.
  * @cssprop [--lr-combobox-option-active-bg=var(--lr-color-brand-quiet)] - Background of a hovered
  *   or keyboard-active option row.
  * @cssprop [--lr-combobox-option-selected-bg=transparent] - Background of the currently-selected
@@ -189,7 +197,7 @@ export interface LyraComboboxEventMap {
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     multiple: { type: Boolean, reflect: true, noAccessor: true },
@@ -207,8 +215,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `2xs`–`xl` scale as `lr-select`'s `size`. */
-  @property({ reflect: true }) size: LyraComboboxSize = 'm';
+  /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`/`lr-select`. The
+   *  Web Awesome / Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a
+   *  migration is a tag rename with no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Rounds the trigger row's corners to a full pill, mirroring `lr-input`'s own `pill`. It is a
+   *  single override of `--lr-combobox-radius`, so a consumer setting that property directly still
+   *  wins for a bespoke shape. */
+  @property({ type: Boolean, reflect: true }) pill = false;
   /** Show a clear button while the combobox has something to clear on either axis: a committed
    *  selection, or visible filter text (the open listbox in single-select, any time in `multiple`
    *  mode — a closed single-select shows the selected label, not the query, so a stale query alone

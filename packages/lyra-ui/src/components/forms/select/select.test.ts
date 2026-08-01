@@ -1063,12 +1063,16 @@ describe('trigger gap/radius cssprops', () => {
     expect(cs.borderRadius).to.equal('3px');
   });
 
-  it('declares --lr-select-gap/--lr-select-radius on :host and consumes them once on [part="trigger"]', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/:host \{[^}]*--lr-select-gap: var\(--lr-space-xs\);/);
-    expect(css).to.match(/:host \{[^}]*--lr-select-radius: var\(--lr-radius\);/);
-    expect(css).to.include('gap: var(--lr-select-gap);');
-    expect(css).to.include('border-radius: var(--lr-select-radius);');
+  it('keeps the trigger gap constant across tiers while the radius follows the shared ladder', async () => {
+    const triggerOf = (host: LyraSelect) => host.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+    const mEl = (await fixture(basic())) as LyraSelect;
+    const xsEl = (await fixture(html`<lr-select size="xs"></lr-select>`)) as LyraSelect;
+    // The trigger's adornment gap is deliberately outside the ladder -- it never varied by tier.
+    expect(getComputedStyle(triggerOf(mEl)).gap).to.equal('4px');
+    expect(getComputedStyle(triggerOf(xsEl)).gap).to.equal('4px');
+    // The radius does vary: a 6px corner on a 24px-tall trigger reads as a lozenge.
+    expect(getComputedStyle(triggerOf(mEl)).borderTopLeftRadius).to.equal('6px');
+    expect(getComputedStyle(triggerOf(xsEl)).borderTopLeftRadius).to.equal('2px');
   });
 });
 
@@ -2280,5 +2284,32 @@ describe('lr-select clear-button spelling parity', () => {
     el.value = 'b';
     await el.updateComplete;
     expect(clearButton(el)).to.equal(null);
+  });
+});
+
+describe('lr-select — the shared size ladder', () => {
+  const trigger = (el: LyraSelect) => el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  const height = (el: LyraSelect) => trigger(el).getBoundingClientRect().height;
+
+  it('renders the Web Awesome size spellings at the same geometry as the canonical steps', async () => {
+    for (const [alias, step] of [['small', 's'], ['medium', 'm'], ['large', 'l']] as const) {
+      const aliasEl = (await fixture(html`<lr-select size=${alias}></lr-select>`)) as LyraSelect;
+      const stepEl = (await fixture(html`<lr-select size=${step}></lr-select>`)) as LyraSelect;
+      expect(height(aliasEl), `size=${alias} height`).to.equal(height(stepEl));
+      expect(getComputedStyle(trigger(aliasEl)).fontSize, `size=${alias} font-size`).to.equal(
+        getComputedStyle(trigger(stepEl)).fontSize,
+      );
+      expect(getComputedStyle(trigger(aliasEl)).paddingTop, `size=${alias} padding-block`).to.equal(
+        getComputedStyle(trigger(stepEl)).paddingTop,
+      );
+    }
+  });
+
+  it('sits at the shared form-control height at every tier', async () => {
+    const expected: Record<string, number> = { '2xs': 20, xs: 24, s: 30, m: 40, l: 48, xl: 56 };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-select size=${size}></lr-select>`)) as LyraSelect;
+      expect(height(el), `size=${size}`).to.equal(px);
+    }
   });
 });

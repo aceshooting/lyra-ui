@@ -8,13 +8,17 @@ import {
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './chat-composer.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
-/** Visual chrome for `<lr-chat-composer>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
-export type ChatComposerAppearance = 'card' | 'plain';
+/** Whether the root draws itself as a bounded card — an alias of the shared {@linkcode LyraFrame},
+ *  so there is one definition. Named `frame`, not `appearance`: `appearance` is the library's
+ *  vocabulary for how a *control fills itself*, and using it for container chrome as well made one
+ *  property name mean two unrelated things. */
+export type ChatComposerFrame = LyraFrame;
 export type ChatComposerStatus = 'idle' | 'sending' | 'streaming';
 export type ChatComposerWrap = 'hard' | 'soft' | 'off';
 export type ChatComposerSelectionDirection = 'forward' | 'backward' | 'none';
@@ -123,7 +127,7 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @event blur - Re-dispatched from the internal native textarea as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal native textarea as a bubbling, composed event.
  * @csspart base - The bordered root container. Drops its card chrome (border, background, padding,
- * radius) under `appearance="plain"`, where the focus affordance becomes an underline on this same
+ * radius) under `frame="plain"`, where the focus affordance becomes an underline on this same
  * part instead of the border-color shift.
  * @csspart chips - The wrapper around the `chips` slot. Hidden entirely when the slot is empty.
  * @csspart row - The row holding the leading slot, textarea, and trailing slot/button.
@@ -140,13 +144,13 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
   @property({ type: Number, attribute: 'max-rows' }) maxRows = 8;
   @property({ reflect: true }) status: ChatComposerStatus = 'idle';
-  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+  /** Visual chrome, on the library-wide `frame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
    *  radius, so a composer docked inside a chat panel, dialog footer or toolbar that already draws
    *  its own border doesn't double the frame. Focus stays visible either way: `plain` swaps the
    *  border-color shift for an underline across the input row, since there is no border left to
    *  recolor. */
-  @property({ reflect: true }) appearance: ChatComposerAppearance = 'card';
+  @property({ reflect: true }) frame: ChatComposerFrame = 'card';
   
   @property({
     type: Boolean,

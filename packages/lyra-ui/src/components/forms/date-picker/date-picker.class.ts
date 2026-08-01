@@ -10,6 +10,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { nextId } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './date-picker.styles.js';
 import {
   monthMatrix,
@@ -30,7 +31,9 @@ import {
   type WeekdayFormat,
 } from './calendar-core.js';
 
-export type LyraDatePickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraDatePickerSize = LyraSizeStep;
 
 export interface DateRange {
   from: Date | null;
@@ -101,8 +104,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property({ converter: monthsConverter }) months: 1 | 2 = 1;
   /** Visual size — scales `--lr-cell-size` proportionally; not pixel-matched to
-   *  `lr-input`'s row-height scale (a calendar cell isn't a text row). */
-  @property({ reflect: true }) size: LyraDatePickerSize = 'm';
+   *  `lr-input`'s row-height scale (a calendar cell isn't a text row). The Web Awesome / Shoelace spellings
+   *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
+   *  attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   @property() override locale = '';
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
   @property({ attribute: 'weekday-format', converter: weekdayFormatConverter }) weekdayFormat: WeekdayFormat = 'short';

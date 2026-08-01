@@ -1450,6 +1450,41 @@ describe('control min-height knob and exact-height hatch', () => {
     }
   });
 
+  it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+    const pairs: ReadonlyArray<readonly [string, string]> = [
+      ['small', 's'],
+      ['medium', 'm'],
+      ['large', 'l'],
+    ];
+    for (const [alias, step] of pairs) {
+      const aliasEl = (await fixture(html`<lr-date-input size=${alias}></lr-date-input>`)) as LyraDateInput;
+      const stepEl = (await fixture(html`<lr-date-input size=${step}></lr-date-input>`)) as LyraDateInput;
+      await aliasEl.updateComplete;
+      await stepEl.updateComplete;
+      expect(getComputedStyle(wrapper(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
+        getComputedStyle(wrapper(stepEl)).minBlockSize,
+      );
+      expect(getComputedStyle(wrapper(aliasEl)).paddingBlockStart, `padding for ${alias}`).to.equal(
+        getComputedStyle(wrapper(stepEl)).paddingBlockStart,
+      );
+      expect(wrapper(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
+        wrapper(stepEl).getBoundingClientRect().height,
+      );
+    }
+  });
+
+  it('rounds the input row to a pill without a ::part() rule', async () => {
+    const plain = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+    const pill = (await fixture(html`<lr-date-input pill></lr-date-input>`)) as LyraDateInput;
+    await plain.updateComplete;
+    await pill.updateComplete;
+    expect(pill.pill).to.be.true;
+    expect(pill.getAttribute('pill')).to.equal('');
+    expect(
+      Number.parseFloat(getComputedStyle(wrapper(pill)).borderStartStartRadius),
+    ).to.be.greaterThan(Number.parseFloat(getComputedStyle(wrapper(plain)).borderStartStartRadius));
+  });
+
   it('leaves the rendered row height byte-identical when the height hatch is unset', async () => {
     const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
     await el.updateComplete;

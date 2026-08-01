@@ -4,10 +4,10 @@ import type { LyraButton } from './button.class.js';
 import { styles } from './button.styles.js';
 
 describe('lr-button', () => {
-  it('defaults to neutral/filled/m/button with a slotted label', async () => {
+  it('defaults to neutral/accent/m/button with a slotted label', async () => {
     const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
     expect(el.variant).to.equal('neutral');
-    expect(el.appearance).to.equal('filled');
+    expect(el.appearance).to.equal('accent');
     expect(el.size).to.equal('m');
     expect(el.type).to.equal('button');
     expect(el.loading).to.equal(false);
@@ -298,27 +298,29 @@ describe('lr-button', () => {
     );
   });
 
-  it('uses the standard medium size token and exposes a rethemeable size scale', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include("font-size: var(--lr-font-size-m);");
-    // Matches lr-input/lr-select/lr-combobox's own size="s" control-min-height token, so a
-    // default-row button lines up with its neighbors (size-tier-height-inconsistent-across-controls).
-    expect(css).to.include('--lr-button-size-s: var(--lr-size-1-875rem);');
-    // The per-tier floor now reaches min-block-size through --lr-button-min-height (re-assigned per
-    // size tier) so a consumer-set --lr-button-height can cap it; the size scale itself is unchanged.
-    expect(css).to.include('--lr-button-min-height: var(--lr-button-size-s);');
-    expect(css).to.include('min-block-size: var(--lr-button-height, var(--lr-button-min-height));');
+  it('reads the standard medium tier from the shared ladder and keeps the floor rethemeable', async () => {
+    const el = (await fixture(html`<lr-button>Go</lr-button>`)) as LyraButton;
+    const baseEl = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(baseEl).fontSize).to.equal('16px');
+    expect(getComputedStyle(baseEl).minBlockSize).to.equal('40px');
+    // The per-tier floor still reaches min-block-size through --lr-button-size-*, so overriding one
+    // tier for buttons alone stays a one-property change rather than a ::part(base) rule.
+    el.style.setProperty('--lr-button-size-m', '52px');
+    await el.updateComplete;
+    expect(getComputedStyle(baseEl).minBlockSize).to.equal('52px');
   });
 
-  it("matches lr-input/lr-select/lr-combobox's shared min-height scale at every size tier so a button never sits shorter than its row neighbors", () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    // Same token values as input.styles.ts's :host([size='…']) --lr-input-control-min-height scale.
-    expect(css).to.include('--lr-button-size-2xs: var(--lr-size-1-25rem);');
-    expect(css).to.include('--lr-button-size-xs: var(--lr-size-1-5rem);');
-    expect(css).to.include('--lr-button-size-s: var(--lr-size-1-875rem);');
-    expect(css).to.include('--lr-button-size-m: var(--lr-size-2-5rem);');
-    expect(css).to.include('--lr-button-size-l: var(--lr-size-3rem);');
-    expect(css).to.include('--lr-button-size-xl: var(--lr-size-3-5rem);');
+  it("matches lr-input's/lr-select's shared control height at every size tier so a button never sits shorter than its row neighbors", async () => {
+    // The one form-control ladder, measured rather than grepped: these are the same six values
+    // lr-input's and lr-select's own tier tests assert.
+    const expected: Record<string, string> = {
+      '2xs': '20px', xs: '24px', s: '30px', m: '40px', l: '48px', xl: '56px',
+    };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-button size=${size}>Go</lr-button>`)) as LyraButton;
+      const baseEl = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(getComputedStyle(baseEl).minBlockSize, `size=${size}`).to.equal(px);
+    }
   });
 
   it('propagates a consumer width from the host to the internal button', () => {
@@ -387,14 +389,14 @@ describe('lr-button', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('supports size="2xs": tighter than xs, with its own min-block-size token', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('--lr-button-size-2xs: var(--lr-size-1-25rem);');
-    // The tier's geometry now lives in cssprop re-assignment on :host([size='2xs']) rather than in
-    // property declarations on [part='base'] -- the values themselves are unchanged.
-    expect(css).to.match(
-      /:host\(\[size='2xs'\]\)\s*\{[^}]*--lr-button-padding-block:\s*var\(--lr-space-2xs\);[^}]*--lr-button-padding-inline:\s*var\(--lr-space-2xs\);[^}]*--lr-button-font-size:\s*var\(--lr-font-size-2xs\);[^}]*--lr-button-min-height:\s*var\(--lr-button-size-2xs\);/,
-    );
+  it('supports size="2xs": tighter than xs, with the ladder\'s tightest floor', async () => {
+    const el = (await fixture(html`<lr-button size="2xs">Go</lr-button>`)) as LyraButton;
+    const xsEl = (await fixture(html`<lr-button size="xs">Go</lr-button>`)) as LyraButton;
+    const cs = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    const xsCs = getComputedStyle(xsEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(cs.minBlockSize).to.equal('20px');
+    expect(parseFloat(cs.fontSize)).to.be.lessThan(parseFloat(xsCs.fontSize));
+    expect(parseFloat(cs.paddingInlineStart)).to.be.lessThan(parseFloat(xsCs.paddingInlineStart));
   });
 
   it('reflects size="2xs" as a host attribute', async () => {
@@ -404,23 +406,23 @@ describe('lr-button', () => {
   });
 
   describe('sizing custom properties', () => {
-    // The computed geometry each tier rendered *before* --lr-button-padding-block/-padding-inline/
-    // -font-size existed. An unset consumer must stay byte-identical, so these are hardcoded px
-    // (root font-size is 16px) rather than re-derived from the same tokens the stylesheet uses.
-    // minHeight now matches lr-input/lr-select/lr-combobox's shared control-min-height scale tier
-    // for tier (size-tier-height-inconsistent-across-controls) -- padding/font-size are unchanged.
+    // The geometry each tier renders, hardcoded in px (root font-size is 16px) rather than
+    // re-derived from the same tokens the stylesheet uses, so a token edit cannot make this test
+    // agree with itself. Since 8.0.0 every value comes from the one shared form-control ladder
+    // (internal/sizes.styles.ts): the min-heights are unchanged tier for tier, while padding and
+    // font-size moved onto the ladder's own steps.
     const tiers = [
-      { size: '2xs', padInline: '2px', padBlock: '2px', fontSize: '10px', minHeight: '20px' },
-      { size: 'xs', padInline: '4px', padBlock: '2px', fontSize: '12px', minHeight: '24px' },
+      { size: '2xs', padInline: '2px', padBlock: '0px', fontSize: '10px', minHeight: '20px' },
+      { size: 'xs', padInline: '4px', padBlock: '0px', fontSize: '12px', minHeight: '24px' },
       { size: 's', padInline: '8px', padBlock: '2px', fontSize: '13px', minHeight: '30px' },
       { size: 'm', padInline: '12px', padBlock: '4px', fontSize: '16px', minHeight: '40px' },
-      { size: 'l', padInline: '16px', padBlock: '8px', fontSize: '16px', minHeight: '48px' },
-      { size: 'xl', padInline: '32px', padBlock: '12px', fontSize: '18px', minHeight: '56px' },
+      { size: 'l', padInline: '16px', padBlock: '8px', fontSize: '18px', minHeight: '48px' },
+      { size: 'xl', padInline: '16px', padBlock: '8px', fontSize: '20px', minHeight: '56px' },
     ];
 
     const base = (el: LyraButton) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
-    it('renders byte-identical padding/font-size/min-height at all six tiers when the properties are untouched', async () => {
+    it('renders the ladder\'s padding/font-size/min-height at all six tiers when the properties are untouched', async () => {
       for (const tier of tiers) {
         const el = (await fixture(html`<lr-button size=${tier.size}>Go</lr-button>`)) as LyraButton;
         const cs = getComputedStyle(base(el));
@@ -447,24 +449,20 @@ describe('lr-button', () => {
       expect(cs.fontSize).to.equal('11px');
     });
 
-    it('declares the geometry knobs on :host (the "m" tier) and consumes them once on [part="base"]', () => {
+    it('takes every tier\'s geometry from the shared ladder, with no per-tier rule on [part="base"]', () => {
       const css = styles.cssText.replace(/\s+/g, ' ');
+      // The knobs read the ladder rather than restating a scale of their own.
       expect(css).to.match(
-        /:host \{[^}]*--lr-button-padding-block: var\(--lr-space-xs\);[^}]*--lr-button-padding-inline: var\(--lr-space-m\);[^}]*--lr-button-font-size: var\(--lr-font-size-m\);/,
+        /:host \{[^}]*--lr-button-padding-block: var\(--lr-form-control-padding-block\);[^}]*--lr-button-padding-inline: var\(--lr-form-control-padding-inline\);[^}]*--lr-button-font-size: var\(--lr-form-control-font-size\);/,
       );
-      // `size` reflects and defaults to 'm', so the ':host' declarations above *are* the m tier --
-      // a separate :host([size='m']) block would be dead weight.
-      expect(css, "a :host([size='m']) rule would only restate the :host defaults").to.not.match(
-        /:host\(\[size='m'\]\)[^;{]*\{/,
+      expect(css, 'no tier may restate a padding or font-size value of its own').to.not.match(
+        /:host\(\[size='[^']+'\]\)[^{]*\{[^}]*--lr-button-(?:padding|font-size)/,
       );
       expect(css).to.match(
         /\[part='base'\] \{[^}]*padding-inline: var\(--lr-button-padding-inline\);[^}]*padding-block: var\(--lr-button-padding-block\);/,
       );
-      // Per-tier blocks only re-assign the same knobs -- no property declarations of their own.
+      // A per-tier rule may only re-assign a cssprop -- never declare a property on the part.
       for (const size of ['2xs', 'xs', 's', 'l', 'xl']) {
-        expect(css, `size=${size}`).to.match(
-          new RegExp(`:host\\(\\[size='${size}'\\]\\) \\{[^}]*--lr-button-padding-block:`),
-        );
         expect(css, `size=${size} must not restyle [part='base'] directly`).to.not.include(
           `:host([size='${size}']) [part='base']`,
         );
@@ -525,12 +523,14 @@ describe('lr-button', () => {
       expect(getComputedStyle(base(el)).borderRadius).to.equal('0px');
     });
 
-    it('declares --lr-button-gap/--lr-button-radius on :host and consumes them once on [part="base"]', () => {
-      const css = styles.cssText.replace(/\s+/g, ' ');
-      expect(css).to.match(/:host \{[^}]*--lr-button-gap: var\(--lr-space-2xs\);/);
-      expect(css).to.match(/:host \{[^}]*--lr-button-radius: var\(--lr-radius\);/);
-      expect(css).to.include('gap: var(--lr-button-gap);');
-      expect(css).to.include('border-radius: var(--lr-button-radius);');
+    it('keeps the gap constant across tiers while the radius follows the shared ladder', async () => {
+      const mEl = (await fixture(html`<lr-button>Go</lr-button>`)) as LyraButton;
+      const xsEl = (await fixture(html`<lr-button size="xs">Go</lr-button>`)) as LyraButton;
+      expect(getComputedStyle(base(mEl)).gap).to.equal('2px');
+      expect(getComputedStyle(base(xsEl)).gap).to.equal('2px');
+      // The radius does vary: a 6px corner on a 24px-tall button reads as a lozenge.
+      expect(getComputedStyle(base(mEl)).borderTopLeftRadius).to.equal('6px');
+      expect(getComputedStyle(base(xsEl)).borderTopLeftRadius).to.equal('2px');
     });
 
     it('leaves --lr-button-height genuinely undeclared so its var() fallback arm can fire', () => {
@@ -1273,5 +1273,90 @@ describe('lr-button: named submitter and form-submission overrides', () => {
     el.click();
     expect(submitted).to.be.false;
     expect(form.querySelectorAll('button').length).to.equal(0);
+  });
+});
+
+describe('lr-button — the shared styling vocabulary', () => {
+  const base = (el: LyraButton) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const height = (el: LyraButton) => base(el).getBoundingClientRect().height;
+
+  it('defaults appearance to the loud accent tier, matching the upstream default', async () => {
+    const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
+    expect(el.appearance).to.equal('accent');
+    expect(el.getAttribute('appearance')).to.equal('accent');
+  });
+
+  // A migrating consumer keeps `size="small"` from wa-*/sl-* markup; it has to land on exactly the
+  // same tier `size="s"` does, geometry included, or the rename is only half a migration.
+  it('renders the Web Awesome size spellings at the same height as the canonical steps', async () => {
+    for (const [alias, step] of [['small', 's'], ['medium', 'm'], ['large', 'l']] as const) {
+      const aliasEl = (await fixture(html`<lr-button size=${alias}>Go</lr-button>`)) as LyraButton;
+      const stepEl = (await fixture(html`<lr-button size=${step}>Go</lr-button>`)) as LyraButton;
+      expect(height(aliasEl), `size=${alias} height`).to.equal(height(stepEl));
+      expect(getComputedStyle(base(aliasEl)).fontSize, `size=${alias} font-size`).to.equal(
+        getComputedStyle(base(stepEl)).fontSize,
+      );
+      expect(getComputedStyle(base(aliasEl)).paddingLeft, `size=${alias} padding-inline`).to.equal(
+        getComputedStyle(base(stepEl)).paddingLeft,
+      );
+    }
+  });
+
+  it('reads its control height from the shared form-control ladder at every tier', async () => {
+    const expected: Record<string, number> = { '2xs': 20, xs: 24, s: 30, m: 40, l: 48, xl: 56 };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-button size=${size}>Go</lr-button>`)) as LyraButton;
+      expect(height(el), `size=${size}`).to.equal(px);
+    }
+  });
+
+  // Before 8.0.0 both tiers resolved to the same loud token for the four chromatic variants, so
+  // `accent` and `filled` painted identically and the distinction existed only in the docs.
+  it('paints appearance="accent" differently from appearance="filled" for every variant', async () => {
+    for (const variant of ['neutral', 'brand', 'success', 'warning', 'danger'] as const) {
+      const filledEl = (await fixture(
+        html`<lr-button appearance="filled" variant=${variant}>Save</lr-button>`,
+      )) as LyraButton;
+      const accentEl = (await fixture(
+        html`<lr-button appearance="accent" variant=${variant}>Save</lr-button>`,
+      )) as LyraButton;
+      const filled = getComputedStyle(base(filledEl));
+      const accent = getComputedStyle(base(accentEl));
+      expect(accent.backgroundColor, `variant=${variant} background`).to.not.equal(filled.backgroundColor);
+      expect(accent.color, `variant=${variant} foreground`).to.not.equal(filled.color);
+      // ...and neither tier may fall back to "no fill at all" on the page surface.
+      expect(filled.backgroundColor, `variant=${variant} filled must not be transparent`).to.not.equal(
+        'rgba(0, 0, 0, 0)',
+      );
+    }
+  });
+
+  // The grid's shape is identical in both modes -- only which ramp step each slot points at moves --
+  // so the accent/filled split must survive the theme switch rather than being a light-mode accident.
+  it('keeps accent and filled apart in dark mode too', async () => {
+    for (const variant of ['neutral', 'brand', 'danger'] as const) {
+      const wrapper = (await fixture(html`
+        <div data-lr-theme="dark">
+          <lr-button appearance="filled" variant=${variant}>Save</lr-button>
+          <lr-button appearance="accent" variant=${variant}>Save</lr-button>
+        </div>
+      `)) as HTMLElement;
+      const [filledEl, accentEl] = Array.from(wrapper.querySelectorAll('lr-button')) as LyraButton[];
+      const filled = getComputedStyle(base(filledEl!));
+      const accent = getComputedStyle(base(accentEl!));
+      expect(accent.backgroundColor, `dark variant=${variant} background`).to.not.equal(
+        filled.backgroundColor,
+      );
+      expect(filled.backgroundColor, `dark variant=${variant} filled must not be transparent`).to.not.equal(
+        'rgba(0, 0, 0, 0)',
+      );
+    }
+  });
+
+  it('is accessible in its new default appearance, and as a pill textarea-adjacent control', async () => {
+    await expect(await fixture(html`<lr-button>Save</lr-button>`)).to.be.accessible();
+    await expect(
+      await fixture(html`<lr-button pill variant="danger" appearance="filled">Delete</lr-button>`),
+    ).to.be.accessible();
   });
 });

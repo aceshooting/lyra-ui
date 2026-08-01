@@ -22,6 +22,8 @@ import {
   type LyraColorPickerFormat,
   type LyraColorPickerOutputFormat,
 } from './color-core.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './color-picker.styles.js';
 
 export type {
@@ -30,7 +32,9 @@ export type {
   LyraColorPickerOutputFormat,
 } from './color-core.js';
 
-export type LyraColorPickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraColorPickerSize = LyraSizeStep;
 
 /** A predefined palette entry. `label` becomes the swatch's accessible name; without one the
  *  raw colour string is announced instead. */
@@ -129,7 +133,9 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart swatch-selected - Token added to the swatch matching the current value.
  * @csspart hint - Supporting text.
  * @csspart error - The validation message.
- * @cssprop --lr-color-picker-swatch-size - The trigger's inline and block size, scaled by `size`.
+ * @cssprop [--lr-color-picker-swatch-size=var(--lr-form-control-height,var(--lr-size-2-5rem))] -
+ *   The trigger's inline and block size. Reads the shared form-control height ladder, so retuning
+ *   `--lr-theme-form-control-height-*` keeps the trigger square with the fields beside it.
  * @cssprop [--lr-color-picker-gap=var(--lr-space-xs)] - Gap between field chrome and panel rows.
  * @cssprop [--lr-color-picker-radius=var(--lr-radius)] - Trigger, grid, and panel corner radius.
  * @cssprop [--lr-color-picker-hover-border-color=var(--lr-color-brand)] - Hover border color.
@@ -153,14 +159,17 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  *   built from the current colour and text direction. Rewritten on every render.
  */
 export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
-  static override styles = [LyraElement.styles, srOnly, styles];
+  static override styles = [LyraElement.styles, srOnly, sizes, styles];
 
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
-  /** Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-select`'s own `size`. */
-  @property({ reflect: true }) size: LyraColorPickerSize = 'm';
+  /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`/`lr-select`, so the
+   *  trigger swatch is exactly as tall as a field beside it. The Web Awesome / Shoelace spellings
+   *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
+   *  attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Output format for `value`. Input is always parsed permissively regardless of this. */
   @property() format: LyraColorPickerFormat = 'hex';
   /** Enables the alpha channel: an opacity slider, and an alpha-carrying serialized value. */

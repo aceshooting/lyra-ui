@@ -248,7 +248,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
               aria-label=${this.localize('retrievalFiltersLabel')}
             >
               ${this.scope.map(
-                (s) => html`<lr-chip tone="brand" removable value=${s} @lr-remove=${(event: Event) => {
+                (s) => html`<lr-chip variant="brand" removable value=${s} @lr-remove=${(event: Event) => {
                   event.stopPropagation();
                   this.removeScope(s);
                 }}

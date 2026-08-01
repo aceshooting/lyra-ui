@@ -5,10 +5,14 @@ export const styles = css`
     display: inline-block;
     color: var(--lr-color-warning);
     /* The 'm' step reproduces exactly the fixed symbol size this component had before the size
-       property existed; every other step below re-declares it. Declared here (rather than left to
-       a var() fallback at the use site) so an unset size and size="m" resolve identically. */
+       property existed; every other step of the library's shared six-step ladder re-declares it
+       below. Declared here (rather than left to a var() fallback at the use site) so an unset size
+       and size="m" resolve identically. The steps are a type ramp rather than the shared
+       --lr-form-control-* ladder: a rating has no control box to fit text inside, only glyphs
+       whose size IS the control. */
     --lr-rating-size: var(--lr-font-size-xl);
   }
+  :host([size='2xs']) { --lr-rating-size: var(--lr-font-size-sm); }
   :host([size='xs']) { --lr-rating-size: var(--lr-font-size-m); }
   :host([size='s']) { --lr-rating-size: var(--lr-font-size-lg); }
   :host([size='m']) { --lr-rating-size: var(--lr-font-size-xl); }

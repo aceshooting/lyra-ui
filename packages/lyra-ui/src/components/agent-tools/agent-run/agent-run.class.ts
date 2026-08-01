@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -106,8 +107,8 @@ function formatDuration(ms: number): FormattedDuration {
   return { key: 'durationSeconds', value: rounded };
 }
 
-/** Visual chrome for `<lr-agent-run>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
-export type AgentRunAppearance = 'card' | 'plain';
+/** Visual chrome for `<lr-agent-run>`'s root — the library's shared container-frame vocabulary. */
+export type AgentRunAppearance = LyraFrame;
 
 export interface LyraAgentRunEventMap {
   'lr-cancel': CustomEvent<CancelEventDetail>;
@@ -263,16 +264,16 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   /** Tighter root padding and header/body gap for dense contexts (a run rendered as a row in a
    *  list, a side panel) -- same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e.
    *  the full card padding. Purely a density knob: the border and background stay, so use
-   *  `appearance="plain"` instead to drop the chrome entirely. */
+   *  `frame="plain"` instead to drop the chrome entirely. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
-  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
-   *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
-   *  radius, so a run nested inside a host frame that already draws a border doesn't double it.
-   *  `plain` wins over `compact` when both are set (nothing left to tighten). The built-in
-   *  Cancel/Retry buttons draw their own border/background and stay visibly interactive either
-   *  way. */
-  @property({ reflect: true }) appearance: AgentRunAppearance = 'card';
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps the bordered, filled, padded box. `'plain'` removes the border, background, padding and
+   *  corner radius, so a run nested inside a host container that already draws a border doesn't
+   *  double it. `plain` wins over `compact` when both are set (nothing left to tighten). The
+   *  built-in Cancel/Retry buttons draw their own border/background and stay visibly interactive
+   *  either way. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @state() private retryAttempt = 0;
   @state() private hasHeaderSlot = false;

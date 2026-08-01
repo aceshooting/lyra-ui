@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
@@ -17,9 +18,9 @@ export interface LyraCommunity {
   memberCount?: number;
 }
 
-/** Visual chrome for `<lr-community-card>`'s root, mirroring `lr-card`'s `appearance` vocabulary
- *  and this component's sibling `lr-entity-card`'s identical property. */
-export type CommunityCardAppearance = 'card' | 'plain';
+/** Container treatment for `<lr-community-card>`'s root. The library-wide {@linkcode LyraFrame}
+ *  vocabulary under this component's own export name. */
+export type CommunityCardAppearance = LyraFrame;
 
 export interface LyraCommunityCardEventMap {
   /** The drill button, header, or overflow chip -- all three mean "show me this whole community". */
@@ -60,11 +61,11 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   @property({ type: Number, attribute: 'max-members' }) maxMembers = 8;
   /** Single-row layout (title + member count + drill button, no summary/chips). */
   @property({ type: Boolean, reflect: true }) compact = false;
-  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary and this component's sibling
-   *  `lr-entity-card`'s identical property. `'card'` (the default) keeps the bordered, filled,
-   *  padded box. `'plain'` removes the border, background, and padding, so a card nested inside a
-   *  container that already draws a border doesn't double it. */
-  @property({ reflect: true }) appearance: CommunityCardAppearance = 'card';
+  /** Container treatment, in the shared `LyraFrame` vocabulary — the same property this
+   *  component's sibling `lr-entity-card` carries. `'card'` (the default) keeps the bordered,
+   *  filled, padded box. `'plain'` removes the border, background, and padding, so a card nested
+   *  inside a container that already draws a border doesn't double it. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** `maxMembers` normalized to a finite, non-negative integer count -- passed straight to
    *  `Array.prototype.slice()` below, which would otherwise silently misbehave on a non-finite or

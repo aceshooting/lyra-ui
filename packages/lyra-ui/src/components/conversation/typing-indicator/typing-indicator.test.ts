@@ -3,25 +3,68 @@ import './typing-indicator.js';
 import type { LyraTypingIndicator } from './typing-indicator.js';
 import { styles } from './typing-indicator.styles.js';
 
-it('defaults to the dots variant, md size, and a "Thinking…" label', async () => {
+it('defaults to the dots variant, m size, and a "Thinking…" label', async () => {
   const el = (await fixture(html`<lr-typing-indicator></lr-typing-indicator>`)) as LyraTypingIndicator;
   expect(el.variant).to.equal('dots');
-  expect(el.size).to.equal('md');
+  expect(el.size).to.equal('m');
   expect(el.label).to.equal('Thinking…');
 });
 
 it('reflects variant and size onto the host attributes', async () => {
   const el = (await fixture(
-    html`<lr-typing-indicator variant="pulse" size="sm"></lr-typing-indicator>`,
+    html`<lr-typing-indicator variant="pulse" size="s"></lr-typing-indicator>`,
   )) as LyraTypingIndicator;
   expect(el.getAttribute('variant')).to.equal('pulse');
-  expect(el.getAttribute('size')).to.equal('sm');
+  expect(el.getAttribute('size')).to.equal('s');
 
   el.variant = 'cursor';
-  el.size = 'md';
+  el.size = 'm';
   await el.updateComplete;
   expect(el.getAttribute('variant')).to.equal('cursor');
-  expect(el.getAttribute('size')).to.equal('md');
+  expect(el.getAttribute('size')).to.equal('m');
+});
+
+describe('shared size ladder', () => {
+  const dotDiameter = async (size?: string): Promise<number> => {
+    const el = (await fixture(
+      size == null
+        ? html`<lr-typing-indicator></lr-typing-indicator>`
+        : html`<lr-typing-indicator size=${size}></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    await el.updateComplete;
+    const dot = el.shadowRoot!.querySelector('[part="dot"]') as HTMLElement;
+    return Number.parseFloat(getComputedStyle(dot).inlineSize);
+  };
+
+  it('renders three tiers across the ladder, with the unset default on the middle one', async () => {
+    const compact = await dotDiameter('s');
+    const middle = await dotDiameter('m');
+    const roomy = await dotDiameter('l');
+    expect(compact, 's < m').to.be.lessThan(middle);
+    expect(roomy, 'l > m').to.be.greaterThan(middle);
+    expect(await dotDiameter(), 'the unset default is the middle tier').to.equal(middle);
+  });
+
+  it('matches a rule for every step of the ladder, in both spellings', async () => {
+    // A step the type accepts and no selector matches would silently render at the default tier.
+    const compact = await dotDiameter('s');
+    const roomy = await dotDiameter('l');
+    for (const size of ['2xs', 'xs', 's', 'small'] as const) {
+      expect(await dotDiameter(size), `${size} is the compact tier`).to.equal(compact);
+    }
+    for (const size of ['l', 'large', 'xl'] as const) {
+      expect(await dotDiameter(size), `${size} is the roomy tier`).to.equal(roomy);
+    }
+    expect(await dotDiameter('medium'), 'medium is the default tier').to.equal(await dotDiameter('m'));
+  });
+
+  it('no longer answers to the retired sm/md spellings', async () => {
+    // `sm`/`md` were this component's own private scale; they are not part of LyraSize, and the
+    // rename is not aliased, so they fall through to the default tier rather than half-working.
+    const middle = await dotDiameter('m');
+    expect(await dotDiameter('sm'), 'sm is inert').to.equal(middle);
+    expect(await dotDiameter('md'), 'md is inert').to.equal(middle);
+  });
 });
 
 it('exposes role="status" and aria-label derived from label on the host', async () => {
@@ -141,7 +184,7 @@ it('does not dispatch any lr-* events (purely presentational)', async () => {
   el.addEventListener('lr-typing-indicator-change', () => (sawEvent = true));
   el.variant = 'pulse';
   await el.updateComplete;
-  el.size = 'sm';
+  el.size = 's';
   await el.updateComplete;
   expect(sawEvent).to.be.false;
 });
@@ -158,7 +201,7 @@ it('is accessible in the pulse and cursor states', async () => {
   await expect(pulse).to.be.accessible();
 
   const cursor = (await fixture(
-    html`<lr-typing-indicator variant="cursor" size="sm"></lr-typing-indicator>`,
+    html`<lr-typing-indicator variant="cursor" size="s"></lr-typing-indicator>`,
   )) as LyraTypingIndicator;
   await expect(cursor).to.be.accessible();
 });

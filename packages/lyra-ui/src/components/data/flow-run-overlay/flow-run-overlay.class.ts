@@ -1,6 +1,7 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { tag } from '../../../internal/prefix.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { Announcer } from '../../../internal/announcer.js';
@@ -8,9 +9,9 @@ import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js'
 import type { FlowRunDecorations, FlowRunStatus } from '../flow-canvas/flow-canvas.class.js';
 import { styles } from './flow-run-overlay.styles.js';
 
-/** Visual chrome for `<lr-flow-run-overlay>`'s root, mirroring `lr-card`'s `appearance`
- *  vocabulary. */
-export type FlowRunOverlayAppearance = 'card' | 'plain';
+/** Container treatment for `<lr-flow-run-overlay>`'s root. The library-wide {@linkcode LyraFrame}
+ *  vocabulary under this component's own export name. */
+export type FlowRunOverlayAppearance = LyraFrame;
 
 const ALL_STATUSES: FlowRunStatus[] = ['pending', 'running', 'success', 'error', 'denied'];
 const DONE_STATUSES = new Set<FlowRunStatus>(['success', 'error', 'denied']);
@@ -28,7 +29,7 @@ interface FlowCanvasLike extends HTMLElement {
  *
  * @customElement lr-flow-run-overlay
  * @slot - Extra host chrome appended to the strip (e.g. a cancel button or a usage badge).
- * @csspart base - The root wrapper. Drops its floating-surface chrome under `appearance="plain"`.
+ * @csspart base - The root wrapper. Drops its floating-surface chrome under `frame="plain"`.
  * @csspart summary - The "{done} of {total} steps complete" line.
  * @csspart count - One per status present (text + tone dot, never color-only).
  * @csspart live-region - The step-transition announcement.
@@ -48,11 +49,11 @@ export class LyraFlowRunOverlay extends LyraElement {
   @property({ attribute: false }) decorations: FlowRunDecorations = {};
   @property({ type: Boolean, attribute: 'hide-summary' }) hideSummary = false;
   @property() label = '';
-  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+  /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, shadowed floating strip. `'plain'` removes the border, background, shadow,
    *  padding and corner radius, so a summary strip dropped directly into a host toolbar that
    *  already draws its own frame doesn't double it. */
-  @property({ reflect: true }) appearance: FlowRunOverlayAppearance = 'card';
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @state() private liveText = '';
   private readonly announcer = new Announcer({ onFlush: (text) => (this.liveText = text) });

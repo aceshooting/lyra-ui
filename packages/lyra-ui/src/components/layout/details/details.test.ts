@@ -461,3 +461,65 @@ describe("unified show/hide lifecycle", () => {
     expect(fired).to.equal(0);
   });
 });
+
+// -- size --------------------------------------------------------------------
+
+describe("size", () => {
+  const summaryOf = (el: LyraDetails): CSSStyleDeclaration =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement);
+  const contentOf = (el: LyraDetails): CSSStyleDeclaration =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="content"]') as HTMLElement);
+
+  const render = async (size?: string): Promise<LyraDetails> =>
+    (await fixture(
+      size === undefined
+        ? html`<lr-details summary="More">Content</lr-details>`
+        : html`<lr-details summary="More" size=${size}>Content</lr-details>`
+    )) as LyraDetails;
+
+  it("defaults to \"m\", and the unset default renders identically to the explicit tier", async () => {
+    const unset = await render();
+    const explicit = await render("m");
+    expect(unset.size).to.equal("m");
+    expect(unset.getAttribute("size")).to.equal("m");
+    expect(summaryOf(unset).paddingBlockStart).to.equal(summaryOf(explicit).paddingBlockStart);
+    expect(summaryOf(unset).fontSize).to.equal(summaryOf(explicit).fontSize);
+  });
+
+  it("grows the rendered summary rhythm and font size monotonically across the ladder", async () => {
+    const measured: { padding: number; font: number; content: number }[] = [];
+    for (const size of ["2xs", "xs", "s", "m", "l", "xl"] as const) {
+      const el = await render(size);
+      measured.push({
+        padding: Number.parseFloat(summaryOf(el).paddingBlockStart),
+        font: Number.parseFloat(summaryOf(el).fontSize),
+        content: Number.parseFloat(contentOf(el).paddingBlockEnd),
+      });
+    }
+    for (let i = 1; i < measured.length; i++) {
+      expect(measured[i]!.padding, `summary padding tier ${i}`).to.be.at.least(measured[i - 1]!.padding);
+      expect(measured[i]!.font, `summary font tier ${i}`).to.be.at.least(measured[i - 1]!.font);
+      expect(measured[i]!.content, `content padding tier ${i}`).to.be.at.least(measured[i - 1]!.content);
+    }
+    expect(measured.at(-1)!.padding, "xl padding beats 2xs").to.be.greaterThan(measured[0]!.padding);
+    expect(measured.at(-1)!.font, "xl font beats 2xs").to.be.greaterThan(measured[0]!.font);
+  });
+
+  it("accepts the Web Awesome size spellings as exact synonyms of the step names", async () => {
+    for (const [step, alias] of [["s", "small"], ["m", "medium"], ["l", "large"]] as const) {
+      const stepped = summaryOf(await render(step));
+      const aliased = summaryOf(await render(alias));
+      expect(aliased.paddingBlockStart, `${alias} padding`).to.equal(stepped.paddingBlockStart);
+      expect(aliased.fontSize, `${alias} font`).to.equal(stepped.fontSize);
+    }
+  });
+
+  it("stays accessible and keyboard-operable at the smallest tier", async () => {
+    const el = await render("2xs");
+    await expect(el).to.be.accessible();
+    const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+    summary.click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+  });
+});

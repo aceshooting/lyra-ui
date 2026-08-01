@@ -658,9 +658,9 @@ describe('accessibility', () => {
 // Regression coverage for the card-chrome-missing-compact-escape-hatch defect class -- a
 // consumer rendering many <lr-media-card> attachment previews inside a dense chat transcript
 // (the component's own documented primary use case) needs a way to suppress the per-card
-// bordered chrome, matching the `appearance="plain"` convention already established across the
-// rest of the component family (e.g. <lr-source-card>).
-describe('appearance', () => {
+// bordered chrome, matching the `frame="plain"` convention the library uses for every container
+// that can dissolve into its surroundings.
+describe('frame', () => {
   const baseChrome = (el: LyraMediaCard) => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const s = getComputedStyle(base);
@@ -675,18 +675,18 @@ describe('appearance', () => {
 
   it('defaults to "card" (bordered chrome)', async () => {
     const el = (await fixture(html`<lr-media-card kind="file" filename="a.txt"></lr-media-card>`)) as LyraMediaCard;
-    expect(el.appearance).to.equal('card');
-    expect(el.hasAttribute('appearance')).to.be.true;
+    expect(el.frame).to.equal('card');
+    expect(el.hasAttribute('frame')).to.be.true;
     const chrome = baseChrome(el);
     expect(chrome.borderTopWidth).to.not.equal('0px');
     expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('drops border, background, padding and radius under appearance="plain" for the file-chip fallback', async () => {
+  it('drops border, background, padding and radius under frame="plain" for the file-chip fallback', async () => {
     const el = (await fixture(
-      html`<lr-media-card appearance="plain" kind="file" filename="a.txt"></lr-media-card>`,
+      html`<lr-media-card frame="plain" kind="file" filename="a.txt"></lr-media-card>`,
     )) as LyraMediaCard;
-    expect(el.getAttribute('appearance')).to.equal('plain');
+    expect(el.getAttribute('frame')).to.equal('plain');
     const chrome = baseChrome(el);
     expect(chrome.borderTopWidth).to.equal('0px');
     expect(chrome.borderTopLeftRadius).to.equal('0px');
@@ -695,19 +695,29 @@ describe('appearance', () => {
     expect(chrome.paddingLeft).to.equal('0px');
   });
 
-  it('drops border and background under appearance="plain" for the image kind too', async () => {
+  it('drops border and background under frame="plain" for the image kind too', async () => {
     const el = (await fixture(
-      html`<lr-media-card appearance="plain" src="https://example.test/a.png" kind="image"></lr-media-card>`,
+      html`<lr-media-card frame="plain" src="https://example.test/a.png" kind="image"></lr-media-card>`,
     )) as LyraMediaCard;
     const chrome = baseChrome(el);
     expect(chrome.borderTopWidth).to.equal('0px');
     expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('is accessible in the plain appearance state', async () => {
+  it('is accessible in the plain frame state', async () => {
+    const el = (await fixture(
+      html`<lr-media-card frame="plain" kind="file" filename="a.txt"></lr-media-card>`,
+    )) as LyraMediaCard;
+    await expect(el).to.be.accessible();
+  });
+
+  it('exposes no `appearance` property, and a stale appearance="plain" keeps the card chrome', async () => {
     const el = (await fixture(
       html`<lr-media-card appearance="plain" kind="file" filename="a.txt"></lr-media-card>`,
     )) as LyraMediaCard;
-    await expect(el).to.be.accessible();
+    expect('appearance' in el, 'appearance is gone from the instance').to.be.false;
+    const chrome = baseChrome(el);
+    expect(chrome.borderTopWidth, 'the card border is still drawn').to.not.equal('0px');
+    expect(chrome.backgroundColor, 'the card background is still drawn').to.not.equal('rgba(0, 0, 0, 0)');
   });
 });

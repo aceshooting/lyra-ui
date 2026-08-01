@@ -12,6 +12,11 @@ export const styles = css`
     --lr-emoji-picker-item-radius: var(--lr-radius-xs);
     --lr-emoji-picker-row-height: calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l));
   }
+  /* An emoji cell is a square tap target in a dense grid, not a form-control row, so this is the
+     component's own ladder rather than the shared --lr-form-control-height one: the two agree from
+     m upwards, but the shared 2xs/xs/s steps (20/24/30px) would take a cell in a grid of hundreds
+     under a comfortable tap target. It still matches both spellings of every tier, the same way
+     internal/sizes.styles.ts does, so size="small" is honoured here too. */
   :host([size='2xs']) {
     --lr-emoji-picker-item-size: var(--lr-size-1-5rem);
     --lr-emoji-picker-glyph-size: var(--lr-font-size-sm);
@@ -20,11 +25,13 @@ export const styles = css`
     --lr-emoji-picker-item-size: var(--lr-size-1-75rem);
     --lr-emoji-picker-glyph-size: var(--lr-font-size-md-sm);
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-emoji-picker-item-size: var(--lr-size-2rem);
     --lr-emoji-picker-glyph-size: var(--lr-font-size-md);
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-emoji-picker-item-size: var(--lr-size-3rem);
     --lr-emoji-picker-glyph-size: var(--lr-font-size-xl);
   }

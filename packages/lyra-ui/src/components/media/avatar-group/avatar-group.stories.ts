@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Stacks a set of slotted `<lr-avatar>` children into a single overlapping row and, past a configurable `max` count, collapses the excess into a "+N" overflow badge. `size`/`shape`/`tone` drive the ring/overlap/badge only -- set a matching `size`/`shape` on each `<lr-avatar>` child too for a visually coherent stack.',
+          'Stacks a set of slotted `<lr-avatar>` children into a single overlapping row and, past a configurable `max` count, collapses the excess into a "+N" overflow badge. `size`/`shape`/`variant` drive the ring/overlap/badge only -- set a matching `size`/`shape` on each `<lr-avatar>` child too for a visually coherent stack.',
       },
     },
   },
@@ -76,24 +76,24 @@ export const Sizes: Story = {
   `,
 };
 
-export const Tones: Story = {
-  name: 'Overflow badge tones',
+export const Variants: Story = {
+  name: 'Overflow badge variants',
   render: () => html`
     <div style="display:flex; align-items:center; gap:1.5rem;">
-      <lr-avatar-group max="2" tone="neutral">
+      <lr-avatar-group max="2" variant="neutral">
         <lr-avatar initials="AB"></lr-avatar>
         <lr-avatar initials="CD"></lr-avatar>
         <lr-avatar initials="EF"></lr-avatar>
       </lr-avatar-group>
-      <lr-avatar-group max="2" tone="brand">
-        <lr-avatar initials="AB" tone="brand"></lr-avatar>
-        <lr-avatar initials="CD" tone="brand"></lr-avatar>
-        <lr-avatar initials="EF" tone="brand"></lr-avatar>
+      <lr-avatar-group max="2" variant="brand">
+        <lr-avatar initials="AB" variant="brand"></lr-avatar>
+        <lr-avatar initials="CD" variant="brand"></lr-avatar>
+        <lr-avatar initials="EF" variant="brand"></lr-avatar>
       </lr-avatar-group>
-      <lr-avatar-group max="2" tone="success">
-        <lr-avatar initials="AB" tone="success"></lr-avatar>
-        <lr-avatar initials="CD" tone="success"></lr-avatar>
-        <lr-avatar initials="EF" tone="success"></lr-avatar>
+      <lr-avatar-group max="2" variant="success">
+        <lr-avatar initials="AB" variant="success"></lr-avatar>
+        <lr-avatar initials="CD" variant="success"></lr-avatar>
+        <lr-avatar initials="EF" variant="success"></lr-avatar>
       </lr-avatar-group>
     </div>
   `,

@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './entity-card.styles.js';
@@ -33,8 +34,9 @@ export interface LyraEntity {
  *  alias for why this isn't imported from `lr-graph` itself. */
 type NodeTypeStyle = { id: string; label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' };
 
-/** Visual chrome for `<lr-entity-card>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
-export type EntityCardAppearance = 'card' | 'plain';
+/** Container treatment for `<lr-entity-card>`'s root. The library-wide {@linkcode LyraFrame}
+ *  vocabulary under this component's own export name. */
+export type EntityCardAppearance = LyraFrame;
 
 export interface LyraEntityCardEventMap {
   'lr-entity-activate': CustomEvent<{ id: string }>;
@@ -105,13 +107,13 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   /** Tighter root padding and row gap for dense contexts (a dossier rendered in a sidebar or a
    *  result list) -- same convention as `lr-empty`'s `compact`, and as this component's sibling
    *  `lr-community-card`. Defaults to `false`, i.e. the full card padding. Purely a density knob:
-   *  the border and background stay, so use `appearance="plain"` to drop the chrome entirely. */
+   *  the border and background stay, so use `frame="plain"` to drop the chrome entirely. */
   @property({ type: Boolean, reflect: true }) compact = false;
-  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+  /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
    *  radius, so a card nested inside a container that already draws a border doesn't double it.
    *  `plain` wins over `compact` when both are set (nothing left to tighten). */
-  @property({ reflect: true }) appearance: EntityCardAppearance = 'card';
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private resolvedType(type: string): NodeTypeStyle | undefined {
     return this.types.find((t) => t.id === type);

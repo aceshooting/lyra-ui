@@ -3,7 +3,14 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
-    --lr-color-picker-swatch-size: var(--lr-size-2-5rem);
+    /* The trigger swatch is square and sits in toolbar rows beside real form controls, so its edge
+       IS the shared form-control height: it reads the ONE ladder (internal/sizes.styles.ts) rather
+       than a private copy of the same six values. That ladder matches both spellings of every tier
+       in one selector list, so size="small" and size="s" resolve identically here with no
+       per-component alias rules. The fallback arm names the default tier's own value, so the swatch
+       still paints at its documented size if this rule is ever applied without the shared ladder
+       sheet alongside it. */
+    --lr-color-picker-swatch-size: var(--lr-form-control-height, var(--lr-size-2-5rem));
     --lr-color-picker-gap: var(--lr-space-xs);
     --lr-color-picker-radius: var(--lr-radius);
     --lr-color-picker-grid-inline-size: var(--lr-size-15rem);
@@ -32,22 +39,6 @@ export const styles = css`
     --lr-color-picker-grid-hue: transparent;
     --lr-color-picker-opacity-gradient: none;
   }
-  :host([size='2xs']) {
-    --lr-color-picker-swatch-size: var(--lr-size-1-25rem);
-  }
-  :host([size='xs']) {
-    --lr-color-picker-swatch-size: var(--lr-size-1-5rem);
-  }
-  :host([size='s']) {
-    --lr-color-picker-swatch-size: var(--lr-size-1-875rem);
-  }
-  :host([size='l']) {
-    --lr-color-picker-swatch-size: var(--lr-size-3rem);
-  }
-  :host([size='xl']) {
-    --lr-color-picker-swatch-size: var(--lr-size-3-5rem);
-  }
-
   [part='form-control'] {
     display: inline-flex;
     flex-direction: column;

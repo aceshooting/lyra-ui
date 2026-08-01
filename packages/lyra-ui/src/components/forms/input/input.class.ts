@@ -6,13 +6,17 @@ import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { closeIcon, eyeIcon, eyeOffIcon } from '../../../internal/icons.js';
 import { styles } from './input.styles.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
 
 export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time' | 'search';
-export type LyraInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
-/** Shared visual-treatment vocabulary for the library's field-shaped controls. */
-export type LyraInputAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain';
+/** Alias of the canonical six-step size ladder. The `size` property itself accepts
+ *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
+export type LyraInputSize = LyraSizeStep;
+/** Alias of the library's one `appearance` (fill-treatment) vocabulary. */
+export type LyraInputAppearance = LyraAppearance;
 
 /** The `type`s whose native `<input>` honors `minlength`/`maxlength` at all. The platform ignores
  *  both on `number`/`time`, so the dirty-value supplement in `updateValidity()` must ignore them
@@ -83,38 +87,51 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *   with `password-toggle` set.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
- * @cssprop --lr-input-control-min-height - Outer control height floor, scaled by `size`.
+ * @cssprop [--lr-input-control-min-height=var(--lr-form-control-height)] - Outer control height
+ *   floor, taken from the active `size` tier of the shared form-control ladder
+ *   (`internal/sizes.styles.ts`), so an input is exactly as tall as an `<lr-button>`/`<lr-select>`
+ *   of the same tier.
  * @cssprop --lr-input-control-height - Exact outer control height. Unset by default, which leaves
  *   `--lr-input-control-min-height` as a floor only; set it to a length to both floor and cap the
  *   control row (e.g. to pixel-match `<lr-select>`/`<lr-combobox>` in the same toolbar). Because it
  *   is never declared by the component itself, it can be set from an ancestor or an outer-tree rule
  *   as well as inline on the element.
- * @cssprop --lr-input-padding-block - Block padding of the native input, scaled by `size`.
- * @cssprop --lr-input-padding-inline - Inline padding of the control row, scaled by `size`.
- * @cssprop --lr-input-font-size - Font size of the native input, scaled by `size`.
+ * @cssprop [--lr-input-padding-block=var(--lr-form-control-padding-block)] - Block padding of the
+ *   native input, from the active `size` tier of the shared ladder.
+ * @cssprop [--lr-input-padding-inline=var(--lr-form-control-padding-inline)] - Inline padding of
+ *   the control row, from the active `size` tier.
+ * @cssprop [--lr-input-font-size=var(--lr-form-control-font-size)] - Font size of the native input,
+ *   from the active `size` tier.
  * @cssprop [--lr-input-gap=var(--lr-space-xs)] - Gap between the start/end adornments and the
  * native input in the control row. Unlike the size knobs above it does not vary by `size` tier.
  * Override it to retune without a `::part(input-wrapper)` rule.
- * @cssprop [--lr-input-radius=var(--lr-radius)] - Corner radius of the control row. Does not vary
- * by `size` tier. `pill` swaps it to `--lr-radius-pill`.
+ * @cssprop [--lr-input-radius=var(--lr-form-control-radius)] - Corner radius of the control row,
+ * from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius).
+ * `pill` swaps it to `--lr-radius-pill`.
  * @cssprop [--lr-input-fill=var(--lr-color-surface)] - Background of the control row. Swapped per
  * `appearance`; the documented default is `appearance="filled-outlined"`'s value.
  * @cssprop [--lr-input-border-color=var(--lr-color-border)] - Border color of the control row,
  * swapped per `appearance` in the same way as `--lr-input-fill`.
  */
 export class LyraInput extends FormAssociated(LyraInputBase) {
-  static override styles = [LyraElement.styles, styles];
+  // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
+  // so every `--lr-input-*` geometry knob can simply point at the active tier's value -- and so
+  // both spellings of every tier (`s` and `small`, …) work with no per-component rule.
+  static override styles = [LyraElement.styles, sizes, styles];
 
   @property() type: LyraInputType = 'text';
-  /** Visual size — same `2xs`–`xl` scale as `lr-select`/`lr-combobox`'s own `size`. `'2xs'` is
-   *  the tightest tier, for dense toolbar-embedded controls. */
-  @property({ reflect: true }) size: LyraInputSize = 'm';
+  /** Visual size on the library's one control ladder — shared with `lr-button`/`lr-select`/
+   *  `lr-combobox`, so same-tier controls line up in a toolbar row. Accepts both the canonical
+   *  `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's `'small'`/`'medium'`/`'large'` spellings of
+   *  `s`/`m`/`l`; the two render identically. `'2xs'` is the tightest tier, for dense
+   *  toolbar-embedded controls. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Visual treatment of the control row, from the library's shared field vocabulary.
    *  `'filled-outlined'` (the default) draws both a surface fill and a border; `'outlined'` drops
    *  the fill, `'filled'` drops the border, `'plain'` drops both, and `'accent'` tints both with
    *  the brand color. Each value only swaps `--lr-input-fill`/`--lr-input-border-color`, so a
    *  consumer can retune any of them without a `::part(input-wrapper)` rule. */
-  @property({ reflect: true }) appearance: LyraInputAppearance = 'filled-outlined';
+  @property({ reflect: true }) appearance: LyraAppearance = 'filled-outlined';
   /** Rounds the control row to a full pill by swapping `--lr-input-radius` to
    *  `--lr-radius-pill`. */
   @property({ type: Boolean, reflect: true }) pill = false;

@@ -28,6 +28,21 @@ export const Sizes: Story = {
   `,
 };
 
+/**
+ * `size` also accepts the Web Awesome / Shoelace spellings — `small`, `medium` and `large` render
+ * exactly as `s`, `m` and `l` — and `pill` rounds the input row to a full pill.
+ */
+export const AliasSizesAndPill: Story = {
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+      <lr-date-input size="small" placeholder='size="small"'></lr-date-input>
+      <lr-date-input size="medium" placeholder='size="medium"'></lr-date-input>
+      <lr-date-input size="large" placeholder='size="large"'></lr-date-input>
+      <lr-date-input pill placeholder="pill"></lr-date-input>
+    </div>
+  `,
+};
+
 export const MinMax: Story = {
   render: () => html`
     <lr-date-input

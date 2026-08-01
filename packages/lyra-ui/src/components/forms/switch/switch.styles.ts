@@ -6,9 +6,13 @@ export const styles = css`
     /* Component-local geometry knobs (defined on :host so each instance can
        tune its own geometry) — a fully-rounded pill/thumb
        needs a radius well past --lr-radius's small 0.375rem default, so
-       it's expressed here rather than bent onto that shared token. */
-    --lr-switch-track-inline-size: var(--lr-size-2-25rem);
-    --lr-switch-track-block-size: var(--lr-size-1-25rem);
+       it's expressed here rather than bent onto that shared token.
+       Both track dimensions ride the shared size ladder
+       (internal/sizes.styles.ts): the track is half the tier's control height, and its inline size
+       keeps the 1.8:1 aspect ratio the control has always had. At the default "m" tier that is
+       exactly the 1.25rem x 2.25rem it shipped with before it had a size at all. */
+    --lr-switch-track-block-size: calc(var(--lr-form-control-height) * 0.5);
+    --lr-switch-track-inline-size: calc(var(--lr-switch-track-block-size) * 1.8);
     --lr-switch-thumb-offset: var(--lr-size-2px);
   }
   [part='base'] {

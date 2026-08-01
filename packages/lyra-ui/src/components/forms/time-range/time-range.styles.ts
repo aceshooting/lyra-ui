@@ -33,16 +33,22 @@ export const styles = css`
        brush-only case renders byte-for-byte the same as before. */
     --lr-time-range-size-scale: 1;
   }
+  /* This control has no form-control row to floor: size scales a brush track, its handles and the
+     preset chips together, so the tier resolves to one multiplier rather than to the shared
+     --lr-form-control-height ladder. It still matches both spellings of every tier, the same way
+     internal/sizes.styles.ts does, so size="small" is honoured here too. */
   :host([size='2xs']) {
     --lr-time-range-size-scale: 0.5;
   }
   :host([size='xs']) {
     --lr-time-range-size-scale: 0.6;
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-time-range-size-scale: 0.75;
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-time-range-size-scale: 1.2;
   }
   :host([size='xl']) {

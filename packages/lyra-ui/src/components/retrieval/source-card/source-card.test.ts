@@ -286,20 +286,20 @@ const baseChrome = (el: LyraSourceCard) => {
   };
 };
 
-it('defaults to compact=false and appearance="card", rendering identically to those values restated', async () => {
+it('defaults to compact=false and frame="card", rendering identically to those values restated', async () => {
   const implicit = (await fixture(
     html`<lr-source-card title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
   )) as LyraSourceCard;
   const explicit = (await fixture(
-    html`<lr-source-card title="a.pdf" appearance="card" .compact=${false}
+    html`<lr-source-card title="a.pdf" frame="card" .compact=${false}
       ><span slot="excerpt">x</span></lr-source-card
     >`,
   )) as LyraSourceCard;
 
   expect(implicit.compact).to.be.false;
-  expect(implicit.appearance).to.equal('card');
+  expect(implicit.frame).to.equal('card');
   expect(implicit.hasAttribute('compact')).to.be.false;
-  expect(implicit.getAttribute('appearance')).to.equal('card');
+  expect(implicit.getAttribute('frame')).to.equal('card');
 
   expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
   const chrome = baseChrome(implicit);
@@ -334,11 +334,11 @@ it('lets a consumer retune the compact values through --lr-source-card-compact-*
   expect(chrome.rowGap).to.equal('5px');
 });
 
-it('drops border, background, padding and radius under appearance="plain"', async () => {
+it('drops border, background, padding and radius under frame="plain"', async () => {
   const el = (await fixture(
-    html`<lr-source-card appearance="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+    html`<lr-source-card frame="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
   )) as LyraSourceCard;
-  expect(el.getAttribute('appearance')).to.equal('plain');
+  expect(el.getAttribute('frame')).to.equal('plain');
   const chrome = baseChrome(el);
   expect(chrome.borderTopWidth).to.equal('0px');
   expect(chrome.borderTopLeftRadius).to.equal('0px');
@@ -347,10 +347,25 @@ it('drops border, background, padding and radius under appearance="plain"', asyn
   expect(chrome.paddingLeft).to.equal('0px');
 });
 
-it('orders :host([appearance="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
+// The container treatment moved off `appearance` (which now means only how a control FILLS
+// itself) onto `frame` in 8.0.0, with no attribute alias. A stale `appearance="plain"` must
+// therefore render as an untouched card -- asserted on the rendered box, because a renamed
+// selector that still matched the old attribute would be invisible to every other assertion here.
+it('ignores a stale appearance="plain", leaving the card chrome intact', async () => {
+  const stale = (await fixture(
+    html`<lr-source-card appearance="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+  )) as LyraSourceCard;
+  expect(stale.frame).to.equal('card');
+  const chrome = baseChrome(stale);
+  expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s, i.e. the untouched card padding
+  expect(chrome.borderTopWidth).to.equal('1px');
+  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
   const css = styles.cssText;
   const compactAt = css.indexOf(':host([compact])');
-  const plainAt = css.indexOf(":host([appearance='plain'])");
+  const plainAt = css.indexOf(":host([frame='plain'])");
   expect(compactAt).to.be.greaterThan(-1);
   expect(plainAt).to.be.greaterThan(-1);
   expect(plainAt).to.be.greaterThan(compactAt);
@@ -358,7 +373,7 @@ it('orders :host([appearance="plain"]) after :host([compact]) so the equal-speci
 
 it('lets plain win over compact when both are set', async () => {
   const el = (await fixture(
-    html`<lr-source-card compact appearance="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+    html`<lr-source-card compact frame="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
   )) as LyraSourceCard;
   const chrome = baseChrome(el);
   expect(chrome.paddingTop).to.equal('0px');
@@ -367,7 +382,7 @@ it('lets plain win over compact when both are set', async () => {
 
 it('keeps the title/toggle affordances under plain (they never depended on the card chrome)', async () => {
   const el = (await fixture(
-    html`<lr-source-card appearance="plain" title="a.pdf">
+    html`<lr-source-card frame="plain" title="a.pdf">
       <span slot="excerpt">x</span><span slot="full">y</span>
     </lr-source-card>`,
   )) as LyraSourceCard;
@@ -393,7 +408,7 @@ it('is accessible in the populated compact and plain states', async () => {
   await expect(compactEl).to.be.accessible();
 
   const plainEl = (await fixture(
-    html`<lr-source-card appearance="plain" source-id="doc-2" title="annual_report.pdf" page="12">
+    html`<lr-source-card frame="plain" source-id="doc-2" title="annual_report.pdf" page="12">
       <span slot="excerpt">Revenue grew 12% year over year.</span>
       <span slot="full">Revenue grew 12% year over year, driven primarily by...</span>
     </lr-source-card>`,

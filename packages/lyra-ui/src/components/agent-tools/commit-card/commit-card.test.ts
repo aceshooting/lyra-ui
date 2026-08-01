@@ -235,13 +235,13 @@ describe('lr-commit-card', () => {
     expect(labels).to.deep.equal(['Modifié', 'Ajouté']);
   });
 
-  it('defaults to compact=false and appearance="card", keeping the pre-existing border/padding', async () => {
+  it('defaults to compact=false and frame="card", keeping the pre-existing border/padding', async () => {
     const el = (await fixture(html`<lr-commit-card></lr-commit-card>`)) as LyraCommitCard;
     await el.updateComplete;
     expect(el.compact).to.be.false;
-    expect(el.appearance).to.equal('card');
+    expect(el.frame).to.equal('card');
     expect(el.hasAttribute('compact')).to.be.false;
-    expect(el.getAttribute('appearance')).to.equal('card');
+    expect(el.getAttribute('frame')).to.equal('card');
     const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
     expect(base.paddingTop).to.equal('12px'); // --lr-space-m
     expect(base.borderTopWidth).to.equal('1px');
@@ -264,22 +264,22 @@ describe('lr-commit-card', () => {
     expect(base.paddingTop).to.equal('3px');
   });
 
-  it('drops border, padding and radius under appearance="plain", winning over compact when both are set', async () => {
+  it('drops border, padding and radius under frame="plain", winning over compact when both are set', async () => {
     const el = (await fixture(
-      html`<lr-commit-card compact appearance="plain"></lr-commit-card>`,
+      html`<lr-commit-card compact frame="plain"></lr-commit-card>`,
     )) as LyraCommitCard;
     await el.updateComplete;
-    expect(el.getAttribute('appearance')).to.equal('plain');
+    expect(el.getAttribute('frame')).to.equal('plain');
     const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
     expect(base.borderTopWidth).to.equal('0px');
     expect(base.borderTopLeftRadius).to.equal('0px');
     expect(base.paddingTop).to.equal('0px');
   });
 
-  it('orders :host([appearance="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
+  it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
     const css = styles.cssText;
     const compactAt = css.indexOf(':host([compact])');
-    const plainAt = css.indexOf(":host([appearance='plain'])");
+    const plainAt = css.indexOf(":host([frame='plain'])");
     expect(compactAt).to.be.greaterThan(-1);
     expect(plainAt).to.be.greaterThan(-1);
     expect(plainAt).to.be.greaterThan(compactAt);
@@ -292,7 +292,7 @@ describe('lr-commit-card', () => {
     await expect(compactEl).to.be.accessible();
 
     const plainEl = (await fixture(
-      html`<lr-commit-card appearance="plain" hash="abcdef1" message="Fix bug" author="Ada"></lr-commit-card>`,
+      html`<lr-commit-card frame="plain" hash="abcdef1" message="Fix bug" author="Ada"></lr-commit-card>`,
     )) as LyraCommitCard;
     await expect(plainEl).to.be.accessible();
   });

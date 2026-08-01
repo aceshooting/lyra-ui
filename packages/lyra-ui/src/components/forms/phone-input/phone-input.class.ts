@@ -6,12 +6,16 @@ import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchor
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './phone-input.styles.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 
 export type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
 export type PhoneInputSelectionDirection = 'forward' | 'backward' | 'none';
-export type LyraPhoneInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
+ *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
+export type LyraPhoneInputSize = LyraSizeStep;
 
 export interface PhoneCountry {
   /** ISO 3166-1 alpha-2 region code. */
@@ -233,11 +237,14 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * @cssprop --lr-phone-input-flag-size - Selected flag size, scaled by `size`.
  * @cssprop --lr-phone-input-glyph-size - Country selector glyph size, scaled by `size`.
  * @cssprop [--lr-phone-input-gap=var(--lr-space-xs)] - Country-trigger child gap.
- * @cssprop [--lr-phone-input-radius=var(--lr-radius)] - Input-wrapper corner radius.
+ * @cssprop [--lr-phone-input-radius=var(--lr-radius)] - Input-wrapper corner radius, shared with
+ *   the country trigger's leading corners. The `pill` attribute swaps it for `--lr-radius-pill`.
  * @cssprop [--lr-phone-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
  * @cssprop [--lr-phone-input-invalid-border-color=var(--lr-color-danger)] - Invalid row border color.
  * @cssprop [--lr-phone-input-country-hover-bg=var(--lr-color-brand-quiet)] - Country trigger hover background.
- * @cssprop --lr-phone-input-control-min-height - Input-wrapper block-size floor, scaled by `size`.
+ * @cssprop [--lr-phone-input-control-min-height=var(--lr-form-control-height)] - Input-wrapper
+ *   block-size floor. Reads the shared form-control height ladder, so retuning
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.
  * @cssprop --lr-phone-input-control-height - Exact input-wrapper height. Unset by default, which
  *   leaves `--lr-phone-input-control-min-height` as a floor only; set it to a length to both floor
  *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
@@ -245,7 +252,7 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  *   as well as inline on the element.
  */
 export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
   static override properties = {
     country: { noAccessor: true },
   };
@@ -278,8 +285,13 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
-  /** Visual size — same `2xs`–`xl` scale as `lr-input`'s own `size`. */
-  @property({ reflect: true }) size: LyraPhoneInputSize = 'm';
+  /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`. The Web Awesome /
+   *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
+   *  tag rename with no attribute rewrite. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Rounds the field's corners to a full pill, mirroring `lr-input`'s own `pill`. The country
+   *  trigger's leading corners follow, since both read `--lr-phone-input-radius`. */
+  @property({ type: Boolean, reflect: true }) pill = false;
   /** Accessible name for the telephone input. Takes precedence over `phoneLabel`, label, and placeholder. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Accessible name for the country selector. */

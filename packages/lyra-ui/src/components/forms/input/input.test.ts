@@ -624,11 +624,18 @@ describe('lr-input', () => {
     );
   });
 
-  it('supports size="2xs": tighter padding/font-size than xs, no min-block-size floor (matches xs\'s own contract)', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(
-      /:host\(\[size='2xs'\]\)\s*\{[^}]*--lr-input-padding-block:\s*var\(--lr-size-0-0625rem\);[^}]*--lr-input-padding-inline:\s*var\(--lr-space-2xs\);[^}]*--lr-input-font-size:\s*var\(--lr-font-size-2xs\);/,
+  it('supports size="2xs": tighter padding/font-size than xs, and the ladder\'s tightest floor', async () => {
+    const el = (await fixture(html`<lr-input size="2xs" aria-label="Name"></lr-input>`)) as LyraInput;
+    const xsEl = (await fixture(html`<lr-input size="xs" aria-label="Name"></lr-input>`)) as LyraInput;
+    const field = (host: LyraInput) => host.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+    const row = (host: LyraInput) => host.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    expect(parseFloat(getComputedStyle(field(el)).fontSize)).to.be.lessThan(
+      parseFloat(getComputedStyle(field(xsEl)).fontSize),
     );
+    expect(parseFloat(getComputedStyle(row(el)).paddingInlineStart)).to.be.lessThan(
+      parseFloat(getComputedStyle(row(xsEl)).paddingInlineStart),
+    );
+    expect(getComputedStyle(row(el)).minBlockSize).to.equal('20px');
   });
 
   it('reflects size="2xs" as a host attribute', async () => {
@@ -683,12 +690,17 @@ describe('lr-input', () => {
       expect(cs.borderRadius).to.equal('3px');
     });
 
-    it('declares --lr-input-gap/--lr-input-radius on :host and consumes them once on [part="input-wrapper"]', () => {
-      const css = styles.cssText.replace(/\s+/g, ' ');
-      expect(css).to.match(/:host \{[^}]*--lr-input-gap: var\(--lr-space-xs\);/);
-      expect(css).to.match(/:host \{[^}]*--lr-input-radius: var\(--lr-radius\);/);
-      expect(css).to.match(/\[part='input-wrapper'\] \{[^}]*gap: var\(--lr-input-gap\);/);
-      expect(css).to.match(/\[part='input-wrapper'\] \{[^}]*border-radius: var\(--lr-input-radius\);/);
+    it('keeps the gap constant across tiers while the radius follows the shared ladder', async () => {
+      const wrapperOf = (host: LyraInput) =>
+        host.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+      const mEl = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
+      const xsEl = (await fixture(html`<lr-input size="xs" aria-label="Name"></lr-input>`)) as LyraInput;
+      // The adornment gap is deliberately outside the ladder -- it never varied by tier.
+      expect(getComputedStyle(wrapperOf(mEl)).gap).to.equal('4px');
+      expect(getComputedStyle(wrapperOf(xsEl)).gap).to.equal('4px');
+      // The radius does vary: a 6px corner on a 24px-tall control reads as a lozenge.
+      expect(getComputedStyle(wrapperOf(mEl)).borderTopLeftRadius).to.equal('6px');
+      expect(getComputedStyle(wrapperOf(xsEl)).borderTopLeftRadius).to.equal('2px');
     });
   });
 });
@@ -1053,5 +1065,43 @@ describe('lr-input clear-button spelling parity', () => {
       html`<lr-input type="search" value="query" aria-label="Search"></lr-input>`,
     )) as LyraInput;
     expect(el.shadowRoot!.querySelector('[part="clear-button"]')).to.not.exist;
+  });
+});
+
+describe('lr-input — the shared size ladder', () => {
+  const wrapper = (el: LyraInput) =>
+    el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  const height = (el: LyraInput) => wrapper(el).getBoundingClientRect().height;
+
+  // The same guarantee lr-button makes: a migrating consumer's `size="small"` must land on the
+  // `s` tier's geometry exactly, not merely parse.
+  it('renders the Web Awesome size spellings at the same geometry as the canonical steps', async () => {
+    for (const [alias, step] of [['small', 's'], ['medium', 'm'], ['large', 'l']] as const) {
+      const aliasEl = (await fixture(
+        html`<lr-input size=${alias} aria-label="Name"></lr-input>`,
+      )) as LyraInput;
+      const stepEl = (await fixture(
+        html`<lr-input size=${step} aria-label="Name"></lr-input>`,
+      )) as LyraInput;
+      expect(height(aliasEl), `size=${alias} height`).to.equal(height(stepEl));
+      const aliasInput = aliasEl.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+      const stepInput = stepEl.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+      expect(getComputedStyle(aliasInput).fontSize, `size=${alias} font-size`).to.equal(
+        getComputedStyle(stepInput).fontSize,
+      );
+      expect(getComputedStyle(aliasInput).paddingTop, `size=${alias} padding-block`).to.equal(
+        getComputedStyle(stepInput).paddingTop,
+      );
+    }
+  });
+
+  // The ladder's whole promise: an input and a button of the same tier sit at the same height in
+  // a toolbar row. Before 8.0.0 the l and xl tiers overshot their own floor by 2px and 5px.
+  it('sits at the shared form-control height at every tier', async () => {
+    const expected: Record<string, number> = { '2xs': 20, xs: 24, s: 30, m: 40, l: 48, xl: 56 };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-input size=${size} aria-label="Name"></lr-input>`)) as LyraInput;
+      expect(height(el), `size=${size}`).to.equal(px);
+    }
   });
 });

@@ -8,38 +8,15 @@ export const styles = css`
        items would otherwise force the scroll container wide. */
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* Matches lr-input/lr-select/lr-combobox's own shared default-tier floor
-       (--lr-size-2-5rem = 40px) so a toolbar built with default-size controls shows this control
-       at a matching height beside them, per the class doc's own "flush beside those controls"
-       promise -- every other explicit tier below already matches those controls exactly. */
-    --lr-segmented-track-min-height: var(--lr-size-2-5rem);
-    --lr-segmented-segment-padding: var(--lr-size-0-125rem) var(--lr-space-s);
-    --lr-segmented-font-size: var(--lr-font-size-sm);
-  }
-  :host([size="2xs"]) {
-    --lr-segmented-track-min-height: var(--lr-size-1-5rem);
-    --lr-segmented-segment-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
-    --lr-segmented-font-size: var(--lr-font-size-2xs);
-  }
-  :host([size="xs"]) {
-    --lr-segmented-track-min-height: var(--lr-size-1-5rem);
-    --lr-segmented-segment-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    --lr-segmented-font-size: var(--lr-font-size-xs);
-  }
-  :host([size="s"]) {
-    --lr-segmented-track-min-height: var(--lr-size-1-875rem);
-    --lr-segmented-segment-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    --lr-segmented-font-size: var(--lr-font-size-sm);
-  }
-  :host([size="l"]) {
-    --lr-segmented-track-min-height: var(--lr-size-3rem);
-    --lr-segmented-segment-padding: var(--lr-space-s) var(--lr-space-m);
-    --lr-segmented-font-size: var(--lr-font-size-lg);
-  }
-  :host([size="xl"]) {
-    --lr-segmented-track-min-height: var(--lr-size-3-5rem);
-    --lr-segmented-segment-padding: var(--lr-space-m) var(--lr-space-l);
-    --lr-segmented-font-size: var(--lr-font-size-xl);
+    /* One ladder for the whole library (internal/sizes.styles.ts): the track floor, the segment
+       padding and the segment font size are the tier's own --lr-form-control-* values, so a toolbar
+       built with same-size controls shows this control at a matching height beside them, per the
+       class doc's own "flush beside those controls" promise. This component used to carry six
+       :host([size=...]) blocks of its own, on a scale that had drifted from that one. */
+    --lr-segmented-track-min-height: var(--lr-form-control-height);
+    --lr-segmented-segment-padding: var(--lr-form-control-padding-block)
+      var(--lr-form-control-padding-inline);
+    --lr-segmented-font-size: var(--lr-form-control-font-size);
   }
   [part="base"] {
     display: inline-flex;
@@ -87,7 +64,7 @@ export const styles = css`
   [part="segment"] {
     min-inline-size: 0;
     border: none;
-    border-radius: calc(var(--lr-radius) * 0.7);
+    border-radius: calc(var(--lr-form-control-radius) * 0.7);
     background: transparent;
     color: var(--lr-color-text-quiet);
     font: inherit;

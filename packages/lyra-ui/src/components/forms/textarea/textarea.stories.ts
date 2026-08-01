@@ -51,13 +51,42 @@ export const Readonly: Story = {
   `,
 };
 
-/** `size` scales the field's padding and font size on the shared `2xs`-`xl` scale. */
+/**
+ * `size` scales the field's padding and font size on the library's one form-control ladder, shared
+ * with `<lr-input>`/`<lr-select>`/`<lr-button>`. A textarea's own height comes from `rows`/`resize`,
+ * so the ladder's control-height floor does not apply here.
+ */
 export const Sizes: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; max-inline-size: 24rem">
-      <lr-textarea size="xs" label="xs" rows="2"></lr-textarea>
-      <lr-textarea size="m" label="m (default)" rows="2"></lr-textarea>
-      <lr-textarea size="xl" label="xl" rows="2"></lr-textarea>
+      ${['2xs', 'xs', 's', 'm', 'l', 'xl'].map(
+        (size) => html`<lr-textarea size=${size} label=${size} rows="2"></lr-textarea>`,
+      )}
+    </div>
+  `,
+};
+
+/** The `small`/`medium`/`large` spellings render exactly what `s`/`m`/`l` render. */
+export const SizeSpellings: Story = {
+  name: 'Both size spellings',
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; max-inline-size: 24rem">
+      <lr-textarea size="s" label='size="s"' rows="2"></lr-textarea>
+      <lr-textarea size="small" label='size="small"' rows="2"></lr-textarea>
+    </div>
+  `,
+};
+
+/**
+ * `pill` rounds the field's corners fully, matching `<lr-input>`'s and `<lr-select>`'s own `pill`.
+ * It reads best on a one- or two-row field; a tall surface with fully rounded ends wastes the first
+ * and last line's inline space, which is why it is opt-in rather than tied to `size`.
+ */
+export const Pill: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; max-inline-size: 24rem">
+      <lr-textarea pill label="pill" rows="2" placeholder="Rounded ends"></lr-textarea>
+      <lr-textarea label="default" rows="2" placeholder="Square ends"></lr-textarea>
     </div>
   `,
 };

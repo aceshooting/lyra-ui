@@ -20,10 +20,10 @@ export default meta;
 type Story = StoryObj;
 
 const entries: ActivityEntry[] = [
-  { id: '1', text: 'Searching the web for recent changes', icon: '🔍', tone: 'brand' },
-  { id: '2', text: 'Read src/index.ts', tone: 'neutral' },
-  { id: '3', text: 'Read package.json', tone: 'neutral' },
-  { id: '4', text: 'Ran the test suite', tone: 'success' },
+  { id: '1', text: 'Searching the web for recent changes', icon: '🔍', variant: 'brand' },
+  { id: '2', text: 'Read src/index.ts', variant: 'neutral' },
+  { id: '3', text: 'Read package.json', variant: 'neutral' },
+  { id: '4', text: 'Ran the test suite', variant: 'success' },
 ];
 
 export const LiveExpanded: Story = {
@@ -59,7 +59,7 @@ export const VirtualizedLongRun: Story = {
     const many: ActivityEntry[] = Array.from({ length: 300 }, (_, i) => ({
       id: `e${i}`,
       text: `Step ${i + 1} of the run`,
-      tone: i % 25 === 0 ? 'brand' : 'neutral',
+      variant: i % 25 === 0 ? 'brand' : 'neutral',
     }));
     return html`<lr-activity-feed style="max-width: 32rem;" mode="live" expanded .entries=${many}></lr-activity-feed>`;
   },

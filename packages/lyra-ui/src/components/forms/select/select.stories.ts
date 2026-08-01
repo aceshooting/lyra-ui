@@ -77,7 +77,10 @@ export const RichRows: Story = {
   `,
 };
 
-/** `size` spans the same `xs`–`xl` scale as `lr-toast-item`, default `m`. */
+/**
+ * `size` walks the library's one form-control ladder, shared with `<lr-button>`/`<lr-input>`/
+ * `<lr-textarea>`, so same-tier controls are the same height in a toolbar row. Default `m`.
+ */
 export const Sizes: Story = {
   render: () => {
     const sizes: LyraSelectSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
@@ -94,6 +97,23 @@ export const Sizes: Story = {
       </div>
     `;
   },
+};
+
+/** The `small`/`medium`/`large` spellings render exactly what `s`/`m`/`l` render. */
+export const SizeSpellings: Story = {
+  name: 'Both size spellings',
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+      ${['s', 'small', 'm', 'medium', 'l', 'large'].map(
+        (size) => html`
+          <lr-select size=${size} placeholder=${`size="${size}"`}>
+            <lr-option value="a">Apple</lr-option>
+            <lr-option value="b">Banana</lr-option>
+          </lr-select>
+        `,
+      )}
+    </div>
+  `,
 };
 
 export const Disabled: Story = {

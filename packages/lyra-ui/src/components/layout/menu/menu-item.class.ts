@@ -3,6 +3,8 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import type { MenuFocusTarget, SubmenuPanel } from './menu-shared.js';
 import { styles } from './menu-item.styles.js';
 
@@ -131,10 +133,20 @@ export interface LyraMenuItemEventMap {
  * @csspart submenu-icon - Wrapper around the chevron shown on a submenu parent. Not rendered at all without a `submenu` slot. Mirrors under RTL through this wrapper, never by swapping the glyph.
  */
 export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  // The shared ladder sits before this component's own sheet so the per-tier `--lr-form-control-*`
+  // knobs are already declared by the time `[part='base']` reads them.
+  static override styles = [LyraElement.styles, sizes, styles];
 
   /** An id/value the parent `<lr-menu>`'s `lr-menu-select` detail keys off of. */
   @property() value = '';
+
+  /** Row density, on the library's shared six-step ladder — `'m'` by default. Scales the row's
+   *  height, inline/block padding, font size and corner radius together; `'small'`/`'medium'`/
+   *  `'large'` are accepted as synonyms of `'s'`/`'m'`/`'l'`. Every tier still resolves to at
+   *  least the 24px pointer-target floor, so even `'2xs'` stays tappable. Each item carries its
+   *  own size rather than inheriting one from `<lr-menu>`, so a single compact row inside an
+   *  otherwise default menu needs no wrapper. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Disables selection and excludes this item from `<lr-menu>`'s roving-tabindex nav entirely. */
   @property({ type: Boolean, reflect: true }) disabled = false;

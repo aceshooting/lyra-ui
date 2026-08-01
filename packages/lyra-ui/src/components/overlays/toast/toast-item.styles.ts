@@ -10,17 +10,19 @@ export const styles = css`
     --lr-toast-font-size: var(--lr-font-size-md);
     --lr-toast-accent-color: var(--lr-color-border);
   }
-  :host([variant='brand']) {
-    --lr-toast-accent-color: var(--lr-color-brand);
+  /* One rule for all four non-neutral variants, in place of the four one-declaration blocks that
+     stood here: the shared variants sheet has already re-pointed --lr-color-fill-* at the active
+     variant's row of the semantic grid, so the toast reads a generic slot and never names a
+     variant. Neutral is excluded rather than mapped, so it keeps the plain --lr-color-border
+     accent declared on :host above -- an ordinary informational toast must not read as a grey
+     status bar. Matching [variant] as well as :not([variant='neutral']) keeps a host that has not
+     yet reflected its default attribute on that same neutral value. */
+  :host([variant]:not([variant='neutral'])) {
+    --lr-toast-accent-color: var(--lr-color-fill-loud);
   }
-  :host([variant='success']) {
-    --lr-toast-accent-color: var(--lr-color-success);
-  }
-  :host([variant='warning']) {
-    --lr-toast-accent-color: var(--lr-color-warning);
-  }
-  :host([variant='danger']) {
-    --lr-toast-accent-color: var(--lr-color-danger);
+  :host([size='2xs']) {
+    --lr-toast-padding: var(--lr-space-2xs);
+    --lr-toast-font-size: var(--lr-font-size-2xs);
   }
   :host([size='xs']) {
     --lr-toast-padding: var(--lr-space-xs);

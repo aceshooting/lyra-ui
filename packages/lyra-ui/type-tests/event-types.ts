@@ -487,8 +487,8 @@ responsivePanel.addEventListener('lr-mode-change', (event) => {
 
 declare const dockPanel: LyraDockPanel;
 dockPanel.addEventListener('lr-resize', (event) => {
-  const size: string = event.detail.size;
-  void size;
+  const extent: string = event.detail.extent;
+  void extent;
 });
 dockPanel.addEventListener('lr-collapse-change', (event) => {
   const collapsed: boolean = event.detail.collapsed;

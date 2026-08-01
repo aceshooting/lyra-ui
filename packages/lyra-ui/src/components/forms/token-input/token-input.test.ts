@@ -176,6 +176,57 @@ it("matches lr-input's own row height at every shared size tier when empty", asy
   }
 });
 
+// Literal pixels, not a relative comparison: adopting the shared form-control ladder moved where
+// these numbers are DECLARED, and the point of the move is that it did not move the numbers.
+it('renders the same laid-out row box at every tier as before the shared ladder', async () => {
+  const expected: ReadonlyArray<readonly [string, number]> = [
+    ['2xs', 20],
+    ['xs', 25],
+    ['s', 30],
+    ['m', 40],
+    ['l', 52],
+    ['xl', 63],
+  ];
+  for (const [size, px] of expected) {
+    const el = await fixture(html`<lr-token-input size=${size}></lr-token-input>`);
+    const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    expect(wrapper.getBoundingClientRect().height, `laid-out height at size=${size}`).to.equal(px);
+  }
+});
+
+it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
+  const pairs: ReadonlyArray<readonly [string, string]> = [
+    ['small', 's'],
+    ['medium', 'm'],
+    ['large', 'l'],
+  ];
+  for (const [alias, step] of pairs) {
+    const aliasEl = await fixture(html`<lr-token-input size=${alias}></lr-token-input>`);
+    const stepEl = await fixture(html`<lr-token-input size=${step}></lr-token-input>`);
+    const row = (el: Element) => el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    expect(getComputedStyle(row(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
+      getComputedStyle(row(stepEl)).minBlockSize,
+    );
+    expect(row(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
+      row(stepEl).getBoundingClientRect().height,
+    );
+  }
+});
+
+it('rounds the token row and its tokens to a pill without a ::part() rule', async () => {
+  const plain = (await fixture(html`<lr-token-input .value=${['alpha']}></lr-token-input>`)) as LyraTokenInput;
+  const pill = (await fixture(html`<lr-token-input pill .value=${['alpha']}></lr-token-input>`)) as LyraTokenInput;
+  const radius = (el: LyraTokenInput, part: string) =>
+    getComputedStyle(el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement).borderStartStartRadius;
+  expect(pill.pill).to.be.true;
+  expect(Number.parseFloat(radius(pill, 'input-wrapper'))).to.be.greaterThan(
+    Number.parseFloat(radius(plain, 'input-wrapper')),
+  );
+  expect(Number.parseFloat(radius(pill, 'token'))).to.be.greaterThan(
+    Number.parseFloat(radius(plain, 'token')),
+  );
+});
+
 it('scales token-chip padding with the token-input size tier', async () => {
   const small = (await fixture(
     html`<lr-token-input size="2xs" .value=${['alpha']}></lr-token-input>`,

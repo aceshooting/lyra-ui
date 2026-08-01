@@ -6,37 +6,31 @@ export const styles = css`
     display: inline-block;
     inline-size: 100%;
     max-inline-size: var(--lr-size-24rem);
-    --lr-model-select-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
-    --lr-model-select-trigger-min-height: var(--lr-size-2-5rem);
-    --lr-model-select-font-size: var(--lr-font-size-md);
+    /* The size ladder itself lives in internal/sizes.styles.ts, which this component composes ahead
+       of this sheet. Only the indirection is here: the public --lr-model-select-* surface stays
+       exactly as documented, while its VALUES come from the one --lr-form-control-* scale every
+       other control in the library sizes against. That keeps a model select the same height as the
+       lr-select / lr-input / lr-button next to it in a toolbar row at every tier, and it means the
+       shared sheet's per-tier :host([size='...']) rules (which list both spellings of each step)
+       are the only place a tier is ever restated. */
+    --lr-model-select-trigger-padding: var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline);
+    --lr-model-select-trigger-min-height: var(--lr-form-control-height);
+    --lr-model-select-font-size: var(--lr-form-control-font-size);
     --lr-model-select-expand-size: var(--lr-size-1-75rem);
   }
   :host(:disabled) {
     cursor: not-allowed;
   }
-  /* Same xs-xl scale as lr-select's size -- see that component's identical per-tier block
-     for the source of these values. */
+  /* The decorative expand icon is the one knob the shared ladder has no equivalent for -- it is a
+     glyph box, not a control metric -- so its three sizes stay here, listed in both spellings of
+     each tier so they track the shared sheet exactly. */
+  :host([size='2xs']),
   :host([size='xs']) {
-    --lr-model-select-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    --lr-model-select-trigger-min-height: var(--lr-size-1-5rem);
-    --lr-model-select-font-size: var(--lr-font-size-xs);
     --lr-model-select-expand-size: var(--lr-size-1rem);
   }
-  :host([size='s']) {
-    --lr-model-select-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
-    --lr-model-select-trigger-min-height: var(--lr-size-1-875rem);
-    --lr-model-select-font-size: var(--lr-font-size-sm);
+  :host([size='s']),
+  :host([size='small']) {
     --lr-model-select-expand-size: var(--lr-size-1-25rem);
-  }
-  :host([size='l']) {
-    --lr-model-select-trigger-padding: var(--lr-space-s) var(--lr-space-m);
-    --lr-model-select-trigger-min-height: var(--lr-size-3rem);
-    --lr-model-select-font-size: var(--lr-font-size-lg);
-  }
-  :host([size='xl']) {
-    --lr-model-select-trigger-padding: var(--lr-space-m) var(--lr-space-l);
-    --lr-model-select-trigger-min-height: var(--lr-size-3-5rem);
-    --lr-model-select-font-size: var(--lr-font-size-xl);
   }
 
   [part='form-control-label'] {

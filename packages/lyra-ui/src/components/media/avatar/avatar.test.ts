@@ -78,18 +78,33 @@ describe('lr-avatar', () => {
     expect(replacement.getAttribute('src')).to.equal(TEST_IMAGE_SRC_REPLACEMENT);
   });
 
-  it('defaults size to medium, shape to circle, tone to neutral', async () => {
+  it('defaults size to medium, shape to circle, variant to neutral', async () => {
     const el = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
     expect(el.size).to.equal('medium');
     expect(el.shape).to.equal('circle');
-    expect(el.tone).to.equal('neutral');
+    expect(el.variant).to.equal('neutral');
   });
 
-  it('reflects size/shape/tone as attributes for CSS selectors', async () => {
-    const el = (await fixture(html`<lr-avatar initials="AB" size="large" shape="square" tone="brand"></lr-avatar>`)) as LyraAvatar;
+  it('reflects size/shape/variant as attributes for CSS selectors', async () => {
+    const el = (await fixture(html`<lr-avatar initials="AB" size="large" shape="square" variant="brand"></lr-avatar>`)) as LyraAvatar;
     expect(el.getAttribute('size')).to.equal('large');
     expect(el.getAttribute('shape')).to.equal('square');
-    expect(el.getAttribute('tone')).to.equal('brand');
+    expect(el.getAttribute('variant')).to.equal('brand');
+  });
+
+  it('exposes no `tone` property at all — `variant` replaced it outright, with no alias', async () => {
+    const el = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
+    expect('tone' in el, 'tone is gone from the instance').to.be.false;
+  });
+
+  it('recolors the rendered circle from `variant`, not from `tone`', async () => {
+    const neutral = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
+    const brand = (await fixture(html`<lr-avatar initials="AB" variant="brand"></lr-avatar>`)) as LyraAvatar;
+    const stale = (await fixture(html`<lr-avatar initials="AB" tone="brand"></lr-avatar>`)) as LyraAvatar;
+    const background = (el: LyraAvatar): string =>
+      getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).backgroundColor;
+    expect(background(brand), 'variant="brand" repaints the circle').to.not.equal(background(neutral));
+    expect(background(stale), 'a stale tone="brand" no longer does').to.equal(background(neutral));
   });
 
   it('keeps a legacy sm/md/lg spelling verbatim in the reflected attribute', async () => {
@@ -284,6 +299,24 @@ describe('lr-avatar size aliases', () => {
     const large = await renderedBox('large');
     expect(Number.parseFloat(small.inlineSize)).to.be.lessThan(Number.parseFloat(medium.inlineSize));
     expect(Number.parseFloat(large.inlineSize)).to.be.greaterThan(Number.parseFloat(medium.inlineSize));
+  });
+
+  it('renders the canonical s/m/l spellings exactly like small/medium/large', async () => {
+    expect(await renderedBox('s'), 's renders as small').to.deep.equal(await renderedBox('small'));
+    expect(await renderedBox('m'), 'm renders as medium').to.deep.equal(await renderedBox('medium'));
+    expect(await renderedBox('l'), 'l renders as large').to.deep.equal(await renderedBox('large'));
+  });
+
+  it('gives every step of the shared six-step ladder its own diameter', async () => {
+    // A value the type accepts but no selector matches would silently render at the default tier,
+    // which no gate in this repo can see. Assert the whole ladder is strictly increasing instead.
+    const diameters: number[] = [];
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+      diameters.push(Number.parseFloat((await renderedBox(size)).inlineSize));
+    }
+    for (let i = 1; i < diameters.length; i += 1) {
+      expect(diameters[i], `step ${i} is larger than step ${i - 1}`).to.be.greaterThan(diameters[i - 1]!);
+    }
   });
 });
 

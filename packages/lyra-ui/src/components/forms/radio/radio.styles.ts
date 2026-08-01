@@ -2,6 +2,26 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
+    /* The indicator tracks the shared size ladder (internal/sizes.styles.ts): 70% of the tier's
+       control height, so a radio lines up with an lr-input/lr-select/lr-button of the same size
+       rather than carrying a scale of its own. At the default "m" tier this resolves to exactly the
+       1.75rem the control shipped with before it had a size at all, and the --lr-icon-button-size
+       cap is kept so a consumer compacting that theme token still compacts this control with it. */
+    --lr-radio-circle-size: min(
+      var(--lr-icon-button-size),
+      calc(var(--lr-form-control-height) * 0.7)
+    );
+    /* Capped at half the circle so the dot can never outgrow the ring it sits in, whatever a
+       consumer does to either the ladder or the --lr-icon-button-size cap above. Resolves to
+       0.75rem at "m", the size the dot shipped with. */
+    --lr-radio-dot-size: min(
+      calc(var(--lr-radio-circle-size) * 0.5),
+      calc(var(--lr-form-control-height) * 0.3)
+    );
+    /* The corner radius of the control's own chrome. A circular indicator is fully round at every
+       setting; the knob exists so <lr-radio-button>'s rectangular chrome -- which inherits this
+       class, and with it the pill property -- has one name to override. */
+    --lr-radio-radius: var(--lr-radius-pill);
     display: inline-block;
     /* Published (not an override hook, so it is declared rather than read with an inline
        var() fallback) so a consumer composing their own per-option hint text under the label
@@ -12,9 +32,7 @@ export const styles = css`
        it does NOT reach a *sibling* node in the consumer's tree, because custom properties
        inherit down, not sideways. A consumer aligning a sibling <p> computes the same formula
        themselves from --lr-theme-icon-button-size and --lr-theme-space-s. */
-    --lr-radio-label-indent: calc(
-      min(var(--lr-icon-button-size), var(--lr-size-1-75rem)) + var(--lr-space-s)
-    );
+    --lr-radio-label-indent: calc(var(--lr-radio-circle-size) + var(--lr-space-s));
   }
   [part='base'] {
     display: inline-flex;
@@ -22,9 +40,7 @@ export const styles = css`
     /* Derived from the published indent rather than repeating --lr-space-s, so the advertised
        value and the rendered label offset cannot drift: the label always starts exactly
        --lr-radio-label-indent from the base's inline start. Resolves to --lr-space-s by default. */
-    gap: calc(
-      var(--lr-radio-label-indent) - min(var(--lr-icon-button-size), var(--lr-size-1-75rem))
-    );
+    gap: calc(var(--lr-radio-label-indent) - var(--lr-radio-circle-size));
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
@@ -55,11 +71,12 @@ export const styles = css`
        label-less radio this circle *is* the whole tap target ([part='base'] contributes no box
        of its own), so a hard inline-size/block-size would let the indicator overflow it and
        would size the target below its own content. Same inline icon-affordance convention as
-       lr-combobox's clear-button / lr-select's toggle: --lr-icon-button-size capped at 1.75rem. */
-    min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
-    min-block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
+       lr-combobox's clear-button / lr-select's toggle: --lr-icon-button-size capped at the
+       tier's own share of the control height. */
+    min-inline-size: var(--lr-radio-circle-size);
+    min-block-size: var(--lr-radio-circle-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-pill);
+    border-radius: var(--lr-radio-radius);
     background: var(--lr-color-surface);
     transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
@@ -73,8 +90,8 @@ export const styles = css`
     border-color: var(--lr-radio-checked-border-color, var(--lr-color-brand));
   }
   [part='dot'] {
-    inline-size: var(--lr-size-0-75rem);
-    block-size: var(--lr-size-0-75rem);
+    inline-size: var(--lr-radio-dot-size);
+    block-size: var(--lr-radio-dot-size);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-radio-checked-dot-color, var(--lr-color-brand));
   }

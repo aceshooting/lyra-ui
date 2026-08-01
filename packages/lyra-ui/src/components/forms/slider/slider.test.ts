@@ -1548,3 +1548,51 @@ it('is accessible as a vertical, readonly slider', async () => {
   ).to.equal('true');
   await expect(el).to.be.accessible();
 });
+
+describe('size', () => {
+  async function slider(markup: unknown): Promise<LyraSlider> {
+    const el = (await fixture(markup as never)) as LyraSlider;
+    await el.updateComplete;
+    return el;
+  }
+  const rectOf = (el: LyraSlider, part: string): DOMRect =>
+    (el.shadowRoot!.querySelector(`[part~="${part}"]`) as HTMLElement).getBoundingClientRect();
+
+  it('defaults to the "m" tier and reflects it', async () => {
+    const el = await slider(html`<lr-slider label="Temp"></lr-slider>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+  });
+
+  it('grows the rendered thumb and track from size="s" to size="l"', async () => {
+    const small = await slider(html`<lr-slider size="s" label="Temp"></lr-slider>`);
+    const large = await slider(html`<lr-slider size="l" label="Temp"></lr-slider>`);
+    expect(rectOf(large, 'thumb').width).to.be.greaterThan(rectOf(small, 'thumb').width);
+    expect(rectOf(large, 'thumb').height).to.be.greaterThan(rectOf(small, 'thumb').height);
+    expect(rectOf(large, 'track').height).to.be.greaterThan(rectOf(small, 'track').height);
+    expect(rectOf(large, 'base').height).to.be.greaterThan(rectOf(small, 'base').height);
+  });
+
+  it('renders "small"/"large" at the same geometry as "s"/"l"', async () => {
+    const s = await slider(html`<lr-slider size="s" label="Temp"></lr-slider>`);
+    const small = await slider(html`<lr-slider size="small" label="Temp"></lr-slider>`);
+    const l = await slider(html`<lr-slider size="l" label="Temp"></lr-slider>`);
+    const large = await slider(html`<lr-slider size="large" label="Temp"></lr-slider>`);
+    expect(rectOf(small, 'thumb').width).to.be.closeTo(rectOf(s, 'thumb').width, 0.5);
+    expect(rectOf(large, 'thumb').width).to.be.closeTo(rectOf(l, 'thumb').width, 0.5);
+  });
+
+  it('keeps the handle drag area at or above 28px at every tier', async () => {
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+      const el = await slider(html`<lr-slider size=${size} label="Temp"></lr-slider>`);
+      const thumb = el.shadowRoot!.querySelector('[part~="thumb"]') as HTMLElement;
+      const area = Number.parseFloat(getComputedStyle(thumb, '::before').inlineSize);
+      expect(area, `${size} drag area`).to.be.at.least(28);
+    }
+  });
+
+  it('is accessible at a non-default tier', async () => {
+    const el = await slider(html`<lr-slider size="l" label="Temp"></lr-slider>`);
+    await expect(el).to.be.accessible();
+  });
+});
