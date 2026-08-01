@@ -463,7 +463,8 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   /** Activates the first internal thumb control, mirroring `<lr-switch>`'s identical `override
    *  click()`. Without this, `HTMLElement.prototype.click()` on the host is a no-op: no click
    *  handler is bound to the host itself, only to `[part="base"]`/the thumbs. In `range` mode
-   *  this targets the lower handle, matching `focus()`/`blur()` below. */
+   *  this targets the lower handle, matching `focus()` below; `blur()` instead follows whichever
+   *  thumb currently owns focus. */
   override click(): void {
     if (!this.effectiveDisabled) this.firstThumb()?.click();
   }

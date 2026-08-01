@@ -147,6 +147,25 @@ describe('playback controls', () => {
     }
   });
 
+  it('relays native media events from the host exactly once without bubbling or composing', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    let count = 0;
+    let bubbles = true;
+    let composed = true;
+    el.addEventListener('play', (event) => {
+      count += 1;
+      bubbles = event.bubbles;
+      composed = event.composed;
+    });
+
+    media.dispatchEvent(new Event('play'));
+
+    expect(count).to.equal(1);
+    expect(bubbles).to.be.false;
+    expect(composed).to.be.false;
+  });
+
   it('handles an internal keyboard-triggered play rejection through the localized render-error path', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
@@ -897,6 +916,46 @@ describe('source identity', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
   });
+
+  it('preserves valid native playback preferences across a source generation', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const oldMedia = mediaEl(el);
+    oldMedia.volume = 0.4;
+    oldMedia.muted = true;
+    oldMedia.playbackRate = 1.5;
+    oldMedia.dispatchEvent(new Event('volumechange'));
+    oldMedia.dispatchEvent(new Event('ratechange'));
+
+    el.src = MP4_SRC;
+    await el.updateComplete;
+    const replacement = mediaEl(el);
+
+    expect(replacement.volume).to.equal(0.4);
+    expect(replacement.muted).to.be.true;
+    expect(replacement.playbackRate).to.equal(1.5);
+  });
+
+  it('pauses and rejects native events while disconnected, then listens once after reconnect', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const parent = el.parentElement!;
+    const media = mediaEl(el);
+    let pauses = 0;
+    Object.defineProperty(media, 'pause', {
+      configurable: true,
+      value: () => { pauses += 1; },
+    });
+    let timeUpdates = 0;
+    el.addEventListener('timeupdate', () => { timeUpdates += 1; });
+
+    el.remove();
+    media.dispatchEvent(new Event('timeupdate'));
+    parent.append(el);
+    await el.updateComplete;
+    media.dispatchEvent(new Event('timeupdate'));
+
+    expect(pauses).to.equal(1);
+    expect(timeUpdates).to.equal(1);
+  });
 });
 
 describe('i18n', () => {
@@ -1093,7 +1152,7 @@ describe('active-state cssprop escape hatches', () => {
     // step rather than a repeat of hover.
     const wrapper = (await fixture(html`<div>
       <lr-av-player
-        src=${MP3_SRC}
+        kind="audio"
         .highlights=${[
           { id: 'h1', anchor: { kind: 'time-range', start: 5 } },
           { id: 'h2', anchor: { kind: 'time-range', start: 60 }, tone: 'danger' },
@@ -1114,6 +1173,8 @@ describe('active-state cssprop escape hatches', () => {
     expect(dangerFill, 'the danger tone supplies its own fill for the mixes to read').to.not.equal(plainFill);
 
     const target = markers[1];
+    target.scrollIntoView({ block: 'center', inline: 'center' });
+    await aTimeout(0);
     const rect = target.getBoundingClientRect();
     expect(rect.width, 'the marker has real geometry to point at').to.be.greaterThan(0);
     const resting = getComputedStyle(target).backgroundColor;
@@ -1122,10 +1183,17 @@ describe('active-state cssprop escape hatches', () => {
         type: 'move',
         position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
       });
+      await aTimeout(0);
+      const hit = el.shadowRoot!.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      expect(
+        target.matches(':hover'),
+        `the native pointer reaches the marker (rect ${rect.left},${rect.top},${rect.width},${rect.height}; viewport ${innerWidth}x${innerHeight}; hit ${(hit as Element | null)?.getAttribute('part') ?? (hit as Element | null)?.localName ?? 'none'})`,
+      ).to.be.true;
       const hovered = getComputedStyle(target).backgroundColor;
       expect(hovered, 'hover moves the marker off its resting fill').to.not.equal(resting);
 
       await sendMouse({ type: 'down' });
+      await aTimeout(0);
       const pressed = getComputedStyle(target).backgroundColor;
       expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
       await sendMouse({ type: 'up' });

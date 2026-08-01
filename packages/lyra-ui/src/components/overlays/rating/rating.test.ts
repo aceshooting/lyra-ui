@@ -61,6 +61,25 @@ it('locale-formats the spoken slider value and forwards host focus/blur/click to
   expect(clicked).to.equal(1);
 });
 
+it('relays one native focus/blur pair and one prefixed alias pair from the slider control', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div><lr-rating value="2"></lr-rating></div>`);
+  const el = wrapper.querySelector('lr-rating') as LyraRating;
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  wrapper.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+  wrapper.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+  wrapper.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+  wrapper.addEventListener('lr-blur', () => aliases.push('lr-blur'));
+
+  el.focus();
+  el.blur();
+
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+});
+
 it('reverses horizontal value movement under RTL', async () => {
   const el = (await fixture(html`<div dir="rtl"><lr-rating value="2"></lr-rating></div>`)).querySelector('lr-rating') as LyraRating;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -433,6 +452,13 @@ it('inherits an ancestor fieldset disablement without mutating its own `disabled
   expect(baseOf(el).getAttribute('aria-disabled')).to.equal('true');
   expect(baseOf(el).getAttribute('tabindex')).to.equal('-1');
   expect(getComputedStyle(baseOf(el)).cursor, ':host(:disabled) tracks the fieldset').to.equal('not-allowed');
+
+  let delegatedCalls = 0;
+  baseOf(el).click = () => { delegatedCalls += 1; };
+  baseOf(el).focus = () => { delegatedCalls += 1; };
+  el.click();
+  el.focus();
+  expect(delegatedCalls, 'fieldset disablement gates host click/focus delegation').to.equal(0);
 
   baseOf(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
   expect(el.value, 'a fieldset-disabled rating is not settable').to.equal(2);

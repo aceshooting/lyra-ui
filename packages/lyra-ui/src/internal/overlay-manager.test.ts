@@ -21,6 +21,14 @@ function createOverlay(doc: Document, label: string) {
   return { host, panel, first, last };
 }
 
+async function waitForCondition(read: () => boolean, message: string): Promise<void> {
+  const started = performance.now();
+  while (!read()) {
+    if (performance.now() - started > 2000) throw new Error(`Timed out waiting for ${message}`);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  }
+}
+
 afterEach(() => {
   document.querySelectorAll('[data-overlay], [data-overlay-background]').forEach((el) => el.remove());
 });
@@ -167,6 +175,47 @@ it('automatically releases an external-modal suspension when its owner disconnec
   expect(() => release()).to.not.throw();
 
   handle.deactivate({ restoreFocus: false });
+});
+
+it('yields Tab without trapping focus while an external modal suspension is active', () => {
+  const overlay = createOverlay(document, 'lyra-yields-tab');
+  const external = document.createElement('section');
+  external.dataset.overlayBackground = '';
+  document.body.append(external);
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  handle.focusInitial();
+  const before = (deepActiveElement(document) as HTMLElement | null)?.textContent;
+  const release = suspendLyraModalsFor(external);
+
+  const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+  document.dispatchEvent(event);
+
+  expect(event.defaultPrevented).to.be.false;
+  expect((deepActiveElement(document) as HTMLElement | null)?.textContent).to.equal(before);
+  release();
+  handle.deactivate({ restoreFocus: false });
+  external.remove();
+});
+
+it('automatically releases an external-modal suspension when its owner is adopted into another document', async () => {
+  const overlay = createOverlay(document, 'lyra-after-external-adoption');
+  const external = document.createElement('section');
+  external.dataset.overlayBackground = '';
+  document.body.append(external);
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  const release = suspendLyraModalsFor(external);
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+
+  iframe.contentDocument!.body.append(external);
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  expect(handle.isTopmost()).to.be.true;
+  expect(overlay.host.inert).to.be.false;
+  expect(() => release()).to.not.throw();
+
+  handle.deactivate({ restoreFocus: false });
+  iframe.remove();
 });
 
 it('keeps external-modal suspension document-scoped', () => {
@@ -380,6 +429,166 @@ it('preserves the existing stack order when a lower overlay is suspended and res
   topHandle.deactivate({ restoreFocus: false });
   bottomHandle.deactivate({ restoreFocus: false });
   container.remove();
+});
+
+it('suspends inerting, focus trapping, stack ownership, and scroll lock while its host has no layout box', async () => {
+  const trigger = document.createElement('button');
+  trigger.dataset.overlayBackground = '';
+  trigger.dataset.returnTarget = 'rendered-lifecycle';
+  document.body.append(trigger);
+  trigger.focus();
+  const background = document.createElement('main');
+  background.dataset.overlayBackground = '';
+  document.body.append(background);
+  const overlay = createOverlay(document, 'rendered-lifecycle');
+  let dismissals = 0;
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => dismissals++,
+    lockScroll: true,
+    suspendWhenUnrendered: true,
+  });
+  handle.focusInitial();
+
+  expect(background.inert).to.be.true;
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+  expect(handle.isTopmost()).to.be.true;
+
+  overlay.host.style.display = 'none';
+  await waitForCondition(
+    () => !background.inert && document.documentElement.style.overflow !== 'hidden',
+    'the hidden overlay to release modal resources',
+  );
+  expect(handle.isActive()).to.be.true;
+  expect(handle.isTopmost()).to.be.false;
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  expect(dismissals).to.equal(0);
+
+  overlay.host.style.display = '';
+  await waitForCondition(
+    () => background.inert && document.documentElement.style.overflow === 'hidden' && handle.isTopmost(),
+    'the visible overlay to reclaim modal resources',
+  );
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  expect(dismissals).to.equal(1);
+
+  handle.deactivate();
+  expect(document.activeElement?.getAttribute('data-return-target')).to.equal('rendered-lifecycle');
+});
+
+it('does not claim modal resources when activated under a hidden ancestor, then resumes in place', async () => {
+  const background = document.createElement('main');
+  background.dataset.overlayBackground = '';
+  document.body.append(background);
+  const ancestor = document.createElement('div');
+  ancestor.dataset.overlayBackground = '';
+  ancestor.style.display = 'none';
+  const overlay = createOverlay(document, 'hidden-before-open');
+  ancestor.append(overlay.host);
+  document.body.append(ancestor);
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+    lockScroll: true,
+    suspendWhenUnrendered: true,
+  });
+
+  expect(handle.isActive()).to.be.true;
+  expect(handle.isTopmost()).to.be.false;
+  expect(background.inert).to.be.false;
+  expect(document.documentElement.style.overflow).to.equal('');
+
+  ancestor.style.display = '';
+  await waitForCondition(
+    () => handle.isTopmost() && background.inert && document.documentElement.style.overflow === 'hidden',
+    'the ancestor-hidden overlay to become active',
+  );
+
+  handle.deactivate({ restoreFocus: false });
+  ancestor.remove();
+});
+
+it('restores original stack order when a hidden top overlay becomes rendered again', async () => {
+  const bottom = createOverlay(document, 'rendered-bottom');
+  const top = createOverlay(document, 'rendered-top');
+  const dismissals: string[] = [];
+  const bottomHandle = activateOverlay({
+    host: bottom.host,
+    panel: () => bottom.panel,
+    onEscape: () => dismissals.push('bottom'),
+    lockScroll: true,
+    suspendWhenUnrendered: true,
+  });
+  const topHandle = activateOverlay({
+    host: top.host,
+    panel: () => top.panel,
+    onEscape: () => dismissals.push('top'),
+    lockScroll: true,
+    suspendWhenUnrendered: true,
+  });
+
+  bottom.host.hidden = true;
+  await waitForCondition(() => topHandle.isTopmost() && !bottomHandle.isTopmost(), 'the top overlay to retain ownership');
+  bottom.host.hidden = false;
+  await waitForCondition(
+    () => bottom.host.getClientRects().length > 0,
+    'the lower overlay to render again',
+  );
+  expect(topHandle.isTopmost()).to.be.true;
+  expect(Number(top.host.style.getPropertyValue('--lr-overlay-stack-index'))).to.be.greaterThan(
+    Number(bottom.host.style.getPropertyValue('--lr-overlay-stack-index')),
+  );
+
+  top.host.hidden = true;
+  await waitForCondition(() => bottomHandle.isTopmost() && !topHandle.isTopmost(), 'the lower overlay to take ownership');
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  expect(dismissals).to.deep.equal(['bottom']);
+
+  top.host.hidden = false;
+  await waitForCondition(() => topHandle.isTopmost(), 'the original top overlay to reclaim ownership');
+  expect(Number(top.host.style.getPropertyValue('--lr-overlay-stack-index'))).to.be.greaterThan(
+    Number(bottom.host.style.getPropertyValue('--lr-overlay-stack-index')),
+  );
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  expect(dismissals).to.deep.equal(['bottom', 'top']);
+
+  topHandle.deactivate({ restoreFocus: false });
+  bottomHandle.deactivate({ restoreFocus: false });
+});
+
+it('keeps rendered suspension across a synchronous disconnect/reconnect until the host is visible', async () => {
+  const overlay = createOverlay(document, 'rendered-reconnect');
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+    lockScroll: true,
+    suspendWhenUnrendered: true,
+  });
+  overlay.host.style.display = 'none';
+  await waitForCondition(() => !handle.isTopmost(), 'the overlay to suspend before reparenting');
+
+  handle.suspend();
+  const destination = document.createElement('div');
+  destination.dataset.overlayBackground = '';
+  document.body.append(destination);
+  destination.append(overlay.host);
+  handle.resume();
+  await Promise.resolve();
+
+  expect(handle.isActive()).to.be.true;
+  expect(handle.isTopmost()).to.be.false;
+  expect(document.documentElement.style.overflow).to.equal('');
+
+  overlay.host.style.display = '';
+  await waitForCondition(() => handle.isTopmost(), 'the reconnected overlay to resume once visible');
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+
+  handle.deactivate({ restoreFocus: false });
+  destination.remove();
 });
 
 it('does not rebase a lower overlay return target when an upper overlay closes', () => {

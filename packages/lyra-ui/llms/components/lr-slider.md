@@ -98,21 +98,24 @@ number, even if `value` is momentarily `""` (e.g. right after `form.reset()`, be
 default reseeds it), by falling back to the midpoint of `[min, max]`. Writing clamps/snaps the input and
 stringifies the result back into `value`.
 
-**Events:** `lr-input` — fired continuously during an active drag or a
-keyboard step, including OS key-repeat while a key is held, mirroring native `<input type=range>`'s
-own `input` event — and `lr-change`, fired once an interaction commits: on
-pointerup for a drag, or on keyup for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press
-fires both, mirroring native `<input type=range>`'s own `change`-on-every-committed-step behavior.
+**Events:** native-style `input` (no detail), then `lr-input`, fire continuously during an active
+drag or keyboard step, including OS key-repeat while a key is held. Native-style `change` (no
+detail), then `lr-change`, fire once an interaction commits: on pointerup for a drag, or on keyup
+for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press fires both pairs, mirroring
+native `<input type=range>` timing.
+The focused handle's native `focus` and `blur` are re-dispatched from the host as bubbling,
+composed events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail).
 **Breaking in 8.0.0:** both details widened from `{ value: number }` to
 `{ value: number; minValue: number; maxValue: number; handle: 'value' | 'min' | 'max' }`. `value` is
 the value of the handle that moved and `handle` says which one that was (`'value'` on a
 single-handle slider); `minValue`/`maxValue` always carry both range-handle positions. Existing
 `e.detail.value` readers keep working unchanged.
 
-**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal `[part="thumb"]`
-control — without them the host's own `focus()`/`blur()`/`click()` would be no-ops, because the
-`role="slider"` element they need to reach lives in the shadow root. In `range` mode all three
-target the **lower** handle.
+**Methods:** `focus(options?)` and `click()` forward to the internal `[part="thumb"]` control (the
+lower handle in `range` mode). `blur()` releases whichever range handle actually owns focus,
+falling back to the lower handle when neither does. Without these overrides the host's own
+`focus()`/`blur()`/`click()` would be no-ops, because the `role="slider"` controls live in the
+shadow root.
 
 **Slots:** `hint` — rich hint content, replacing the plain-text `hint` property. The hint region is
 hidden and contributes no `aria-describedby` while neither the property nor the slot has content.

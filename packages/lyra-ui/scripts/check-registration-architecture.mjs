@@ -8,6 +8,64 @@ import { parseSync } from 'oxc-parser';
 const components = fileURLToPath(new URL('../src/components/', import.meta.url));
 const sourceRoot = fileURLToPath(new URL('../src/', import.meta.url));
 const packageRoot = resolve(sourceRoot, '..');
+const inventoryPath = join(packageRoot, 'scripts', 'fixtures', 'component-inventory.json');
+
+/**
+ * Reads the authoritative root-registration partition from component-inventory.json.
+ * Root-excluded components currently have one supported reason: their registration module would
+ * pull optional peers into the all-components barrel. Any new exclusion reason must first gain a
+ * corresponding public entry point and explicit architecture policy here.
+ */
+export function inventoryRootRegistrationSets(inventory) {
+  assert.equal(inventory?.schemaVersion, 1, 'component inventory must use supported schemaVersion 1');
+  assert.ok(Array.isArray(inventory.components), 'component inventory must contain components[]');
+
+  const seenTags = new Set();
+  const rootTags = [];
+  const optionalTags = [];
+  for (const component of inventory.components) {
+    assert.equal(typeof component.tag, 'string', 'every inventory component must have a tag');
+    assert.ok(!seenTags.has(component.tag), `component inventory contains duplicate tag ${component.tag}`);
+    seenTags.add(component.tag);
+    assert.equal(
+      typeof component.rootIncluded,
+      'boolean',
+      `${component.tag}: rootIncluded must be a boolean`,
+    );
+    assert.ok(Array.isArray(component.optionalPeers), `${component.tag}: optionalPeers must be an array`);
+
+    if (component.rootIncluded) {
+      assert.equal(component.rootExclusion, null, `${component.tag}: an included tag cannot have a root exclusion`);
+      rootTags.push(component.tag);
+      continue;
+    }
+
+    assert.equal(
+      component.rootExclusion,
+      'optional-peer-family',
+      `${component.tag}: unsupported root exclusion ${String(component.rootExclusion)}`,
+    );
+    assert.ok(component.optionalPeers.length > 0, `${component.tag}: optional-peer exclusion must name its peers`);
+    optionalTags.push(component.tag);
+  }
+
+  return {
+    rootTags: rootTags.sort(),
+    optionalTags: optionalTags.sort(),
+    allTags: [...seenTags].sort(),
+  };
+}
+
+export function parseRootRegistrationAllowlist(source) {
+  const rootBlock = source.match(/ROOT_BARREL_TAGS\s*=\s*\[([\s\S]*?)\]\s*as const/);
+  assert.ok(rootBlock, 'root registration allowlist must define ROOT_BARREL_TAGS');
+  const optionalBlock = source.match(/ROOT_BARREL_OPTIONAL_PEER_TAGS\s*=\s*\[([\s\S]*?)\]\s*as const/);
+  assert.ok(optionalBlock, 'root registration allowlist must define ROOT_BARREL_OPTIONAL_PEER_TAGS');
+  return {
+    rootTags: [...rootBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]).sort(),
+    optionalTags: [...optionalBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]).sort(),
+  };
+}
 
 async function findFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -775,12 +833,19 @@ async function checkRegistrationArchitecture() {
 
   const rootBarrel = await readFile(join(sourceRoot, 'lyra.ts'), 'utf8');
   const allowlist = await readFile(join(sourceRoot, 'internal', 'root-registration-allowlist.ts'), 'utf8');
-  const rootBlock = allowlist.match(/ROOT_BARREL_TAGS\s*=\s*\[([\s\S]*?)\]\s*as const/);
-  assert.ok(rootBlock, 'root registration allowlist must define ROOT_BARREL_TAGS');
-  const expectedRootTags = [...rootBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]).sort();
-  const optionalBlock = allowlist.match(/ROOT_BARREL_OPTIONAL_PEER_TAGS\s*=\s*\[([\s\S]*?)\]\s*as const/);
-  assert.ok(optionalBlock, 'root registration allowlist must define ROOT_BARREL_OPTIONAL_PEER_TAGS');
-  const expectedOptionalTags = [...optionalBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]).sort();
+  const inventory = JSON.parse(readFileSync(inventoryPath, 'utf8'));
+  const inventorySets = inventoryRootRegistrationSets(inventory);
+  const allowlistSets = parseRootRegistrationAllowlist(allowlist);
+  assert.deepEqual(
+    allowlistSets.rootTags,
+    inventorySets.rootTags,
+    'ROOT_BARREL_TAGS must match inventory rootIncluded entries',
+  );
+  assert.deepEqual(
+    allowlistSets.optionalTags,
+    inventorySets.optionalTags,
+    'ROOT_BARREL_OPTIONAL_PEER_TAGS must match inventory optional-peer exclusions',
+  );
   const importedRootTags = [
     ...rootBarrel.matchAll(/^import '\.\/components\/(?:[^/\n]+\/)*([^']+)\.js';$/gm),
   ]
@@ -792,8 +857,8 @@ async function checkRegistrationArchitecture() {
   }
   assert.deepEqual(
     [...new Set(importedRootTags)].sort(),
-    expectedRootTags,
-    'root barrel imports must match ROOT_BARREL_TAGS',
+    inventorySets.rootTags,
+    'root barrel imports must match inventory rootIncluded entries',
   );
 
   const manifest = JSON.parse(readFileSync(join(sourceRoot, '..', 'custom-elements.json'), 'utf8'));
@@ -804,12 +869,15 @@ async function checkRegistrationArchitecture() {
     .filter((tag, index, tags) => tags.indexOf(tag) === index)
     .sort();
   assert.deepEqual(
-    [...expectedRootTags, ...expectedOptionalTags].sort(),
+    inventorySets.allTags,
     manifestTags,
-    'root registration allowlist must cover every manifest custom element exactly once',
+    'component inventory must cover every manifest custom element exactly once',
   );
 
-  console.log(`root registration allowlist verified: ${expectedRootTags.length} tags`);
+  console.log(
+    `root registration inventory verified: ${inventorySets.rootTags.length} root + ` +
+      `${inventorySets.optionalTags.length} optional-peer tags`,
+  );
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

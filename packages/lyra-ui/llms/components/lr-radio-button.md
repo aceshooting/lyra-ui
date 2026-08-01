@@ -33,10 +33,11 @@ inline padding and font size, so a `size="small"` radio button sits at the same 
 `size="small"` `lr-button` beside it. `pill` is the one inherited property that does *more* here
 than on a plain `lr-radio` — see the radius note below.
 
-**Events:** identical to `lr-radio` — `input` and `change` on selection; `lr-change`
+**Events:** identical to `lr-radio` — `input`, `lr-input` and `change` on selection; `lr-change`
 (`detail: { checked, value }`) only for a *standalone* button, since an owning `lr-radio-group`
 emits its own aggregate `lr-change` instead; and `focus` / `blur`, re-emitted because the internal
-control's own do not cross the shadow boundary.
+control's own do not cross the shadow boundary, each followed by its prefixed alias
+`lr-focus` / `lr-blur` (no detail).
 
 **Slots:** default (label text), `prefix` (leading content, typically an icon), `suffix`.
 

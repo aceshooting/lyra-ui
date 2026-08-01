@@ -39,11 +39,13 @@ radio rather than on `<lr-radio-group>` because the group is not itself form-ass
 designates one member as the group's validity owner, and that radio is what participates in the
 owning form.
 
-**Events:** native-style composed `input` and `change`. A standalone radio also emits `lr-change`
-with `{ checked, value }`. An owned radio suppresses that child alias at its source; its group emits
-the sole aggregate `lr-change` described below, so capture and bubble listeners cannot observe two
-differently shaped aliases. The internal control's native `focus` and `blur` are re-dispatched as
-bubbling, composed host events.
+**Events:** native-style composed `input` and `change`, plus the prefixed `lr-input` alias
+(`detail: { checked, value }`) fired immediately after `input`. A standalone radio also emits
+`lr-change` with `{ checked, value }`. An owned radio suppresses both child aliases at their source;
+its group emits the sole aggregate pair described below, so capture and bubble listeners cannot
+observe two differently shaped aliases. The internal control's native `focus` and `blur` are re-dispatched as
+bubbling, composed host events, each followed by its prefixed alias `lr-focus`/`lr-blur`
+(no detail).
 
 **Slots:** default label content.
 

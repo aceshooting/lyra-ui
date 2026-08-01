@@ -37,14 +37,16 @@ control's visible, clickable label (same as `<lr-checkbox>`).
   through `::part(label)` if you want it to track the control.
 
 **Events:** a user toggle (click, Space/Enter, or the programmatic `click()` activation path) emits
-`input`, then `change`, then `lr-change` (`detail: { checked: boolean }`) — in that order, matching
+`input`, then `lr-input`, then `change`, then `lr-change` (both aliases carry
+`detail: { checked: boolean }`) — in that order, matching
 the native checkbox/radio contract. The two native-style events are **new in 8.0.0**: a boolean
 control that emitted only the `lr-`-prefixed alias was invisible to every form library, validation
 helper, and `<form>`-level `change` listener that binds the native names, which is the ordinary way
 a consumer observes a control they didn't write. Both bubble and compose, and neither carries a
 detail — read `event.target.checked`. None of the three fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
-`focus` and `blur` are re-dispatched as bubbling, composed host events.
+`focus` and `blur` are re-dispatched as bubbling, composed host events, each followed by its
+prefixed alias `lr-focus`/`lr-blur` (no detail).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("notifications are disabled

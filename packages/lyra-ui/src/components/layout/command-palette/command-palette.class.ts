@@ -6,7 +6,6 @@ import {
   activateOverlay,
   type OverlayHandle,
 } from "../../../internal/overlay-manager.js";
-import { lockScroll } from "../../../internal/scroll-lock.js";
 import { styles } from "./command-palette.styles.js";
 import { resolveCssLength } from "../../../internal/css-length.js";
 
@@ -106,7 +105,6 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   @state() private rowPitch = COMMAND_ROW_HEIGHT;
   @state() private groupPitch = GROUP_ROW_HEIGHT;
   private listId = nextId("command-list");
-  private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
   private activeCommand?: LyraCommand;
   private listResizeObserver?: ResizeObserver;
@@ -154,11 +152,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has("open")) {
       if (this.open) {
-        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
         this.activateOverlay();
       } else {
-        this.releaseScrollLock?.();
-        this.releaseScrollLock = undefined;
         this.overlay?.deactivate();
         this.overlay = undefined;
       }
@@ -238,7 +233,6 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         this.listViewportHeight = height;
     });
     if (this.hasUpdated && this.open) {
-      this.releaseScrollLock ??= lockScroll(this.ownerDocument);
       this.activateOverlay();
       queueMicrotask(() => this.overlay?.focusInitial());
     }
@@ -247,8 +241,6 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener("keydown", this.onGlobalKeyDown);
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.suspend();
     this.listResizeObserver?.disconnect();
     this.listResizeObserver = undefined;
@@ -270,6 +262,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         this.shadowRoot?.querySelector<HTMLElement>('[part="dialog"]') ?? null,
       onEscape: () => this.close(),
       onBackdrop: () => this.close(),
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
   }
 

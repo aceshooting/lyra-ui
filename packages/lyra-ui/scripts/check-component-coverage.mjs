@@ -4,9 +4,15 @@ import { fileURLToPath } from 'node:url';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = path.join(packageDir, 'src', 'components');
-const manifest = JSON.parse(fs.readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));
+const inventory = JSON.parse(
+  fs.readFileSync(path.join(packageDir, 'scripts', 'fixtures', 'component-inventory.json'), 'utf8'),
+);
 const sharedCoverage = JSON.parse(fs.readFileSync(path.join(packageDir, 'scripts', 'component-coverage.json'), 'utf8'));
 const errors = [];
+
+if (inventory.schemaVersion !== 1 || !Array.isArray(inventory.components)) {
+  throw new Error('component-inventory.json uses an unsupported schema; expected schemaVersion 1 with components[]');
+}
 
 function readFamilyFiles(family, suffix) {
   const directory = path.join(sourceRoot, family);
@@ -21,29 +27,26 @@ function exercisesTag(tests, tag) {
   return new RegExp(`<${tag}(?:\\s|>)`).test(tests) || new RegExp(`['"\`]${tag}['"\`]`).test(tests);
 }
 
-for (const module of manifest.modules) {
-  if (!module.path.startsWith('src/components/')) continue;
-  // Exactly two segments (family, component name) regardless of how deep the analyzed module
-  // itself sits below that -- a component's own fixtures/ subfolder can hold its own analyzed
-  // .ts modules, but its stories/tests still live directly in the component's own directory.
-  const relPath = module.path.slice('src/components/'.length);
+for (const component of inventory.components) {
+  // Exactly two segments (family, component name) regardless of how deep the class module sits
+  // below that -- a component's own fixtures/ subfolder can hold analyzed modules, but its
+  // stories/tests still live directly in the component's own directory.
+  const relPath = component.classModule.slice('src/components/'.length);
   const pathSegments = relPath.split('/');
-  // Family barrels live directly at `src/components/<family>/index.ts`; they expose no component
-  // fixture directory of their own and are covered through the component modules they re-export.
-  if (pathSegments.length < 3) continue;
+  if (pathSegments.length < 3) {
+    errors.push(`${component.tag}: invalid classModule ${component.classModule}`);
+    continue;
+  }
   const family = pathSegments.slice(0, 2).join('/');
   const stories = readFamilyFiles(family, '.stories.ts').join('\n');
   const tests = readFamilyFiles(family, '.test.ts').join('\n');
-  for (const declaration of module.declarations ?? []) {
-    if (!declaration.customElement || !declaration.tagName) continue;
-    const tag = declaration.tagName;
-    if (!new RegExp(`<${tag}(?:\\s|>)`).test(stories)) errors.push(`${tag}: no story exercises the public tag`);
-    if (!exercisesTag(tests, tag)) {
-      const shared = sharedCoverage[tag];
-      const sharedTest = shared && path.join(packageDir, shared.test);
-      const sharedSource = sharedTest && fs.existsSync(sharedTest) ? fs.readFileSync(sharedTest, 'utf8') : '';
-      if (!shared || !sharedSource.includes(shared.marker) || !shared.reason) errors.push(`${tag}: no behavior test or documented shared-family coverage`);
-    }
+  const tag = component.tag;
+  if (!new RegExp(`<${tag}(?:\\s|>)`).test(stories)) errors.push(`${tag}: no story exercises the public tag`);
+  if (!exercisesTag(tests, tag)) {
+    const shared = sharedCoverage[tag];
+    const sharedTest = shared && path.join(packageDir, shared.test);
+    const sharedSource = sharedTest && fs.existsSync(sharedTest) ? fs.readFileSync(sharedTest, 'utf8') : '';
+    if (!shared || !sharedSource.includes(shared.marker) || !shared.reason) errors.push(`${tag}: no behavior test or documented shared-family coverage`);
   }
   if (!tests.includes('accessible')) errors.push(`${family}: no accessibility assertion in its test family`);
 }
@@ -53,6 +56,5 @@ if (errors.length) {
   for (const error of errors) console.error(`- ${error}`);
   process.exitCode = 1;
 } else {
-  const count = manifest.modules.flatMap((module) => module.declarations ?? []).filter((declaration) => declaration.customElement).length;
-  console.log(`Component coverage contract passed for ${count} public tags.`);
+  console.log(`Component coverage contract passed for ${inventory.components.length} public tags.`);
 }

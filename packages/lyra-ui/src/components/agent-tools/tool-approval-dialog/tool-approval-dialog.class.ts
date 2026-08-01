@@ -2,7 +2,6 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { lockScroll } from '../../../internal/scroll-lock.js';
 import { nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization.js';
 import { styles } from './tool-approval-dialog.styles.js';
@@ -198,7 +197,6 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   /** `JSON.parse` failure message for `draftText`, or `''` while it parses cleanly. Empty string (not `undefined`) so it can drive `?hidden` directly. */
   @state() private draftError = '';
 
-  private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
   private readonly titleId = nextId('tool-approval-dialog-title');
   private readonly errorId = nextId('tool-approval-dialog-error');
@@ -206,7 +204,6 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('open')) {
       if (this.open) {
-        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
         this.activateOverlay();
         // Every open starts fresh in the read-only view -- a reused instance
         // must never carry a half-finished edit (or its error state), or a
@@ -217,8 +214,6 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         this.draftError = '';
         this.pending = null;
       } else {
-        this.releaseScrollLock?.();
-        this.releaseScrollLock = undefined;
         this.overlay?.deactivate();
         this.overlay = undefined;
       }
@@ -263,7 +258,6 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated && this.open) {
-      this.releaseScrollLock ??= lockScroll(this.ownerDocument);
       this.activateOverlay();
       queueMicrotask(() => this.overlay?.focusInitial());
     }
@@ -271,8 +265,6 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.suspend();
   }
 
@@ -294,6 +286,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       },
       preferredInitialFocus: () =>
         this.shadowRoot?.querySelector<HTMLElement>('[part="deny-button"]') ?? null,
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
   }
 

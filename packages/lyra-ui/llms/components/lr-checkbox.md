@@ -33,9 +33,11 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
   row. The slotted label keeps the library's standard control-label type size at every tier —
   restyle it through `::part(label)` if you want it to track the control.
 
-**Events:** user toggles emit bubbling/composed `input`, then `change`, then the compatibility
-`lr-change` alias (`detail: { checked: boolean }`). Programmatic `.checked` assignments are
-silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events.
+**Events:** user toggles emit, in order, bubbling/composed `input`, the compatibility `lr-input`
+alias, bubbling/composed `change`, then the compatibility `lr-change` alias (both aliases carry
+`detail: { checked: boolean }`). Programmatic `.checked` assignments are
+silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events, each followed
+by its prefixed alias `lr-focus`/`lr-blur` (no detail).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control.
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("those terms have been

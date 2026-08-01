@@ -38,6 +38,8 @@ export interface LyraRatingEventMap {
   'lr-hover': CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>;
   focus: FocusEvent;
   blur: FocusEvent;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
 }
 
 // A five-point star, sharing internal/icons.ts's 24x24 viewBox / 1em sizing
@@ -78,6 +80,8 @@ function starSolid(): SVGTemplateResult {
  * pointer position would produce — enough to render a live description of what is being hovered.
  * @event focus - Native focus relayed once from the internal slider control.
  * @event blur - Native blur relayed once from the internal slider control.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @method focus - Forwards focus to the internal slider control.
  * @method blur - Forwards blur to the internal slider control.
  * @method click - Forwards activation to the internal slider control.
@@ -489,11 +493,13 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   private onFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onBlur = (event: FocusEvent): void => {
     this.markInteracted();
     relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   protected override willUpdate(changed: PropertyValues<this>): void {

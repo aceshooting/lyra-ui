@@ -398,16 +398,17 @@ select with nothing chosen goes back to `valueMissing` rather than to valid. The
 every selection change and a `form.reset()` — like a native control, only another
 `setCustomValidity('')` clears it — and is used verbatim, never localized.
 
-**Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
-selection change — a native `<select>` doesn't meaningfully distinguish the two either), and
-`lr-change` (a prefixed compatibility alias fired after both, mirroring `<lr-checkbox>`'s
-`lr-change`). All three carry `detail: { value: string | string[] }` — the new committed selection,
-a string in single mode and a `string[]` in `multiple` mode — and fire only on a real change, never
-on a programmatic `value` write, `form.reset()`, or session-state restoration. Plus
-`lr-clear` (no detail; emitted by the `with-clear` button *after* its `input`/`change`/`lr-change`
-trio, and never when there was nothing to clear, so it never announces a no-op),
+**Events:** each real selection change emits, in order, native-style `input`, `lr-input`, native-style
+`change`, then `lr-change`. The native events carry no detail; read `event.target.value`. Both
+prefixed aliases carry `detail: { value: string | string[] }` — the new committed selection, a string
+in single mode and a `string[]` in `multiple` mode. The complete sequence is silent for a
+programmatic `value` write, `form.reset()`, or session-state restoration. Plus
+`lr-clear` (no detail; emitted by the `with-clear` button *after* its
+`input`/`lr-input`/`change`/`lr-change` run, and never when there was nothing to clear, so it never
+announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
-trigger.
+trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
+its unprefixed counterpart.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided), `start` (non-interactive adornment before the selected-value label), and
@@ -876,6 +877,8 @@ the shadow boundary.
 | `lr-change` | `{ value: string }` | Compatibility alias fired on native `change` timing (blur after a committed edit). |
 | `blur` | none | Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and composed, unlike the native event. |
 | `focus` | none | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`. |
+| `lr-blur` | none | Prefixed compatibility alias, fired immediately after `blur`. |
+| `lr-focus` | none | Prefixed compatibility alias, fired immediately after `focus`. |
 
 Programmatic property assignments, selection changes, `setRangeText()`, form reset, and form-state
 restoration are silent. User edits update `value`, submitted form data, and required validity before
@@ -1039,8 +1042,10 @@ Each size tier's `min-block-size` floor is exposed as its own token (see below).
 element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
 submit/reset behavior in `<button>` mode.
 
-**Events:** none (a plain native `click` bubbles and composes through the shadow boundary
-unmodified; disabled while `disabled` or `loading`).
+**Events:** a plain native `click` bubbles and composes through the shadow boundary unmodified
+(disabled while `disabled` or `loading`). The internal button's `focus` and `blur` — which do not
+cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
+events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail).
 
 **Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content).
 
@@ -1216,6 +1221,10 @@ best-effort fallbacks.
 the native button, activating it — including this component's own `type="submit"`/`type="reset"`
 handling, since the click goes through the same `<button>` the pointer/keyboard path does.
 
+**Events:** a plain native `click` crosses the shadow boundary unmodified. The internal button's
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
+its prefixed alias `lr-focus` / `lr-blur` (no detail).
+
 **Slots:** (default) — custom icon content. It is rendered **beside** the `icon` glyph, as a
 sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts only when `icon` is
 set, so with `icon` left empty your content is the button's only child. That is what lets a
@@ -1380,8 +1389,9 @@ Three more native passthroughs:
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
 `change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
-own `blur`/`focus`), and `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/
-`change`/`lr-change` sequence).
+own `blur`/`focus`) each followed by its prefixed alias `lr-blur`/`lr-focus` (no detail), and
+`lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/`change`/`lr-change`
+sequence).
 
 **Slots:** `label`, `hint`, `error`, `start` (adornment before the input), `end` (adornment after the
 input and built-in actions).
@@ -1609,7 +1619,8 @@ field for no new capability. Each carries a localized accessible name and the sh
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
-input), and `lr-clear` (inherited, never fired here).
+input) each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail), and `lr-clear`
+(inherited, never fired here).
 
 **Slots:** `label`, `hint`, `error`, `start`, `end`.
 
@@ -1686,8 +1697,8 @@ native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow
 `checkValidity()`.
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
-(`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed), and `lr-clear`
-(inherited, never fired here).
+(`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed) each followed by its
+prefixed alias `lr-focus`/`lr-blur` (no detail), and `lr-clear` (inherited, never fired here).
 
 **Slots:** `label`, `hint`, `error`, `start`, `end`.
 
@@ -1956,17 +1967,19 @@ consumer-facing `disabled` property/attribute itself.
   number; end: number }`; optional discrete presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
-  `lr-input`/`lr-change` pair a committed drag or keyboard step would
+  native/prefixed input and change sequences a committed drag or keyboard step would
 
-**Events:** `lr-input` (fired continuously while dragging or on each arrow/Home/End/PageUp/
-PageDown key press, `detail: { start, end }`), `lr-change` (fired on pointer release /
-key-up-commit, or when a preset button is clicked, `detail: { start, end }`)
+**Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),
+both fired continuously while dragging or on each arrow/Home/End/PageUp/PageDown key press; and a
+native-style composed `change` (no detail) then `lr-change` (`detail: { start, end }`), both fired
+on pointer release / key-up-commit, or when a preset button is clicked. The focused handle's native
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
+its prefixed alias `lr-focus` / `lr-blur` (no detail).
 
-**Methods:** `focus(options?)`, `blur()`, and `click()` forward to `[part="handle-start"]`. A
-two-handle control has no single canonical target, so the start handle is the one they address —
-call `.focus()` on `::part(handle-end)` yourself if you need the other. Without these overrides the
-host's own `focus()`/`blur()`/`click()` are no-ops, because the real control lives in the shadow
-root.
+**Methods:** `focus(options?)` and `click()` forward to `[part="handle-start"]`. `blur()` releases
+whichever handle actually owns focus, falling back to the start handle when neither does. Without
+these overrides the host's own `focus()`/`blur()`/`click()` are no-ops, because the real controls
+live in the shadow root.
 
 `setCustomValidity(message)` is this control's **only** validation channel: every reachable range is
 intrinsically legal, so there is no constraint for it to compute. A non-empty message raises
@@ -2205,9 +2218,11 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
   row. The slotted label keeps the library's standard control-label type size at every tier —
   restyle it through `::part(label)` if you want it to track the control.
 
-**Events:** user toggles emit bubbling/composed `input`, then `change`, then the compatibility
-`lr-change` alias (`detail: { checked: boolean }`). Programmatic `.checked` assignments are
-silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events.
+**Events:** user toggles emit, in order, bubbling/composed `input`, the compatibility `lr-input`
+alias, bubbling/composed `change`, then the compatibility `lr-change` alias (both aliases carry
+`detail: { checked: boolean }`). Programmatic `.checked` assignments are
+silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events, each followed
+by its prefixed alias `lr-focus`/`lr-blur` (no detail).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control.
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("those terms have been
@@ -2332,14 +2347,16 @@ control's visible, clickable label (same as `<lr-checkbox>`).
   through `::part(label)` if you want it to track the control.
 
 **Events:** a user toggle (click, Space/Enter, or the programmatic `click()` activation path) emits
-`input`, then `change`, then `lr-change` (`detail: { checked: boolean }`) — in that order, matching
+`input`, then `lr-input`, then `change`, then `lr-change` (both aliases carry
+`detail: { checked: boolean }`) — in that order, matching
 the native checkbox/radio contract. The two native-style events are **new in 8.0.0**: a boolean
 control that emitted only the `lr-`-prefixed alias was invisible to every form library, validation
 helper, and `<form>`-level `change` listener that binds the native names, which is the ordinary way
 a consumer observes a control they didn't write. Both bubble and compose, and neither carries a
-detail — read `event.target.checked`. None of the three fires for a programmatic `.checked`
+detail — read `event.target.checked`. None of the four fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
-`focus` and `blur` are re-dispatched as bubbling, composed host events.
+`focus` and `blur` are re-dispatched as bubbling, composed host events, each followed by its
+prefixed alias `lr-focus`/`lr-blur` (no detail).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("notifications are disabled
@@ -2490,21 +2507,24 @@ number, even if `value` is momentarily `""` (e.g. right after `form.reset()`, be
 default reseeds it), by falling back to the midpoint of `[min, max]`. Writing clamps/snaps the input and
 stringifies the result back into `value`.
 
-**Events:** `lr-input` — fired continuously during an active drag or a
-keyboard step, including OS key-repeat while a key is held, mirroring native `<input type=range>`'s
-own `input` event — and `lr-change`, fired once an interaction commits: on
-pointerup for a drag, or on keyup for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press
-fires both, mirroring native `<input type=range>`'s own `change`-on-every-committed-step behavior.
+**Events:** native-style `input` (no detail), then `lr-input`, fire continuously during an active
+drag or keyboard step, including OS key-repeat while a key is held. Native-style `change` (no
+detail), then `lr-change`, fire once an interaction commits: on pointerup for a drag, or on keyup
+for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press fires both pairs, mirroring
+native `<input type=range>` timing.
+The focused handle's native `focus` and `blur` are re-dispatched from the host as bubbling,
+composed events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail).
 **Breaking in 8.0.0:** both details widened from `{ value: number }` to
 `{ value: number; minValue: number; maxValue: number; handle: 'value' | 'min' | 'max' }`. `value` is
 the value of the handle that moved and `handle` says which one that was (`'value'` on a
 single-handle slider); `minValue`/`maxValue` always carry both range-handle positions. Existing
 `e.detail.value` readers keep working unchanged.
 
-**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal `[part="thumb"]`
-control — without them the host's own `focus()`/`blur()`/`click()` would be no-ops, because the
-`role="slider"` element they need to reach lives in the shadow root. In `range` mode all three
-target the **lower** handle.
+**Methods:** `focus(options?)` and `click()` forward to the internal `[part="thumb"]` control (the
+lower handle in `range` mode). `blur()` releases whichever range handle actually owns focus,
+falling back to the lower handle when neither does. Without these overrides the host's own
+`focus()`/`blur()`/`click()` would be no-ops, because the `role="slider"` controls live in the
+shadow root.
 
 **Slots:** `hint` — rich hint content, replacing the plain-text `hint` property. The hint region is
 hidden and contributes no `aria-describedby` while neither the property nor the slot has content.
@@ -2648,11 +2668,12 @@ radio rather than on `<lr-radio-group>` because the group is not itself form-ass
 designates one member as the group's validity owner, and that radio is what participates in the
 owning form.
 
-**Events:** native-style composed `input` and `change`. A standalone radio also emits `lr-change`
-with `{ checked, value }`. An owned radio suppresses that child alias at its source; its group emits
-the sole aggregate `lr-change` described below, so capture and bubble listeners cannot observe two
-differently shaped aliases. The internal control's native `focus` and `blur` are re-dispatched as
-bubbling, composed host events.
+**Events:** a standalone selection emits, in order, native-style composed `input`, `lr-input`,
+native-style composed `change`, then `lr-change`; both aliases carry `{ checked, value }`. An owned
+radio emits none of those child value events; its group emits the sole aggregate sequence described
+below, so capture and bubble listeners cannot observe two differently shaped event sets. The
+internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events,
+each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
 
 **Slots:** default label content.
 
@@ -2710,10 +2731,11 @@ inline padding and font size, so a `size="small"` radio button sits at the same 
 `size="small"` `lr-button` beside it. `pill` is the one inherited property that does *more* here
 than on a plain `lr-radio` — see the radius note below.
 
-**Events:** identical to `lr-radio` — `input` and `change` on selection; `lr-change`
-(`detail: { checked, value }`) only for a *standalone* button, since an owning `lr-radio-group`
-emits its own aggregate `lr-change` instead; and `focus` / `blur`, re-emitted because the internal
-control's own do not cross the shadow boundary.
+**Events:** identical to `lr-radio` — a standalone selection emits `input`, `lr-input`, `change`,
+then `lr-change` (both aliases carry `{ checked, value }`); an owning `lr-radio-group` emits the
+aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
+not cross the shadow boundary, each followed by its prefixed alias `lr-focus` / `lr-blur`
+(no detail).
 
 **Slots:** default (label text), `prefix` (leading content, typically an icon), `suffix`.
 
@@ -2777,7 +2799,11 @@ separator (`format="###-###"`), overriding `length`; `type: 'numeric' | 'alpha' 
 count when `format` is set, else `length`, clamped to 1–32. This is the number `value` is truncated
 to and the field is validated against, so read it rather than re-deriving it from `length`.
 
-**Events:** `input`, `change`, and `lr-complete` — `detail: { value }`, once every segment is filled.
+**Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`, and
+`lr-complete` — `detail: { value }`, once every segment is filled. The real input's native `focus`
+and `blur` are re-dispatched from the host as bubbling, composed events,
+since the native ones do not cross the shadow boundary; each is followed by its prefixed alias
+`lr-focus` / `lr-blur` (no detail).
 
 **Slots:** `label`, `hint`, `error` (each replaces the matching attribute for rich content).
 
@@ -2813,10 +2839,13 @@ options off the same values the controls themselves use. It deliberately does **
 at mixed sizes and an explicitly-sized option is never silently overridden by its container. Set the
 same `size` on the children to scale the whole group.
 
-**Events:** exactly one group-owned `lr-change` with `{ value, radio }` per owned selection,
-including keyboard activation. The selected child does not emit its standalone alias. Ownership is
-resolved synchronously, so immediate removal restores standalone behavior and immediate reparenting
-routes the event to the new group without waiting for a mutation-observer turn.
+**Events:** per owned selection — including keyboard activation — the group emits, in order,
+native-style composed `input`, `lr-input`, native-style composed `change`, then exactly one
+group-owned `lr-change`. The two native-style events carry no detail (read `event.target.value`);
+both prefixed aliases carry `{ value, radio }`. The selected child does not emit its standalone
+value events. Ownership is resolved synchronously, so immediate removal restores standalone
+behavior and immediate reparenting routes the event to the new group without waiting for a
+mutation-observer turn.
 
 **Slots:** default radios, `label`, `hint`, `error`.
 

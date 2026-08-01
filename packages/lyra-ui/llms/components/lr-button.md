@@ -115,8 +115,10 @@ Each size tier's `min-block-size` floor is exposed as its own token (see below).
 element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
 submit/reset behavior in `<button>` mode.
 
-**Events:** none (a plain native `click` bubbles and composes through the shadow boundary
-unmodified; disabled while `disabled` or `loading`).
+**Events:** a plain native `click` bubbles and composes through the shadow boundary unmodified
+(disabled while `disabled` or `loading`). The internal button's `focus` and `blur` — which do not
+cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
+events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail).
 
 **Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content).
 

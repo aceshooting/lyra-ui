@@ -10,10 +10,12 @@ const fixtureRoot = mkdtempSync(join(tmpdir(), 'lyra-side-effects-'));
 
 try {
   const fixtureScripts = join(fixtureRoot, 'scripts');
+  const fixtureInventory = join(fixtureScripts, 'fixtures');
   const componentDir = join(fixtureRoot, 'src', 'components', 'forms', 'test-control');
   const familyDir = join(fixtureRoot, 'src', 'components', 'forms');
   const translationsDir = join(fixtureRoot, 'src', 'translations');
   mkdirSync(fixtureScripts, { recursive: true });
+  mkdirSync(fixtureInventory, { recursive: true });
   mkdirSync(componentDir, { recursive: true });
   mkdirSync(translationsDir, { recursive: true });
 
@@ -23,6 +25,23 @@ try {
   );
   writeFileSync(join(componentDir, 'test-control.class.ts'), 'export class TestControl {}\n');
   writeFileSync(join(componentDir, 'test-control.ts'), 'defineElement();\n');
+  writeFileSync(
+    join(fixtureInventory, 'component-inventory.json'),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        components: [
+          {
+            tag: 'lr-test-control',
+            classModule: 'src/components/forms/test-control/test-control.class.ts',
+            registrationModule: 'src/components/forms/test-control/test-control.ts',
+          },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
   writeFileSync(join(familyDir, 'index.ts'), "export * from './test-control/test-control.js';\n");
   writeFileSync(join(fixtureRoot, 'src', 'lyra.ts'), "import './components/forms/index.js';\n");
   writeFileSync(join(fixtureRoot, 'src', 'theme.css'), ':root { --lr-test: 1; }\n');
@@ -61,6 +80,20 @@ try {
     readFileSync(join(fixtureRoot, 'package.json'), 'utf8'),
     first,
     'regeneration must be byte-for-byte idempotent',
+  );
+
+  writeFileSync(
+    join(fixtureInventory, 'component-inventory.json'),
+    `${JSON.stringify({ schemaVersion: 999, components: [] }, null, 2)}\n`,
+  );
+  assert.throws(
+    () =>
+      execFileSync(process.execPath, [join(fixtureScripts, 'generate-side-effects.mjs')], {
+        cwd: fixtureRoot,
+        stdio: 'pipe',
+      }),
+    /Command failed/,
+    'an unknown inventory schema must fail closed instead of deleting component side effects',
   );
 } finally {
   rmSync(fixtureRoot, { recursive: true, force: true });

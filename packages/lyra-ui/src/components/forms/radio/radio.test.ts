@@ -14,14 +14,28 @@ it('renders radio semantics and explicit false states', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('selects and emits native-style events', async () => {
+it('selects and emits the complete native and prefixed event pair exactly once', async () => {
   const el = (await fixture(html`<lr-radio value="a">A</lr-radio>`)) as LyraRadio;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const events: string[] = [];
-  for (const name of ['input', 'change', 'lr-change']) el.addEventListener(name, () => events.push(name));
+  const nativeEvents: Event[] = [];
+  const aliases: CustomEvent<{ checked: boolean; value: string }>[] = [];
+  for (const name of ['input', 'lr-input', 'change', 'lr-change']) {
+    el.addEventListener(name, (event) => {
+      events.push(name);
+      if (name === 'input' || name === 'change') nativeEvents.push(event);
+      else aliases.push(event as CustomEvent<{ checked: boolean; value: string }>);
+    });
+  }
   base.click();
   expect(el.checked).to.be.true;
-  expect(events).to.deep.equal(['input', 'change', 'lr-change']);
+  expect(events).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  expect(nativeEvents.every((event) => event.constructor === Event)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases.map((event) => event.detail)).to.deep.equal([
+    { checked: true, value: 'a' },
+    { checked: true, value: 'a' },
+  ]);
 });
 
 it('reflects non-empty and empty name/value property writes without collapsing through an empty attribute', async () => {
@@ -242,6 +256,14 @@ it('temporarily disables a bare radio through an ancestor fieldset without overw
   expect(b.disabled, 'an already-explicitly-disabled radio is unaffected').to.be.true;
   expect(b.effectiveDisabled).to.be.true;
 
+  const aBase = a.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  let delegatedCalls = 0;
+  aBase.click = () => { delegatedCalls += 1; };
+  aBase.focus = () => { delegatedCalls += 1; };
+  a.click();
+  a.focus();
+  expect(delegatedCalls, 'fieldset disablement gates host click/focus delegation').to.equal(0);
+
   fieldset.disabled = false;
   expect(a.effectiveDisabled, 'must not be permanently stuck disabled once the fieldset re-enables').to.be.false;
   expect(a.disabled).to.be.false;
@@ -249,7 +271,6 @@ it('temporarily disables a bare radio through an ancestor fieldset without overw
   expect(b.effectiveDisabled).to.be.true;
 
   await Promise.all([a.updateComplete, b.updateComplete]);
-  const aBase = a.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(aBase.getAttribute('aria-disabled')).to.equal('false');
   expect(aBase.getAttribute('tabindex')).to.equal('0');
 });
@@ -931,8 +952,10 @@ it('fires input and change for arrow-key selection, matching click and Space', a
   radios[0]!.checked = true;
   firstBase.focus();
 
-  const seen: string[] = [];
-  for (const type of ['input', 'change', 'lr-change']) group.addEventListener(type, () => seen.push(type));
+  const seen: Array<{ type: string; event: Event }> = [];
+  for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
+    group.addEventListener(type, (event) => seen.push({ type, event }));
+  }
 
   const pending = oneEvent(group, 'lr-change');
   firstBase.dispatchEvent(
@@ -943,9 +966,12 @@ it('fires input and change for arrow-key selection, matching click and Space', a
   expect(radios[1]!.checked, 'arrow navigation moves the selection').to.be.true;
   // Native <input type=radio> fires input+change on arrow navigation; a consumer bound to the
   // native-mirroring events must not silently miss keyboard selection.
-  expect(seen).to.include('input');
-  expect(seen).to.include('change');
-  expect(seen).to.include('lr-change');
+  expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  expect(seen[0].event.constructor === Event).to.be.true;
+  expect(seen[2].event.constructor === Event).to.be.true;
+  expect(seen[0].event.target === group && seen[2].event.target === group).to.be.true;
+  expect(seen[1].event instanceof CustomEvent).to.be.true;
+  expect((seen[1].event as CustomEvent).detail.value).to.equal('m');
 });
 
 describe('size', () => {

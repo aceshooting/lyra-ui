@@ -788,6 +788,10 @@ describe('resizable', () => {
     expect(el.dragging).to.be.false;
     expect(getComputedStyle(base).transitionProperty).to.not.equal('none');
 
+    // Synthetic PointerEvents do not create a browser-owned active pointer, so Firefox correctly
+    // throws InvalidPointerId from the native capture method. Pointer-capture behavior is covered
+    // by real-pointer tests; this state/transition test stubs only that browser primitive.
+    resizer.setPointerCapture = () => {};
     resizer.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, bubbles: true }));
     await el.updateComplete;
     expect(el.dragging).to.be.true;

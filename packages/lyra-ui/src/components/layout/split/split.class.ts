@@ -5,7 +5,6 @@ import {
   activateOverlay,
   type OverlayHandle,
 } from "../../../internal/overlay-manager.js";
-import { lockScroll } from "../../../internal/scroll-lock.js";
 import { isRtl } from "../../../internal/rtl.js";
 import { finiteRange } from "../../../internal/numbers.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
@@ -352,7 +351,6 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   // `overlayActive`).
   private overlayActive = false;
   private justOpened = false;
-  private releaseScrollLock?: () => void;
   private overlayHandle?: OverlayHandle;
   // Keyed by pointerId so an interrupted or concurrent (multi-touch) drag on
   // one divider never reads or clobbers another pointer's drag state.
@@ -419,8 +417,6 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       } else {
         this.activateFloatingOverlay();
       }
-      if (!this.releaseScrollLock)
-        this.releaseScrollLock = lockScroll(this.ownerDocument);
       queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
   }
@@ -434,8 +430,6 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     window.removeEventListener("pointercancel", this.onPointerUp);
     window.removeEventListener("lostpointercapture", this.onPointerUp);
     this.collapseResizeObserver?.disconnect();
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlayHandle?.suspend();
   }
 
@@ -1176,18 +1170,17 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   }
 
   private activateFloatingOverlay(): void {
-    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.floatingPanelEl,
       onEscape: () => (this.open = false),
       onBackdrop: () => (this.open = false),
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
   }
 
   private deactivateFloatingOverlay(): void {
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;
   }

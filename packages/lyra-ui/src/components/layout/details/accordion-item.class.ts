@@ -1,14 +1,14 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { LyraElement, type LyraEmitOptions } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 import { styles } from './accordion-item.styles.js';
 import { LyraDetails } from './details.class.js';
 
 export type LyraAccordionIconPlacement = 'start' | 'end';
-export type LyraAccordionHeadingLevel = '1' | '2' | '3' | '4' | '5' | '6' | 'none';
+/** A heading level string. Values other than 1–6 and `none` render the documented h3 fallback. */
+export type LyraAccordionHeadingLevel = string;
 export type LyraAccordionAppearance = Exclude<LyraAppearance, 'accent'>;
 
 /**
@@ -27,21 +27,32 @@ export type LyraAccordionAppearance = Exclude<LyraAppearance, 'accent'>;
  * @csspart accordion-item - The outer wrapper. It is the same node as `base`.
  * @csspart heading - Heading around the trigger; omitted for `heading-level="none"`.
  * @csspart button - The trigger button.
+ * @csspart summary - Details compatibility alias for `button`; both names are on the same trigger.
  * @csspart label - Label container.
  * @csspart icon - Expand/collapse icon container.
  * @csspart panel - Expandable panel.
  * @csspart content - Content container inside the panel.
- * @cssprop [--spacing=var(--lr-form-control-padding-inline)] - Header/content spacing.
- * @cssprop [--show-duration=var(--lr-duration-base)] - Expand transition duration.
- * @cssprop [--hide-duration=var(--lr-duration-base)] - Collapse transition duration.
- * @cssprop [--easing=var(--lr-easing-standard)] - Expand/collapse easing.
+ * @cssprop [--lr-accordion-item-spacing=var(--lr-form-control-padding-inline)] - Header/content
+ *   spacing.
+ * @cssprop [--lr-accordion-item-show-duration=var(--lr-duration-base)] - Expand transition
+ *   duration.
+ * @cssprop [--lr-accordion-item-hide-duration=var(--lr-duration-base)] - Collapse transition
+ *   duration.
+ * @cssprop [--lr-accordion-item-easing=var(--lr-easing-standard)] - Expand/collapse easing.
+ * @cssprop [--spacing] - Compatibility alias for `--lr-accordion-item-spacing`; set on either
+ *   name.
+ * @cssprop [--show-duration] - Compatibility alias for `--lr-accordion-item-show-duration`.
+ * @cssprop [--hide-duration] - Compatibility alias for `--lr-accordion-item-hide-duration`.
+ * @cssprop [--easing] - Compatibility alias for `--lr-accordion-item-easing`.
+ * @cssprop [--lr-details-font-size=var(--lr-form-control-font-size)] - Details compatibility alias
+ *   for the item's text size.
+ * @cssprop [--lr-details-spacing=var(--lr-form-control-padding-inline)] - Details compatibility
+ *   alias for the item's spacing.
  * @cssstate animating - Present while an expand/collapse transition is settling.
  */
 export class LyraAccordionItem extends LyraDetails {
   static override styles = [LyraElement.styles, sizes, styles];
 
-  private transitionGeneration = 0;
-  private transitionComplete: Promise<void> = Promise.resolve();
   private readonly itemInternals = this.attachInternals();
   @state() private hasLabelSlot = false;
   @state() private hasLegacySummarySlot = false;
@@ -49,7 +60,10 @@ export class LyraAccordionItem extends LyraDetails {
   /** Text shown in the trigger. Rich content belongs in the `label` slot. */
   @property() label = '';
 
-  /** Whether the panel is expanded. This is synchronized bidirectionally with `open`. */
+  /**
+   * Whether the panel is expanded. This is synchronized bidirectionally with `open`.
+   * @default false
+   */
   @property({ type: Boolean, reflect: true })
   get expanded(): boolean {
     return this.open;
@@ -62,7 +76,7 @@ export class LyraAccordionItem extends LyraDetails {
     else if (this.open !== normalized) this.toggleAttribute('expanded', this.open);
   }
 
-  /** Heading level from 1–6, or `none` to render the button without a heading wrapper. */
+  /** Heading level from 1–6, or `none`; every other value uses h3. */
   @property({ attribute: 'heading-level', reflect: true })
   headingLevel: LyraAccordionHeadingLevel = '3';
 
@@ -78,9 +92,20 @@ export class LyraAccordionItem extends LyraDetails {
   @property({ attribute: false }) isTabbable = true;
 
   override disconnectedCallback(): void {
-    this.transitionGeneration++;
     this.setAnimating(false);
     super.disconnectedCallback();
+  }
+
+  protected override emit<T = unknown>(
+    name: string,
+    detail?: T,
+    options?: LyraEmitOptions,
+  ): CustomEvent<T> {
+    // The inherited Details lifecycle owns the real rendered-motion wait. Drop the custom state
+    // immediately before publishing its completion boundary so every lr-after-* listener observes
+    // a settled item rather than the one-microtask race produced by a second parallel waiter.
+    if (name === 'lr-after-show' || name === 'lr-after-hide') this.setAnimating(false);
+    return super.emit(name, detail, options);
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -107,9 +132,17 @@ export class LyraAccordionItem extends LyraDetails {
   override show(): void {
     const old = this.open;
     super.show();
-    if (this.open === old) return;
+    if (this.open === old) {
+      // A post-mount attribute write still invokes Lit's property setter even when Details rejects
+      // the transition while disabled. Reflect the actual state back through both aliases.
+      if (!old) {
+        this.toggleAttribute('open', false);
+        this.toggleAttribute('expanded', false);
+      }
+      return;
+    }
     this.requestUpdate('expanded', old);
-    this.transitionComplete = this.settleItemTransition(true);
+    this.setAnimating(true);
   }
 
   /** Details-compatible collapse. Prefer `collapse()` in accordion code. */
@@ -118,27 +151,25 @@ export class LyraAccordionItem extends LyraDetails {
     super.hide();
     if (this.open === old) return;
     this.requestUpdate('expanded', old);
-    this.transitionComplete = this.settleItemTransition(false);
+    this.setAnimating(true);
   }
 
   /** Expand with animation. Disabled or already-expanded items are unchanged. */
-  async expand(): Promise<void> {
+  expand(): void {
     if (this.expanded || this.disabled) return;
     this.show();
-    if (this.expanded) await this.transitionComplete;
   }
 
   /** Collapse with animation. Disabled or already-collapsed items are unchanged. */
-  async collapse(): Promise<void> {
+  collapse(): void {
     if (!this.expanded || this.disabled) return;
     this.hide();
-    if (!this.expanded) await this.transitionComplete;
   }
 
   /** Toggle the expanded state. */
-  async toggle(): Promise<void> {
-    if (this.expanded) await this.collapse();
-    else await this.expand();
+  toggle(): void {
+    if (this.expanded) this.collapse();
+    else this.expand();
   }
 
   /** Focus the internal trigger. */
@@ -167,30 +198,10 @@ export class LyraAccordionItem extends LyraDetails {
     else this.itemInternals.states.delete('animating');
   }
 
-  private async settleItemTransition(expectedExpanded: boolean): Promise<void> {
-    const generation = ++this.transitionGeneration;
-    this.setAnimating(true);
-    await this.updateComplete;
-    if (generation !== this.transitionGeneration || this.expanded !== expectedExpanded) return;
-
-    if (this.isConnected && !prefersReducedMotion()) {
-      const view = this.ownerDocument.defaultView;
-      if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
-      if (generation !== this.transitionGeneration || this.expanded !== expectedExpanded) return;
-      const panel = this.renderRoot.querySelector<HTMLElement>('[part~="panel"]');
-      const animations = panel?.getAnimations({ subtree: true }) ?? [];
-      await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
-    }
-
-    if (generation === this.transitionGeneration && this.expanded === expectedExpanded) {
-      this.setAnimating(false);
-    }
-  }
-
   private handleTriggerClick = (): void => {
     if (this.disabled) return;
     const handled = this.emit('lr-accordion-item-trigger', { item: this }, { cancelable: true });
-    if (!handled.defaultPrevented) void this.toggle();
+    if (!handled.defaultPrevented) this.toggle();
   };
 
   private handleLabelSlotChange = (event: Event): void => {
@@ -223,7 +234,7 @@ export class LyraAccordionItem extends LyraDetails {
     const fallbackLabel = this.label || this.summary || this.localize('details');
     const button = html`<button
       id="trigger"
-      part="button"
+      part="button summary"
       type="button"
       aria-expanded=${this.expanded ? 'true' : 'false'}
       aria-controls="panel"

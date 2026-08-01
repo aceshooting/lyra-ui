@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "1.0.0",
+  "modules": [
+    {
+      "kind": "javascript-module",
+      "path": "src/components/data/sample-table/sample-table.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "LyraSampleTable",
+          "customElement": true,
+          "tagName": "lr-sample-table",
+          "members": [
+            {
+              "kind": "field",
+              "name": "rows",
+              "type": { "text": "readonly SampleRow[]" }
+            },
+            {
+              "kind": "field",
+              "name": "density",
+              "type": { "text": "'compact' | 'comfortable'" },
+              "attribute": "density"
+            },
+            {
+              "kind": "field",
+              "name": "computedRows",
+              "type": { "text": "readonly SampleRow[]" },
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "internalRows",
+              "privacy": "private",
+              "type": { "text": "SampleRow[]" }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "density",
+              "fieldName": "density",
+              "type": { "text": "'compact' | 'comfortable'" }
+            }
+          ],
+          "events": [
+            { "name": "lr-row-activate", "type": { "text": "CustomEvent<{ row: SampleRow }>" } }
+          ],
+          "cssProperties": [
+            { "name": "--lr-sample-table-row-gap", "type": { "text": "<length>" } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/forms/sample-field/sample-field.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "LyraSampleField",
+          "customElement": true,
+          "tagName": "lr-sample-field",
+          "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": { "text": "string | null" },
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "disabled",
+              "type": { "text": "boolean" },
+              "attribute": "disabled"
+            },
+            {
+              "kind": "field",
+              "name": "value",
+              "type": { "text": "string" },
+              "attribute": "value"
+            },
+            {
+              "kind": "field",
+              "name": "formAssociated",
+              "type": { "text": "boolean" },
+              "static": true
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": { "text": "string" },
+              "privacy": "protected",
+              "readonly": true
+            }
+          ],
+          "attributes": [
+            {
+              "name": "aria-label",
+              "fieldName": "accessibleLabel",
+              "type": { "text": "string | null" }
+            },
+            {
+              "name": "disabled",
+              "fieldName": "disabled",
+              "type": { "text": "boolean" }
+            },
+            {
+              "name": "icon-only",
+              "type": { "text": "boolean" }
+            },
+            {
+              "name": "value",
+              "fieldName": "value",
+              "type": { "text": "string" }
+            }
+          ],
+          "events": [
+            { "name": "focus", "type": { "text": "FocusEvent" } },
+            { "name": "lr-change", "type": { "text": "CustomEvent<{ value: string }>" } }
+          ],
+          "cssProperties": [
+            { "name": "--lr-sample-field-width", "type": { "text": "<length-percentage>" } }
+          ]
+        }
+      ]
+    }
+  ]
+}

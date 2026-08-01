@@ -8,13 +8,14 @@
 // side effects, in both the published `./dist/...` form and the in-repo `./src/...` form.
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { basename, dirname, join, relative } from 'node:path';
+import { basename, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deriveSideEffects } from './generate-side-effects.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 const componentsRoot = join(packageDir, 'src', 'components');
 const packageJsonPath = join(packageDir, 'package.json');
+const inventoryPath = join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
 
 function walk(directory) {
   const files = [];
@@ -33,6 +34,16 @@ assert.ok(classFiles.length >= 80, 'expected pure class modules for the componen
 
 const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
 assert.ok(Array.isArray(pkg.sideEffects), 'package.json#sideEffects must be an array');
+const inventory = JSON.parse(readFileSync(inventoryPath, 'utf8'));
+assert.equal(inventory.schemaVersion, 1, 'component-inventory.json must use the supported schemaVersion 1');
+assert.ok(Array.isArray(inventory.components), 'component-inventory.json must contain components[]');
+const inventoryClassFiles = inventory.components.map((component) => component.classModule).sort();
+const discoveredClassFiles = classFiles.map((file) => relative(packageDir, file).replaceAll('\\', '/')).sort();
+assert.deepEqual(
+  inventoryClassFiles,
+  discoveredClassFiles,
+  'component-inventory.json classModule entries must match the component source tree',
+);
 const sideEffects = new Set(pkg.sideEffects);
 
 const duplicates = pkg.sideEffects.filter((entry, index) => pkg.sideEffects.indexOf(entry) !== index);
@@ -57,16 +68,14 @@ if (pkg.sideEffects.some((entry, index) => entry !== derivedEntries[index])) {
   errors.push('package.json#sideEffects must match the deterministic generated order');
 }
 
-// Every `<name>.class.ts` has a sibling `<name>.ts` that imports the class and calls
-// `defineElement()` -- that sibling is the file with the actual registration side effect. (The
+// Every inventory entry names the `<name>.ts` module that imports the class and calls
+// `defineElement()` -- that module is the file with the actual registration side effect. (The
 // two known exceptions -- `archive-viewer-register.ts` and `ebook-viewer-register.ts`, which
-// register a document-viewer renderer rather than a custom element -- don't have a `.class.ts` of
-// their own, so the class-file-driven walk below never visits them; both already carry their own
-// long-standing sideEffects entries.)
-for (const classFile of classFiles) {
-  const dir = dirname(classFile);
-  const base = basename(classFile, '.class.ts');
-  const registrationFile = join(dir, `${base}.ts`);
+// register a document-viewer renderer rather than a custom element -- don't have inventory
+// registrations of their own; both already carry their own long-standing sideEffects entries.)
+for (const component of inventory.components) {
+  const classFile = join(packageDir, component.classModule);
+  const registrationFile = join(packageDir, component.registrationModule);
   let source;
   try {
     source = readFileSync(registrationFile, 'utf8');
@@ -82,9 +91,8 @@ for (const classFile of classFiles) {
     continue;
   }
 
-  const relPath = relative(componentsRoot, registrationFile).replaceAll('\\', '/');
-  const srcEntry = `./src/components/${relPath}`;
-  const distEntry = `./dist/components/${relPath.replace(/\.ts$/, '.js')}`;
+  const srcEntry = `./${component.registrationModule.replaceAll('\\', '/')}`;
+  const distEntry = srcEntry.replace(/^\.\/src\//, './dist/').replace(/\.ts$/, '.js');
   if (!sideEffects.has(srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
   if (!sideEffects.has(distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
 }

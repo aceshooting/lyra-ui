@@ -56,13 +56,13 @@ it('toggles on Space but not Enter, matching the native checkbox keyboard contra
   expect(el.checked).to.be.true;
 });
 
-it('emits native-style input and change events before the lr-change alias for user toggles', async () => {
+it('emits exactly one native Event pair and one prefixed alias pair for user toggles', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  const observed: string[] = [];
-  for (const name of ['input', 'change', 'lr-change']) {
+  const observed: Array<{ name: string; event: Event }> = [];
+  for (const name of ['input', 'lr-input', 'change', 'lr-change']) {
     el.addEventListener(name, (event) => {
-      observed.push(name);
+      observed.push({ name, event });
       expect(event.bubbles, `${name} bubbles`).to.be.true;
       expect(event.composed, `${name} is composed`).to.be.true;
     });
@@ -70,7 +70,12 @@ it('emits native-style input and change events before the lr-change alias for us
 
   base.click();
 
-  expect(observed).to.deep.equal(['input', 'change', 'lr-change']);
+  expect(observed.map(({ name }) => name)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  expect(observed[0].event.constructor === Event).to.be.true;
+  expect(observed[2].event.constructor === Event).to.be.true;
+  expect(observed[0].event.target === el && observed[2].event.target === el).to.be.true;
+  expect(observed[1].event instanceof CustomEvent).to.be.true;
+  expect((observed[1].event as CustomEvent).detail).to.deep.equal({ checked: true });
 });
 
 it('preventDefault()s the Space keydown so the page does not scroll', async () => {
@@ -635,10 +640,10 @@ it('un-hides the label part when a slotted element mutates its own text content 
   expect(label.hidden).to.be.false;
 });
 
-it('does not emit input, change, or lr-change for a programmatic .checked assignment', async () => {
+it('does not emit native or prefixed value events for a programmatic .checked assignment', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
   const fired: string[] = [];
-  for (const name of ['input', 'change', 'lr-change']) {
+  for (const name of ['input', 'lr-input', 'change', 'lr-change']) {
     el.addEventListener(name, () => fired.push(name));
   }
   el.checked = true;
@@ -646,22 +651,23 @@ it('does not emit input, change, or lr-change for a programmatic .checked assign
   expect(fired).to.deep.equal([]);
 });
 
-it('forwards focus and blur methods and re-dispatches bubbling, composed events', async () => {
+it('forwards focus/blur and relays exactly one native pair plus prefixed aliases', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  el.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+  el.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+  el.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+  el.addEventListener('lr-blur', () => aliases.push('lr-blur'));
 
-  const focusPromise = oneEvent(el, 'focus');
   el.focus();
-  const focusEvent = await focusPromise;
-  expect(focusEvent.bubbles).to.be.true;
-  expect(focusEvent.composed).to.be.true;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
-
-  const blurPromise = oneEvent(el, 'blur');
   el.blur();
-  const blurEvent = await blurPromise;
-  expect(blurEvent.bubbles).to.be.true;
-  expect(blurEvent.composed).to.be.true;
   expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
 });
 
 it('forwards host click() to the internal control, toggling checked', async () => {

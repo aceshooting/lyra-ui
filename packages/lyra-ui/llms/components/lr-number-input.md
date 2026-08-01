@@ -56,7 +56,8 @@ field for no new capability. Each carries a localized accessible name and the sh
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
-input), and `lr-clear` (inherited, never fired here).
+input) each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail), and `lr-clear`
+(inherited, never fired here).
 
 **Slots:** `label`, `hint`, `error`, `start`, `end`.
 

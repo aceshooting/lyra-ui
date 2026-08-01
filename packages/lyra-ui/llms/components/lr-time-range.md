@@ -43,9 +43,12 @@ consumer-facing `disabled` property/attribute itself.
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
   `lr-input`/`lr-change` pair a committed drag or keyboard step would
 
-**Events:** `lr-input` (fired continuously while dragging or on each arrow/Home/End/PageUp/
-PageDown key press, `detail: { start, end }`), `lr-change` (fired on pointer release /
-key-up-commit, or when a preset button is clicked, `detail: { start, end }`)
+**Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),
+both fired continuously while dragging or on each arrow/Home/End/PageUp/PageDown key press; and a
+native-style composed `change` (no detail) then `lr-change` (`detail: { start, end }`), both fired
+on pointer release / key-up-commit, or when a preset button is clicked. The focused handle's native
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
+its prefixed alias `lr-focus` / `lr-blur` (no detail).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to `[part="handle-start"]`. A
 two-handle control has no single canonical target, so the start handle is the one they address —

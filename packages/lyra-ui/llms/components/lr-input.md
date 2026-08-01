@@ -117,8 +117,9 @@ Three more native passthroughs:
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
 `change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
-own `blur`/`focus`), and `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/
-`change`/`lr-change` sequence).
+own `blur`/`focus`) each followed by its prefixed alias `lr-blur`/`lr-focus` (no detail), and
+`lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/`change`/`lr-change`
+sequence).
 
 **Slots:** `label`, `hint`, `error`, `start` (adornment before the input), `end` (adornment after the
 input and built-in actions).

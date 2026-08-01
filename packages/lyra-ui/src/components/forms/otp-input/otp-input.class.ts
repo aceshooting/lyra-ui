@@ -32,6 +32,8 @@ export interface LyraOtpInputEventMap {
   change: Event;
   focus: FocusEvent;
   blur: FocusEvent;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
   'lr-complete': CustomEvent<{ value: string }>;
 }
 
@@ -52,10 +54,13 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @slot label - Rich label content, replacing the `label` attribute.
  * @slot hint - Rich supporting text, replacing the `hint` attribute.
  * @slot error - Rich validation text, replacing the `errorText` attribute.
- * @event input - The value changed.
- * @event change - The value changed and the field settled.
+ * @event input - The real input changed; relayed as one native `InputEvent` with its editing
+ *   payload intact.
+ * @event change - The value changed and the field settled; relayed as one native `Event`.
  * @event focus - Native focus relayed once from the real input.
  * @event blur - Native blur relayed once from the real input.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-complete - Every segment is filled. `detail: { value }`.
  * @cssstate required - Matches while `required` is set. Style with `lr-otp-input:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
@@ -223,11 +228,13 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   private onFocus = (event: FocusEvent): void => {
     this.focused = true;
     relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
   private onBlur = (event: FocusEvent): void => {
     this.focused = false;
     this.touched = true;
     relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   private onLabelSlotChange = (event: Event): void => {

@@ -6,7 +6,6 @@ import {
   deepActiveElement,
   type OverlayHandle,
 } from "../../../internal/overlay-manager.js";
-import { lockScroll } from "../../../internal/scroll-lock.js";
 import { styles } from "./responsive-panel.styles.js";
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
@@ -172,7 +171,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   @state() private headingText?: string;
 
   private mediaQuery?: MediaQueryList;
-  private releaseScrollLock?: () => void;
   private lastTrigger?: HTMLElement;
   private overlayHandle?: OverlayHandle;
   private headerObserver?: MutationObserver;
@@ -294,8 +292,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
       } else {
         this.activateOverlayChrome();
       }
-      if (!this.releaseScrollLock)
-        this.releaseScrollLock = lockScroll(this.ownerDocument);
       queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
     if (this.hasUpdated) {
@@ -313,15 +309,12 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     super.disconnectedCallback();
     this.mediaQuery?.removeEventListener("change", this.onMediaChange);
     this.mediaQuery = undefined;
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlayHandle?.suspend();
     this.headerObserver?.disconnect();
     this.headerObserver = undefined;
   }
 
   private activateOverlayChrome(): void {
-    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () =>
@@ -329,12 +322,12 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
       onEscape: () => this.close("escape"),
       onBackdrop: () => this.close("backdrop"),
       restoreFocusTo: this.lastTrigger ?? null,
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
   }
 
   private deactivateOverlayChrome(restoreFocus = true): void {
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlayHandle?.deactivate({ restoreFocus });
     this.overlayHandle = undefined;
   }

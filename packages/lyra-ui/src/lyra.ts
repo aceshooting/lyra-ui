@@ -803,7 +803,7 @@ export type {
 } from './components/forms/textarea/textarea.js';
 
 export { LyraButton } from './components/forms/button/button.js';
-export type { ButtonVariant, ButtonAppearance, ButtonSize, ButtonType, ButtonFormEnctype, ButtonFormMethod } from './components/forms/button/button.js';
+export type { ButtonVariant, ButtonAppearance, ButtonSize, ButtonType, ButtonFormEnctype, ButtonFormMethod, LyraButtonEventMap } from './components/forms/button/button.js';
 
 export { LyraInput } from './components/forms/input/input.js';
 export type { LyraInputType, LyraInputSize, LyraInputAppearance } from './components/forms/input/input.js';
@@ -829,6 +829,7 @@ export type { CalloutVariant, LyraCalloutEventMap } from './components/overlays/
 export { LyraDetails } from './components/layout/details/details.js';
 export type { LyraDetailsEventMap } from './components/layout/details/details.js';
 export { LyraAccordion } from './components/layout/details/accordion.js';
+export type { LyraAccordionEventMap } from './components/layout/details/accordion.js';
 export { LyraAccordionItem } from './components/layout/details/accordion-item.js';
 export { LyraDivider } from './components/utility/divider/divider.js';
 export { LyraVisuallyHidden } from './components/utility/visually-hidden/visually-hidden.js';
@@ -853,6 +854,7 @@ export { registerIconLibrary, unregisterIconLibrary, getIconLibrary } from './co
 export type { LyraIconFlip, LyraIconEventMap } from './components/utility/icon/icon.js';
 export type { LyraIconLibrary, LyraIconLibraryOptions, LyraIconLibraryResolver, LyraIconLibraryMutator } from './components/utility/icon/icon.js';
 export { LyraIconButton } from './components/forms/icon-button/icon-button.js';
+export type { LyraIconButtonEventMap } from './components/forms/icon-button/icon-button.js';
 export { LyraCommandPalette } from './components/layout/command-palette/command-palette.js';
 export type { LyraCommand, LyraCommandPaletteEventMap } from './components/layout/command-palette/command-palette.js';
 export { LyraCodeEditor } from './components/forms/code-editor/code-editor.js';

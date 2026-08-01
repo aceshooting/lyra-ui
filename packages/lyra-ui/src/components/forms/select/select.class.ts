@@ -153,12 +153,8 @@ export interface LyraSelectEventMap {
  *   against axe-core 4.12.1) -- the hazard is real but not automatically detectable today.
  * @slot end - Adornment after the selected-value label and before the expand icon. Same
  *   non-focusable/non-interactive-content caveat as `start`.
- * @event change - A native `Event` fired when the selection changed. Deliberately
- *   unprefixed, mirroring native `<select>`'s own event name -- contrast `<lr-slider>`, which uses
- *   `lr-input`/`lr-change` for its analogous value-change pair. Which form controls mirror native
- *   unprefixed DOM event names (this one, matching `<select>`) versus which use the `lr-` prefix
- *   (`<lr-slider>`, matching `<input type="range">` via a custom name) is a deliberate per-control
- *   choice, not an incidental divergence. Read the new selection from `value`.
+ * @event change - A native `Event` fired when the selection changed, mirroring native
+ *   `<select>`'s own event name. Read the new selection from `value`.
  * @event input - A native `Event` fired alongside `change` on every
  *   selection change (native `<select>` doesn't meaningfully distinguish the two either).
  * @event lr-input - Prefixed compatibility alias for `input`; `detail: { value }`.
@@ -166,7 +162,7 @@ export interface LyraSelectEventMap {
  *   fired after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s
  *   `lr-change`. Not fired for a programmatic `value` assignment.
  * @event lr-clear - The `with-clear` button emptied the selection, fired after the
- *   `input`/`change`/`lr-change` trio. Never fired when there was nothing to clear.
+ *   `input`/`lr-input`/`change`/`lr-change` sequence. Never fired when there was nothing to clear.
  * @event lr-show - The listbox opened.
  * @event lr-hide - The listbox closed.
  * @event blur - Re-dispatched from the trigger as a bubbling, composed event.

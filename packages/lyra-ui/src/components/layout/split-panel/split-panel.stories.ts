@@ -1,0 +1,106 @@
+import type { Meta, StoryObj } from '@storybook/web-components-vite';
+import { html } from 'lit';
+import './split-panel.js';
+
+const meta: Meta = {
+  title: 'Layout/Split panel',
+  component: 'lr-split-panel',
+  tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'An accessible two-pane layout with percent/pixel positioning, optional primary-pane preservation, constraints, snapping, keyboard resizing, and horizontal or vertical orientation.',
+      },
+    },
+  },
+};
+
+export default meta;
+type Story = StoryObj;
+
+const paneStyle = 'padding: var(--lr-space-l); block-size: 100%; box-sizing: border-box;';
+
+export const Default: Story = {
+  render: () => html`
+    <lr-split-panel
+      aria-label="Resize editor panes"
+      style="block-size: 16rem; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
+    >
+      <section slot="start" style=${`${paneStyle} background: var(--lr-color-surface-raised);`}>
+        <strong>Source</strong>
+        <p>Drag the divider or focus it and use Left/Right.</p>
+      </section>
+      <section slot="end" style=${paneStyle}>
+        <strong>Preview</strong>
+        <p>The default position is 50%.</p>
+      </section>
+    </lr-split-panel>
+  `,
+};
+
+export const Vertical: Story = {
+  render: () => html`
+    <lr-split-panel
+      orientation="vertical"
+      position="35"
+      aria-label="Resize stacked panes"
+      style="block-size: 24rem; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
+    >
+      <section slot="start" style=${`${paneStyle} background: var(--lr-color-surface-raised);`}>
+        Timeline
+      </section>
+      <section slot="end" style=${paneStyle}>Details</section>
+    </lr-split-panel>
+  `,
+};
+
+export const FixedPrimaryWithConstraints: Story = {
+  name: 'Fixed primary + constraints',
+  render: () => html`
+    <lr-split-panel
+      primary="start"
+      position-in-pixels="240"
+      aria-label="Resize navigation"
+      style="block-size: 16rem; --min: 10rem; --max: 22rem; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
+    >
+      <nav slot="start" aria-label="Project" style=${`${paneStyle} background: var(--lr-color-surface-raised);`}>
+        The start pane remains 240px wide when the story canvas resizes.
+      </nav>
+      <main slot="end" style=${paneStyle}>Flexible workspace</main>
+    </lr-split-panel>
+  `,
+};
+
+export const SnappingAndCustomDivider: Story = {
+  render: () => html`
+    <lr-split-panel
+      snap="25% 50% 75%"
+      snap-threshold="16"
+      aria-label="Resize snapping panes"
+      style="block-size: 16rem; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
+    >
+      <section slot="start" style=${`${paneStyle} background: var(--lr-color-surface-raised);`}>
+        Snaps at 25%, 50%, and 75%
+      </section>
+      <span slot="divider" aria-hidden="true">⋮</span>
+      <section slot="end" style=${paneStyle}>Custom divider content</section>
+    </lr-split-panel>
+  `,
+};
+
+export const RightToLeft: Story = {
+  render: () => html`
+    <lr-split-panel
+      dir="rtl"
+      position="35"
+      aria-label="تغيير حجم الجزأين"
+      style="block-size: 16rem; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
+    >
+      <section slot="start" style=${`${paneStyle} background: var(--lr-color-surface-raised);`}>
+        البداية المنطقية
+      </section>
+      <section slot="end" style=${paneStyle}>النهاية المنطقية</section>
+    </lr-split-panel>
+  `,
+};

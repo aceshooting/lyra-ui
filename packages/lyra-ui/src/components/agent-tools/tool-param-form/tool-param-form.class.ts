@@ -773,6 +773,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         .value=${typeof effective === 'string' ? effective : ''}
         ?disabled=${this.effectiveDisabled}
         @input=${this.stopNestedControlEvent}
+        @lr-input=${this.stopNestedControlEvent}
         @change=${(e: Event) => this.onSelectChange(key, e)}
         @lr-change=${this.stopNestedControlEvent}
         @lr-show=${this.stopNestedControlEvent}
@@ -836,6 +837,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         ?checked=${effective === true}
         ?disabled=${this.effectiveDisabled}
         @input=${this.stopNestedControlEvent}
+        @lr-input=${this.stopNestedControlEvent}
         @change=${this.stopNestedControlEvent}
         @lr-change=${(e: CustomEvent<{ checked: boolean }>) => this.onCheckboxChange(key, e)}
       >

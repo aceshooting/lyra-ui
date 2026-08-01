@@ -1,4 +1,6 @@
 import { deepActiveElementIn } from './active-element.js';
+import { RenderedStateController } from './rendered-state.js';
+import { lockScroll } from './scroll-lock.js';
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'area[href]',
@@ -37,6 +39,10 @@ export interface OverlayActivationOptions {
   trapFocus?: boolean;
   /** Optional non-trapping Tab lifecycle, called without preventing the event. */
   onTab?: () => void;
+  /** Temporarily releases stack ownership while the resolved panel generates no layout box. */
+  suspendWhenUnrendered?: boolean;
+  /** Ref-counts a document scroll lock for exactly as long as this entry is registered. */
+  lockScroll?: boolean;
 }
 
 export interface OverlayDeactivateOptions {
@@ -72,12 +78,16 @@ interface OverlayEntry {
   restoreFocusTo: HTMLElement | null;
   active: boolean;
   registered: boolean;
+  manuallySuspended: boolean;
+  rendered: boolean;
   wasTopmostOnSuspend: boolean;
   suspendGeneration: number;
   stackOrder: number;
   state: OverlayDocumentState;
   previousStackValue: string;
   previousStackPriority: string;
+  releaseScrollLock?: () => void;
+  renderedState?: RenderedStateController;
   handle: OverlayHandle;
 }
 
@@ -410,7 +420,10 @@ function createState(doc: Document): OverlayDocumentState {
   state.onKeyDown = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.isComposing) return;
     if (state.externalModalSuspensions.size > 0) return;
-    const entry = state.stack[state.stack.length - 1];
+    let entry = state.stack[state.stack.length - 1];
+    while (entry?.renderedState && !entry.renderedState.check()) {
+      entry = state.stack[state.stack.length - 1];
+    }
     if (!entry) return;
     if (event.key === 'Escape') {
       event.preventDefault();
@@ -558,10 +571,14 @@ function updateStackStyles(state: OverlayDocumentState): void {
 }
 
 function registerEntry(entry: OverlayEntry, state: OverlayDocumentState, preserveStackOrder = false): void {
+  if (entry.registered) return;
   startState(state);
   if (!preserveStackOrder || entry.state !== state) entry.stackOrder = state.nextStackOrder++;
   entry.state = state;
   entry.registered = true;
+  if (entry.options.lockScroll && !entry.releaseScrollLock) {
+    entry.releaseScrollLock = lockScroll(state.document);
+  }
   const nextIndex = state.stack.findIndex((candidate) => candidate.stackOrder > entry.stackOrder);
   if (nextIndex === -1) state.stack.push(entry);
   else state.stack.splice(nextIndex, 0, entry);
@@ -570,18 +587,32 @@ function registerEntry(entry: OverlayEntry, state: OverlayDocumentState, preserv
 }
 
 function unregisterEntry(entry: OverlayEntry): boolean {
-  if (!entry.registered) return entry.wasTopmostOnSuspend;
+  if (!entry.registered) {
+    const hasHigherEntry = entry.state.stack.some((candidate) => candidate.stackOrder > entry.stackOrder);
+    return entry.state.externalModalSuspensions.size === 0 && entry.wasTopmostOnSuspend && !hasHigherEntry;
+  }
   const state = entry.state;
   const index = state.stack.indexOf(entry);
   const wasTopmost = state.externalModalSuspensions.size === 0 && index === state.stack.length - 1;
   if (index !== -1) state.stack.splice(index, 1);
   entry.registered = false;
   entry.wasTopmostOnSuspend = wasTopmost;
+  entry.releaseScrollLock?.();
+  entry.releaseScrollLock = undefined;
   restoreStackStyle(entry);
   updateStackStyles(state);
   applyTopmostInert(state);
   stopStateIfIdle(state);
   return wasTopmost;
+}
+
+function syncEntryRegistration(entry: OverlayEntry): void {
+  if (!entry.active || entry.manuallySuspended || !entry.rendered) {
+    unregisterEntry(entry);
+    return;
+  }
+  const state = stateFor(entry.options.host.ownerDocument);
+  registerEntry(entry, state, entry.state === state);
 }
 
 function rebaseReturnTargets(entry: OverlayEntry): void {
@@ -601,9 +632,11 @@ function restoreEntryFocus(entry: OverlayEntry): void {
 
 function deactivateEntry(entry: OverlayEntry, restoreFocus: boolean): void {
   if (!entry.active) return;
+  entry.renderedState?.stop();
   rebaseReturnTargets(entry);
   const wasTopmost = unregisterEntry(entry);
   entry.active = false;
+  entry.manuallySuspended = false;
   entry.suspendGeneration++;
   if (hostEntries.get(entry.options.host) === entry) hostEntries.delete(entry.options.host);
   if (!wasTopmost) return;
@@ -634,14 +667,20 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
     options.restoreFocusTo !== undefined ? options.restoreFocusTo : (inheritedReturnTarget ?? captured);
   entry.active = true;
   entry.registered = false;
+  entry.manuallySuspended = false;
+  entry.rendered = true;
   entry.wasTopmostOnSuspend = false;
   entry.suspendGeneration = 0;
   entry.state = stateFor(doc);
-  entry.stackOrder = -1;
+  // Reserve order at logical activation time, even when the panel begins unrendered and therefore
+  // cannot join the live stack yet. Otherwise multiple lifecycle-controlled entries all carry the
+  // same sentinel order and a restored lower entry can incorrectly jump above a newer overlay.
+  entry.stackOrder = entry.state.nextStackOrder++;
   entry.previousStackValue = options.host.style.getPropertyValue(STACK_PROPERTY);
   entry.previousStackPriority = options.host.style.getPropertyPriority(STACK_PROPERTY);
   entry.handle = {
     focusInitial: () => {
+      entry.renderedState?.check();
       if (
         entry.active &&
         entry.registered &&
@@ -652,6 +691,7 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
       }
     },
     focusAutofocus: () => {
+      entry.renderedState?.check();
       if (!entry.active || !entry.registered || entry.state.externalModalSuspensions.size > 0) return false;
       const panel = entry.options.panel();
       if (!panel) return false;
@@ -666,8 +706,9 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
       deactivateEntry(entry, deactivateOptions.restoreFocus !== false);
     },
     suspend: () => {
-      if (!entry.active || !entry.registered) return;
-      unregisterEntry(entry);
+      if (!entry.active || entry.manuallySuspended) return;
+      entry.manuallySuspended = true;
+      syncEntryRegistration(entry);
       const generation = ++entry.suspendGeneration;
       queueMicrotask(() => {
         if (entry.active && !entry.registered && entry.suspendGeneration === generation && !entry.options.host.isConnected) {
@@ -676,16 +717,21 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
       });
     },
     resume: () => {
-      if (!entry.active || entry.registered) return;
+      if (!entry.active || !entry.manuallySuspended) return;
       entry.suspendGeneration++;
-      const state = stateFor(entry.options.host.ownerDocument);
-      registerEntry(entry, state, entry.state === state);
+      entry.manuallySuspended = false;
+      entry.renderedState?.check();
+      syncEntryRegistration(entry);
     },
-    isTopmost: () =>
-      entry.active &&
-      entry.registered &&
-      entry.state.externalModalSuspensions.size === 0 &&
-      entry.state.stack[entry.state.stack.length - 1] === entry,
+    isTopmost: () => {
+      entry.renderedState?.check();
+      return (
+        entry.active &&
+        entry.registered &&
+        entry.state.externalModalSuspensions.size === 0 &&
+        entry.state.stack[entry.state.stack.length - 1] === entry
+      );
+    },
     isActive: () => entry.active,
     dismissBackdrop: () => {
       if (!entry.handle.isTopmost() || !entry.options.onBackdrop) return false;
@@ -695,7 +741,23 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
   };
 
   hostEntries.set(options.host, entry);
-  registerEntry(entry, entry.state);
+  if (options.suspendWhenUnrendered) {
+    entry.renderedState = new RenderedStateController(options.host, options.panel, (rendered) => {
+      if (!entry.active || entry.rendered === rendered) return;
+      const wasRegistered = entry.registered;
+      entry.rendered = rendered;
+      syncEntryRegistration(entry);
+      if (rendered && !wasRegistered && entry.registered) {
+        queueMicrotask(() => entry.handle.focusInitial());
+      }
+    });
+    // Seed false so the controller's mandatory initial report always owns the first registration
+    // decision, including a panel that already has a box at activation time.
+    entry.rendered = false;
+    entry.renderedState.start();
+  } else {
+    registerEntry(entry, entry.state, true);
+  }
   return entry.handle;
 }
 

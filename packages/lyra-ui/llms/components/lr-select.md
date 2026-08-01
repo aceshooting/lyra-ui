@@ -121,16 +121,17 @@ select with nothing chosen goes back to `valueMissing` rather than to valid. The
 every selection change and a `form.reset()` — like a native control, only another
 `setCustomValidity('')` clears it — and is used verbatim, never localized.
 
-**Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
-selection change — a native `<select>` doesn't meaningfully distinguish the two either), and
-`lr-change` (a prefixed compatibility alias fired after both, mirroring `<lr-checkbox>`'s
-`lr-change`). All three carry `detail: { value: string | string[] }` — the new committed selection,
-a string in single mode and a `string[]` in `multiple` mode — and fire only on a real change, never
-on a programmatic `value` write, `form.reset()`, or session-state restoration. Plus
-`lr-clear` (no detail; emitted by the `with-clear` button *after* its `input`/`change`/`lr-change`
-trio, and never when there was nothing to clear, so it never announces a no-op),
+**Events:** each real selection change emits, in order, native-style `input`, `lr-input`, native-style
+`change`, then `lr-change`. The native events carry no detail; read `event.target.value`. Both
+prefixed aliases carry `detail: { value: string | string[] }` — the new committed selection, a string
+in single mode and a `string[]` in `multiple` mode. The complete sequence is silent for a
+programmatic `value` write, `form.reset()`, or session-state restoration. Plus
+`lr-clear` (no detail; emitted by the `with-clear` button *after* its
+`input`/`lr-input`/`change`/`lr-change` run, and never when there was nothing to clear, so it never
+announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
-trigger.
+trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
+its unprefixed counterpart.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided), `start` (non-interactive adornment before the selected-value label), and

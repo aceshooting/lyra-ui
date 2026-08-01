@@ -1,14 +1,18 @@
 import { expect } from '@open-wc/testing';
 import { composedContains, deepActiveElement } from './overlay-manager.js';
 import '../components/overlays/dialog/dialog.js';
+import '../components/overlays/drawer/drawer.js';
 import '../components/layout/responsive-panel/responsive-panel.js';
 import '../components/agent-tools/tool-select-dialog/tool-select-dialog.js';
 import '../components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';
 import '../components/agent-tools/tool-result-dialog/tool-result-dialog.js';
 import '../components/layout/app-rail/app-rail.js';
+import '../components/layout/command-palette/command-palette.js';
+import '../components/layout/split/split.js';
 import '../components/layout/widget/widget.js';
 import '../components/forms/date-picker/date-input.js';
 import '../components/media/lightbox/lightbox.js';
+import '../components/utility/tour/tour.js';
 import type { LyraLightboxImage } from '../components/media/lightbox/lightbox.class.js';
 
 interface ReactiveOverlay extends HTMLElement {
@@ -20,6 +24,10 @@ interface ReactiveOverlay extends HTMLElement {
   toolName?: string;
   expandable?: boolean;
   images?: LyraLightboxImage[];
+  commands?: Array<{ id: string; label: string }>;
+  collapse?: string;
+  collapseState?: string;
+  steps?: Array<{ id: string; target: string; heading: string; content: string }>;
 }
 
 const lightboxImage: LyraLightboxImage = {
@@ -38,6 +46,12 @@ const adapters: OverlayAdapter[] = [
   {
     tag: 'lr-dialog',
     setup: (element) => (element.label = 'Dialog'),
+    activate: (element) => (element.open = true),
+    deactivate: (element) => (element.open = false),
+  },
+  {
+    tag: 'lr-drawer',
+    setup: (element) => (element.label = 'Drawer'),
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
   },
@@ -74,6 +88,24 @@ const adapters: OverlayAdapter[] = [
     deactivate: (element) => (element.open = false),
   },
   {
+    tag: 'lr-command-palette',
+    setup: (element) => (element.commands = [{ id: 'command', label: 'Command' }]),
+    activate: (element) => (element.open = true),
+    deactivate: (element) => (element.open = false),
+  },
+  {
+    tag: 'lr-split',
+    setup: (element) => {
+      element.collapse = 'start';
+      element.collapseState = 'floating';
+      element.style.inlineSize = '20rem';
+      element.style.blockSize = '12rem';
+      element.append(document.createElement('div'), document.createElement('div'));
+    },
+    activate: (element) => (element.open = true),
+    deactivate: (element) => (element.open = false),
+  },
+  {
     tag: 'lr-widget',
     setup: (element) => {
       element.label = 'Widget';
@@ -85,6 +117,13 @@ const adapters: OverlayAdapter[] = [
   {
     tag: 'lr-lightbox',
     setup: (element) => (element.images = [lightboxImage]),
+    activate: (element) => (element.open = true),
+    deactivate: (element) => (element.open = false),
+  },
+  {
+    tag: 'lr-tour',
+    setup: (element) =>
+      (element.steps = [{ id: 'step', target: '#missing-tour-target', heading: 'Tour', content: 'Step' }]),
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
   },
@@ -103,6 +142,48 @@ afterEach(async () => {
   await Promise.resolve();
   await Promise.resolve();
 });
+
+async function waitForCondition(read: () => boolean, message: string): Promise<void> {
+  const started = performance.now();
+  while (!read()) {
+    if (performance.now() - started > 2000) throw new Error(`Timed out waiting for ${message}`);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  }
+}
+
+for (const adapter of adapters) {
+  it(`${adapter.tag} releases and restores modal resources when CSS removes and restores its layout box`, async () => {
+    const element = create(adapter);
+    adapter.activate(element);
+    await element.updateComplete;
+    await waitForCondition(
+      () => document.documentElement.style.overflow === 'hidden',
+      `${adapter.tag} to acquire its scroll lock`,
+    );
+    expect(element.open ?? element.fullscreen).to.be.true;
+
+    element.style.display = 'none';
+    await waitForCondition(
+      () => document.documentElement.style.overflow !== 'hidden',
+      `${adapter.tag} to release its scroll lock while hidden`,
+    );
+    expect(element.open ?? element.fullscreen).to.be.true;
+
+    element.style.display = '';
+    await waitForCondition(
+      () => document.documentElement.style.overflow === 'hidden',
+      `${adapter.tag} to restore its scroll lock when rendered`,
+    );
+    expect(element.open ?? element.fullscreen).to.be.true;
+
+    adapter.deactivate(element);
+    await element.updateComplete;
+    await waitForCondition(
+      () => document.documentElement.style.overflow !== 'hidden',
+      `${adapter.tag} to release its final scroll lock`,
+    );
+  });
+}
 
 for (let index = 0; index < adapters.length; index++) {
   const bottomAdapter = adapters[index];

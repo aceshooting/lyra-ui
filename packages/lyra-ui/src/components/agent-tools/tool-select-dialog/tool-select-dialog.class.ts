@@ -2,7 +2,6 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { lockScroll } from '../../../internal/scroll-lock.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { styles } from './tool-select-dialog.styles.js';
 import '../../forms/checkbox/checkbox.class.js';
@@ -174,7 +173,6 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   @state() private query = '';
   @state() private hasFooterSlot = false;
 
-  private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
   private readonly titleId = nextId('tool-select-dialog-title');
   // Stable per-category heading ids, keyed by category name (or the null
@@ -189,11 +187,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     }
     if (changed.has('open')) {
       if (this.open) {
-        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
         this.activateOverlay();
       } else {
-        this.releaseScrollLock?.();
-        this.releaseScrollLock = undefined;
         this.overlay?.deactivate();
         this.overlay = undefined;
         // Otherwise a long-lived instance reopens still showing whatever
@@ -217,7 +212,6 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated && this.open) {
-      this.releaseScrollLock ??= lockScroll(this.ownerDocument);
       this.activateOverlay();
       queueMicrotask(() => this.overlay?.focusInitial());
     }
@@ -225,8 +219,6 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.suspend();
   }
 
@@ -240,6 +232,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
       onEscape: () => this.close('escape'),
       onBackdrop: () => this.close('backdrop'),
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
   }
 

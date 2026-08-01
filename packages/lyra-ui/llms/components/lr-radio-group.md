@@ -25,10 +25,13 @@ options off the same values the controls themselves use. It deliberately does **
 at mixed sizes and an explicitly-sized option is never silently overridden by its container. Set the
 same `size` on the children to scale the whole group.
 
-**Events:** exactly one group-owned `lr-change` with `{ value, radio }` per owned selection,
-including keyboard activation. The selected child does not emit its standalone alias. Ownership is
-resolved synchronously, so immediate removal restores standalone behavior and immediate reparenting
-routes the event to the new group without waiting for a mutation-observer turn.
+**Events:** per owned selection — including keyboard activation — the group emits, in order,
+native-style composed `input`, `lr-input`, native-style composed `change`, then exactly one
+group-owned `lr-change`. The two native-style events carry no detail (read `event.target.value`);
+both prefixed aliases carry `{ value, radio }`. The selected child does not emit its
+standalone alias. Ownership is resolved synchronously, so immediate removal restores standalone
+behavior and immediate reparenting routes the event to the new group without waiting for a
+mutation-observer turn.
 
 **Slots:** default radios, `label`, `hint`, `error`.
 

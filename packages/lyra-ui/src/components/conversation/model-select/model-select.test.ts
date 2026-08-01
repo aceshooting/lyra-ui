@@ -759,20 +759,20 @@ it('normalizes a null value assignment to an empty string (defensive ?? fallback
   expect(el.value).to.equal('');
 });
 
-it('falls back to the global Event constructor when ownerDocument has no defaultView (a detached/adopted document)', async () => {
+it('dispatches one native Event input/change pair even from a detached/adopted document', async () => {
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   const detachedDoc = document.implementation.createHTMLDocument('detached');
   detachedDoc.adoptNode(el);
   expect(el.ownerDocument).to.equal(detachedDoc);
   expect(detachedDoc.defaultView, 'precondition: a document created via createHTMLDocument() has no window').to.equal(null);
 
-  let inputFired = false;
-  let changeFired = false;
-  el.addEventListener('input', () => (inputFired = true));
-  el.addEventListener('change', () => (changeFired = true));
+  const events: Event[] = [];
+  el.addEventListener('input', (event) => events.push(event));
+  el.addEventListener('change', (event) => events.push(event));
   (el as unknown as { emitValueEvents(): void }).emitValueEvents();
-  expect(inputFired).to.be.true;
-  expect(changeFired).to.be.true;
+  expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
+  expect(events.every((event) => event.constructor === Event)).to.be.true;
+  expect(events.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
 });
 
 it('restores the declared default value (initial value attribute) on form.reset()', async () => {
@@ -824,6 +824,17 @@ it('temporarily disables both modes through a fieldset without overwriting autho
   expect(getComputedStyle(trigger(el)).cursor).to.equal('not-allowed');
   expect(new FormData(form).get('model')).to.equal(null);
   expect(new FormData(form).get('custom-model')).to.equal(null);
+
+  let delegatedCalls = 0;
+  trigger(el).click = () => { delegatedCalls += 1; };
+  trigger(el).focus = () => { delegatedCalls += 1; };
+  input(freeText).click = () => { delegatedCalls += 1; };
+  input(freeText).focus = () => { delegatedCalls += 1; };
+  el.click();
+  el.focus();
+  freeText.click();
+  freeText.focus();
+  expect(delegatedCalls, 'fieldset disablement gates host click/focus in both modes').to.equal(0);
 
   fieldset.disabled = false;
   await Promise.all([el.updateComplete, freeText.updateComplete, explicitlyDisabled.updateComplete]);
@@ -1092,25 +1103,58 @@ describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
   });
 });
 
-describe('blur/focus bubbling', () => {
-  it('re-dispatches a bubbling, composed blur event when the free-text input blurs', async () => {
-    const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
-    const inp = input(el);
-    inp.focus();
-    const eventPromise = oneEvent(el, 'blur');
-    inp.blur();
-    const ev = await eventPromise;
-    expect(ev.bubbles).to.be.true;
-    expect(ev.composed).to.be.true;
+describe('native event relays', () => {
+  async function expectFocusContract(wrapper: HTMLElement, el: LyraModelSelect, control: HTMLElement): Promise<void> {
+    const nativeEvents: FocusEvent[] = [];
+    const aliases: string[] = [];
+    wrapper.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+    wrapper.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+    wrapper.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+    wrapper.addEventListener('lr-blur', () => aliases.push('lr-blur'));
+
+    control.focus();
+    control.blur();
+
+    expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+    expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+    expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  }
+
+  it('relays exactly one native focus/blur pair and aliases in both rendering modes', async () => {
+    const closedWrapper = await fixture<HTMLElement>(html`
+      <div><lr-model-select .catalog=${CATALOG}></lr-model-select></div>
+    `);
+    const closed = closedWrapper.querySelector('lr-model-select') as LyraModelSelect;
+    await expectFocusContract(closedWrapper, closed, trigger(closed));
+
+    const freeWrapper = await fixture<HTMLElement>(html`<div><lr-model-select></lr-model-select></div>`);
+    const free = freeWrapper.querySelector('lr-model-select') as LyraModelSelect;
+    await expectFocusContract(freeWrapper, free, input(free));
   });
 
-  it('re-dispatches a bubbling, composed focus event when the free-text input focuses', async () => {
-    const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
-    const eventPromise = oneEvent(el, 'focus');
-    input(el).focus();
-    const ev = await eventPromise;
-    expect(ev.bubbles).to.be.true;
-    expect(ev.composed).to.be.true;
+  it('preserves the free-text InputEvent payload without a shadow duplicate', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><lr-model-select></lr-model-select></div>`);
+    const el = wrapper.querySelector('lr-model-select') as LyraModelSelect;
+    const control = input(el);
+    const events: InputEvent[] = [];
+    wrapper.addEventListener('input', (event) => events.push(event as InputEvent));
+
+    control.value = 'm';
+    control.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      composed: true,
+      data: 'm',
+      inputType: 'insertText',
+      isComposing: true,
+    }));
+
+    expect(events).to.have.lengthOf(1);
+    expect(events[0] instanceof InputEvent).to.be.true;
+    expect(events[0].target === el && events[0].bubbles && events[0].composed).to.be.true;
+    expect(events[0].data).to.equal('m');
+    expect(events[0].inputType).to.equal('insertText');
+    expect(events[0].isComposing).to.be.true;
   });
 });
 

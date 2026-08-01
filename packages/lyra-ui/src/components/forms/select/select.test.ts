@@ -101,13 +101,17 @@ it('emits input alongside change on selection, matching a native <select>', asyn
   expect(inputFired).to.be.true;
 });
 
-it('emits typed aliases with the new value alongside native input/change events', async () => {
+it('emits exactly one native Event pair and typed aliases with the new value', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   el.open = true;
   await el.updateComplete;
-  const seen: Array<{ type: string; detail: unknown }> = [];
+  const seen: Array<{ type: string; detail: unknown; event: Event }> = [];
   for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
-    el.addEventListener(type, (e) => seen.push({ type, detail: (e as CustomEvent).detail }));
+    el.addEventListener(type, (event) => seen.push({
+      type,
+      detail: (event as CustomEvent).detail,
+      event,
+    }));
   }
   rows(el)[1].click();
   await el.updateComplete;
@@ -117,13 +121,18 @@ it('emits typed aliases with the new value alongside native input/change events'
   expect(seen[1].detail).to.deep.equal({ value: 'b' });
   expect(seen[2].detail).to.be.undefined;
   expect(seen[3].detail).to.deep.equal({ value: 'b' });
+  expect(seen[0].event.constructor === Event).to.be.true;
+  expect(seen[2].event.constructor === Event).to.be.true;
+  expect([seen[0].event, seen[2].event].every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(seen[1].event instanceof CustomEvent).to.be.true;
+  expect(seen[3].event instanceof CustomEvent).to.be.true;
 });
 
-it('stays silent on input/change/lr-change for a programmatic value assignment', async () => {
+it('stays silent on native and prefixed value events for a programmatic value assignment', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   await el.updateComplete;
   let count = 0;
-  for (const type of ['input', 'change', 'lr-change']) {
+  for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
     el.addEventListener(type, () => count++);
   }
   el.value = 'b';
@@ -477,6 +486,12 @@ it('disables the select when its containing fieldset is disabled', async () => {
   const triggerEl = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
   expect(getComputedStyle(triggerEl).opacity).to.equal('0.5');
   expect(getComputedStyle(triggerEl).cursor).to.equal('not-allowed');
+  let delegatedCalls = 0;
+  triggerEl.click = () => { delegatedCalls += 1; };
+  triggerEl.focus = () => { delegatedCalls += 1; };
+  el.click();
+  el.focus();
+  expect(delegatedCalls, 'fieldset disablement gates host click/focus delegation').to.equal(0);
 });
 
 it('restores its own explicit `disabled` after an ancestor fieldset re-enables', async () => {
@@ -579,21 +594,23 @@ it('forwards public focus and blur to the trigger', async () => {
   expect(el.shadowRoot!.activeElement).to.equal(null);
 });
 
-it('bridges trigger focus and blur as bubbling, composed host events', async () => {
+it('bridges exactly one native trigger focus/blur pair plus typed aliases', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   const btn = trigger(el);
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  el.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+  el.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+  el.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+  el.addEventListener('lr-blur', () => aliases.push('lr-blur'));
 
-  const focusPromise = oneEvent(el, 'focus');
   btn.focus();
-  const focusEvent = await focusPromise;
-  expect(focusEvent.bubbles).to.be.true;
-  expect(focusEvent.composed).to.be.true;
-
-  const blurPromise = oneEvent(el, 'blur');
   btn.blur();
-  const blurEvent = await blurPromise;
-  expect(blurEvent.bubbles).to.be.true;
-  expect(blurEvent.composed).to.be.true;
+
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
 });
 
 it('reflects an invalid state only after the field has been interacted with once', async () => {

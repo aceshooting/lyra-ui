@@ -37,6 +37,25 @@ describe('lr-button', () => {
     expect(ev.composed).to.be.true;
   });
 
+  it('relays exactly one native focus/blur pair plus one prefixed alias pair', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><lr-button>Save</lr-button></div>`);
+    const el = wrapper.querySelector('lr-button') as LyraButton;
+    const nativeEvents: FocusEvent[] = [];
+    const aliases: string[] = [];
+    wrapper.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+    wrapper.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+    wrapper.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+    wrapper.addEventListener('lr-blur', () => aliases.push('lr-blur'));
+
+    el.focus();
+    el.blur();
+
+    expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+    expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+    expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  });
+
   it('never fires click while disabled or loading (native disabled button semantics)', async () => {
     const disabledEl = (await fixture(html`<lr-button disabled>Save</lr-button>`)) as LyraButton;
     let calls = 0;

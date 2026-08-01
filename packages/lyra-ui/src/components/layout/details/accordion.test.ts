@@ -41,7 +41,9 @@ describe('<lr-accordion>', () => {
     const { accordion, items } = await renderAccordion();
 
     expect(accordion.mode).to.equal('multiple');
+    expect(accordion.getAttribute('mode')).to.equal('multiple');
     expect(accordion.multiple).to.be.true;
+    expect(accordion.hasAttribute('multiple')).to.be.false;
     expect(accordion.iconPlacement).to.equal('end');
     expect(accordion.headingLevel).to.equal('3');
     expect(accordion.appearance).to.equal('outlined');
@@ -55,6 +57,15 @@ describe('<lr-accordion>', () => {
     expect(items.map((item) => item.iconPlacement)).to.deep.equal(['start', 'start', 'start']);
     expect(items.map((item) => item.headingLevel)).to.deep.equal(['2', '2', '2']);
     expect(items.map((item) => item.appearance)).to.deep.equal(['filled', 'filled', 'filled']);
+
+    accordion.headingLevel = 'outside-range';
+    await accordion.updateComplete;
+    await Promise.all(items.map((item) => item.updateComplete));
+    expect(items.map((item) => item.shadowRoot!.querySelector('h3')?.localName)).to.deep.equal([
+      'h3',
+      'h3',
+      'h3',
+    ]);
   });
 
   it('keeps the legacy multiple alias unambiguous and gives an authored mode precedence', async () => {
@@ -69,10 +80,12 @@ describe('<lr-accordion>', () => {
     accordion.multiple = false;
     await accordion.updateComplete;
     expect(accordion.mode).to.equal('single-collapsible');
+    expect(accordion.getAttribute('multiple')).to.equal('false');
 
     accordion.multiple = true;
     await accordion.updateComplete;
     expect(accordion.mode).to.equal('multiple');
+    expect(accordion.hasAttribute('multiple')).to.be.false;
 
     const markupAlias = (await fixture(html`<lr-accordion multiple="false">
       <lr-accordion-item label="One">One</lr-accordion-item>
@@ -116,6 +129,55 @@ describe('<lr-accordion>', () => {
     buttonFor(collapsibleItem).click();
     await collapsed;
     expect(collapsibleItem.expanded).to.be.false;
+  });
+
+  it('runs and honors collapse lifecycle events before replacing the expanded single item', async () => {
+    const accordion = (await fixture(html`<lr-accordion mode="single">
+      <lr-accordion-item id="locked" label="Locked" expanded style=${quickMotion}>Locked</lr-accordion-item>
+      <lr-accordion-item id="next" label="Next" style=${quickMotion}>Next</lr-accordion-item>
+    </lr-accordion>`)) as LyraAccordion;
+    const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    const lifecycle: string[] = [];
+    accordion.addEventListener('lr-expand', (event) => lifecycle.push(`${event.type}:${event.detail.item.id}`));
+    accordion.addEventListener('lr-collapse', (event) => {
+      lifecycle.push(`${event.type}:${event.detail.item.id}`);
+      if (event.detail.item.id === 'locked') event.preventDefault();
+    });
+    accordion.addEventListener('lr-after-expand', (event) =>
+      lifecycle.push(`${event.type}:${event.detail.item.id}`),
+    );
+
+    buttonFor(items[1]!).click();
+    await Promise.all(items.map((item) => item.updateComplete));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    expect(items.map((item) => item.expanded)).to.deep.equal([true, false]);
+    expect(lifecycle).to.deep.equal(['lr-expand:next', 'lr-collapse:locked']);
+  });
+
+  it('emits matching group lifecycle events for item and group methods', async () => {
+    const accordion = (await fixture(html`<lr-accordion>
+      <lr-accordion-item id="method-item" label="Method item" style=${quickMotion}>Content</lr-accordion-item>
+      <lr-accordion-item id="disabled-open" label="Disabled open" disabled expanded style=${quickMotion}>
+        Content
+      </lr-accordion-item>
+    </lr-accordion>`)) as LyraAccordion;
+    const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+
+    const itemExpanded = oneEvent(accordion, 'lr-after-expand');
+    items[0]!.expand();
+    const expandEvent = (await itemExpanded) as CustomEvent<{ item: LyraAccordionItem }>;
+    expect(expandEvent.detail.item.id).to.equal('method-item');
+
+    const collapsedIds: string[] = [];
+    accordion.addEventListener('lr-after-collapse', (event) => collapsedIds.push(event.detail.item.id));
+    const itemCollapsed = oneEvent(items[0]!, 'lr-after-hide');
+    const disabledItemCollapsed = oneEvent(items[1]!, 'lr-after-hide');
+    accordion.collapseAll();
+    await Promise.all([itemCollapsed, disabledItemCollapsed]);
+
+    expect(items.map((item) => item.expanded)).to.deep.equal([false, false]);
+    expect(collapsedIds.sort()).to.deep.equal(['disabled-open', 'method-item']);
   });
 
   it('reconciles excess initially expanded items when entering a single mode', async () => {
@@ -270,6 +332,40 @@ describe('<lr-accordion>', () => {
     expect((outer.querySelector('#outer-one') as LyraAccordionItem).expanded).to.be.true;
   });
 
+  it('restores one valid roving stop after children shrink and after reconnect', async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-accordion appearance="outlined">
+        <lr-accordion-item id="shrink-one" label="One">One</lr-accordion-item>
+        <lr-accordion-item id="shrink-two" label="Two">Two</lr-accordion-item>
+        <lr-accordion-item id="shrink-three" label="Three">Three</lr-accordion-item>
+      </lr-accordion>
+    </div>`);
+    const accordion = wrapper.querySelector('lr-accordion') as LyraAccordion;
+    const second = accordion.querySelector('#shrink-two') as LyraAccordionItem;
+    buttonFor(second).focus();
+    second.remove();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    let remaining = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    await Promise.all(remaining.map((item) => item.updateComplete));
+    expect(remaining.map((item) => buttonFor(item).tabIndex)).to.deep.equal([0, -1]);
+
+    accordion.remove();
+    accordion.appearance = 'filled';
+    wrapper.append(accordion);
+    await accordion.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    remaining = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    await Promise.all(remaining.map((item) => item.updateComplete));
+
+    expect(remaining.map((item) => item.appearance)).to.deep.equal(['filled', 'filled']);
+    expect(remaining.map((item) => buttonFor(item).tabIndex)).to.deep.equal([0, -1]);
+    const expanded = oneEvent(accordion, 'lr-after-expand');
+    buttonFor(remaining[1]!).click();
+    await expanded;
+    expect(remaining[1]!.expanded).to.be.true;
+  });
+
   it('is accessible with populated and expanded content', async () => {
     const accordion = await fixture(html`<lr-accordion>
       <lr-accordion-item label="Shipping" expanded>
@@ -304,9 +400,10 @@ describe('<lr-accordion-item>', () => {
     expect(item.hasAttribute('expanded')).to.be.true;
     expect(item.shadowRoot!.querySelector('[part~="base"][part~="accordion-item"]')).to.exist;
     expect(item.shadowRoot!.querySelector('h2[part~="heading"]')).to.exist;
-    for (const part of ['button', 'label', 'icon', 'panel', 'content']) {
+    for (const part of ['button', 'summary', 'label', 'icon', 'panel', 'content']) {
       expect(item.shadowRoot!.querySelector(`[part~="${part}"]`), `missing part ${part}`).to.exist;
     }
+    expect(getComputedStyle(item.shadowRoot!.querySelector<HTMLElement>('[part~="icon"]')!).order).to.equal('-1');
 
     item.open = false;
     await item.updateComplete;
@@ -336,17 +433,42 @@ describe('<lr-accordion-item>', () => {
     expect(buttonFor(slotItem).textContent).to.not.contain('Details');
   });
 
+  it('gives the canonical label slot precedence and restores the summary alias when it is removed', async () => {
+    const item = (await fixture(html`<lr-accordion-item label="Property label" summary="Summary property">
+      <span id="canonical-label" slot="label">Canonical slot</span>
+      <span id="legacy-label" slot="summary">Summary slot</span>
+      Content
+    </lr-accordion-item>`)) as LyraAccordionItem;
+    const labelSlot = item.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="label"]')!;
+    const summarySlot = item.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="summary"]')!;
+    expect(labelSlot.hidden).to.be.false;
+    expect(summarySlot.hidden).to.be.true;
+
+    item.querySelector('#canonical-label')!.remove();
+    await item.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(labelSlot.hidden).to.be.true;
+    expect(summarySlot.hidden).to.be.false;
+    expect(summarySlot.assignedElements()[0]?.id).to.equal('legacy-label');
+  });
+
   it('supports expand(), collapse(), toggle(), show(), hide(), focus(), blur(), and click()', async () => {
     const item = (await fixture(
       html`<lr-accordion-item label="Methods" style=${quickMotion}>Content</lr-accordion-item>`,
     )) as LyraAccordionItem;
 
-    await item.expand();
+    let settled = oneEvent(item, 'lr-after-show');
+    item.expand();
     expect(item.expanded).to.be.true;
-    await item.collapse();
+    await settled;
+    settled = oneEvent(item, 'lr-after-hide');
+    item.collapse();
     expect(item.expanded).to.be.false;
-    await item.toggle();
+    await settled;
+    settled = oneEvent(item, 'lr-after-show');
+    item.toggle();
     expect(item.expanded).to.be.true;
+    await settled;
     item.hide();
     expect(item.expanded).to.be.false;
     item.show();
@@ -371,7 +493,7 @@ describe('<lr-accordion-item>', () => {
     expect(button.disabled).to.be.true;
     button.click();
     item.click();
-    await item.expand();
+    item.expand();
     expect(item.expanded).to.be.false;
   });
 
@@ -389,13 +511,80 @@ describe('<lr-accordion-item>', () => {
     expect(item.hasAttribute('open')).to.be.false;
   });
 
+  it('keeps a disabled write through the open attribute alias synchronized', async () => {
+    const item = (await fixture(
+      html`<lr-accordion-item label="Disabled alias" disabled>Content</lr-accordion-item>`,
+    )) as LyraAccordionItem;
+
+    item.setAttribute('open', '');
+    await item.updateComplete;
+
+    expect(item.open).to.be.false;
+    expect(item.expanded).to.be.false;
+    expect(item.hasAttribute('open')).to.be.false;
+    expect(item.hasAttribute('expanded')).to.be.false;
+  });
+
+  it('keeps the canonical and Details-compatible spacing hooks live in rendered styles', async () => {
+    const item = (await fixture(html`<lr-accordion-item
+      label="Spacing"
+      style="--lr-accordion-item-spacing: 17px"
+    >Content</lr-accordion-item>`)) as LyraAccordionItem;
+    const button = buttonFor(item);
+    expect(getComputedStyle(button).paddingInlineStart).to.equal('17px');
+
+    item.style.removeProperty('--lr-accordion-item-spacing');
+    item.style.setProperty('--lr-details-spacing', '23px');
+    expect(getComputedStyle(button).paddingInlineStart).to.equal('23px');
+
+    item.style.setProperty('--spacing', '29px');
+    expect(getComputedStyle(button).paddingInlineStart).to.equal('29px');
+
+    item.style.setProperty('--lr-details-font-size', '21px');
+    expect(getComputedStyle(button).fontSize).to.equal('21px');
+  });
+
+  it('mirrors the icon rotation in RTL and lets consumer part styles disable it', async () => {
+    const wrapper = await fixture(html`<div dir="rtl">
+      <style>lr-accordion-item.no-rotation::part(icon) { rotate: none; }</style>
+      <lr-accordion-item label="RTL icon" expanded>Content</lr-accordion-item>
+      <lr-accordion-item class="no-rotation" label="Static icon" expanded>Content</lr-accordion-item>
+    </div>`);
+    const items = [...wrapper.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    const rotatingIcon = items[0]!.shadowRoot!.querySelector<HTMLElement>('[part~="icon"]')!;
+    const staticIcon = items[1]!.shadowRoot!.querySelector<HTMLElement>('[part~="icon"]')!;
+
+    expect(getComputedStyle(rotatingIcon).rotate).to.equal('-90deg');
+    expect(getComputedStyle(staticIcon).rotate).to.equal('none');
+  });
+
+  it('waits for rendered item motion before the inherited Details after-event', async () => {
+    const item = (await fixture(html`<lr-accordion-item
+      label="After timing"
+      style="--show-duration: 80ms"
+    >Content</lr-accordion-item>`)) as LyraAccordionItem;
+    const panel = item.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
+    // Establish the collapsed style in a painted frame so the subsequent state change creates a
+    // real transition rather than being coalesced into the initial render.
+    void panel.offsetWidth;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const after = oneEvent(item, 'lr-after-show');
+
+    const startedAt = performance.now();
+    item.show();
+    await after;
+
+    expect(performance.now() - startedAt).to.be.at.least(50);
+  });
+
   it('publishes the animating custom state only while a transition is settling', async () => {
     const item = (await fixture(html`<lr-accordion-item
       label="Animation state"
       style="--show-duration: 40ms"
     >Content</lr-accordion-item>`)) as LyraAccordionItem;
 
-    const expansion = item.expand();
+    const expansion = oneEvent(item, 'lr-after-show');
+    item.expand();
     await item.updateComplete;
     expect(item.matches(':state(animating)')).to.be.true;
     await expansion;
@@ -412,24 +601,47 @@ describe('<lr-accordion-item>', () => {
     expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
   });
 
-  it('renders motion by default and installs a reduced-motion kill switch for panel and icon', async () => {
+  it('renders motion by default and applies the reduced-motion kill switch to panel and icon', async () => {
     const item = (await fixture(
       html`<lr-accordion-item label="Motion">Content</lr-accordion-item>`,
     )) as LyraAccordionItem;
     const panel = item.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
+    const icon = item.shadowRoot!.querySelector<HTMLElement>('[part~="icon"]')!;
     expect(getComputedStyle(panel).transitionDuration).to.not.equal('0s');
 
-    const reducedRules = item.shadowRoot!.adoptedStyleSheets
+    const reducedRule = item.shadowRoot!.adoptedStyleSheets
       .flatMap((sheet) => [...sheet.cssRules])
-      .filter(
+      .find(
         (rule): rule is CSSMediaRule =>
-          rule instanceof CSSMediaRule && rule.conditionText === '(prefers-reduced-motion: reduce)',
-      )
-      .flatMap((media) => [...media.cssRules])
-      .map((rule) => rule.cssText)
-      .join(' ');
-    expect(reducedRules).to.match(/\[part~=["']panel["']\]/);
-    expect(reducedRules).to.match(/\[part~=["']icon["']\]/);
-    expect(reducedRules).to.include('transition: none');
+          rule instanceof CSSMediaRule &&
+          rule.conditionText === '(prefers-reduced-motion: reduce)' &&
+          [...rule.cssRules].some(
+            (nested) =>
+              nested instanceof CSSStyleRule &&
+              nested.selectorText.includes('panel') &&
+              nested.selectorText.includes('icon'),
+          ),
+      );
+    expect(reducedRule?.conditionText).to.equal('(prefers-reduced-motion: reduce)');
+    const originalCondition = reducedRule!.media.mediaText;
+    try {
+      reducedRule!.media.mediaText = 'all';
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      expect(getComputedStyle(panel).transitionDuration).to.equal('0s');
+      expect(getComputedStyle(icon).transitionDuration).to.equal('0s');
+    } finally {
+      reducedRule!.media.mediaText = originalCondition;
+    }
+  });
+
+  it('localizes the fallback label and is accessible in its own populated expanded state', async () => {
+    const item = (await fixture(html`<lr-accordion-item expanded>
+      <p>Populated panel content.</p>
+    </lr-accordion-item>`)) as LyraAccordionItem;
+    item.strings = { details: 'Localized disclosure' };
+    await item.updateComplete;
+
+    expect(buttonFor(item).textContent).to.contain('Localized disclosure');
+    await expect(item).to.be.accessible();
   });
 });

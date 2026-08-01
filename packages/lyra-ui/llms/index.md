@@ -104,8 +104,8 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-card` · layout/card/card.js — a generic, styled bordered content container: the "small bordered surface with padding" idiom common to hero highlights, clickable grid t...
 - `lr-command-palette` · layout/command-palette/command-palette.js — searchable application command menu with keyboard navigation.
 - `lr-details` · layout/details/details.js — an accessible disclosure panel.
-- `lr-accordion` · layout/details/accordion.js — coordinates slotted `<lr-details>` panels.
-- `lr-accordion-item` · layout/details/accordion-item.js — an accordion-compatible disclosure panel.
+- `lr-accordion` · layout/details/accordion.js — coordinates accessible, vertically stacked expandable sections.
+- `lr-accordion-item` · layout/details/accordion-item.js — an accessible expandable section for `<lr-accordion>`.
 - `lr-breadcrumb` · layout/breadcrumb/breadcrumb.js — a responsive navigation trail.
 - `lr-breadcrumb-item` · layout/breadcrumb/breadcrumb-item.js — one link or current-page label in a breadcrumb.
 - `lr-dashboard-grid` · layout/dashboard-grid/dashboard-grid.js — a responsive, keyboard-accessible widget grid: positions `layout` entries (`DashboardCell`: `x`/`y`/`w`/`h` grid units + a widget descrip...

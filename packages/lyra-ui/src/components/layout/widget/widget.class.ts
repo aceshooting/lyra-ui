@@ -8,7 +8,6 @@ import {
   deepActiveElement,
   type OverlayHandle,
 } from "../../../internal/overlay-manager.js";
-import { lockScroll } from "../../../internal/scroll-lock.js";
 import {
   readPersistedState,
   writePersistedState,
@@ -148,7 +147,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @state() private labelSlotText?: string;
   @state() private hasSublabelSlot = false;
 
-  private releaseScrollLock?: () => void;
   private overlayHandle?: OverlayHandle;
   private explicitTrigger?: HTMLElement;
   private labelSlotObserver?: MutationObserver;
@@ -274,8 +272,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       } else {
         this.activateFullscreenOverlay();
       }
-      if (!this.releaseScrollLock)
-        this.releaseScrollLock = lockScroll(this.ownerDocument);
       queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
     if (this.hasUpdated) {
@@ -290,15 +286,12 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlayHandle?.suspend();
     this.labelSlotObserver?.disconnect();
     this.labelSlotObserver = undefined;
   }
 
   private activateFullscreenOverlay(): void {
-    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () =>
@@ -306,13 +299,13 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       onEscape: this.dismissFullscreen,
       onBackdrop: this.dismissFullscreen,
       restoreFocusTo: this.explicitTrigger,
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
     this.explicitTrigger = undefined;
   }
 
   private deactivateFullscreenOverlay(): void {
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;
   }

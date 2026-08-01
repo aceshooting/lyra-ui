@@ -42,8 +42,8 @@ native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow
 `checkValidity()`.
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
-(`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed), and `lr-clear`
-(inherited, never fired here).
+(`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed) each followed by its
+prefixed alias `lr-focus`/`lr-blur` (no detail), and `lr-clear` (inherited, never fired here).
 
 **Slots:** `label`, `hint`, `error`, `start`, `end`.
 

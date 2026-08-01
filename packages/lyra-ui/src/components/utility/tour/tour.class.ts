@@ -4,7 +4,6 @@ import { keyed } from 'lit/directives/keyed.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { lockScroll } from '../../../internal/scroll-lock.js';
 import {
   activateOverlay,
   collectFocusableElements,
@@ -253,7 +252,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   @state() private hasSlotContent = false;
 
   private overlay?: OverlayHandle;
-  private releaseScrollLock?: () => void;
   private placeCleanup?: () => void;
   private spotlightCleanup?: () => void;
   private interactiveKeyboardTarget?: HTMLElement;
@@ -337,7 +335,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (this.hasUpdated && this.open) {
       if (this.overlay?.isActive()) {
         this.overlay.resume();
-        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
       } else {
         this.activateOverlayInternal();
       }
@@ -360,8 +357,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.disposePositioning();
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.suspend();
     if (this.open) {
       // Deferred a microtask so a synchronous reparent (disconnect immediately followed by
@@ -570,7 +565,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       this.overlay.deactivate({ restoreFocus: false });
       this.overlay = undefined;
     }
-    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlay = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="popover"]') ?? null,
@@ -579,6 +573,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       preferredInitialFocus: () => this.renderRoot.querySelector<HTMLElement>('[part="popover"]'),
       modal: !interactive,
       trapFocus: !interactive,
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
     this.overlayInteractive = interactive;
     return true;
@@ -587,8 +583,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private deactivateOverlayInternal(): void {
     this.disposePositioning();
     this.activeTargetSnapshot = null;
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.deactivate();
     this.overlay = undefined;
     this.overlayInteractive = undefined;

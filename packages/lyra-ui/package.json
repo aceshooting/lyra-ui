@@ -26,6 +26,7 @@
   ],
   "license": "MIT",
   "type": "module",
+  "types": "./dist/lyra.d.ts",
   "author": {
     "name": "Aceshooting",
     "email": "info@aceshooting.com"
@@ -62,7 +63,23 @@
     "web-types.json"
   ],
   "exports": {
-    ".": "./dist/lyra.js",
+    ".": {
+      "types": "./dist/lyra.d.ts",
+      "default": "./dist/lyra.js"
+    },
+    "./custom-elements.json": "./custom-elements.json",
+    "./custom-elements-jsx": {
+      "types": "./dist/custom-elements-jsx.d.ts",
+      "default": "./dist/custom-elements-jsx.js"
+    },
+    "./vue": {
+      "types": "./dist/vue.d.ts",
+      "default": "./dist/vue.js"
+    },
+    "./svelte": {
+      "types": "./dist/svelte.d.ts",
+      "default": "./dist/svelte.js"
+    },
     "./components/*": "./dist/components/*",
     "./translations/*": "./dist/translations/*",
     "./components/agent-tools": "./dist/components/agent-tools/index.js",
@@ -692,10 +709,12 @@
     "build": "node scripts/build.mjs",
     "test": "wtr",
     "test:visual": "node scripts/visual-regression.mjs",
-    "test:platform": "wtr src/internal/form-associated.test.ts src/internal/overlay-manager.test.ts src/components/forms/input/input.test.ts src/components/forms/textarea/textarea.test.ts src/components/forms/checkbox/checkbox.test.ts src/components/forms/radio/radio.test.ts src/components/forms/slider/slider.test.ts src/components/forms/phone-input/phone-input.test.ts src/components/forms/token-input/token-input.test.ts src/components/forms/combobox/combobox.test.ts src/components/forms/select/select.test.ts src/components/forms/date-picker/date-input.test.ts src/components/layout/menu/menu.test.ts src/components/overlays/overlay/overlay.test.ts src/components/overlays/dialog/dialog.test.ts src/components/overlays/drawer/drawer.test.ts src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts src/components/layout/tab-group/tab-group.test.ts src/components/data/tree/tree.test.ts src/components/layout/carousel/carousel.test.ts src/components/data/table/table.test.ts src/components/layout/virtual-list/virtual-list.test.ts",
+    "test:platform": "wtr src/internal/form-associated.test.ts src/internal/overlay-manager.test.ts src/internal/rendered-state.test.ts src/internal/overlay-components.test.ts src/components/forms/input/input.test.ts src/components/forms/textarea/textarea.test.ts src/components/forms/checkbox/checkbox.test.ts src/components/forms/radio/radio.test.ts src/components/forms/slider/slider.test.ts src/components/forms/phone-input/phone-input.test.ts src/components/forms/token-input/token-input.test.ts src/components/forms/combobox/combobox.test.ts src/components/forms/select/select.test.ts src/components/forms/date-picker/date-input.test.ts src/components/layout/menu/menu.test.ts src/components/overlays/overlay/overlay.test.ts src/components/overlays/dialog/dialog.test.ts src/components/overlays/drawer/drawer.test.ts src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts src/components/layout/tab-group/tab-group.test.ts src/components/data/tree/tree.test.ts src/components/layout/carousel/carousel.test.ts src/components/data/table/table.test.ts src/components/layout/virtual-list/virtual-list.test.ts",
     "test:coverage": "WTR_COVERAGE=1 wtr $(find src -name '*.test.ts' -print)",
     "test:watch": "wtr --watch",
     "test:architecture": "node scripts/check-registration-architecture.test.mjs && node scripts/check-registration-architecture.mjs",
+    "check:component-inventory": "node scripts/check-component-inventory.mjs",
+    "test:component-inventory": "node --test scripts/component-inventory.test.mjs",
     "check-side-effects": "node scripts/check-side-effects.mjs",
     "test:side-effects": "node scripts/generate-side-effects.test.mjs",
     "check:script-paths": "node scripts/check-script-paths.mjs",
@@ -710,6 +729,9 @@
     "check:default-strings": "node scripts/check-default-strings.mjs",
     "test:default-strings": "node scripts/check-default-strings.test.mjs",
     "test:tooling": "node scripts/component-families.test.mjs && node scripts/maplibre-peer-range.test.mjs && node scripts/migrate-wa.test.mjs && node scripts/visual-regression-compare.test.mjs",
+    "framework-types": "node scripts/generate-framework-types.mjs",
+    "check:framework-types": "node scripts/check-framework-types.mjs",
+    "test:framework-types": "node scripts/generate-framework-types.test.mjs",
     "test:types": "tsc --noEmit -p tsconfig.type-tests.json",
     "style-policy": "node scripts/check-style-policy.mjs",
     "check:source-policy": "node scripts/check-source-policy.mjs",
@@ -733,9 +755,9 @@
     "llms-freshness": "node scripts/check-llms-freshness.mjs",
     "migrate-wa": "node scripts/migrate-wa.mjs",
     "test:migrate-wa": "node scripts/migrate-wa.test.mjs",
-    "contract-policy": "pnpm run check:script-paths && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && node scripts/check-contrast.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run llms-freshness && pnpm run llms:check && pnpm run test:architecture && pnpm run check-side-effects && pnpm run test:side-effects && pnpm run check:form-associated && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:cycles && pnpm run check:interaction-states && pnpm run check:value-named-tokens && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:numeric-guards && pnpm run check:default-strings && pnpm run check:translations && pnpm run check:style-vocabulary && pnpm run test:style-vocabulary && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps",
+    "contract-policy": "pnpm run check:script-paths && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && node scripts/check-contrast.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run check:framework-types && pnpm run test:framework-types && pnpm run llms-freshness && pnpm run llms:check && pnpm run check:component-inventory && pnpm run test:component-inventory && pnpm run test:architecture && pnpm run check-side-effects && pnpm run test:side-effects && pnpm run check:form-associated && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:cycles && pnpm run check:interaction-states && pnpm run check:value-named-tokens && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:numeric-guards && pnpm run check:default-strings && pnpm run check:translations && pnpm run check:style-vocabulary && pnpm run test:style-vocabulary && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps",
     "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types",
-    "prepack": "pnpm run build && pnpm run manifest && pnpm run generate-editor-data && pnpm run llms",
+    "prepack": "pnpm run manifest && pnpm run framework-types && pnpm run build && pnpm run generate-editor-data && pnpm run llms",
     "check:translations": "node scripts/check-translations.mjs",
     "check:style-vocabulary": "node scripts/check-style-vocabulary.mjs",
     "test:style-vocabulary": "node scripts/check-style-vocabulary.test.mjs",
@@ -772,7 +794,10 @@
     "pdfjs-dist": "^6.2.108",
     "postal-mime": "^2.7.5",
     "qrcode": "^1.5.4",
+    "react": ">=19 <20",
     "shiki": "^4.3.1",
+    "svelte": ">=5 <6",
+    "vue": ">=3.5 <4",
     "xlsx": ">=0.20.3 <0.21.0"
   },
   "peerDependenciesMeta": {
@@ -842,6 +867,9 @@
     "qrcode": {
       "optional": true
     },
+    "react": {
+      "optional": true
+    },
     "papaparse": {
       "optional": true
     },
@@ -849,6 +877,12 @@
       "optional": true
     },
     "shiki": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    },
+    "vue": {
       "optional": true
     },
     "xlsx": {
@@ -869,6 +903,7 @@
     "@types/d3-zoom": "^3.0.8",
     "@types/papaparse": "^5.5.2",
     "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.2.18",
     "@types/sinonjs__fake-timers": "^15.0.1",
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
@@ -900,11 +935,14 @@
     "pngjs": "^7.0.0",
     "postal-mime": "^2.7.5",
     "qrcode": "^1.5.4",
+    "react": "^19.2.8",
     "shiki": "^4.4.1",
+    "svelte": "^5.56.8",
     "typescript": "^7.0.2",
+    "vue": "^3.5.40",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "packageManager": "pnpm@11.18.0",
-  "customElements": "custom-elements.json",
+  "customElements": "/tmp/lyra-t09-manifest.YzsH55/custom-elements.json",
   "web-types": "web-types.json"
 }

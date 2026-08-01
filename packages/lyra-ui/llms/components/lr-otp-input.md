@@ -41,7 +41,11 @@ separator (`format="###-###"`), overriding `length`; `type: 'numeric' | 'alpha' 
 count when `format` is set, else `length`, clamped to 1–32. This is the number `value` is truncated
 to and the field is validated against, so read it rather than re-deriving it from `length`.
 
-**Events:** `input`, `change`, and `lr-complete` — `detail: { value }`, once every segment is filled.
+**Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`, and
+`lr-complete` — `detail: { value }`, once every segment is filled. The real input's native `focus`
+and `blur` are re-dispatched from the host as bubbling, composed events,
+since the native ones do not cross the shadow boundary; each is followed by its prefixed alias
+`lr-focus` / `lr-blur` (no detail).
 
 **Slots:** `label`, `hint`, `error` (each replaces the matching attribute for rich content).
 

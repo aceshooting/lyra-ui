@@ -93,16 +93,34 @@ it('updates value and fires lr-input on user typing', async () => {
   expect(el.value).to.equal('hello');
 });
 
-it('also emits composed native-style input and change events', async () => {
+it('relays exactly one native InputEvent payload and one Event change plus their typed aliases', async () => {
   const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
   const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-  const seen: string[] = [];
-  el.addEventListener('input', (event) => { expect(event.composed).to.be.true; seen.push(event.type); });
-  el.addEventListener('change', (event) => { expect(event.composed).to.be.true; seen.push(event.type); });
+  const seen: Array<{ type: string; event: Event }> = [];
+  for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
+    el.addEventListener(type, (event) => seen.push({ type, event }));
+  }
   textarea.value = 'hello';
-  textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  textarea.dispatchEvent(new Event('change', { bubbles: true }));
-  expect(seen).to.deep.equal(['input', 'change']);
+  textarea.dispatchEvent(new InputEvent('input', {
+    bubbles: true,
+    composed: true,
+    data: 'o',
+    inputType: 'insertText',
+    isComposing: true,
+  }));
+  textarea.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+
+  expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  const inputEvent = seen[0].event as InputEvent;
+  expect(inputEvent instanceof InputEvent).to.be.true;
+  expect(inputEvent.target === el && inputEvent.bubbles && inputEvent.composed).to.be.true;
+  expect(inputEvent.data).to.equal('o');
+  expect(inputEvent.inputType).to.equal('insertText');
+  expect(inputEvent.isComposing).to.be.true;
+  expect(seen[2].event.constructor === Event).to.be.true;
+  expect(seen[2].event.target === el && seen[2].event.bubbles && seen[2].event.composed).to.be.true;
+  expect(seen[1].event instanceof CustomEvent).to.be.true;
+  expect(seen[3].event instanceof CustomEvent).to.be.true;
 });
 
 it('fires lr-change on native change (blur-after-edit timing)', async () => {
@@ -679,25 +697,23 @@ describe('switching resize away from "auto"', () => {
 });
 
 describe('blur/focus bubbling', () => {
-  it('re-dispatches a bubbling, composed blur event when the native textarea blurs', async () => {
+  it('relays exactly one native focus/blur pair plus one prefixed alias pair', async () => {
     const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
     const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    ta.focus();
-    const eventPromise = oneEvent(el, 'blur');
-    ta.blur();
-    const ev = await eventPromise;
-    expect(ev.bubbles).to.be.true;
-    expect(ev.composed).to.be.true;
-  });
+    const nativeEvents: FocusEvent[] = [];
+    const aliases: string[] = [];
+    el.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+    el.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+    el.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+    el.addEventListener('lr-blur', () => aliases.push('lr-blur'));
 
-  it('re-dispatches a bubbling, composed focus event when the native textarea focuses', async () => {
-    const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
-    const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    const eventPromise = oneEvent(el, 'focus');
     ta.focus();
-    const ev = await eventPromise;
-    expect(ev.bubbles).to.be.true;
-    expect(ev.composed).to.be.true;
+    ta.blur();
+
+    expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+    expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+    expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
   });
 });
 

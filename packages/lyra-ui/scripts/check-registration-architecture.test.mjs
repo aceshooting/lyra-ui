@@ -4,8 +4,91 @@ import assert from 'node:assert/strict';
 import {
   dynamicRelativeSpecifiers,
   findTransitiveRegistrationPaths,
+  inventoryRootRegistrationSets,
+  parseRootRegistrationAllowlist,
   runtimeRelativeSpecifiers,
 } from './check-registration-architecture.mjs';
+
+const registrationInventory = {
+  schemaVersion: 1,
+  components: [
+    {
+      tag: 'lr-safe',
+      rootIncluded: true,
+      rootExclusion: null,
+      optionalPeers: [],
+    },
+    {
+      tag: 'lr-lazy-peer',
+      rootIncluded: true,
+      rootExclusion: null,
+      optionalPeers: ['lazy-peer'],
+    },
+    {
+      tag: 'lr-opt-in',
+      rootIncluded: false,
+      rootExclusion: 'optional-peer-family',
+      optionalPeers: ['eager-peer'],
+    },
+  ],
+};
+
+assert.deepEqual(
+  inventoryRootRegistrationSets(registrationInventory),
+  {
+    rootTags: ['lr-lazy-peer', 'lr-safe'],
+    optionalTags: ['lr-opt-in'],
+    allTags: ['lr-lazy-peer', 'lr-opt-in', 'lr-safe'],
+  },
+  'inventory rootIncluded and explicit exclusions are the authoritative partition',
+);
+
+assert.deepEqual(
+  parseRootRegistrationAllowlist(`
+    export const ROOT_BARREL_TAGS = ['lr-safe', 'lr-lazy-peer'] as const;
+    export const ROOT_BARREL_OPTIONAL_PEER_TAGS = ['lr-opt-in'] as const;
+  `),
+  {
+    rootTags: ['lr-lazy-peer', 'lr-safe'],
+    optionalTags: ['lr-opt-in'],
+  },
+  'the TypeScript allowlist parser exposes both sets for inventory comparison',
+);
+
+for (const [description, mutate, expected] of [
+  [
+    'unknown inventory schemas fail closed',
+    (fixture) => {
+      fixture.schemaVersion = 2;
+    },
+    /schemaVersion 1/,
+  ],
+  [
+    'duplicate inventory tags fail closed',
+    (fixture) => {
+      fixture.components.push({ ...fixture.components[0] });
+    },
+    /duplicate tag lr-safe/,
+  ],
+  [
+    'included tags cannot carry exclusion metadata',
+    (fixture) => {
+      fixture.components[0].rootExclusion = 'optional-peer-family';
+    },
+    /included tag cannot have a root exclusion/,
+  ],
+  [
+    'excluded tags must name an eager optional peer',
+    (fixture) => {
+      fixture.components[2].optionalPeers = [];
+    },
+    /optional-peer exclusion must name its peers/,
+  ],
+]) {
+  const fixture = structuredClone(registrationInventory);
+  mutate(fixture);
+  assert.throws(() => inventoryRootRegistrationSets(fixture), expected, description);
+}
 
 const modules = new Map([
   [

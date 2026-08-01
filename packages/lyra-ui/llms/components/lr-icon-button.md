@@ -42,6 +42,10 @@ best-effort fallbacks.
 the native button, activating it — including this component's own `type="submit"`/`type="reset"`
 handling, since the click goes through the same `<button>` the pointer/keyboard path does.
 
+**Events:** a plain native `click` crosses the shadow boundary unmodified. The internal button's
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
+its prefixed alias `lr-focus` / `lr-blur` (no detail).
+
 **Slots:** (default) — custom icon content. It is rendered **beside** the `icon` glyph, as a
 sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts only when `icon` is
 set, so with `icon` left empty your content is the button's only child. That is what lets a

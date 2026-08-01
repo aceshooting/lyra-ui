@@ -61,7 +61,11 @@ function paintProbe(root: ShadowRoot) {
 }
 
 function channelDistance(left: string, right: string): number {
-  const channels = (color: string) => (color.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+  // Keep scientific-notation channels intact. Firefox serializes a near-zero Oklab channel as
+  // `5.96046e-8`; splitting that into `5.96046` and `-8` makes the exponent dominate the distance
+  // and can invert an otherwise-obvious deeper pressed fill.
+  const channels = (color: string) =>
+    (color.match(/[-+]?(?:\d*\.?\d+)(?:e[-+]?\d+)?/gi) ?? []).map(Number);
   const a = channels(left);
   const b = channels(right);
   return Math.hypot(...a.map((value, index) => value - (b[index] ?? 0)));
@@ -1189,7 +1193,12 @@ describe('lr-tour', () => {
 
     expect(hovered).to.not.equal(resting);
     expect(pressed).to.not.equal(hovered);
-    expect(channelDistance(pressed, resting)).to.be.greaterThan(channelDistance(hovered, resting));
+    const pressedDistance = channelDistance(pressed, resting);
+    const hoverDistance = channelDistance(hovered, resting);
+    expect(
+      pressedDistance,
+      `resting=${resting}; hovered=${hovered}; pressed=${pressed}`,
+    ).to.be.greaterThan(hoverDistance);
   });
 
   it('wraps the internal previous-button/skip-button hover rule in :where() so a consumer ::part(...):hover override wins without !important', async () => {

@@ -1392,6 +1392,11 @@ cue is active), `lr-highlight-activate` (`detail: { id }`), `lr-anchor-result` (
 found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), and
 `lr-render-error` (`detail: { error }`).
 
+The native `ended`, `error`, `loadedmetadata`, `pause`, `play`, `timeupdate`, and `volumechange`
+events are also relayed exactly once from the host as native `Event` instances. Like the original
+media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
+`lr-*` notifications above remain unchanged.
+
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
 `timeline` (click-to-seek and arrow-key seeking), `timeline-marker` (one per `time-range` highlight;
 `data-tone`, `data-active`), `transcript` (the `<lr-virtual-list>` itself), `cue` (`aria-current`,

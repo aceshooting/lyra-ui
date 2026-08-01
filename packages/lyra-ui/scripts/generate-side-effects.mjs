@@ -2,7 +2,7 @@
 // scripts/check-side-effects.mjs verifies against, so the array is a generated artifact instead
 // of 500+ hand-maintained lines. Run after any component add/move/remove, then commit the diff.
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
-import { basename, dirname, join, relative, resolve } from 'node:path';
+import { basename, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
@@ -21,23 +21,29 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
   const sourceRoot = join(packageDir, 'src');
   const componentsRoot = join(sourceRoot, 'components');
   const translationsRoot = join(sourceRoot, 'translations');
-  const classFiles = walk(componentsRoot)
-    .filter((file) => file.endsWith('.class.ts'))
-    .sort();
+  const inventoryPath = join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
+  const inventory = JSON.parse(readFileSync(inventoryPath, 'utf8'));
+  if (inventory.schemaVersion !== 1 || !Array.isArray(inventory.components)) {
+    throw new Error('component-inventory.json uses an unsupported schema; expected schemaVersion 1 with components[]');
+  }
+  const registrationModules = inventory.components.map((component) => component.registrationModule);
+  if (registrationModules.some((module) => typeof module !== 'string' || !module.startsWith('src/components/') || !module.endsWith('.ts'))) {
+    throw new Error('component-inventory.json contains an invalid registrationModule');
+  }
+  if (new Set(registrationModules).size !== registrationModules.length) {
+    throw new Error('component-inventory.json contains duplicate registrationModule entries');
+  }
 
   const required = new Set(['./src/lyra.ts', './dist/lyra.js']);
 
-  for (const classFile of classFiles) {
-    const dir = dirname(classFile);
-    const base = basename(classFile, '.class.ts');
-    const registrationFile = join(dir, `${base}.ts`);
-    const relPath = relative(componentsRoot, registrationFile).replaceAll('\\', '/');
-    required.add(`./src/components/${relPath}`);
-    required.add(`./dist/components/${relPath.replace(/\.ts$/, '.js')}`);
+  for (const registrationModule of registrationModules) {
+    const sourceEntry = `./${registrationModule.replaceAll('\\', '/')}`;
+    required.add(sourceEntry);
+    required.add(sourceEntry.replace(/^\.\/src\//, './dist/').replace(/\.ts$/, '.js'));
   }
 
-// Side-effect-only modules with no `*.class.ts` of their own, which the class-file-driven walk
-// above therefore never visits, so they have to be derived from the file tree directly:
+// Side-effect-only modules with no inventory registration of their own have to be derived from
+// the file tree directly:
 //   *-register.ts  archive-viewer / ebook-viewer -- register a document-viewer renderer rather
 //                  than a custom element.
 //   *-peer.ts      flag-peer -- installs an optional-peer resolver (`setFlagUrlResolver()`) for a

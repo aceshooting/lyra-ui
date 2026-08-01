@@ -17,6 +17,7 @@ const omittedEmptyStringConverter: ComplexAttributeConverter<string> = {
 export interface LyraRadioEventMap {
   input: Event;
   change: Event;
+  'lr-input': CustomEvent<{ checked: boolean; value: string }>;
   'lr-change': CustomEvent<{ checked: boolean; value: string }>;
   focus: FocusEvent;
   blur: FocusEvent;
@@ -46,10 +47,13 @@ interface RadioGroupController {
  *
  * @customElement lr-radio
  * @slot - Label text.
- * @event input - The user selected this radio.
- * @event change - The user selected this radio.
- * @event lr-change - A standalone radio was selected. `detail: { checked, value }`. An owning
- * radio group emits its aggregate event instead.
+ * @event input - A standalone radio was selected; native-style and composed.
+ * @event lr-input - Standalone prefixed compatibility alias for `input`.
+ *   `detail: { checked, value }`.
+ * @event change - A standalone radio was selected; native-style and composed.
+ * @event lr-change - Standalone prefixed compatibility alias for `change`.
+ *   `detail: { checked, value }`. An owning radio group emits its aggregate value-event sequence
+ *   instead of any child value events.
  * @event focus - The internal radio received focus.
  * @event blur - The internal radio lost focus.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
@@ -413,7 +417,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     return group;
   }
   /** @internal Group-driven activation (arrow keys). Shares the click/Space path so every
-   *  modality emits the same `input`/`change`/`lr-change` trio. */
+   *  modality emits the same native/prefixed value-event sequence from the owning group. */
   activateFromGroup(): void {
     this.select();
   }
@@ -428,6 +432,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     }
     this.checked = true;
     dispatchNativeEvent(this, 'input');
+    this.emit('lr-input', { checked: true, value: this.value });
     dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { checked: true, value: this.value });
   }

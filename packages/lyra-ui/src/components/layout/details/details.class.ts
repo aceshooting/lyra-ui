@@ -157,7 +157,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       const view = this.ownerDocument.defaultView;
       if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
       if (this.transitionToken !== token) return;
-      const base = (this.renderRoot as ShadowRoot).querySelector('[part="base"]');
+      const base = (this.renderRoot as ShadowRoot).querySelector('[part~="base"]');
       // subtree: true so the disclosure marker's own transition (declared on a pseudo-element of a
       // descendant) is waited on too. It resolves through --lr-transition-fast, which the token
       // layer flattens under prefers-reduced-motion, so this settles in that branch as well.

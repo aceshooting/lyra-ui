@@ -54,6 +54,10 @@ text, never as markup. Left unset, the built-in star outline/solid pair is uncha
   `pointerleave` **and** on `pointercancel` (a touch drag taken over by scrolling, palm rejection),
   so an interrupted gesture never leaves the preview frozen. A disconnect or a disablement drops the
   preview silently, with no `end` phase — that teardown wasn't user-driven.
+- `focus` / `blur` — re-dispatched from the internal rating control as bubbling, composed host
+  events, because the native ones do not cross the shadow boundary.
+- `lr-focus` / `lr-blur` — prefixed compatibility aliases (no detail), each fired immediately after
+  its unprefixed counterpart.
 
 **Methods:** `focus()`, `blur()` and `click()` forward to the internal rating control.
 `checkValidity()` and `reportValidity()` behave as on a native form control — `reportValidity()`

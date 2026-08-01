@@ -1034,16 +1034,16 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
   distinctly from a real catalog pick)
-- `change` (`Event`, no detail) — fired alongside `lr-change`, mirroring `<lr-select>`/
+- `change` (`Event`, no detail) — fired on a committed value alongside `lr-change`, mirroring `<lr-select>`/
   `<lr-combobox>`'s native-style value-change pair so native form bindings/framework `v-model`
   handlers behave consistently across the picker family.
-- `input` (`Event`, no detail) — fired immediately before `change` alongside each committed
-  `lr-change`, providing the same native-style value-event pair as `<lr-select>`/`<lr-combobox>`.
-- `blur` (no detail) — re-dispatched from the free-text mode's internal `<input>`'s own `blur`,
-  bubbling and composed unlike the native event. Closed-dropdown mode's trigger `<button>` has no
-  equivalent re-dispatch, matching `<lr-select>`'s own trigger.
-- `focus` (no detail) — re-dispatched from the free-text mode's internal `<input>`'s own `focus`,
-  for the same reason as `blur`.
+- `input` — a payload-preserving `InputEvent` for each free-text edit, and a plain `Event` fired
+  immediately before `change` when either mode commits a value.
+- `blur` / `focus` (no detail) — one native `FocusEvent` re-dispatched from the active control in
+  either mode (the closed trigger button or free-text input), bubbling and composed unlike the
+  shadow-internal original.
+- `lr-blur` and `lr-focus` (no detail) — prefixed compatibility aliases, each fired immediately
+  after its unprefixed counterpart.
 
 **Slots:** `hint` (custom hint content), `error` (custom error content).
 

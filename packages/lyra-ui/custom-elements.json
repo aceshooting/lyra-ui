@@ -19736,14 +19736,6 @@
             },
             {
               "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
               "name": "spellcheck",
               "type": {
                 "text": "boolean"
@@ -22482,14 +22474,6 @@
             },
             {
               "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
               "name": "safeDurationMs",
               "type": {
                 "text": "number | null"
@@ -24024,14 +24008,6 @@
               },
               "privacy": "private",
               "default": "''"
-            },
-            {
-              "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
             },
             {
               "kind": "field",
@@ -71044,6 +71020,11 @@
             },
             {
               "kind": "field",
+              "name": "onTriggerFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onTriggerKeyDown",
               "privacy": "private"
             },
@@ -71271,6 +71252,16 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Blurs the active semantic control in both rendering modes."
+            },
+            {
+              "kind": "method",
               "name": "checkValidity",
               "return": {
                 "type": {
@@ -71364,6 +71355,25 @@
                 }
               },
               "description": "Dispatches the platform-style value-event pair alongside `lr-change`,\nmirroring `<lr-select>`/`<lr-combobox>` so native form bindings and\nframework `v-model` handlers behave consistently across the picker\nfamily."
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Focuses the active semantic control in both closed-dropdown and free-text modes."
             },
             {
               "kind": "method",
@@ -71744,30 +71754,38 @@
           ],
           "events": [
             {
-              "description": "Re-dispatched from the free-text mode's internal native `<input>`'s own `blur` -- bubbling and composed (unlike the native event, which is neither), so a listener above the shadow boundary can observe it. Closed-dropdown mode's trigger `<button>` has no equivalent re-dispatch, matching `<lr-select>`'s own trigger.",
+              "description": "Native blur relayed once from the active control in either rendering mode.",
               "name": "blur"
             },
             {
-              "name": "change",
               "type": {
                 "text": "Event"
               },
-              "description": "Fired alongside `lr-change`, mirroring `<lr-select>`/`<lr-combobox>`'s native-style value-change pair so native form bindings/framework `v-model` handlers behave consistently across the picker family."
+              "description": "Fired alongside `lr-change`, mirroring `<lr-select>`/`<lr-combobox>`'s native-style value-change pair so native form bindings/framework `v-model` handlers behave consistently across the picker family.",
+              "name": "change"
             },
             {
-              "description": "Re-dispatched from the free-text mode's internal native `<input>`'s own `focus`, for the same reason as `blur`.",
+              "description": "Native focus relayed once from the active control in either rendering mode.",
               "name": "focus"
             },
             {
-              "name": "input",
               "type": {
                 "text": "Event"
               },
-              "description": "Fired alongside `change`/`lr-change` (see `change`)."
+              "description": "Fired alongside `change`/`lr-change` (see `change`).",
+              "name": "input"
+            },
+            {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
             },
             {
               "description": "The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.",
               "name": "lr-change"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
             }
           ],
           "attributes": [
@@ -108262,12 +108280,22 @@
             },
             {
               "kind": "field",
+              "name": "onBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onClick",
               "privacy": "private"
             },
             {
               "kind": "field",
               "name": "onEndSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onFocus",
               "privacy": "private"
             },
             {
@@ -108706,6 +108734,24 @@
                   "text": "void"
                 }
               }
+            }
+          ],
+          "events": [
+            {
+              "description": "Native blur relayed once from the internal button or anchor.",
+              "name": "blur"
+            },
+            {
+              "description": "Native focus relayed once from the internal button or anchor.",
+              "name": "focus"
+            },
+            {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
             }
           ],
           "attributes": [
@@ -110886,8 +110932,20 @@
               "name": "input"
             },
             {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
+            },
+            {
               "description": "Compatibility alias fired after `input` and `change` (click or Space). `detail: { checked }`. Not fired for a programmatic `.checked` assignment.",
               "name": "lr-change"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
+            },
+            {
+              "description": "Prefixed compatibility alias for `input`; `detail: { checked }`.",
+              "name": "lr-input"
             }
           ],
           "attributes": [
@@ -121608,7 +121666,17 @@
             },
             {
               "kind": "field",
+              "name": "onBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onFocus",
               "privacy": "private"
             },
             {
@@ -121983,6 +122051,24 @@
                 }
               },
               "description": "Mirrors `<lr-icon>`'s own `syncCustomNodes()`: repopulates `[part=\"fallback\"]` from scratch\non every update so it never drifts from the currently-assigned bare-geometry elements."
+            }
+          ],
+          "events": [
+            {
+              "description": "Native blur relayed once from the internal button.",
+              "name": "blur"
+            },
+            {
+              "description": "Native focus relayed once from the internal button.",
+              "name": "focus"
+            },
+            {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
             }
           ],
           "attributes": [
@@ -123519,12 +123605,20 @@
               "name": "input"
             },
             {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
+            },
+            {
               "description": "Compatibility alias for `change`; `detail: { value }`.",
               "name": "lr-change"
             },
             {
               "description": "The built-in clear button cleared a text/search value, after the input/change events.",
               "name": "lr-clear"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
             },
             {
               "description": "Compatibility alias for `input`; `detail: { value }`.",
@@ -125700,6 +125794,14 @@
               }
             },
             {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur",
+              "inheritedFrom": {
+                "name": "LyraInput",
+                "module": "src/components/forms/input/input.class.ts"
+              }
+            },
+            {
               "description": "Compatibility alias for `change`; `detail: { value }`.",
               "name": "lr-change",
               "inheritedFrom": {
@@ -125710,6 +125812,14 @@
             {
               "description": "The built-in clear button cleared a text/search value, after the input/change events.",
               "name": "lr-clear",
+              "inheritedFrom": {
+                "name": "LyraInput",
+                "module": "src/components/forms/input/input.class.ts"
+              }
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus",
               "inheritedFrom": {
                 "name": "LyraInput",
                 "module": "src/components/forms/input/input.class.ts"
@@ -127554,6 +127664,14 @@
               }
             },
             {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur",
+              "inheritedFrom": {
+                "name": "LyraInput",
+                "module": "src/components/forms/input/input.class.ts"
+              }
+            },
+            {
               "description": "Compatibility alias for `change`; `detail: { value }`.",
               "name": "lr-change",
               "inheritedFrom": {
@@ -127564,6 +127682,14 @@
             {
               "description": "The built-in clear button cleared a text/search value, after the input/change events.",
               "name": "lr-clear",
+              "inheritedFrom": {
+                "name": "LyraInput",
+                "module": "src/components/forms/input/input.class.ts"
+              }
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus",
               "inheritedFrom": {
                 "name": "LyraInput",
                 "module": "src/components/forms/input/input.class.ts"
@@ -129655,16 +129781,32 @@
           ],
           "events": [
             {
+              "description": "Native blur relayed once from the real input.",
+              "name": "blur"
+            },
+            {
               "description": "The value changed and the field settled.",
               "name": "change"
+            },
+            {
+              "description": "Native focus relayed once from the real input.",
+              "name": "focus"
             },
             {
               "description": "The value changed.",
               "name": "input"
             },
             {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
+            },
+            {
               "description": "Every segment is filled. `detail: { value }`.",
               "name": "lr-complete"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
             }
           ],
           "attributes": [
@@ -132633,8 +132775,32 @@
               }
             },
             {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
               "description": "A standalone radio button was selected. `detail: { checked, value }`. An owning radio group emits its aggregate event instead.",
               "name": "lr-change",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "Prefixed compatibility alias for `input`. `detail: { checked, value }`.",
+              "name": "lr-input",
               "inheritedFrom": {
                 "name": "LyraRadio",
                 "module": "src/components/forms/radio/radio.class.ts"
@@ -133431,8 +133597,20 @@
           ],
           "events": [
             {
+              "description": "Native event fired after `input` for the same group selection.",
+              "name": "change"
+            },
+            {
+              "description": "Native event fired from the group when its selected value changes.",
+              "name": "input"
+            },
+            {
               "description": "A radio was selected. `detail: { value, radio }`.",
               "name": "lr-change"
+            },
+            {
+              "description": "Prefixed alias for `input`; `detail: { value, radio }`.",
+              "name": "lr-input"
             }
           ],
           "attributes": [
@@ -134473,8 +134651,20 @@
               "name": "input"
             },
             {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
+            },
+            {
               "description": "A standalone radio was selected. `detail: { checked, value }`. An owning radio group emits its aggregate event instead.",
               "name": "lr-change"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
+            },
+            {
+              "description": "Prefixed compatibility alias for `input`. `detail: { checked, value }`.",
+              "name": "lr-input"
             }
           ],
           "attributes": [
@@ -136794,7 +136984,7 @@
                   "text": "void"
                 }
               },
-              "description": "Dispatches the value-change trio. `input`/`change` stay deliberately unprefixed -- this\ncontrol is a direct `<select>` counterpart, so its value-change events keep `<select>`'s own\nnaming instead of the `lr-` prefix `<lr-slider>` uses for its analogous rename. See the class\ndoc's `change` entry for the full rule. `lr-change` is an additional prefixed alias (matching\n`<lr-checkbox>`), so a consumer can subscribe to a namespaced event. All three carry\n`detail: { value }`."
+              "description": "Dispatches the native value-change pair and prefixed aliases. `input`/`change` stay deliberately unprefixed -- this\ncontrol is a direct `<select>` counterpart, so its value-change events keep `<select>`'s own\nnaming instead of the `lr-` prefix `<lr-slider>` uses for its analogous rename. See the class\ndoc's `change` entry for the full rule. The prefixed aliases carry `detail: { value }`."
             },
             {
               "kind": "method",
@@ -137249,10 +137439,7 @@
               "name": "blur"
             },
             {
-              "type": {
-                "text": "CustomEvent<{ value: string | string[] }>"
-              },
-              "description": "The selection changed. Deliberately unprefixed, mirroring native `<select>`'s own event name -- contrast `<lr-slider>`, which uses `lr-input`/`lr-change` for its analogous value-change pair. Which form controls mirror native unprefixed DOM event names (this one, matching `<select>`) versus which use the `lr-` prefix (`<lr-slider>`, matching `<input type=\"range\">` via a custom name) is a deliberate per-control choice, not an incidental divergence. `detail: { value }` carries the new committed selection: a string in single mode, a `string[]` in `multiple` mode.",
+              "description": "A native `Event` fired when the selection changed. Deliberately unprefixed, mirroring native `<select>`'s own event name -- contrast `<lr-slider>`, which uses `lr-input`/`lr-change` for its analogous value-change pair. Which form controls mirror native unprefixed DOM event names (this one, matching `<select>`) versus which use the `lr-` prefix (`<lr-slider>`, matching `<input type=\"range\">` via a custom name) is a deliberate per-control choice, not an incidental divergence. Read the new selection from `value`.",
               "name": "change"
             },
             {
@@ -137260,11 +137447,12 @@
               "name": "focus"
             },
             {
-              "type": {
-                "text": "CustomEvent<{ value: string | string[] }>"
-              },
-              "description": "Fired alongside `change` on every selection change (native `<select>` doesn't meaningfully distinguish the two either).",
+              "description": "A native `Event` fired alongside `change` on every selection change (native `<select>` doesn't meaningfully distinguish the two either).",
               "name": "input"
+            },
+            {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
             },
             {
               "type": {
@@ -137278,8 +137466,16 @@
               "name": "lr-clear"
             },
             {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
+            },
+            {
               "description": "The listbox closed.",
               "name": "lr-hide"
+            },
+            {
+              "description": "Prefixed compatibility alias for `input`; `detail: { value }`.",
+              "name": "lr-input"
             },
             {
               "description": "The listbox opened.",
@@ -138173,7 +138369,7 @@
                   "text": "void"
                 }
               },
-              "description": "Removes focus from the first internal thumb control."
+              "description": "Removes focus from whichever internal thumb currently owns it."
             },
             {
               "kind": "method",
@@ -138277,6 +138473,42 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "emitChange",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "handle",
+                  "type": {
+                    "text": "SliderHandle"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "emitInput",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "handle",
+                  "type": {
+                    "text": "SliderHandle"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -138520,6 +138752,12 @@
                   "type": {
                     "text": "SliderHandle"
                   }
+                },
+                {
+                  "name": "event",
+                  "type": {
+                    "text": "FocusEvent"
+                  }
                 }
               ]
             },
@@ -138537,6 +138775,12 @@
                   "name": "handle",
                   "type": {
                     "text": "SliderHandle"
+                  }
+                },
+                {
+                  "name": "event",
+                  "type": {
+                    "text": "FocusEvent"
                   }
                 }
               ]
@@ -138812,8 +139056,32 @@
           ],
           "events": [
             {
+              "description": "Native blur relayed once from the thumb losing focus.",
+              "name": "blur"
+            },
+            {
+              "description": "Native event fired when a handle interaction commits.",
+              "name": "change"
+            },
+            {
+              "description": "Native focus relayed once from the focused thumb.",
+              "name": "focus"
+            },
+            {
+              "description": "Native event fired continuously while a user moves a handle.",
+              "name": "input"
+            },
+            {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
+            },
+            {
               "description": "Fired once an interaction commits: on pointerup for a drag, or on keyup for a keyboard step — so a single Arrow/Home/End/ PageUp/PageDown press fires both `lr-input` and `lr-change`, mirroring how native `<input type=range>` fires `change` on every committed step too. `detail: { value, minValue, maxValue, handle }`.",
               "name": "lr-change"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
             },
             {
               "description": "Fired continuously during an active drag or a keyboard step (including OS key-repeat while a key is held), mirroring native `<input type=range>`'s own `input` event. `detail: { value, minValue, maxValue, handle }`.",
@@ -140571,8 +140839,20 @@
               "name": "input"
             },
             {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
+            },
+            {
               "description": "Compatibility alias fired after `input` and `change` (click, Space/Enter, or the programmatic `click()` activation path). `detail: { checked }`. Not fired for a plain `.checked` property assignment, `form.reset()`, or session-state restoration.",
               "name": "lr-change"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
+            },
+            {
+              "description": "Prefixed compatibility alias for `input`; `detail: { checked }`.",
+              "name": "lr-input"
             }
           ],
           "attributes": [
@@ -141799,8 +142079,16 @@
               "name": "input"
             },
             {
+              "description": "Prefixed compatibility alias for the native-style `blur` relay.",
+              "name": "lr-blur"
+            },
+            {
               "description": "Compatibility alias for `change`; `detail: { value }`.",
               "name": "lr-change"
+            },
+            {
+              "description": "Prefixed compatibility alias for the native-style `focus` relay.",
+              "name": "lr-focus"
             },
             {
               "description": "Compatibility alias for `input`; `detail: { value }`.",
@@ -142391,6 +142679,16 @@
             },
             {
               "kind": "field",
+              "name": "onHandleBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHandleFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onKeyDown",
               "privacy": "private"
             },
@@ -142616,7 +142914,7 @@
                   "text": "void"
                 }
               },
-              "description": "Removes focus from the start handle."
+              "description": "Removes focus from whichever handle currently owns it."
             },
             {
               "kind": "method",
@@ -142707,6 +143005,26 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emitChange",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emitInput",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
               }
             },
             {
@@ -142992,8 +143310,32 @@
           ],
           "events": [
             {
+              "description": "Native blur relayed once from either handle.",
+              "name": "blur"
+            },
+            {
+              "description": "Native event fired when a handle interaction or preset commits.",
+              "name": "change"
+            },
+            {
+              "description": "Native focus relayed once from either handle.",
+              "name": "focus"
+            },
+            {
+              "description": "Native event fired continuously while a user moves either handle.",
+              "name": "input"
+            },
+            {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
+            },
+            {
               "description": "Fired on release / keyup-commit, or when a preset button is clicked. `detail: { start, end }`.",
               "name": "lr-change"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
             },
             {
               "description": "Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.",
@@ -145728,14 +146070,6 @@
               },
               "description": "The rail's current width in px while `resizable` — settable/gettable. Unset defers to the\n`--lr-app-rail-width` CSS token's own resolved width.",
               "attribute": "rail-width-px"
-            },
-            {
-              "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
             },
             {
               "kind": "field",
@@ -150066,14 +150400,6 @@
             },
             {
               "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
               "name": "resultModel",
               "type": {
                 "text": "CommandResultModel"
@@ -152507,14 +152833,114 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-accordion-item>` — an accordion-compatible disclosure panel.",
+          "description": "`<lr-accordion-item>` — an accessible expandable section for `<lr-accordion>`.\n\n`expanded`/`label` are the canonical accordion vocabulary. The inherited Details vocabulary is\nalso supported: `open` aliases `expanded`, `summary` aliases `label`, the `summary` slot aliases\nthe `label` slot, and `show()`/`hide()` alias `expand()`/`collapse()`.",
           "name": "LyraAccordionItem",
-          "superclass": {
-            "name": "LyraDetails",
-            "module": "/src/components/layout/details/details.class.js"
-          },
-          "tagName": "lr-accordion-item",
-          "customElement": true,
+          "cssProperties": [
+            {
+              "description": "Header/content spacing.",
+              "name": "--lr-accordion-item-spacing",
+              "default": "var(--lr-form-control-padding-inline)"
+            },
+            {
+              "description": "Expand transition duration.",
+              "name": "--lr-accordion-item-show-duration",
+              "default": "var(--lr-duration-base)"
+            },
+            {
+              "description": "Collapse transition duration.",
+              "name": "--lr-accordion-item-hide-duration",
+              "default": "var(--lr-duration-base)"
+            },
+            {
+              "description": "Expand/collapse easing.",
+              "name": "--lr-accordion-item-easing",
+              "default": "var(--lr-easing-standard)"
+            },
+            {
+              "description": "Upstream (`wa-details`) alias for `--lr-accordion-item-spacing`; set on either name.",
+              "name": "--spacing"
+            },
+            {
+              "description": "Upstream alias for `--lr-accordion-item-show-duration`.",
+              "name": "--show-duration"
+            },
+            {
+              "description": "Upstream alias for `--lr-accordion-item-hide-duration`.",
+              "name": "--hide-duration"
+            },
+            {
+              "description": "Upstream alias for `--lr-accordion-item-easing`.",
+              "name": "--easing"
+            },
+            {
+              "description": "Details compatibility alias for the item's text size.",
+              "name": "--lr-details-font-size",
+              "default": "var(--lr-form-control-font-size)",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/layout/details/details.class.ts"
+              }
+            },
+            {
+              "description": "Details compatibility alias for the item's spacing.",
+              "name": "--lr-details-spacing",
+              "default": "var(--lr-form-control-padding-inline)",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/layout/details/details.class.ts"
+              }
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The outer wrapper. It is the same node as `base`.",
+              "name": "accordion-item"
+            },
+            {
+              "description": "Deprecated compatibility name for the outer wrapper; use `accordion-item`.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/layout/details/details.class.ts"
+              }
+            },
+            {
+              "description": "The trigger button.",
+              "name": "button"
+            },
+            {
+              "description": "Content container inside the panel.",
+              "name": "content",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/layout/details/details.class.ts"
+              }
+            },
+            {
+              "description": "Heading around the trigger; omitted for `heading-level=\"none\"`.",
+              "name": "heading"
+            },
+            {
+              "description": "Expand/collapse icon container.",
+              "name": "icon"
+            },
+            {
+              "description": "Label container.",
+              "name": "label"
+            },
+            {
+              "description": "Expandable panel.",
+              "name": "panel"
+            },
+            {
+              "description": "Details compatibility alias for `button`; both names are on the same trigger.",
+              "name": "summary",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/layout/details/details.class.ts"
+              }
+            }
+          ],
           "slots": [
             {
               "description": "Panel content.",
@@ -152525,118 +152951,16 @@
               }
             },
             {
-              "description": "Summary content. Takes priority over `summary` when any light-DOM child carries `slot=\"summary\"` — the fallback localized \"Details\" text only appears when neither is set.",
+              "description": "Optional decorative expand/collapse icon.",
+              "name": "icon"
+            },
+            {
+              "description": "Header label; takes priority over `label`, `summary`, and the `summary` slot.",
+              "name": "label"
+            },
+            {
+              "description": "Compatibility alias for the `label` slot.",
               "name": "summary",
-              "inheritedFrom": {
-                "name": "LyraDetails",
-                "module": "src/components/layout/details/details.class.ts"
-              }
-            }
-          ],
-          "cssParts": [
-            {
-              "description": "The native details element.",
-              "name": "base",
-              "inheritedFrom": {
-                "name": "LyraDetails",
-                "module": "src/components/layout/details/details.class.ts"
-              }
-            },
-            {
-              "description": "The panel content.",
-              "name": "content",
-              "inheritedFrom": {
-                "name": "LyraDetails",
-                "module": "src/components/layout/details/details.class.ts"
-              }
-            },
-            {
-              "description": "The summary control.",
-              "name": "summary",
-              "inheritedFrom": {
-                "name": "LyraDetails",
-                "module": "src/components/layout/details/details.class.ts"
-              }
-            }
-          ],
-          "cssProperties": [
-            {
-              "description": "Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder.",
-              "name": "--lr-details-font-size",
-              "default": "var(--lr-form-control-font-size)",
-              "inheritedFrom": {
-                "name": "LyraDetails",
-                "module": "src/components/layout/details/details.class.ts"
-              }
-            },
-            {
-              "description": "Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row.",
-              "name": "--lr-details-spacing",
-              "default": "var(--lr-form-control-padding-inline)",
-              "inheritedFrom": {
-                "name": "LyraDetails",
-                "module": "src/components/layout/details/details.class.ts"
-              }
-            }
-          ],
-          "attributes": [
-            {
-              "name": "disabled",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "fieldName": "disabled",
-              "inheritedFrom": {
-                "name": "LyraDetails",
-                "module": "src/components/layout/details/details.class.ts"
-              }
-            },
-            {
-              "name": "locale",
-              "type": {
-                "text": "string"
-              },
-              "default": "''",
-              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
-              "fieldName": "locale",
-              "inheritedFrom": {
-                "name": "LyraElement",
-                "module": "src/internal/lyra-element.ts"
-              }
-            },
-            {
-              "name": "open",
-              "type": {
-                "text": "boolean"
-              },
-              "description": "Whether the panel is expanded. Assigning it runs the full `lr-show`/`lr-hide` lifecycle and\ncan be vetoed the same way, so the property, the reflected attribute and `show()`/`hide()`\ncan never disagree.",
-              "fieldName": "open",
-              "inheritedFrom": {
-                "name": "LyraDetails",
-                "module": "src/components/layout/details/details.class.ts"
-              }
-            },
-            {
-              "name": "size",
-              "type": {
-                "text": "LyraDetailsSize"
-              },
-              "default": "'m'",
-              "description": "Visual density, on the library's shared ladder. Both spellings of every tier are accepted\n(`s`/`small`, `m`/`medium`, `l`/`large`), so markup migrated from Web Awesome or Shoelace\nneeds no attribute rewrite. `m` reproduces the disclosure this component had before `size`\nexisted.",
-              "fieldName": "size",
-              "inheritedFrom": {
-                "name": "LyraDetails",
-                "module": "src/components/layout/details/details.class.ts"
-              }
-            },
-            {
-              "name": "summary",
-              "type": {
-                "text": "string"
-              },
-              "default": "''",
-              "fieldName": "summary",
               "inheritedFrom": {
                 "name": "LyraDetails",
                 "module": "src/components/layout/details/details.class.ts"
@@ -152669,6 +152993,17 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "appearance",
+              "type": {
+                "text": "LyraAccordionAppearance"
+              },
+              "default": "'outlined'",
+              "description": "Visual treatment inherited from the owning accordion.",
+              "attribute": "appearance",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -152727,6 +153062,49 @@
             },
             {
               "kind": "field",
+              "name": "expanded",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether the panel is expanded. This is synchronized bidirectionally with `open`.",
+              "attribute": "expanded",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "handleLabelSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "handleSummarySlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "handleTriggerClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "hasLabelSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasLegacySummarySlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "hasSummarySlot",
               "type": {
                 "text": "boolean"
@@ -152740,6 +153118,28 @@
             },
             {
               "kind": "field",
+              "name": "headingLevel",
+              "type": {
+                "text": "LyraAccordionHeadingLevel"
+              },
+              "default": "'3'",
+              "description": "Heading level from 1–6, or `none` to render the button without a heading wrapper.",
+              "attribute": "heading-level",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "iconPlacement",
+              "type": {
+                "text": "LyraAccordionIconPlacement"
+              },
+              "default": "'end'",
+              "description": "Whether the icon appears before or after the label.",
+              "attribute": "icon-placement",
+              "reflects": true
+            },
+            {
+              "kind": "field",
               "name": "inheritedContextObserver",
               "type": {
                 "text": "MutationObserver | undefined"
@@ -152749,6 +153149,22 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "itemInternals",
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Text shown in the trigger. Rich content belongs in the `label` slot.",
+              "attribute": "label"
             },
             {
               "kind": "field",
@@ -152873,6 +153289,23 @@
             },
             {
               "kind": "field",
+              "name": "transitionComplete",
+              "type": {
+                "text": "Promise<void>"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "transitionGeneration",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
               "name": "transitionToken",
               "type": {
                 "text": "number"
@@ -152884,6 +153317,15 @@
                 "name": "LyraDetails",
                 "module": "src/components/layout/details/details.class.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "triggerButton",
+              "type": {
+                "text": "HTMLButtonElement | null"
+              },
+              "privacy": "private",
+              "readonly": true
             },
             {
               "kind": "method",
@@ -152958,6 +153400,36 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Remove focus from the internal trigger."
+            },
+            {
+              "kind": "method",
+              "name": "click",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Activate the internal trigger."
+            },
+            {
+              "kind": "method",
+              "name": "collapse",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              },
+              "description": "Collapse with animation. Disabled or already-collapsed items are unchanged."
+            },
+            {
+              "kind": "method",
               "name": "emit",
               "privacy": "protected",
               "return": {
@@ -152995,13 +153467,42 @@
             },
             {
               "kind": "method",
+              "name": "expand",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              },
+              "description": "Expand with animation. Disabled or already-expanded items are unchanged."
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Focus the internal trigger."
+            },
+            {
+              "kind": "method",
               "name": "hide",
               "return": {
                 "type": {
                   "text": "void"
                 }
               },
-              "description": "Collapse the panel. Emits `lr-hide` first — vetoing it leaves the panel open.",
+              "description": "Details-compatible collapse. Prefer `collapse()` in accordion code.",
               "inheritedFrom": {
                 "name": "LyraDetails",
                 "module": "src/components/layout/details/details.class.ts"
@@ -153094,6 +153595,24 @@
             },
             {
               "kind": "method",
+              "name": "renderHeading",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "button",
+                  "type": {
+                    "text": "TemplateResult"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "scheduleAfterUpdate",
               "privacy": "protected",
               "return": {
@@ -153118,6 +153637,42 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "setAnimating",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "animating",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "settleItemTransition",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "expectedExpanded",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -153149,7 +153704,7 @@
                   "text": "void"
                 }
               },
-              "description": "Expand the panel. Emits `lr-show` first — vetoing it leaves the panel closed. A disabled\npanel never opens.",
+              "description": "Details-compatible expansion. Prefer `expand()` in accordion code.",
               "inheritedFrom": {
                 "name": "LyraDetails",
                 "module": "src/components/layout/details/details.class.ts"
@@ -153169,8 +153724,138 @@
                 "name": "LyraDetails",
                 "module": "src/components/layout/details/details.class.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "toggle",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              },
+              "description": "Toggle the expanded state."
             }
           ],
+          "attributes": [
+            {
+              "name": "appearance",
+              "type": {
+                "text": "LyraAccordionAppearance"
+              },
+              "default": "'outlined'",
+              "description": "Visual treatment inherited from the owning accordion.",
+              "fieldName": "appearance"
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "fieldName": "disabled",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/layout/details/details.class.ts"
+              }
+            },
+            {
+              "name": "expanded",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether the panel is expanded. This is synchronized bidirectionally with `open`.",
+              "fieldName": "expanded"
+            },
+            {
+              "name": "heading-level",
+              "type": {
+                "text": "LyraAccordionHeadingLevel"
+              },
+              "default": "'3'",
+              "description": "Heading level from 1–6, or `none` to render the button without a heading wrapper.",
+              "fieldName": "headingLevel"
+            },
+            {
+              "name": "icon-placement",
+              "type": {
+                "text": "LyraAccordionIconPlacement"
+              },
+              "default": "'end'",
+              "description": "Whether the icon appears before or after the label.",
+              "fieldName": "iconPlacement"
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Text shown in the trigger. Rich content belongs in the `label` slot.",
+              "fieldName": "label"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "open",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether the panel is expanded. Assigning it runs the full `lr-show`/`lr-hide` lifecycle and\ncan be vetoed the same way, so the property, the reflected attribute and `show()`/`hide()`\ncan never disagree.",
+              "fieldName": "open",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/layout/details/details.class.ts"
+              }
+            },
+            {
+              "name": "size",
+              "type": {
+                "text": "LyraDetailsSize"
+              },
+              "default": "'m'",
+              "description": "Visual density, on the library's shared ladder. Both spellings of every tier are accepted\n(`s`/`small`, `m`/`medium`, `l`/`large`), so markup migrated from Web Awesome or Shoelace\nneeds no attribute rewrite. `m` reproduces the disclosure this component had before `size`\nexisted.",
+              "fieldName": "size",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/layout/details/details.class.ts"
+              }
+            },
+            {
+              "name": "summary",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "summary",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/layout/details/details.class.ts"
+              }
+            }
+          ],
+          "cssStates": [
+            {
+              "description": "Present while an expand/collapse transition is settling.",
+              "name": "animating"
+            }
+          ],
+          "superclass": {
+            "name": "LyraDetails",
+            "module": "/src/components/layout/details/details.class.js"
+          },
+          "tagName": "lr-accordion-item",
+          "customElement": true,
           "events": [
             {
               "description": "The panel is closed and its marker transition has finished.",
@@ -153255,7 +153940,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-accordion>` — coordinates slotted `<lr-details>` panels.",
+          "description": "`<lr-accordion>` — coordinates accessible, vertically stacked expandable sections.\n\n`mode=\"multiple\"` allows any number of items to expand. `single` permits at most one and keeps\nthe active item open when it is activated again. `single-collapsible` also permits at most one,\nbut allows all items to be collapsed. Direct `<lr-details>` children remain supported for\ncompatibility; the full accordion presentation and roving-keyboard contract applies to\n`<lr-accordion-item>` children.",
           "name": "LyraAccordion",
           "cssParts": [
             {
@@ -153265,11 +153950,20 @@
           ],
           "slots": [
             {
-              "description": "`<lr-details>` panels.",
+              "description": "Direct `<lr-accordion-item>` elements, or legacy `<lr-details>` panels.",
               "name": ""
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "_mode",
+              "type": {
+                "text": "LyraAccordionMode"
+              },
+              "privacy": "private",
+              "default": "'multiple'"
+            },
             {
               "kind": "field",
               "name": "afterUpdateCallbacks",
@@ -153282,6 +153976,17 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "appearance",
+              "type": {
+                "text": "LyraAccordionAppearance"
+              },
+              "default": "'outlined'",
+              "description": "Visual treatment applied to the group and its direct items.",
+              "attribute": "appearance",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -153326,6 +154031,73 @@
             },
             {
               "kind": "field",
+              "name": "handleFocusIn",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "handleItemStateChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "handleItemTrigger",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "handleKeyDown",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "handlePanelAfterHide",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "handlePanelAfterShow",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "handlePanelHide",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "handlePanelShow",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "handleSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "headingLevel",
+              "type": {
+                "text": "LyraAccordionHeadingLevel"
+              },
+              "default": "'3'",
+              "description": "Heading level applied to direct accordion items.",
+              "attribute": "heading-level",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "iconPlacement",
+              "type": {
+                "text": "LyraAccordionIconPlacement"
+              },
+              "default": "'end'",
+              "description": "Icon position applied to direct accordion items.",
+              "attribute": "icon-placement",
+              "reflects": true
+            },
+            {
+              "kind": "field",
               "name": "inheritedContextObserver",
               "type": {
                 "text": "MutationObserver | undefined"
@@ -153353,30 +154125,30 @@
             },
             {
               "kind": "field",
-              "name": "multiple",
+              "name": "mode",
               "type": {
-                "text": "boolean"
+                "text": "LyraAccordionMode"
               },
-              "default": "false",
-              "attribute": "multiple",
+              "description": "Controls whether one or multiple items can be expanded.",
+              "attribute": "mode",
               "reflects": true
             },
             {
               "kind": "field",
-              "name": "onPanelToggle",
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
-              "name": "onSlotChange",
-              "privacy": "private"
+              "name": "multiple",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Compatibility alias for `mode`: true means `multiple`; false means `single-collapsible`.\nWhen both attributes occur in initial markup, the explicit `mode` attribute wins.",
+              "attribute": "multiple",
+              "reflects": true
             },
             {
               "kind": "field",
               "name": "panels",
               "privacy": "private",
               "readonly": true,
-              "default": "new Set<LyraDetails>()"
+              "default": "new Set<LyraAccordionPanel>()"
             },
             {
               "kind": "field",
@@ -153389,6 +154161,20 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "pendingTransitions",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new WeakMap<LyraAccordionPanel, LyraAccordionTransition>()"
+            },
+            {
+              "kind": "field",
+              "name": "performingTransitions",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new WeakMap<LyraAccordionPanel, LyraAccordionTransition>()"
             },
             {
               "kind": "field",
@@ -153484,6 +154270,52 @@
             },
             {
               "kind": "method",
+              "name": "collapseAll",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Collapse every direct expanded item."
+            },
+            {
+              "kind": "method",
+              "name": "collapseSiblings",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "source",
+                  "type": {
+                    "text": "LyraAccordionPanel"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "directPanel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "LyraAccordionPanel | undefined"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "text": "Event"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "emit",
               "privacy": "protected",
               "return": {
@@ -153518,6 +154350,62 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "enabledItems",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "LyraAccordionItem[]"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "expandAll",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Expand every direct enabled item. No-op outside `multiple` mode."
+            },
+            {
+              "kind": "method",
+              "name": "isAccordionItem",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "panel is LyraAccordionItem"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "panel",
+                  "type": {
+                    "text": "LyraAccordionPanel"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "isExpanded",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "panel",
+                  "type": {
+                    "text": "LyraAccordionPanel"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -153558,6 +154446,30 @@
             },
             {
               "kind": "method",
+              "name": "markPending",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "panel",
+                  "type": {
+                    "text": "LyraAccordionPanel"
+                  }
+                },
+                {
+                  "name": "transition",
+                  "type": {
+                    "text": "LyraAccordionTransition"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "observeInheritedContext",
               "privacy": "private",
               "return": {
@@ -153572,7 +154484,31 @@
             },
             {
               "kind": "method",
-              "name": "reconcileOpenPanels",
+              "name": "performPanelState",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "panel",
+                  "type": {
+                    "text": "LyraAccordionPanel"
+                  }
+                },
+                {
+                  "name": "expanded",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "reconcileExpandedPanels",
               "privacy": "private",
               "return": {
                 "type": {
@@ -153616,6 +154552,24 @@
             },
             {
               "kind": "method",
+              "name": "requestCollapse",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "panel",
+                  "type": {
+                    "text": "LyraAccordionPanel"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "scheduleAfterUpdate",
               "privacy": "protected",
               "return": {
@@ -153640,9 +154594,83 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "syncPresentation",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "syncRovingTabIndex",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "preferred",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraAccordionItem"
+                  }
+                }
+              ]
+            }
+          ],
+          "events": [
+            {
+              "description": "Emitted after a direct item finishes collapsing. `detail: { item }`.",
+              "name": "lr-after-collapse"
+            },
+            {
+              "description": "Emitted after a direct item finishes expanding. `detail: { item }`.",
+              "name": "lr-after-expand"
+            },
+            {
+              "description": "Emitted before a direct item collapses. `detail: { item }`. Cancelable.",
+              "name": "lr-collapse"
+            },
+            {
+              "description": "Emitted before a direct item expands. `detail: { item }`. Cancelable.",
+              "name": "lr-expand"
             }
           ],
           "attributes": [
+            {
+              "name": "appearance",
+              "type": {
+                "text": "LyraAccordionAppearance"
+              },
+              "default": "'outlined'",
+              "description": "Visual treatment applied to the group and its direct items.",
+              "fieldName": "appearance"
+            },
+            {
+              "name": "heading-level",
+              "type": {
+                "text": "LyraAccordionHeadingLevel"
+              },
+              "default": "'3'",
+              "description": "Heading level applied to direct accordion items.",
+              "fieldName": "headingLevel"
+            },
+            {
+              "name": "icon-placement",
+              "type": {
+                "text": "LyraAccordionIconPlacement"
+              },
+              "default": "'end'",
+              "description": "Icon position applied to direct accordion items.",
+              "fieldName": "iconPlacement"
+            },
             {
               "name": "locale",
               "type": {
@@ -153657,11 +154685,19 @@
               }
             },
             {
+              "name": "mode",
+              "type": {
+                "text": "LyraAccordionMode"
+              },
+              "description": "Controls whether one or multiple items can be expanded.",
+              "fieldName": "mode"
+            },
+            {
               "name": "multiple",
               "type": {
                 "text": "boolean"
               },
-              "default": "false",
+              "description": "Compatibility alias for `mode`: true means `multiple`; false means `single-collapsible`.\nWhen both attributes occur in initial markup, the explicit `mode` attribute wins.",
               "fieldName": "multiple"
             }
           ],
@@ -161404,14 +162440,6 @@
             },
             {
               "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
               "name": "stopLocaleSubscription",
               "type": {
                 "text": "() => void | undefined"
@@ -163649,14 +164677,6 @@
               "default": "\"3.5rem\"",
               "description": "Fixed CSS length the collapsing pane clamps to in the `'rail'` state.",
               "attribute": "rail-width"
-            },
-            {
-              "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
             },
             {
               "kind": "field",
@@ -168949,14 +169969,6 @@
             },
             {
               "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
               "name": "setActiveView",
               "privacy": "private"
             },
@@ -173173,10 +174185,23 @@
             },
             {
               "kind": "field",
+              "name": "mediaController",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new NativeMediaController(this, { onEvent: (event) => this.onNativeMediaEvent(event), })"
+            },
+            {
+              "kind": "field",
               "name": "mediaEl",
               "type": {
                 "text": "HTMLMediaElement | undefined"
               },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "mediaRef",
               "privacy": "private"
             },
             {
@@ -173224,37 +174249,7 @@
             },
             {
               "kind": "field",
-              "name": "onLoadedMetadata",
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
-              "name": "onMediaError",
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
-              "name": "onPause",
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
-              "name": "onPlay",
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
               "name": "onPlaybackFailure",
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
-              "name": "onSeeked",
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
-              "name": "onTimeUpdate",
               "privacy": "private"
             },
             {
@@ -173292,15 +174287,6 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
-            },
-            {
-              "kind": "field",
-              "name": "pendingSeek",
-              "type": {
-                "text": "number | null"
-              },
-              "privacy": "private",
-              "default": "null"
             },
             {
               "kind": "field",
@@ -173590,24 +174576,6 @@
             },
             {
               "kind": "method",
-              "name": "isCurrentMediaEvent",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "boolean"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "event",
-                  "type": {
-                    "text": "Event"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
               "name": "localize",
               "privacy": "protected",
               "return": {
@@ -173655,6 +174623,84 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "onLoadedMetadata",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "onMediaError",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "onNativeMediaEvent",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "text": "Event"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "onPause",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "onPlay",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "onSeeked",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "onTimeUpdate",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
               }
             },
             {
@@ -179809,14 +180855,6 @@
             {
               "kind": "field",
               "name": "previous"
-            },
-            {
-              "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
             },
             {
               "kind": "field",
@@ -188031,14 +189069,6 @@
             },
             {
               "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
               "name": "srLabelId",
               "privacy": "private",
               "readonly": true
@@ -189032,18 +190062,6 @@
               "description": "Which edge the drawer slides in from. `end` by default, matching `wa-drawer`; it used to be\n`start`, so a mechanical rename silently moved every migrated drawer to the other side.",
               "attribute": "placement",
               "reflects": true
-            },
-            {
-              "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private",
-              "inheritedFrom": {
-                "name": "LyraDialog",
-                "module": "src/components/overlays/dialog/dialog.class.ts"
-              }
             },
             {
               "kind": "field",
@@ -197154,7 +198172,17 @@
             },
             {
               "kind": "field",
+              "name": "onBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onFocus",
               "privacy": "private"
             },
             {
@@ -197756,8 +198784,24 @@
           ],
           "events": [
             {
+              "description": "Native blur relayed once from the internal slider control.",
+              "name": "blur"
+            },
+            {
+              "description": "Native focus relayed once from the internal slider control.",
+              "name": "focus"
+            },
+            {
+              "description": "Prefixed compatibility alias for `blur`.",
+              "name": "lr-blur"
+            },
+            {
               "description": "The rating changed. `detail: { value }`.",
               "name": "lr-change"
+            },
+            {
+              "description": "Prefixed compatibility alias for `focus`.",
+              "name": "lr-focus"
             },
             {
               "description": "The pointer entered, moved across, or left the symbols while the rating is settable. `detail: { phase, value }`, where `value` is the rating that committing the current pointer position would produce — enough to render a live description of what is being hovered.",
@@ -236604,14 +237648,6 @@
               "name": "progressTextId",
               "privacy": "private",
               "readonly": true
-            },
-            {
-              "kind": "field",
-              "name": "releaseScrollLock",
-              "type": {
-                "text": "() => void | undefined"
-              },
-              "privacy": "private"
             },
             {
               "kind": "field",

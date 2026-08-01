@@ -2,7 +2,6 @@ import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type P
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { lockScroll } from '../../../internal/scroll-lock.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
@@ -297,7 +296,6 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // two source properties changed.
   private overlayActive = false;
   private justOpened = false;
-  private releaseScrollLock?: () => void;
   private overlayHandle?: OverlayHandle;
   private explicitTrigger?: HTMLElement;
   private readonly navId = nextId('app-rail-nav');
@@ -542,7 +540,6 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       } else {
         this.activateMobileOverlay();
       }
-      if (!this.releaseScrollLock) this.releaseScrollLock = lockScroll(this.ownerDocument);
       queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
     if (this.hasUpdated) {
@@ -555,27 +552,24 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.teardownMediaQueries();
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlayHandle?.suspend();
     this.endResizerGesture();
   }
 
   private activateMobileOverlay(): void {
-    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
       onEscape: () => this.setOpen(false),
       onBackdrop: () => this.setOpen(false),
       restoreFocusTo: this.explicitTrigger,
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
     this.explicitTrigger = undefined;
   }
 
   private deactivateMobileOverlay(): void {
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;
   }

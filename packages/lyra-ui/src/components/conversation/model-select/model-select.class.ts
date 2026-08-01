@@ -113,7 +113,8 @@ export interface LyraModelSelectEventMap {
  * @event {Event} change - Fired alongside `lr-change`, mirroring `<lr-select>`/`<lr-combobox>`'s
  *   native-style value-change pair so native form bindings/framework `v-model` handlers behave
  *   consistently across the picker family.
- * @event {Event} input - Fired alongside `change`/`lr-change` (see `change`).
+ * @event {Event} input - A payload-preserving `InputEvent` on each free-text edit, and a plain
+ *   native `Event` alongside `change` when either rendering mode commits a value.
  * @event blur - Native blur relayed once from the active control in either rendering mode.
  * @event focus - Native focus relayed once from the active control in either rendering mode.
  * @event lr-blur - Prefixed compatibility alias for `blur`.

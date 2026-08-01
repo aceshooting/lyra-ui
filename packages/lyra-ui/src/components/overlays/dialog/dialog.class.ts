@@ -1,7 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { lockScroll } from '../../../internal/scroll-lock.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
@@ -215,7 +214,6 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   @state() private hasHeaderActionsSlot = false;
   @state() private headingText?: string;
 
-  private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
   private headingObserver?: MutationObserver;
   /** Invalidates any in-flight `lr-after-show`/`lr-after-hide` wait, so a lifecycle interrupted by
@@ -261,7 +259,6 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     if (this.hasUpdated && this.open) {
       if (this.overlay?.isActive()) {
         this.overlay.resume();
-        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
       } else {
         this.activateOverlay();
       }
@@ -273,8 +270,6 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   override disconnectedCallback(): void {
     this.headingObserver?.disconnect();
     super.disconnectedCallback();
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.suspend();
     // Transient exit-animation state never survives a detach: a reattached dialog re-runs its
     // own lifecycle from scratch, and a pending after-event must not fire for a transition the
@@ -474,18 +469,17 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   private activateOverlay(): void {
     if (!this.isConnected || this.overlay?.isActive()) return;
-    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlay = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
       onEscape: () => this.close('escape'),
       onBackdrop: () => this.close('backdrop'),
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
   }
 
   private deactivateOverlay(): void {
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.deactivate();
     this.overlay = undefined;
   }

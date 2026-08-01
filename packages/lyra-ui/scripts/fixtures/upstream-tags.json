@@ -22,6 +22,7 @@
   ],
   "webawesome": {
     "version": "3.11.0",
+    "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf",
     "free": [
       "wa-accordion",
       "wa-accordion-item",
@@ -116,6 +117,7 @@
   },
   "shoelace": {
     "version": "2.20.1",
+    "commit": "25bd8ec776609670a932f21390be59a495df497d",
     "tags": [
       "sl-alert",
       "sl-animated-image",
@@ -178,9 +180,9 @@
     ]
   },
   "noCounterpart": {
-    "wa-page": "App-shell page layout element. lyra-ui composes app chrome from lr-app-rail/lr-dock-panel/lr-dashboard-grid rather than shipping one page primitive; no single tag to rename to.",
-    "wa-video": "Video and Video-Playlist are deferred indefinitely by design.",
-    "wa-video-playlist": "Video and Video-Playlist are deferred indefinitely by design."
+    "wa-page": "The required lr-page target is not registered yet, so automatic migration must remain disabled until its full public contract ships.",
+    "wa-video": "The required lr-video target is not registered yet, so automatic migration must remain disabled until its full public contract ships.",
+    "wa-video-playlist": "The required lr-video-playlist target is not registered yet, so automatic migration must remain disabled until its full public contract ships."
   },
   "attributeRenames": [
     {

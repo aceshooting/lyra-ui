@@ -81,6 +81,16 @@ through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` o
   (`LyraTable<T>`, `LyraTableEventMap<T>`, …); annotate the element to keep `detail` payloads typed.
 - **Setting object properties from templates** requires a property binding, never an attribute —
   see "Framework integration".
+- **Framework template declarations are opt-in.** Import exactly the declaration entry your
+  compiler uses once in its type graph:
+  ```ts
+  import type {} from '@aceshooting/lyra-ui/custom-elements-jsx'; // React 19 / JSX
+  import type {} from '@aceshooting/lyra-ui/vue';
+  import type {} from '@aceshooting/lyra-ui/svelte';
+  ```
+  All three are generated from `custom-elements.json` and type the documented properties,
+  attribute aliases, events, element refs, and CSS custom properties. Their emitted JavaScript is
+  empty: they are declaration merging, not runtime wrappers, and they do not register any tag.
 - **Delegated, `document` and `window` listeners: `@aceshooting/lyra-ui/events`.** Component events
   bubble and are composed, so they reach ancestors, `document`, and `window` — but a listener
   attached *there* has no element type to key off and would otherwise receive a bare `Event`. This
@@ -877,15 +887,19 @@ adapter (`loadLibphonenumberAdapter()`) rather than importing `libphonenumber-js
 
 ## Framework integration
 
-Plain custom elements, so they work anywhere — with the usual two caveats.
+Plain custom elements, so they work anywhere — with the usual two caveats. React 19/JSX, Vue 3,
+and Svelte 5 projects can opt into the generated declarations shown under "TypeScript" without
+installing or shipping a wrapper; import the normal granular registration entry separately.
 
 - **Complex values must be property-bound, not attribute-bound.** An attribute stringifies:
   `rows="[object Object]"`. Use the framework's property syntax for anything that isn't a string,
   number, or boolean: Lit `.rows=${rows}`, Vue `:rows.prop="rows"` (or `.rows="rows"`), Angular
   `[rows]="rows"`, Svelte `bind:this` + assignment, React 19+ passes objects to custom-element
   properties natively (earlier React needs a ref).
-- **Events are dashed custom events.** Lit `@lr-change=${…}`, Vue `@lr-change="…"`, Angular
-  `(lr-change)="…"`, Svelte `on:lr-change={…}`, React `ref.addEventListener('lr-change', …)`.
+- **Events are dashed custom events.** Lit `@lr-change=${…}`, React 19
+  `onlr-change={…}`, Vue `@lr-change="…"`, Angular `(lr-change)="…"`, and Svelte 5
+  `onlr-change={…}` (or the legacy `on:lr-change={…}`). Earlier React versions use
+  `ref.addEventListener('lr-change', …)`.
 - **Angular** additionally needs `CUSTOM_ELEMENTS_SCHEMA` in the module/component that uses the tags.
 - In-DOM templates lower-case attribute names; camelCase property names only survive in framework
   templates and JS, never in hand-written HTML attributes.
@@ -926,7 +940,9 @@ The published package ships machine-readable metadata for editors, all regenerat
 `custom-elements.json` (Custom Elements Manifest), `web-types.json` (JetBrains, zero-config), and
 `vscode-html-data.json` / `vscode-css-data.json` (point `html.customData` / `css.customData` at them
 in `.vscode/settings.json`). For an agent, `llms/components/<tag>.md` is the cheaper source; these
-files matter when scaffolding a project's editor configuration.
+files matter when scaffolding a project's editor configuration. Build tools can import the manifest
+through the explicit `@aceshooting/lyra-ui/custom-elements.json` package export; native Node ESM
+uses `with { type: 'json' }` on that import.
 
 ## Independence and migration
 
@@ -1029,13 +1045,21 @@ entry point — open an issue and it can be promoted deliberately.
   for spacing. It returns raw box centers with layer 0 at `y = 0`; centering the drawing in your own
   canvas is yours.
 - **`overlay-manager` → `activateOverlay(options): OverlayHandle`** — per-`Document` coordination
-  for `lr-dialog`, overlay-mode `lr-responsive-panel`, the three tool dialogs, mobile `lr-app-rail`,
-  and fullscreen `lr-widget`. All overlays share one topmost stack: only the top entry handles
-  Escape, Tab trapping, and backdrop dismissal. Content outside the active modal's composed path is
-  inert, including lower overlays and page content added while it is open. Focus traversal crosses
-  slots and open shadow roots; activation preserves focus already inside but pulls outside focus in,
-  and closing restores the still-connected opener. Nested closes restore into the surviving overlay
-  before returning to the original trigger.
+  for exactly these twelve consumers: `lr-dialog`, `lr-drawer`, `lr-tool-approval-dialog`,
+  `lr-tool-result-dialog`, `lr-tool-select-dialog`, `lr-command-palette`, `lr-lightbox`, mobile
+  `lr-app-rail`, overlay-mode `lr-responsive-panel`, floating `lr-split`, fullscreen `lr-widget`,
+  and `lr-tour`. All overlays share one topmost stack: only the top entry handles Escape, Tab
+  trapping, and backdrop dismissal. Content outside the active modal's composed path is inert,
+  including lower overlays and page content added while it is open. Focus traversal crosses slots
+  and open shadow roots; activation preserves focus already inside but pulls outside focus in, and
+  closing restores the still-connected opener. Nested closes restore into the surviving overlay
+  before returning to the original trigger. `OverlayActivationOptions.lockScroll` gives the manager
+  document-scoped, ref-counted ownership of scroll locking for the entry's registered lifetime; it
+  releases that ownership during disconnect or rendered suspension. `suspendWhenUnrendered` defaults
+  to `false`. When enabled, an active entry whose resolved panel generates no CSS layout box —
+  including because `display: none` is set on the host or an ancestor — releases inerting,
+  focus-trap/stack ownership, and manager-owned scroll lock without changing the component's logical
+  open state. It resumes in its original stack order when rendered again.
   When a third-party modal must open above a Lyra modal, call
   `const release = suspendLyraModalsFor(externalModal)` after its root is connected, then call
   `release()` when it closes. The handle is idempotent, document-scoped, and nestable. While any
@@ -1053,9 +1077,9 @@ entry point — open an issue and it can be promoted deliberately.
 
 ## Packaging
 
-`custom-elements.json`, the editor metadata, and every file under `llms/` are regenerated by
-`prepack` and included in `package.json`'s `files` allowlist, so a published tarball always carries
-an up-to-date copy matching its `dist/`.
+`custom-elements.json`, the React/Vue/Svelte declaration entry points, the editor metadata, and every
+file under `llms/` are regenerated by `prepack` and included in `package.json`'s `files` allowlist,
+so a published tarball always carries an up-to-date copy matching its `dist/`.
 
 ## When no component fits, file it
 

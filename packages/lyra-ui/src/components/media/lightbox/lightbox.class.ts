@@ -1,7 +1,6 @@
 import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { lockScroll } from '../../../internal/scroll-lock.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
@@ -215,7 +214,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   @query('lr-zoomable-frame') private frameEl?: LyraZoomableFrame;
 
-  private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
   private readonly captionId = nextId('lightbox-caption');
 
@@ -337,7 +335,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     if (this.hasUpdated && this.open) {
       if (this.overlay?.isActive()) {
         this.overlay.resume();
-        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
       } else {
         this.activateOverlay();
       }
@@ -347,8 +344,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.suspend();
     if (this.open) {
       // Deferred one microtask so a synchronous reparent (disconnect immediately followed by
@@ -365,7 +360,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   private activateOverlay(): void {
     if (this.overlay?.isActive()) return;
-    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlay = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
@@ -376,12 +370,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       // whatever happens to be first in DOM tab order (which could otherwise be a consumer's own
       // actions-slot content if placed before close-button).
       preferredInitialFocus: () => this.shadowRoot?.querySelector<HTMLElement>('[part="close-button"]') ?? null,
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
   }
 
   private deactivateOverlay(): void {
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.deactivate();
     this.overlay = undefined;
   }

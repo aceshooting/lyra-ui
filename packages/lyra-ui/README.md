@@ -474,10 +474,24 @@ at scale" rather than a tested, supported deployment target — a meta-framework
 integration (or a custom `@lit-labs/ssr` server) is still the right place to start, and an issue report
 with the specific component and framework is welcome if something breaks.
 
-## Framework integration (Vue, Angular, Svelte)
+## Framework integration (React, Vue, Angular, Svelte)
 
 Lyra ships plain custom elements with no framework-specific wrapper package, so the friction is the
 same friction any custom-element library has with a non-Lit framework, not anything Lyra-specific:
+
+For tag, property, event, element-ref, and CSS-custom-property types in framework templates, import
+the matching opt-in declaration entry once in your application's type graph:
+
+```ts
+import type {} from '@aceshooting/lyra-ui/custom-elements-jsx'; // React 19 / JSX
+import type {} from '@aceshooting/lyra-ui/vue';
+import type {} from '@aceshooting/lyra-ui/svelte';
+```
+
+These entry points are generated from the same Custom Elements Manifest as the editor metadata.
+They contain types only: they add no runtime wrapper or framework dependency, and they do not
+register elements. Keep importing the granular registration modules your application uses, for
+example `import '@aceshooting/lyra-ui/components/forms/input/input.js'`.
 
 - **Property vs. attribute binding.** A complex-typed property (an object, array, or function — e.g.
   `.strings`, `.selectedRows`, `.markers`) must be bound as a JS *property*, not a stringified
@@ -494,8 +508,10 @@ same friction any custom-element library has with a non-Lit framework, not anyth
   shorthand.** A framework's usual event shorthand (Vue's `@event` on a *Vue component*, Angular's
   `(event)` output binding) is wired for that framework's own event system; a plain custom element's
   events are native `CustomEvent`s and need the same binding path used for native DOM events —
-  `@lr-change="handler"` in Vue, `(lr-change)="handler()"` in Angular, `on:lr-change` in Svelte,
-  or `element.addEventListener('lr-change', handler)` directly when a template binding isn't
+  `onlr-change={handler}` in React 19, `@lr-change="handler"` in Vue,
+  `(lr-change)="handler()"` in Angular, or `onlr-change={handler}` in Svelte 5
+  (`on:lr-change={handler}` remains accepted by Svelte's legacy event-directive syntax). Use
+  `element.addEventListener('lr-change', handler)` directly when a template binding isn't
   available. Lyra's own event names are consistently kebab-case (`lr-change`, `lr-cell-click`,
   `lr-selection-change`, …) rather than camelCase, specifically to stay friendly to this binding
   path — some other custom-element libraries use camelCase event names, which can silently fail to
@@ -524,6 +540,12 @@ Both settings accept an array, so add these alongside any other custom-data file
 already references. WebStorm/IntelliJ users get the same tag/attribute/slot/CSS-part/custom-property
 coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick up a dependency's
 `web-types.json` with no extra configuration once the package is installed.
+
+Build tools can import the published manifest directly through its explicit package export:
+
+```ts
+import manifest from '@aceshooting/lyra-ui/custom-elements.json' with { type: 'json' };
+```
 
 ## Components
 

@@ -20,6 +20,10 @@ it('moves the start handle with ArrowRight and emits lr-input then lr-change', a
     html`<lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const sequence: Array<{ type: string; event: Event }> = [];
+  for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
+    el.addEventListener(type, (event) => sequence.push({ type, event }));
+  }
   expect(startHandle.getAttribute('role')).to.equal('slider');
   // lr-input/lr-change are emitted synchronously from the keydown/keyup
   // handlers, so the listener must be attached before dispatch (matches the
@@ -32,6 +36,12 @@ it('moves the start handle with ArrowRight and emits lr-input then lr-change', a
   el.addEventListener('lr-change', (e) => (changeDetail = (e as CustomEvent).detail));
   startHandle.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
   expect(changeDetail!.start).to.equal(25);
+  expect(sequence.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  expect(sequence[0].event.constructor === Event).to.be.true;
+  expect(sequence[2].event.constructor === Event).to.be.true;
+  expect(sequence[0].event.target === el && sequence[2].event.target === el).to.be.true;
+  expect(sequence[1].event instanceof CustomEvent).to.be.true;
+  expect((sequence[1].event as CustomEvent).detail).to.deep.equal({ start: 25, end: 80 });
 });
 
 it('never lets the start handle pass the end handle', async () => {
@@ -53,6 +63,28 @@ it('forwards host focus()/blur() to the start handle', async () => {
   expect(el.shadowRoot!.activeElement === startHandle).to.be.true;
   el.blur();
   expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+it('relays each handle focus/blur as one native pair plus one prefixed alias pair', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><lr-time-range min="0" max="100" start="20" end="80"></lr-time-range></div>
+  `);
+  const el = wrapper.querySelector('lr-time-range') as LyraTimeRange;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  wrapper.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+  wrapper.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+  wrapper.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+  wrapper.addEventListener('lr-blur', () => aliases.push('lr-blur'));
+
+  endHandle.focus();
+  endHandle.blur();
+
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
 });
 
 it('forwards host click() to the start handle', async () => {
@@ -512,6 +544,12 @@ it('uses cursor:not-allowed (not pointer-events:none) when disabled, matching ev
   // to actually change there too, not just on the track.
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   expect(getComputedStyle(startHandle).cursor).to.equal('not-allowed');
+  let delegatedCalls = 0;
+  startHandle.click = () => { delegatedCalls += 1; };
+  startHandle.focus = () => { delegatedCalls += 1; };
+  el.click();
+  el.focus();
+  expect(delegatedCalls, 'fieldset disablement gates host click/focus delegation').to.equal(0);
 });
 
 it('dims with opacity/not-allowed cursor when disabled purely via an ancestor fieldset, not just its own disabled attribute', async () => {

@@ -103,6 +103,8 @@ export interface LyraTimeRangeEventMap {
   'lr-change': CustomEvent<{ start: number; end: number }>;
   focus: FocusEvent;
   blur: FocusEvent;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
 }
 /**
  * `<lr-time-range>` — a two-handle brush/scrubber over a numeric domain.
@@ -141,6 +143,8 @@ export interface LyraTimeRangeEventMap {
  * @event lr-change - Fired on release / keyup-commit, or when a preset button is clicked. `detail: { start, end }`.
  * @event focus - Native focus relayed once from either handle.
  * @event blur - Native blur relayed once from either handle.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart base - The time-range wrapper.
  * @csspart track - The complete range track.
  * @csspart range - The selected range.
@@ -290,10 +294,12 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   private onHandleFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onHandleBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
@@ -406,7 +412,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   /** Activates the start handle, mirroring `<lr-switch>`'s identical `override click()`. Without
    *  this, `HTMLElement.prototype.click()` on the host is a no-op: no click handler is bound to
    *  the host itself, only to the internal `[part="handle-start"]`/`[part="handle-end"]`
-   *  controls. Targets the start handle specifically, matching `focus()`/`blur()` below. */
+   *  controls. Targets the start handle specifically, matching `focus()` below; `blur()` instead
+   *  follows whichever handle currently owns focus. */
   override click(): void {
     if (!this.effectiveDisabled) {
       (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.click();

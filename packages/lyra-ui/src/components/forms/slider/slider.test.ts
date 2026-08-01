@@ -247,6 +247,11 @@ it('moves by one step on ArrowRight/ArrowUp and emits lr-input on keydown, lr-ch
   )) as LyraSlider;
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
 
+  const sequence: Array<{ type: string; event: Event }> = [];
+  for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
+    el.addEventListener(type, (event) => sequence.push({ type, event }));
+  }
+
   let inputDetail: { value: number } | undefined;
   el.addEventListener('lr-input', (e) => (inputDetail = (e as CustomEvent).detail));
   thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -257,6 +262,12 @@ it('moves by one step on ArrowRight/ArrowUp and emits lr-input on keydown, lr-ch
   el.addEventListener('lr-change', (e) => (changeDetail = (e as CustomEvent).detail));
   thumb.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
   expect(changeDetail!.value).to.equal(25);
+  expect(sequence.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  expect(sequence[0].event.constructor === Event).to.be.true;
+  expect(sequence[2].event.constructor === Event).to.be.true;
+  expect(sequence[0].event.target === el && sequence[2].event.target === el).to.be.true;
+  expect(sequence[1].event instanceof CustomEvent).to.be.true;
+  expect((sequence[1].event as CustomEvent).detail.handle).to.equal('value');
 });
 
 it('moves by one step on ArrowLeft/ArrowDown', async () => {
@@ -576,6 +587,30 @@ it('forwards host focus()/blur() to the internal thumb control', async () => {
   expect(el.shadowRoot!.activeElement).to.equal(null);
 });
 
+it('blurs the active range thumb and relays exactly one native pair plus prefixed aliases', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><lr-slider range min-value="20" max-value="80"></lr-slider></div>
+  `);
+  const el = wrapper.querySelector('lr-slider') as LyraSlider;
+  const maxThumb = el.shadowRoot!.querySelector('[part~="thumb-max"]') as HTMLElement;
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  wrapper.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+  wrapper.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+  wrapper.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+  wrapper.addEventListener('lr-blur', () => aliases.push('lr-blur'));
+
+  maxThumb.focus();
+  expect(el.shadowRoot!.activeElement === maxThumb).to.be.true;
+  el.blur();
+
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+});
+
 it('forwards host click() to the internal thumb control', async () => {
   const el = (await fixture(html`<lr-slider></lr-slider>`)) as LyraSlider;
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
@@ -775,6 +810,12 @@ it('formDisabledCallback disables the control via a fieldset', async () => {
   expect(getComputedStyle(el).opacity).to.equal('0.5');
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
   expect(getComputedStyle(thumb).cursor).to.equal('not-allowed');
+  let delegatedCalls = 0;
+  thumb.click = () => { delegatedCalls += 1; };
+  thumb.focus = () => { delegatedCalls += 1; };
+  el.click();
+  el.focus();
+  expect(delegatedCalls, 'fieldset disablement gates host click/focus delegation').to.equal(0);
 });
 
 it('widens the thumb hit/drag area past the visible 16px dot via a transparent ::before', async () => {

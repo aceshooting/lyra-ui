@@ -71,6 +71,32 @@ it('emits input and then lr-complete once every segment is filled', async () => 
   expect(event.detail.value).to.equal('123');
 });
 
+it('relays exactly one native InputEvent with its editing payload from the real input', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><lr-otp-input label="Code" length="4"></lr-otp-input></div>
+  `);
+  const el = wrapper.querySelector('lr-otp-input') as LyraOtpInput;
+  const control = controlOf(el);
+  const events: InputEvent[] = [];
+  wrapper.addEventListener('input', (event) => events.push(event as InputEvent));
+
+  control.value = '7';
+  control.dispatchEvent(new InputEvent('input', {
+    bubbles: true,
+    composed: true,
+    data: '7',
+    inputType: 'insertText',
+    isComposing: true,
+  }));
+
+  expect(events).to.have.lengthOf(1);
+  expect(events[0] instanceof InputEvent).to.be.true;
+  expect(events[0].target === el && events[0].bubbles && events[0].composed).to.be.true;
+  expect(events[0].data).to.equal('7');
+  expect(events[0].inputType).to.equal('insertText');
+  expect(events[0].isComposing).to.be.true;
+});
+
 it('does not emit lr-complete while the code is short', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="3"></lr-otp-input>`);
   let fired = false;
@@ -176,6 +202,12 @@ it('dims the segments and disables the control inside a disabled fieldset', asyn
   expect(el.disabled, 'own disabled property').to.equal(false);
   expect(el.effectiveDisabled, 'effective disabled state').to.equal(true);
   expect(controlOf(el).disabled, 'the real input').to.equal(true);
+  let delegatedCalls = 0;
+  controlOf(el).click = () => { delegatedCalls += 1; };
+  controlOf(el).focus = () => { delegatedCalls += 1; };
+  el.click();
+  el.focus();
+  expect(delegatedCalls, 'fieldset disablement gates host click/focus delegation').to.equal(0);
   const [first] = segmentsOf(el);
   expect(Number(getComputedStyle(first).opacity), 'segment opacity').to.be.lessThan(1);
   expect(getComputedStyle(controlOf(el)).cursor, 'control cursor').to.equal('not-allowed');
@@ -196,6 +228,27 @@ it('marks the next segment active only while focused', async () => {
   await el.updateComplete;
   const active = segmentsOf(el).findIndex((s) => s.getAttribute('part')!.includes('active'));
   expect(active).to.equal(2);
+});
+
+it('relays one native focus/blur pair and one prefixed alias pair from the real input', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><lr-otp-input label="Code" length="4"></lr-otp-input></div>
+  `);
+  const el = wrapper.querySelector('lr-otp-input') as LyraOtpInput;
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  wrapper.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+  wrapper.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+  wrapper.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+  wrapper.addEventListener('lr-blur', () => aliases.push('lr-blur'));
+
+  el.focus();
+  el.blur();
+
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
 });
 
 it('renders the English fallback label with no locale registered', async () => {

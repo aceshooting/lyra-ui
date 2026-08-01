@@ -14,6 +14,7 @@ import { styles } from './accordion.styles.js';
 
 export type LyraAccordionMode = 'single' | 'single-collapsible' | 'multiple';
 export type LyraAccordionPanel = LyraAccordionItem | LyraDetails;
+type LyraAccordionTransition = 'expand' | 'collapse';
 export interface LyraAccordionEventDetail { item: LyraAccordionPanel }
 export interface LyraAccordionEventMap {
   'lr-expand': CustomEvent<LyraAccordionEventDetail>;
@@ -48,8 +49,13 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
 
   private _mode: LyraAccordionMode = 'multiple';
   private readonly panels = new Set<LyraAccordionPanel>();
+  private readonly pendingTransitions = new WeakMap<LyraAccordionPanel, LyraAccordionTransition>();
+  private readonly performingTransitions = new WeakMap<LyraAccordionPanel, LyraAccordionTransition>();
 
-  /** Controls whether one or multiple items can be expanded. */
+  /**
+   * Controls whether one or multiple items can be expanded.
+   * @default 'multiple'
+   */
   @property({ reflect: true })
   get mode(): LyraAccordionMode {
     return this._mode;
@@ -66,6 +72,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   /**
    * Compatibility alias for `mode`: true means `multiple`; false means `single-collapsible`.
    * When both attributes occur in initial markup, the explicit `mode` attribute wins.
+   * @default true
    */
   @property({ reflect: true, converter: trueDefaultBooleanConverter })
   get multiple(): boolean {
@@ -81,7 +88,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   @property({ attribute: 'icon-placement', reflect: true })
   iconPlacement: LyraAccordionIconPlacement = 'end';
 
-  /** Heading level applied to direct accordion items. */
+  /** Heading level applied to direct items. Values other than 1–6 and `none` use h3. */
   @property({ attribute: 'heading-level', reflect: true })
   headingLevel: LyraAccordionHeadingLevel = '3';
 
@@ -121,7 +128,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     if (this.mode !== 'multiple') return;
     for (const panel of this.panels) {
       if (panel.disabled || this.isExpanded(panel)) continue;
-      if (this.isAccordionItem(panel)) void panel.expand();
+      if (this.isAccordionItem(panel)) panel.expand();
       else panel.show();
     }
   }
@@ -130,8 +137,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   collapseAll(): void {
     for (const panel of this.panels) {
       if (!this.isExpanded(panel)) continue;
-      if (this.isAccordionItem(panel)) void panel.collapse();
-      else panel.hide();
+      this.requestCollapse(panel);
     }
   }
 
@@ -175,7 +181,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
         foundExpanded = true;
         continue;
       }
-      panel.open = false;
+      this.performPanelState(panel, false);
     }
   }
 
@@ -195,12 +201,45 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     }
   }
 
-  private collapseSiblings(source: LyraAccordionPanel): void {
+  private markPending(panel: LyraAccordionPanel, transition: LyraAccordionTransition): void {
+    this.pendingTransitions.set(panel, transition);
+    queueMicrotask(() => {
+      if (this.pendingTransitions.get(panel) !== transition) return;
+      const expectedExpanded = transition === 'expand';
+      if (this.isExpanded(panel) !== expectedExpanded) this.pendingTransitions.delete(panel);
+    });
+  }
+
+  private performPanelState(panel: LyraAccordionPanel, expanded: boolean): boolean {
+    const transition: LyraAccordionTransition = expanded ? 'expand' : 'collapse';
+    this.performingTransitions.set(panel, transition);
+    try {
+      if (expanded) panel.show();
+      else panel.hide();
+    } finally {
+      this.performingTransitions.delete(panel);
+    }
+    const changed = this.isExpanded(panel) === expanded;
+    if (!changed && this.pendingTransitions.get(panel) === transition) {
+      this.pendingTransitions.delete(panel);
+    }
+    return changed;
+  }
+
+  private requestCollapse(panel: LyraAccordionPanel): boolean {
+    if (!this.isExpanded(panel)) return true;
+    const before = this.emit('lr-collapse', { item: panel }, { cancelable: true });
+    if (before.defaultPrevented) return false;
+    this.markPending(panel, 'collapse');
+    return this.performPanelState(panel, false);
+  }
+
+  private collapseSiblings(source: LyraAccordionPanel): boolean {
     for (const panel of this.panels) {
       if (panel === source || !this.isExpanded(panel)) continue;
-      if (this.isAccordionItem(panel)) void panel.collapse();
-      else panel.hide();
+      if (!this.requestCollapse(panel)) return false;
     }
+    return true;
   }
 
   private handleSlotChange = (event: Event): void => {
@@ -209,6 +248,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
 
   private handleItemStateChange = (event: CustomEvent<{ item: LyraAccordionItem }>): void => {
     if (!this.panels.has(event.detail.item)) return;
+    event.stopPropagation();
     this.syncRovingTabIndex();
   };
 
@@ -253,73 +293,64 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     next.focus();
   };
 
-  private handleItemTrigger = async (
-    event: CustomEvent<{ item: LyraAccordionItem }>,
-  ): Promise<void> => {
+  private handleItemTrigger = (event: CustomEvent<{ item: LyraAccordionItem }>): void => {
     const { item } = event.detail;
     if (!this.panels.has(item)) return;
-    event.preventDefault();
     event.stopPropagation();
-    if (item.disabled) return;
-
-    if (item.expanded) {
-      if (this.mode === 'single') return;
-      const before = this.emit('lr-collapse', { item }, { cancelable: true });
-      if (before.defaultPrevented) return;
-      await item.collapse();
-      if (!item.expanded) this.emit('lr-after-collapse', { item });
-      return;
-    }
-
-    const before = this.emit('lr-expand', { item }, { cancelable: true });
-    if (before.defaultPrevented) return;
-    if (this.mode !== 'multiple') this.collapseSiblings(item);
-    await item.expand();
-    if (item.expanded) this.emit('lr-after-expand', { item });
+    if (item.disabled || (item.expanded && this.mode === 'single')) event.preventDefault();
   };
 
-  private directLegacyPanel(event: Event): LyraDetails | undefined {
-    const panel = event.target as LyraDetails;
-    return this.panels.has(panel) && !this.isAccordionItem(panel) ? panel : undefined;
+  private directPanel(event: Event): LyraAccordionPanel | undefined {
+    const panel = event.target as LyraAccordionPanel;
+    return this.panels.has(panel) ? panel : undefined;
   }
 
-  private handleLegacyShow = (event: Event): void => {
-    const panel = this.directLegacyPanel(event);
-    if (!panel) return;
+  private handlePanelShow = (event: Event): void => {
+    const panel = this.directPanel(event);
+    if (!panel || event.defaultPrevented) return;
+    if (this.performingTransitions.get(panel) === 'expand') return;
     const before = this.emit('lr-expand', { item: panel }, { cancelable: true });
     if (before.defaultPrevented) {
       event.preventDefault();
       return;
     }
-    if (this.mode !== 'multiple') this.collapseSiblings(panel);
+    if (this.mode !== 'multiple' && !this.collapseSiblings(panel)) {
+      event.preventDefault();
+      return;
+    }
+    this.markPending(panel, 'expand');
   };
 
-  private handleLegacyHide = (event: Event): void => {
-    const panel = this.directLegacyPanel(event);
-    if (!panel) return;
-    if (this.mode === 'single') {
+  private handlePanelHide = (event: Event): void => {
+    const panel = this.directPanel(event);
+    if (!panel || event.defaultPrevented) return;
+    if (this.performingTransitions.get(panel) === 'collapse') return;
+    // Legacy Details panels do not expose the item's internal activation request, so retain the
+    // historical single-mode guard for them. Group-owned sibling/collapseAll changes carry the
+    // `performingTransitions` marker above and can still close them.
+    if (!this.isAccordionItem(panel) && this.mode === 'single') {
       event.preventDefault();
       return;
     }
     if (this.emit('lr-collapse', { item: panel }, { cancelable: true }).defaultPrevented) {
       event.preventDefault();
+      return;
     }
+    this.markPending(panel, 'collapse');
   };
 
-  private handleLegacyAfterShow = (event: Event): void => {
-    const panel = this.directLegacyPanel(event);
-    if (panel) this.emit('lr-after-expand', { item: panel });
+  private handlePanelAfterShow = (event: Event): void => {
+    const panel = this.directPanel(event);
+    if (!panel || this.pendingTransitions.get(panel) !== 'expand' || !this.isExpanded(panel)) return;
+    this.pendingTransitions.delete(panel);
+    this.emit('lr-after-expand', { item: panel });
   };
 
-  private handleLegacyAfterHide = (event: Event): void => {
-    const panel = this.directLegacyPanel(event);
-    if (panel) this.emit('lr-after-collapse', { item: panel });
-  };
-
-  private handlePanelToggle = (event: CustomEvent<{ open: boolean }>): void => {
-    const panel = event.target as LyraAccordionPanel;
-    if (!this.panels.has(panel) || !event.detail.open || this.mode === 'multiple') return;
-    this.collapseSiblings(panel);
+  private handlePanelAfterHide = (event: Event): void => {
+    const panel = this.directPanel(event);
+    if (!panel || this.pendingTransitions.get(panel) !== 'collapse' || this.isExpanded(panel)) return;
+    this.pendingTransitions.delete(panel);
+    this.emit('lr-after-collapse', { item: panel });
   };
 
   override render(): TemplateResult {
@@ -327,11 +358,10 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
       part="base"
       @lr-accordion-item-trigger=${this.handleItemTrigger}
       @lr-accordion-item-state-change=${this.handleItemStateChange}
-      @lr-show=${this.handleLegacyShow}
-      @lr-hide=${this.handleLegacyHide}
-      @lr-after-show=${this.handleLegacyAfterShow}
-      @lr-after-hide=${this.handleLegacyAfterHide}
-      @lr-toggle=${this.handlePanelToggle}
+      @lr-show=${this.handlePanelShow}
+      @lr-hide=${this.handlePanelHide}
+      @lr-after-show=${this.handlePanelAfterShow}
+      @lr-after-hide=${this.handlePanelAfterHide}
       @focusin=${this.handleFocusIn}
       @keydown=${this.handleKeyDown}
     ><slot @slotchange=${this.handleSlotChange}></slot></div>`;

@@ -2,6 +2,48 @@
   "version": 1.1,
   "properties": [
     {
+      "name": "--easing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** — Upstream alias for `--lr-accordion-item-easing`."
+      }
+    },
+    {
+      "name": "--hide-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** — Upstream alias for `--lr-accordion-item-hide-duration`."
+      }
+    },
+    {
+      "name": "--lr-accordion-item-easing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-easing-standard)`) — Expand/collapse easing."
+      }
+    },
+    {
+      "name": "--lr-accordion-item-hide-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Collapse transition duration."
+      }
+    },
+    {
+      "name": "--lr-accordion-item-show-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Expand transition duration."
+      }
+    },
+    {
+      "name": "--lr-accordion-item-spacing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-padding-inline)`) — Header/content spacing."
+      }
+    },
+    {
       "name": "--lr-activity-feed-max-height",
       "description": {
         "kind": "markdown",
@@ -6418,6 +6460,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-zoomable-frame>`** (default: `1`) — The scale factor applied to `[part=\"content\"]`. Written by the component itself on every render from the current `zoom`, so it is a read-out rather than a consumer knob; set the `zoom` property instead."
+      }
+    },
+    {
+      "name": "--show-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** — Upstream alias for `--lr-accordion-item-show-duration`."
+      }
+    },
+    {
+      "name": "--spacing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** — Upstream (`wa-details`) alias for `--lr-accordion-item-spacing`; set on either name."
       }
     }
   ]

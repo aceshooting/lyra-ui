@@ -1,15 +1,49 @@
 {
   "$schema": "https://json.schemastore.org/web-types",
   "name": "@aceshooting/lyra-ui",
-  "version": "7.8.1",
+  "version": "8.0.0",
   "description-markup": "markdown",
   "contributions": {
     "html": {
       "elements": [
         {
           "name": "lr-accordion",
-          "description": "`<lr-accordion>` — coordinates slotted `<lr-details>` panels.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-details>` panels. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The accordion wrapper. |",
+          "description": "`<lr-accordion>` — coordinates accessible, vertically stacked expandable sections.\n\n`mode=\"multiple\"` allows any number of items to expand. `single` permits at most one and keeps\nthe active item open when it is activated again. `single-collapsible` also permits at most one,\nbut allows all items to be collapsed. Direct `<lr-details>` children remain supported for\ncompatibility; the full accordion presentation and roving-keyboard contract applies to\n`<lr-accordion-item>` children.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Direct `<lr-accordion-item>` elements, or legacy `<lr-details>` panels. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The accordion wrapper. |",
           "attributes": [
+            {
+              "name": "appearance",
+              "description": "Visual treatment applied to the group and its direct items.\n\nType: `LyraAccordionAppearance`  \nDefault: `'outlined'`",
+              "value": {
+                "type": [
+                  "LyraAccordionAppearance"
+                ]
+              }
+            },
+            {
+              "name": "heading-level",
+              "description": "Heading level applied to direct accordion items.\n\nType: `LyraAccordionHeadingLevel`  \nDefault: `'3'`",
+              "value": {
+                "type": [
+                  "'1'",
+                  "'2'",
+                  "'3'",
+                  "'4'",
+                  "'5'",
+                  "'6'",
+                  "'none'"
+                ]
+              }
+            },
+            {
+              "name": "icon-placement",
+              "description": "Icon position applied to direct accordion items.\n\nType: `LyraAccordionIconPlacement`  \nDefault: `'end'`",
+              "value": {
+                "type": [
+                  "'start'",
+                  "'end'"
+                ]
+              }
+            },
             {
               "name": "locale",
               "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
@@ -20,8 +54,19 @@
               }
             },
             {
+              "name": "mode",
+              "description": "Controls whether one or multiple items can be expanded.\n\nType: `LyraAccordionMode`",
+              "value": {
+                "type": [
+                  "'single'",
+                  "'single-collapsible'",
+                  "'multiple'"
+                ]
+              }
+            },
+            {
               "name": "multiple",
-              "description": "Type: `boolean`  \nDefault: `false`",
+              "description": "Compatibility alias for `mode`: true means `multiple`; false means `single-collapsible`.\nWhen both attributes occur in initial markup, the explicit `mode` attribute wins.\n\nType: `boolean`",
               "value": {
                 "type": [
                   "boolean"
@@ -32,14 +77,66 @@
         },
         {
           "name": "lr-accordion-item",
-          "description": "`<lr-accordion-item>` — an accordion-compatible disclosure panel.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Panel content. |\n| `summary` | Summary content. Takes priority over `summary` when any light-DOM child carries `slot=\"summary\"` — the fallback localized \"Details\" text only appears when neither is set. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The native details element. |\n| `content` | The panel content. |\n| `summary` | The summary control. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-details-font-size` (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder.\n- `--lr-details-spacing` (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row.",
+          "description": "`<lr-accordion-item>` — an accessible expandable section for `<lr-accordion>`.\n\n`expanded`/`label` are the canonical accordion vocabulary. The inherited Details vocabulary is\nalso supported: `open` aliases `expanded`, `summary` aliases `label`, the `summary` slot aliases\nthe `label` slot, and `show()`/`hide()` alias `expand()`/`collapse()`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Panel content. |\n| `icon` | Optional decorative expand/collapse icon. |\n| `label` | Header label; takes priority over `label`, `summary`, and the `summary` slot. |\n| `summary` | Compatibility alias for the `label` slot. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `accordion-item` | The outer wrapper. It is the same node as `base`. |\n| `base` | Deprecated compatibility name for the outer wrapper; use `accordion-item`. |\n| `button` | The trigger button. |\n| `content` | Content container inside the panel. |\n| `heading` | Heading around the trigger; omitted for `heading-level=\"none\"`. |\n| `icon` | Expand/collapse icon container. |\n| `label` | Label container. |\n| `panel` | Expandable panel. |\n| `summary` | The summary control. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-accordion-item-spacing` (default: `var(--lr-form-control-padding-inline)`) — Header/content spacing.\n- `--lr-accordion-item-show-duration` (default: `var(--lr-duration-base)`) — Expand transition duration.\n- `--lr-accordion-item-hide-duration` (default: `var(--lr-duration-base)`) — Collapse transition duration.\n- `--lr-accordion-item-easing` (default: `var(--lr-easing-standard)`) — Expand/collapse easing.\n- `--spacing` — Upstream (`wa-details`) alias for `--lr-accordion-item-spacing`; set on either name.\n- `--show-duration` — Upstream alias for `--lr-accordion-item-show-duration`.\n- `--hide-duration` — Upstream alias for `--lr-accordion-item-hide-duration`.\n- `--easing` — Upstream alias for `--lr-accordion-item-easing`.\n- `--lr-details-font-size` (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder.\n- `--lr-details-spacing` (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row.",
           "attributes": [
+            {
+              "name": "appearance",
+              "description": "Visual treatment inherited from the owning accordion.\n\nType: `LyraAccordionAppearance`  \nDefault: `'outlined'`",
+              "value": {
+                "type": [
+                  "LyraAccordionAppearance"
+                ]
+              }
+            },
             {
               "name": "disabled",
               "description": "Type: `boolean`  \nDefault: `false`",
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "expanded",
+              "description": "Whether the panel is expanded. This is synchronized bidirectionally with `open`.\n\nType: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "heading-level",
+              "description": "Heading level from 1–6, or `none` to render the button without a heading wrapper.\n\nType: `LyraAccordionHeadingLevel`  \nDefault: `'3'`",
+              "value": {
+                "type": [
+                  "'1'",
+                  "'2'",
+                  "'3'",
+                  "'4'",
+                  "'5'",
+                  "'6'",
+                  "'none'"
+                ]
+              }
+            },
+            {
+              "name": "icon-placement",
+              "description": "Whether the icon appears before or after the label.\n\nType: `LyraAccordionIconPlacement`  \nDefault: `'end'`",
+              "value": {
+                "type": [
+                  "'start'",
+                  "'end'"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Text shown in the trigger. Rich content belongs in the `label` slot.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
                 ]
               }
             },
@@ -20843,6 +20940,30 @@
     "css": {
       "properties": [
         {
+          "name": "--easing",
+          "description": "**`<lr-accordion-item>`** — Upstream alias for `--lr-accordion-item-easing`."
+        },
+        {
+          "name": "--hide-duration",
+          "description": "**`<lr-accordion-item>`** — Upstream alias for `--lr-accordion-item-hide-duration`."
+        },
+        {
+          "name": "--lr-accordion-item-easing",
+          "description": "**`<lr-accordion-item>`** (default: `var(--lr-easing-standard)`) — Expand/collapse easing."
+        },
+        {
+          "name": "--lr-accordion-item-hide-duration",
+          "description": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Collapse transition duration."
+        },
+        {
+          "name": "--lr-accordion-item-show-duration",
+          "description": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Expand transition duration."
+        },
+        {
+          "name": "--lr-accordion-item-spacing",
+          "description": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-padding-inline)`) — Header/content spacing."
+        },
+        {
           "name": "--lr-activity-feed-max-height",
           "description": "**`<lr-activity-feed>`** (default: `16rem`) — Cap on how tall the expanded body grows before it scrolls internally (non-virtualized mode); also sizes the internal virtual-list."
         },
@@ -24509,6 +24630,14 @@
         {
           "name": "--lr-zoomable-frame-zoom",
           "description": "**`<lr-zoomable-frame>`** (default: `1`) — The scale factor applied to `[part=\"content\"]`. Written by the component itself on every render from the current `zoom`, so it is a read-out rather than a consumer knob; set the `zoom` property instead."
+        },
+        {
+          "name": "--show-duration",
+          "description": "**`<lr-accordion-item>`** — Upstream alias for `--lr-accordion-item-show-duration`."
+        },
+        {
+          "name": "--spacing",
+          "description": "**`<lr-accordion-item>`** — Upstream (`wa-details`) alias for `--lr-accordion-item-spacing`; set on either name."
         }
       ]
     }

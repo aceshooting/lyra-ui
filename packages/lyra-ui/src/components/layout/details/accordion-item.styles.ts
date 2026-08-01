@@ -2,7 +2,7 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    --lr-accordion-item-spacing: var(--lr-form-control-padding-inline);
+    --lr-accordion-item-spacing: var(--lr-details-spacing, var(--lr-form-control-padding-inline));
     --lr-accordion-item-show-duration: var(--lr-duration-base);
     --lr-accordion-item-hide-duration: var(--lr-duration-base);
     --lr-accordion-item-easing: var(--lr-easing-standard);
@@ -13,6 +13,7 @@ export const styles = css`
   [part~='accordion-item'] {
     min-inline-size: 0;
     background: transparent;
+    font-size: var(--lr-details-font-size, var(--lr-form-control-font-size));
   }
   :host([appearance='outlined']) [part~='accordion-item'] {
     background: var(--lr-color-surface);
@@ -42,17 +43,17 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  [part~='button']:hover {
+  [part~='button']:where(:hover):where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
-  [part~='button']:active {
+  [part~='button']:where(:active):where(:not(:disabled)) {
     background: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part~='button']:focus-visible {
+  [part~='button']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-width) * -1);
   }
@@ -74,7 +75,7 @@ export const styles = css`
     justify-content: center;
     color: var(--lr-color-text-quiet);
     transition:
-      transform
+      rotate
       var(--hide-duration, var(--lr-accordion-item-hide-duration))
       var(--easing, var(--lr-accordion-item-easing));
   }
@@ -92,14 +93,12 @@ export const styles = css`
   :host(:dir(rtl)) .default-icon {
     transform: rotate(45deg);
   }
-  :host([open]) [part~='icon'],
-  :host([expanded]) [part~='icon'] {
-    transform: rotate(90deg);
+  :host(:where([open], [expanded])) [part~='icon'] {
+    rotate: 90deg;
     transition-duration: var(--show-duration, var(--lr-accordion-item-show-duration));
   }
-  :host([open]:dir(rtl)) [part~='icon'],
-  :host([expanded]:dir(rtl)) [part~='icon'] {
-    transform: rotate(-90deg);
+  :host(:where([open], [expanded]):dir(rtl)) [part~='icon'] {
+    rotate: -90deg;
   }
   [part~='panel'] {
     display: grid;

@@ -164,25 +164,27 @@ it('toggles and emits lr-change with detail.checked on click', async () => {
 });
 
 describe('native form event contract', () => {
-  /** Records the ordered event-name sequence a single activation produces on the host, so the
-   *  assertions below can prove both that the native pair fires *and* that it fires in the
-   *  native order (`input` before `change`) with the `lr-change` compatibility alias last --
-   *  matching `<lr-checkbox>`'s established sequence. */
-  const recordSequence = (el: LyraSwitch): string[] => {
-    const seen: string[] = [];
-    for (const name of ['input', 'change', 'lr-change']) {
-      el.addEventListener(name, (event) => seen.push(event.type));
+  /** Records the complete ordered native/prefixed pair a single activation produces. */
+  const recordSequence = (el: LyraSwitch): Array<{ type: string; event: Event }> => {
+    const seen: Array<{ type: string; event: Event }> = [];
+    for (const name of ['input', 'lr-input', 'change', 'lr-change']) {
+      el.addEventListener(name, (event) => seen.push({ type: event.type, event }));
     }
     return seen;
   };
 
-  it('emits input, change and lr-change in that order on a pointer click', async () => {
+  it('emits exactly one native Event pair and one typed alias pair on a pointer click', async () => {
     const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const seen = recordSequence(el);
 
     base.click();
-    expect(seen).to.deep.equal(['input', 'change', 'lr-change']);
+    expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+    expect(seen[0].event.constructor === Event).to.be.true;
+    expect(seen[2].event.constructor === Event).to.be.true;
+    expect(seen[0].event.target === el && seen[2].event.target === el).to.be.true;
+    expect(seen[1].event instanceof CustomEvent).to.be.true;
+    expect((seen[1].event as CustomEvent).detail).to.deep.equal({ checked: true });
     expect(el.checked).to.be.true;
   });
 
@@ -192,12 +194,15 @@ describe('native form event contract', () => {
     const seen = recordSequence(el);
 
     base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
-    expect(seen).to.deep.equal(['input', 'change', 'lr-change']);
+    expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
 
     base.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
     );
-    expect(seen).to.deep.equal(['input', 'change', 'lr-change', 'input', 'change', 'lr-change']);
+    expect(seen.map(({ type }) => type)).to.deep.equal([
+      'input', 'lr-input', 'change', 'lr-change',
+      'input', 'lr-input', 'change', 'lr-change',
+    ]);
     expect(el.checked).to.be.false;
   });
 
@@ -206,7 +211,7 @@ describe('native form event contract', () => {
     const seen = recordSequence(el);
 
     el.click();
-    expect(seen).to.deep.equal(['input', 'change', 'lr-change']);
+    expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
   });
 
   it('makes input and change bubbling, composed and non-cancelable', async () => {
@@ -235,13 +240,13 @@ describe('native form event contract', () => {
     el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.dispatchEvent(
       new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }),
     );
-    expect(seen).to.deep.equal([]);
+    expect(seen).to.have.lengthOf(0);
 
     el.disabled = false;
     await el.updateComplete;
     el.checked = true;
     await el.updateComplete;
-    expect(seen).to.deep.equal([]);
+    expect(seen).to.have.lengthOf(0);
   });
 
   it('emits neither input nor change from form.reset() or session-state restoration', async () => {
@@ -253,7 +258,7 @@ describe('native form event contract', () => {
 
     form.reset();
     el.formStateRestoreCallback('checked');
-    expect(seen).to.deep.equal([]);
+    expect(seen).to.have.lengthOf(0);
   });
 });
 
@@ -325,22 +330,23 @@ it('forwards focus() and blur() to the internal switch control', async () => {
   expect(el.shadowRoot!.activeElement).to.equal(null);
 });
 
-it('re-dispatches the internal control focus/blur as bubbling, composed host-level events', async () => {
+it('relays exactly one native focus/blur pair plus one prefixed alias pair', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  el.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+  el.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+  el.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+  el.addEventListener('lr-blur', () => aliases.push('lr-blur'));
 
-  const focusPromise = oneEvent(el, 'focus');
   el.focus();
-  const focusEvent = await focusPromise;
-  expect(focusEvent.bubbles).to.be.true;
-  expect(focusEvent.composed).to.be.true;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
-
-  const blurPromise = oneEvent(el, 'blur');
   el.blur();
-  const blurEvent = await blurPromise;
-  expect(blurEvent.bubbles).to.be.true;
-  expect(blurEvent.composed).to.be.true;
   expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
 });
 
 it('reflects aria-invalid on the inner switch only after the field has been interacted with once', async () => {

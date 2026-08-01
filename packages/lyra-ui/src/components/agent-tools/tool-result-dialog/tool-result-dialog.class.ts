@@ -9,7 +9,6 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { lockScroll } from '../../../internal/scroll-lock.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon } from '../../../internal/icons.js';
@@ -278,7 +277,6 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   @state() private hasFooterSlot = false;
 
-  private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
   private readonly titleId = nextId('tool-result-dialog-title');
 
@@ -312,7 +310,6 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     if (this.hasUpdated && this.open) {
       if (this.overlay?.isActive()) {
         this.overlay.resume();
-        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
       } else {
         this.activateOverlay();
       }
@@ -322,8 +319,6 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.suspend();
   }
 
@@ -367,18 +362,17 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   private activateOverlay(): void {
     if (this.overlay?.isActive()) return;
-    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlay = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
       onEscape: () => this.close('escape'),
       onBackdrop: () => this.close('backdrop'),
+      lockScroll: true,
+      suspendWhenUnrendered: true,
     });
   }
 
   private deactivateOverlay(): void {
-    this.releaseScrollLock?.();
-    this.releaseScrollLock = undefined;
     this.overlay?.deactivate();
     this.overlay = undefined;
   }
