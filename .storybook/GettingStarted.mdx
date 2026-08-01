@@ -1,0 +1,214 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Guides/Getting started" />
+
+# Getting started
+
+Lyra UI is a library of plain custom elements. There is no wrapper, no provider, no build plugin
+and no framework binding to set up — you install the package, import the elements you want, and
+write HTML.
+
+## Install
+
+```bash
+npm install @aceshooting/lyra-ui
+```
+
+`lit`, `@floating-ui/dom` and `@types/geojson` come along as ordinary dependencies, so nothing else
+is required to render a button, a form, a table or a dialog.
+
+Everything heavier than that is an **optional peer dependency** — Chart.js for `<lr-chart>`,
+MapLibre for `<lr-map>`, PDF.js for `<lr-pdf-viewer>`, and so on. None of them is imported eagerly;
+a component loads its peer on demand the first time it needs it, and fails closed with a localized
+error message if it isn't installed. You only install the ones whose components you actually use.
+See the [Optional peers](?path=/docs/guides-getting-started--docs#optional-peers) note below.
+
+## Registering an element
+
+Every component is its own side-effect entry point that registers its own tag:
+
+```js
+import '@aceshooting/lyra-ui/components/forms/button/button.js';
+```
+
+```html
+<lr-button variant="brand">Save changes</lr-button>
+```
+
+That's the whole setup. The import registers `<lr-button>` with `customElements`, and any
+`<lr-button>` in the document — including ones added later — upgrades itself.
+
+**The path always carries the source family segment**: `components/<family>/<dir>/<file>.js`, never
+`components/<tag>/`. The eleven families are `agent-tools`, `charts`, `conversation`, `data`,
+`forms`, `layout`, `media`, `overlays`, `retrieval`, `utility` and `viewers`. A wrong or missing
+family segment is a hard module-resolution failure, not a silent no-op, because the package's
+`exports` map points `./components/*` straight at `./dist/components/*`.
+
+You never have to work the path out by hand: **every component page in this site prints its own
+import line directly under the title**, and the same line appears in that component's reference file
+under <a href="./llms/index.md" target="_blank" rel="noreferrer">`llms/index.md`</a>.
+
+Some directories hold more than one tag, and each tag is registered by its own entry point. Tabs are
+the common example:
+
+```js
+import '@aceshooting/lyra-ui/components/layout/tab-group/tab-group.js';
+import '@aceshooting/lyra-ui/components/layout/tab-group/tab.js';
+import '@aceshooting/lyra-ui/components/layout/tab-group/tab-panel.js';
+```
+
+```html
+<lr-tab-group>
+  <lr-tab panel="general">General</lr-tab>
+  <lr-tab panel="advanced">Advanced</lr-tab>
+  <lr-tab-panel name="general">General settings</lr-tab-panel>
+  <lr-tab-panel name="advanced">Advanced settings</lr-tab-panel>
+</lr-tab-group>
+```
+
+## The two import styles
+
+### Granular subpaths — the default
+
+```js
+import '@aceshooting/lyra-ui/components/forms/input/input.js';
+import '@aceshooting/lyra-ui/components/forms/select/select.js';
+import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
+```
+
+One import per tag you use. Your bundler sees exactly those modules and their shared internals, and
+nothing else. This is what you want in application code, and it is what every example in these
+guides and in the component reference uses.
+
+### The root barrel — for exploring
+
+```js
+import '@aceshooting/lyra-ui'; // registers ~everything
+```
+
+Convenient in a scratch file, a REPL, or while you are still deciding which components you need.
+
+Two things to know before you ship it:
+
+- **It defeats tree-shaking.** The barrel's entire purpose is the side effect of registering every
+  tag, so a bundler cannot drop any of it. Importing the barrel to use three components pulls in all
+  of them.
+- **It is not actually complete.** The barrel deliberately skips every tag gated behind an optional
+  peer dependency — the whole chart family (`<lr-chart>` and its typed subclasses, `<lr-box-plot>`,
+  `<lr-histogram>`), plus `<lr-map>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>` and
+  `<lr-geojson-view>`. If the barrel registered those, every consumer would pull Chart.js, MapLibre
+  and d3 into their bundle whether or not they render a chart. Those tags always need their own
+  subpath import, so the moment you use one you are writing granular imports anyway.
+
+The barrel also re-exports a broad compatibility surface of commonly used classes, helpers and
+types — but it is a convenience, not an exhaustive promise. The component's own entry point is the
+complete contract for that component.
+
+### Family entry points
+
+Three families ship an "everything in this family" entry, which is a useful middle ground while
+building a whole agent or chat surface:
+
+```js
+import '@aceshooting/lyra-ui/components/conversation';
+import '@aceshooting/lyra-ui/components/agent-tools';
+import '@aceshooting/lyra-ui/components/retrieval';
+```
+
+These register and export the complete family. Granular entries are still the smallest bundle and
+remain the recommendation for production.
+
+## Importing a class without registering a tag
+
+Every registration entry has a `.class.js` sibling that exports the class — and its
+`HTMLElementTagNameMap` augmentation — without touching `customElements`:
+
+```ts
+import { LyraTable } from '@aceshooting/lyra-ui/components/data/table/table.class.js';
+
+const table = document.querySelector('lr-table') as LyraTable<Invoice>;
+```
+
+Use it for subclassing, `instanceof` checks, and type-only imports. Note that
+`document.querySelector('lr-table')` is only *typed* as `LyraTable` when that class module is in
+your type graph — importing the registration entry (`table.js`) is enough, since it re-exports the
+class module.
+
+## The other subpaths
+
+Beyond `components/*`, the package publishes a small set of focused entries:
+
+| Subpath | What it is |
+| --- | --- |
+| `@aceshooting/lyra-ui/theme.css` | Ready-made light + dark theme values. See [Theming](?path=/docs/guides-theming--docs). |
+| `@aceshooting/lyra-ui/theme.js` | Zero-dependency runtime for persisting and applying a theme mode/accent. |
+| `@aceshooting/lyra-ui/localization.js` | Side-effect-free locale runtime. See [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs). |
+| `@aceshooting/lyra-ui/events` | Types only — the global typed-event surface. See [Events](?path=/docs/guides-events--docs). |
+| `@aceshooting/lyra-ui/ai` | Provider-neutral types and stream adapters for the agentic components. |
+| `@aceshooting/lyra-ui/utilities` | The curated, semver-covered helper surface (also importable one module at a time, e.g. `utilities/positioner`). |
+| `@aceshooting/lyra-ui/testing` | happy-dom shims so form-associated controls are constructible in a non-browser test DOM. |
+
+`theme.js`, `localization.js` and `events` are deliberately free of component imports, so an
+application can set up theming, locales and event typing without pulling the component graph into
+its first-paint bundle.
+
+## Optional peers
+
+A component that needs a peer imports it dynamically, the first time it renders something that
+requires it. If the peer is not installed, the component fails closed and renders a localized error
+in a live region rather than throwing. Empty-but-valid results get their own state and never take
+the error path.
+
+Install only what you use:
+
+```bash
+npm install chart.js          # <lr-chart> and its typed subclasses
+npm install maplibre-gl       # <lr-map>
+npm install dompurify         # <lr-include>, and the viewers that render remote HTML
+```
+
+The full component-to-peer table is in
+<a href="./llms/peers.md" target="_blank" rel="noreferrer">`llms/peers.md`</a>.
+
+## Using them from a framework
+
+They are custom elements, so they work anywhere — with two caveats that apply to custom elements in
+general, not to this library specifically.
+
+**Complex values must be property-bound, not attribute-bound.** An attribute stringifies, so
+`rows="[object Object]"` is what an array binding gets you. Use your framework's property syntax:
+
+```jsx
+// Lit
+html`<lr-table .rows=${rows} .columns=${columns}></lr-table>`
+// Vue
+<lr-table :rows.prop="rows" :columns.prop="columns" />
+// Angular
+<lr-table [rows]="rows" [columns]="columns"></lr-table>
+// React 19+ passes objects to custom-element properties natively
+<lr-table rows={rows} columns={columns} />
+```
+
+**Events are dashed custom events**, not React-style `onSomething` props:
+
+```jsx
+html`<lr-table @lr-sort=${onSort}></lr-table>`   // Lit
+<lr-table @lr-sort="onSort" />                    // Vue
+<lr-table (lr-sort)="onSort($event)"></lr-table>  // Angular
+tableRef.current.addEventListener('lr-sort', onSort); // React
+```
+
+Angular additionally needs `CUSTOM_ELEMENTS_SCHEMA` in the module or component that uses the tags.
+And remember that in-DOM HTML lower-cases attribute names — a camelCase *property* name only
+survives in framework templates and in JavaScript, never in hand-written HTML.
+
+## Where to go next
+
+- [Theming](?path=/docs/guides-theming--docs) — the token layers, light/dark switching, and how far
+  an override reaches.
+- [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs) — translating built-in
+  strings and mirroring layout.
+- [Forms](?path=/docs/guides-forms--docs) — native form participation, validation and field chrome.
+- [Events](?path=/docs/guides-events--docs) — the event contract and its TypeScript surface.
+- [Migrating from Web Awesome or Shoelace](?path=/docs/guides-migrating-from-web-awesome-or-shoelace--docs)
+  — the rename tables and the codemod.
