@@ -10,6 +10,26 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const staticRoot = join(root, 'storybook-static');
 const indexPath = join(staticRoot, 'index.json');
 
+// WCAG 2.2 SC 1.4.3 relative luminance, over the `rgb(r, g, b)` strings getComputedStyle returns.
+// packages/lyra-ui/scripts/check-contrast.mjs has the same formula, but it reads hex out of the
+// token sources and does not export it; this one measures what a browser actually painted.
+const srgbToLinear = (channel) =>
+  channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+
+function relativeLuminance(color) {
+  const channels = color.match(/\d+(\.\d+)?/g)?.slice(0, 3).map(Number);
+  if (channels?.length !== 3) return null;
+  const [r, g, b] = channels.map((channel) => srgbToLinear(channel / 255));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(foreground, background) {
+  const lf = relativeLuminance(foreground);
+  const lb = relativeLuminance(background);
+  if (lf === null || lb === null) return 0;
+  return (Math.max(lf, lb) + 0.05) / (Math.min(lf, lb) + 0.05);
+}
+
 const requiredStories = [
   'checkbox--default',
   'dialog--open-initially',
@@ -140,13 +160,13 @@ async function waitForDocs(page, baseUrl, id, theme = 'dark') {
   await frame.waitForSelector('.sbdocs-wrapper', { timeout: 15_000 });
   try {
     await frame.waitForFunction(
-      (expectedTheme) => document.documentElement.dataset.lyraTheme === expectedTheme,
+      (expectedTheme) => document.documentElement.dataset.lrTheme === expectedTheme,
       theme,
       { timeout: 15_000 },
     );
   } catch {
     const state = await frame.evaluate(() => ({
-      dataset: document.documentElement.dataset.lyraTheme,
+      dataset: document.documentElement.dataset.lrTheme,
       url: location.href,
     }));
     throw new Error(`${id} Docs did not apply theme ${theme}: ${JSON.stringify(state)}`);
@@ -468,19 +488,29 @@ async function main() {
       const checkbox = document.querySelector('lr-checkbox');
       const checkboxLabel = checkbox?.shadowRoot?.querySelector('[part="label"]');
       return {
-        dataset: document.documentElement.dataset.lyraTheme,
+        dataset: document.documentElement.dataset.lrTheme,
         wrapperBackground: wrapper ? getComputedStyle(wrapper).backgroundColor : '',
         headingColor: heading ? getComputedStyle(heading).color : '',
         checkboxColor: checkboxLabel ? getComputedStyle(checkboxLabel).color : '',
       };
     });
+    // The heading is Storybook's own React chrome, so its colour is pinned exactly. The checkbox
+    // label is a shipped component reading the production theme, and since 8.0.0 Storybook renders
+    // that theme instead of a hand-maintained preview palette -- so the two are no longer the same
+    // colour by construction (#f2f2f2 from theme.css vs Storybook's #f0f6fc), and pinning them to
+    // each other would only re-assert the palette that was deliberately removed. What this check is
+    // named for is legibility, so measure that: the component's text must actually carry WCAG AA
+    // contrast against the surface it is drawn on.
+    const checkboxContrast = contrastRatio(darkDocsTheme.checkboxColor, darkDocsTheme.wrapperBackground);
     if (
       darkDocsTheme.dataset !== 'dark' ||
       darkDocsTheme.wrapperBackground !== 'rgb(13, 17, 23)' ||
       darkDocsTheme.headingColor !== 'rgb(240, 246, 252)' ||
-      darkDocsTheme.checkboxColor !== 'rgb(240, 246, 252)'
+      !(checkboxContrast >= 4.5)
     ) {
-      throw new Error(`dark Docs theme is not consistently legible: ${JSON.stringify(darkDocsTheme)}`);
+      throw new Error(
+        `dark Docs theme is not consistently legible: ${JSON.stringify({ ...darkDocsTheme, checkboxContrast })}`,
+      );
     }
 
     for (const privateMember of ['_checked', 'deferredLoad', 'effectiveLocale']) {
@@ -493,7 +523,7 @@ async function main() {
     }
 
     await chooseToolbarTheme(page, 'Dark', 'Light');
-    await docsFrame.waitForFunction(() => document.documentElement.dataset.lyraTheme === 'light');
+    await docsFrame.waitForFunction(() => document.documentElement.dataset.lrTheme === 'light');
     await page.waitForFunction(() => getComputedStyle(document.body).backgroundColor === 'rgb(255, 255, 255)');
     const lightDocsTheme = await docsFrame.evaluate(() => {
       const wrapper = document.querySelector('.sbdocs-wrapper');
@@ -510,8 +540,11 @@ async function main() {
       throw new Error(`light Docs theme did not follow the toolbar: ${JSON.stringify(lightDocsTheme)}`);
     }
 
-    await chooseToolbarTheme(page, 'Light', 'High contrast');
-    await docsFrame.waitForFunction(() => document.documentElement.dataset.lyraTheme === 'high-contrast');
+    // No high-contrast pass here: `LyraThemeMode` is `'light' | 'dark' | 'auto'` and theme.css
+    // declares no high-contrast block, so the mode this used to select existed only in Storybook's
+    // former hand-maintained preview palette. Storybook now renders the production theme, and real
+    // forced-colors support is covered by src/forced-colors-intrinsic.test.ts and
+    // src/components/charts/chart/chart-forced-colors.test.ts, which assert rendered pixels.
 
     const landingFrame = await waitForDocs(page, baseUrl, 'introduction--docs', 'light');
     const lightLanding = await landingFrame.evaluate(() => {
@@ -519,7 +552,7 @@ async function main() {
       const heading = document.querySelector('.lr-landing h1');
       const primaryButtonText = document.querySelector('.lr-landing__button--primary p');
       return {
-        dataset: document.documentElement.dataset.lyraTheme,
+        dataset: document.documentElement.dataset.lrTheme,
         backgroundImage: landing ? getComputedStyle(landing).backgroundImage : '',
         headingBackground: heading ? getComputedStyle(heading).backgroundImage : '',
         primaryButtonColor: primaryButtonText ? getComputedStyle(primaryButtonText).color : '',
@@ -532,27 +565,6 @@ async function main() {
       lightLanding.primaryButtonColor !== 'rgb(255, 255, 255)'
     ) {
       throw new Error(`Introduction did not render its light theme: ${JSON.stringify(lightLanding)}`);
-    }
-
-    const highContrastLandingFrame = await waitForDocs(page, baseUrl, 'introduction--docs', 'high-contrast');
-    const highContrastLanding = await highContrastLandingFrame.evaluate(() => {
-      const landing = document.querySelector('.lr-landing');
-      const panel = document.querySelector('.lr-landing__showcase');
-      const heading = document.querySelector('.lr-landing h1');
-      return {
-        dataset: document.documentElement.dataset.lyraTheme,
-        backgroundImage: landing ? getComputedStyle(landing).backgroundImage : '',
-        panelShadow: panel ? getComputedStyle(panel).boxShadow : '',
-        headingColor: heading ? getComputedStyle(heading).color : '',
-      };
-    });
-    if (
-      highContrastLanding.dataset !== 'high-contrast' ||
-      highContrastLanding.backgroundImage !== 'none' ||
-      highContrastLanding.panelShadow !== 'none' ||
-      highContrastLanding.headingColor !== 'rgb(0, 0, 0)'
-    ) {
-      throw new Error(`Introduction did not render its high-contrast theme: ${JSON.stringify(highContrastLanding)}`);
     }
 
     const dropdownDocsFrame = await waitForDocs(page, baseUrl, 'overlay-dropdown--docs', 'dark');
@@ -654,25 +666,25 @@ async function main() {
       await expectSelector(page, id, storyChecks.get(id));
     }
 
+    // Read the RESOLVED values, not `documentElement.style`. Storybook used to write the theme as
+    // inline custom properties from its own preview palette; it now calls the production
+    // `setLyraTheme()`, which sets `data-lr-theme` and lets theme.css supply the tokens. Asserting
+    // the inline style therefore tested the harness rather than the shipped theme.
     await waitForStory(page, baseUrl, 'checkbox--default', { width: 1280, height: 800 }, 'dark');
-    const darkTheme = await page.evaluate(() => ({
-      scheme: document.documentElement.style.colorScheme,
-      surface: document.documentElement.style.getPropertyValue('--lr-theme-color-surface-default'),
-    }));
-    if (darkTheme.scheme !== 'dark' || darkTheme.surface !== '#0d1117') {
+    const darkTheme = await page.evaluate(() => {
+      const styles = getComputedStyle(document.documentElement);
+      return {
+        mode: document.documentElement.dataset.lrTheme,
+        scheme: styles.colorScheme,
+        surface: styles.getPropertyValue('--lr-theme-color-surface-default').trim(),
+      };
+    });
+    // #1a1a1a is theme.css's shipped dark surface. The former #0d1117 was Storybook's own preview
+    // palette, which no longer exists.
+    if (darkTheme.mode !== 'dark' || !darkTheme.scheme.includes('dark') || darkTheme.surface !== '#1a1a1a') {
       throw new Error(`dark Storybook theme did not apply semantic tokens: ${JSON.stringify(darkTheme)}`);
     }
     await runA11y(page, 'checkbox--default/dark');
-
-    await waitForStory(page, baseUrl, 'checkbox--default', { width: 1280, height: 800 }, 'high-contrast');
-    const highContrastTheme = await page.evaluate(() => ({
-      scheme: document.documentElement.style.colorScheme,
-      surface: document.documentElement.style.getPropertyValue('--lr-theme-color-surface-default'),
-    }));
-    if (highContrastTheme.scheme !== 'light' || highContrastTheme.surface !== 'Canvas') {
-      throw new Error(`high-contrast Storybook theme did not apply semantic tokens: ${JSON.stringify(highContrastTheme)}`);
-    }
-    await runA11y(page, 'checkbox--default/high-contrast');
 
     await waitForStory(page, baseUrl, 'dialog--open-initially', { width: 1280, height: 800 });
     await runA11y(page, 'dialog--open-initially');

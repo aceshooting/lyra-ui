@@ -10,7 +10,10 @@ body {
   min-block-size: 100%;
   background: var(--lr-theme-color-surface-default, #ffffff);
   color: var(--lr-theme-color-text-normal, #1f2328);
-  color-scheme: inherit;
+  /* Deliberately no `color-scheme` here. It already inherits, and this rule is UNLAYERED, so
+     declaring it would outrank theme.css's `@layer lr-theme` and win -- `inherit` on <html> has
+     nothing to inherit from, so it resolved to `normal` and left native controls, scrollbars and
+     form widgets in light mode while the page rendered dark. theme.css owns color-scheme. */
 }
 
 body {

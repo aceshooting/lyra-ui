@@ -24,7 +24,7 @@ function initialThemeName(context) {
   }
 
   return normalizeStoryThemeName(
-    document.documentElement.dataset.lyraTheme ?? themeFromUrl(),
+    document.documentElement.dataset.lrTheme ?? themeFromUrl(),
   );
 }
 

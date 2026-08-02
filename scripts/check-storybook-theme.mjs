@@ -50,8 +50,18 @@ for (const unsupported of ['high-contrast', 'density: {', 'lyraDensity', '--lr-d
     throw new Error(`Storybook preview advertises unsupported presentation state: ${unsupported}`);
   }
 }
-if (storyThemeSource.includes('LYRA_THEME_TOKENS') || storyThemeSource.includes("'--lr-theme-")) {
+// The rule is that no Lyra colour VALUE is copied into Storybook -- not that Lyra token names may
+// not be referenced. `COLOR_PROPERTIES` maps a semantic name to a `--lr-theme-*` custom property and
+// `storyColor()` resolves it with getComputedStyle against the live production theme, which is
+// exactly the intended mechanism; an earlier substring ban on `'--lr-theme-` rejected it. The hex
+// literals that remain in this file belong to `LYRA_STORYBOOK_THEMES`, the Storybook manager/React
+// chrome theme, whose theming API takes literal colours and which styles Storybook's own UI rather
+// than any lr-* component.
+if (storyThemeSource.includes('LYRA_THEME_TOKENS')) {
   throw new Error('Storybook preview colors must come from the complete production theme.css, not a copied palette');
+}
+if (storyThemeSource.includes("'--lr-theme-") && !storyThemeSource.includes('getComputedStyle')) {
+  throw new Error('Storybook must resolve --lr-theme-* values from the live theme, not restate them');
 }
 
 for (const required of [
