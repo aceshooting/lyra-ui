@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { tag } from './prefix.js';
+import { collectFocusableElements } from './overlay-manager.js';
 
 let counter = 0;
 
@@ -22,6 +23,25 @@ export const nextId = (scope: string): string => `${tag(scope)}-${++counter}`;
  *  carrying "real" content rather than being effectively empty. */
 export function hasRealContent(nodes: Iterable<Node>): boolean {
   return Array.from(nodes).some((n) => n.nodeType === Node.ELEMENT_NODE || (n.textContent ?? '').trim().length > 0);
+}
+
+/**
+ * Resolves the node that actually receives focus when a consumer-supplied trigger is activated.
+ *
+ * A name/description relationship is only surfaced to assistive technology on the element the user
+ * is focused on. A custom-element host is almost never that element: `<lr-select>`, `<lr-switch>`,
+ * `<lr-chip>` and any consumer-authored wrapper all move focus to a native control inside their
+ * shadow root, so a description parked on the host is silently dropped. Walk to the first focusable
+ * descendant instead -- `collectFocusableElements()` already crosses slots and nested open shadow
+ * roots in browser tab order, so the first entry is exactly the node a Tab press would land on.
+ *
+ * Returns `trigger` itself when the trigger is its own focus target (any native control), when it
+ * carries its own `tabindex`, and when nothing focusable is reachable yet (a custom element that
+ * has not upgraded, or a disabled control) -- callers then behave exactly as they did before.
+ */
+export function resolveAccessibleTrigger(trigger: HTMLElement): HTMLElement {
+  const [focusable] = collectFocusableElements(trigger);
+  return focusable ?? trigger;
 }
 
 /** Visually-hidden-but-screen-reader-available helper class. */

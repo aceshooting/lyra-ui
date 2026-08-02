@@ -1353,3 +1353,79 @@ describe('setCustomValidity()', () => {
     expect(el.matches(':state(user-invalid)')).to.be.false;
   });
 });
+
+it('paints the shared required marker on the label, and lets a consumer retune or suppress it', async () => {
+  const el = (await fixture(html`
+    <lr-voice-picker label="Voice" required .catalog=${CATALOG}></lr-voice-picker>
+  `)) as LyraVoicePicker;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label, '::after').content).to.contain('*');
+
+  // The three knobs the shared sheet publishes are what make the glyph translatable, retunable and
+  // suppressible -- a hardcoded `content: ' *'` left a consumer nowhere to say any of that.
+  el.style.setProperty('--lr-form-control-required-content', '" (required)"');
+  el.style.setProperty('--lr-form-control-required-color', 'rgb(1, 2, 3)');
+  await el.updateComplete;
+  expect(getComputedStyle(label, '::after').content).to.contain('required');
+  expect(getComputedStyle(label, '::after').color).to.equal('rgb(1, 2, 3)');
+
+  el.style.setProperty('--lr-form-control-required-content', '""');
+  await el.updateComplete;
+  expect(getComputedStyle(label, '::after').content.replace(/["']/g, '')).to.equal('');
+});
+
+it('leaves the required marker off an optional picker', async () => {
+  const el = (await fixture(html`
+    <lr-voice-picker label="Voice" .catalog=${CATALOG}></lr-voice-picker>
+  `)) as LyraVoicePicker;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label, '::after').content).to.not.contain('*');
+});
+
+it('bars constraint validation while disabled, natively and in the published states', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const el = (await fixture(html`
+    <lr-voice-picker label="Voice" required disabled .catalog=${CATALOG}></lr-voice-picker>
+  `)) as LyraVoicePicker;
+  await el.updateComplete;
+  // A native `<input required disabled>` matches neither `:valid` nor `:invalid`; publishing
+  // `invalid`/`user-invalid` from one is what painted every disabled required field red.
+  expect(el.checkValidity(), 'a barred control reports no violation').to.be.true;
+  expect(el.matches(':state(invalid)')).to.be.false;
+  expect(el.matches(':state(user-invalid)')).to.be.false;
+  expect(el.matches(':state(valid)')).to.be.false;
+  expect(el.matches(':state(required)'), 'required/optional describe the attribute, not the outcome')
+    .to.be.true;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.checkValidity()).to.be.false;
+  expect(el.matches(':state(invalid)')).to.be.true;
+});
+
+it('emits a cancelable lr-invalid alias whose cancellation cancels the native invalid event', async () => {
+  const el = (await fixture(html`
+    <lr-voice-picker label="Voice" required .catalog=${CATALOG}></lr-voice-picker>
+  `)) as LyraVoicePicker;
+  await el.updateComplete;
+  const aliases: CustomEvent[] = [];
+  const nativePrevented: boolean[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+  // Registered after the alias relay's own constructor-installed `invalid` listener, so it reads
+  // the native event exactly as the relay left it.
+  el.addEventListener('invalid', (event) => nativePrevented.push(event.defaultPrevented));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0].cancelable, 'lr-invalid is a real veto point').to.be.true;
+  expect(nativePrevented).to.deep.equal([false]);
+
+  el.addEventListener('lr-invalid', (event) => event.preventDefault(), { once: true });
+  expect(el.checkValidity()).to.be.false;
+  expect(
+    nativePrevented,
+    'preventDefault() on lr-invalid suppresses the native validation bubble',
+  ).to.deep.equal([false, true]);
+});

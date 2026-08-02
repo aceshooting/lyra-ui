@@ -43,6 +43,32 @@ component and a release blocker for a new one.
   evaluate false for every candidate and leave the whole widget with zero focusable stops.
   `lr-date-picker`'s `nearestEnabledDate`/`firstEnabledFrom` (stepping past disabled cells up to
   a bounded cap) is the pattern to match.
+- **That predicate excludes `inert` — the element's own and any ancestor's — alongside
+  disabled/hidden/`aria-hidden`.** An inert element does not merely look unavailable, it *refuses
+  focus*: `focus()` on it is a silent no-op with no error and no return value to check. Roving
+  focus that steps onto one is stranded on whatever held focus before (or on `<body>`, outside the
+  widget's keydown handler), and every subsequent key press dies — the widget reads as frozen, not
+  as skipping an item. `lr-menu`'s `isNavigable()` is the shape to copy:
+  `!item.interactionDisabled && !item.hidden && item.getAttribute('aria-hidden') !== 'true' &&
+  !item.inert && !item.closest('[inert]')`. The `closest('[inert]')` arm is not optional —
+  inertness inherits, so an inert *ancestor* (very often the library's own modal-overlay inerting,
+  applied while a dialog is open above the widget) disables the item exactly as completely as the
+  attribute on the item itself. The same predicate has to be re-consulted when items change state,
+  so an active index that just became inert is rehomed instead of silently going dead.
+- **A live region has to be in the host's light DOM; one inside a shadow root is not reliably
+  announced** (JAWS with Firefox ignores one outright). Never render `role="status"` /
+  `role="alert"` / `aria-live` into a component's own shadow root and expect it to be spoken —
+  route announcements through `acquireAnnouncementSink(politeness, opts)`
+  (`src/internal/announcer.ts`), which mounts one ref-counted, visually-hidden region per document
+  per politeness at the end of `<body>`, marked `data-lr-live-region="<politeness>"` so a
+  consumer's own DOM diffing can recognize it. Two timing rules are baked into that helper and are
+  easy to get wrong by hand: the region must be **mounted before the text arrives** (assistive tech
+  has to already be observing it — creating a region and filling it in the same task announces
+  nothing), and each announcement is **appended as a new child** with `aria-relevant="additions"` /
+  `aria-atomic="false"` rather than replacing `textContent`, which is what makes an identical
+  repeat announce again instead of being a silent no-op. Release the handle in
+  `disconnectedCallback()`; `<lr-live-region>` composes the sink with `Announcer`'s throttling and
+  is the wrapper other components should reuse rather than instantiating either half directly.
 
 ## Native-control wrappers — preserve the useful native contract
 
@@ -143,9 +169,15 @@ component and a release blocker for a new one.
   TypeScript build does not catch stale stories, prose, CSS-part lists, or a missing manifest
   entry.
 - **A standalone helper function's usage example in `llms/<family>.md` imports from its own
-  granular subpath, never the bare `@aceshooting/lyra-ui` root barrel.** The root barrel is an
-  eager side-effect chain registering 80+ components; importing it just to call one helper (e.g.
-  `confirm()`/`toast()`) drags the whole thing into a consumer's example code, and into anyone
-  who copies it verbatim — a real prior incident measured +79 KB gzip for `confirm()` alone from
-  exactly this mistake. When fixing one helper, check every sibling helper in the same file; the
-  fix does not automatically propagate to neighbors.
+  granular subpath, never the bare `@aceshooting/lyra-ui` root.** Since 8.0.0 the root registers
+  nothing (the 268 registration side effects live in `src/all.ts`, reached as
+  `@aceshooting/lyra-ui/all.js`), so the rule's original justification — an eager side-effect chain
+  — no longer applies. The rule still holds for a different reason: the root re-exports the whole
+  library's public classes and types (274 component class modules), so importing it just to call
+  one helper (e.g. `confirm()`/`toast()`) puts that entire named-export graph in front of the
+  consumer's bundler and leans the
+  example's correctness entirely on tree-shaking that a consumer's build may not perform (a
+  `sideEffects: false` misconfiguration, a CommonJS interop step, a `dev` build). That mistake
+  measured +79 KB gzip for `confirm()` alone in a real prior incident, back when the root was still
+  side-effectful — a granular subpath cannot regress that way at all. When fixing one helper, check
+  every sibling helper in the same file; the fix does not automatically propagate to neighbors.

@@ -945,6 +945,48 @@ describe('validity custom states', () => {
     expect(el.matches(':state(user-valid)'), 'user-valid after reset').to.be.false;
     expect(el.matches(':state(invalid)'), 'invalid after reset').to.be.true;
   });
+
+  it('publishes neither invalid nor user-invalid while disabled', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    // A native `<input required disabled>` matches neither `:valid` nor `:invalid`. Publishing
+    // `invalid`/`user-invalid` from a barred control is what painted every disabled required field
+    // red under the documented `lr-rubric-form:state(user-invalid) { ... }` rule.
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS} name="rubric" disabled></lr-rubric-form>`,
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.checkValidity(), 'a barred control reports no violation').to.be.true;
+    expect(el.validity.valueMissing).to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid while disabled').to.be.false;
+    expect(el.matches(':state(valid)'), 'barred matches neither half of the pair').to.be.false;
+    expect(el.matches(':state(required)'), 'requiredness describes the keys, not the outcome').to.be.true;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid while disabled').to.be.false;
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.checkValidity(), 'the constraint returns with the control').to.be.false;
+    expect(el.matches(':state(invalid)'), 'invalid once enabled again').to.be.true;
+  });
+
+  it('publishes neither invalid nor user-invalid inside a disabled fieldset', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = (await fixture(html`
+      <form>
+        <fieldset disabled><lr-rubric-form .keys=${KEYS} name="rubric"></lr-rubric-form></fieldset>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.disabled, 'a fieldset never mutates the control own disabled').to.be.false;
+    expect(el.validity.valueMissing, 'fieldset-disabled bars validation exactly like own disabled').to.be
+      .false;
+    expect(el.matches(':state(invalid)')).to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)')).to.be.false;
+  });
 });
 
 describe('lr-rubric-form setCustomValidity()', () => {

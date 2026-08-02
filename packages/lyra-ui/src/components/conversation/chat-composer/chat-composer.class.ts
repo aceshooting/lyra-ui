@@ -293,11 +293,13 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
+    // A server render sees no light-DOM children, so a hydrating composer reproduces the server's
+    // slot-less rendering first and adopts the real adornment slots on the next update.
+    this.seedFirstRenderState(() => {
       this.hasLeadingSlot = this.hasSlotted('leading');
       this.hasChipsSlot = this.hasSlotted('chips');
       this.hasTrailingSlot = this.hasSlotted('trailing');
-    }
+    });
   }
 
   protected override firstUpdated(changed: PropertyValues): void {

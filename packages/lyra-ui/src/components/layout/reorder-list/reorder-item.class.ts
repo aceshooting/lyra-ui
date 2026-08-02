@@ -73,12 +73,12 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   private onMoveUpClick = (): void => {
     if (this.moveUpDisabled) return;
-    this.emit<{ direction: 'up' | 'down' }>('lr-move-request', { direction: 'up' });
+    this.emit('lr-move-request', { direction: 'up' });
   };
 
   private onMoveDownClick = (): void => {
     if (this.moveDownDisabled) return;
-    this.emit<{ direction: 'up' | 'down' }>('lr-move-request', { direction: 'down' });
+    this.emit('lr-move-request', { direction: 'down' });
   };
 
   protected override willUpdate(changed: PropertyValues): void {

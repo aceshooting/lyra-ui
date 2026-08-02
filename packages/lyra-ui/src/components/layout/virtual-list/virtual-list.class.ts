@@ -745,7 +745,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         const moved = this.containerScrollTop !== scrollTop;
         this.containerScrollTop = scrollTop;
         if (moved) {
-          this.emit<VirtualListScroll>("lr-scroll", {
+          this.emit("lr-scroll", {
             scrollTop,
             viewportHeight: this.viewportHeight,
           });
@@ -993,7 +993,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       return;
     this.lastEmittedStart = this.visibleStart;
     this.lastEmittedEnd = this.visibleEnd;
-    this.emit<VirtualListRange>("lr-visible-range-changed", {
+    this.emit("lr-visible-range-changed", {
       start: this.visibleStart,
       end: this.visibleEnd,
     });

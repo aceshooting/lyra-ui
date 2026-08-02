@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   dynamicRelativeSpecifiers,
   findTransitiveRegistrationPaths,
+  inventoryAllRegistrationSpecifiers,
   inventoryRootRegistrationSpecifiers,
   inventoryRootRegistrationSets,
   parseRootRegistrationAllowlist,
@@ -55,6 +56,16 @@ assert.deepEqual(
     './components/forms/safe/safe.js',
   ],
   'root registration specifiers preserve tag order while using exact inventory modules',
+);
+
+assert.deepEqual(
+  inventoryAllRegistrationSpecifiers(registrationInventory),
+  [
+    '../components/media/lazy-peer/lazy-peer.js',
+    '../components/charts/opt-in/opt-in.js',
+    '../components/forms/safe/safe.js',
+  ],
+  'the server all-components entry includes optional-peer families in tag order',
 );
 
 assert.deepEqual(

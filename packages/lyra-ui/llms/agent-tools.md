@@ -915,6 +915,19 @@ fails a native validity check.
 
 **Slots:** none.
 
+**The required marker.** A field whose key is listed in `schema.required` marks its `[part="label"]`
+with the library's shared required marker — the same `::after` rule and the same three properties
+every labelled control in the library uses (`--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset`), so retuning or
+suppressing the marker application-wide reaches this form's fields
+too (see `llms/shared.md` → "The required-field marker"). Requiredness here is **per field**, not per host:
+the host carries no `required` attribute, so the marker keys off a `data-required` attribute the
+component sets on each `[part="field"]` wrapper. That attribute is component-owned bookkeeping —
+never write it, and note that `::part(field)[data-required]` is invalid CSS (an attribute selector
+cannot follow `::part()`), so it is not a selector hook you can use from outside. An enum field
+renders as an `<lr-select>` that receives the same `required`, and marks itself through its own
+label.
+
 **CSS parts:** `base`, `field`, `label`, `control`, `description`, `error`, `unsupported`, `empty`.
 `control` is the native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'` field — one
 shared part name across both the text and number inputs, and deliberately *not* present on the
@@ -1273,8 +1286,15 @@ text, anchor, rects }`).
 `data-line-number`/`data-match`/`data-highlight-tone`, and is forwarded via `exportparts` so
 `lr-terminal::part(line)` reaches the rendered lines from a consumer stylesheet despite them living
 in the internal `<lr-virtual-list>`'s shadow root), `jump-to-latest` (shown while `follow` is
-disengaged and new output has arrived), and `announcer` (the visually-hidden `role="status"` region
-used when `announce-output` is set).
+disengaged and new output has arrived), and `announcer` (the visually-hidden, `aria-hidden` mirror
+of the text last announced while `announce-output` is set).
+
+`[part="announcer"]` is a styling and inspection surface only — it carries **no** live-region role
+of its own. The announcement itself goes to the library's shared **light-DOM** polite region,
+appended to the consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live
+region inside a shadow root is not reliably announced (JAWS with Firefox ignores one outright). A
+test therefore asserts against that shared region, not `::part(announcer)`; the part remains the
+right hook for styling, and for reading back what the terminal last announced.
 
 **Themeable custom properties:** `--lr-terminal-height` (default `var(--lr-size-20rem)`) — the
 viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.
@@ -2243,7 +2263,13 @@ PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`
 `PromptStudioState = { messages, variables }`.
 
 **Events:** `lr-change`, `lr-run`, `lr-save` (all carry complete messages/variables);
-`lr-version-select` (`{ version }`).
+`lr-version-select` (`{ version }`). Plus `focus` and `blur` (no detail), re-dispatched from the
+host — bubbling and composed — whenever a message textarea or a variable input gains or loses
+focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
+boundary, so without the re-dispatch an
+`editor.addEventListener('focus', …)` would never fire at all. They are re-dispatches of real
+focus movement, not a synthetic host-level focus signal: moving between two fields inside the
+studio emits a `blur` and then a `focus`.
 
 **CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
 `message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,

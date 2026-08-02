@@ -1,7 +1,8 @@
 import { deepActiveElementIn } from './active-element.js';
 import { RenderedStateController } from './rendered-state.js';
 import { lockScroll } from './scroll-lock.js';
-const FOCUSABLE_SELECTOR = [
+/** Elements the platform makes focusable on their own, with no `tabindex` from the author. */
+const NATIVELY_FOCUSABLE_SELECTOR = [
   'a[href]',
   'area[href]',
   'audio[controls]',
@@ -13,8 +14,9 @@ const FOCUSABLE_SELECTOR = [
   'textarea:not([disabled])',
   'video[controls]',
   '[contenteditable]:not([contenteditable="false"])',
-  '[tabindex]',
 ].join(', ');
+
+const FOCUSABLE_SELECTOR = [NATIVELY_FOCUSABLE_SELECTOR, '[tabindex]'].join(', ');
 
 const STACK_PROPERTY = '--lr-overlay-stack-index';
 const STACK_BASE = 1000;
@@ -157,9 +159,35 @@ function isRendered(element: HTMLElement): boolean {
   return element.checkVisibility ? element.checkVisibility() : element.getClientRects().length > 0;
 }
 
+/**
+ * A scroll container is a keyboard destination in its own right: without a stop on it, a panel
+ * whose only content is long prose, a table, or a rendered document is mouse-scrollable but has
+ * no way in from the keyboard at all. `scroll` always counts (the author asked for a scrollbar);
+ * `auto` counts only while the content really overflows, so a short region never becomes a
+ * gratuitous stop. Both reads force layout, which is why this is the last thing `isTabbable()`
+ * asks -- every cheaper answer has already been given by then.
+ */
+function isOverflowingAndTabbable(element: HTMLElement): boolean {
+  const view = element.ownerDocument.defaultView;
+  if (!view) return false;
+  const { overflowX, overflowY } = view.getComputedStyle(element);
+  if (overflowX === 'scroll' || overflowY === 'scroll') return true;
+  if (overflowY === 'auto' && element.scrollHeight > element.clientHeight) return true;
+  if (overflowX === 'auto' && element.scrollWidth > element.clientWidth) return true;
+  return false;
+}
+
 function isTabbable(element: HTMLElement): boolean {
-  if (element.tabIndex < 0 || element.matches(':disabled')) return false;
-  return isRendered(element);
+  if (element.matches(':disabled')) return false;
+  if (!isRendered(element)) return false;
+  if (element.tabIndex >= 0) return true;
+  // tabIndex < 0 on a control the platform already made focusable is the author deliberately
+  // taking it out of the order -- honour that. On anything else, tabindex="-1" is the only way
+  // to make a scroll container focusable at all, so a negative value there says "reachable, but
+  // not in the page's own order", and the trap still has to offer a way in or the content is
+  // keyboard-dead.
+  if (element.matches(NATIVELY_FOCUSABLE_SELECTOR)) return false;
+  return isOverflowingAndTabbable(element);
 }
 
 function collectFocusable(element: Element, result: HTMLElement[]): void {

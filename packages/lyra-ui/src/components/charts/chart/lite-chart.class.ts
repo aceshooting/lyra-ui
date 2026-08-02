@@ -160,13 +160,6 @@ function niceDomain(dataLo: number, dataHi: number, beginAtZero: boolean, count:
   return { lo, hi, ticks };
 }
 
-interface PointDetail {
-  datasetIndex: number;
-  index: number;
-  label: string | undefined;
-  value: number | null;
-}
-
 interface InteractiveMark {
   datasetIndex: number;
   index: number;
@@ -683,7 +676,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private emitPoint(datasetIndex: number, index: number): void {
     const label = this.labels[index];
     const value = this.datasets[datasetIndex]?.data[index] ?? null;
-    this.emit<PointDetail>('lr-point-click', { datasetIndex, index, label, value });
+    this.emit('lr-point-click', { datasetIndex, index, label, value });
   }
 
   private emitNearestLinePoint(

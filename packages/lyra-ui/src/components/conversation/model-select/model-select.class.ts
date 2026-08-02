@@ -14,7 +14,13 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
-import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import {
+  getFormOwner,
+  installCustomErrorProperty,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import {
   filterCatalogEntries,
@@ -122,7 +128,9 @@ export interface LyraModelSelectEventMap {
  * @event focus - Native focus relayed once from the active control in either rendering mode.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-invalid - The picker failed a validity check.
+ * @event lr-invalid - The picker failed a validity check. Cancelable: calling `preventDefault()`
+ *   also cancels the native `invalid` event behind it, suppressing the browser's own validation
+ *   bubble so an app can present the failure its own way.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @cssstate required - Matches while `required` is set. Style with `lr-model-select:state(required)`.
@@ -159,6 +167,13 @@ export interface LyraModelSelectEventMap {
  * @cssprop [--lr-model-select-option-selected-border=var(--lr-color-brand)] - Border color of the selected option row.
  * @cssprop [--lr-model-select-option-selected-color=var(--lr-color-brand)] - Text color of the selected option row.
  * @cssprop [--lr-model-select-option-selected-font-weight=var(--lr-font-weight-semibold)] - Font weight of the selected option row.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
+ *   `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
+ *   other quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Required-marker color,
+ *   themeable independently of error text and invalid borders.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ *   required marker.
  * @status stable
  * @since 4.0.0
  */
@@ -273,7 +288,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
     // Native <input> always has a submission value ("") from construction —
     // without this, a control whose `value` is never touched is entirely
     // absent from FormData instead of present as "" (see form-associated.ts).
@@ -435,6 +450,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
     if (this._disabled) this.hide();
+    // Disabling bars constraint validation, so the intrinsic violation has to be dropped with it --
+    // synchronously, for the same reason the attribute is reflected synchronously.
+    this.updateValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -454,8 +472,20 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     return this.disabled || this._fieldsetDisabled;
   }
 
+  /**
+   * Shared with every other form control: own `disabled` and a `<fieldset disabled>` ancestor bar
+   * constraint validation (this picker has no `readonly` of its own). A barred control matches
+   * neither `:valid` nor `:invalid` natively, so leaving `valueMissing` raised on a disabled
+   * required picker is what painted it red under the documented `:state(user-invalid)` rule.
+   */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   private updateValidity(): void {
-    if (this.required && !this._value) {
+    if (this.barredFromValidation) {
+      this.validityController.setValidity({});
+    } else if (this.required && !this._value) {
       this.validityController.setValidity({ valueMissing: true }, this.localize('modelSelectRequired'));
     } else {
       this.validityController.setValidity({});
@@ -470,7 +500,11 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    *  interaction flag: it flips on the trigger's/input's first blur, and on a `reportValidity()`
    *  call, which is what a submit attempt runs. */
   private publishValidityStates(): void {
-    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.touched,
+      barred: this.barredFromValidation,
+    });
   }
 
   formResetCallback(): void {
@@ -492,6 +526,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     if (disabled) this.hide();
+    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
+    this.updateValidity();
     this.requestUpdate();
   }
   checkValidity(): boolean {

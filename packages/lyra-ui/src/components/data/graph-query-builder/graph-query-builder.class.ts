@@ -14,7 +14,13 @@ import '../../forms/combobox/option.class.js';
 import '../../forms/input/input.class.js';
 import '../../overlays/chip/chip.class.js';
 import '../../overlays/chip/chip-group.class.js';
-import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import {
+  getFormOwner,
+  installCustomErrorProperty,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 
 /** Traversal direction relative to the matched node(s): `'out'` (outgoing edges), `'in'`
@@ -369,6 +375,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    // Disabling bars constraint validation, so the published validity and `:state()` hooks change
+    // even though the value did not. The guard covers a setter call that lands before the
+    // constructor body under a DOM shim.
+    if (this.validityController) this.syncFormState();
     this.requestUpdate('disabled', old);
   }
 
@@ -415,13 +425,22 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
       formValue = null;
     }
     this.internals.setFormValue(formValue, formValue);
-    if (Object.keys(flags).length === 0) {
+    if (this.barredFromValidation || Object.keys(flags).length === 0) {
       this.validityController.setValidity({});
     } else {
       const message = Object.values(errors)[0] ?? '';
       this.validityController.setValidity(flags, message);
     }
     this.syncValidityCustomStates();
+  }
+
+  /**
+   * Shared with every other form control in the library: own `disabled` and a `<fieldset disabled>`
+   * ancestor both bar constraint validation, so a barred builder reports no failure and publishes
+   * neither `:state(invalid)` nor `:state(user-invalid)` — see `internal/custom-states.ts`.
+   */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
   }
 
   /**
@@ -434,7 +453,11 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
    * `startId`, since a path query with no anchor is not runnable.
    */
   private syncValidityCustomStates(): void {
-    syncValidityStates(this.internals, { required: true, hasInteracted: this.hasInteracted });
+    syncValidityStates(this.internals, {
+      required: true,
+      hasInteracted: this.hasInteracted,
+      barred: this.barredFromValidation,
+    });
   }
 
   /** Resynchronizes validity without revealing inline errors. */
@@ -502,6 +525,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    this.syncFormState();
     this.requestUpdate();
   }
 

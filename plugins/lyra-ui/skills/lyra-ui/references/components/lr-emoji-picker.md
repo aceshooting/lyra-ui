@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -78,6 +78,13 @@ error message). While windowing is active the rows are wrapped in `virtual-space
 (full-height scroll spacer), `virtual-row` (one absolutely-positioned row), `virtual-label` (an
 `aria-hidden` spacer standing in for a row's missing `group-label`), and `virtual-items` (the row's
 emoji flex line).
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
+painted.
 
 **Themeable custom properties:** `--lr-emoji-picker-item-size` (default `--lr-icon-button-size`,
 each emoji button's box; scaled by the `size` property), `--lr-emoji-picker-glyph-size` (default

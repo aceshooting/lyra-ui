@@ -14,6 +14,7 @@ import {
   createStringArrayFormDataState,
   getFormOwner,
   installCustomErrorProperty,
+  isBarredFromValidation,
   readStringArrayFormDataState,
   setFormOwner,
   type FormOwnerValue,
@@ -117,7 +118,9 @@ const stringArrayConverter = {
  *   call `preventDefault()` to veto the removal (e.g. pending an async confirmation or a
  *   protected-token check) and the token stays in `value` unchanged.
  * @event lr-token-edit - An existing token was edited in place and committed; detail is `{ value, previousValue, index }`. Not emitted for a reverted, unchanged, emptied, or duplicate-colliding edit.
- * @event lr-invalid - The token list failed a validity check.
+ * @event lr-invalid - The token list failed a validity check. Cancelable: calling
+ * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
+ * browser's own validation bubble so an app can present the failure its own way.
  * @csspart form-control - Outer control wrapper.
  * @csspart form-control-label - Label.
  * @csspart input-wrapper - Token and input row.
@@ -150,6 +153,13 @@ const stringArrayConverter = {
  *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
  *   never declared by the component itself, it can be set from an ancestor or an outer-tree rule
  *   as well as inline on the element.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
+ * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
+ * other quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Required-marker color,
+ * themeable independently of error text and invalid borders.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * required marker.
  * @cssstate required - Matches while `required` is set.
  * @cssstate optional - Matches while `required` is not set (the complement of `required`).
  * @cssstate valid - Matches while the control satisfies its constraints.
@@ -324,6 +334,9 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this._disabled = Boolean(next);
     if (this._disabled) this.discardTransientState(true);
     this.toggleAttribute('disabled', this._disabled);
+    // Disabling bars constraint validation, so the violation itself is recomputed here rather than
+    // left raised on a control the browser will never enforce.
+    this.syncValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -332,7 +345,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
   }
   override connectedCallback(): void { super.connectedCallback(); this.syncValidity(); }
   override disconnectedCallback(): void {
@@ -359,6 +372,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     if (disabled) this.discardTransientState(true);
+    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
+    this.syncValidity();
     this.requestUpdate();
   }
   /**
@@ -412,17 +427,30 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     }
   }
 
+  /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   private syncValidity(): void {
-    const missing = this.required && this.value.length === 0;
+    // A barred control reports no violation at all, exactly like a native disabled input --
+    // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required
+    // token lists, and with it the documented `:state(user-invalid)` error styling.
+    const barred = this.barredFromValidation;
+    const missing = !barred && this.required && this.value.length === 0;
     this.validityController.setValidity(missing ? { valueMissing: true } : {}, missing ? this.localize('tokenInputRequired') : '');
-    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    this.toggleAttribute('data-invalid', !barred && this.touched && !this.internals.validity.valid);
     // The six validity custom states, from the shared helper in `internal/custom-states.ts`. This
     // control drives `ElementInternals` directly rather than through the `FormAssociated` mixin
     // (its value is a `string[]`), so it publishes them itself; `touched` is its own interaction
     // flag, already set on blur, which keeps the `user-*` pair off a pristine control the way
     // native `:user-invalid` does. Every mutation path funnels through here, so this one call
     // covers `value`, `required`, `name`, blur, and `form.reset()`.
-    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.touched,
+      barred,
+    });
     const data = new FormData();
     if (this.name) this.value.forEach((token) => data.append(this.name, token));
     this.internals.setFormValue(
@@ -435,7 +463,11 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.syncValidity();
     this.emit('input', { value: this.value });
     this.emit('change', { value: this.value });
-    if (event === 'add') this.emit('lr-add', { value: next[next.length - 1] });
+    if (event === 'add') {
+      // `lr-add` promises a `string`; an 'add' that produced no token has nothing to announce.
+      const added = next[next.length - 1];
+      if (added !== undefined) this.emit('lr-add', { value: added });
+    }
   }
   private addDraft(): void {
     if (this.effectiveDisabled) return;
@@ -464,6 +496,9 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
 
   private removeToken(index: number): void {
     const removed = this.value[index];
+    // The roving/edit index can outlive the token it pointed at, and `lr-remove` promises a
+    // `string` value -- a stale index has nothing to remove rather than a token named `undefined`.
+    if (removed === undefined) return;
     const event = this.emit('lr-remove', { value: removed, index }, { cancelable: true });
     if (event.defaultPrevented) return;
     // Removing a token reindexes every later one, so an editor left open over the old indices would
@@ -517,6 +552,9 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (restoreFocus) this.focusTokenPending = index;
     this.editingIndex = -1;
     this.editDraft = '';
+    // Editor state is cleared above even for a stale index; there is simply no previous token to
+    // report, and `lr-token-edit` promises a `string` `previousValue`.
+    if (previousValue === undefined) return;
     if (!next || next === previousValue) return;
     if (!this.allowDuplicates && this.value.some((token, i) => i !== index && token === next)) return;
     this.updateValue(this.value.map((token, i) => (i === index ? next : token)));
@@ -647,7 +685,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
     return html`<div part="form-control">
-      <label part="form-control-label" ?hidden=${!hasLabel} for="input" id=${this.labelId}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</label>
+      <label part="form-control-label" ?hidden=${!hasLabel} for="input" id=${this.labelId}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot></label>
       <div part="input-wrapper" role="group" aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-label=${this.accessibleLabel || nothing}>
         ${this.value.map((token, index) => this.editable ? this.renderEditableToken(token, index) : html`<span part="token"><span>${token}</span><button part="remove" type="button" aria-label=${this.localize('removeWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} @click=${() => this.removeToken(index)}>${closeIcon()}</button></span>`)}
         <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} aria-label=${this.accessibleLabel || nothing} aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-describedby=${described} aria-required=${this.required ? 'true' : 'false'} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />

@@ -998,3 +998,32 @@ describe('lr-checkbox-group setCustomValidity()', () => {
     expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
   });
 });
+
+it('bars constraint validation while disabled, like a native disabled required control', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group required disabled label="Topics">
+      <lr-checkbox value="a">A</lr-checkbox>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'a barred group raises no violation').to.be.false;
+  expect(el.checkValidity()).to.be.true;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'the violation returns once it is enforceable again').to.be.true;
+});
+
+it('renders the required marker from the shared themeable rule, not a literal span', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group required label="Topics"><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label, '::after').content).to.contain('*');
+  expect(label.querySelector('span[aria-hidden]'), 'no hand-rolled glyph element').to.equal(null);
+
+  el.style.setProperty('--lr-form-control-required-content', "''");
+  await el.updateComplete;
+  expect(getComputedStyle(label, '::after').content).to.not.contain('*');
+});

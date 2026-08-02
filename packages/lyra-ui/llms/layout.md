@@ -839,8 +839,16 @@ first, with the Lyra/token values as fallbacks. Otherwise shared tokens —
 ```
 
 **Known gotchas:**
+- **`inert` on a child excludes its tab from arrow-key navigation, exactly as `disabled` does.** An
+  inert element refuses focus outright, so a roving `tabindex` that stepped onto one would leave
+  `focus()` a silent no-op and strand the arrow key with focus back on `<body>`. The tab button
+  rendered for an inert source child is itself marked `inert`, so the two can never disagree,
+  Home/End skip it, and `active` is never resolved to it. Only the child's **own** `inert` counts,
+  never an ancestor's: a tab group inside a subtree an open modal has inerted is inert as a whole,
+  and treating every tab as unreachable there would reset `active` to `''` and blank every panel for
+  as long as the dialog is open.
 - Tabs are rebuilt from direct children via a `MutationObserver` watching `childList` plus
-  `attributeFilter: ['slot', 'label', 'disabled', 'closable']` — not `slotchange` — because a brand-new tab's
+  `attributeFilter: ['slot', 'label', 'disabled', 'inert', 'closable']` — not `slotchange` — because a brand-new tab's
   `slot` name has no matching `<slot>` to fire `slotchange` on until this component has already
   rendered one for it, and neither `slotchange` nor any Lit lifecycle hook observes a plain
   attribute edit on a light-DOM child at all.
@@ -2011,6 +2019,20 @@ wrapping the default slot), `footer` (wrapper around the `footer` slot, below th
 
 **Optional peer deps:** none.
 
+**Which items arrow keys reach.** An item is navigable unless it is `disabled` (or `loading`),
+`hidden`, `aria-hidden="true"`, **`inert`, or has an `inert` ancestor** — the last two alongside the
+rest because an inert element *refuses* focus: stepping the roving `tabindex` onto one leaves
+`focus()` a silent no-op, so roving focus stays wherever it was (or falls to `<body>`) and every
+later arrow press dies. The state is observed live —
+`attributeFilter: ['disabled', 'hidden', 'aria-hidden', 'inert']` on every item — so marking the
+*currently active* item inert rehomes roving focus to the next reachable one instead of leaving a
+stale `tabindex="0"` on an unfocusable row. `lr-tab-group`, `lr-tree` and `lr-video-playlist` mirror
+the same rule for their own roving navigation, with one deliberate difference: those three read only
+a child's **own** inertness (plus, in `lr-tree`, an inert ancestor *inside* the tree), because a list
+inerted wholesale by an open modal must not lose its selection and its tab stop for as long as the
+dialog is up — focus cannot be inside it anyway. A menu is itself the overlay, so it takes the
+simpler ancestor-inclusive read.
+
 ### `lr-menu-item`
 
 Not meaningful standalone — it exists purely as `<lr-menu>`'s light-DOM child, the same
@@ -2030,7 +2052,8 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
   single compact row inside an otherwise default menu needs no wrapper — and, conversely, sizing a
   whole menu means setting it on every item
 - `disabled: boolean = false` (reflected — disables selection and excludes this item from
-  `<lr-menu>`'s roving-tabindex navigation entirely)
+  `<lr-menu>`'s roving-tabindex navigation entirely; the native `inert` attribute, `hidden`, and
+  `aria-hidden="true"` exclude it the same way — see "Which items arrow keys reach" above)
 - `destructive: boolean = false` (reflected — tints the row with `--lr-color-danger`, for a
   dangerous action like "Delete"; retained as a behavior-identical alias)
 - `variant: LyraVariant | 'default' = 'default'` (reflected) — `danger` is the mapped dangerous

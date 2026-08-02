@@ -2,6 +2,16 @@ import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
+  const element = sinkElement(politeness);
+  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
 
 describe('lr-terminal', () => {
   it('defaults to follow=true, wrap=true, copyable=true, maxScrollback=5000', async () => {
@@ -422,14 +432,38 @@ describe('lr-terminal', () => {
     expect(event.detail.following).to.be.false;
   });
 
-  it('announce-output routes appended text into the visually-hidden announcer region', async () => {
+  it('announce-output routes appended text into the shared light-DOM sink, not the shadow region', async () => {
     const el = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
     el.write('build started');
     await el.updateComplete;
     await new Promise((resolve) => setTimeout(resolve, 20)); // Announcer's own throttle uses real timers
+    expect(sinkTexts('polite')).to.deep.equal(['build started']);
     const region = el.shadowRoot!.querySelector('[part="announcer"]')!;
-    expect(region.getAttribute('role')).to.equal('status');
+    // The retained part is a styling/inspection mirror only -- it must not be a second live region,
+    // or a browser that *does* announce shadow live regions reads every chunk twice.
+    expect(region.getAttribute('role')).to.equal(null);
+    expect(region.getAttribute('aria-live')).to.equal(null);
+    expect(region.getAttribute('aria-hidden')).to.equal('true');
     expect(region.textContent).to.equal('build started');
+  });
+
+  it('announces a repeated identical chunk twice instead of silently rewriting one text node', async () => {
+    const el = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
+    el.write('same line');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    el.write('same line');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(sinkTexts('polite')).to.deep.equal(['same line', 'same line']);
+  });
+
+  it('ref-counts the shared sink away once the last terminal disconnects', async () => {
+    const first = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
+    const second = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
+    expect(sinkElement('polite') !== null, 'a connected terminal holds the sink').to.be.true;
+    first.remove();
+    expect(sinkElement('polite') !== null, 'a still-connected terminal keeps it mounted').to.be.true;
+    second.remove();
+    expect(sinkElement('polite') === null, 'the last disconnect unmounts it').to.be.true;
   });
 
   it('does not populate the announcer region when announce-output is left off (default)', async () => {

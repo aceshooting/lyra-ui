@@ -21,17 +21,36 @@ function mockTrackWidth(el: LyraSlider, width: number): void {
     }) as DOMRect;
 }
 
-it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = (await fixture(html`<lr-slider aria-label="Volume"></lr-slider>`)) as LyraSlider;
   const aliases: CustomEvent[] = [];
   el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+  // Registered after the component's own constructor-time relay, so it observes the native event
+  // once the alias has had its turn at it.
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
   el.setCustomValidity('Choose another value.');
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
   expect(aliases[0].target).to.equal(el);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.false;
+  expect(aliases[0].cancelable).to.be.true;
+  // Nothing cancelled it, so the browser's own validation UI stays enabled.
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.false;
+});
+
+it('cancels the native invalid event when the lr-invalid alias is cancelled', async () => {
+  const el = (await fixture(html`<lr-slider aria-label="Volume"></lr-slider>`)) as LyraSlider;
+  el.addEventListener('lr-invalid', (event) => event.preventDefault());
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
+  el.setCustomValidity('Choose another value.');
+
+  expect(el.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.true;
 });
 
 /** Vertical counterpart of mockTrackWidth: a track box spanning `height` px
@@ -1810,4 +1829,243 @@ describe('size', () => {
     const el = await slider(html`<lr-slider size="l" label="Temp"></lr-slider>`);
     await expect(el).to.be.accessible();
   });
+});
+
+it('exposes the required flag and the native label/validation surface', async () => {
+  const form = (await fixture(html`
+    <form>
+      <label id="volume-label" for="volume">Volume</label>
+      <lr-slider id="volume" name="volume" value="20"></lr-slider>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-slider') as LyraSlider;
+  expect(el.required).to.equal(false);
+  expect(el.willValidate).to.equal(true);
+  expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['volume-label']);
+
+  el.required = true;
+  await elementUpdated(el);
+  expect(el.hasAttribute('required')).to.equal(true);
+  // A slider always carries a numeric value, so `required` never makes it invalid on its own.
+  expect(el.checkValidity()).to.equal(true);
+
+  el.required = false;
+  await elementUpdated(el);
+  expect(el.hasAttribute('required')).to.equal(false);
+});
+
+it('mirrors range mode through the upstream isRange alias', async () => {
+  const el = (await fixture(html`<lr-slider min="0" max="100" value="30"></lr-slider>`)) as LyraSlider;
+  expect(el.isRange).to.equal(false);
+  el.range = true;
+  await elementUpdated(el);
+  expect(el.isRange).to.equal(true);
+});
+
+it('restores single and range values from persisted form state', async () => {
+  const el = (await fixture(
+    html`<lr-slider name="level" min="0" max="100" value="10"></lr-slider>`,
+  )) as LyraSlider;
+  el.formStateRestoreCallback('42', 'restore');
+  await elementUpdated(el);
+  expect(el.value).to.equal(42);
+
+  el.formStateRestoreCallback(null, 'restore');
+  await elementUpdated(el);
+  expect(el.value).to.equal(10);
+
+  const ranged = (await fixture(html`
+    <lr-slider name="window" range min="0" max="100" min-value="10" max-value="90"></lr-slider>
+  `)) as LyraSlider;
+  const state = new FormData();
+  state.append('window', '25');
+  state.append('window', '75');
+  ranged.formStateRestoreCallback(state, 'restore');
+  await elementUpdated(ranged);
+  expect(ranged.minValue).to.equal(25);
+  expect(ranged.maxValue).to.equal(75);
+
+  const partial = new FormData();
+  partial.append('window', '5');
+  ranged.formStateRestoreCallback(partial, 'autocomplete');
+  await elementUpdated(ranged);
+  expect(ranged.minValue).to.equal(25);
+  expect(ranged.maxValue).to.equal(75);
+});
+
+it('treats a null defaultValue or name as unset', async () => {
+  const el = (await fixture(html`<lr-slider name="level" value="30"></lr-slider>`)) as LyraSlider;
+  expect(el.defaultValue).to.equal(30);
+
+  el.defaultValue = null;
+  expect(el.hasAttribute('value'), 'a null default drops the declarative value attribute').to.equal(false);
+  await elementUpdated(el);
+  expect(el.defaultValue).to.equal(0);
+
+  el.defaultValue = '15';
+  await elementUpdated(el);
+  expect(el.defaultValue).to.equal(15);
+  expect(el.getAttribute('value')).to.equal('15');
+
+  el.name = null;
+  await elementUpdated(el);
+  expect(el.name).to.equal(null);
+  expect(el.hasAttribute('name')).to.equal(false);
+
+  el.name = '';
+  await elementUpdated(el);
+  expect(el.name).to.equal(null);
+});
+
+it('steps silently through the native stepUp/stepDown IDL', async () => {
+  const el = (await fixture(
+    html`<lr-slider min="0" max="100" step="5" value="50"></lr-slider>`,
+  )) as LyraSlider;
+  let events = 0;
+  el.addEventListener('lr-input', () => { events += 1; });
+  el.addEventListener('lr-change', () => { events += 1; });
+
+  el.stepUp();
+  await elementUpdated(el);
+  expect(el.value).to.equal(55);
+
+  el.stepDown(3);
+  await elementUpdated(el);
+  expect(el.value).to.equal(40);
+
+  el.stepUp(0);
+  await elementUpdated(el);
+  expect(el.value).to.equal(40);
+
+  el.stepUp(Number.NaN);
+  await elementUpdated(el);
+  expect(el.value).to.equal(45);
+
+  expect(events, 'the native IDL steps are event-silent').to.equal(0);
+
+  const disabled = (await fixture(
+    html`<lr-slider disabled min="0" max="100" step="5" value="50"></lr-slider>`,
+  )) as LyraSlider;
+  disabled.stepUp();
+  await elementUpdated(disabled);
+  expect(disabled.value).to.equal(50);
+
+  const unstepped = (await fixture(
+    html`<lr-slider min="0" max="100" step="0" value="50"></lr-slider>`,
+  )) as LyraSlider;
+  unstepped.stepUp();
+  await elementUpdated(unstepped);
+  expect(unstepped.value).to.equal(50);
+});
+
+it('steps the low handle of a range and blurs whichever thumb has focus', async () => {
+  const el = (await fixture(html`
+    <lr-slider range min="0" max="100" step="10" min-value="20" max-value="80"></lr-slider>
+  `)) as LyraSlider;
+  el.stepUp();
+  await elementUpdated(el);
+  expect(el.minValue).to.equal(30);
+  expect(el.maxValue).to.equal(80);
+
+  el.focus();
+  await elementUpdated(el);
+  expect(el.shadowRoot!.activeElement).to.exist;
+  el.blur();
+  await elementUpdated(el);
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+
+  // Blurring again with nothing focused falls back to the first thumb and stays a no-op.
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+it('renders markers only for a finite, reasonably sized grid', async () => {
+  const el = (await fixture(
+    html`<lr-slider with-markers min="0" max="100" step="25"></lr-slider>`,
+  )) as LyraSlider;
+  await elementUpdated(el);
+  expect(el.shadowRoot!.querySelectorAll('[part~="marker"]').length).to.equal(5);
+
+  el.step = 0;
+  await elementUpdated(el);
+  expect(el.shadowRoot!.querySelectorAll('[part~="marker"]').length).to.equal(0);
+
+  el.step = 0.000001;
+  await elementUpdated(el);
+  expect(
+    el.shadowRoot!.querySelectorAll('[part~="marker"]').length,
+    'an absurd interval count renders no markers at all',
+  ).to.equal(0);
+
+  el.step = 25;
+  el.max = 0;
+  await elementUpdated(el);
+  expect(el.shadowRoot!.querySelectorAll('[part~="marker"]').length).to.equal(0);
+});
+
+it('prefers a handle-aware value formatter over the tooltip formatter', async () => {
+  const el = (await fixture(html`
+    <lr-slider range min="0" max="100" min-value="20" max-value="80" tooltip="top"></lr-slider>
+  `)) as LyraSlider;
+  el.tooltipFormatter = (value) => `T${value}`;
+  await elementUpdated(el);
+  const tooltipText = (): string[] =>
+    [...el.shadowRoot!.querySelectorAll('[part~="tooltip__content"]')].map(
+      (node) => node.textContent!.trim(),
+    );
+  expect(tooltipText()).to.deep.equal(['T20', 'T80']);
+
+  el.valueFormatter = (value, handle) => `${handle}:${value}`;
+  await elementUpdated(el);
+  expect(tooltipText()).to.deep.equal(['min:20', 'max:80']);
+
+  el.valueFormatter = null;
+  el.tooltipFormatter = null;
+  await elementUpdated(el);
+  expect(tooltipText()).to.deep.equal(['20', '80']);
+});
+
+it('renders a required marker on the slider label from the shared themeable rule', async () => {
+  // Rendered result, not stylesheet text: a marker declared on a selector that never matched would
+  // still substring-match the sheet source.
+  const el = (await fixture(html`
+    <lr-slider required label="Volume"></lr-slider>
+  `)) as LyraSlider;
+  await elementUpdated(el);
+  const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label, '::after').content).to.contain('*');
+
+  const suppressed = (await fixture(html`
+    <lr-slider required label="Volume" style="--lr-form-control-required-content: ''"></lr-slider>
+  `)) as LyraSlider;
+  await elementUpdated(suppressed);
+  const suppressedLabel = suppressed.shadowRoot!.querySelector(
+    '[part~="form-control-label"]',
+  ) as HTMLElement;
+  expect(getComputedStyle(suppressedLabel, '::after').content).to.not.contain('*');
+});
+
+it('bars the validity custom states while readonly or disabled', async function () {
+  // `internals.states` and the `:state()` selector shipped separately; skip where either is absent
+  // rather than fail on an engine that cannot answer.
+  let supported = false;
+  try {
+    supported = typeof CustomStateSet === 'function' && document.createElement('div').matches(':state(x)') === false;
+  } catch {
+    supported = false;
+  }
+  if (!supported) this.skip();
+
+  const el = (await fixture(html`<lr-slider aria-label="Volume" readonly></lr-slider>`)) as LyraSlider;
+  el.setCustomValidity('Choose another value.');
+  await elementUpdated(el);
+  expect(el.matches(':state(invalid)'), 'a readonly control is barred from validation').to.be.false;
+
+  el.readonly = false;
+  await elementUpdated(el);
+  expect(el.matches(':state(invalid)'), 'the state returns once it is enforceable again').to.be.true;
+
+  el.disabled = true;
+  await elementUpdated(el);
+  expect(el.matches(':state(invalid)'), 'a disabled control is barred too').to.be.false;
 });

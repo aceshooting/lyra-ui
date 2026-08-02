@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,9 +55,16 @@ validity fails.
 
 **Slots:** `label`, `hint`, `error`.
 
-**CSS parts:** `form-control`, `label` (**not** `form-control-label` as on the other form
-components), `editor` (the bordered frame and the single scroll viewport), `gutter` (line numbers,
-`aria-hidden`, only when `lineNumbers`), `textarea`, `hint`, `error`.
+**CSS parts:** `form-control`, `label` / `form-control-label` (both tokens sit on the same `<label>`
+element — `label` is the historical name, `form-control-label` the one every other form component
+in this family uses), `editor` (the bordered frame and the single scroll viewport), `gutter` (line
+numbers, `aria-hidden`, only when `lineNumbers`), `textarea`, `hint`, `error`.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+that label element — the one `::after` rule described under "The required-field marker" above, not
+a copy of it, so `--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the element is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-code-editor-min-block-size` (default `--lr-size-8rem`, the
 frame's and textarea's height floor) and `--lr-code-editor-line-height` (default `1.5`, applied to

@@ -235,6 +235,9 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
   Firefox, Safari). CI runs the full test suite against Chromium plus a separate platform-contract
   suite against Firefox and WebKit, on Node 20 and 22.
 - Not tested against Internet Explorer or other browsers without native custom-element support.
+- **Exact version floors** (Chromium 120+, Gecko 121+, WebKit 16.4+), how they were derived, the CI
+  matrix behind them, assistive-technology status, and the policy for engines outside the window:
+  [`docs/support-policy.md`](./docs/support-policy.md).
 
 ## Built with
 
@@ -252,6 +255,12 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
   (short index) and [`llms-full.txt`](./packages/lyra-ui/llms-full.txt) (full API reference).
 - **Contributors working on this repo itself:** [`AGENTS.md`](./AGENTS.md) (AI agents) and
   [`CONTRIBUTING.md`](./CONTRIBUTING.md) (humans).
+- **Accessibility:** [`docs/accessibility.md`](./docs/accessibility.md) — which guarantees a gate
+  enforces on every commit, which are conventions, and which are not verified at all (no screen
+  reader has been run against this library).
+- **Support window:** [`docs/support-policy.md`](./docs/support-policy.md) — supported browser and
+  Node versions, what CI actually proves for each, assistive-technology status, and the policy for
+  engines outside the window.
 
 ## Claude Code plugin
 

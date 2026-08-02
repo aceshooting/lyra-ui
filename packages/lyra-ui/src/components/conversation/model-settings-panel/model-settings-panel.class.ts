@@ -124,7 +124,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   }
 
   private emitChange(): void {
-    this.emit<ModelSettingsChangeDetail>('lr-change', {
+    this.emit('lr-change', {
       modelValue: this.modelValue,
       inCatalog: this.inCatalog,
       temperature: this.temperature,

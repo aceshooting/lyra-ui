@@ -8,7 +8,7 @@
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -74,8 +74,11 @@ emit `input` immediately and one `change` when the field settles on blur or Ente
 composition events stay on the real input without sanitizing or committing; the final
 non-composing input commits and relays once. `lr-complete` (`detail: { value }`) fires only on an
 incomplete-to-complete transition, so replacing a filled cell does not complete again. It always
-bubbles, composes, and is cancelable. With `autosubmit`, the component calls `requestSubmit()` on
-its owning form after the event unless a listener calls `preventDefault()`. The real input's native
+bubbles, composes, and is cancelable. With `autosubmit`, the component submits its owning form
+after the event unless a listener calls `preventDefault()`. That submission is deferred one task,
+so a listener that decides asynchronously (`await`-ing a check before letting the form go) can
+still veto it; it then goes through the same resolved default button as Enter-to-submit, so
+`SubmitEvent.submitter` and the button's own `name`/`value` reach the submission. The real input's native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
 do not cross the shadow boundary; each is followed by its prefixed alias `lr-focus` / `lr-blur` (no
 detail). `lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.
@@ -87,7 +90,10 @@ mirrored in RTL. Backspace clears the current cell and moves back; Delete clears
 Neither operation shifts later characters. Typing replaces the active cell and advances. A
 nonempty native selection maps its compact-string offsets back to occupied visual cells: typing
 replaces the selection at its first cell, while either deletion key clears every selected cell.
-Enter flushes a pending `change` and requests exactly one submission from the owning form. Pasting
+A bare Enter flushes a pending `change` and requests exactly one submission from the owning form,
+through the shared Enter-to-submit gate above — so a modifier-held Enter, an Enter that commits an
+IME candidate, an already-vetoed keydown, and a `readonly` field all leave the form alone, and the
+keystroke itself is never cancelled. Pasting
 fills accepted characters from the first cell in one input operation. The public and submitted
 `value` concatenates occupied cells; a middle hole is a visual editing state and is not encoded in
 that string.
@@ -99,7 +105,11 @@ nonempty `label`/`hint` attribute wins when both sources are supplied. The `erro
 **CSS parts:** `base` / `form-control` (aliases on the outer wrapper), `label` /
 `form-control-label` (aliases on the label), `field` / `segments` (aliases on the segment wrapper),
 `control` (the real, transparent input), `segment`, `separator` / `segment-literal` (aliases on
-separators), `hint`, and `error`. A populated required label paints the shared required asterisk.
+separators), `hint`, and `error`. A populated required label paints the shared required marker —
+the same `::after` rule and the same three properties every other labelled control uses (see "The
+required-field marker" above), not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here too.
 `segment` carries `active`, `masked`, `placeholder-mask`, and `invalid` as additional part tokens.
 
 **Themeable custom properties:** `--mask-char` (mapped mask-glyph alias, defaulting to the retained

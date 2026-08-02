@@ -263,7 +263,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
       // input's own live state.
       const snapshot = new DataTransfer();
       for (const file of selected) snapshot.items.add(file);
-      this.emit<AttachmentPickDetail>('lr-pick', {
+      this.emit('lr-pick', {
         capability: this.pendingCapability,
         files: snapshot.files,
       });

@@ -15,6 +15,10 @@ assert.match(
 );
 assert.match(migration, /The codemod changes only `exact` and `rewritten`/);
 assert.match(migration, /The JSON migration report records every rewrite and warning/);
+assert.match(migration, /npx --package @aceshooting\/lyra-ui@<version> lyra-ui-migrate --check/);
+assert.match(migration, /`@aceshooting\/lyra-ui\/all\.js`/);
+assert.match(migration, /root-excluded targets receive granular registration imports/);
+assert.match(migration, /`OPTIONAL_PEER_REQUIRED`/);
 assert.match(migration, /Shoelace relationships are classified independently/);
 assert.doesNotMatch(migration, /review ledger|reviewed independently|reviewed and recorded/);
 assert.match(migration, /## Migrating Lyra 7 defaults/);

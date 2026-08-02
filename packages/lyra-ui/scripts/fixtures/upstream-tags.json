@@ -18,7 +18,16 @@
     "                    pair disagrees on polarity (`light-dismiss` vs `no-light-dismiss`,",
     "                    `with-summary` vs `hide-summary`): a rename that flips a boolean's sense",
     "                    still parses, so nothing errors and the component just behaves the other",
-    "                    way round."
+    "                    way round.",
+    "",
+    "unaliasedEvents  -- upstream events lyra-ui deliberately does not dispatch under their",
+    "                    migrated name, keyed `\"<upstream-tag> <event>\"`. The gate requires every",
+    "                    event a mapped upstream tag dispatches to land on an event the Lyra",
+    "                    target actually dispatches, because a renamed mirrored event is the",
+    "                    quietest parity break there is: the markup still parses, the codemod",
+    "                    still reports success, and the consumer's listener just never fires.",
+    "                    An entry whose event has since been aliased is reported as stale, so",
+    "                    this list can never quietly outlive its reason. Empty is the goal."
   ],
   "webawesome": {
     "version": "3.11.0",
@@ -180,6 +189,7 @@
     ]
   },
   "noCounterpart": {},
+  "unaliasedEvents": {},
   "attributeRenames": [
     {
       "component": "lr-dialog",

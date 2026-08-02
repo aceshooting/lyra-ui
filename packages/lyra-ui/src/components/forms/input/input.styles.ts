@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -68,10 +69,7 @@ export const styles = css`
   [part='form-control-label'][hidden] {
     display: none;
   }
-  :host([required]) [part='form-control-label']::after {
-    content: ' *';
-    color: var(--lr-color-danger);
-  }
+  ${formControlRequiredMarker}
   [part~='input-wrapper'] {
     display: flex;
     align-items: center;

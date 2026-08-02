@@ -4,6 +4,8 @@
     {
       "tag": "lr-resize-observer",
       "registrationModule": "src/components/utility/resize-observer/resize-observer.ts",
+      "rootIncluded": true,
+      "optionalPeers": [],
       "surface": {
         "attributes": [],
         "properties": [],
@@ -17,6 +19,8 @@
     {
       "tag": "lr-static",
       "registrationModule": "src/components/utility/static/static.ts",
+      "rootIncluded": true,
+      "optionalPeers": [],
       "surface": {
         "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
         "cssProperties": [], "methods": []
@@ -25,6 +29,8 @@
     {
       "tag": "lr-widget",
       "registrationModule": "src/components/forms/widget/widget.ts",
+      "rootIncluded": true,
+      "optionalPeers": [],
       "surface": {
         "attributes": [
           { "name": "new-attribute" },
@@ -42,6 +48,8 @@
     {
       "tag": "lr-table",
       "registrationModule": "src/components/data/table/table.ts",
+      "rootIncluded": true,
+      "optionalPeers": [],
       "surface": {
         "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
         "cssProperties": [], "methods": []
@@ -50,6 +58,8 @@
     {
       "tag": "lr-include",
       "registrationModule": "src/components/viewers/include/include.ts",
+      "rootIncluded": true,
+      "optionalPeers": [],
       "surface": {
         "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
         "cssProperties": [], "methods": []
@@ -59,9 +69,13 @@
   "localMigrations": [],
   "upstreams": {
     "shoelace": {
+      "packages": [
+        { "name": "@shoelace-style/shoelace", "tiers": ["free"] }
+      ],
       "components": [
         {
           "tag": "sl-resize-observer",
+          "tier": "free",
           "surface": {
             "attributes": [],
             "properties": [],
@@ -74,6 +88,7 @@
         },
         {
           "tag": "sl-static",
+          "tier": "free",
           "surface": {
             "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
             "cssProperties": [], "methods": []
@@ -82,9 +97,14 @@
       ]
     },
     "webawesome": {
+      "packages": [
+        { "name": "@awesome.me/webawesome", "tiers": ["free"] },
+        { "name": "@awesome.me/webawesome-pro", "tiers": ["free", "pro"] }
+      ],
       "components": [
         {
           "tag": "wa-widget",
+          "tier": "free",
           "surface": {
             "attributes": [{ "name": "old-attribute" }, { "name": "mode" }],
             "properties": [{ "name": "oldProperty" }],
@@ -97,6 +117,7 @@
         },
         {
           "tag": "wa-data-grid",
+          "tier": "pro",
           "surface": {
             "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
             "cssProperties": [], "methods": []
@@ -104,6 +125,7 @@
         },
         {
           "tag": "wa-include",
+          "tier": "free",
           "surface": {
             "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
             "cssProperties": [], "methods": []
@@ -111,6 +133,7 @@
         },
         {
           "tag": "wa-deferred",
+          "tier": "pro",
           "surface": {
             "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
             "cssProperties": [], "methods": []
@@ -126,6 +149,12 @@
       "targetTag": "lr-resize-observer",
       "classification": "rewritten",
       "rationale": "The prefixed event change is explicit and deterministic.",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": { "registration": "all", "optionalPeers": [] },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -144,6 +173,12 @@
       "targetTag": "lr-static",
       "classification": "exact",
       "rationale": null,
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": { "registration": "all", "optionalPeers": [] },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
         "cssProperties": [], "methods": [], "defaults": []
@@ -156,6 +191,12 @@
       "targetTag": "lr-widget",
       "classification": "rewritten",
       "rationale": "Every reviewed difference has an explicit deterministic rewrite.",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": { "registration": "all", "optionalPeers": [] },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [{ "from": "old-attribute", "to": "new-attribute" }],
         "properties": [{ "from": "oldProperty", "to": "newProperty" }],
@@ -198,6 +239,12 @@
       "targetTag": "lr-table",
       "classification": "conceptual-only",
       "rationale": "A data grid is not a semantic table.",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "warning-required",
+        "runtime": { "registration": "all", "optionalPeers": [] },
+        "behaviorReviewFlags": ["conceptual-contract"]
+      },
       "rewrites": {
         "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
         "cssProperties": [], "methods": [], "defaults": []
@@ -210,6 +257,12 @@
       "targetTag": "lr-include",
       "classification": "warning-required",
       "rationale": "Security defaults require manual review.",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "warning-required",
+        "runtime": { "registration": "all", "optionalPeers": [] },
+        "behaviorReviewFlags": ["remote-content-security"]
+      },
       "rewrites": {
         "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
         "cssProperties": [], "methods": [], "defaults": []
@@ -222,6 +275,12 @@
       "targetTag": null,
       "classification": "unsupported",
       "rationale": "No target has shipped.",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "unreviewed",
+        "runtime": { "registration": "unavailable", "optionalPeers": [] },
+        "behaviorReviewFlags": ["missing-target"]
+      },
       "rewrites": {
         "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
         "cssProperties": [], "methods": [], "defaults": []

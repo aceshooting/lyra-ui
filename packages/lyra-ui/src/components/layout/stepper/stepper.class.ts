@@ -336,7 +336,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     this._effectiveOrientation = next;
     this.requestUpdate();
     if (emitOnChange) {
-      this.emit<StepperOrientationChangeDetail>(
+      this.emit(
         "lr-stepper-orientation-change",
         { orientation: next }
       );
@@ -364,7 +364,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     // Not cancelable -- see the class doc's `lr-step-select` entry for why this component (a
     // fully controlled, data-driven component like `lr-table`) has no default action of its own
     // to gate behind `.defaultPrevented`.
-    this.emit<{ index: number; id: string }>("lr-step-select", {
+    this.emit("lr-step-select", {
       index,
       id: step.id,
     });

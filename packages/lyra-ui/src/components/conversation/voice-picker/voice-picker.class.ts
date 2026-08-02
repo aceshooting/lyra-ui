@@ -9,6 +9,7 @@ import {
   attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
+  isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
@@ -104,7 +105,9 @@ export interface LyraVoicePickerEventMap {
  * @event lr-preview-request - `detail: { voiceId: string; previewUrl?: string }`. Cancelable.
  * @event lr-preview-change - `detail: { voiceId: string | null }` — internal playback started
  *   (`voiceId`) or stopped (`null`).
- * @event lr-invalid - The picker failed a validity check.
+ * @event lr-invalid - The picker failed a validity check. Cancelable: calling `preventDefault()`
+ *   also cancels the native `invalid` event behind it, suppressing the browser's own validation
+ *   bubble so an app can present the failure its own way.
  * @csspart form-control-label - The `<label>` element.
  * @csspart trigger - The trigger button (closed-dropdown mode).
  * @csspart combobox - The text-input container (free-text mode).
@@ -131,6 +134,13 @@ export interface LyraVoicePickerEventMap {
  *   Selected option label weight.
  * @cssprop [--lr-voice-picker-preview-hover-bg=var(--lr-color-brand-quiet)] - Preview hover fill.
  * @cssprop [--lr-voice-picker-preview-hover-color=var(--lr-color-brand)] - Preview hover icon.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
+ *   `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
+ *   other quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Required-marker color,
+ *   themeable independently of error text and invalid borders.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ *   required marker.
  * @status stable
  * @since 4.0.0
  */
@@ -208,7 +218,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
     this.internals.setFormValue('');
   }
 
@@ -368,6 +378,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
       this.hide();
       this.stopInternalPreview();
     }
+    // Disabling bars constraint validation, so the intrinsic violation has to be dropped with it --
+    // synchronously, for the same reason the attribute is reflected synchronously.
+    this.updateValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -387,8 +400,20 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     return this.disabled || this._fieldsetDisabled;
   }
 
+  /**
+   * Shared with every other form control: own `disabled` and a `<fieldset disabled>` ancestor bar
+   * constraint validation (this picker has no `readonly` of its own). A barred control matches
+   * neither `:valid` nor `:invalid` natively, so leaving `valueMissing` raised on a disabled
+   * required picker is what painted it red under the documented `:state(user-invalid)` rule.
+   */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   private updateValidity(): void {
-    if (this.required && !this._value) {
+    if (this.barredFromValidation) {
+      this.validityController.setValidity({});
+    } else if (this.required && !this._value) {
       this.validityController.setValidity({ valueMissing: true }, this.localize('voicePickerRequired'));
     } else {
       this.validityController.setValidity({});
@@ -403,7 +428,11 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
    *  on the trigger's/input's first blur, and on a `reportValidity()` call, which is what a submit
    *  attempt runs. */
   private publishValidityStates(): void {
-    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.touched,
+      barred: this.barredFromValidation,
+    });
   }
 
   formResetCallback(): void {
@@ -425,6 +454,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
       this.hide();
       this.stopInternalPreview();
     }
+    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
+    this.updateValidity();
     this.requestUpdate();
   }
   checkValidity(): boolean {
@@ -588,7 +619,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     if (!voiceId) return;
     const entry = this.effectiveEntries.find((e) => e.id === voiceId);
     const previewUrl = entry?.previewUrl;
-    const event = this.emit<{ voiceId: string; previewUrl?: string }>(
+    const event = this.emit(
       'lr-preview-request',
       { voiceId, previewUrl },
       { cancelable: true },
@@ -607,7 +638,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.audioEl = audio;
     this.previewingId = voiceId;
     void audio.play().catch(() => this.onAudioLoadFailure(audio));
-    this.emit<{ voiceId: string | null }>('lr-preview-change', { voiceId });
+    this.emit('lr-preview-change', { voiceId });
   }
 
   private onAudioEnded = (event: Event): void => {
@@ -640,7 +671,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.audioEl = undefined;
     if (this.previewingId !== null) {
       this.previewingId = null;
-      this.emit<{ voiceId: string | null }>('lr-preview-change', { voiceId: null });
+      this.emit('lr-preview-change', { voiceId: null });
     }
   };
 
@@ -653,7 +684,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     }
     if (this.previewingId !== null) {
       this.previewingId = null;
-      this.emit<{ voiceId: string | null }>('lr-preview-change', { voiceId: null });
+      this.emit('lr-preview-change', { voiceId: null });
     }
   }
 

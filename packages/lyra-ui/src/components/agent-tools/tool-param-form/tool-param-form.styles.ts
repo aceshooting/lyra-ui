@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -26,14 +27,15 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
-  /* Applies to a boolean field's slotted <span part="label"> (inside
+  /* The shared required marker (internal/form-control.styles.ts). This is the
+     one component where "required" is per FIELD rather than per host, which is
+     why that sheet carries a second selector keyed on
+     [part="field"][data-required] alongside the usual :host([required]) one.
+     It applies to a boolean field's slotted <span part="label"> (inside
      <lr-checkbox>) too -- see tool-param-form.ts's class doc for why that
      span still belongs to *this* component's shadow tree for CSS purposes
      even though it's visually projected into a child element's template. */
-  [part='field'][data-required] [part='label']::after {
-    content: ' *';
-    color: var(--lr-color-danger);
-  }
+  ${formControlRequiredMarker}
 
   [part='field'] > lr-select,
   [part='field'] > lr-checkbox,

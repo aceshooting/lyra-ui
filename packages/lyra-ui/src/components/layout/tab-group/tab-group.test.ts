@@ -488,6 +488,89 @@ it("rehomes focus when the focused active tab is removed", async () => {
   expect(focused?.tabIndex).to.equal(0);
 });
 
+it("ArrowRight steps past an inert tab, which never holds the roving tabindex", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group>
+      <div slot="input" label="Input">Raw input</div>
+      <div slot="preview" label="Preview" inert>Rendered preview</div>
+      <div slot="settings" label="Settings">Settings form</div>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  const buttons = tabButtons(el);
+  // The button standing in for inert content is itself inert, so it refuses focus outright --
+  // which is exactly why arrow navigation must never step onto it.
+  expect(buttons[0].inert).to.be.false;
+  expect(buttons[1].inert).to.be.true;
+  expect(buttons[1].getAttribute("tabindex")).to.equal("-1");
+
+  press(buttons[0], "ArrowRight");
+  await el.updateComplete;
+  expect(el.active).to.equal("settings");
+
+  press(tabButtons(el)[2], "ArrowLeft");
+  await el.updateComplete;
+  expect(el.active).to.equal("input");
+
+  press(tabButtons(el)[0], "End");
+  await el.updateComplete;
+  expect(el.active).to.equal("settings");
+});
+
+it("never activates an inert tab, and skips it when resolving the default active tab", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group>
+      <div slot="input" label="Input" inert>Raw input</div>
+      <div slot="preview" label="Preview">Rendered preview</div>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  expect(el.active).to.equal("preview");
+
+  let fired = false;
+  el.addEventListener("lr-tab-show", () => (fired = true));
+  el.show("input");
+  await el.updateComplete;
+  expect(fired).to.be.false;
+  expect(el.active).to.equal("preview");
+});
+
+it("rehomes focus when the focused active tab becomes inert", async () => {
+  const el = (await fixture(basic())) as LyraTabGroup;
+  tabButtons(el)[0].focus();
+  (el.querySelector('[slot="input"]') as HTMLElement).inert = true;
+
+  await aTimeout(0);
+  await el.updateComplete;
+
+  const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(el.active).to.equal("preview");
+  expect(focused?.dataset["slot"]).to.equal("preview");
+  expect(focused?.tabIndex).to.equal(0);
+});
+
+it("leaves selection and panels alone when an ancestor inerts the whole group", async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <lr-tab-group>
+        <div slot="input" label="Input">Raw input</div>
+        <div slot="preview" label="Preview">Rendered preview</div>
+      </lr-tab-group>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector("lr-tab-group") as LyraTabGroup;
+  await el.updateComplete;
+  expect(el.active).to.equal("input");
+
+  // A modal inerting the page behind it must not blank every panel: uniform inertness needs no
+  // per-tab handling, since focus cannot be inside the group at all.
+  wrapper.inert = true;
+  await aTimeout(0);
+  await el.updateComplete;
+
+  expect(el.active).to.equal("input");
+  expect(tabButtons(el)[0].inert).to.be.false;
+  expect(panels(el)[0].hasAttribute("hidden")).to.be.false;
+});
+
 it("rehomes focus when the focused active tab becomes disabled", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   tabButtons(el)[0].focus();

@@ -372,13 +372,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     ) {
       this.focusTaskGeneration++;
     }
-    if (!this.hasUpdated) {
-      this.hasEmptySlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'empty');
-      const defaultSlotted = this.defaultSlottedElements();
-      this.hasDefaultSlotContent = defaultSlotted.length > 0;
-      this.markAsListItems(defaultSlotted);
-    }
-    if (changed.has('threads')) {
+    const syncSlottedContent = (): void => {
       const defaultSlotted = this.defaultSlottedElements();
       this.hasDefaultSlotContent = defaultSlotted.length > 0;
       if (this.threads.length > 0 && defaultSlotted.length > 0) {
@@ -389,6 +383,19 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       } else if (this.threads.length === 0) {
         this.markAsListItems(defaultSlotted);
       }
+    };
+    if (!this.hasUpdated) {
+      // A server render sees no light-DOM children, so it always renders data mode; a hydrating
+      // list reproduces that first and adopts slotted rows on the update right after. Every
+      // light-DOM read of the first update goes through the one deferral, including the
+      // `threads` branch below -- the initial property values reach it as changes too, and a
+      // single live read there is enough to contradict the markup being hydrated.
+      this.seedFirstRenderState(() => {
+        this.hasEmptySlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'empty');
+        syncSlottedContent();
+      });
+    } else if (changed.has('threads')) {
+      syncSlottedContent();
     }
   }
 
@@ -567,7 +574,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     this.focusTaskGeneration++;
     this.searchText = (e.target as HTMLInputElement).value;
     const count = this.visibleThreads.length;
-    this.emit<{ text: string; matchCount: number }>('lr-filter-change', {
+    this.emit('lr-filter-change', {
       text: this.searchText,
       matchCount: count,
     });
@@ -882,22 +889,32 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.label || this.localize('threadListLabel');
-    if (!this.dataMode) {
-      return html`
-        <div part="base">
-          ${this.searchable ? this.renderSearch() : nothing}
-          <div part="list" role="list" aria-label=${label}>
-            <slot @slotchange=${this.onDefaultSlotChange}></slot>
-          </div>
-        </div>
-      `;
-    }
+    // Both modes share one outer template so the mode switch replaces only the list inside it.
+    // Slotted rows are invisible to a server renderer, which therefore always emits data mode; a
+    // hydrating list has to reuse that markup rather than discard it on its corrective update.
+    return html`
+      <div
+        part="base"
+        role=${this.dataMode ? 'region' : nothing}
+        aria-label=${this.dataMode ? label : nothing}
+      >
+        ${this.searchable ? this.renderSearch() : nothing}
+        ${this.dataMode ? this.renderDataList() : this.renderSlottedList(label)}
+      </div>
+    `;
+  }
+
+  private renderSlottedList(label: string): TemplateResult {
+    return html`<div part="list" role="list" aria-label=${label}>
+      <slot @slotchange=${this.onDefaultSlotChange}></slot>
+    </div>`;
+  }
+
+  private renderDataList(): TemplateResult {
     const visible = this.visibleThreads;
     const items = this.buildItems(visible);
     const showEmpty = visible.length === 0 && !this.hasEmptySlot;
     return html`
-      <div part="base" role="region" aria-label=${label}>
-        ${this.searchable ? this.renderSearch() : nothing}
         <div part="list" @keydown=${this.onListKeyDown}>
           ${showEmpty
             ? html`<div part="empty">${
@@ -920,7 +937,6 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ></slot>
         </div>
         <lr-live-region></lr-live-region>
-      </div>
     `;
   }
 }

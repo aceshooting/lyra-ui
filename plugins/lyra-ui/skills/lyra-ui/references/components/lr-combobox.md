@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 26 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -157,7 +157,8 @@ the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user e
 `detail: { inputValue }` and is the one cancelable event: preventing it suppresses the default
 append/select action so the host can normalize and commit its own option.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
-`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
+`lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
+validity fails — see "The validity alias is cancelable in 8.0.0" above.
 
 **The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
 committed selection and an in-progress filter query, so the button renders whenever either has
@@ -218,6 +219,12 @@ adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`
 leading visual for an async row), `option-label`, `option-sub` (a row's secondary line, when `sub`
 is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"
 indicator from `maxRender`), `error`, `hint`
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-combobox-trigger-padding`,
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,

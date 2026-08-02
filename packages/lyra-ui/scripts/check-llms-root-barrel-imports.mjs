@@ -1,9 +1,15 @@
 #!/usr/bin/env node
 // Root-barrel import gate: fails when a ```ts/```js code fence in llms/*.md shows a consumer
-// importing from the bare `@aceshooting/lyra-ui` package-root barrel. The root barrel side-effect
-// registers every component (~253 of them) it re-exports, so a copy-pasted example that imports
-// from it silently drags a consumer's whole eager bundle in, even when the example only wants one
-// component. The correct copy-pasteable form is a granular subpath, e.g.
+// importing from the bare `@aceshooting/lyra-ui` package root. Since 8.0.0 the root is a pure
+// export surface -- the registration side effects moved to `src/all.ts`, published as the
+// `all.js` subpath -- so a bare-root import no longer *registers* anything. The gate still holds,
+// for the reason it always mattered most: the root re-exports every component class and type in
+// the library, so a copy-pasted example importing from it hands a consumer's bundler the whole
+// named-export graph to prove dead, when the example only wanted one component. That proof is not
+// free and not guaranteed -- it is exactly what a `sideEffects` misconfiguration, a CommonJS
+// interop step, or an unoptimized dev build fails to do, and the example's reader inherits the
+// failure. A granular subpath cannot regress that way at all, so it stays the only correct
+// copy-pasteable form, e.g.
 // `@aceshooting/lyra-ui/components/forms/select/select.js` -- see the "Tree-shakeable exports" rule
 // in docs/agents/coding-conventions.md. `check-llms-freshness.mjs` (via scripts/llms-gaps.mjs) only
 // asserts that a member *name* is mentioned somewhere in a component's section; it does not (and
@@ -20,8 +26,8 @@
 //     inline `` `code span` `` that merely *mentions* the root package name (e.g. "install
 //     `@aceshooting/lyra-ui`") is not a copy-pasteable import example and is left alone.
 //   * Both `import ... from '@aceshooting/lyra-ui'` / `export ... from '@aceshooting/lyra-ui'` and
-//     a dynamic `import('@aceshooting/lyra-ui')` are covered -- either form eagerly pulls in the
-//     same side-effectful module graph.
+//     a dynamic `import('@aceshooting/lyra-ui')` are covered -- either form reaches the same
+//     whole-library export graph.
 //
 // Fixtures for both the positive (flagged) and negative (subpath / different package / non-code-
 // fence, correctly not flagged) shapes live in check-llms-root-barrel-imports.test.mjs, run by the
@@ -94,8 +100,9 @@ export function checkRootBarrelImports(file, text) {
       // makes the finding read as a complete expression.
       const shown = match[0].startsWith('import(') ? `${match[0]})` : match[0];
       findings.push(
-        `${rel(file)}:${line} imports the bare root barrel (\`${shown}\`) -- this side-effect ` +
-          `registers every component into a consumer's eager bundle. Use a granular subpath instead, ` +
+        `${rel(file)}:${line} imports the bare root barrel (\`${shown}\`) -- that reaches every ` +
+          `component's exports, leaving the example's cost to whatever tree-shaking the consumer's ` +
+          `build happens to do. Use a granular subpath instead, ` +
           `e.g. \`${PACKAGE_NAME}/components/<family>/<name>/<name>.js\`.`,
       );
     }

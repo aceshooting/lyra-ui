@@ -815,3 +815,59 @@ it('blur() releases the native trigger it focused', async () => {
   el.blur();
   expect(el.shadowRoot!.activeElement).to.be.null;
 });
+
+const twoFormats = [
+  { id: 'csv', label: 'CSV' },
+  { id: 'json', label: 'JSON' },
+] as unknown as LyraExportButton['formats'];
+
+it('honours preventDefault() on lr-show and lr-hide for the format menu', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.formats = twoFormats;
+  await el.updateComplete;
+
+  el.addEventListener('lr-show', (event) => event.preventDefault(), { once: true });
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open, 'a vetoed open never applies').to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open, 'the veto was one-shot').to.be.true;
+
+  el.addEventListener('lr-hide', (event) => event.preventDefault(), { once: true });
+  el.open = false;
+  await el.updateComplete;
+  expect(el.open, 'a vetoed close stays open').to.be.true;
+  expect(el.hasAttribute('open')).to.be.true;
+});
+
+it('never lets a veto hold the menu open once the component disables itself', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.formats = twoFormats;
+  await el.updateComplete;
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  el.addEventListener('lr-hide', (event) => event.preventDefault());
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.open, 'a self-imposed close is not vetoable').to.be.false;
+});
+
+it('makes the menu lifecycle events cancelable', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.formats = twoFormats;
+  await el.updateComplete;
+  const seen: CustomEvent[] = [];
+  el.addEventListener('lr-show', (event) => seen.push(event as CustomEvent));
+  el.addEventListener('lr-hide', (event) => seen.push(event as CustomEvent));
+  el.open = true;
+  await el.updateComplete;
+  el.open = false;
+  await el.updateComplete;
+  expect(seen.map((event) => event.type)).to.deep.equal(['lr-show', 'lr-hide']);
+  expect(seen.every((event) => event.cancelable)).to.be.true;
+});

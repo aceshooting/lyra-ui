@@ -75,7 +75,7 @@ export function createXmlComplexityInspectorFactory(
     const finishTag = (): void => {
       const match = /^<([A-Za-z_][\w:.-]*)(?:\s|\/|$)/.exec(prefix);
       if (!match) return;
-      const localName = match[1]!.split(':').at(-1)!.toLocaleLowerCase('en-US');
+      const localName = match[1]!.split(':').at(-1)!.toLowerCase();
       nodes++;
       if (localName === 'row') rows++;
       if (localName === 'c') cells++;

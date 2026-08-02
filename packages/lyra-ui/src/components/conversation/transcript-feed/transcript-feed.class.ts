@@ -104,7 +104,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     if (changed.has('entries') && this.follow) this.scrollToBottom();
     if (changed.has('follow')) {
       if (this.follow) this.scrollToBottom();
-      if (!this._isFirstUpdate) this.emit<{ following: boolean }>('lr-follow-change', { following: this.follow });
+      if (!this._isFirstUpdate) this.emit('lr-follow-change', { following: this.follow });
     }
   }
 

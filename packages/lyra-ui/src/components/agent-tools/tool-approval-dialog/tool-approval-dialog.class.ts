@@ -307,7 +307,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   close(reason: ToolApprovalDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit<ToolApprovalDialogCloseReason>('lr-close', reason);
+    this.emit('lr-close', reason);
   }
 
   private onBackdropClick = (): void => {
@@ -368,7 +368,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         return;
       }
     }
-    const event = this.emit<{ args: unknown }>('lr-approve', { args: currentArgs }, { cancelable: true });
+    const event = this.emit('lr-approve', { args: currentArgs }, { cancelable: true });
     if (event.defaultPrevented) {
       this.pending = 'approve';
       return;

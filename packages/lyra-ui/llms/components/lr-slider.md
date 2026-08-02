@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 24 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -142,6 +142,14 @@ the part name because `::part(tooltip)[data-visible]` is invalid CSS and never m
 
 **Breaking in 8.0.0:** the `fill` part was **renamed to `indicator`**, matching `wa-slider`. A
 `::part(fill)` rule silently matches nothing now — rename it.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+the `form-control-label` node — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the node is hidden and no glyph is
+painted. It is purely a visual convention here, for the reason the custom states note above gives:
+a slider always has a value, so the marker never accompanies a `valueMissing` violation.
 
 **Themeable custom properties:** three geometry knobs ride the shared `size` ladder, so a tier moves
 them all without a per-tier rule, and the values in brackets are what they resolve to at the default

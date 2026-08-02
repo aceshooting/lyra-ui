@@ -16,21 +16,41 @@ const basic = () => html`
   </lr-select>
 `;
 
-it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = (await fixture(html`
     <lr-select required label="Fruit"><lr-option value="a">Apple</lr-option></lr-select>
   `)) as LyraSelect;
   const aliases: CustomEvent[] = [];
   el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+  // Registered after the component's own constructor-time relay, so it observes the native event
+  // once the alias has had its turn at it.
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
   expect(aliases[0].target).to.equal(el);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.false;
+  expect(aliases[0].cancelable).to.be.true;
+  // Nothing cancelled it, so the browser's own validation UI stays enabled.
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.false;
 });
 
-it('emits non-cancelable after-events once the listbox transition settles', async () => {
+it('cancels the native invalid event when the lr-invalid alias is cancelled', async () => {
+  const el = (await fixture(html`
+    <lr-select required label="Fruit"><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  el.addEventListener('lr-invalid', (event) => event.preventDefault());
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.true;
+});
+
+it('emits a cancelable lr-show/lr-hide pair and non-cancelable after-events', async () => {
   const el = (await fixture(html`
     <lr-select style="--lr-transition-fast: 1ms linear">
       <lr-option value="a">Apple</lr-option>
@@ -51,7 +71,57 @@ it('emits non-cancelable after-events once the listbox transition settles', asyn
   expect(events.map((event) => event.type)).to.deep.equal([
     'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide',
   ]);
-  expect(events.every((event) => !event.cancelable && event.target === el)).to.be.true;
+  expect(events.every((event) => event.target === el)).to.be.true;
+  // `lr-show`/`lr-hide` are veto points library-wide; the settled after-events are pure
+  // notifications and stay non-cancelable.
+  expect(events.filter((event) => event.type.startsWith('lr-after')).every((event) => !event.cancelable)).to.be.true;
+  expect(events.filter((event) => !event.type.startsWith('lr-after')).every((event) => event.cancelable)).to.be.true;
+});
+
+it('honours preventDefault() on lr-show, leaving the property and attribute closed', async () => {
+  const el = (await fixture(html`
+    <lr-select><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  el.addEventListener('lr-show', (event) => event.preventDefault());
+  let afterShows = 0;
+  el.addEventListener('lr-after-show', () => { afterShows += 1; });
+
+  await el.show();
+  await el.updateComplete;
+  await aTimeout(60);
+
+  expect(el.open, 'a vetoed open never applies').to.be.false;
+  expect(el.hasAttribute('open'), 'the reflected attribute agrees with the property').to.be.false;
+  expect(afterShows, 'a transition that never happened has no after-event').to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-expanded')).to.equal('false');
+});
+
+it('honours preventDefault() on lr-hide, including a direct `open` assignment', async () => {
+  const el = (await fixture(html`
+    <lr-select><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(60);
+  expect(el.open).to.be.true;
+
+  el.addEventListener('lr-hide', (event) => event.preventDefault());
+  el.open = false;
+  await el.updateComplete;
+  await aTimeout(60);
+
+  expect(el.open, 'a vetoed close stays open').to.be.true;
+  expect(el.hasAttribute('open')).to.be.true;
+});
+
+it('resolves show()/hide() promises even when the transition is vetoed', async () => {
+  const el = (await fixture(html`
+    <lr-select><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  el.addEventListener('lr-show', (event) => event.preventDefault());
+  // A veto must not strand the caller: the promise settles, it just settles on "nothing changed".
+  await el.show();
+  expect(el.open).to.be.false;
 });
 
 it('drops a stale lr-after-show when closing interrupts the opening transition', async () => {
@@ -2871,4 +2941,55 @@ describe('lr-select mapped Select parity surface', () => {
     expect(performance.now() - started).to.be.below(3000);
     el.remove();
   });
+});
+
+it('bars constraint validation while disabled, like a native disabled required control', async () => {
+  const el = (await fixture(html`
+    <lr-select required disabled label="Fruit"><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'a barred control raises no violation').to.be.false;
+  expect(el.checkValidity()).to.be.true;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'the violation returns once it is enforceable again').to.be.true;
+});
+
+it('renders the required marker from the shared themeable rule', async () => {
+  const el = (await fixture(html`
+    <lr-select required label="Fruit"><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label, '::after').content).to.contain('*');
+
+  el.style.setProperty('--lr-form-control-required-content', "''");
+  await el.updateComplete;
+  expect(getComputedStyle(label, '::after').content).to.not.contain('*');
+});
+
+it('skips inert options when moving the active descendant', async () => {
+  const el = (await fixture(html`
+    <lr-select label="Fruit">
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b" inert>Banana</lr-option>
+      <lr-option value="c">Cherry</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part~="trigger"]') as HTMLElement;
+  const press = (key: string): void => {
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  };
+  // From the pristine -1 index the first ArrowDown lands on Apple; the second must skip the inert
+  // Banana entirely rather than making it the active descendant.
+  press('ArrowDown');
+  await el.updateComplete;
+  press('ArrowDown');
+  await el.updateComplete;
+  press('Enter');
+  await el.updateComplete;
+  expect(el.value, 'the inert option is never a navigation stop').to.equal('c');
 });

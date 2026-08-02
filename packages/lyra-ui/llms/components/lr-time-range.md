@@ -65,6 +65,37 @@ control — so a consumer re-validating a range on every `lr-input` calls this w
 (or `''`) each time rather than expecting the movement itself to clear it. The message is
 caller-supplied and is used verbatim, never localized.
 
+**`form.reset()` — `formResetCallback()`.** The control has no submitted value, but it does take
+part in its owning form's reset, and a reset undoes everything the *user* did to it:
+
+- **The range** goes back to the declared `start`/`end` **content attributes** — the markup default,
+  the way a native `<input>` resets to its `value` attribute rather than to its current IDL value. A
+  handle with no attribute falls back to the domain bound it started at. The restored pair is
+  normalized the same way a preset pick is (clamped into `[min, max]`, then ordered so
+  `start <= end`), so an inverted or out-of-range declared range still restores to a legal one.
+- **The interaction flag** is cleared, which makes the control pristine again: `:state(user-valid)`
+  and `:state(user-invalid)` stop matching until the user touches it again. Without this, a range a
+  consumer had rejected kept rendering as the user's mistake on a form they had just reset.
+- **An in-flight keyboard gesture** is dropped, so the next key-up cannot commit an `lr-change` for
+  a step the reset already discarded. A drag in progress is left alone — only the pointer sequence
+  itself ends it.
+
+Two things deliberately **survive** the reset, matching native semantics:
+
+- **A `setCustomValidity()` message**, and with it `customError`, `validationMessage`,
+  `:state(invalid)` and blocked submission. Only another `setCustomValidity('')` clears it. The
+  reset stops it looking like the user's error; it does not decide the consumer's constraint is
+  satisfied. If a reset should also clear your rejection, call `setCustomValidity('')` from your own
+  `reset` listener.
+- **`disabled`, `min`/`max`, `step`, `presets`, and every other author-set property** — a reset
+  restores the user's edits, not the component's configuration.
+
+The reset **emits nothing**: like a native control, it is the form's edit rather than the user's, so
+no `input`/`change`/`lr-input`/`lr-change` fires. Read `start`/`end` in a `reset` listener on the
+form if you need to react. There is deliberately no `formStateRestoreCallback()` beside it — this
+control never calls `setFormValue()`, so the browser has no serialized state to hand back for
+autofill or back/forward restore.
+
 **Slots:** none.
 
 **CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`

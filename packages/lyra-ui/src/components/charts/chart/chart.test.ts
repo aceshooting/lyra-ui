@@ -2088,6 +2088,10 @@ it('applies the public point-radius default without adding an inert segment obje
     'borderRadius',
     'borderWidth',
     'borderDash',
+    // Present but `undefined` outside `forced-colors: active`, exactly like `borderDash`: Chart.js
+    // resolves an undefined dataset option from its own defaults, so the key's presence is inert
+    // here (unlike `segment`, asserted above).
+    'pointStyle',
     'backgroundColor',
     'borderColor',
     'pointBackgroundColor',

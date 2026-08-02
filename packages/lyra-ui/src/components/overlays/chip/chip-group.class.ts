@@ -234,7 +234,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
 
   private onToggleOverflow = (): void => {
     this.expanded = !this.expanded;
-    this.emit<ChipGroupOverflowToggleDetail>('lr-overflow-toggle', { expanded: this.expanded });
+    this.emit('lr-overflow-toggle', { expanded: this.expanded });
   };
 
   override render(): TemplateResult {

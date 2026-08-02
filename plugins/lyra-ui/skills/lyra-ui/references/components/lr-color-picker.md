@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 43 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 43 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -176,6 +176,13 @@ The eyedropper aliases are also addressable individually as `eyedropper-button__
 `eyedropper-button__start`, `eyedropper-button__label`, `eyedropper-button__end`,
 `eyedropper-button__caret`, `eye-dropper-button__base`, `eye-dropper-button__prefix`,
 `eye-dropper-button__label`, `eye-dropper-button__suffix`, and `eye-dropper-button__caret`.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
+painted.
 
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
 not the button's minimum target. It is auto-swapped per `size` tier (default `'m'` reads `2.5rem`,

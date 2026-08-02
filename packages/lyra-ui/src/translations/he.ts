@@ -1297,4 +1297,7 @@ const strings: LyraLocaleStrings = {
   reorderItemMoved: 'הועבר למיקום {index} מתוך {total}',
 };
 
-registerLyraLocale('he', strings);
+// `dir` is declared, not inferred: no component reads it (direction still comes from the
+// platform `dir` cascade), but it is what lets an application ask the library whether this
+// locale needs `dir="rtl"` instead of keeping its own tag table.
+registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

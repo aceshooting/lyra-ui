@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 11 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -167,9 +167,14 @@ override and no `::part()` rule. Charts are canvas-rendered, so a live theme cha
 the built-in `ThemeWatcher` (or `refreshTheme()`) rather than by CSS alone.
 
 Under `forced-colors: active` the ramp deliberately collapses onto the three system colors the mode
-actually guarantees (`Highlight`/`LinkText`/`CanvasText`, cycling), so more than three series stop
-being distinguishable by colour there — a chart that must stay readable in forced colors needs a
-non-colour channel (dashes, point styles, direct labels via `dataLabels`) as well.
+actually guarantees (`Highlight`/`LinkText`/`CanvasText`, cycling), so colour alone stops separating
+more than three series there. The chart therefore adds a **non-colour encoding automatically** in
+that mode, cycling eight variants by series index: a canvas fill pattern (stripes, crosshatch, dots,
+checker), a `borderDash` stroke pattern, a `pointStyle` shape, and the matching texture on the DOM
+legend's `legend-swatch`, which carries a `data-encoding` attribute naming the variant (`solid`,
+`horizontal`, `vertical`, `diagonal`, `reverse-diagonal`, `crosshatch`, `dots`, `checker`). Nothing
+is opt-in and no author colour is substituted. Direct labels via `dataLabels` are still worth adding
+when a chart must stay readable with no legend at all.
 
 The instance method `seriesPalette(): string[]` resolves that ramp through `getComputedStyle` and
 returns the concrete, theme-aware colors — the exact same values the chart hands an uncolored
@@ -226,7 +231,27 @@ legend text, and tooltip background/text respectively; plus
 declaration on a DOM element (the outline is painted by the stylesheet, not by Chart.js), so it is
 consumed directly with no `getComputedStyle` bridging; it is an inline `var()` fallback at the point
 of use, so it can be set on the element or any ancestor, and left unset the outline is exactly the
-`--lr-border-width-thin` it always was. Plus shared `--lr-space-xs`.
+`--lr-border-width-thin` it always was.
+
+`--lr-chart-pattern-step` (default `var(--lr-space-2xs)`) is the tile size of the texture painted on
+`[part="legend-swatch"]` while `forced-colors: active` matches — the legend half of the non-colour
+encoding described under "The categorical series ramp" above, and the reason repeated system colours
+stay tellable apart in the DOM legend. It has no effect outside forced colors, where the swatch is a
+plain colour chip. It scales the tile, not the mark inside it: the stripe/crosshatch line width
+stays `--lr-border-width-thin` and the `dots` radius stays absolute, so a larger step spaces those
+marks further apart rather than thickening them (the percentage-based `checker` variant is the one
+that scales with the step). It does not touch the **canvas** pattern, whose 8×8 bitmap geometry is
+part of the encoding algorithm and is not themeable. Unlike
+the properties above it is declared by the shadow stylesheet on the swatch itself, not inherited
+from the host, so setting it on `lr-chart` does nothing — override it through the part:
+
+```css
+lr-chart::part(legend-swatch) {
+  --lr-chart-pattern-step: 0.5rem;
+}
+```
+
+Plus shared `--lr-space-xs`.
 
 The mirrored Chart styling hooks are also available on all nine tags. All canvas-bound values are
 resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live root font size and

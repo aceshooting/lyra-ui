@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -79,6 +79,13 @@ Setting it to `null` disables both, so a token may contain the delimiter verbati
 does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
 (both of which the attribute converter maps to `null`), or a property binding
 (`.delimiter=${null}`). Removing the attribute restores the `,` default.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. It marks the control, not an individual token. With no label
+text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-token-input-padding` (the input-wrapper padding, scaled by
 `size`), `--lr-token-input-font-size` (the input-wrapper and token font size, scaled by `size`),

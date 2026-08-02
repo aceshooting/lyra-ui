@@ -218,7 +218,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     this.isMounting = false;
 
     if (!wasMounting && changed.has('follow')) {
-      this.emit<ActivityFeedFollowChangeDetail>('lr-follow-change', { following: this.follow });
+      this.emit('lr-follow-change', { following: this.follow });
     }
 
     if (!wasMounting && changed.has('mode')) {
@@ -291,7 +291,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   private toggle = (): void => {
     this.expanded = !this.expanded;
-    this.emit<ActivityFeedToggleDetail>('lr-toggle', { expanded: this.expanded });
+    this.emit('lr-toggle', { expanded: this.expanded });
   };
 
   private onBodyScroll = (e: Event): void => {

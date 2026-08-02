@@ -83,6 +83,45 @@ describe('ThemeWatcher', () => {
     }
   });
 
+  it('invokes onChange when data-lr-theme toggles on an ancestor', async () => {
+    // data-lr-theme is the library's own light/dark switch: an ancestor carrying it re-resolves
+    // every token in tokens.styles.ts and tokens/palette.styles.ts, with nothing else to observe.
+    const parent = (await fixture(html`<div><span></span></div>`)) as HTMLElement;
+    const child = parent.querySelector('span') as HTMLElement;
+    const controllers: ReactiveController[] = [];
+    const host = Object.assign(child, {
+      addController(c: ReactiveController) {
+        controllers.push(c);
+      },
+      removeController() {},
+      requestUpdate() {},
+      updateComplete: Promise.resolve(true),
+    }) as unknown as ReactiveControllerHost & Element;
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    controllers.forEach((c) => c.hostConnected?.());
+    try {
+      parent.setAttribute('data-lr-theme', 'dark');
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+      parent.setAttribute('data-lr-theme', 'light');
+      await aTimeout(0);
+      expect(calls).to.equal(2);
+    } finally {
+      controllers.forEach((c) => c.hostDisconnected?.());
+    }
+  });
+
+  it('invokes onChange when data-lr-theme mutates on the host itself', async () => {
+    const { host, connect } = await makeHost();
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    connect();
+    host.setAttribute('data-lr-theme', 'dark');
+    await aTimeout(0);
+    expect(calls).to.equal(1);
+  });
+
   it('stops observing after hostDisconnected()', async () => {
     const { host, connect, disconnect } = await makeHost();
     let calls = 0;

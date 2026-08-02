@@ -38,7 +38,9 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @event change - Native change timing.
  * @event focus - The internal textarea received focus; re-dispatched as a bubbling, composed event.
  * @event blur - The internal textarea lost focus; re-dispatched as a bubbling, composed event.
- * @event lr-invalid - The editor failed a validity check.
+ * @event lr-invalid - The editor failed a validity check. Cancelable: `preventDefault()` forwards to
+ * the native `invalid` event, suppressing the browser's own validation bubble and the focus/scroll
+ * `reportValidity()` would otherwise perform.
  * @csspart form-control - Outer wrapper.
  * @csspart form-control-label - Label. Also carries the `label` part token for compatibility.
  * @csspart label - Alias of `form-control-label`.
@@ -50,6 +52,13 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @cssprop [--lr-code-editor-min-block-size=var(--lr-size-8rem)] - Minimum block size of the editor frame and its textarea.
  * @cssprop [--lr-code-editor-line-height=1.5] - Line height shared by the gutter and the textarea, so line numbers stay aligned with their lines.
  * @cssprop [--lr-code-editor-tab-size=2] - The textarea's `tab-size`. The single channel for tab width — the class writes this token rather than setting `tab-size` directly.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
+ * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
+ * localized word) to replace it. Caller-supplied content, so it is never localized here.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ * retunable without touching any other danger-coloured surface.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * marker.
  * @status stable
  * @since 4.0.0
  */
@@ -186,7 +195,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const describedBy = [hasError ? 'textarea-error' : '', hasHint ? 'textarea-hint' : ''].filter(Boolean).join(' ');
     const label = this.accessibleLabel || (hasLabel ? nothing : this.localize('codeEditorLabel'));
     return html`<div part="form-control">
-      <label part="label form-control-label" for="textarea" ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</label>
+      <label part="label form-control-label" for="textarea" ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot></label>
       <div part="editor" data-language=${this.language}>
         ${this.lineNumbers
           ? html`<div part="gutter" aria-hidden="true">${lineCount <= 1_000

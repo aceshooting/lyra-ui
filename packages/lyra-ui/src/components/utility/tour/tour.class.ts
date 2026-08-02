@@ -366,7 +366,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       queueMicrotask(() => {
         if (!this.isConnected && this.open) {
           this.open = false;
-          this.emit<TourEndReason>('lr-tour-end', 'unmount');
+          this.emit('lr-tour-end', 'unmount');
         }
       });
     }
@@ -378,7 +378,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (this.steps.length === 0) return;
     this.activeIndex = this.clampIndex(index);
     this.open = true;
-    this.emit<{ index: number }>('lr-tour-start', { index: this.activeIndex });
+    this.emit('lr-tour-start', { index: this.activeIndex });
   }
 
   /** Advances to the next step. On the last step, ends the tour instead (`end('completed')`) --
@@ -418,7 +418,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
    *  practice for `'unmount'`) -- mirrors `LyraDialog.close(reason)` exactly. */
   end(reason: TourEndReason = 'api'): void {
     if (!this.open) return;
-    const event = this.emit<TourEndReason>('lr-tour-end', reason, { cancelable: true });
+    const event = this.emit('lr-tour-end', reason, { cancelable: true });
     if (event.defaultPrevented) return;
     this.open = false;
   }
@@ -433,7 +433,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     const previousIndex = this.activeIndex;
     const step = this.steps[index];
     if (!step) return;
-    const event = this.emit<{ index: number; previousIndex: number; step: TourStep; via: typeof via }>(
+    const event = this.emit(
       'lr-tour-step-change',
       { index, previousIndex, step, via },
       { cancelable: true },
@@ -482,7 +482,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
     if (!target?.isConnected) {
       if (options.announceMissing) {
-        this.emit<{ index: number; step: TourStep }>('lr-tour-target-missing', {
+        this.emit('lr-tour-target-missing', {
           index: this.activeIndex,
           step,
         });

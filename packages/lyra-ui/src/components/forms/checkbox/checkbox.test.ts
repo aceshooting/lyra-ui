@@ -5,16 +5,34 @@ import type { LyraCheckbox } from './checkbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
-it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = (await fixture(html`<lr-checkbox required>Accept</lr-checkbox>`)) as LyraCheckbox;
   const aliases: CustomEvent[] = [];
   el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+  // Registered after the component's own constructor-time relay, so it observes the native event
+  // once the alias has had its turn at it.
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
   expect(aliases[0].target).to.equal(el);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.false;
+  expect(aliases[0].cancelable).to.be.true;
+  // Nothing cancelled it, so the browser's own validation UI stays enabled.
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.false;
+});
+
+it('cancels the native invalid event when the lr-invalid alias is cancelled', async () => {
+  const el = (await fixture(html`<lr-checkbox required>Accept</lr-checkbox>`)) as LyraCheckbox;
+  el.addEventListener('lr-invalid', (event) => event.preventDefault());
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.true;
 });
 
 it('defaults to unchecked with role="checkbox" and aria-checked="false"', async () => {
@@ -1193,4 +1211,29 @@ describe('lr-checkbox setCustomValidity()', () => {
     el.setCustomValidity('');
     expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
   });
+});
+
+it('shows the hint region when hint content arrives only through the slot', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox>Subscribe<span slot="hint">We never share it</span></lr-checkbox>
+  `)) as LyraCheckbox;
+  await el.updateComplete;
+  const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
+  expect(hint.hasAttribute('hidden')).to.equal(false);
+
+  el.querySelector('[slot="hint"]')!.remove();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await el.updateComplete;
+  expect(hint.hasAttribute('hidden')).to.equal(true);
+});
+
+it('bars constraint validation while disabled, like a native disabled required control', async () => {
+  const el = (await fixture(html`<lr-checkbox required disabled>Accept</lr-checkbox>`)) as LyraCheckbox;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'a barred control raises no violation').to.be.false;
+  expect(el.checkValidity()).to.be.true;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'the violation returns once it is enforceable again').to.be.true;
 });

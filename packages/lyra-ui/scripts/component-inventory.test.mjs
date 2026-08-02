@@ -865,6 +865,184 @@ test('surface comparison catches member, default, cancelability, and polarity dr
   );
 });
 
+test('reviewed cancelability normalizations neutralize widening only, never a lost veto', () => {
+  const surface = {
+    attributes: [],
+    properties: [],
+    slots: [],
+    parts: [],
+    cssProperties: [],
+    cssStates: [],
+    methods: [],
+    native: { forwardedEvents: [], delegatedMethods: [] },
+    form: { associated: false, properties: [], methods: [] },
+  };
+  const compare = (upstreamCancelable, targetCancelable, normalizations) =>
+    compareMappedSurfaces(
+      { ...surface, events: [{ name: 'wa-invalid', type: 'Event', cancelable: upstreamCancelable }] },
+      { ...surface, events: [{ name: 'lr-invalid', type: 'Event', cancelable: targetCancelable }] },
+      { upstreamPrefix: 'wa-', ...(normalizations ? { normalizations } : {}) },
+    ).filter((entry) => entry.code === 'cancelability-mismatch');
+
+  const widening = emptyNormalizations();
+  widening.cancelabilityEquivalences.push({ event: 'wa-invalid', upstream: 'never', target: 'always' });
+
+  assert.deepEqual(
+    compare('never', 'always', widening),
+    [],
+    'making a never-cancelable event cancelable is a superset no shipped consumer can depend against',
+  );
+  assert.deepEqual(
+    compare('never', 'always').map(({ code, member }) => ({ code, member })),
+    [{ code: 'cancelability-mismatch', member: 'wa-invalid' }],
+    'the widening exception is never inferred without an explicit per-event reviewed rule',
+  );
+  assert.deepEqual(
+    compare('never', 'conditional', widening).map(({ expected, actual }) => ({ expected, actual })),
+    [{ expected: 'never', actual: 'conditional' }],
+    'a reviewed rule pins both labels, so it stops applying the moment either side moves',
+  );
+
+  const narrowing = emptyNormalizations();
+  narrowing.cancelabilityEquivalences.push({ event: 'wa-invalid', upstream: 'always', target: 'never' });
+  narrowing.cancelabilityPathAdditions.push({
+    event: 'wa-invalid',
+    upstream: 'always',
+    target: 'never',
+    addedPath: 'a veto that silently stopped vetoing',
+  });
+  assert.deepEqual(
+    compare('always', 'never', narrowing).map(({ expected, actual }) => ({ expected, actual })),
+    [{ expected: 'always', actual: 'never' }],
+    'losing cancelability stays a mismatch no matter which section a rule is written into',
+  );
+  assert.deepEqual(
+    compare('conditional', 'never', narrowing).map(({ expected, actual }) => ({ expected, actual })),
+    [{ expected: 'conditional', actual: 'never' }],
+  );
+
+  const pathAddition = emptyNormalizations();
+  pathAddition.cancelabilityPathAdditions.push({
+    event: 'wa-invalid',
+    upstream: 'always',
+    target: 'conditional',
+    addedPath: 'a Lyra-only emission on disconnect that no veto could undo',
+  });
+  assert.deepEqual(
+    compare('always', 'conditional', pathAddition),
+    [],
+    'a reviewed Lyra-only non-cancelable path keeps every upstream-documented veto working',
+  );
+  assert.deepEqual(
+    compare('always', 'conditional', widening).map(({ expected, actual }) => ({ expected, actual })),
+    [{ expected: 'always', actual: 'conditional' }],
+    'the widening section cannot be used to wave through a narrowing',
+  );
+  assert.deepEqual(
+    compare('always', 'never', pathAddition).map(({ expected, actual }) => ({ expected, actual })),
+    [{ expected: 'always', actual: 'never' }],
+  );
+});
+
+test('cancelability normalization validation rejects narrowing, unnamed paths, and stale labels', () => {
+  const surface = { attributes: [], properties: [], methods: [] };
+  const upstream = {
+    ...surface,
+    events: [
+      { name: 'wa-invalid', type: 'Event', cancelable: 'never' },
+      { name: 'wa-hide', type: 'Event', cancelable: 'always' },
+    ],
+  };
+  const target = {
+    ...surface,
+    events: [
+      { name: 'lr-invalid', type: 'Event', cancelable: 'always' },
+      { name: 'lr-hide', type: 'Event', cancelable: 'conditional' },
+    ],
+  };
+  const normalizations = emptyNormalizations();
+  normalizations.cancelabilityEquivalences.push({
+    event: 'wa-invalid',
+    upstream: 'never',
+    target: 'always',
+  });
+  normalizations.cancelabilityPathAdditions.push({
+    event: 'wa-hide',
+    upstream: 'always',
+    target: 'conditional',
+    addedPath: 'an already-removed element closing on disconnect',
+  });
+  const mapping = {
+    upstreamTag: 'wa-dialog',
+    rewrites: { events: [{ from: 'wa-invalid', to: 'lr-invalid' }, { from: 'wa-hide', to: 'lr-hide' }] },
+    normalizations,
+  };
+  assert.deepEqual(validateMappingNormalizations(mapping, { upstream, target }), []);
+
+  const narrowed = structuredClone(mapping);
+  narrowed.normalizations.cancelabilityEquivalences[0] = {
+    event: 'wa-hide',
+    upstream: 'always',
+    target: 'conditional',
+  };
+  assert.ok(
+    validateMappingNormalizations(narrowed, { upstream, target }).some((finding) =>
+      finding.includes('invalid normalizations.cancelabilityEquivalences rule'),
+    ),
+    'the widening section refuses any rule that hands listeners less veto power than upstream',
+  );
+
+  const lostVeto = structuredClone(mapping);
+  lostVeto.normalizations.cancelabilityPathAdditions[0].target = 'never';
+  assert.ok(
+    validateMappingNormalizations(lostVeto, { upstream, target }).some((finding) =>
+      finding.includes('invalid normalizations.cancelabilityPathAdditions rule'),
+    ),
+    'no review can authorize dropping an upstream-cancelable event to never',
+  );
+
+  const unnamedPath = structuredClone(mapping);
+  unnamedPath.normalizations.cancelabilityPathAdditions[0].addedPath = '';
+  assert.ok(
+    validateMappingNormalizations(unnamedPath, { upstream, target }).some((finding) =>
+      finding.includes('invalid normalizations.cancelabilityPathAdditions rule'),
+    ),
+    'the Lyra-only path has to be named, so the claim survives in the generated inventory',
+  );
+
+  const duplicate = structuredClone(mapping);
+  duplicate.normalizations.cancelabilityEquivalences.push({
+    event: 'wa-hide',
+    upstream: 'never',
+    target: 'always',
+  });
+  assert.ok(
+    validateMappingNormalizations(duplicate, { upstream, target }).some((finding) =>
+      finding.includes('duplicate cancelability normalization wa-hide'),
+    ),
+    'one event carries one reviewed cancelability decision, never one per section',
+  );
+
+  const stale = structuredClone(mapping);
+  stale.normalizations.cancelabilityEquivalences[0].target = 'conditional';
+  const staleFindings = validateMappingNormalizations(stale, { upstream, target });
+  assert.ok(staleFindings.some((finding) => finding.includes('stale target cancelability normalization wa-invalid')));
+
+  const staleUpstream = structuredClone(mapping);
+  staleUpstream.normalizations.cancelabilityPathAdditions[0].event = 'wa-invalid';
+  assert.ok(
+    validateMappingNormalizations(staleUpstream, { upstream, target }).some((finding) =>
+      finding.includes('stale upstream cancelability normalization wa-invalid'),
+    ),
+  );
+
+  const dangling = structuredClone(mapping);
+  dangling.normalizations.cancelabilityEquivalences[0].event = 'wa-missing';
+  const danglingFindings = validateMappingNormalizations(dangling, { upstream, target });
+  assert.ok(danglingFindings.some((finding) => finding.includes('dangling upstream cancelability normalization wa-missing')));
+  assert.ok(danglingFindings.some((finding) => finding.includes('dangling target cancelability normalization wa-missing')));
+});
+
 test('surface comparison catches normalized attribute and property contract drift', () => {
   const common = {
     slots: [],
@@ -1283,11 +1461,8 @@ test('reviewed derived defaults preserve a dynamic target value without inventin
   );
 
   const mappingNormalizations = {
-    typeEquivalences: [],
-    defaultEquivalences: [],
+    ...emptyNormalizations(),
     derivedDefaultEquivalences: normalizations.derivedDefaultEquivalences,
-    inferredAttributeSuppressions: [],
-    unknownMethodReturnTypes: [],
   };
   assert.deepEqual(
     validateMappingNormalizations(
@@ -1765,6 +1940,7 @@ test('normalization validation rejects dangling, duplicate, stale, and explicit-
   const mapping = {
     upstreamTag: 'sl-select',
     normalizations: {
+      ...emptyNormalizations(),
       typeEquivalences: [
         {
           memberKind: 'attribute',
@@ -1781,7 +1957,6 @@ test('normalization validation rejects dangling, duplicate, stale, and explicit-
           target: 'm',
         },
       ],
-      derivedDefaultEquivalences: [],
       inferredAttributeSuppressions: [{ attribute: 'get-tag', property: 'getTag' }],
       unknownMethodReturnTypes: [{ method: 'format' }],
     },

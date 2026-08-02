@@ -2,7 +2,11 @@ import { setCustomElementsManifest } from '@storybook/web-components';
 import { LyraDocsContainer } from './docs-container.js';
 import { LyraDocsPage } from './docs-page.js';
 import { publicStorybookManifest } from './storybook-manifest.js';
-import { applyLyraTheme } from './story-theme.js';
+import { normalizeStoryThemeName } from './story-theme.js';
+import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';
+// The preview uses the exact stylesheet consumers import. Storybook-specific colors stay in the
+// manager theme; component previews never maintain a second, partial token palette.
+import '../packages/lyra-ui/src/theme.css';
 // Docs/story authoring only — lr-* components' shadow DOM never sees this.
 import './tailwind.css';
 // Registers every lr-* custom element once, for every story — no per-story imports needed.
@@ -51,17 +55,15 @@ window.addEventListener('vite:preloadError', () => {
 
 function applyLyraPresentation(globals) {
   const direction = globals.direction === 'rtl' ? 'rtl' : 'ltr';
-  const density = globals.density === 'compact' ? 'compact' : 'comfortable';
   const root = document.documentElement;
 
   root.dir = direction;
   root.dataset.lyraDirection = direction;
-  root.dataset.lyraDensity = density;
-  root.style.setProperty('--lr-docs-density-gap', density === 'compact' ? '.625rem' : '1rem');
 }
 
 const withLyraTheme = (story, context) => {
-  applyLyraTheme(context.globals.theme);
+  const theme = normalizeStoryThemeName(context.globals.theme);
+  setLyraTheme({ mode: theme, accent: null });
   applyLyraPresentation(context.globals);
   return story();
 };
@@ -82,7 +84,6 @@ const preview = {
         items: [
           { value: 'light', title: 'Light' },
           { value: 'dark', title: 'Dark' },
-          { value: 'high-contrast', title: 'High contrast' },
         ],
       },
     },
@@ -99,24 +100,10 @@ const preview = {
         ],
       },
     },
-    density: {
-      name: 'Density',
-      description: 'Choose the amount of breathing room around story examples.',
-      toolbar: {
-        title: 'Density',
-        icon: 'expand',
-        dynamicTitle: true,
-        items: [
-          { value: 'comfortable', title: 'Comfortable' },
-          { value: 'compact', title: 'Compact' },
-        ],
-      },
-    },
   },
   initialGlobals: {
     theme: 'dark',
     direction: 'ltr',
-    density: 'comfortable',
   },
   decorators: [withLyraTheme],
   parameters: {

@@ -2,6 +2,7 @@ import {
   getAnimation,
   type ElementAnimation,
 } from '../utilities/animation-registry.js';
+import { prefersReducedMotion } from './motion.js';
 
 export interface RegisteredAnimationSpec {
   keyframes: Keyframe[];
@@ -68,6 +69,22 @@ function fallbackAnimation(target: HTMLElement, spec: RegisteredAnimationSpec): 
 }
 
 /**
+ * Flattens timing under `prefers-reduced-motion: reduce`. Applied here, at the single call site
+ * that reaches `Element.animate()`, so no per-component fallback, no public `--show-duration`/
+ * `--hide-duration` value and no registry override carrying an explicit `options.duration` can
+ * defeat the preference — a CSS media query cannot reach a Web Animations timing object at all.
+ * Keyframes are preserved so the animation still lands on its end state and its `finished` promise
+ * still resolves, keeping every caller's show/hide lifecycle intact.
+ */
+function clampReducedMotion(
+  target: HTMLElement,
+  options: KeyframeAnimationOptions,
+): KeyframeAnimationOptions {
+  if (!prefersReducedMotion(target.ownerDocument?.defaultView)) return options;
+  return { ...options, duration: 0, delay: 0, endDelay: 0, iterations: 1 };
+}
+
+/**
  * Starts one registry-resolved animation with a component-owned, token-derived fallback.
  * A `null` override returns no native `Animation`, so callers can complete their normal lifecycle
  * immediately. Malformed public overrides fail closed to the sanitized fallback instead of
@@ -86,10 +103,10 @@ export function animateRegistered(
     fallback,
   });
   if (resolved.keyframes.length === 0) return undefined;
-  const options: KeyframeAnimationOptions = {
+  const options = clampReducedMotion(target, {
     ...resolved.options,
     id: resolved.options.id ?? animationName,
-  };
+  });
   try {
     return target.animate(resolved.keyframes, options);
   } catch {
@@ -97,7 +114,7 @@ export function animateRegistered(
       ? fallback.rtlKeyframes
       : fallback.keyframes;
     try {
-      return target.animate(keyframes, fallback.options);
+      return target.animate(keyframes, clampReducedMotion(target, fallback.options ?? {}));
     } catch {
       return undefined;
     }

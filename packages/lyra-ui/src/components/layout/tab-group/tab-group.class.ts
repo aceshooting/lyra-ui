@@ -21,11 +21,28 @@ interface TabDef {
   slotName: string;
   label: string;
   disabled: boolean;
+  /** The source child's own `inert` state — see `isInertChild()`. */
+  inert: boolean;
   hasIcon: boolean;
   /** `element` when the tab came from an `<lr-tab>`, whose content the button projects instead of
    *  rendering `label` as text. `attribute` is the panel-attribute shape. */
   source: 'attribute' | 'element';
   element?: LyraTab;
+}
+
+/**
+ * `inert` sits alongside `disabled` in every navigability predicate here, matching `<lr-menu>`'s
+ * own item predicate: an inert element *refuses* focus, so a roving `tabindex` that steps onto one
+ * leaves `focus()` a silent no-op and strands the user's arrow key with focus back on `<body>`.
+ * The tab button this group renders for an inert source child is itself marked `inert`, so the two
+ * states cannot disagree — which is exactly why the button must never be an arrow-key target.
+ *
+ * Deliberately the child's **own** inert state, never an ancestor's: a tab group sitting in a
+ * subtree an open modal has inerted is inert *as a whole*, and treating every tab as non-navigable
+ * there would reset `active` to `''` and blank every panel for as long as the dialog is open.
+ */
+function isInertChild(child: Element): boolean {
+  return child instanceof HTMLElement && child.inert;
 }
 
 /** Which edge the tab strip sits on. `start`/`end` are logical, so they mirror under RTL. */
@@ -83,6 +100,11 @@ export interface LyraTabGroupEventMap {
  * `aria-keyshortcuts="Delete"` to that same real tab button; Delete routes the close request through
  * the descriptor so `lr-close` still targets `<lr-tab>`. The visual close affordance stays
  * non-focusable and accessibility-hidden, avoiding a nested interactive control.
+ *
+ * **`inert` on a source child excludes its tab exactly as `disabled` does** — it never takes
+ * selection, never holds the roving `tabindex`, and arrow keys step past it — and the rendered tab
+ * button is itself marked `inert`, so a pointer cannot reach it either. Only the child's *own*
+ * `inert` counts: a whole group inerted by an open modal keeps its selection and panels intact.
  *
  * **Two child models are accepted.** `<lr-tab panel="x">` plus `<lr-tab-panel name="x">` mirrors
  * `wa-tab-group`/`sl-tab-group`, so that markup renames mechanically; the group assigns the `slot`
@@ -232,7 +254,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['slot', 'label', 'disabled', 'closable'],
+      attributeFilter: ['slot', 'label', 'disabled', 'inert', 'closable'],
     });
   }
 
@@ -275,7 +297,14 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       seen.add(slotName);
       const iconSlot = this.iconSlotName(slotName);
       const hasIcon = children.some((c) => c.getAttribute('slot') === iconSlot);
-      next.push({ slotName, label, disabled: child.hasAttribute('disabled'), hasIcon, source: 'attribute' });
+      next.push({
+        slotName,
+        label,
+        disabled: child.hasAttribute('disabled'),
+        inert: isInertChild(child),
+        hasIcon,
+        source: 'attribute',
+      });
     }
     return next;
   }
@@ -308,6 +337,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
         slotName,
         label: (child.textContent ?? '').trim(),
         disabled: child.hasAttribute('disabled'),
+        inert: isInertChild(child),
         hasIcon: false,
         source: 'element',
         element: child as LyraTab,
@@ -317,16 +347,23 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     return next;
   }
 
-  /** Keeps `active` resolved to a real, enabled tab -- covers the initial default, a tab disappearing/becoming disabled underneath the current selection, and a consumer assigning `.active` directly. Silent (no `lr-tab-show`): this corrects *invalid* state rather than responding to a user picking a different tab. */
+  /** Whether a tab can hold selection, the roving `tabindex`, and arrow-key focus. `inert` counts
+   *  alongside `disabled` — see `isInertChild()` for why, and for why only the child's own inert
+   *  state is consulted. */
+  private isNavigable(tab: TabDef): boolean {
+    return !tab.disabled && !tab.inert;
+  }
+
+  /** Keeps `active` resolved to a real, navigable tab -- covers the initial default, a tab disappearing/becoming disabled or inert underneath the current selection, and a consumer assigning `.active` directly. Silent (no `lr-tab-show`): this corrects *invalid* state rather than responding to a user picking a different tab. Reading the focused element *before* the render that marks the outgoing button `inert` is what lets `updated()` rehome real focus rather than leaving it stranded on `<body>`. */
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!changed.has('tabs') && !changed.has('active')) return;
     const current = this.tabs.find((t) => t.slotName === this.active);
-    if (current && !current.disabled) return;
+    if (current && this.isNavigable(current)) return;
     this.rehomeTabFocus =
       activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute('part') ===
       'tab';
-    this.active = this.tabs.find((t) => !t.disabled)?.slotName ?? '';
+    this.active = this.tabs.find((t) => this.isNavigable(t))?.slotName ?? '';
     this.focusedTab = this.active;
   }
 
@@ -344,7 +381,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  `lr-tab-hide` for the outgoing tab before `lr-tab-show` for the incoming one, so a listener
    *  that tears down the old panel always runs before the one that builds the new one. */
   private selectTab(tab: TabDef): void {
-    if (tab.disabled || tab.slotName === this.active) return;
+    if (!this.isNavigable(tab) || tab.slotName === this.active) return;
     const previous = this.active;
     this.active = tab.slotName;
     this.focusedTab = tab.slotName;
@@ -379,7 +416,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  under `manual` focus may sit elsewhere, and it must fall back to the selection whenever the
    *  remembered tab has gone away or become disabled. */
   private get rovingTab(): string {
-    const candidate = this.tabs.find((t) => t.slotName === this.focusedTab && !t.disabled);
+    const candidate = this.tabs.find((t) => t.slotName === this.focusedTab && this.isNavigable(t));
     return candidate ? candidate.slotName : this.active;
   }
 
@@ -401,7 +438,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   }
 
   private onTabListKeyDown = (e: KeyboardEvent): void => {
-    const navigable = this.tabs.filter((t) => !t.disabled);
+    const navigable = this.tabs.filter((t) => this.isNavigable(t));
     if (navigable.length === 0) return;
     const currentIndex = navigable.findIndex((t) => t.slotName === this.rovingTab);
 
@@ -541,13 +578,14 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   private renderTab(tab: TabDef): TemplateResult {
     const selected = tab.slotName === this.active;
-    const closable = !tab.disabled && Boolean(tab.element?.closable);
+    const closable = this.isNavigable(tab) && Boolean(tab.element?.closable);
     return html`<button
       type="button"
       part="tab"
       id=${this.tabId(tab.slotName)}
       data-slot=${tab.slotName}
       role="tab"
+      ?inert=${tab.inert}
       aria-selected=${selected ? 'true' : 'false'}
       aria-disabled=${tab.disabled ? 'true' : 'false'}
       aria-controls=${this.panelId(tab.slotName)}

@@ -7,16 +7,24 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import {
+  getLyraLocaleDirection,
   getRegisteredLyraLocales,
   subscribeLyraLocaleRegistry,
   setLyraLocale,
+  type LyraLocaleDirection,
 } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import {
+  getFormOwner,
+  installCustomErrorProperty,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
@@ -91,9 +99,18 @@ interface NormalizedLocaleEntry {
  *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
 export type LyraLocalePickerSize = LyraSizeStep;
 
+/** `lr-change`'s detail. `direction` is the picked locale's writing direction, resolved through
+ *  `getLyraLocaleDirection()` — the component never applies it (see the class doc), it just hands
+ *  the host the one fact it would otherwise need its own locale table to know. */
+export interface LyraLocaleChangeDetail {
+  value: string;
+  previousValue: string;
+  direction: LyraLocaleDirection;
+}
+
 export interface LyraLocalePickerEventMap {
   'lr-invalid': CustomEvent<undefined>;
-  'lr-change': CustomEvent<{ value: string; previousValue: string }>;
+  'lr-change': CustomEvent<LyraLocaleChangeDetail>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
@@ -129,14 +146,18 @@ export interface LyraLocalePickerEventMap {
  *
  * Does not touch `document.documentElement.lang`/`dir` — applying a picked locale's writing
  * direction to the page is left to the host, which already has everything it needs from
- * `lr-change`'s `value` to do that itself.
+ * `lr-change` to do that itself: the detail carries the resolved `direction` alongside `value`,
+ * so `document.documentElement.dir = event.detail.direction` is the whole of it.
  *
  * @customElement lr-locale-picker
- * @event lr-change - The selection changed. `detail: { value, previousValue }`. Cancelable —
+ * @event lr-change - The selection changed. `detail: { value, previousValue, direction }`, where
+ *   `direction` is the picked locale's `'ltr'`/`'rtl'` writing direction. Cancelable —
  *   `event.preventDefault()` stops the automatic `setLyraLocale()` call without reverting `value`.
  * @event blur - Re-dispatched from the internal trigger button as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal trigger button as a bubbling, composed event.
- * @event lr-invalid - The locale picker failed a validity check.
+ * @event lr-invalid - The locale picker failed a validity check; cancelable. Calling
+ *   `preventDefault()` also cancels the native `invalid` event it aliases, suppressing the
+ *   browser's own validation bubble and `reportValidity()`'s focus/scroll.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
@@ -170,6 +191,13 @@ export interface LyraLocalePickerEventMap {
  * @cssprop [--lr-locale-picker-option-selected-color=var(--lr-color-brand)] - Selected option text.
  * @cssprop [--lr-locale-picker-option-active-bg=var(--lr-color-brand-quiet)] - Background of a
  *   hovered or keyboard-active option row.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
+ * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
+ * localized word) to replace it. Caller-supplied content, so it is never localized here.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ * retunable without touching any other danger-coloured surface.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * marker.
  * @cssstate required - Matches while `required` is set.
  * @cssstate optional - Matches while `required` is not set (the complement of `required`).
  * @cssstate valid - Matches while the control satisfies its constraints.
@@ -258,7 +286,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
     this.internals.setFormValue('');
   }
 
@@ -385,8 +413,14 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   set disabled(next: boolean) {
     const old = this._disabled;
     this._disabled = Boolean(next);
+    // Reflected before the recomputation below, because `internals.willValidate` answers from the
+    // live host attribute rather than from this field.
     this.toggleAttribute('disabled', this._disabled);
     if (this._disabled) this.hide();
+    // Disabling bars constraint validation, so the intrinsic violation and the `invalid`/
+    // `user-invalid` states go with it — synchronously, so a same-tick `checkValidity()` answers
+    // from the new state rather than from the previous render's.
+    this.updateValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -406,13 +440,32 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return this.disabled || this._fieldsetDisabled;
   }
 
+  /**
+   * Recomputes the intrinsic `valueMissing` constraint.
+   *
+   * A control barred from constraint validation (own `disabled`, an ancestor `<fieldset disabled>`,
+   * or any platform condition `internals.willValidate` folds in) reports no violation at all,
+   * exactly like a native control — a real `<input required disabled>` matches neither `:valid` nor
+   * `:invalid`. Without this guard a `<lr-locale-picker required disabled>` kept publishing
+   * `valueMissing` and `:state(invalid)`, which is what painted every disabled picker with the
+   * documented `lr-locale-picker:state(user-invalid)` error styling.
+   */
   private updateValidity(): void {
-    if (this.required && !this._value) {
+    if (this.isBarred()) {
+      this.validityController.setValidity({});
+    } else if (this.required && !this._value) {
       this.validityController.setValidity({ valueMissing: true }, this.localize('localePickerRequired'));
     } else {
       this.validityController.setValidity({});
     }
     this.syncCustomStates();
+  }
+
+  /** Whether constraint validation is currently barred. Shares the library-wide predicate rather
+   *  than re-listing the conditions, so this control cannot implement three of them and miss the
+   *  fourth. This picker has no `readonly` of its own; the shared predicate simply never sees one. */
+  private isBarred(): boolean {
+    return isBarredFromValidation(this, this.internals);
   }
 
   /**
@@ -424,7 +477,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    * control the way native `:user-invalid` does.
    */
   private syncCustomStates(): void {
-    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.touched,
+      barred: this.isBarred(),
+    });
   }
 
   formResetCallback(): void {
@@ -449,6 +506,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     if (disabled) this.hide();
+    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`, so
+    // validity is recomputed here rather than merely re-rendered — recording the flag alone left
+    // `valueMissing` (and `:state(invalid)`) raised on every required picker inside a
+    // `<fieldset disabled>`.
+    this.updateValidity();
     this.requestUpdate();
   }
   checkValidity(): boolean {
@@ -556,9 +618,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     const previousValue = this._value;
     this.value = tag;
     this.hide();
-    const event = this.emit<{ value: string; previousValue: string }>(
+    const event = this.emit(
       'lr-change',
-      { value: tag, previousValue },
+      { value: tag, previousValue, direction: getLyraLocaleDirection(tag) },
       { cancelable: true },
     );
     if (!event.defaultPrevented) setLyraLocale(tag);

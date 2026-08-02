@@ -11,6 +11,9 @@
 //   intl-outside-cache      `new Intl.<Formatter>` constructions perform an ICU locale-data
 //                           lookup per call; all formatter instances must come from the shared
 //                           per-locale+options caches in src/internal/intl-cache.ts.
+//   unsafe-intl-locale      Native `toLocale*()`/`localeCompare()` calls must receive an explicit
+//                           validated effective locale. Bare runtime-default, hardcoded, and raw
+//                           host locale arguments bypass the safe Intl boundary.
 //   pointercancel-pairing   A `pointermove` listener on window/document is drag tracking; the
 //                           browser can end such an interaction with `pointercancel` (touch
 //                           scroll takeover, alt-tab, stylus palm rejection) and never fire
@@ -282,7 +285,35 @@ function checkIntlOutsideCache(file, stripped, findings) {
 }
 
 // ---------------------------------------------------------------------------
-// Rule 3: pointercancel-pairing
+// Rule 3: unsafe-intl-locale
+// ---------------------------------------------------------------------------
+
+const LOCALE_SENSITIVE_METHOD = /\.(toLocale[A-Za-z]*|localeCompare)\s*\(/g;
+
+function isUnsafeDirectLocale(expression) {
+  if (expression === undefined) return true;
+  const locale = expression.trim();
+  if (!locale || locale === 'undefined' || locale === 'null') return true;
+  if (/^(['"`])(?:\\.|(?!\1)[\s\S])*\1$/.test(locale)) return true;
+  if (/\bthis\s*\.\s*locale\b|\bresolveLyraLocale\s*\(/.test(locale)) return true;
+  return false;
+}
+
+function checkUnsafeIntlLocale(file, stripped, findings) {
+  for (const match of stripped.matchAll(LOCALE_SENSITIVE_METHOD)) {
+    const args = splitTopLevelArgs(balancedArgText(stripped, match.index + match[0].length));
+    const localeArg = match[1] === 'localeCompare' ? args[1] : args[0];
+    if (!isUnsafeDirectLocale(localeArg)) continue;
+    findings.push(
+      `${rel(file)}:${lineOf(stripped, match.index)} [unsafe-intl-locale] .${match[1]}() must receive ` +
+        `this.effectiveLocale/effectiveIntlLocale or a locale derived from resolveIntlLocale(); ` +
+        `do not use the runtime default, a hardcoded tag, this.locale, or resolveLyraLocale() directly`,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rule 4: pointercancel-pairing
 // ---------------------------------------------------------------------------
 
 const GLOBAL_POINTERMOVE = /\b(?:window|document|ownerDocument)\s*\.\s*addEventListener\s*\(\s*['"]pointermove['"]/;
@@ -300,7 +331,7 @@ function checkPointercancelPairing(file, stripped, rawLines, findings) {
 }
 
 // ---------------------------------------------------------------------------
-// Rule 4: rtl-arrow-keys
+// Rule 5: rtl-arrow-keys
 // ---------------------------------------------------------------------------
 
 function checkRtlArrowKeys(file, stripped, rawLines, findings) {
@@ -319,7 +350,7 @@ function checkRtlArrowKeys(file, stripped, rawLines, findings) {
 }
 
 // ---------------------------------------------------------------------------
-// Rule 5: physical-css
+// Rule 6: physical-css
 // ---------------------------------------------------------------------------
 
 const PHYSICAL_PATTERNS = [
@@ -488,12 +519,14 @@ for (const file of componentFiles) {
   }
   checkLocalizeFallback(file, stripped, knownKeys, findings);
   checkIntlOutsideCache(file, stripped, findings);
+  checkUnsafeIntlLocale(file, stripped, findings);
   checkPointercancelPairing(file, stripped, rawLines, findings);
   checkRtlArrowKeys(file, stripped, rawLines, findings);
 }
 
 for (const file of internalFiles) {
   checkIntlOutsideCache(file, strippedByFile.get(file), findings);
+  checkUnsafeIntlLocale(file, strippedByFile.get(file), findings);
 }
 
 const offenders = collectRatchetOffenders(componentFiles, strippedByFile);

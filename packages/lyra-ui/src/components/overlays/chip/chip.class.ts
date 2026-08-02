@@ -224,12 +224,12 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private onRemoveClick = (): void => {
-    this.emit<ChipRemoveDetail>('lr-remove', { value: this.value });
+    this.emit('lr-remove', { value: this.value });
   };
 
   private onToggleClick = (): void => {
     const selected = !this.selected;
-    const event = this.emit<ChipSelectDetail>(
+    const event = this.emit(
       'lr-chip-select',
       { value: this.value, selected },
       { cancelable: true },

@@ -357,10 +357,10 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
 
   private onClick = (): void => {
     const detail: ToolChipSelectDetail = { name: this.name, callId: this.callId };
-    this.emit<ToolChipSelectDetail>('lr-tool-call-chip-select', detail);
+    this.emit('lr-tool-call-chip-select', detail);
     // Deprecated alias retained through its documented compatibility window
     // so existing `lr-tool-chip-select` listeners keep working.
-    this.emit<ToolChipSelectDetail>('lr-tool-chip-select', detail);
+    this.emit('lr-tool-chip-select', detail);
   };
 
   private get effectiveStatus(): ToolCallStatus {

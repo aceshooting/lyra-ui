@@ -51,8 +51,15 @@ text, anchor, rects }`).
 `data-line-number`/`data-match`/`data-highlight-tone`, and is forwarded via `exportparts` so
 `lr-terminal::part(line)` reaches the rendered lines from a consumer stylesheet despite them living
 in the internal `<lr-virtual-list>`'s shadow root), `jump-to-latest` (shown while `follow` is
-disengaged and new output has arrived), and `announcer` (the visually-hidden `role="status"` region
-used when `announce-output` is set).
+disengaged and new output has arrived), and `announcer` (the visually-hidden, `aria-hidden` mirror
+of the text last announced while `announce-output` is set).
+
+`[part="announcer"]` is a styling and inspection surface only — it carries **no** live-region role
+of its own. The announcement itself goes to the library's shared **light-DOM** polite region,
+appended to the consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live
+region inside a shadow root is not reliably announced (JAWS with Firefox ignores one outright). A
+test therefore asserts against that shared region, not `::part(announcer)`; the part remains the
+right hook for styling, and for reading back what the terminal last announced.
 
 **Themeable custom properties:** `--lr-terminal-height` (default `var(--lr-size-20rem)`) — the
 viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.

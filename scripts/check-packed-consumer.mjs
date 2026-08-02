@@ -17,22 +17,82 @@ const optionalPeers = Object.keys(uiPackageJson.peerDependencies ?? {})
   .filter((name) => uiPackageJson.peerDependenciesMeta?.[name]?.optional === true)
   .sort();
 
+// The authoritative registration inventory, so the packed contract fixture below asserts against
+// the same source `src/all.ts` and `src/ssr/all.ts` are generated from rather than a hand-kept list
+// that would rot on the next `pnpm create:component`.
+const componentInventory = JSON.parse(
+  await readFile(join(uiPackage, 'scripts', 'fixtures', 'component-inventory.json'), 'utf8'),
+);
+const rootIncludedTags = componentInventory.components
+  .filter((component) => component.rootIncluded)
+  .map((component) => component.tag)
+  .sort();
+const optionalPeerFamilyTags = componentInventory.components
+  .filter((component) => !component.rootIncluded)
+  .map((component) => component.tag)
+  .sort();
+
+// The package root is registration-free by design, but it is not registration-*silent* under an
+// eager (non-tree-shaking) Node import: three curated re-exports are imperative APIs that cannot
+// work without their element, so each one pulls that element's registration entry --
+// `toast()` -> toaster.js -> toast.js -> toast-item.js, `confirm()` -> dialog.js, and the
+// widget-renderer default registry -> the elements it renders. A bundler drops all of it, because
+// `./dist/lyra.js` is absent from package.json#sideEffects and nothing here is referenced; the
+// `rootBarrel` bundle entry below proves exactly that. This list is the eager-import counterpart:
+// it is the complete set that a bare `await import('@aceshooting/lyra-ui')` may define, and the
+// fixture fails on any addition -- which is how a registration import silently creeping back into
+// the root gets caught.
+const rootHelperRegisteredTags = [
+  'lr-badge',
+  'lr-button',
+  'lr-card',
+  'lr-dialog',
+  'lr-markdown',
+  'lr-media-card',
+  'lr-result-card',
+  'lr-result-field',
+  'lr-stat',
+  'lr-toast',
+  'lr-toast-item',
+];
+
 // Keep the aggregate barrel budget as an auditable sum rather than an unexplained moving ceiling.
-// The first term is the already-reviewed graph through the 8.0.0 baseline. The second is reserved
-// only for the stable root expansion described on `bundleEntries.core` below.
+// The first term is the measured graph of the entry this budget actually guards; the second is a
+// named allowance for the aggregate implementation growth described on `bundleEntries.core` below.
 const coreRawBudget = {
-  reviewedBaselineBytes: 3_400_000,
-  stableRootExpansionBytes: 200_000,
+  measuredAllEntryBytes: 3_580_000,
+  reviewedGrowthAllowanceBytes: 220_000,
 };
 
 const bundleEntries = {
   core: {
     fixture: 'core',
-    // The root barrel registers the full non-optional component set, so its raw bundle grows as
-    // those implementations gain functionality even when the tag count is stable. The current
-    // entry measures ~2488.8 KiB with optional peers externalized; this leaves about 10% headroom
-    // while the tighter single-component gzip canary below still catches an accidental eager
-    // dependency in the shared base layer.
+    // Measures `@aceshooting/lyra-ui/all.js` -- the entry that registers the full non-optional
+    // component set -- so its raw bundle grows as those implementations gain functionality even
+    // when the tag count is stable.
+    //
+    // Re-pointed here from a bare `import '@aceshooting/lyra-ui'` for 8.0.0's registration split.
+    // The root is now registration-free and absent from package.json#sideEffects, so the old
+    // fixture had stopped measuring anything at all: with nothing imported *from* the root, a
+    // production tree-shaker legitimately emits an EMPTY bundle for it (measured: 0 B raw across
+    // one file, against a 3,600,000 B ceiling). The budget could not have failed, and the 268
+    // registration side effects it was written to weigh had moved to `all.js`. The bare-root
+    // import is not lost -- it is now the `rootBarrel` entry below, where "collapses to nothing"
+    // is the assertion rather than an unnoticed hole.
+    //
+    // Re-baselined against a real measurement of the new entry rather than carried over: 3495.5
+    // KiB (3,579,374 B) raw / 850.8 KiB gzip across 7 output files with optional peers
+    // externalized, and its static graph reaches zero optional peers (0 eager, 0 physically
+    // bundled), so none of those bytes can be a peer's. That is ~163 KiB above the last root-barrel
+    // measurement below, which is expected in the split's direction: `all.js` reaches every
+    // root-included component through a registration entry that a tree-shaker must keep, whereas
+    // the old root reached the same classes as removable re-exports. The named allowance leaves
+    // ~6% headroom, and the `button` gzip canary below -- unchanged, and still the tight one --
+    // remains the signal for a foreign dependency leaking into the shared eager layer.
+    //
+    // History below is the pre-8.0.0 audit trail from when this entry measured the side-effectful
+    // root barrel. It is kept because the growth it records is the same aggregate implementation
+    // weight the entry still measures, just reached through `all.js` now.
     //
     // Raised from 2_250_000 after the 2026-07-20 review-sweep fixes: 422 component fixes across
     // 171 directories each added real code (boolean-attribute converters, fail-closed peer-error
@@ -73,7 +133,19 @@ const bundleEntries = {
     // Lit and Floating UI beyond Lyra itself. This is aggregate implementation weight, not an
     // optional-peer leak.
     maxRawBytes:
-      coreRawBudget.reviewedBaselineBytes + coreRawBudget.stableRootExpansionBytes,
+      coreRawBudget.measuredAllEntryBytes + coreRawBudget.reviewedGrowthAllowanceBytes,
+  },
+  // The other half of the registration split, and the reason the `core` budget above could move to
+  // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to
+  // essentially nothing under a production tree-shaker. Measured at 0 B raw in a single output file
+  // -- rolldown walks 743 modules and emits none of them -- so any regression that makes the root
+  // side-effectful again (a registration import creeping back into `src/lyra.ts`, or `./dist/lyra.js`
+  // reappearing in package.json#sideEffects) shows up here as a multi-megabyte bundle rather than
+  // as silence. The ceiling is deliberately tiny; `runBundle` additionally rejects any custom
+  // element definition surviving in the output.
+  rootBarrel: {
+    fixture: 'core',
+    maxRawBytes: 8_192,
   },
   // Single-component regression canary: catches a PR silently dragging something heavy into the
   // eager import graph (e.g. a `*-loader.ts`'s dynamic `import()` accidentally hoisted to a
@@ -299,6 +371,70 @@ if ((await ssrLoader.diagnoseLyraHydration()).length !== 0) {
 console.log('Node ESM package imports passed.');
 `,
   );
+  // The 8.0.0 registration split's whole contract, asserted in ONE fresh module registry so the
+  // three stages are ordered rather than independently true: the root must not register the
+  // library, a granular entry must register exactly one tag, and `all.js` must register the whole
+  // root-included set and nothing from an optional-peer family. Split across processes each stage
+  // would still pass with the other two broken. Registered-tag counts come from the same inventory
+  // `src/all.ts` is generated from, so a new component is covered the day it is scaffolded.
+  await writeFile(
+    join(fixtureDir, 'src', 'node-registration-contract.mjs'),
+    `const ROOT_HELPER_TAGS = ${JSON.stringify(rootHelperRegisteredTags)};
+const ROOT_INCLUDED_TAGS = ${JSON.stringify(rootIncludedTags)};
+const OPTIONAL_PEER_TAGS = ${JSON.stringify(optionalPeerFamilyTags)};
+const EVERY_TAG = [...ROOT_INCLUDED_TAGS, ...OPTIONAL_PEER_TAGS];
+const definedAmong = (tags) => tags.filter((tag) => customElements.get(tag) !== undefined);
+
+// 1. The root entry carries the named/type surface WITHOUT registering the library.
+const root = await import('@aceshooting/lyra-ui');
+if (typeof root.LyraEmpty !== 'function' || typeof root.LyraElement !== 'function') {
+  throw new Error('the package root did not expose its named class surface');
+}
+const afterRoot = definedAmong(EVERY_TAG).join(',');
+if (afterRoot !== ROOT_HELPER_TAGS.join(',')) {
+  throw new Error(
+    'importing the package root registered an unexpected component set.\\n' +
+      '  allowed (imperative-helper re-exports only): ' + ROOT_HELPER_TAGS.join(',') + '\\n' +
+      '  actual: ' + (afterRoot || '(none)'),
+  );
+}
+
+// 2. A granular registration entry registers EXACTLY its own tag, and registers the very class the
+//    root re-exports (a duplicated class module would satisfy a typeof check but not this).
+await import('@aceshooting/lyra-ui/components/overlays/empty/empty.js');
+if (customElements.get('lr-empty') !== root.LyraEmpty) {
+  throw new Error('the granular registration entry did not register the root barrel class');
+}
+const afterGranular = definedAmong(EVERY_TAG).join(',');
+const expectedAfterGranular = [...ROOT_HELPER_TAGS, 'lr-empty'].sort().join(',');
+if (afterGranular !== expectedAfterGranular) {
+  throw new Error(
+    'a granular registration entry registered more than its own tag.\\n' +
+      '  expected: ' + expectedAfterGranular + '\\n' +
+      '  actual:   ' + afterGranular,
+  );
+}
+
+// 3. all.js is the compatibility path: every root-included tag, and no optional-peer family.
+await import('@aceshooting/lyra-ui/all.js');
+const unregistered = ROOT_INCLUDED_TAGS.filter((tag) => customElements.get(tag) === undefined);
+if (unregistered.length > 0) {
+  throw new Error(
+    'all.js left ' + unregistered.length + ' of ' + ROOT_INCLUDED_TAGS.length +
+      ' root-included tag(s) unregistered: ' + unregistered.slice(0, 10).join(','),
+  );
+}
+const leaked = definedAmong(OPTIONAL_PEER_TAGS);
+if (leaked.length > 0) {
+  throw new Error('all.js registered optional-peer-family tag(s): ' + leaked.join(','));
+}
+console.log(
+  'Registration-split contract passed (root registers ' + ROOT_HELPER_TAGS.length +
+    ' helper tag(s); all.js registers ' + ROOT_INCLUDED_TAGS.length + ').',
+);
+`,
+  );
+
   await writeFile(
     join(fixtureDir, 'src', 'node-localization-import.mjs'),
     `const localization = await import('@aceshooting/lyra-ui/localization.js');
@@ -576,7 +712,8 @@ export default defineConfig({
   );
 
   const bundleSources = {
-    core: `import '@aceshooting/lyra-ui';\nexport const loaded = true;\n`,
+    core: `import '@aceshooting/lyra-ui/all.js';\nexport const loaded = true;\n`,
+    rootBarrel: `import '@aceshooting/lyra-ui';\nexport const loaded = true;\n`,
     button: `import '@aceshooting/lyra-ui/components/forms/button/button.js';\nexport const loaded = true;\n`,
     theme: `import '@aceshooting/lyra-ui/theme.css';\nexport const loaded = true;\n`,
     nativeStyles: `import '@aceshooting/lyra-ui/native.css';\nexport const loaded = true;\n`,
@@ -742,6 +879,11 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   if (entry === 'button' && javascript.includes('data-lr-autoload-pending')) {
     violations.push('a granular component import unexpectedly pulled in the optional autoloader');
   }
+  if (entry === 'rootBarrel' && /customElements\s*\.\s*define/.test(javascript)) {
+    violations.push(
+      'the registration-free package root defined a custom element in a bare, otherwise-unused import',
+    );
+  }
   if (entry === 'theme') {
     const cssFiles = output.files.filter((file) => file.endsWith('.css'));
     const css = (await Promise.all(cssFiles.map((file) => readFile(file, 'utf8')))).join('\n');
@@ -891,6 +1033,13 @@ async function main() {
       'Lit-free gemstone data import check',
     );
     await run(process.execPath, ['src/node-imports.mjs'], coreFixture, 'Node ESM import check');
+    // Its own process: the three stages need a module registry no earlier check has warmed.
+    await run(
+      process.execPath,
+      ['src/node-registration-contract.mjs'],
+      coreFixture,
+      'packed registration-split contract check',
+    );
     await run(
       join(coreFixture, 'node_modules', '.bin', binName('tsc')),
       ['--noEmit', '--skipLibCheck', 'false', '-p', 'tsconfig.json'],

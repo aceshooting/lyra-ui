@@ -308,7 +308,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (expanded) next.add(key);
     else next.delete(key);
     this.expandedIds = next;
-    this.emit<LyraMemoryExpandDetail>('lr-expand', { id: item.id, expanded });
+    this.emit('lr-expand', { id: item.id, expanded });
   }
 
   private startItemPending(kind: 'add' | 'remove', item: LyraMemoryItem, scope: MemoryScope): void {
@@ -380,8 +380,8 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (index < 0) return;
     this.pending = null;
     if (approved) {
-      if (p.kind === 'add') this.emit<LyraMemoryAddDetail>('lr-add', { item: p.item });
-      else this.emit<LyraMemoryRemoveDetail>('lr-remove', { id: p.item.id, scope: p.scope });
+      if (p.kind === 'add') this.emit('lr-add', { item: p.item });
+      else this.emit('lr-remove', { id: p.item.id, scope: p.scope });
     }
     this.refocusItem(p.scope, index);
   }
@@ -389,7 +389,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   private resolveForgetAllDecision(pending: ForgetAllPending, approved: boolean): void {
     if (this.pending !== pending || this.longTerm !== pending.longTerm) return;
     this.pending = null;
-    if (approved) this.emit<undefined>('lr-forget');
+    if (approved) this.emit('lr-forget');
     void this.updateComplete.then(() => {
       (
         (this.renderRoot.querySelector('[part="forget-all-button"]') ??

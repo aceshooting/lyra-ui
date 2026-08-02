@@ -1304,3 +1304,59 @@ describe('lr-phone-input implicit form submission', () => {
     expect(submits, 'a bare Enter still submits').to.equal(1);
   });
 });
+
+it('emits a cancelable lr-invalid alias and forwards its cancellation to the native invalid event', async () => {
+  const el = (await fixture(html`
+    <lr-phone-input label="Phone number" required default-country="LU" .adapter=${adapter}></lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  const aliases: CustomEvent[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
+  expect(aliases[0].cancelable).to.be.true;
+
+  // Cancelling the alias must cancel the native `invalid` it aliases, or an app rendering its own
+  // error banner cannot suppress the browser's validation bubble alongside it. The host's alias
+  // listener is installed in the constructor, so it runs before the recorder registered here.
+  el.addEventListener('lr-invalid', (event) => event.preventDefault());
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
+  expect(el.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.true;
+});
+
+it('bars constraint validation while disabled or fieldset-disabled', async () => {
+  // A native <input required disabled> matches neither :valid nor :invalid; this control used to
+  // report valueMissing regardless, painting every disabled required field with the documented
+  // :state(user-invalid) error styling.
+  const el = (await fixture(html`
+    <lr-phone-input label="Phone number" required default-country="LU" .adapter=${adapter} disabled></lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'disabled + required').to.be.false;
+  expect(el.validity.valid).to.be.true;
+  expect(el.matches(':state(invalid)'), 'disabled must not be :state(invalid)').to.be.false;
+  el.reportValidity();
+  expect(el.matches(':state(user-invalid)'), 'disabled must not be :state(user-invalid)').to.be.false;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'enabled again').to.be.true;
+
+  const form = (await fixture(html`
+    <form>
+      <fieldset disabled>
+        <lr-phone-input label="Nested" name="nested" required default-country="LU"></lr-phone-input>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const nested = form.querySelector('lr-phone-input') as LyraPhoneInput;
+  await nested.updateComplete;
+  expect(nested.disabled, 'a fieldset never mutates the control own disabled').to.be.false;
+  expect(nested.validity.valueMissing, 'fieldset-disabled + required').to.be.false;
+  expect(nested.matches(':state(invalid)')).to.be.false;
+});

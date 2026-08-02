@@ -890,6 +890,49 @@ describe('validity custom states', () => {
       .false;
   });
 
+  it('publishes neither invalid nor user-invalid while disabled', async function () {
+    if (!supportsCustomStates) this.skip();
+    // A native `<input required disabled>` matches neither `:valid` nor `:invalid`. This control's
+    // one constraint never lifts, so before barring was wired every disabled builder published
+    // `invalid` — and, after any reportValidity(), `user-invalid` — painting itself red under the
+    // documented `lr-graph-query-builder:state(user-invalid) { ... }` rule.
+    const el = (await fixture(
+      html`<lr-graph-query-builder disabled></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    expect(el.checkValidity(), 'a barred control reports no violation').to.be.true;
+    expect(el.validity.valueMissing).to.be.false;
+    expect(states(el).has('invalid')).to.be.false;
+    expect(states(el).has('valid'), 'barred matches neither half of the pair').to.be.false;
+    expect(states(el).has('required'), 'requiredness describes the attribute, not the outcome').to.be.true;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(states(el).has('user-invalid')).to.be.false;
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.checkValidity(), 'the constraint returns with the control').to.be.false;
+    expect(states(el).has('invalid')).to.be.true;
+  });
+
+  it('publishes neither invalid nor user-invalid inside a disabled fieldset', async function () {
+    if (!supportsCustomStates) this.skip();
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <fieldset disabled><lr-graph-query-builder name="q"></lr-graph-query-builder></fieldset>
+      </form>
+    `);
+    const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    expect(el.disabled, 'a fieldset never mutates the control own disabled').to.be.false;
+    expect(el.validity.valueMissing, 'fieldset-disabled bars validation exactly like own disabled').to.be
+      .false;
+    expect(states(el).has('invalid')).to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(states(el).has('user-invalid')).to.be.false;
+  });
+
   it('matches the states through a :state() selector, not just the CustomStateSet', async function () {
     if (!supportsCustomStates || !supportsStateSelector) this.skip();
     const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;

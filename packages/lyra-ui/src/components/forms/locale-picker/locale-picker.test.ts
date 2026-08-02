@@ -244,13 +244,31 @@ it('selecting a row updates value, fires lr-change with {value, previousValue}, 
   el.open = true;
   await el.updateComplete;
 
-  let detail: { value: string; previousValue: string } | undefined;
+  let detail: { value: string; previousValue: string; direction: string } | undefined;
   el.addEventListener('lr-change', (e) => (detail = (e as CustomEvent).detail));
   setTimeout(() => rows(el)[1].click());
   await oneEvent(el, 'lr-change');
   expect(el.value).to.equal('de');
-  expect(detail).to.deep.equal({ value: 'de', previousValue: 'fr' });
+  expect(detail).to.deep.equal({ value: 'de', previousValue: 'fr', direction: 'ltr' });
   expect(getLyraLocale()).to.equal('de');
+  setLyraLocale('en');
+});
+
+// The picked locale's writing direction travels with the pick, so a host applying `dir` to the
+// page does not have to keep its own tag -> direction table.
+it('reports the picked locale writing direction in lr-change detail', async () => {
+  setLyraLocale('en');
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['he', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+
+  let detail: { direction: string } | undefined;
+  el.addEventListener('lr-change', (e) => (detail = (e as CustomEvent).detail));
+  setTimeout(() => rows(el)[0].click());
+  await oneEvent(el, 'lr-change');
+  expect(detail?.direction).to.equal('rtl');
   setLyraLocale('en');
 });
 
@@ -1054,5 +1072,58 @@ describe('lr-locale-picker setCustomValidity()', () => {
     expect(el.matches(':state(valid)')).to.be.false;
     el.setCustomValidity('');
     expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
+  });
+});
+
+// A control barred from constraint validation is neither :valid nor :invalid natively -- a real
+// `<input required disabled>` matches neither -- so a barred picker must publish no violation at
+// all. Before the shared `isBarredFromValidation()` guard reached this component, a disabled
+// required picker kept `valueMissing` raised and painted itself with the documented
+// `:state(user-invalid)` error styling.
+describe('barred from constraint validation', () => {
+  it('reports no violation while disabled, and restores it on re-enable', async () => {
+    const el = (await fixture(
+      html`<lr-locale-picker required disabled name="locale" .locales=${['fr']}></lr-locale-picker>`,
+    )) as LyraLocalePicker;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing while disabled').to.be.false;
+    expect(el.validity.valid, 'valid while disabled').to.be.true;
+    expect(el.validationMessage, 'no message while disabled').to.equal('');
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing once enabled').to.be.true;
+    expect(el.validationMessage, 'a message once enabled').to.not.equal('');
+  });
+
+  it('keeps the invalid custom states off a disabled required picker', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-locale-picker required name="locale" .locales=${['fr']}></lr-locale-picker>`,
+    )) as LyraLocalePicker;
+    await el.updateComplete;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid while enabled').to.be.true;
+
+    el.disabled = true;
+    await el.updateComplete;
+    expect(el.matches(':state(invalid)'), 'invalid while disabled').to.be.false;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid while disabled').to.be.false;
+    expect(el.matches(':state(valid)'), 'a barred control is not valid either').to.be.false;
+  });
+
+  it('reports no violation inside a disabled fieldset', async () => {
+    const form = (await fixture(html`
+      <form>
+        <fieldset disabled>
+          <lr-locale-picker required name="locale" .locales=${['fr']}></lr-locale-picker>
+        </fieldset>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-locale-picker') as LyraLocalePicker;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing inside a disabled fieldset').to.be.false;
+    expect(el.checkValidity(), 'checkValidity() inside a disabled fieldset').to.be.true;
   });
 });

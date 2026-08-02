@@ -25,15 +25,19 @@ export interface LyraAlertEventMap {
 
 /**
  * `<lr-alert>` — a closed-by-default inline alert that can also move into the shared toast stack.
- * It mirrors the public `<sl-alert>` contract under the `lr-` prefix. Lifecycle notifications are
- * noncancelable; initial `open` markup establishes state without announcing a transition.
+ * It mirrors the public `<sl-alert>` contract under the `lr-` prefix. `lr-show`/`lr-hide` are
+ * cancelable veto points, matching every other Lyra component that emits them; the settled
+ * `lr-after-*` notifications are not. Initial `open` markup establishes state without announcing a
+ * transition, so it is never vetoable.
  *
  * @customElement lr-alert
  * @slot - The alert's main content.
  * @slot icon - Optional leading icon.
- * @event lr-show - Emitted when the alert begins opening. Noncancelable.
+ * @event lr-show - The alert is about to open. Cancelable — `preventDefault()` leaves it
+ *   closed and the reflected attribute untouched.
  * @event lr-after-show - Emitted after the alert's show motion completes. Noncancelable.
- * @event lr-hide - Emitted when the alert begins closing. Noncancelable.
+ * @event lr-hide - The alert is about to close, including an auto-hide expiry. Cancelable on
+ *   the same terms as `lr-show`.
  * @event lr-after-hide - Emitted after the alert's hide motion completes. Noncancelable.
  * @csspart base - The component's base wrapper.
  * @csspart close-button - The close button.
@@ -60,6 +64,18 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   set open(next: boolean) {
     const normalized = Boolean(next);
     if (normalized === this._open) return;
+    // The veto point sits in the setter, ahead of the state change, because every path -- `show()`,
+    // `hide()`, `toast()`, the close button, the auto-hide timer, the reflected attribute -- funnels
+    // through here. Initial declarative `open` markup is state, not a transition, so it is neither
+    // announced nor vetoable, exactly as before.
+    if (this.hasUpdated) {
+      if (this.emit(normalized ? 'lr-show' : 'lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+        // A veto that arrived through the reflected attribute would otherwise leave the attribute
+        // disagreeing with the property.
+        this.toggleAttribute('open', this._open);
+        return;
+      }
+    }
     const previous = this._open;
     this._open = normalized;
     this.requestUpdate('open', previous);
@@ -187,16 +203,16 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     const token = ++this.transitionToken;
     this.clearAutoHide();
 
+    // `lr-show`/`lr-hide` already fired from the `open` setter, before the state changed, so a
+    // listener still has a real veto; only the motion bookkeeping remains here.
     if (opening) {
       this.removeAttribute('data-alert-hiding');
       this.setAttribute('data-alert-showing', '');
-      this.emit('lr-show');
     } else {
       const base = this.base;
       if (base) void base.offsetWidth;
       this.removeAttribute('data-alert-showing');
       this.setAttribute('data-alert-hiding', '');
-      this.emit('lr-hide');
     }
 
     await this.updateComplete;

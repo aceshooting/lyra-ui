@@ -1,0 +1,4 @@
+{
+  "$comment": "Reviewed exemptions from the stable-qualification gate (scripts/check-qualification.mjs). This file is a ratchet: an exemption whose evidence has since landed is reported as stale and must be deleted, so the list can only shrink. Adding an entry requires a substantive reason. It is empty because every component claiming maturity \"stable\" carries a populated-state axe assertion in its own directory -- an exemption here is an exception, never a starting point. See docs/agents/component-qualification.md.",
+  "exemptions": []
+}

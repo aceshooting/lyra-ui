@@ -206,9 +206,11 @@ export class LyraKbd extends LyraElement {
   @state() private hasCustomContent = false;
 
   protected override willUpdate(): void {
-    if (!this.hasUpdated) {
+    // A server render sees no light-DOM children, so a hydrating chip reproduces the server's
+    // keys rendering first and adopts slotted content on the very next update instead.
+    this.seedFirstRenderState(() => {
       this.hasCustomContent = hasRealContent(this.childNodes);
-    }
+    });
   }
 
   private onSlotChange = (e: Event): void => {
@@ -218,18 +220,6 @@ export class LyraKbd extends LyraElement {
   override render(): TemplateResult {
     const explicitLabel = this.getAttribute('aria-label');
 
-    if (this.hasCustomContent) {
-      return html`
-        <span
-          part="base"
-          role=${explicitLabel ? 'img' : nothing}
-          aria-label=${explicitLabel || nothing}
-        >
-          <slot @slotchange=${this.onSlotChange}></slot>
-        </span>
-      `;
-    }
-
     // Deliberately drop the second (fallback) argument here: shortcutTokenLabel's
     // `resolve()` always sets `fallback` to the literal built-in English text for
     // the key (see the module doc), which already matches DEFAULT_STRINGS for
@@ -237,7 +227,9 @@ export class LyraKbd extends LyraElement {
     // fallback slot would short-circuit resolveLyraString() before it ever
     // consults a registerLyraLocale()-registered translation. Passing only `key`
     // is intentional (KbdLocalize callers may ignore trailing params).
-    const tokens = parseShortcut(this.keys, IS_MAC, (key) => this.localize(key));
+    const tokens = this.hasCustomContent
+      ? []
+      : parseShortcut(this.keys, IS_MAC, (key) => this.localize(key));
     // role="img" treats the chip as one opaque unit (matching
     // lr-context-meter's/lr-chart's canvas usage of the same pattern):
     // the individual glyphs and "+" separators aren't real words, so
@@ -253,20 +245,25 @@ export class LyraKbd extends LyraElement {
     // violation (a nameless-but-labeled, role-less element).
     const ariaLabel = explicitLabel || tokens.map((t) => t.word).join('+');
 
+    // One outer template for both renderings, with the branch inside it. Slotted content is only
+    // discoverable in a browser, so a hydrating chip switches branches on its second update -- and
+    // a swap of the *outer* template would discard (rather than reuse) the server's markup.
     return html`
       <span
         part="base"
         role=${ariaLabel ? 'img' : nothing}
-        aria-hidden=${ariaLabel ? nothing : 'true'}
+        aria-hidden=${!this.hasCustomContent && !ariaLabel ? 'true' : nothing}
         aria-label=${ariaLabel || nothing}
       >
-        ${tokens.map(
-          (t, i) => html`
-            ${i > 0 ? html`<span class="sep" aria-hidden="true">+</span>` : nothing}
-            <span part="key">${t.visual}</span>
-          `,
-        )}
-        <slot @slotchange=${this.onSlotChange} hidden></slot>
+        ${this.hasCustomContent
+          ? html`<slot @slotchange=${this.onSlotChange}></slot>`
+          : html`${tokens.map(
+              (t, i) => html`
+                ${i > 0 ? html`<span class="sep" aria-hidden="true">+</span>` : nothing}
+                <span part="key">${t.visual}</span>
+              `,
+            )}
+            <slot @slotchange=${this.onSlotChange} hidden></slot>`}
       </span>
     `;
   }

@@ -58,6 +58,7 @@ function migrationCoverageFixture() {
     noCounterpart: {
       'wa-deferred': 'The target has not shipped.',
     },
+    unaliasedEvents: {},
     attributeRenames: [
       { component: 'lr-dialog', from: 'light-dismiss', to: 'light-dismiss' },
     ],
@@ -66,9 +67,12 @@ function migrationCoverageFixture() {
     modules: [
       {
         path: 'synthetic.ts',
+        // Events are part of the synthetic manifest because the coverage gate measures every
+        // upstream event against the events the Lyra target actually dispatches.
         declarations: coverageInventory.components.map((component) => ({
           customElement: true,
           tagName: component.tag,
+          events: (component.surface.events ?? []).map((event) => ({ name: event.name })),
         })),
       },
     ],
@@ -145,11 +149,35 @@ test('the migration contract validates every reserved rewrite rule array', () =>
         member: 'fabricated',
       });
     },
+    (copy) => {
+      delete copy.mappings.find((mapping) => mapping.upstreamTag === 'sl-static').parity.staticApi;
+    },
+    (copy) => {
+      copy.mappings.find((mapping) => mapping.upstreamTag === 'sl-static').parity.runtime.registration = 'granular';
+    },
+    (copy) => {
+      copy.upstreams.webawesome.packages[1].name = '@awesome.me/webawesome';
+    },
   ]) {
     const copy = structuredClone(inventory);
     mutate(copy);
     assert.throws(() => buildMigrationContract(copy));
   }
+});
+
+test('free and Pro package identities share the Web Awesome ecosystem without conflating tiers', () => {
+  assert.deepEqual(
+    contract.packageIdentities.get('@awesome.me/webawesome'),
+    { ecosystem: 'webawesome', tiers: new Set(['free']) },
+  );
+  assert.deepEqual(
+    contract.packageIdentities.get('@awesome.me/webawesome-pro'),
+    { ecosystem: 'webawesome', tiers: new Set(['free', 'pro']) },
+  );
+  assert.deepEqual(
+    contract.packageIdentities.get('@shoelace-style/shoelace'),
+    { ecosystem: 'shoelace', tiers: new Set(['free']) },
+  );
 });
 
 test('inventory-v1 migration coverage classifies every pinned tag without claiming blanket renames', () => {
@@ -250,6 +278,39 @@ test('migration coverage fails closed on relationship, fiction, dangling, polari
       },
     },
     {
+      // A mirrored event that survives under a different name is the quietest parity break
+      // there is: the migrated markup parses and the listener silently never fires again.
+      expected: 'wa-old-event migrates to lr-new-event, which lr-widget does not dispatch',
+      mutate(inputs) {
+        const widget = inputs.lyraManifest.modules[0].declarations.find(
+          (declaration) => declaration.tagName === 'lr-widget',
+        );
+        widget.events = [];
+      },
+    },
+    {
+      // Dropping the explicit rewrite falls back to the mechanical prefix swap, which lands on a
+      // name nothing dispatches -- the gate must not accept the codemod's own guess as coverage.
+      expected: 'wa-old-event migrates to lr-old-event, which lr-widget does not dispatch',
+      mutate(inputs) {
+        inputs.inventory.mappings.find(
+          (mapping) => mapping.upstreamTag === 'wa-widget',
+        ).rewrites.events = [];
+      },
+    },
+    {
+      expected: 'unaliasedEvents exemption is stale',
+      mutate(inputs) {
+        inputs.upstreamTags.unaliasedEvents['wa-widget wa-old-event'] = 'Synthetic exemption.';
+      },
+    },
+    {
+      expected: 'unaliasedEvents exemption no longer applies to any pinned upstream event',
+      mutate(inputs) {
+        inputs.upstreamTags.unaliasedEvents['wa-widget wa-fictional'] = 'Synthetic exemption.';
+      },
+    },
+    {
       expected: 'noCounterpart may exempt only an unsupported inventory mapping',
       mutate(inputs) {
         inputs.readme = inputs.readme.replace('| `<lr-static>` | `sl-static` | exact |\n', '');
@@ -267,6 +328,28 @@ test('migration coverage fails closed on relationship, fiction, dangling, polari
       `${expected}:\n${result.errors.join('\n')}`,
     );
   }
+});
+
+test('a documented unaliasedEvents reason is the only way an unmirrored upstream event passes', () => {
+  const inputs = migrationCoverageFixture();
+  inputs.lyraManifest.modules[0].declarations.find(
+    (declaration) => declaration.tagName === 'lr-widget',
+  ).events = [];
+
+  const undocumented = analyzeMigrationCoverage(structuredClone(inputs));
+  assert.ok(undocumented.errors.some((error) => error.includes('lr-widget does not dispatch')));
+
+  const blank = structuredClone(inputs);
+  blank.upstreamTags.unaliasedEvents['wa-widget wa-old-event'] = '   ';
+  assert.ok(
+    analyzeMigrationCoverage(blank).errors.some((error) => error.includes('lr-widget does not dispatch')),
+    'a whitespace-only reason is not a reason',
+  );
+
+  const documented = structuredClone(inputs);
+  documented.upstreamTags.unaliasedEvents['wa-widget wa-old-event'] =
+    'Synthetic: the widget deliberately has no equivalent notification.';
+  assert.deepEqual(analyzeMigrationCoverage(documented).errors, []);
 });
 
 test('the checked-in inventory is executable and carries its explicit event-prefix rewrite', () => {
@@ -395,6 +478,17 @@ test('supported registration deep imports follow inventory modules; bindings and
     result.warnings.map((entry) => entry.warningCode),
     ['IMPORT_BINDING_REVIEW_REQUIRED', 'UNRESOLVED_DEEP_IMPORT'],
   );
+});
+
+test('Web Awesome Pro deep imports use the same proven granular registration mapping', () => {
+  const input = "import '@awesome.me/webawesome-pro/dist/components/widget/widget.js';\n";
+  const result = migrateText(input, contract, { file: 'pro-registration.ts' });
+
+  assert.equal(
+    result.content,
+    "import '@aceshooting/lyra-ui/components/forms/widget/widget.js';\n",
+  );
+  assert.deepEqual(result.warnings, []);
 });
 
 test('multiline and commented import syntax cannot bypass binding-import safety', () => {
@@ -527,7 +621,7 @@ test('a retained root registration import blocks automatic mappings in a mixed-s
   }
 });
 
-test('a root registration import rewrites when every discovered use in its ecosystem is automatic', () => {
+test('a root registration import rewrites to the explicit all-components entry when every target is root-included', () => {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-root-safe-v8-'));
   try {
     const source = path.join(scratch, 'safe.html');
@@ -543,12 +637,59 @@ test('a root registration import rewrites when every discovered use in its ecosy
     assert.equal(
       fs.readFileSync(source, 'utf8'),
       [
-        "import '@aceshooting/lyra-ui';",
+        "import '@aceshooting/lyra-ui/all.js';",
         '<lr-widget placement="start"></lr-widget>',
         '',
       ].join('\n'),
     );
     assert.deepEqual(report.warnings, []);
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test('a root package import receives granular registration for root-excluded targets and peer requirements', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-root-closure-v8-'));
+  try {
+    const source = path.join(scratch, 'safe.ts');
+    const input = [
+      "import '@awesome.me/webawesome-pro';",
+      "document.body.innerHTML = '<wa-widget></wa-widget><wa-data-grid></wa-data-grid>';",
+      '',
+    ].join('\n');
+    fs.writeFileSync(source, input);
+
+    const rootExcludedInventory = structuredClone(inventory);
+    const widget = rootExcludedInventory.components.find((component) => component.tag === 'lr-widget');
+    widget.rootIncluded = false;
+    widget.optionalPeers = ['widget-runtime'];
+    const widgetMapping = rootExcludedInventory.mappings.find((mapping) => mapping.upstreamTag === 'wa-widget');
+    widgetMapping.parity.runtime = {
+      registration: 'granular',
+      optionalPeers: ['widget-runtime'],
+    };
+    const dataGrid = rootExcludedInventory.mappings.find((mapping) => mapping.upstreamTag === 'wa-data-grid');
+    dataGrid.classification = 'exact';
+    dataGrid.rationale = null;
+    dataGrid.parity.lightDom = 'surface-only';
+    dataGrid.parity.behaviorReviewFlags = [];
+
+    const report = migrateFiles({ files: [source], inventory: rootExcludedInventory, cwd: scratch });
+    assert.equal(report.filesChanged, 1);
+    assert.equal(
+      fs.readFileSync(source, 'utf8'),
+      [
+        "import '@aceshooting/lyra-ui/all.js';",
+        "import '@aceshooting/lyra-ui/components/forms/widget/widget.js';",
+        "document.body.innerHTML = '<lr-widget placement=\"start\"></lr-widget><lr-table></lr-table>';",
+        '',
+      ].join('\n'),
+    );
+    assert.deepEqual(
+      report.warnings.map((entry) => [entry.warningCode, entry.target]),
+      [['OPTIONAL_PEER_REQUIRED', 'widget-runtime']],
+    );
+    assert.ok(report.changes.some((entry) => entry.action === 'insert-registration'));
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true });
   }
@@ -692,8 +833,9 @@ test('aliased elements and opaque attribute spreads block local defaults across 
   }
 });
 
-test('CLI argument parsing includes dry-run and a stable report target', () => {
-  assert.deepEqual(parseArgs(['--dry-run', '--origin=lyra-v7', '--report=out/report.json', '--ext=.ts,vue', '--', 'src']), {
+test('CLI argument parsing includes check mode, dry-run, and a stable report target', () => {
+  assert.deepEqual(parseArgs(['--check', '--origin=lyra-v7', '--report=out/report.json', '--ext=.ts,vue', '--', 'src']), {
+    check: true,
     dryRun: true,
     help: false,
     extensions: new Set(['ts', 'vue']),
@@ -702,6 +844,34 @@ test('CLI argument parsing includes dry-run and a stable report target', () => {
     targets: ['src'],
   });
   assert.throws(() => parseArgs(['--origin=lyra-v6', 'src']), /Unknown migration origin/);
+});
+
+test('CLI --check is non-mutating and exits nonzero until the migration is clean', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-check-v8-'));
+  try {
+    const source = path.join(scratch, 'component.ts');
+    const input = [
+      "import '@shoelace-style/shoelace/dist/components/resize-observer/resize-observer.js';",
+      "document.body.innerHTML = '<sl-resize-observer></sl-resize-observer>';",
+      '',
+    ].join('\n');
+    fs.writeFileSync(source, input);
+    const invoke = (...args) =>
+      spawnSync(process.execPath, [migratePath, ...args], { cwd: scratch, encoding: 'utf8' });
+
+    const pending = invoke('--check', source);
+    assert.equal(pending.status, 1, pending.stderr);
+    assert.equal(fs.readFileSync(source, 'utf8'), input);
+    assert.match(pending.stdout, /Migration check failed:/);
+
+    const applied = invoke(source);
+    assert.equal(applied.status, 0, applied.stderr);
+    const clean = invoke('--check', source);
+    assert.equal(clean.status, 0, clean.stderr);
+    assert.match(clean.stdout, /Migration check passed:/);
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
 });
 
 test('migrateFiles writes a stable location-aware JSON report and honors dry-run', () => {

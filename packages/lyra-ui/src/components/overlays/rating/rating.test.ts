@@ -3,16 +3,34 @@ import './rating.js';
 import type { LyraRating } from './rating.js';
 import { styles } from './rating.styles.js';
 
-it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+it('emits one cancelable lr-invalid alias whose cancellation cancels the native invalid event', async () => {
   const el = await fixture<LyraRating>(html`<lr-rating required aria-label="Score"></lr-rating>`);
   const aliases: CustomEvent[] = [];
+  const nativePrevented: boolean[] = [];
   el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+  // Registered after the alias relay's own constructor-installed `invalid` listener, so it reads
+  // the native event exactly as the relay left it.
+  el.addEventListener('invalid', (event) => nativePrevented.push(event.defaultPrevented));
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target).to.equal(el);
+  // Compared as a boolean, never as two DOM nodes: a failing chai assertion carrying an element
+  // hangs the whole file.
+  expect(aliases[0].target === el, 'lr-invalid is retargeted to the host').to.be.true;
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.false;
+  expect(aliases[0].cancelable, 'lr-invalid is a real veto point').to.be.true;
+  expect(nativePrevented, 'native invalid left alone while nobody cancels').to.deep.equal([false]);
+
+  // Cancelling the alias must reach the platform event behind it, so an app presenting its own
+  // error banner can suppress the browser's validation bubble.
+  el.addEventListener('lr-invalid', (event) => event.preventDefault(), { once: true });
+
+  expect(el.checkValidity()).to.be.false;
+  expect(aliases).to.have.lengthOf(2);
+  expect(
+    nativePrevented,
+    'preventDefault() on lr-invalid suppresses the native validation bubble',
+  ).to.deep.equal([false, true]);
 });
 
 it('gives the star row hover feedback matching the keyboard focus-visible cue', () => {
@@ -818,4 +836,19 @@ it('is accessible while required, labelled, rated, and rendering a custom symbol
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('i').length).to.equal(10);
   await expect(el).to.be.accessible();
+});
+
+it('exposes its native label association', async () => {
+  const form = (await fixture(html`
+    <form>
+      <label id="score-label" for="score">Score</label>
+      <lr-rating id="score" name="score" label="Score"></lr-rating>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-rating') as LyraRating;
+  expect(el.form).to.equal(form);
+  expect(el.getForm()).to.equal(form);
+  expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['score-label']);
+  expect(el.validity.valid).to.equal(true);
+  expect(el.validationMessage).to.equal('');
 });

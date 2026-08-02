@@ -1,8 +1,9 @@
 import { DocsContainer } from '@storybook/addon-docs/blocks';
 import { createElement, useEffect, useLayoutEffect, useState } from 'react';
 import { GLOBALS_UPDATED } from 'storybook/internal/core-events';
+import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';
 
-import { applyLyraTheme, normalizeStoryThemeName, storyTheme } from './story-theme.js';
+import { normalizeStoryThemeName, storyTheme } from './story-theme.js';
 
 function themeFromUrl() {
   try {
@@ -31,7 +32,7 @@ export function LyraDocsContainer({ context, children }) {
   const [themeName, setThemeName] = useState(() => initialThemeName(context));
 
   useLayoutEffect(() => {
-    applyLyraTheme(themeName);
+    setLyraTheme({ mode: themeName, accent: null });
   }, [themeName]);
 
   useEffect(() => {

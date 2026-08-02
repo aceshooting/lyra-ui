@@ -14,7 +14,13 @@ import '../../forms/select/select.class.js';
 import '../../forms/combobox/option.class.js';
 import '../../forms/checkbox/checkbox.class.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
-import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import {
+  getFormOwner,
+  installCustomErrorProperty,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 
 /** The four leaf property types this flat-schema renderer understands. */
@@ -181,6 +187,15 @@ export interface LyraToolParamFormEventMap {
  * @csspart unsupported - The fallback note rendered in place of a control for
  * a property whose `type` is outside this renderer's scope.
  * @csspart empty - The message shown when `schema.properties` has no entries.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
+ * `label` part of every field whose key is listed in the schema's `required` array — per field
+ * here, not per host, because this control's value is a whole object. Set it to `''` to suppress
+ * the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.
+ * Caller-supplied content, so it is never localized here.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ * retunable without touching any other danger-coloured surface.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * marker.
  * @cssstate required - The schema declares at least one required property. Requiredness is
  * per-property here (the value is an object), so this is the whole-control reading: "this form
  * demands something of the user".
@@ -415,6 +430,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    // Disabling bars constraint validation, so the published validity and `:state()` hooks change
+    // even though the value did not.
+    this.applyValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -614,6 +632,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    this.applyValidity();
     this.requestUpdate();
   }
 
@@ -640,10 +659,28 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return serialized;
   }
 
+  /**
+   * Shared with every other form control in the library: own `disabled` and a `<fieldset disabled>`
+   * ancestor both bar constraint validation, so a barred form reports no failure and publishes
+   * neither `:state(invalid)` nor `:state(user-invalid)` — see `internal/custom-states.ts`.
+   */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   /** Pushes the already-computed snapshot into `ElementInternals`. */
   private syncInternals(formValue: string | null): void {
     this.internals.setFormValue(formValue, formValue);
-    if (Object.keys(this._validityFlags).length === 0) {
+    this.applyValidity();
+  }
+
+  /**
+   * Publishes the current constraint state. Split out of {@linkcode syncInternals} because
+   * becoming (or ceasing to be) barred changes the answer without changing the submitted value.
+   */
+  private applyValidity(): void {
+    if (!this.validityController) return;
+    if (this.barredFromValidation || Object.keys(this._validityFlags).length === 0) {
       this.validityController.setValidity({});
     } else {
       // Every branch that sets a _validityFlags flag (this else-branch's precondition) also sets
@@ -668,6 +705,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     syncValidityStates(this.internals, {
       required: this.requiredKeys.length > 0,
       hasInteracted: this.hasInteracted,
+      barred: this.barredFromValidation,
     });
   }
 

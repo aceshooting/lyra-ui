@@ -3714,3 +3714,101 @@ describe('reviewed Web Awesome Pro combobox surface', () => {
     expect(order).to.deep.equal(['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
   });
 });
+
+it('mirrors the lowercase IDL aliases of the native input hints', async () => {
+  const el = (await fixture(
+    html`<lr-combobox label="City"><lr-option value="paris">Paris</lr-option></lr-combobox>`,
+  )) as LyraCombobox;
+  expect(el.inputmode).to.equal('');
+  expect(el.enterkeyhint).to.equal('');
+
+  el.inputmode = 'numeric';
+  el.enterkeyhint = 'search';
+  await el.updateComplete;
+  expect(el.inputMode).to.equal('numeric');
+  expect(el.enterKeyHint).to.equal('search');
+  expect(el.inputmode).to.equal('numeric');
+  expect(el.enterkeyhint).to.equal('search');
+  expect(el.input?.inputMode).to.equal('numeric');
+  expect(el.input?.enterKeyHint).to.equal('search');
+
+  el.inputmode = null as unknown as string;
+  el.enterkeyhint = null as unknown as string;
+  await el.updateComplete;
+  expect(el.inputmode).to.equal('');
+  expect(el.enterkeyhint).to.equal('');
+});
+
+it('drops a consumer validity message and restores the intrinsic constraint', async () => {
+  const el = (await fixture(
+    html`<lr-combobox label="City" required><lr-option value="paris">Paris</lr-option></lr-combobox>`,
+  )) as LyraCombobox;
+  el.setCustomValidity('Pick a supported city');
+  await el.updateComplete;
+  expect(el.validity.customError).to.equal(true);
+  expect(el.validationMessage).to.equal('Pick a supported city');
+
+  el.resetValidity();
+  await el.updateComplete;
+  expect(el.validity.customError).to.equal(false);
+  expect(el.validity.valueMissing).to.equal(true);
+});
+
+it('bars constraint validation while disabled, like a native disabled required control', async () => {
+  const el = (await fixture(html`
+    <lr-combobox required disabled label="Fruit"><lr-option value="a">Apple</lr-option></lr-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'a barred control raises no violation').to.be.false;
+  expect(el.checkValidity()).to.be.true;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'the violation returns once it is enforceable again').to.be.true;
+});
+
+it('honours preventDefault() on lr-show and lr-hide, keeping property and attribute in step', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  await el.updateComplete;
+
+  el.addEventListener('lr-show', (event) => event.preventDefault(), { once: true });
+  await el.show();
+  await el.updateComplete;
+  await aTimeout(60);
+  expect(el.open, 'a vetoed open never applies').to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+
+  await el.show();
+  await el.updateComplete;
+  await aTimeout(60);
+  expect(el.open, 'the veto was one-shot; the next request opens normally').to.be.true;
+
+  el.addEventListener('lr-hide', (event) => event.preventDefault(), { once: true });
+  el.open = false;
+  await el.updateComplete;
+  await aTimeout(60);
+  expect(el.open, 'a vetoed close stays open even for a direct property write').to.be.true;
+  expect(el.hasAttribute('open')).to.be.true;
+});
+
+it('makes lr-show/lr-hide cancelable and the settled after-events not', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const seen: CustomEvent[] = [];
+  for (const type of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+    el.addEventListener(type, (event) => seen.push(event as CustomEvent));
+  }
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(80);
+  el.open = false;
+  await el.updateComplete;
+  await aTimeout(80);
+
+  const byType = new Map(seen.map((event) => [event.type, event.cancelable]));
+  expect(byType.get('lr-show'), 'lr-show is a veto point').to.equal(true);
+  expect(byType.get('lr-hide'), 'lr-hide is a veto point').to.equal(true);
+  // Whichever after-events settled inside the window are pure notifications.
+  for (const event of seen.filter((candidate) => candidate.type.startsWith('lr-after'))) {
+    expect(event.cancelable, `${event.type} is a notification, not a veto point`).to.equal(false);
+  }
+});

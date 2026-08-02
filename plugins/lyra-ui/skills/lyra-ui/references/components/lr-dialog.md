@@ -135,6 +135,22 @@ empty). The `label` and `header-actions` slots are new in 8.0.0.
 additive aliases on the same functional node, so a mapped `::part(title)` rule styles the same
 visible title as Lyra's `::part(heading)`.
 
+**The body is keyboard-reachable while it overflows.** `[part="body"]` is the element that scrolls,
+so it carries `tabindex="-1"` and joins the focus order **only while its content actually
+overflows** — a dialog whose content is nothing but prose, a table, or a rendered document used to
+be scrollable with a mouse and completely unreachable from the keyboard, because a scroll container
+with no focusable child is not a stop of its own. A short body never becomes a gratuitous stop.
+
+It takes focus like any other stop, so it styles like one: `::part(body):focus-visible` draws the
+standard `--lr-focus-ring-*` ring, inset (`outline-offset` is negative) because the body is flush
+with the panel edges, where an outset ring would be clipped or would collide with the header rule.
+Restyle it through `::part(body)` as usual; do not remove the outline without replacing it.
+
+It never steals initial focus from real content: an `[autofocus]` element wins, then the first
+focusable control *inside* the body, and the body itself is used only when there is nothing else to
+focus. So a dialog full of form controls behaves exactly as before, and a dialog full of text is now
+scrollable with the arrow keys, Page Up/Down and Home/End once Tab reaches it.
+
 **Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--width`, `--spacing`,
 `--header-spacing`, `--body-spacing`, `--footer-spacing`, `--show-duration`, and
 `--hide-duration`. The individual region properties override `--spacing`; mapped properties in

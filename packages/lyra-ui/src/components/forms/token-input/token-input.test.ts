@@ -1444,3 +1444,28 @@ describe('lr-token-input implicit form submission', () => {
     expect(submits, 'a bare Enter still submits').to.equal(1);
   });
 });
+
+it('bars constraint validation while disabled, like a native disabled required control', async () => {
+  const el = (await fixture(html`<lr-token-input required disabled label="Tags"></lr-token-input>`)) as LyraTokenInput;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'a barred control raises no violation').to.be.false;
+  expect(el.checkValidity()).to.be.true;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'the violation returns once it is enforceable again').to.be.true;
+});
+
+it('renders the required marker from the shared themeable rule, not a literal span', async () => {
+  const el = (await fixture(html`
+    <lr-token-input required label="Tags"></lr-token-input>
+  `)) as LyraTokenInput;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label, '::after').content).to.contain('*');
+  expect(label.querySelector('span[aria-hidden]'), 'no hand-rolled glyph element').to.equal(null);
+
+  el.style.setProperty('--lr-form-control-required-content', "''");
+  await el.updateComplete;
+  expect(getComputedStyle(label, '::after').content).to.not.contain('*');
+});

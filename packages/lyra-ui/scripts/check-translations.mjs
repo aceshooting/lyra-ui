@@ -145,7 +145,7 @@ function namedObjectLiteral(program, name) {
   return found;
 }
 
-/** The `registerLyraLocale('<tag>', <identifier>)` call a catalog module must make. */
+/** The `registerLyraLocale('<tag>', <identifier>[, <meta>])` call a catalog module must make. */
 function registrationCall(program) {
   let call;
   visitAst(program, (node) => {
@@ -154,9 +154,15 @@ function registrationCall(program) {
     call = {
       tag: literalString(node.arguments?.[0]),
       identifier: node.arguments?.[1]?.type === 'Identifier' ? node.arguments[1].name : undefined,
+      meta: node.arguments?.[2]?.type === 'ObjectExpression' ? node.arguments[2] : undefined,
     };
   });
   return call;
+}
+
+/** The base language subtag of a locale tag, normalized the way `normalizeLocale()` does. */
+function baseLanguage(tag) {
+  return tag.trim().replace(/_/g, '-').toLowerCase().split('-')[0];
 }
 
 const PLACEHOLDER = /\{(\w+)\}/g;
@@ -175,6 +181,53 @@ function unionPlaceholders(message) {
 
 function pluralCategoriesFor(tag) {
   return new Intl.PluralRules(tag).resolvedOptions().pluralCategories;
+}
+
+/** Source text of a top-level `function <name>(...)` declaration, or `undefined`. */
+function functionSource(program, source, name) {
+  let found;
+  visitAst(program, (node) => {
+    if (found || node.type !== 'FunctionDeclaration' || node.id?.name !== name) return;
+    found = source.slice(node.start, node.end);
+  });
+  return found;
+}
+
+/**
+ * Fails a regional-only catalog whose base tag would render English.
+ *
+ * `pt-BR` and `zh-CN` are the only Portuguese and Chinese catalogs that ship, so `lang="pt"`,
+ * `lang="pt-PT"`, `lang="zh"` and `lang="zh-Hans-CN"` reach them only through the base-language
+ * widening half of `localeCandidates()` -- the plain BCP-47 truncation walk can only ever go from
+ * more specific to less specific, never sideways into a region. Deleting that half type-checks,
+ * passes every test that uses a base-tag catalog (`fa`, `he`, `de`), and silently renders English
+ * for the two largest catalogs in the package; nothing else would notice.
+ *
+ * So: whenever a base language ships only regional catalogs, `localeCandidates()` must still
+ * contain the widening step. The check costs nothing while every catalog is a bare base tag.
+ */
+function checkRegionalReachability(tags, localizationProgram, localizationSource) {
+  const byLanguage = new Map();
+  for (const tag of tags) {
+    const language = baseLanguage(tag);
+    if (!byLanguage.has(language)) byLanguage.set(language, []);
+    byLanguage.get(language).push(tag);
+  }
+  const unreachable = [...byLanguage]
+    .filter(([language, group]) => !group.some((tag) => tag.toLowerCase() === language))
+    .map(([language, group]) => `"${language}" (only ${group.join(', ')} ship)`);
+  if (unreachable.length === 0) return [];
+
+  const candidates = functionSource(localizationProgram, localizationSource, 'localeCandidates');
+  if (candidates === undefined) {
+    return ['src/internal/localization.ts no longer declares localeCandidates(); locale lookup cannot be verified'];
+  }
+  if (candidates.includes('regionalFallbacks')) return [];
+  return [
+    'src/internal/localization.ts: localeCandidates() dropped the base-language widening step ' +
+      '(regionalFallbacks), so these base languages resolve to English despite a fully translated ' +
+      `catalog being registered: ${unreachable.join('; ')}`,
+  ];
 }
 
 async function main() {
@@ -213,6 +266,7 @@ async function main() {
 
   const summaries = [];
   const catalogEntries = new Map();
+  const registeredTags = [];
 
   for (const name of files) {
     const file = relative(packageRoot, join(translationsRoot, name));
@@ -224,7 +278,26 @@ async function main() {
       errors.push(`${file}: expected a top-level registerLyraLocale('<tag>', <catalog>) call`);
       continue;
     }
-    const { tag, identifier } = registration;
+    const { tag, identifier, meta } = registration;
+    registeredTags.push(tag);
+
+    // The optional third argument is catalog metadata, not messages: only `dir` and `name` exist,
+    // `dir` is a two-value closed set, and an unrecognised member would be stored and never read.
+    if (meta) {
+      for (const property of meta.properties) {
+        const member = propertyName(property);
+        if (member !== 'dir' && member !== 'name') {
+          errors.push(`${file}: registerLyraLocale() metadata has an unknown member "${member ?? '<computed>'}"`);
+          continue;
+        }
+        const value = literalString(property.value);
+        if (value === undefined) {
+          errors.push(`${file}: registerLyraLocale() metadata "${member}" must be a string literal`);
+        } else if (member === 'dir' && value !== 'ltr' && value !== 'rtl') {
+          errors.push(`${file}: registerLyraLocale() metadata dir is "${value}"; only "ltr" and "rtl" exist`);
+        }
+      }
+    }
 
     const base = name.slice(0, -'.ts'.length);
     if (tag.toLowerCase().replace(/_/g, '-') !== base.toLowerCase()) {
@@ -340,6 +413,8 @@ async function main() {
 
     summaries.push(`${tag} (${translated.size} keys, plural categories: ${categories.join('/')})`);
   }
+
+  errors.push(...checkRegionalReachability(registeredTags, localizationProgram, localizationSource));
 
   try {
     const [reviewSource, schemaSource, upstreamSource] = await Promise.all([

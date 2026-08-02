@@ -5,8 +5,37 @@ import {
   getDisplayNames,
   getListFormat,
   getNumberFormat,
+  getPluralRules,
+  getRelativeTimeFormat,
   getSegmenter,
+  resolveIntlLocale,
 } from './intl-cache.js';
+
+it('canonicalizes underscore locale tags', () => {
+  expect(resolveIntlLocale('EN_us')).to.equal('en-US');
+});
+
+it('uses a deterministic safe locale for browser auto and malformed or synthetic tags', () => {
+  expect(resolveIntlLocale('auto')).to.equal('en');
+  expect(resolveIntlLocale('not_a_locale@')).to.equal('en');
+  expect(resolveIntlLocale('x-test')).to.equal('en');
+});
+
+it('routes every shared Intl formatter kind through the safe locale boundary', () => {
+  const malformed = 'not_a_locale@';
+  expect(() => getNumberFormat(malformed).format(1234)).not.to.throw();
+  expect(() => getDateTimeFormat(malformed).format(new Date(2020, 0, 15))).not.to.throw();
+  expect(() => getDisplayNames(malformed, { type: 'region' }).of('FR')).not.to.throw();
+  expect(() => getListFormat(malformed).format(['Alpha', 'Beta'])).not.to.throw();
+  expect(() => getRelativeTimeFormat(malformed).format(-1, 'day')).not.to.throw();
+  expect(() => getPluralRules(malformed).select(2)).not.to.throw();
+  expect(() => getCollator(malformed).compare('a', 'b')).not.to.throw();
+  expect(() => [...getSegmenter(malformed).segment('text')]).not.to.throw();
+});
+
+it('shares cached formatter instances across equivalent canonical locale spellings', () => {
+  expect(getNumberFormat('en_US') === getNumberFormat('en-US')).to.be.true;
+});
 
 it('memoizes Intl.NumberFormat per locale + options, insensitive to option key order', () => {
   const a = getNumberFormat('en-US', { style: 'percent', maximumFractionDigits: 1 });

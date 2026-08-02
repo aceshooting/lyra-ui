@@ -1757,3 +1757,168 @@ it('treats a blur as interaction for the user-* validity states', async function
   expect(el.matches(':state(user-invalid)'), 'focusout is the observable blur signal').to.be.true;
   expect(el.start, 'blur alone must not move a handle').to.equal(20);
 });
+
+describe('lr-time-range form reset', () => {
+  it('restores the declared range', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    handle.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(el.start, 'the user moved the start handle').to.equal(25);
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.start, 'reset restores the declared start').to.equal(20);
+    expect(el.end, 'reset leaves the untouched end at its declared value').to.equal(80);
+    const range = el.shadowRoot!.querySelector('[part="range"]') as HTMLElement;
+    expect(range.style.insetInlineStart, 'and the restored range actually re-renders').to.equal('20%');
+  });
+
+  it('falls back to the domain bounds when no range was declared', async () => {
+    const form = (await fixture(html`
+      <form><lr-time-range min="10" max="20" step="1"></lr-time-range></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    el.start = 14;
+    el.end = 16;
+    await el.updateComplete;
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.start).to.equal(10);
+    expect(el.end).to.equal(20);
+  });
+
+  it('emits neither lr-input nor lr-change — a reset is not a user edit', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    el.start = 40;
+    await el.updateComplete;
+    const events: string[] = [];
+    for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
+      el.addEventListener(type, () => events.push(type));
+    }
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.start).to.equal(20);
+    expect(events).to.deep.equal([]);
+  });
+
+  it('clears the interaction flag so :state(user-invalid) stops matching, without clearing the custom error', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = (await fixture(html`
+      <form>
+        <lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    el.setCustomValidity('Server says no');
+    const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid after a real interaction').to.be.true;
+
+    form.reset();
+    await el.updateComplete;
+    // Native semantics, both halves: the reset clears the "user has interacted" flag, so the
+    // control stops rendering as an error the user has not caused yet -- but a custom error is
+    // sticky across a reset (only another setCustomValidity('') clears it), so the control is
+    // still invalid and still blocks submission.
+    expect(el.matches(':state(user-invalid)'), 'a pristine control must not read as an error').to.be
+      .false;
+    expect(el.matches(':state(invalid)'), 'the custom error itself survives').to.be.true;
+    expect(el.validationMessage).to.equal('Server says no');
+  });
+
+  it('does not commit a pending keyboard step after the reset', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+
+    form.reset();
+    await el.updateComplete;
+    const changes: string[] = [];
+    el.addEventListener('lr-change', () => changes.push('change'));
+    handle.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+    expect(el.start, 'the reset value stands').to.equal(20);
+    expect(changes, 'the in-flight keyboard gesture was dropped by the reset').to.deep.equal([]);
+  });
+});
+
+it('exposes the native label and validation surface of its form association', async () => {
+  const form = (await fixture(html`
+    <form>
+      <label id="window-label" for="window">Window</label>
+      <lr-time-range id="window" name="window" min="0" max="100" start="10" end="60"></lr-time-range>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-time-range') as LyraTimeRange;
+  expect(el.form).to.equal(form);
+  expect(el.getForm()).to.equal(form);
+  expect(el.willValidate).to.equal(true);
+  expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['window-label']);
+  expect(el.validationMessage).to.equal('');
+  expect(el.validity.valid).to.equal(true);
+});
+
+// A control barred from constraint validation matches neither :valid nor :invalid natively,
+// however its validity was set -- a real `<input disabled>` carrying setCustomValidity() matches
+// neither. This control's ONLY validity channel is setCustomValidity(), so without the bar a
+// disabled range kept publishing :state(invalid)/:state(user-invalid) and painted itself as an
+// error the user cannot even reach.
+describe('lr-time-range barred from constraint validation', () => {
+  it('withholds the valid/invalid states while disabled, without discarding the message', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    await el.updateComplete;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid while enabled').to.be.true;
+
+    el.disabled = true;
+    await el.updateComplete;
+    expect(el.matches(':state(invalid)'), 'invalid while disabled').to.be.false;
+    expect(el.matches(':state(valid)'), 'a barred control is not valid either').to.be.false;
+    expect(el.matches(':state(user-invalid)'), 'user-invalid while disabled').to.be.false;
+    expect(el.validationMessage, 'the message itself is untouched').to.equal('Server says no');
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.matches(':state(invalid)'), 'invalid again once enabled').to.be.true;
+  });
+
+  it('withholds them inside a disabled fieldset too', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = (await fixture(html`
+      <form>
+        <fieldset disabled>
+          <lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>
+        </fieldset>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    await el.updateComplete;
+    el.setCustomValidity('Server says no');
+    expect(el.matches(':state(invalid)'), 'invalid inside a disabled fieldset').to.be.false;
+    expect(el.matches(':state(valid)'), 'valid inside a disabled fieldset').to.be.false;
+    expect(el.disabled, 'the fieldset never mutates the own disabled IDL').to.be.false;
+  });
+});

@@ -89,6 +89,22 @@ binding is deliberately **not** RTL-swapped — "down" always means later in the
 If a same-id data refresh disables an expanded branch, that reused branch collapses immediately;
 enabled descendants are never left visibly stranded outside this navigation walk.
 
+**`inert` excludes an item and its whole subtree from that walk, exactly as `disabled` does.**
+`role="treeitem"` and the roving `tabindex` both live on the `<lr-tree-item>` host itself, so an
+inert item literally refuses `focus()` — stepping the roving index onto one would leave focus behind
+on `<body>` and kill every later arrow press. Marking the focused item inert therefore moves the
+roving stop to the next reachable row instead of stranding it, and the state is observed live
+(`attributeFilter: ['selected', 'disabled', 'inert', 'lazy']`). Two deliberate limits:
+
+- **Only inertness *inside* the tree counts** — the item's own `inert`, or that of an ancestor item
+  between it and the `<lr-tree>`. An inert ancestor *outside* the tree (the page behind an open
+  modal) inerts every item uniformly, and excluding them all would empty the walk, null out
+  `activeId`, and leave the tree with no `tabindex="0"` stop for anything to restore once the dialog
+  closes. That case needs no handling: focus cannot be inside the tree at all.
+- **Selection ignores it.** An inert subtree is temporarily non-interactive, not deselected, so
+  `selectedItems` and the multiple-mode cascade are unchanged and a modal that inerts the page can
+  never silently wipe a tree's selection.
+
 **Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
 cycle).
 

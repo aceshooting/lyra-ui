@@ -324,7 +324,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   };
 
   private onClick = (): void => {
-    this.emit<CitationActivateDetail>('lr-citation-activate', { sourceId: this.sourceId, index: this.index });
+    this.emit('lr-citation-activate', { sourceId: this.sourceId, index: this.index });
   };
 
   private onDblClick = (): void => {
@@ -332,7 +332,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   };
 
   private emitOpen(): void {
-    this.emit<CitationOpenDetail>('lr-citation-open', {
+    this.emit('lr-citation-open', {
       sourceId: this.sourceId,
       index: this.index,
       href: this.href || undefined,

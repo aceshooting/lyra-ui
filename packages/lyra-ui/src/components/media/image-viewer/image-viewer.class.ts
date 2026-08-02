@@ -321,7 +321,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     if (!this.draft) return;
     const rect: ImageRegionRect = { x: this.draft.x, y: this.draft.y, width: this.draft.width, height: this.draft.height };
     this.draft = null;
-    this.emit<{ anchor: LyraAnchor }>('lr-annotation-create', { anchor: { kind: 'region', rect } });
+    this.emit('lr-annotation-create', { anchor: { kind: 'region', rect } });
     this.liveRegion?.announce(this.localize('imageViewerAnnotationAdded'), { force: true });
   }
 

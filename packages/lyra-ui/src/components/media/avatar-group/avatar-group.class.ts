@@ -214,7 +214,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   private onOverflowClick = (): void => {
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
     const hiddenAvatars = slot.assignedElements({ flatten: true }).slice(this.max as number) as LyraAvatar[];
-    this.emit<AvatarGroupOverflowClickDetail>('lr-overflow-click', {
+    this.emit('lr-overflow-click', {
       hiddenCount: hiddenAvatars.length,
       hiddenAvatars,
     });

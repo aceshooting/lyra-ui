@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -99,6 +99,19 @@ are contained at the form boundary; consumers receive the single form-level `lr-
 fails a native validity check.
 
 **Slots:** none.
+
+**The required marker.** A field whose key is listed in `schema.required` marks its `[part="label"]`
+with the library's shared required marker — the same `::after` rule and the same three properties
+every labelled control in the library uses (`--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset`), so retuning or
+suppressing the marker application-wide reaches this form's fields
+too (see `llms/shared.md` → "The required-field marker"). Requiredness here is **per field**, not per host:
+the host carries no `required` attribute, so the marker keys off a `data-required` attribute the
+component sets on each `[part="field"]` wrapper. That attribute is component-owned bookkeeping —
+never write it, and note that `::part(field)[data-required]` is invalid CSS (an attribute selector
+cannot follow `::part()`), so it is not a selector hook you can use from outside. An enum field
+renders as an `<lr-select>` that receives the same `required`, and marks itself through its own
+label.
 
 **CSS parts:** `base`, `field`, `label`, `control`, `description`, `error`, `unsupported`, `empty`.
 `control` is the native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'` field — one

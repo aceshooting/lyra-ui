@@ -276,6 +276,39 @@ it('traps Tab focus inside the panel, wrapping last->first and first->last', asy
   expect(document.activeElement).to.equal(last);
 });
 
+it('makes an overflowing body a keyboard stop when it holds no interactive content', async () => {
+  const el = (await fixture(
+    html`<lr-dialog label="Untitled" closable="false" open
+      ><p style="block-size: 300vh">long prose with no controls</p></lr-dialog
+    >`,
+  )) as LyraDialog;
+  await el.updateComplete;
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  expect(body.scrollHeight, 'fixture must actually overflow its body').to.be.greaterThan(body.clientHeight);
+
+  // Reaching the scroller is what makes the prose readable and scrollable without a mouse.
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('body');
+
+  const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+  document.dispatchEvent(tab);
+  expect(tab.defaultPrevented).to.be.true;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('body');
+});
+
+it('still prefers a control inside an overflowing body over the body scroller itself', async () => {
+  const el = (await fixture(
+    html`<lr-dialog label="Untitled" closable="false" open
+      ><button id="inner">act</button>
+      <p style="block-size: 300vh">long prose</p></lr-dialog
+    >`,
+  )) as LyraDialog;
+  await el.updateComplete;
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  expect(body.scrollHeight, 'fixture must actually overflow its body').to.be.greaterThan(body.clientHeight);
+
+  expect(document.activeElement?.id).to.equal('inner');
+});
+
 it('prevents Tab from doing anything when there is nothing focusable', async () => {
   const el = (await fixture(html`<lr-dialog label="Untitled" closable="false" open><p>no controls</p></lr-dialog>`)) as LyraDialog;
   await el.updateComplete;

@@ -106,6 +106,21 @@
   names and details.
 - **Sibling `*.styles.ts` file** per component (e.g. `empty.styles.ts` exports `styles`), not
   inline `css`; the component sets `static styles = [LyraElement.styles, styles]`.
+- **A backtick inside a `css` / `html` tagged template terminates the literal — including inside a
+  comment.** These files are one enormous template literal each: a `*.styles.ts` typically opens
+  ``css` `` on line 4 and closes it 500 lines later, and the explanatory comments that make them
+  readable live *inside* it. A CSS block comment or an HTML `<!-- … -->` comment is only a comment to
+  the CSS/HTML parser; to the JavaScript parser it is ordinary template text, so a stray backtick
+  in prose ("use the `css` helper", a quoted token name, a Markdown-style code span) ends the
+  template right there. Everything after it is parsed as code, and the failure surfaces as a
+  `TS1005: ',' expected` pointing at some innocent line dozens of lines further down — usually at
+  whatever punctuation in the following prose first fails to parse — so the reported location is
+  never the real one. `${` in a comment is the same trap with a different shape: it opens an
+  interpolation hole and the comment text after it becomes an expression. This broke the tree twice
+  in one day. Write token and helper names in comments unquoted, or with single quotes; if a
+  backtick is genuinely unavoidable, escape it with a preceding backslash. When a parse error
+  appears in a `*.styles.ts`, grep the file for backticks first: a healthy one has exactly two
+  hits, the opening and closing delimiter.
 - **Watch for silently-inert CSS.** A declaration that never applies looks identical to one that
   works, and nothing in the toolchain flags it — not `tsc`, not the style policy, not a test that
   greps stylesheet text. Four live instances were found in one pass: `:host(:has(> lr-x))`

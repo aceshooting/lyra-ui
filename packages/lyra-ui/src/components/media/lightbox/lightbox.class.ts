@@ -256,7 +256,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    */
   close(reason: LyraLightboxCloseReason = 'api'): void {
     if (!this.open) return;
-    const event = this.emit<LyraLightboxCloseReason>('lr-lightbox-close', reason, { cancelable: true });
+    const event = this.emit('lr-lightbox-close', reason, { cancelable: true });
     if (event.defaultPrevented) return;
     this.open = false;
   }
@@ -354,7 +354,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       queueMicrotask(() => {
         if (!this.isConnected && this.open) {
           this.open = false;
-          this.emit<LyraLightboxCloseReason>('lr-lightbox-close', 'unmount');
+          this.emit('lr-lightbox-close', 'unmount');
         }
       });
     }

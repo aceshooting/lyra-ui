@@ -22,7 +22,6 @@ import type {
   LyraAnchor,
   LyraHighlight,
   LyraHighlightTone,
-  HighlightActivateDetail,
 } from '../document-viewer/anchors.js';
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
 import { assertDocxArchiveWithinLimits } from './docx-resource-guard.js';
@@ -540,7 +539,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   // every render anyway.
   private onContentClick = (e: MouseEvent): void => {
     const highlightId = this.hitTestHighlightAt(e.clientX, e.clientY);
-    if (highlightId) this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: highlightId });
+    if (highlightId) this.emit('lr-highlight-activate', { id: highlightId });
   };
 
   private highlightActionLabel(highlight: LyraHighlight): string {
@@ -563,7 +562,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         : resolved.range.commonAncestorContainer.parentElement;
     target?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' });
     this.activeHighlightId = highlight.id;
-    this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: highlight.id });
+    this.emit('lr-highlight-activate', { id: highlight.id });
   }
 
   private renderHighlightActions(): TemplateResult | typeof nothing {

@@ -14,6 +14,10 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
+import {
+  EXTERNAL_LABEL_ACTIVATION,
+  type ExternalLabelActivation,
+} from '../../../internal/form-control-labels.js';
 
 export interface LyraIconButtonEventMap {
   focus: FocusEvent;
@@ -218,6 +222,14 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     if (!this.effectiveDisabled) this.baseEl?.focus(options);
   }
   override blur(): void { this.baseEl?.blur(); }
+
+  /** A native `<button>`'s label activates it rather than merely focusing it, so an external
+   *  `<label for>` runs this button's submit/reset behavior once. See `<lr-button>` for why the
+   *  internal element's role cannot be used to infer this.
+   *  @internal */
+  [EXTERNAL_LABEL_ACTIVATION](): ExternalLabelActivation {
+    return 'activate';
+  }
 
   private onClick = (): void => {
     if (this.effectiveDisabled) return;

@@ -8,9 +8,10 @@ const preview = readFileSync(join(root, '.storybook/preview.js'), 'utf8');
 const manager = readFileSync(join(root, '.storybook/manager.js'), 'utf8');
 const main = readFileSync(join(root, '.storybook/main.js'), 'utf8');
 const landing = readFileSync(join(root, '.storybook/landing.css'), 'utf8');
+const storyThemeSource = readFileSync(join(root, '.storybook/story-theme.js'), 'utf8');
 
 const [
-  { applyLyraTheme, LYRA_STORYBOOK_THEMES, LYRA_THEME_TOKENS, normalizeStoryThemeName },
+  { LYRA_STORYBOOK_THEMES, normalizeStoryThemeName },
   { publicStorybookManifest },
   { FAMILY_LABELS, createGroupedStoryIndexer, groupedStoryTitle },
   { transformStoryTitle },
@@ -30,7 +31,9 @@ for (const required of [
   'dynamicTitle: true',
   "{ value: 'light', title: 'Light' }",
   "{ value: 'dark', title: 'Dark' }",
-  "{ value: 'high-contrast', title: 'High contrast' }",
+  "import '../packages/lyra-ui/src/theme.css';",
+  "import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';",
+  'setLyraTheme({ mode: theme, accent: null });',
   'decorators: [withLyraTheme]',
   'container: LyraDocsContainer',
 ]) {
@@ -41,6 +44,14 @@ for (const required of [
 
 if (preview.includes('backgrounds:')) {
   throw new Error('Storybook must use the semantic theme toolbar instead of a canvas-only background switch');
+}
+for (const unsupported of ['high-contrast', 'density: {', 'lyraDensity', '--lr-docs-density-gap']) {
+  if (preview.includes(unsupported)) {
+    throw new Error(`Storybook preview advertises unsupported presentation state: ${unsupported}`);
+  }
+}
+if (storyThemeSource.includes('LYRA_THEME_TOKENS') || storyThemeSource.includes("'--lr-theme-")) {
+  throw new Error('Storybook preview colors must come from the complete production theme.css, not a copied palette');
 }
 
 for (const required of [
@@ -56,10 +67,7 @@ if (!main.includes('createGroupedStoryIndexer')) {
   throw new Error('Storybook must group story index entries by source family');
 }
 
-for (const selector of [
-  ":root[data-lyra-theme='light']",
-  ":root[data-lyra-theme='high-contrast']",
-]) {
+for (const selector of [":root[data-lr-theme='light']", ":root[data-lr-theme='dark']"]) {
   if (!landing.includes(selector)) {
     throw new Error(`Storybook landing page is missing ${selector}`);
   }
@@ -67,35 +75,11 @@ for (const selector of [
 
 assert.equal(normalizeStoryThemeName('light'), 'light');
 assert.equal(normalizeStoryThemeName('dark'), 'dark');
-assert.equal(normalizeStoryThemeName('high-contrast'), 'high-contrast');
+assert.equal(normalizeStoryThemeName('high-contrast'), 'dark');
 assert.equal(normalizeStoryThemeName('unknown'), 'dark');
 assert.equal(LYRA_STORYBOOK_THEMES.dark.base, 'dark');
 assert.equal(LYRA_STORYBOOK_THEMES.light.base, 'light');
-assert.equal(LYRA_STORYBOOK_THEMES['high-contrast'].base, 'light');
-assert.equal(LYRA_THEME_TOKENS.dark['--lr-theme-color-surface-default'], '#0d1117');
-assert.equal(LYRA_THEME_TOKENS.dark['--lr-theme-color-surface-raised'], '#161b22');
-assert.equal(LYRA_THEME_TOKENS.light['--lr-theme-color-surface-default'], '#ffffff');
-assert.equal(LYRA_THEME_TOKENS.light['--lr-theme-color-surface-raised'], '#f6f8fa');
-assert.equal(LYRA_THEME_TOKENS['high-contrast']['--lr-theme-color-surface-raised'], 'Canvas');
-
-const appliedTokens = {};
-const themedDocument = {
-  documentElement: {
-    dataset: {},
-    style: {
-      setProperty(property, value) {
-        appliedTokens[property] = value;
-      },
-    },
-  },
-  body: { dataset: {}, style: {} },
-};
-applyLyraTheme('dark', themedDocument);
-assert.equal(themedDocument.documentElement.dataset.lyraTheme, 'dark');
-assert.equal(themedDocument.documentElement.style.colorScheme, 'dark');
-assert.equal(themedDocument.body.dataset.lyraTheme, 'dark');
-assert.equal(appliedTokens['--lr-theme-color-surface-default'], '#0d1117');
-assert.equal(appliedTokens['--lr-theme-color-surface-raised'], '#161b22');
+assert.deepEqual(Object.keys(LYRA_STORYBOOK_THEMES).sort(), ['dark', 'light']);
 
 const sampleManifest = {
   modules: [{

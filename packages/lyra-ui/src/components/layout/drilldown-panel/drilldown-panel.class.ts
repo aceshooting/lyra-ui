@@ -185,7 +185,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   }
 
   private navigateTo(node: DrilldownNode, index: number): void {
-    this.emit<DrilldownNavigateDetail>('lr-drilldown-navigate', { id: node.id, index });
+    this.emit('lr-drilldown-navigate', { id: node.id, index });
   }
 
   private renderEvidence(items: DrilldownEvidenceItem[]): TemplateResult {

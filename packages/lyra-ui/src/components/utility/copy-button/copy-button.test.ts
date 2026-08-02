@@ -1,6 +1,16 @@
 import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './copy-button.js';
 import type { LyraCopyButton } from './copy-button.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
+  const element = sinkElement(politeness);
+  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
 
 /** The clipboard write is awaited before any feedback state is applied, so a click needs one
  *  macrotask (which drains every pending microtask first) plus the Lit update it schedules. */
@@ -290,6 +300,36 @@ describe('lr-copy-button', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="success-icon"]').length).to.equal(1);
     expect(el.shadowRoot!.querySelectorAll('[part="error-icon"]').length).to.equal(0);
     expect(feedbackText(el)).to.equal('Copied!');
+    expect(sinkTexts('polite')).to.deep.equal(['Copied!']);
+    const feedback = el.shadowRoot!.querySelector('[part="feedback"]') as HTMLElement;
+    // The retained part is a styling/inspection mirror only -- a live region inside a shadow root
+    // is not reliably announced, and leaving it live would double-announce where it *is* honored.
+    expect(feedback.getAttribute('role')).to.equal(null);
+    expect(feedback.getAttribute('aria-hidden')).to.equal('true');
+  });
+
+  it('announces a second identical copy again instead of silently rewriting one text node', async () => {
+    const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
+    expect(sinkTexts('polite'), 'mounting must not announce a resting state').to.deep.equal([]);
+    baseButton(el).click();
+    await settle(el);
+    baseButton(el).click();
+    await settle(el);
+    expect(
+      sinkTexts('polite'),
+      'an identical repeat must be a second addition so assistive tech reads it again',
+    ).to.deep.equal(['Copied!', 'Copied!']);
+  });
+
+  it('ref-counts the shared sink away once the last copy button disconnects', async () => {
+    const first = (await fixture(html`<lr-copy-button value="a"></lr-copy-button>`)) as LyraCopyButton;
+    const second = (await fixture(html`<lr-copy-button value="b"></lr-copy-button>`)) as LyraCopyButton;
+    expect(sinkElement('polite') !== null, 'a connected copy button holds the sink').to.be.true;
+    first.remove();
+    expect(sinkElement('polite') !== null, 'a still-connected copy button keeps it mounted').to.be
+      .true;
+    second.remove();
+    expect(sinkElement('polite') === null, 'the last disconnect unmounts it').to.be.true;
   });
 
   it('reverts the copied confirmation after the default duration', async () => {

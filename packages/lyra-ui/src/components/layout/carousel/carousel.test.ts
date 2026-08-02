@@ -1214,3 +1214,98 @@ describe("touch scrolling and scroll-snap", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe("carousel drag completion", () => {
+  function dragViewport(el: LyraCarousel): HTMLElement {
+    const viewport = el.shadowRoot!.querySelector(
+      '[part~="scroll-container"]'
+    ) as HTMLElement;
+    viewport.setPointerCapture = () => {};
+    viewport.releasePointerCapture = () => {};
+    viewport.hasPointerCapture = () => true;
+    return viewport;
+  }
+
+  function startDrag(viewport: HTMLElement, pointerId: number): void {
+    viewport.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId,
+        pointerType: "mouse",
+        button: 0,
+        clientX: 200,
+        bubbles: true,
+      })
+    );
+    viewport.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId,
+        pointerType: "mouse",
+        clientX: 120,
+        bubbles: true,
+      })
+    );
+  }
+
+  it("ends a drag on pointerup and swallows the click the gesture would emit", async () => {
+    const el = await carousel(html`
+      <lr-carousel mouse-dragging style="inline-size: 320px">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const viewport = dragViewport(el);
+    startDrag(viewport, 7);
+    expect(viewport.hasAttribute("data-dragging")).to.be.true;
+
+    viewport.dispatchEvent(
+      new PointerEvent("pointerup", { pointerId: 7, pointerType: "mouse", bubbles: true })
+    );
+    expect(viewport.hasAttribute("data-dragging")).to.be.false;
+
+    const swallowed = new MouseEvent("click", { bubbles: true, cancelable: true });
+    viewport.dispatchEvent(swallowed);
+    expect(swallowed.defaultPrevented, "the click that ends a drag never reaches a slide").to.be
+      .true;
+
+    // A pointerup for some other pointer is not this drag and must be ignored.
+    viewport.dispatchEvent(
+      new PointerEvent("pointerup", { pointerId: 99, pointerType: "mouse", bubbles: true })
+    );
+    expect(el.currentSlide).to.equal(0);
+  });
+
+  it("ends a drag when the viewport loses pointer capture", async () => {
+    const el = await carousel(html`
+      <lr-carousel mouse-dragging style="inline-size: 320px">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const viewport = dragViewport(el);
+    startDrag(viewport, 8);
+    expect(viewport.hasAttribute("data-dragging")).to.be.true;
+
+    viewport.dispatchEvent(
+      new PointerEvent("lostpointercapture", {
+        pointerId: 8,
+        pointerType: "mouse",
+        bubbles: true,
+      })
+    );
+    expect(viewport.hasAttribute("data-dragging")).to.be.false;
+    expect(el.currentSlide).to.equal(0);
+  });
+
+  it("lets an ordinary click through when no drag preceded it", async () => {
+    const el = await carousel(html`
+      <lr-carousel mouse-dragging style="inline-size: 320px">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const viewport = dragViewport(el);
+    const plain = new MouseEvent("click", { bubbles: true, cancelable: true });
+    viewport.dispatchEvent(plain);
+    expect(plain.defaultPrevented).to.be.false;
+  });
+});

@@ -264,12 +264,20 @@ function validateRequest({ packageDir, family, name }) {
     metadata: join(packageDir, 'scripts/fixtures/component-metadata.json'),
     manifest: join(packageDir, 'custom-elements.json'),
     rootBarrel: join(packageDir, 'src/lyra.ts'),
+    // `pnpm registrations` (a verification step below) rewrites the two compatibility barrels and
+    // the allowlist from the inventory, so all three belong in the rollback snapshot.
+    allBarrel: join(packageDir, 'src/all.ts'),
+    ssrAllBarrel: join(packageDir, 'src/ssr/all.ts'),
     allowlist: join(packageDir, 'src/internal/root-registration-allowlist.ts'),
     packageJson: join(packageDir, 'package.json'),
     componentDirectory: join(packageDir, 'src/components', family, name),
   };
+  // `allBarrel`/`ssrAllBarrel` are rollback targets, not preconditions: `pnpm registrations`
+  // regenerates both from the inventory, and the snapshot below handles an absent one by deleting
+  // it on rollback rather than restoring it.
+  const optionalPaths = ['componentDirectory', 'familyIndex', 'docs', 'allBarrel', 'ssrAllBarrel'];
   for (const [key, file] of Object.entries(paths)) {
-    if (['componentDirectory', 'familyIndex', 'docs'].includes(key)) continue;
+    if (optionalPaths.includes(key)) continue;
     if (!existsSync(file)) throw new Error(`Cannot scaffold: required repository file is missing: ${file}`);
   }
 
@@ -391,10 +399,16 @@ export async function scaffoldComponent({
     state.paths.metadata,
     state.paths.manifest,
     state.paths.rootBarrel,
+    state.paths.allBarrel,
+    state.paths.ssrAllBarrel,
     state.paths.allowlist,
     state.paths.packageJson,
   ];
-  const snapshots = new Map(snapshotPaths.map((file) => [file, readFileSync(file, 'utf8')]));
+  // A missing file snapshots as `null` and is DELETED on rollback rather than restored, so a
+  // generator that creates one of these on its first run cannot leave it behind after a failure.
+  const snapshots = new Map(
+    snapshotPaths.map((file) => [file, existsSync(file) ? readFileSync(file, 'utf8') : null]),
+  );
 
   try {
     mkdirSync(state.paths.componentDirectory);
@@ -440,7 +454,10 @@ export async function scaffoldComponent({
     return { tag, className, componentDirectory: state.paths.componentDirectory };
   } catch (error) {
     rmSync(state.paths.componentDirectory, { recursive: true, force: true });
-    for (const [file, source] of snapshots) atomicWrite(file, source);
+    for (const [file, source] of snapshots) {
+      if (source === null) rmSync(file, { force: true });
+      else atomicWrite(file, source);
+    }
     throw error;
   }
 }

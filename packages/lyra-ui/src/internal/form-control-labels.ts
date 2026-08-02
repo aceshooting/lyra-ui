@@ -1,0 +1,413 @@
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { collectFocusableElements } from './overlay-manager.js';
+
+/**
+ * How an external `<label>` activation reaches a control.
+ *
+ * `'focus'` is the native text/select-like behaviour: clicking the label moves focus to the
+ * control and nothing else happens. `'activate'` is the native toggle/button-like behaviour:
+ * focus moves *and* the control's own activation runs exactly once (a checkbox toggles, a
+ * `type="submit"` button submits).
+ *
+ * A closed literal union rather than an `enum`: `enum` is nominal, so a consumer could not write
+ * the string form, and it would ship a runtime object against the tree-shaking budget.
+ */
+export type ExternalLabelActivation = 'focus' | 'activate';
+
+/**
+ * Opt-in hook a control implements when its label activation is *not* inferable from the role its
+ * own shadow root exposes.
+ *
+ * Roles carry the answer for every toggle (`checkbox`/`switch`/`radio` all activate), but a plain
+ * `<button>` does not: `<lr-button>` and `<lr-icon-button>` must run their submit/reset behaviour
+ * on a label click, while `<lr-color-picker>`'s and `<lr-select>`'s triggers are also `<button>`s
+ * and must merely take focus — opening a popup from a label click is not what any native control
+ * does. Guessing from the tag name would encode the component list in the bridge; the symbol lets
+ * the two controls that differ say so themselves.
+ */
+export const EXTERNAL_LABEL_ACTIVATION = Symbol('lr-external-label-activation');
+
+/** A control that declares its own {@linkcode ExternalLabelActivation}. */
+export interface ExternalLabelActivationHost {
+  /** @internal */
+  [EXTERNAL_LABEL_ACTIVATION](): ExternalLabelActivation;
+}
+
+/**
+ * The `ElementInternals` each form-associated control attached, keyed by the control.
+ *
+ * A `WeakMap` rather than a field on the shared base class: an instance field is inherited by all
+ * 283 components and would be published into `custom-elements.json` for every one of them, and this
+ * is infrastructure state that belongs to the bridge, not public surface of every element in the
+ * library. Weak keys mean a discarded control is still collectable.
+ */
+const attachedInternals = new WeakMap<HTMLElement, ElementInternals>();
+
+/** Records the internals a control just attached. Called from the one place every attachment
+ *  spelling bottoms out in. @internal */
+export function captureFormInternals(host: HTMLElement, internals: ElementInternals): void {
+  attachedInternals.set(host, internals);
+}
+
+/** The host surface {@linkcode ExternalLabelController} reads. Every member is optional because
+ *  the same controller serves the eleven controls built on the `FormAssociated` mixin, the eighteen
+ *  that drive `ElementInternals` directly, and any environment whose DOM stops short of
+ *  `attachInternals()` altogether. */
+export interface ExternalLabelHost extends HTMLElement {
+  readonly renderRoot?: DocumentFragment | HTMLElement;
+  readonly effectiveDisabled?: boolean;
+  readonly disabled?: boolean;
+}
+
+/**
+ * Roles whose owner is the *composite* — the element the external name belongs on even though
+ * focus lands on one of its children. `<lr-time-input>` renders `role="group"` around three
+ * `role="spinbutton"` segments and `<lr-radio-group>` renders `role="radiogroup"` around slotted
+ * radios; naming the segment or the first radio would attach the field's name to one of its parts.
+ */
+const COMPOSITE_ROLE_SELECTOR = '[role="radiogroup"],[role="group"],[role="grid"],[role="tree"]';
+
+/**
+ * Elements that can own an accessible name inside a control's own shadow root, used only as the
+ * last resort before giving up. Deliberately excludes `[tabindex="-1"]` nodes: a programmatically
+ * focusable-only node (a stepper button, a mirror input) is never the control's role owner.
+ */
+const SEMANTIC_TARGET_SELECTOR = [
+  'input:not([type="hidden"]):not([tabindex="-1"])',
+  'textarea:not([tabindex="-1"])',
+  'select:not([tabindex="-1"])',
+  'button:not([tabindex="-1"])',
+  '[role]:not([tabindex="-1"])',
+].join(',');
+
+/** Roles whose native counterpart activates (not merely focuses) when its label is clicked. */
+const ACTIVATING_ROLES = new Set(['checkbox', 'switch', 'radio', 'menuitemcheckbox', 'menuitemradio']);
+
+/** The deepest focused element, following open shadow roots the way a user perceives focus. */
+function deepestActiveElement(): Element | null {
+  let active: Element | null = document.activeElement;
+  while (active instanceof HTMLElement && active.shadowRoot?.activeElement) {
+    active = active.shadowRoot.activeElement;
+  }
+  return active;
+}
+
+/** Whether `candidate` sits inside `host`'s composed subtree (crossing open shadow boundaries). */
+function isComposedDescendant(host: Node, candidate: Node | null): boolean {
+  let current: Node | null = candidate;
+  while (current) {
+    if (current === host) return true;
+    const root: Node = current.getRootNode();
+    current = root instanceof ShadowRoot ? root.host : current.parentNode;
+  }
+  return false;
+}
+
+/**
+ * The label elements associated with `host`.
+ *
+ * `ElementInternals.labels` is the platform's own answer for a form-associated custom element — it
+ * already resolves both `<label for>` and an ancestor `<label>`, stays live as the document
+ * changes, and needs no id at all for the implicit form. It is feature-detected rather than
+ * assumed: a DOM shim's stand-in internals report an empty list, and an environment with no
+ * `attachInternals()` has none, so the `label[for]` query is kept as the degraded path rather than
+ * as the primary one.
+ */
+export function resolveExternalLabels(host: ExternalLabelHost): HTMLLabelElement[] {
+  const native = attachedInternals.get(host)?.labels;
+  if (native) {
+    return Array.from(native).filter((node): node is HTMLLabelElement => node instanceof HTMLLabelElement);
+  }
+  const labels: HTMLLabelElement[] = [];
+  const ancestor = host.closest('label');
+  if (ancestor) labels.push(ancestor);
+  const root = host.getRootNode();
+  // `CSS.escape` is feature-detected rather than assumed: this branch only runs in an environment
+  // without `attachInternals()`, which is exactly the kind of DOM that may also lack `CSS`.
+  if (host.id && 'querySelectorAll' in root && typeof CSS?.escape === 'function') {
+    const selector = `label[for="${CSS.escape(host.id)}"]`;
+    for (const found of (root as Document | ShadowRoot).querySelectorAll(selector)) {
+      if (found instanceof HTMLLabelElement && !labels.includes(found)) labels.push(found);
+    }
+  }
+  return labels;
+}
+
+/** A label's text with `exclude`'s subtree left out wherever it appears. */
+function labelText(node: Node, exclude?: Node): string {
+  if (node === exclude) return '';
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
+  let text = '';
+  for (const child of node.childNodes) text += labelText(child, exclude);
+  return text;
+}
+
+/**
+ * The accessible name contributed by `labels`, joined the way multiple native labels are: each
+ * label's own text, in document order, separated by a single space. Whitespace-only labels drop
+ * out entirely so an empty `<label>` cannot blank a real one.
+ *
+ * `host` is excluded from the text, because an implicit label *wraps* the control it names —
+ * `<label>Remember me <lr-checkbox>Yes</lr-checkbox></label>` names the checkbox "Remember me",
+ * not "Remember me Yes". Reading the label's whole `textContent` would fold the control's own
+ * content back into its name, which for a checkbox or a radio is precisely the text it already
+ * renders.
+ */
+export function resolveExternalLabelText(
+  labels: readonly HTMLLabelElement[],
+  host?: Node,
+): string {
+  return labels
+    .map((label) => labelText(label, host).trim())
+    .filter((text) => text !== '')
+    .join(' ');
+}
+
+/**
+ * Bridges a native external `<label>` onto a form-associated custom element.
+ *
+ * A `<label for>` pointing at a custom element gives the platform *half* the relationship: the
+ * browser resolves `ElementInternals.labels` and forwards a click to the host, but it can reach no
+ * further. It cannot name the element inside the shadow root that actually owns the control's role
+ * — an accessible name is only announced on the node the user is focused on, and that node is
+ * never the host — and the forwarded host click lands on an element with no activation behaviour of
+ * its own, so a label click focuses nothing and toggles nothing. Both halves are this controller's
+ * job, for every form-associated control at once rather than thirty-five times over.
+ *
+ * The name is written straight onto the resolved target rather than routed through the component's
+ * template, for two reasons: no control has to grow an `externalLabel` property and a template
+ * binding for it, and the un-labelled value stays exactly what the component itself renders, so
+ * removing the label restores it *synchronously* — a template round-trip would leave the stale name
+ * in the accessibility tree until Lit's next update. Every write is snapshotted and reverted, and a
+ * revert whose value no longer matches what was applied is abandoned rather than forced, so a
+ * render that legitimately replaced the name (a host `aria-label` appearing) always wins.
+ *
+ * Host `aria-label` precedence is absolute: while the host carries one, the bridge applies nothing
+ * and lets the component's own forwarding put the host's name on the target.
+ */
+export class ExternalLabelController implements ReactiveController {
+  private labels: HTMLLabelElement[] = [];
+  private observer?: MutationObserver;
+  /** The element currently carrying an applied name, and what it read before. */
+  private applied?: { target: HTMLElement; name: string; had: boolean; previous: string | null };
+  /** Guards the synthetic activation click against an implicit (ancestor) label re-entering. */
+  private activating = false;
+
+  constructor(private readonly host: ExternalLabelHost & ReactiveControllerHost) {}
+
+  hostConnected(): void {
+    this.refresh();
+  }
+
+  hostUpdated(): void {
+    this.refresh();
+  }
+
+  hostDisconnected(): void {
+    this.release();
+    this.stopObserving();
+    for (const label of this.labels) label.removeEventListener('click', this.onLabelClick);
+    this.labels = [];
+  }
+
+  /** Re-resolves the associated labels, re-arms observation, and re-applies the name. */
+  private refresh(): void {
+    const next = resolveExternalLabels(this.host);
+    const changed =
+      next.length !== this.labels.length || next.some((label, index) => label !== this.labels[index]);
+    if (changed) {
+      for (const label of this.labels) label.removeEventListener('click', this.onLabelClick);
+      this.labels = next;
+      for (const label of this.labels) label.addEventListener('click', this.onLabelClick);
+      this.observe();
+    }
+    this.apply();
+  }
+
+  /**
+   * Watches only the labels this control is actually associated with — their text, their subtree,
+   * and the `for` attribute that could re-point them elsewhere. That is the bound: no document-wide
+   * subtree observer, one observer instance per control, disconnected on `hostDisconnected`.
+   *
+   * Re-association is still covered, because a label leaving this control and a replacement
+   * arriving are one synchronous step in the calling code and the observer callback runs after it:
+   * by the time the old label's `for` mutation is delivered, `ElementInternals.labels` already
+   * reports the replacement. A label that appears with no accompanying mutation to an existing one
+   * is picked up on the control's next render instead of immediately.
+   */
+  private observe(): void {
+    this.stopObserving();
+    if (this.labels.length === 0 || typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(() => this.refresh());
+    for (const label of this.labels) {
+      observer.observe(label, {
+        characterData: true,
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['for'],
+      });
+    }
+    this.observer = observer;
+  }
+
+  private stopObserving(): void {
+    this.observer?.disconnect();
+    this.observer = undefined;
+  }
+
+  /** Whether label activation is currently barred — the control's own `disabled` or an ancestor
+   *  `<fieldset disabled>`. `:disabled` is the authority (it is the only selector that tracks
+   *  fieldset cascading), with the component's own flags consulted for a DOM that does not match
+   *  a form-associated custom element against it. */
+  private get barred(): boolean {
+    if (typeof this.host.matches === 'function' && this.host.matches(':disabled')) return true;
+    return Boolean(this.host.effectiveDisabled ?? this.host.disabled);
+  }
+
+  /** The element that owns the control's role — where the external name belongs. */
+  private resolveNameTarget(focusTarget: HTMLElement | null): HTMLElement | null {
+    const root = this.ownRoot;
+    if (!root) return focusTarget;
+
+    // 1. A composite that contains the focus target owns the name for all of its parts.
+    if (focusTarget) {
+      for (const composite of root.querySelectorAll(COMPOSITE_ROLE_SELECTOR)) {
+        if (composite instanceof HTMLElement && isComposedDescendant(composite, focusTarget)) {
+          return composite;
+        }
+      }
+    }
+
+    // 2. The node the user's focus lands on, when this control renders it itself.
+    if (focusTarget && focusTarget.getRootNode() === root) return focusTarget;
+
+    // 3. Otherwise the outermost node of this control's own tree on the way down to the focus
+    //    target — a nested component's host, or a slotted child. Naming that element keeps the
+    //    write inside a boundary this control owns, where no other component's render can clear it.
+    const owned = focusTarget ? this.outermostOwnedAncestor(focusTarget) : null;
+    if (owned) return owned;
+
+    // 4. Nothing focusable is reachable yet; fall back to whatever semantic node this control
+    //    renders first, then to the focus target itself.
+    const semantic = root.querySelector(SEMANTIC_TARGET_SELECTOR);
+    return semantic instanceof HTMLElement ? semantic : focusTarget;
+  }
+
+  /** The outermost ancestor of `node` that this control renders itself or hosts as a slotted
+   *  child, walking the composed tree up to (but never including) the host. */
+  private outermostOwnedAncestor(node: HTMLElement): HTMLElement | null {
+    const root = this.ownRoot;
+    let owned: HTMLElement | null = null;
+    let current: Node | null = node;
+    while (current && current !== this.host) {
+      if (current instanceof HTMLElement) {
+        const parentRoot = current.getRootNode();
+        if (parentRoot === root || current.parentNode === this.host) owned = current;
+      }
+      const nodeRoot: Node = current.getRootNode();
+      current = nodeRoot instanceof ShadowRoot ? nodeRoot.host : current.parentNode;
+    }
+    return owned;
+  }
+
+  private get ownRoot(): ShadowRoot | null {
+    const root = this.host.renderRoot;
+    return root instanceof ShadowRoot ? root : this.host.shadowRoot;
+  }
+
+  private resolveFocusTarget(): HTMLElement | null {
+    return collectFocusableElements(this.host)[0] ?? null;
+  }
+
+  /** How a label click reaches this control. */
+  private resolveActivation(focusTarget: HTMLElement | null): ExternalLabelActivation {
+    const declared = (this.host as Partial<ExternalLabelActivationHost>)[EXTERNAL_LABEL_ACTIVATION];
+    if (typeof declared === 'function') return declared.call(this.host);
+    // Role-inferred activation is deliberately restricted to a target this control renders itself.
+    // A group's focus target belongs to a *member* (`<lr-radio-group>` lands on its first radio),
+    // and selecting that member because the group's label was clicked would be a destructive
+    // answer to a request that native markup only ever answers with focus.
+    if (!focusTarget || focusTarget.getRootNode() !== this.ownRoot) return 'focus';
+    const role = focusTarget.getAttribute('role');
+    return role && ACTIVATING_ROLES.has(role) ? 'activate' : 'focus';
+  }
+
+  /** Applies (or withdraws) the external name on the current role owner. */
+  private apply(): void {
+    if (this.host.hasAttribute('aria-label')) {
+      // Host `aria-label` wins over any computed internal name; the component's own forwarding
+      // already puts it on the target, so the bridge must not compete with it.
+      this.release();
+      return;
+    }
+    const name = resolveExternalLabelText(this.labels, this.host);
+    if (name === '') {
+      this.release();
+      return;
+    }
+    // Steady state: the name is already where it belongs. Returning here is what keeps this off
+    // the hot path — `apply()` runs after *every* render, and resolving the target walks the
+    // control's whole composed subtree, which a drag-driven control (`<lr-slider>` emits `input`
+    // per pointermove) would otherwise pay for on every frame.
+    const settled = this.applied;
+    if (
+      settled &&
+      settled.name === name &&
+      settled.target.isConnected &&
+      settled.target.getAttribute('aria-label') === name
+    ) {
+      return;
+    }
+    const target = this.resolveNameTarget(this.resolveFocusTarget());
+    if (!target) return;
+    if (this.applied && this.applied.target !== target) this.release();
+    if (!this.applied) {
+      this.applied = {
+        target,
+        name,
+        had: target.hasAttribute('aria-label'),
+        previous: target.getAttribute('aria-label'),
+      };
+    }
+    if (target.getAttribute('aria-label') !== name) target.setAttribute('aria-label', name);
+    this.applied.name = name;
+  }
+
+  /**
+   * Puts the target's own name back.
+   *
+   * Only when the attribute still reads what was applied: a component that re-rendered a *different*
+   * name in the meantime (the host gained an `aria-label`) has stated the newer truth, and restoring
+   * the stale snapshot over it would be the bridge overruling the control it is helping.
+   */
+  private release(): void {
+    const applied = this.applied;
+    this.applied = undefined;
+    if (!applied) return;
+    const { target, name, had, previous } = applied;
+    if (target.getAttribute('aria-label') !== name) return;
+    if (had) target.setAttribute('aria-label', previous ?? '');
+    else target.removeAttribute('aria-label');
+  }
+
+  private readonly onLabelClick = (event: Event): void => {
+    if (this.activating || this.barred) return;
+    // The native rule: a label whose own click originated inside its labeled control does not
+    // re-activate it. Without this an implicit `<label><lr-checkbox>…</label>` would toggle twice —
+    // once from the user's click and once from the forwarded one — and recurse besides.
+    if (event.composedPath().includes(this.host)) return;
+
+    const focusTarget = this.resolveFocusTarget();
+    const activation = this.resolveActivation(focusTarget);
+
+    this.activating = true;
+    try {
+      this.host.focus();
+      if (!isComposedDescendant(this.host, deepestActiveElement())) focusTarget?.focus();
+      if (activation === 'activate') focusTarget?.click();
+    } finally {
+      this.activating = false;
+    }
+  };
+}

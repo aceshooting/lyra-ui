@@ -196,9 +196,14 @@ export const palette = css`
      Those engines still resolve an ancestor .lr-dark correctly, just by a different route:
      theme.css declares the mode's values as ordinary custom properties on .lr-dark, and custom
      properties inherit through the shadow boundary. This rule is the no-theme.css convenience
-     path, not the contract. */
-  :host-context(.lr-dark),
-  :host-context([data-lr-theme='dark']) {
+     path, not the contract.
+
+     The :host(:not(...)) half keeps a light island inside a dark subtree light: without it this
+     rule sits later at equal specificity and beats the light :host block. It has to be written as
+     its own :host() pseudo -- a bare :not([data-lr-theme='light']) appended to :host-context()
+     matches nothing at all, because the shadow host is featureless. */
+  :host(:not([data-lr-theme='light'])):host-context(.lr-dark),
+  :host(:not([data-lr-theme='light'])):host-context([data-lr-theme='dark']) {
       --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, var(--lr-ramp-brand-30));
       --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, var(--lr-ramp-brand-50));
       --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, var(--lr-ramp-brand-70));

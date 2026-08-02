@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -140,7 +140,7 @@ the shadow boundary.
 | `focus` | none | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`. |
 | `lr-blur` | none | Prefixed compatibility alias, fired immediately after `blur`. |
 | `lr-focus` | none | Prefixed compatibility alias, fired immediately after `focus`. |
-| `lr-invalid` | none | Fired when a validity check finds the control invalid. |
+| `lr-invalid` | none | Fired when a validity check finds the control invalid. **Cancelable** — `preventDefault()` suppresses the native validation bubble and `reportValidity()`'s focus/scroll. |
 
 Programmatic property assignments, selection changes, `setRangeText()`, form reset, and form-state
 restoration are silent. User edits update `value`, submitted form data, and required validity before
@@ -177,6 +177,12 @@ on every keystroke. Lengths count UTF-16 code units (one emoji counts as two), m
 script-assigned value can exceed `maxlength`, and the `tooLong` validity flag already reports that
 state better than a negative number would. An unparseable `maxlength` (`maxlength="oops"`) is
 dropped rather than rendered as `NaN`, and the count counts up from zero instead.
+
+`required` with a non-empty `label` paints the library's shared marker on `form-control-label` —
+the one `::after` rule described under "The required-field marker" above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 ### Themeable custom properties
 

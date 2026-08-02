@@ -73,7 +73,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   }
 
   private select(suggestion: ChatSuggestion): void {
-    this.emit<{ id: string; label: string }>('lr-suggestion-select', {
+    this.emit('lr-suggestion-select', {
       id: suggestion.id,
       label: suggestion.label,
     });

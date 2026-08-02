@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { normalizeDeclaration } from './component-inventory.mjs';
+import { NORMALIZATION_SECTIONS, emptyNormalizations, normalizeDeclaration } from './component-inventory.mjs';
 
 import {
   reviewedWebAwesomeChart,
@@ -242,8 +242,19 @@ test('origin-aware analyzer normalizations are comparison-only and narrowly scop
   const waInput = reviewedMappingNormalizations('wa-input');
   const waTextarea = reviewedMappingNormalizations('wa-textarea');
 
+  // Asserting the populated sections rather than a frozen key list keeps this review honest as the
+  // comparison-only schema grows: the claim is that these form-control mappings only ever carry
+  // analyzer equivalences, never a cancelability review or a method-return wildcard.
+  const populated = (contract) => Object.keys(contract).filter((section) => contract[section].length > 0);
   for (const contract of [slInput, slSelect, slTextarea, waInput, waTextarea]) {
-    assert.deepEqual(Object.keys(contract), ['defaultEquivalences', 'inferredAttributeSuppressions']);
+    assert.deepEqual(Object.keys(contract), NORMALIZATION_SECTIONS);
+    assert.deepEqual(
+      populated(contract).filter(
+        (section) =>
+          !['typeEquivalences', 'defaultEquivalences', 'inferredAttributeSuppressions'].includes(section),
+      ),
+      [],
+    );
   }
   assert.deepEqual(
     [slInput, slSelect, slTextarea].map((contract) => contract.defaultEquivalences),
@@ -258,11 +269,12 @@ test('origin-aware analyzer normalizations are comparison-only and narrowly scop
   assert.deepEqual(waInput.defaultEquivalences, [
     { memberKind: 'attribute', member: 'name', upstream: null, target: '' },
   ]);
-  assert.deepEqual(waTextarea, waInput);
-  assert.deepEqual(reviewedMappingNormalizations('wa-unrelated'), {
-    defaultEquivalences: [],
-    inferredAttributeSuppressions: [],
-  });
+  // Both Web Awesome form controls carry the same origin-aware default review. Their per-member
+  // type equivalences legitimately differ (`resize` against `type`/`value`), so compare the review
+  // that is meant to be shared rather than the whole assembled contract.
+  assert.deepEqual(waTextarea.defaultEquivalences, waInput.defaultEquivalences);
+  assert.deepEqual(waTextarea.inferredAttributeSuppressions, waInput.inferredAttributeSuppressions);
+  assert.deepEqual(reviewedMappingNormalizations('wa-unrelated'), emptyNormalizations());
 });
 
 test('Lyra subclass normalization retains reviewed inherited property-only APIs without inferring attributes', () => {

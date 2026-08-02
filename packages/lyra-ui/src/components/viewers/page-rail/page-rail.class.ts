@@ -378,7 +378,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   private onPageActivate(pageNumber: number): void {
     if (this.boundViewer) this.boundViewer.page = pageNumber;
-    this.emit<{ page: number }>('lr-page-select', { page: pageNumber });
+    this.emit('lr-page-select', { page: pageNumber });
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {

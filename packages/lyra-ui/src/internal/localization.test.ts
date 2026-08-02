@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import {
   registerLyraLocale,
   setLyraLocale,
+  getLyraLocaleDirection,
   getRegisteredLyraLocales,
   subscribeLyraLocaleRegistry,
   subscribeLyraLocale,
@@ -11,8 +12,12 @@ import {
   resolveLyraString,
 } from './localization.js';
 import '../components/data/sparkline/sparkline.js';
+import '../translations/ar.js';
+import '../translations/de.js';
 import '../translations/fa.js';
 import '../translations/he.js';
+import '../translations/pt-BR.js';
+import '../translations/zh-CN.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
 
 it('resolves registered locale messages and per-instance overrides', async () => {
@@ -187,6 +192,66 @@ it('selects Persian one/other and Hebrew one/two/other catalog forms through reg
   expect(matches(hebrew, 3)).to.equal('3 התאמות');
 });
 
+it('reaches a regional-only catalog from its bare base language and from a script-bearing tag', async () => {
+  // zh-CN and pt-BR are the only Chinese/Portuguese catalogs that ship; every one of these tags
+  // has to land on them rather than silently rendering English.
+  for (const tag of ['zh', 'zh-Hans', 'zh-Hans-CN', 'zh-CN']) {
+    expect(resolveLyraString(await localeHost(tag), 'close'), tag).to.equal('关闭');
+  }
+  for (const tag of ['pt', 'pt-PT', 'pt-BR']) {
+    expect(resolveLyraString(await localeHost(tag), 'close'), tag).to.equal('Fechar');
+  }
+});
+
+it('breaks a base-language fallback tie by shared subtags, then alphabetically -- never by registration order', async () => {
+  registerLyraLocale('qaa-TW', { 'x-tie-probe': 'TW' });
+  registerLyraLocale('qaa-CN', { 'x-tie-probe': 'CN' });
+  // No subtag in common beyond the language -> alphabetical.
+  expect(resolveLyraString(await localeHost('qaa'), 'x-tie-probe')).to.equal('CN');
+  // A shared region subtag outranks the alphabetical winner.
+  expect(resolveLyraString(await localeHost('qaa-Hant-TW'), 'x-tie-probe')).to.equal('TW');
+});
+
+it('keeps an exact truncation-chain hit ahead of any regional sibling', async () => {
+  registerLyraLocale('qab', { 'x-exact-probe': 'BASE' });
+  registerLyraLocale('qab-CN', { 'x-exact-probe': 'REGION' });
+  expect(resolveLyraString(await localeHost('qab-Hans-CN'), 'x-exact-probe')).to.equal('BASE');
+});
+
+it('selects plural categories through the same widened chain the messages use', async () => {
+  registerLyraLocale('zh-CN', { 'x-plural-chain': { other: '{count} 个' } });
+  const host = await localeHost('zh-Hans-CN');
+  expect(resolveLyraString(host, 'x-plural-chain', undefined, undefined, { count: 3 })).to.equal('3 个');
+});
+
+it('reports a registered catalog writing direction, honouring regional and base tags', () => {
+  expect(getLyraLocaleDirection('ar')).to.equal('rtl');
+  expect(getLyraLocaleDirection('ar-EG')).to.equal('rtl');
+  expect(getLyraLocaleDirection('fa-IR')).to.equal('rtl');
+  expect(getLyraLocaleDirection('he')).to.equal('rtl');
+  expect(getLyraLocaleDirection('de')).to.equal('ltr');
+  expect(getLyraLocaleDirection('zh-Hans-CN')).to.equal('ltr');
+  expect(getLyraLocaleDirection('')).to.equal('ltr');
+  expect(getLyraLocaleDirection('not a tag')).to.equal('ltr');
+});
+
+it('accepts explicit locale metadata without disturbing the two-argument call', () => {
+  registerLyraLocale('x-meta-probe', { noData: 'first' });
+  expect(getLyraLocaleDirection('x-meta-probe')).to.equal('ltr');
+  registerLyraLocale('x-meta-probe', { close: 'second' }, { dir: 'rtl', name: 'Probe' });
+  expect(getLyraLocaleDirection('x-meta-probe')).to.equal('rtl');
+  // The metadata call must merge, never replace, the strings registered before it.
+  expect(getRegisteredLyraLocales()).to.include('x-meta-probe');
+  registerLyraLocale('x-meta-probe', { noData: 'third' });
+  expect(getLyraLocaleDirection('x-meta-probe')).to.equal('rtl');
+});
+
+it('derives direction from Intl for an unregistered RTL locale when the engine exposes text info', () => {
+  const supported = typeof (Intl.Locale.prototype as { getTextInfo?: unknown }).getTextInfo === 'function';
+  // `ur` ships no catalog; the answer can only come from Intl, and only where Intl provides it.
+  expect(getLyraLocaleDirection('ur')).to.equal(supported ? 'rtl' : 'ltr');
+});
+
 it('inherits explicit RTL direction for Persian and Hebrew without forcing direction from locale', async () => {
   for (const locale of ['fa-IR', 'he-IL']) {
     const wrapper = await fixture<HTMLDivElement>(
@@ -223,7 +288,7 @@ it('subscribeLyraLocaleRegistry stops notifying after unsubscribe', () => {
   expect(calls).to.equal(0);
 });
 
-it('registerLyraLocale still only notifies subscribeLyraLocale listeners for the active locale (regression guard)', () => {
+it('registerLyraLocale notifies locale subscribers when the global active locale differs', () => {
   setLyraLocale('x-registry-active-guard');
   let activeListenerCalls = 0;
   const unsubscribeActive = subscribeLyraLocale(() => {
@@ -231,9 +296,9 @@ it('registerLyraLocale still only notifies subscribeLyraLocale listeners for the
   });
   try {
     registerLyraLocale('x-registry-inactive-guard', { noData: 'unrelated' });
-    expect(activeListenerCalls).to.equal(0);
-    registerLyraLocale('x-registry-active-guard', { noData: 'matches' });
     expect(activeListenerCalls).to.equal(1);
+    registerLyraLocale('x-registry-active-guard', { noData: 'matches' });
+    expect(activeListenerCalls).to.equal(2);
   } finally {
     unsubscribeActive();
     setLyraLocale('en');

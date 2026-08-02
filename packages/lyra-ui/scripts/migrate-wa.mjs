@@ -55,13 +55,11 @@ const MEMBER_RULE_SECTIONS = [
   'methods',
 ];
 const REWRITE_RULE_SECTIONS = [...MEMBER_RULE_SECTIONS, 'defaults'];
-const PACKAGE_BY_ECOSYSTEM = {
-  shoelace: '@shoelace-style/shoelace',
-  webawesome: '@awesome.me/webawesome',
-};
-const ECOSYSTEM_BY_PACKAGE = new Map(
-  Object.entries(PACKAGE_BY_ECOSYSTEM).map(([ecosystem, packageName]) => [packageName, ecosystem]),
-);
+const ECOSYSTEMS = ['webawesome', 'shoelace'];
+const PACKAGE_TIERS = new Set(['free', 'pro']);
+const STATIC_API_STATUSES = new Set(['reviewed', 'tag-only', 'unreviewed']);
+const LIGHT_DOM_STATUSES = new Set(['not-applicable', 'surface-only', 'warning-required', 'unreviewed']);
+const REGISTRATION_STATUSES = new Set(['all', 'granular', 'unavailable']);
 
 function invariant(condition, message) {
   if (!condition) throw new Error(`Invalid component inventory migration contract: ${message}`);
@@ -179,6 +177,16 @@ export function buildMigrationContract(inventory) {
       typeof component.registrationModule === 'string' && component.registrationModule.endsWith('.ts'),
       `${component.tag}: registrationModule must end in .ts`,
     );
+    if (Object.hasOwn(component, 'rootIncluded')) {
+      invariant(typeof component.rootIncluded === 'boolean', `${component.tag}: rootIncluded must be boolean`);
+    }
+    if (Object.hasOwn(component, 'optionalPeers')) {
+      invariant(Array.isArray(component.optionalPeers), `${component.tag}: optionalPeers must be an array`);
+      invariant(
+        component.optionalPeers.every((peer) => typeof peer === 'string' && peer),
+        `${component.tag}: optionalPeers entries must be non-empty package names`,
+      );
+    }
     components.set(component.tag, component);
   }
 
@@ -190,11 +198,48 @@ export function buildMigrationContract(inventory) {
   }
 
   const upstreamComponents = new Map();
-  for (const ecosystem of Object.keys(PACKAGE_BY_ECOSYSTEM)) {
-    const entries = inventory.upstreams[ecosystem]?.components;
+  const packageIdentities = new Map();
+  const packagesByEcosystem = new Map(ECOSYSTEMS.map((ecosystem) => [ecosystem, []]));
+  let extendedPackageSchema = false;
+  for (const ecosystem of ECOSYSTEMS) {
+    const upstream = inventory.upstreams[ecosystem];
+    const entries = upstream?.components;
     invariant(Array.isArray(entries), `${ecosystem}: upstream components must be an array`);
+    const identities = Array.isArray(upstream?.packages)
+      ? upstream.packages
+      : typeof upstream?.package === 'string' && upstream.package
+        ? [{ name: upstream.package, tiers: ['free', 'pro'] }]
+        : [];
+    if (Array.isArray(upstream?.packages)) extendedPackageSchema = true;
+    invariant(identities.length > 0, `${ecosystem}: packages must contain at least one identity`);
+    for (const identity of identities) {
+      invariant(
+        identity && typeof identity.name === 'string' && identity.name,
+        `${ecosystem}: package identity needs a non-empty name`,
+      );
+      invariant(!packageIdentities.has(identity.name), `duplicate package identity ${identity.name}`);
+      invariant(
+        Array.isArray(identity.tiers) && identity.tiers.length > 0,
+        `${identity.name}: tiers must be a non-empty array`,
+      );
+      invariant(
+        identity.tiers.every((tier) => PACKAGE_TIERS.has(tier)),
+        `${identity.name}: tiers contain an unsupported value`,
+      );
+      invariant(new Set(identity.tiers).size === identity.tiers.length, `${identity.name}: tiers contain duplicates`);
+      const normalized = { ecosystem, tiers: new Set(identity.tiers) };
+      packageIdentities.set(identity.name, normalized);
+      packagesByEcosystem.get(ecosystem).push({ name: identity.name, tiers: normalized.tiers });
+    }
     for (const component of entries) {
       invariant(!upstreamComponents.has(component.tag), `duplicate upstream component ${component.tag}`);
+      if (Object.hasOwn(component, 'tier')) {
+        invariant(PACKAGE_TIERS.has(component.tier), `${component.tag}: unsupported package tier`);
+        invariant(
+          packagesByEcosystem.get(ecosystem).some((identity) => identity.tiers.has(component.tier)),
+          `${component.tag}: no ${ecosystem} package identity provides tier ${component.tier}`,
+        );
+      }
       upstreamComponents.set(component.tag, { ecosystem, component });
     }
   }
@@ -232,6 +277,55 @@ export function buildMigrationContract(inventory) {
     });
     invariant(normalizationFindings.length === 0, normalizationFindings.join('; '));
     invariant(Array.isArray(mapping.drift), `${mapping.upstreamTag}: drift must be an array`);
+    if (extendedPackageSchema) {
+      const parity = mapping.parity;
+      invariant(parity && typeof parity === 'object' && !Array.isArray(parity), `${mapping.upstreamTag}: parity missing`);
+      const parityKeys = Object.keys(parity).filter(
+        (key) => !['staticApi', 'lightDom', 'runtime', 'behaviorReviewFlags'].includes(key),
+      );
+      invariant(parityKeys.length === 0, `${mapping.upstreamTag}: parity has unknown key(s) ${parityKeys.join(', ')}`);
+      invariant(STATIC_API_STATUSES.has(parity.staticApi), `${mapping.upstreamTag}: invalid parity.staticApi`);
+      invariant(LIGHT_DOM_STATUSES.has(parity.lightDom), `${mapping.upstreamTag}: invalid parity.lightDom`);
+      invariant(
+        Array.isArray(parity.behaviorReviewFlags) &&
+          parity.behaviorReviewFlags.every((flag) => typeof flag === 'string' && flag) &&
+          new Set(parity.behaviorReviewFlags).size === parity.behaviorReviewFlags.length,
+        `${mapping.upstreamTag}: parity.behaviorReviewFlags must contain unique non-empty strings`,
+      );
+      invariant(
+        parity.runtime && typeof parity.runtime === 'object' && !Array.isArray(parity.runtime),
+        `${mapping.upstreamTag}: parity.runtime missing`,
+      );
+      invariant(
+        Object.keys(parity.runtime).every((key) => key === 'registration' || key === 'optionalPeers'),
+        `${mapping.upstreamTag}: parity.runtime has unknown keys`,
+      );
+      invariant(
+        REGISTRATION_STATUSES.has(parity.runtime.registration),
+        `${mapping.upstreamTag}: invalid parity.runtime.registration`,
+      );
+      invariant(Array.isArray(parity.runtime.optionalPeers), `${mapping.upstreamTag}: parity.runtime.optionalPeers must be an array`);
+      const expectedRegistration = !target ? 'unavailable' : target.rootIncluded === false ? 'granular' : 'all';
+      invariant(
+        parity.runtime.registration === expectedRegistration,
+        `${mapping.upstreamTag}: parity runtime registration is stale`,
+      );
+      const expectedPeers = [...(target?.optionalPeers ?? [])].sort();
+      invariant(
+        JSON.stringify([...parity.runtime.optionalPeers].sort()) === JSON.stringify(expectedPeers),
+        `${mapping.upstreamTag}: parity runtime optional peers are stale`,
+      );
+      if (AUTO_CLASSIFICATIONS.has(mapping.classification)) {
+        invariant(
+          parity.lightDom !== 'warning-required' && parity.lightDom !== 'unreviewed',
+          `${mapping.upstreamTag}: automatic mapping cannot require light-DOM review`,
+        );
+        invariant(
+          parity.behaviorReviewFlags.length === 0,
+          `${mapping.upstreamTag}: automatic mapping cannot carry behavior review flags`,
+        );
+      }
+    }
     if (target && upstreamEntry.component.review?.status === 'complete') {
       const expectedDrift = compareMappedSurfaces(upstreamEntry.component.surface, target.surface, {
         upstreamPrefix: mapping.upstream === 'webawesome' ? 'wa-' : 'sl-',
@@ -270,7 +364,15 @@ export function buildMigrationContract(inventory) {
 
   invariant(mappings.size === upstreamComponents.size, 'every upstream tag must have exactly one mapping');
   for (const tag of upstreamComponents.keys()) invariant(mappings.has(tag), `${tag}: missing mapping`);
-  return { inventory, components, mappings, upstreamComponents, localMigrations };
+  return {
+    inventory,
+    components,
+    mappings,
+    upstreamComponents,
+    localMigrations,
+    packageIdentities,
+    packagesByEcosystem,
+  };
 }
 
 // README mirror-table parsing is retained for documentation drift checks and inventory generation.
@@ -794,6 +896,21 @@ function targetImport(component) {
     .replace(/\.ts$/, '.js')}`;
 }
 
+function registrationClosure(contract, upstreamTags) {
+  const targets = new Map();
+  for (const upstreamTag of upstreamTags ?? []) {
+    const mapping = contract.mappings.get(upstreamTag);
+    if (!mapping || !AUTO_CLASSIFICATIONS.has(mapping.classification) || !mapping.target) continue;
+    targets.set(mapping.targetTag, mapping.target);
+  }
+  const rootIncluded = [...targets.values()].some((component) => component.rootIncluded !== false);
+  const granular = [...targets.values()]
+    .filter((component) => component.rootIncluded === false)
+    .map(targetImport)
+    .sort();
+  return [...(rootIncluded ? ['@aceshooting/lyra-ui/all.js'] : []), ...granular];
+}
+
 function deepImportTag(specifier, ecosystem) {
   const match = specifier.match(/\/components\/([a-z0-9-]+)\/(?:\1(?:\.component)?|index)\.(?:js|mjs)$/);
   return match ? `${ecosystem === 'webawesome' ? 'wa' : 'sl'}-${match[1]}` : null;
@@ -820,8 +937,19 @@ function moduleSpecifierContext(text, quoteStart) {
   return null;
 }
 
-function scanImports(text, ignoredRanges) {
-  const packagePattern = /(['"])(?<specifier>@shoelace-style\/shoelace|@awesome\.me\/webawesome)(?<subpath>\/[^'"\s]*)?\1/g;
+function regexEscape(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function scanImports(text, ignoredRanges, contract) {
+  const packageAlternatives = [...contract.packageIdentities.keys()]
+    .sort((left, right) => right.length - left.length)
+    .map(regexEscape)
+    .join('|');
+  const packagePattern = new RegExp(
+    `(['"])(?<specifier>${packageAlternatives})(?<subpath>\\/[^'"\\s]*)?\\1`,
+    'g',
+  );
   const imports = [];
   for (const match of text.matchAll(packagePattern)) {
     if (insideRanges(match.index, ignoredRanges)) continue;
@@ -829,14 +957,24 @@ function scanImports(text, ignoredRanges) {
     const context = moduleSpecifierContext(text, quoteStart);
     if (!context) continue;
     const specifier = `${match.groups.specifier}${match.groups.subpath ?? ''}`;
+    const identity = contract.packageIdentities.get(match.groups.specifier);
+    invariant(identity, `unrecognized package identity ${match.groups.specifier}`);
+    const closingQuoteEnd = quoteStart + match[0].length;
+    const lineBreak = text.indexOf('\n', closingQuoteEnd);
+    const lineEnd = lineBreak === -1 ? text.length : lineBreak;
+    const semicolon = text.indexOf(';', closingQuoteEnd);
+    const statementEnd = semicolon !== -1 && semicolon < lineEnd ? semicolon + 1 : lineEnd;
     imports.push({
       ...context,
-      ecosystem: ECOSYSTEM_BY_PACKAGE.get(match.groups.specifier),
+      ecosystem: identity.ecosystem,
+      tiers: identity.tiers,
       packageName: match.groups.specifier,
       specifier,
       subpath: match.groups.subpath ?? '',
+      quote: match[1],
       start: quoteStart + 1,
       end: quoteStart + 1 + specifier.length,
+      statementEnd,
     });
   }
   return imports;
@@ -1023,6 +1161,7 @@ export function migrateText(original, contract, options = {}) {
   if (options.origin) return migrateLocalText(original, contract, options);
   const file = options.file ?? '<memory>';
   const rewriteBarePackages = options.rewriteBarePackages ?? new Set();
+  const rootRegistrationMappings = options.rootRegistrationMappings ?? new Map();
   const starts = lineStarts(original);
   const ignoredRanges = commentRanges(original);
   const markupTokens = scanMarkupTags(original, ignoredRanges);
@@ -1030,9 +1169,9 @@ export function migrateText(original, contract, options = {}) {
   const apiReferences = scanApiTagReferences(original, ignoredRanges);
   const aliasReviews = scanAliasedRewriteReviews(original, contract, ignoredRanges);
   const dynamicDefaultReviews = scanDynamicDefaultReviews(original, markupTokens, contract);
-  const imports = scanImports(original, ignoredRanges);
-  const bareImportEcosystems = new Set(
-    imports.filter((imported) => imported.sideEffect && !imported.subpath).map((imported) => imported.ecosystem),
+  const imports = scanImports(original, ignoredRanges, contract);
+  const bareImportPackages = new Set(
+    imports.filter((imported) => imported.sideEffect && !imported.subpath).map((imported) => imported.packageName),
   );
   const blockedMappings = new Set([
     ...(options.blockedMappings ?? []),
@@ -1059,6 +1198,8 @@ export function migrateText(original, contract, options = {}) {
     webawesome: { automatic: 0, manual: 0 },
     shoelace: { automatic: 0, manual: 0 },
   };
+  const automaticMappings = new Set();
+  const reportedOptionalPeers = new Set();
 
   const reportOrigin = (upstreamTag, origin) =>
     origin ?? (upstreamTag?.startsWith('wa-') ? 'webawesome' : upstreamTag?.startsWith('sl-') ? 'shoelace' : null);
@@ -1090,6 +1231,22 @@ export function migrateText(original, contract, options = {}) {
         message,
       }),
     );
+  };
+  const noteAutomatic = (mapping, offset) => {
+    automaticMappings.add(mapping.upstreamTag);
+    for (const peer of mapping.target?.optionalPeers ?? []) {
+      const key = `${mapping.targetTag}:${peer}`;
+      if (reportedOptionalPeers.has(key)) continue;
+      reportedOptionalPeers.add(key);
+      warn(
+        offset,
+        mapping.upstreamTag,
+        'runtime',
+        'OPTIONAL_PEER_REQUIRED',
+        peer,
+        `${mapping.targetTag} requires the optional peer package ${peer}; install a compatible version before relying on the migrated component.`,
+      );
+    }
   };
   const addEdit = (start, end, replacement, details) => {
     edits.push({ start, end, replacement });
@@ -1155,6 +1312,7 @@ export function migrateText(original, contract, options = {}) {
       continue;
     }
     usage[ecosystem].automatic += 1;
+    noteAutomatic(mapping, token.nameStart);
     addEdit(token.nameStart, token.nameEnd, mapping.targetTag, {
       upstreamTag: token.tag,
       upstreamMember: null,
@@ -1181,6 +1339,7 @@ export function migrateText(original, contract, options = {}) {
       continue;
     }
     usage[ecosystem].automatic += 1;
+    noteAutomatic(mapping, reference.start);
     addEdit(reference.start, reference.end, mapping.targetTag, {
       upstreamTag: reference.tag,
       upstreamMember: null,
@@ -1327,6 +1486,7 @@ export function migrateText(original, contract, options = {}) {
       }
       for (const tagMatch of selectorMatches) {
         const offset = selectorStart + tagMatch.index;
+        noteAutomatic(mapping, offset);
         addEdit(offset, offset + mapping.upstreamTag.length, mapping.targetTag, {
           upstreamTag: mapping.upstreamTag,
           upstreamMember: null,
@@ -1428,23 +1588,44 @@ export function migrateText(original, contract, options = {}) {
       continue;
     }
     if (!imported.subpath) {
-      if (rewriteBarePackages.has(ecosystem)) {
-        addEdit(imported.start, imported.end, '@aceshooting/lyra-ui', {
+      const canRewrite = rewriteBarePackages.has(ecosystem) || rewriteBarePackages.has(imported.packageName);
+      const registeredMappings =
+        rootRegistrationMappings.get(imported.packageName) ?? rootRegistrationMappings.get(ecosystem) ?? new Set();
+      const closure = registrationClosure(contract, registeredMappings);
+      if (canRewrite && closure.length > 0) {
+        addEdit(imported.start, imported.end, closure[0], {
           upstreamTag: null,
           origin: ecosystem,
           upstreamMember: 'module',
           action: 'rewrite-import',
-          target: '@aceshooting/lyra-ui',
-          message: `Rewrite ${imported.packageName} root registration import.`,
+          target: closure[0],
+          message: `Rewrite ${imported.packageName} root registration import to its proven Lyra registration closure.`,
         });
+        const lineEnding = original.includes('\r\n') ? '\r\n' : '\n';
+        for (const specifier of closure.slice(1)) {
+          edits.push({
+            start: imported.statementEnd,
+            end: imported.statementEnd,
+            replacement: `${lineEnding}import ${imported.quote}${specifier}${imported.quote};`,
+          });
+          change(
+            imported.start,
+            null,
+            'module',
+            'insert-registration',
+            specifier,
+            `Insert granular registration for a root-excluded Lyra target.`,
+            ecosystem,
+          );
+        }
       } else {
         warn(
           imported.start,
           null,
           'module',
           'PACKAGE_IMPORT_BLOCKED',
-          '@aceshooting/lyra-ui',
-          `The ${ecosystem} package import remains because this scan contains manual or no proven-safe component uses.`,
+          '@aceshooting/lyra-ui/all.js',
+          `The ${ecosystem} package import remains because this scan contains manual uses or no proven registration closure.`,
           ecosystem,
         );
       }
@@ -1475,6 +1656,7 @@ export function migrateText(original, contract, options = {}) {
       continue;
     }
     usage[ecosystem].automatic += 1;
+    noteAutomatic(mapping, imported.start);
     const target = targetImport(mapping.target);
     addEdit(imported.start, imported.end, target, {
       upstreamTag,
@@ -1495,7 +1677,8 @@ export function migrateText(original, contract, options = {}) {
     usage,
     blockedMappings,
     blockedEcosystems,
-    bareImportEcosystems,
+    bareImportPackages,
+    automaticMappings,
   };
 }
 
@@ -1560,7 +1743,8 @@ export function migrateFiles({
   }
   const blockedMappings = new Set();
   const blockedEcosystems = new Set();
-  const bareImportEcosystems = new Set();
+  const bareImportPackages = new Set();
+  const automaticMappings = new Set();
   const usage = {
     webawesome: { automatic: 0, manual: 0 },
     shoelace: { automatic: 0, manual: 0 },
@@ -1576,17 +1760,36 @@ export function migrateFiles({
     }
     for (const upstreamTag of analysis.blockedMappings) blockedMappings.add(upstreamTag);
     for (const ecosystem of analysis.blockedEcosystems) blockedEcosystems.add(ecosystem);
-    for (const ecosystem of analysis.bareImportEcosystems) bareImportEcosystems.add(ecosystem);
+    for (const packageName of analysis.bareImportPackages) bareImportPackages.add(packageName);
+    for (const upstreamTag of analysis.automaticMappings) automaticMappings.add(upstreamTag);
   }
-  for (const ecosystem of bareImportEcosystems) {
-    if (usage[ecosystem].manual > 0) blockedEcosystems.add(ecosystem);
+  for (const packageName of bareImportPackages) {
+    const identity = contract.packageIdentities.get(packageName);
+    if (identity && usage[identity.ecosystem].manual > 0) blockedEcosystems.add(identity.ecosystem);
   }
   const rewriteBarePackages = new Set(
-    Object.entries(usage)
-      .filter(([ecosystem, counts]) =>
-        counts.automatic > 0 && counts.manual === 0 && !blockedEcosystems.has(ecosystem),
-      )
-      .map(([ecosystem]) => ecosystem),
+    [...bareImportPackages].filter((packageName) => {
+      const identity = contract.packageIdentities.get(packageName);
+      if (!identity) return false;
+      const counts = usage[identity.ecosystem];
+      return counts.automatic > 0 && counts.manual === 0 && !blockedEcosystems.has(identity.ecosystem);
+    }),
+  );
+  const rootRegistrationMappings = new Map(
+    [...bareImportPackages].map((packageName) => {
+      const identity = contract.packageIdentities.get(packageName);
+      const relevant = new Set(
+        [...automaticMappings].filter((upstreamTag) => {
+          const mapping = contract.mappings.get(upstreamTag);
+          return Boolean(
+            identity &&
+            mapping?.upstream === identity.ecosystem &&
+            (!mapping.source?.tier || identity.tiers.has(mapping.source.tier)),
+          );
+        }),
+      );
+      return [packageName, relevant];
+    }),
   );
 
   const changes = [];
@@ -1596,6 +1799,7 @@ export function migrateFiles({
     const result = migrateText(original, contract, {
       file: reportPathName(file, cwd),
       rewriteBarePackages,
+      rootRegistrationMappings,
       blockedMappings,
       blockedEcosystems,
     });
@@ -1630,6 +1834,7 @@ export function migrateFiles({
 
 export function parseArgs(argv) {
   const options = {
+    check: false,
     dryRun: false,
     help: false,
     extensions: DEFAULT_EXTENSIONS,
@@ -1642,6 +1847,9 @@ export function parseArgs(argv) {
     if (!positional && argument === '--') {
       positional = true;
     } else if (!positional && (argument === '--dry-run' || argument === '-n')) {
+      options.dryRun = true;
+    } else if (!positional && argument === '--check') {
+      options.check = true;
       options.dryRun = true;
     } else if (!positional && (argument === '--help' || argument === '-h')) {
       options.help = true;
@@ -1672,7 +1880,7 @@ export function parseArgs(argv) {
 }
 
 function printUsage() {
-  console.log(`Usage: node scripts/migrate-wa.mjs [--dry-run] [--origin=lyra-v7] [--report=path] [--ext=html,ts,...] targets...
+  console.log(`Usage: lyra-ui-migrate [--check] [--dry-run] [--origin=lyra-v7] [--report=path] [--ext=html,ts,...] targets...
 
 Only exact and fully rewritten inventory mappings change automatically. Conceptual, unsafe,
 unsupported, unknown, and unresolved deep-import uses remain unchanged with source-located
@@ -1682,6 +1890,7 @@ Without --origin, only Web Awesome and Shoelace migrations run. --origin=lyra-v7
 opt-in Lyra defaults migration and never rewrites tags or imports.
 
   --dry-run, -n     report changes without writing source files
+  --check           exit nonzero when rewrites or warnings remain; never write source files
   --origin=lyra-v7  insert explicit attributes that preserve changed Lyra v7 defaults
   --report=path     write the stable JSON migration report
   --ext=a,b,c       extensions scanned for directory targets
@@ -1785,6 +1994,15 @@ export function run(argv) {
     );
     if (options.dryRun && report.filesChanged) console.log('Dry run only -- no source files were written.');
     if (options.report) console.log(`JSON report written to ${options.report}.`);
+    if (options.check) {
+      const remaining = report.filesChanged > 0 || report.summary.warnings > 0;
+      console.log(
+        remaining
+          ? `Migration check failed: ${report.filesChanged} file(s) need changes and ${report.summary.warnings} warning(s) require review.`
+          : 'Migration check passed: no rewrites or warnings remain.',
+      );
+      return remaining ? 1 : 0;
+    }
     return 0;
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

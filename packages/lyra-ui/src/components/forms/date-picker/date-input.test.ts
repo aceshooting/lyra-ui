@@ -2137,10 +2137,14 @@ describe('reviewed date-input parity surface', () => {
     expect(state.cleanupFn).to.be.a('function').and.not.equal(placementCleanup);
   });
 
-  it('keeps blur/change/focus/input/clear/invalid non-cancelable', async () => {
+  it('keeps blur/change/focus/input/clear non-cancelable', async () => {
     const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
     const seen = new Map<string, Event>();
-    for (const name of ['blur', 'change', 'focus', 'input', 'lr-clear', 'lr-invalid']) {
+    // `lr-invalid` is deliberately absent: it aliases the native `invalid` event, which IS a real
+    // veto point (cancelling it suppresses the browser's own validation UI), so it is emitted
+    // cancelable — see the test below.
+    const notifications = ['blur', 'change', 'focus', 'input', 'lr-clear'];
+    for (const name of notifications) {
       el.addEventListener(name, (event) => seen.set(name, event));
     }
     el.focus();
@@ -2149,10 +2153,38 @@ describe('reviewed date-input parity surface', () => {
     el.required = true;
     el.checkValidity();
     await el.updateComplete;
-    for (const name of ['blur', 'change', 'focus', 'input', 'lr-clear', 'lr-invalid']) {
+    for (const name of notifications) {
       expect(seen.get(name), `${name} fired`).to.exist;
       expect(seen.get(name)?.cancelable, name).to.be.false;
     }
+  });
+
+  it('emits lr-invalid cancelable and forwards its cancellation to the native invalid event', async () => {
+    const el = (await fixture(
+      html`<lr-date-input required></lr-date-input>`,
+    )) as LyraDateInput;
+    await el.updateComplete;
+
+    const seen: CustomEvent[] = [];
+    el.addEventListener('lr-invalid', (event) => seen.push(event as CustomEvent));
+    const natives: Event[] = [];
+    el.addEventListener('invalid', (event) => natives.push(event));
+
+    expect(el.reportValidity(), 'a required-and-empty date input is invalid').to.be.false;
+    expect(seen.length, 'lr-invalid fired').to.equal(1);
+    expect(seen[0]?.cancelable, 'lr-invalid is cancelable').to.be.true;
+    expect(natives.length, 'the native invalid event fired too').to.equal(1);
+    expect(natives[0]?.defaultPrevented, 'nothing cancelled it').to.be.false;
+
+    // Cancelling the alias must cancel the platform event it aliases — that is the whole point of
+    // making it cancelable: an app rendering its own error banner suppresses the native bubble.
+    const veto = (event: Event): void => event.preventDefault();
+    el.addEventListener('lr-invalid', veto);
+    el.reportValidity();
+    el.removeEventListener('lr-invalid', veto);
+    expect(natives.length, 'a second invalid event fired').to.equal(2);
+    expect(natives[1]?.defaultPrevented, 'preventDefault() on the alias reached the native event').to
+      .be.true;
   });
 
   it('relays typed input/change and focus/blur once with native constructors and payload', async () => {
@@ -2286,5 +2318,51 @@ describe('reviewed date-input parity surface', () => {
     el.resetValidity();
     expect(el.validity.customError).to.be.false;
     await expect(el).shadowDom.to.be.accessible();
+  });
+});
+
+// A control barred from constraint validation is neither :valid nor :invalid natively -- a real
+// `<input required disabled>` and `<input required readonly>` both match neither -- so a barred
+// date input must publish no violation at all. This override used to guard only `readonly`, so a
+// disabled required field kept `valueMissing` raised and `:state(invalid)` published.
+describe('lr-date-input barred from constraint validation', () => {
+  it('reports no violation while disabled, and restores it on re-enable', async () => {
+    const el = (await fixture(
+      html`<lr-date-input required disabled></lr-date-input>`,
+    )) as LyraDateInput;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing while disabled').to.be.false;
+    expect(el.validationMessage, 'no message while disabled').to.equal('');
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing once enabled').to.be.true;
+  });
+
+  it('reports no range violation while disabled', async () => {
+    const el = (await fixture(
+      html`<lr-date-input value="2026-07-15" min="2026-08-01" disabled></lr-date-input>`,
+    )) as LyraDateInput;
+    await el.updateComplete;
+    expect(el.validity.rangeUnderflow, 'rangeUnderflow while disabled').to.be.false;
+    expect(el.validity.valid, 'valid while disabled').to.be.true;
+  });
+
+  it('reports no violation inside a disabled fieldset', async () => {
+    const form = (await fixture(html`
+      <form><fieldset disabled><lr-date-input required></lr-date-input></fieldset></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-date-input') as LyraDateInput;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing inside a disabled fieldset').to.be.false;
+    expect(el.checkValidity(), 'checkValidity() inside a disabled fieldset').to.be.true;
+  });
+
+  it('still reports no violation while readonly', async () => {
+    const el = (await fixture(
+      html`<lr-date-input required readonly></lr-date-input>`,
+    )) as LyraDateInput;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing while readonly').to.be.false;
   });
 });

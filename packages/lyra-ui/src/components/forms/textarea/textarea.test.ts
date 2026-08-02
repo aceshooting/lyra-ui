@@ -5,7 +5,7 @@ import type { LyraTextarea } from './textarea.js';
 import { styles } from './textarea.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 
-it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = await fixture<LyraTextarea>(html`<lr-textarea required aria-label="Notes"></lr-textarea>`);
   const aliases: CustomEvent[] = [];
   el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
@@ -14,7 +14,70 @@ it('emits one non-cancelable lr-invalid alias when a validity check fails', asyn
   expect(aliases).to.have.lengthOf(1);
   expect(aliases[0].target).to.equal(el);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.false;
+  expect(aliases[0].cancelable).to.be.true;
+});
+
+it('forwards preventDefault() on lr-invalid to the native invalid event', async () => {
+  // Cancelling the alias has to cancel the event it aliases, or an app that wires `lr-invalid` to
+  // its own error banner has no way to suppress the browser's validation bubble alongside it. The
+  // host's alias listener is installed in the constructor, so it runs before this recorder and its
+  // preventDefault() is already visible here.
+  const el = await fixture<LyraTextarea>(html`<lr-textarea required aria-label="Notes"></lr-textarea>`);
+  el.addEventListener('lr-invalid', (event) => event.preventDefault());
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].cancelable, 'the native invalid event is cancelable').to.be.true;
+  expect(natives[0].defaultPrevented).to.be.true;
+});
+
+it('leaves the native invalid event alone when the lr-invalid alias is not cancelled', async () => {
+  const el = await fixture<LyraTextarea>(html`<lr-textarea required aria-label="Notes"></lr-textarea>`);
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.false;
+});
+
+it('bars constraint validation while disabled, fieldset-disabled or readonly', async () => {
+  // Native <textarea required disabled>/<textarea required readonly> match neither :valid nor
+  // :invalid; a barred lyra control must not raise valueMissing or publish
+  // :state(invalid)/:state(user-invalid) either.
+  const el = await fixture<LyraTextarea>(
+    html`<lr-textarea required aria-label="Notes" disabled></lr-textarea>`,
+  );
+  expect(el.validity.valueMissing, 'disabled + required').to.be.false;
+  expect(el.validity.valid).to.be.true;
+  expect(el.matches(':state(invalid)'), 'disabled must not be :state(invalid)').to.be.false;
+  el.reportValidity();
+  expect(el.matches(':state(user-invalid)'), 'disabled must not be :state(user-invalid)').to.be.false;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'enabled again').to.be.true;
+  expect(el.matches(':state(invalid)')).to.be.true;
+
+  el.readonly = true;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'readonly + required').to.be.false;
+  expect(el.matches(':state(invalid)'), 'readonly must not be :state(invalid)').to.be.false;
+
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <fieldset disabled>
+        <lr-textarea required aria-label="Nested" name="nested"></lr-textarea>
+      </fieldset>
+    </form>
+  `);
+  const nested = form.querySelector('lr-textarea') as LyraTextarea;
+  await nested.updateComplete;
+  expect(nested.disabled, 'a fieldset never mutates the control own disabled').to.be.false;
+  expect(nested.validity.valueMissing, 'fieldset-disabled + required').to.be.false;
+  expect(nested.matches(':state(invalid)')).to.be.false;
 });
 
 it('falls back from an invalid runtime resize value without injecting declarations', async () => {
@@ -1084,4 +1147,24 @@ describe('lr-textarea mapped Textarea parity surface', () => {
     await el.updateComplete;
     expect(el.matches(':state(blank)')).to.be.false;
   });
+});
+
+it('mirrors the lowercase IDL aliases of the native input hints', async () => {
+  const el = (await fixture(html`<lr-textarea label="Notes"></lr-textarea>`)) as LyraTextarea;
+  expect(el.inputmode).to.equal('');
+  expect(el.enterkeyhint).to.equal('');
+
+  el.inputmode = 'numeric';
+  el.enterkeyhint = 'send';
+  await el.updateComplete;
+  expect(el.inputMode).to.equal('numeric');
+  expect(el.enterKeyHint).to.equal('send');
+  expect(el.inputmode).to.equal('numeric');
+  expect(el.enterkeyhint).to.equal('send');
+
+  el.inputmode = null as unknown as string;
+  el.enterkeyhint = null as unknown as string;
+  await el.updateComplete;
+  expect(el.inputmode).to.equal('');
+  expect(el.enterkeyhint).to.equal('');
 });

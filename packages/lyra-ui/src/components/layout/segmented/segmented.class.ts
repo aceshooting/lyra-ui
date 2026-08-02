@@ -124,7 +124,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.selectedItem = item;
     if (valueChanged) {
       this.value = item.value;
-      this.emit<{ value: string }>("lr-change", { value: item.value });
+      this.emit("lr-change", { value: item.value });
     }
   }
 

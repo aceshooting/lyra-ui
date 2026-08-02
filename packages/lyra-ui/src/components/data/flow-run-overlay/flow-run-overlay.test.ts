@@ -4,6 +4,16 @@ import './flow-run-overlay.js';
 import type { LyraFlowRunOverlay } from './flow-run-overlay.js';
 import type { LyraFlowCanvas, FlowNode, FlowRunDecorations } from '../flow-canvas/flow-canvas.js';
 import { styles } from './flow-run-overlay.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
+  const element = sinkElement(politeness);
+  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
 
 const nodes: FlowNode[] = [
   { id: 'fetch', position: { x: 0, y: 0 }, data: { label: 'Fetch data' } },
@@ -270,6 +280,74 @@ it('announces every simultaneous step transition in one live-region update', asy
   const announcement = overlay.shadowRoot!.querySelector('[part="live-region"]')!.textContent!;
   expect(announcement).to.include('Fetch data: Success');
   expect(announcement).to.include('Summarize: Error');
+});
+
+it('routes step transitions into the shared light-DOM sink, leaving the shadow part a mirror', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas>
+      <lr-flow-run-overlay
+        slot="top-end"
+        .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}
+      ></lr-flow-run-overlay>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  const overlay = wrapper.querySelector('lr-flow-run-overlay') as LyraFlowRunOverlay;
+  await overlay.updateComplete;
+  expect(sinkTexts('polite'), 'mounting must not announce a resting state').to.deep.equal([]);
+
+  overlay.decorations = { fetch: { status: 'success' } };
+  await overlay.updateComplete;
+  expect(sinkTexts('polite')).to.deep.equal(['Fetch data: Success']);
+
+  const region = overlay.shadowRoot!.querySelector('[part="live-region"]')!;
+  // The retained part is a styling/inspection mirror only -- a live region inside a shadow root is
+  // not reliably announced, and leaving it live would double-announce where it *is* honored.
+  expect(region.getAttribute('role')).to.equal(null);
+  expect(region.getAttribute('aria-live')).to.equal(null);
+  expect(region.getAttribute('aria-hidden')).to.equal('true');
+});
+
+it('announces a repeated identical transition twice instead of silently rewriting one text node', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas>
+      <lr-flow-run-overlay
+        slot="top-end"
+        .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}
+      ></lr-flow-run-overlay>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  const overlay = wrapper.querySelector('lr-flow-run-overlay') as LyraFlowRunOverlay;
+  await overlay.updateComplete;
+
+  overlay.decorations = { fetch: { status: 'success' } };
+  await overlay.updateComplete;
+  overlay.decorations = { fetch: { status: 'running' } };
+  await overlay.updateComplete;
+  overlay.decorations = { fetch: { status: 'success' } };
+  await overlay.updateComplete;
+
+  expect(
+    sinkTexts('polite').filter((text) => text === 'Fetch data: Success').length,
+    'an identical repeat must be a second addition so assistive tech reads it again',
+  ).to.equal(2);
+});
+
+it('ref-counts the shared sink away once the last overlay disconnects', async () => {
+  const first = (await fixture(
+    html`<lr-flow-run-overlay></lr-flow-run-overlay>`,
+  )) as LyraFlowRunOverlay;
+  const second = (await fixture(
+    html`<lr-flow-run-overlay></lr-flow-run-overlay>`,
+  )) as LyraFlowRunOverlay;
+  expect(sinkElement('polite') !== null, 'a connected overlay holds the sink').to.be.true;
+  first.remove();
+  expect(sinkElement('polite') !== null, 'a still-connected overlay keeps it mounted').to.be.true;
+  second.remove();
+  expect(sinkElement('polite') === null, 'the last disconnect unmounts it').to.be.true;
 });
 
 it('locale-formats summary/count numbers and localizes each count as a whole template', async () => {

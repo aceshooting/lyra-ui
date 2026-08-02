@@ -21,6 +21,20 @@ version. If an API is deprecated in major version M, it remains available for th
 release line and cannot be removed before M+2. This policy applies equally to stable and
 experimental public APIs.
 
+### The support window
+
+Compatibility promises are bounded by a published support window, not by "evergreen browsers":
+Chromium 120+, Gecko 121+, WebKit 16.4+, and Node 20+ (ESM only; there is no CommonJS entry point).
+Those floors are derived from platform features the source actually uses — `:dir()`, `:has()`,
+`@container`, `color-mix()`, `ElementInternals` form association — because the package ships
+untranspiled ES2022 modules with no polyfills and no build-time downleveling. There is deliberately
+no `browserslist` field: it would describe a build step this package does not have. CI proves the
+current stable build of each engine (the full suite on Chromium, a contract subset on Firefox and
+WebKit, on Node 20 and 22); the version floors are derived rather than tested. Raising any floor is
+a semver-major change. Full policy, including the known WebKit cross-shadow-selection gap and the
+rule for when a `@supports` fallback may be dropped:
+<https://github.com/aceshooting/lyra-ui/blob/main/docs/support-policy.md>.
+
 ## Importing and registering components
 
 Every component is a side-effect entry point that registers its own tag. The path always carries
@@ -47,6 +61,34 @@ import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
 module-resolution failure, not a silent no-op — `exports` maps `./components/*` straight onto
 `./dist/components/*`.
 
+**Breaking in 8.0.0 — the package root no longer registers anything.** Through 7.x, importing the
+bare `@aceshooting/lyra-ui` root had the side effect of defining every non-optional-peer tag, so a
+project that only wanted a type or a helper from it silently pulled 268 component definitions into
+its eager bundle. The root is now a pure, side-effect-free export surface, and the registrations
+moved to an explicit entry:
+
+```js
+import '@aceshooting/lyra-ui/all.js'; // exactly the pre-8 root behaviour, opted into by name
+```
+
+*Nothing was removed from the root's named surface.* Every class, helper, and type it exported in
+7.x is still exported, from the same specifier; `all.js` re-exports that identical surface, so
+`import { LyraTable } from '@aceshooting/lyra-ui';` and the `@aceshooting/lyra-ui/all.js` form of it
+both keep working. Only the registration side effect changed.
+
+*Migrating.* If a bare `import '@aceshooting/lyra-ui';` (or a bundler entry that relied on it) was
+how your tags got defined, add the `/all.js` specifier — a one-line change with identical behaviour.
+If instead the root was only ever imported for values or types, delete nothing: those imports now
+cost what they should. The symptom of a missed migration is an unupgraded element — the tag renders
+as an empty inert box with its light DOM visible — not a module error, because the specifier still
+resolves and still hands back everything it used to.
+
+*Granular imports remain the recommendation.* `all.js` is a compatibility and prototyping
+convenience, not the intended production shape: it is side-effectful by definition and cannot be
+tree-shaken down to the handful of elements a page actually renders.
+
+The entry points, then:
+
 - **Class without registration.** Each entry has a `.class.js` sibling exporting the class (and the
   `HTMLElementTagNameMap` augmentation) without touching `customElements`:
   `import { LyraTable } from '@aceshooting/lyra-ui/components/data/table/table.class.js';`. Use it
@@ -56,15 +98,22 @@ module-resolution failure, not a silent no-op — `exports` maps `./components/*
   one warning for that exact conflict with the existing/incoming package versions, constructor
   names, and both constructor references. An existing non-Lyra definition is reported with an
   `unknown` existing version rather than guessed provenance.
-- **Root barrel.** `import '@aceshooting/lyra-ui';` registers everything **except** the 15
-  inventory-designated optional-peer-family tags: `lr-chart` and its 8 typed subclasses (`lr-line-chart`,
-  `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`,
-  `lr-bubble-chart`, `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
-  `lr-knowledge-graph-explorer`, and `lr-geojson-view`. Those always need their own subpath import.
-  The barrel also re-exports a broad compatibility surface of commonly used classes, helpers, and
-  types, but it is not an exhaustive promise that every component-owned type or future export is
-  present. It is the one import that defeats tree-shaking — prefer the owning component entry in
-  application code, both for the smallest bundle and the complete contract of that component.
+- **Root barrel.** `import '@aceshooting/lyra-ui';` registers **nothing** (see the 8.0.0 note
+  above). It re-exports a broad compatibility surface of commonly used classes, helpers, and types,
+  but it is not an exhaustive promise that every component-owned type or future export is present.
+  Prefer the owning component entry in application code, both for the smallest bundle and the
+  complete contract of that component.
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 268
+  root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
+  `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
+  `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
+  `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
+  `lr-knowledge-graph-explorer`, and `lr-geojson-view`. Those always need their own subpath import,
+  from `all.js` exactly as from the root — the entry deliberately preserves the optional-peer
+  isolation contract rather than putting `chart.js`, `maplibre-gl`, or the `d3-*` set on the
+  critical path of every install. It is the one import that defeats tree-shaking.
+  (Server-side, `@aceshooting/lyra-ui/ssr/all.js` is the counterpart that *does* register the
+  complete inventory, optional-peer families included; see "SSR and declarative shadow DOM".)
 - **Document anchor/highlight types.** The granular document-viewer entry owns and exports
   `LyraAnchor`, `LyraAnchorKind`, `LyraHighlight`, `LyraHighlightTone`,
   `AnchorTargetCapabilities`, `HighlightActivateDetail`, `TextSelectDetail`, and
@@ -271,6 +320,23 @@ Methods include `checkValidity()`, `reportValidity()`, and `setCustomValidity()`
   `setCustomValidity()`; assign `null` to clear it and remove `custom-error`. Whenever the native
   non-bubbling `invalid` event fires, the host also emits exactly one bubbling, composed
   `lr-invalid` alias with no detail.
+
+  **`lr-invalid` is cancelable, and cancelling it cancels the native event too.** It is one of the
+  library's few real veto points: `event.preventDefault()` on `lr-invalid` forwards the cancellation
+  to the platform `invalid` event that triggered it, which suppresses that event's default —
+  the browser's own validation bubble, and the focus/scroll `reportValidity()` performs on the first
+  invalid control. That is what lets an app render its own error banner from `lr-invalid` without the
+  native UI appearing alongside it. Nothing else changes: the control is still invalid, still fails
+  `checkValidity()`, and still blocks submission.
+  ```ts
+  form.addEventListener('lr-invalid', (event) => {
+    event.preventDefault();          // no native bubble, no auto-scroll
+    showMyOwnErrorSummary(event.target as HTMLElement);
+  });
+  ```
+  Leave it uncancelled to keep the platform behavior. The listener has to be attached before the
+  validity check runs (`lr-invalid` bubbles and composes, so the form or `document` is a fine place);
+  a `preventDefault()` after the fact does nothing.
 - **Validation anchoring.** An internal controller passes
   `internals.setValidity(flags, message, anchor)` with `anchor` = the first focusable descendant in
   the shadow root (`input:not([type='hidden']), textarea, select, button, [tabindex]:not([tabindex='-1'])`),
@@ -356,6 +422,25 @@ every field that failed. `form.reset()` makes the control pristine again and the
 `setCustomValidity()` participates like any other constraint: raising a custom error flips `invalid`
 immediately, and `user-invalid` too if the control has already been touched.
 
+**A control barred from constraint validation publishes neither `valid` nor `invalid`** — and
+therefore neither `user-valid` nor `user-invalid`. "Barred" is the platform's own term and the
+platform's own list: the control's own `disabled`, an ancestor `<fieldset disabled>`, `readonly`
+where the control has it, or anything else that makes `willValidate` false. A native
+`<input required disabled>` matches neither `:valid` nor `:invalid`, and these states match native.
+This matters because the idiomatic rule is written against the *tag*:
+
+```css
+lr-input:state(user-invalid)::part(input-wrapper) {
+  border-color: var(--lr-color-danger-border-loud);
+}
+```
+
+A disabled required field that still published `invalid` painted every greyed-out control in the
+form red. `required`/`optional` are unaffected — they describe the attribute, not the validation
+outcome, so they keep publishing exactly like native `:required`/`:optional`, and a disabled
+required field still matches `:state(required)`. Style the barred case through
+`:state(disabled)`/`:disabled` and `:state(readonly)`, not through the validity pair.
+
 The states are published the same way whether a control uses the `FormAssociated` mixin or drives
 `ElementInternals` directly, so a rule written against `lr-input` behaves identically on
 `lr-checkbox`. `lr-button` and `lr-icon-button` are the exception noted above: form-associated, but
@@ -363,6 +448,52 @@ with no value and therefore no validity to publish. Where an engine cannot regis
 at all, the styling hook is simply absent — validity, submission blocking and
 `checkValidity()`/`reportValidity()` are unaffected, so never make a `:state()` rule the only signal
 that a field is wrong.
+
+## The required-field marker
+
+A labelled control with `required` set paints a marker after its label text — by default ` *` in
+`--lr-color-danger`. It is **one shared rule**, rendered as an `::after` on the `form-control-label`
+part, so it looks and sits identically on every control that has that part, in every family: the
+labelled form controls, plus `lr-file-input`, `lr-model-select`, `lr-voice-picker`, and
+`lr-tool-param-form`, which marks its *per-field* labels the same way. A control with no
+`form-control-label` part — `lr-checkbox`, `lr-switch`, `lr-radio`, whose default slot *is* the
+visible label — has no label box to hang a marker on and paints none; a control that renders the
+part with no label text set paints none either, so no stray glyph is ever orphaned.
+
+Three custom properties control it. Each is read as an inline `var()` fallback at the point of use,
+never declared on `:host`, so setting one on **any ancestor** of the control reaches it — and one
+declaration on `:root` retunes every marker in the application at once:
+
+| Property | Default | What it does |
+| --- | --- | --- |
+| `--lr-form-control-required-content` | `' *'` | The marker itself, as a CSS `content` string. Must be *quoted*. |
+| `--lr-form-control-required-color` | `var(--lr-color-danger)` | The marker's colour, independent of every other danger surface. |
+| `--lr-form-control-required-offset` | `0` | Inline space between the label text and the marker (a logical `margin-inline-start`, so it flips under RTL). |
+
+```css
+/* mark the requirement in words, in the page's language */
+:root {
+  --lr-form-control-required-content: ' (required)';
+  --lr-form-control-required-color: var(--lr-color-text-quiet);
+  --lr-form-control-required-offset: var(--lr-space-2xs);
+}
+
+/* or suppress the marker entirely and rely on your own label copy */
+lr-input.no-marker { --lr-form-control-required-content: ''; }
+```
+
+Three things follow from `content` being a consumer-supplied string:
+
+- **It is never localized by the library.** `localize()` covers strings the library authors; this
+  one is yours, so a translated marker (` (obligatoire)`, ` (必須)`) is set per locale by the
+  application — one declaration on the root element beside whatever else the locale switch changes.
+- **The default's leading space is part of the glyph**, which is why
+  `--lr-form-control-required-offset` defaults to `0`. A replacement string that omits the space
+  should set an offset rather than baking one in, so the spacing stays a length.
+- **Suppressing the marker is a styling change, not a semantic one.** `required` still reflects,
+  still reaches the accessibility tree through the control's own `aria-required`, still publishes
+  `:state(required)`, and still fails `valueMissing`. If the marker is the only way a form
+  communicates requiredness, replace it with visible copy rather than removing it.
 
 ## The shared styling vocabulary
 
@@ -699,7 +830,23 @@ consult it rather than guessing a token name.
 With `theme.css` imported, switch modes by putting `class="lr-light"`/`class="lr-dark"` (or
 `data-lr-theme="light"`/`"dark"`) on any ancestor; it also sets `color-scheme`. Without it, the token
 layer still ships a `prefers-color-scheme: dark` fallback that re-points the hardcoded defaults at a
-dark palette — that fallback applies only where no real `--lr-theme-*` value is set.
+dark palette. Two things switch that fallback off:
+
+- **A real `--lr-theme-*` value**, which the fallback only substitutes for.
+- **`data-lr-theme="light"` on the component itself**, which pins light mode regardless of the OS.
+  Both layers honour it now: the palette layer always did, and the token layer — the hardcoded
+  surface/text/border defaults — does too, so `<lr-card data-lr-theme="light">` on a dark machine is
+  light throughout rather than light chrome over a dark colour grid. The mirror-image
+  `data-lr-theme="dark"` pins dark on a light machine the same way, and a `.lr-dark` /
+  `data-lr-theme="dark"` *ancestor* is followed as well (through `:host-context()` where the engine
+  has it, and through `theme.css`'s inheriting custom properties everywhere else).
+
+Note the asymmetry: the *light* pin is read on the component itself (`:host([data-lr-theme='light'])`),
+while a *dark* ancestor is followed through `:host-context()`. Putting `data-lr-theme="light"` on
+`<html>` — what `theme.js`'s `setLyraTheme({ mode: 'light' })` does — pins the page through
+`theme.css`'s real `--lr-theme-*` values, which inherit into every shadow root. Without `theme.css`
+there are no such values to inherit, so put the attribute on the components you actually need
+pinned.
 
 The token layer also sets `:host([hidden]) { display: none !important; }` and an inherited
 `box-sizing: border-box` reset.
@@ -931,16 +1078,56 @@ setLyraLocale('fr'); // …or just set <html lang="fr"> and let components inher
 ```
 
 The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
-`registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getRegisteredLyraLocales`,
-`subscribeLyraLocaleRegistry`, `resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`,
-`LYRA_DEFAULT_STRINGS`, and the types `LyraLocaleStrings`, `LyraMessageKey`, `LyraMessage`,
+`registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getLyraLocaleDirection`,
+`getRegisteredLyraLocales`, `subscribeLyraLocaleRegistry`, `resolveLyraLocale`,
+`resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
+`LyraLocaleStrings`, `LyraLocaleMeta`, `LyraLocaleDirection`, `LyraMessageKey`, `LyraMessage`,
 `LyraPluralMessage` and `LyraPluralCategory`. The package root continues to re-export the same
 surface for compatibility, but it also registers the non-peer-gated component graph; use the
 dedicated entry when the application only needs locale setup.
 **`LYRA_DEFAULT_STRINGS` is the authoritative key list** (matching the `LyraMessageKey` union) —
-read it to find the key to override rather than guessing one. Lookup
-falls back exact locale → base language → English. Date, number, byte, relative-time and calendar
-output goes through `Intl`.
+read it to find the key to override rather than guessing one. Date, number, byte, relative-time and
+calendar output goes through `Intl`.
+
+**Lookup order for a tag.** Every message resolves through one chain, and `Intl.PluralRules`
+category selection walks the same chain, so the two can never disagree:
+
+1. **The full BCP-47 truncation walk, most specific first** — `zh-Hans-CN` → `zh-Hans` → `zh`.
+   Casing and `_` separators are normalized, so `pt_BR` and `pt-br` are the same key.
+2. **Then any registered catalog sharing the base language**, which is how a *regional-only*
+   catalog is reached from a less specific tag: `lang="zh"` and `lang="zh-Hans"` both find the
+   shipped `zh-CN` catalog, and `lang="pt"`/`lang="pt-PT"` both find `pt-BR`. Order within this
+   step is deterministic and independent of import order — most shared subtags first
+   (`zh-Hant-TW` prefers a registered `zh-TW` over `zh-CN`), then alphabetically as the tie-break
+   (bare `zh` with both registered picks `zh-CN`). Register the regional tag you actually mean if
+   the tie-break isn't the answer you want.
+3. **Then `en`**, always available through the built-in English defaults.
+
+Step 1 always beats step 2: with both `zh` and `zh-CN` registered, `zh-Hans-CN` resolves to `zh`.
+
+```ts
+import { getLyraLocaleDirection } from '@aceshooting/lyra-ui/localization.js';
+
+getLyraLocaleDirection('ar-EG'); // 'rtl' — declared by the shipped `ar` catalog, inherited by the region
+getLyraLocaleDirection('de');    // 'ltr'
+```
+
+`getLyraLocaleDirection(tag): 'ltr' | 'rtl'` answers "does this locale need `dir="rtl"`?" without
+an application keeping its own tag table. It reads a `dir` declared by `registerLyraLocale()`'s
+optional third argument first (walked through the same chain above, so a region inherits its base
+language's declaration), then `Intl.Locale`'s text-info surface where the engine has it, and
+finally `'ltr'`. It only *reports* a direction — nothing in the library applies one; see
+[RTL and direction](#rtl-and-direction).
+
+```ts
+registerLyraLocale('ar', { close: 'إغلاق' }, { dir: 'rtl', name: 'العربية' });
+```
+
+`registerLyraLocale(tag, strings, meta?)`'s third argument is optional catalog metadata —
+`{ dir?: 'ltr' | 'rtl'; name?: string }` (`LyraLocaleMeta`). Nothing in it is ever rendered: `dir`
+feeds `getLyraLocaleDirection()`, `name` is the locale's endonym for an application's own locale
+list. It merges the same way `strings` does, so a later two-argument call adding messages never
+drops metadata, and the two-argument call remains the normal way to register a catalog.
 
 `getRegisteredLyraLocales(): string[]` lists every locale with strings registered via
 `registerLyraLocale()`, plus `'en'` (always available through the built-in English fallback),
@@ -961,14 +1148,22 @@ modules**: import one bare, read nothing from it, and it calls `registerLyraLoca
 
 ```ts
 import '@aceshooting/lyra-ui/translations/de.js';
-import '@aceshooting/lyra-ui/translations/ar.js'; // RTL catalog; direction still comes from dir
+import '@aceshooting/lyra-ui/translations/ar.js'; // declares dir: 'rtl'; direction still comes from dir
 import '@aceshooting/lyra-ui/translations/fa.js'; // fa-IR falls back to this base catalog
 import '@aceshooting/lyra-ui/translations/he.js'; // he-IL falls back to this base catalog
+import '@aceshooting/lyra-ui/translations/pt-BR.js'; // also serves pt and pt-PT
+import '@aceshooting/lyra-ui/translations/zh-CN.js'; // also serves zh, zh-Hans and zh-Hans-CN
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
-`one`/`two`/`other`). Locale selection does not force writing direction: set `dir="rtl"` on the
-page or an ancestor alongside `lang="fa-IR"`/`lang="he-IL"`, just as for Arabic.
+`one`/`two`/`other`). `ar`, `fa` and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
+answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not *force*
+writing direction: set `dir="rtl"` on the page or an ancestor yourself.
+
+`pt-BR` and `zh-CN` are the only Portuguese and Chinese catalogs, and they are regional tags. Step 2
+of the lookup order above is what makes them reachable from `lang="pt"`, `lang="pt-PT"`,
+`lang="zh"`, `lang="zh-Hans"` and `lang="zh-Hans-CN"` — no separate `pt`/`zh` alias registration is
+needed. They are still listed under their real tags in `getRegisteredLyraLocales()`.
 
 Import only the locales the application can actually offer — each is a separate module, so unimported
 ones cost nothing. A catalog registered this way is merged like any other, so a later
@@ -1023,7 +1218,10 @@ key becomes an unused entry and the singular renders for every count. Fold the p
 ## RTL and direction
 
 Direction is inherited from the platform `dir` cascade; locale/`lang` selection does not change it,
-and no component forces its own. Pair an RTL locale with `dir="rtl"`. Layout mirrors through CSS
+and no component forces its own. Pair an RTL locale with `dir="rtl"` — ask
+`getLyraLocaleDirection(tag)` rather than hard-coding a list of RTL tags, and note that
+`<lr-locale-picker>`'s `lr-change` detail already carries the picked locale's `direction`, so
+applying it is `document.documentElement.dir = event.detail.direction`. Layout mirrors through CSS
 logical properties. Where physical math is unavoidable — drag ratios, arrow-key direction, anchored
 placement — components share one internal direction helper: `isRtl(el)` (used by `lr-split`,
 `lr-time-range`, `lr-dock-panel`), plus `rtlAwareSide(side, el)` and `rtlAwarePlacement(placement,
@@ -1129,7 +1327,11 @@ installing or shipping a wrapper; import the normal granular registration entry 
 
 ## SSR and declarative shadow DOM
 
-Root and granular component imports are server-safe under Node 20+. Use the public
+Root, `all.js`, and granular component imports are server-safe under Node 20+.
+`@aceshooting/lyra-ui/ssr/all.js` is the **server-only** convenience entry: unlike the browser
+`all.js`, it registers the complete inventory including the optional-peer families — defining those
+tags never imports their peers (each component loads its own lazily, client-side), and the
+browser-bundle argument for excluding them does not apply to a server render. Use the public
 `@aceshooting/lyra-ui/ssr-loader.js` entry for the tested Lit SSR contract. Its exported
 `LYRA_SSR_SUPPORT_MATRIX`, `LYRA_SSR_RENDER_AND_HYDRATE_TAGS`, and
 `LYRA_SSR_CLIENT_RENDER_TAGS` classify every inventory tag exactly once:
@@ -1161,7 +1363,11 @@ updates, and reports `hydrated`, `client-rendered`, `unregistered`, `missing-sha
 
 The loader preserves optional-peer isolation: import a root-excluded component's granular
 registration after the loader. A fallback cannot serialize JS property bindings, so put initial
-server state in attributes/light DOM or assign it client-side. Layout/observer/canvas/media work
+server state in attributes/light DOM or assign it client-side. A `render-and-hydrate` component
+whose rendering depends on something only a browser can answer — its own light-DOM children, or a
+browser global such as `EyeDropper` — reproduces the server's answer on the hydrating render and
+corrects itself on the next update, so a slotted override lands one frame after hydration; a
+browser-only mount is unaffected and renders the final result the first time. Layout/observer/canvas/media work
 begins after hydration, and remote content is client-only. CI imports every granular module, renders
 every inventory tag through its declared tier, and crawls a real Chromium DSD page (including
 `lr-page`) while failing hydration warnings/errors or DOM-identity replacement.
@@ -1188,6 +1394,23 @@ toggle/selection/expansion ARIA attributes and deliberate host-name forwarding. 
 controls preserve `ElementInternals`, reset, validity, focus, and native editing behavior. Reusable
 layouts respond to their allocated container rather than the viewport, and decorative or infinite
 motion simplifies under `prefers-reduced-motion: reduce`.
+
+Keyboard model: a composite widget (menu, tab group, tree, table, calendar, carousel, segmented
+control) is a single tab stop using a roving `tabindex`; arrow keys move within it and skip disabled, hidden,
+`aria-hidden` and `inert` items; `Home`/`End` jump to the ends; `Enter` and `Space` both activate;
+`Escape` dismisses the topmost dismissible overlay and returns focus to whatever opened it.
+`ArrowLeft`/`ArrowRight` mean previous/next and swap under `dir="rtl"`.
+
+**What that contract is verified by, precisely.** Every one of the 283 components carries at least
+one axe-core assertion in its own directory's tests, in a test that mounts its own tag; contrast
+(4.5:1 text, 3:1 control borders, in both the light and dark palettes), a 40px minimum target size,
+pressed-state coverage for every hoverable part, and `::part()` reachability are separate blocking
+gates. All of that is automated. **No screen reader has been run against this library, in any
+pairing, and no human accessibility audit exists** — so treat "accessible" here as "passes an
+automated rule engine and a written role/name/state contract", never as verified assistive-technology
+behavior, and expect no conformance claim or VPAT. The full statement of what is and is not covered,
+plus how to report an accessibility bug, is at
+<https://github.com/aceshooting/lyra-ui/blob/main/docs/accessibility.md>.
 
 ## Editor and tooling integration
 
@@ -1225,7 +1448,8 @@ They existed for three families before 8.0.0, were in the exports map, and were 
 so they were effectively unreachable. All eleven now exist and are listed here.
 
 A family barrel is **side-effectful by design**: importing it registers every tag in that family, the
-same way the root barrel registers all of them. Reach for one when you genuinely use most of a family
+same way `all.js` registers all of them (the package root itself registers nothing as of 8.0.0 — see
+"Importing and registering components"). Reach for one when you genuinely use most of a family
 and want a single import; reach for the granular
 `@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` path — which is what every example in
 these docs uses — when you do not, because a barrel cannot be tree-shaken down to the two elements
@@ -1370,8 +1594,14 @@ entry point — open an issue and it can be promoted deliberately.
   The handle is document-scoped and nestable. While any
   such handle is active, Lyra yields Escape/Tab ownership and keeps only the external modal paths
   non-inert; disconnecting or adopting the external root releases its handle automatically.
-- **`announcer` → `Announcer`** — throttled live-region announcements, paired with
-  `lr-live-region`.
+- **`announcer` → `Announcer` and `acquireAnnouncementSink()`** — throttled live-region
+  announcements, paired with `lr-live-region`. `Announcer` is the DOM-free coalescing engine;
+  `acquireAnnouncementSink(politeness, options?)` hands back the ref-counted, visually hidden region
+  in the **host document's light DOM** that every Lyra announcement lands in (a live region inside a
+  shadow root is not reliably announced). The module also exports `ANNOUNCEMENT_SINK_ATTRIBUTE` —
+  the `data-lr-live-region` marker those regions carry — so a consumer's DOM diffing, snapshot
+  testing, or `MutationObserver` can recognize and ignore them. Both are documented in full in
+  `llms/components/lr-live-region.md`.
 
 **Known gotchas:**
 - `formResetCallback()` restores the *content attribute* default, so `el.value = 'x'` never redefines

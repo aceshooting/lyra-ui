@@ -169,6 +169,28 @@ interface ChartStyleOptions {
   gridBorderWidth: number;
   lineBorderWidth: number;
   pointRadius: number;
+  forcedColors: boolean;
+}
+
+const FORCED_COLOR_ENCODINGS = [
+  { name: 'solid', dash: [] as number[], pointStyle: 'circle' },
+  { name: 'horizontal', dash: [2, 2], pointStyle: 'rect' },
+  { name: 'vertical', dash: [8, 3], pointStyle: 'triangle' },
+  { name: 'diagonal', dash: [8, 3, 2, 3], pointStyle: 'rectRot' },
+  { name: 'reverse-diagonal', dash: [1, 3], pointStyle: 'cross' },
+  { name: 'crosshatch', dash: [10, 2], pointStyle: 'crossRot' },
+  { name: 'dots', dash: [6, 2, 1, 2], pointStyle: 'star' },
+  { name: 'checker', dash: [12, 3, 3, 3], pointStyle: 'line' },
+] as const;
+
+type ForcedColorEncodingName = (typeof FORCED_COLOR_ENCODINGS)[number]['name'];
+
+function forcedColorsActive(): boolean {
+  try {
+    return typeof matchMedia === 'function' && matchMedia('(forced-colors: active)').matches;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -296,6 +318,11 @@ function labelText(value: unknown): string {
  *   `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the
  *   `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).
+ * @cssprop [--lr-chart-pattern-step=var(--lr-space-2xs)] - Tile size of the texture painted on
+ *   `[part='legend-swatch']` while `forced-colors: active` matches, where every series collapses to
+ *   one system color and the stripe/crosshatch pattern becomes the only channel keeping series
+ *   apart. Declared on the swatch part rather than the host; the stripe width within a tile stays
+ *   `--lr-border-width-thin`, so a larger step spaces the stripes further apart.
  * @cssprop [--border-color-1=var(--lr-color-chart-1)] - First dataset border color.
  * @cssprop [--border-color-2=var(--lr-color-chart-2)] - Second dataset border color.
  * @cssprop [--border-color-3=var(--lr-color-chart-3)] - Third dataset border color.
@@ -997,6 +1024,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             ? translucentAreaColor(this, backgroundColor)
             : backgroundColor
         : backgroundColor;
+    const encoding = FORCED_COLOR_ENCODINGS[index % FORCED_COLOR_ENCODINGS.length]!;
+    const encodedBackgroundColor = chartStyle.forcedColors
+      ? Array.isArray(resolvedBackgroundColor)
+        ? resolvedBackgroundColor.map((color, itemIndex) =>
+            this.forcedColorPattern(sliceChart ? itemIndex : index, color),
+          )
+        : resolvedBackgroundColor
+          ? this.forcedColorPattern(index, resolvedBackgroundColor)
+          : resolvedBackgroundColor
+      : resolvedBackgroundColor;
     return {
       label: s.label,
       data: s.points ?? s.data ?? [],
@@ -1018,8 +1055,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       borderRadius: chartStyle.borderRadius,
       borderWidth:
         s.width ?? (datasetType === 'line' ? chartStyle.lineBorderWidth : chartStyle.borderWidth),
-      borderDash: s.dash ? [4, 4] : undefined,
-      backgroundColor: resolvedBackgroundColor,
+      borderDash: s.dash ? [4, 4] : chartStyle.forcedColors ? [...encoding.dash] : undefined,
+      pointStyle: chartStyle.forcedColors ? encoding.pointStyle : undefined,
+      backgroundColor: encodedBackgroundColor,
       borderColor: colors?.[0] ?? sliceBorderColors ?? borderFallback,
       pointBackgroundColor: s.pointColors?.map((color) =>
         resolveCanvasColor(this, color, colors?.[0] ?? borderFallback ?? 'transparent'),
@@ -1093,6 +1131,70 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }
   }
 
+  /**
+   * Builds a small deterministic CanvasPattern for the category index. Forced-colors exposes only
+   * a few system colors, so the chart ramp necessarily repeats; texture, line dash, and point shape
+   * keep those repeated colors distinguishable without substituting arbitrary author colors.
+   */
+  private forcedColorPattern(index: number, background: string): CanvasPattern | string {
+    if (typeof document === 'undefined') return background;
+    const tile = document.createElement('canvas');
+    // Fixed bitmap geometry is part of the encoding algorithm, not a component design dimension.
+    const size = 8;
+    const half = size / 2;
+    tile.width = size;
+    tile.height = size;
+    const context = tile.getContext('2d');
+    if (!context) return background;
+
+    context.fillStyle = background;
+    context.fillRect(0, 0, size, size);
+    context.fillStyle = this.styleColor('--lr-color-surface', FALLBACK_TOOLTIP_BG);
+    context.strokeStyle = context.fillStyle;
+    context.lineWidth = 1;
+
+    switch (index % FORCED_COLOR_ENCODINGS.length) {
+      case 1:
+        context.fillRect(0, half, size, 1);
+        break;
+      case 2:
+        context.fillRect(half, 0, 1, size);
+        break;
+      case 3:
+        context.beginPath();
+        context.moveTo(-half, size);
+        context.lineTo(half, 0);
+        context.moveTo(half, size);
+        context.lineTo(size + half, 0);
+        context.stroke();
+        break;
+      case 4:
+        context.beginPath();
+        context.moveTo(-half, 0);
+        context.lineTo(half, size);
+        context.moveTo(half, 0);
+        context.lineTo(size + half, size);
+        context.stroke();
+        break;
+      case 5:
+        context.fillRect(0, half, size, 1);
+        context.fillRect(half, 0, 1, size);
+        break;
+      case 6:
+        context.beginPath();
+        context.arc(half, half, 1.5, 0, Math.PI * 2);
+        context.fill();
+        break;
+      case 7:
+        context.fillRect(0, 0, half, half);
+        context.fillRect(half, half, half, half);
+        break;
+      default:
+        break;
+    }
+    return context.createPattern(tile, 'repeat') ?? background;
+  }
+
   private chartStyleOptions(palette: string[]): ChartStyleOptions {
     const computed = getComputedStyle(this);
     const authoredFillColors = palette.map(
@@ -1113,6 +1215,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       gridBorderWidth: this.styleNumber('--grid-border-width', '--lr-border-width-thin', 1),
       lineBorderWidth: this.styleNumber('--line-border-width', '--lr-border-width-medium', 2),
       pointRadius: this.styleNumber('--point-radius', '--lr-space-2xs', 4),
+      forcedColors: forcedColorsActive(),
     };
   }
 
@@ -2104,6 +2207,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       >
         ${effective.datasets.map((dataset, index) => {
           const visible = this.legendDatasetVisible(dataset, index);
+          const encoding: ForcedColorEncodingName | undefined = forcedColorsActive()
+            ? FORCED_COLOR_ENCODINGS[index % FORCED_COLOR_ENCODINGS.length]!.name
+            : undefined;
           return html`
             <button
               part="legend-item"
@@ -2113,6 +2219,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             >
               <span
                 part="legend-swatch"
+                aria-hidden="true"
+                data-encoding=${encoding ?? nothing}
                 style="background-color:${this.legendColor(dataset, index)}"
               ></span>
               <span>${this.legendTextFor(dataset, index)}</span>

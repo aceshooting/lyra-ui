@@ -3,7 +3,11 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { Announcer } from '../../../internal/announcer.js';
+import {
+  Announcer,
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
 import { createAnsiParser, type AnsiSegment, type AnsiStyles } from '../../../internal/ansi.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -143,7 +147,10 @@ export interface LyraTerminalEventMap {
  *   shadow root rather than this component's -- this component's own stylesheet reaches it via
  *   `lr-virtual-list::part(line)`, one hop of the standard CSS Shadow Parts selector.
  * @csspart jump-to-latest - The pill shown while `follow` is disengaged and new output has arrived.
- * @csspart announcer - The visually-hidden `role="status"` region used when `announce-output` is set.
+ * @csspart announcer - The visually-hidden, `aria-hidden` mirror of the text last announced while
+ *   `announce-output` is set. The announcement itself lands in the shared light-DOM region
+ *   (`acquireAnnouncementSink()` in `internal/announcer.ts`), because a live region inside a shadow
+ *   root is not reliably announced; this part is a styling/inspection surface only.
  * @cssprop [--lr-terminal-height=var(--lr-size-20rem)] - Block size of `[part="viewport"]`, the
  *   scrollable log region. Not declared on `:host`, so it is inherited — set it on the host or any
  *   ancestor.
@@ -204,10 +211,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
    *  reflects exactly "what's new since the last thing actually spoken". */
   private pendingAnnounceText = '';
   private announceRegionEl?: HTMLElement;
+  /** Handle on the shared light-DOM live region every flush actually announces through -- a region
+   *  rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores one
+   *  outright), so `[part="announcer"]` below is only an `aria-hidden` mirror. */
+  private sink?: AnnouncementSink;
   private readonly announcer = new Announcer({
     throttleMs: ANNOUNCE_THROTTLE_MS,
     onFlush: (text) => {
       this.pendingAnnounceText = '';
+      this.sink?.announce(text);
       if (this.announceRegionEl) this.announceRegionEl.textContent = text;
     },
   });
@@ -216,11 +228,21 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   private searchMatches: SearchMatch[] = [];
   private searchActiveIndex = -1;
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // Acquired on connect, not on the first announcement: assistive tech has to have been
+    // observing a live region *before* text arrives for the change to be announced at all, and
+    // streamed output can start in the same task the element is appended in.
+    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
     this.justCopied = false;
     this.cancelPendingAnnouncement();
+    this.sink?.release();
+    this.sink = undefined;
   }
 
   override firstUpdated(): void {
@@ -697,7 +719,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     const highlightOwnerLines = this.resolvedHighlightOwnerLines();
     return html`
       <div part="base">
-        <div part="announcer" class="sr-only" role="status" aria-live="polite"></div>
+        <div part="announcer" class="sr-only" aria-hidden="true"></div>
         ${hasToolbar
           ? html`
               <div part="toolbar">

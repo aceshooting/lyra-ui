@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -67,6 +68,15 @@ export const styles = css`
   }
   [part='form-control'] { display: grid; min-inline-size: 0; max-inline-size: 100%; gap: var(--lr-token-input-gap); }
   [part='form-control-label'] { color: var(--lr-color-text); font-weight: var(--lr-font-weight-semibold); }
+  /* The required marker comes from the one shared sheet (internal/form-control.styles.ts) like
+     every other labelled control's, so its glyph, colour and spacing are consumer-settable. The
+     rule below suppresses this component's older hand-rolled glyph -- a literal <span> the label
+     template still renders -- so the two never double up; it is dead the moment that span is
+     dropped from token-input.class.ts's render(). */
+  :host([required]) [part='form-control-label'] > span[aria-hidden='true'] {
+    display: none;
+  }
+  ${formControlRequiredMarker}
   /* min-block-size is a FLOOR, and this box is border-box, so the floor only decides the rendered
      height while the row's own content stays under it. Its content is the draft input, whose text
      box is line-height: normal -- a metric of whatever the ambient font family resolves to, which

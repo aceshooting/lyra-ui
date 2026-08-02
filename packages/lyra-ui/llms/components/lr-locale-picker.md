@@ -8,7 +8,7 @@
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,12 +50,31 @@ list, no filter/free-text mode.
 - `open: boolean = false` (reflected).
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`).
 
-**Events:** `lr-change` (`detail: { value, previousValue }`, **cancelable**) — fired on every
-explicit pick; if not `defaultPrevented`, the component applies the pick itself via
+**Events:** `lr-change` (`detail: { value, previousValue, direction }`, **cancelable**) — fired on
+every explicit pick; if not `defaultPrevented`, the component applies the pick itself via
 `setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
 active locale untouched, so a host can persist the choice first and apply it later. `blur`/`focus`
 re-dispatched from the internal trigger as bubbling, composed events. `lr-invalid` is the single
-bubbling/composed alias of a failed native validity check.
+bubbling/composed, cancelable alias of a failed native validity check.
+
+`direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing
+direction, resolved through `getLyraLocaleDirection(value)` — a catalog's declared
+`registerLyraLocale(tag, strings, { dir })` first, then `Intl.Locale`'s text-info surface where the
+engine has it, then `'ltr'`. It is present on every `lr-change`, cancelled or not, and it is carried
+precisely so applying the direction is a one-liner instead of an application-maintained table of RTL
+tags:
+
+```js
+picker.addEventListener('lr-change', (e) => {
+  document.documentElement.lang = e.detail.value;
+  document.documentElement.dir = e.detail.direction;
+});
+```
+
+The component still never writes `lang`/`dir` itself — a picker does not own the page — but it no
+longer leaves the host to work the direction out. `getLyraLocaleDirection()` is exported from
+`@aceshooting/lyra-ui/localization.js` for the same lookup outside an event handler (a persisted
+choice applied on boot).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` — all forward to the internal trigger
 button, same convention as `lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
@@ -69,6 +88,13 @@ required picker with nothing committed goes back to `valueMissing`. It survives 
 **CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `option`,
 `option-flag` (present only while `showFlags` is on), `option-label`, `option-tag` (the row's
 secondary line — the raw BCP-47 tag), `expand-icon`, `hint`, `error`.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. The part is rendered only when there is label text, so an
+unlabelled picker paints no stray glyph.
 
 **Themeable custom properties:** `--lr-locale-picker-trigger-padding`,
 `--lr-locale-picker-trigger-min-height`, `--lr-locale-picker-trigger-height` (unset by default, a
@@ -95,7 +121,9 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
 **Known gotchas:**
 - selecting a row applies `setLyraLocale()` itself unless the listener calls
   `event.preventDefault()` on `lr-change` — it does not touch
-  `document.documentElement.lang`/`dir`; apply writing-direction changes to the page yourself.
+  `document.documentElement.lang`/`dir`. Applying those is still the host's job, but the direction
+  is no longer the host's to *derive*: read `event.detail.direction` (or call
+  `getLyraLocaleDirection(tag)`), rather than keeping a hand-maintained list of RTL tags.
 - no filter/free-text mode — for a catalog with hundreds+ of rows, roll your own with `lr-select`
   or `lr-combobox` instead.
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no

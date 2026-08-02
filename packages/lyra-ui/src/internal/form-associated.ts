@@ -1,4 +1,4 @@
-import type { LitElement } from 'lit';
+import type { ComplexAttributeConverter, LitElement, PropertyValues } from 'lit';
 import { resolveLyraString } from './localization.js';
 import {
   AnchoredValidityController,
@@ -53,6 +53,195 @@ export function readStringArrayFormDataState(
   return entries as string[];
 }
 
+/**
+ * What `ElementInternals.setFormValue()` accepts for both the submission entry and the
+ * session-history/autofill state.
+ */
+export type FormSubmissionValue = File | string | FormData | null;
+
+/**
+ * The seam that lets {@linkcode FormAssociated} carry a value of any type.
+ *
+ * The mixin owns the *behaviour* (synchronous accessors, dirty/default tracking, the interaction
+ * signal, barred-validation short-circuiting, anchored validity layering, reset and state
+ * restoration); an adapter supplies only the type-dependent facts the behaviour needs — what
+ * "empty" is, how the value reaches `setFormValue()`, whether a given value counts as missing, and
+ * how it round-trips through the reflected `value` content attribute. Every member except
+ * {@linkcode empty} and {@linkcode toFormValue} has a documented default, so the smallest useful
+ * adapter is two lines.
+ *
+ * Without this seam a control whose value is not a string had no choice but to hand-roll the entire
+ * `ElementInternals` dance, which is why dirty/default tracking was copy-pasted four different ways
+ * and `formResetCallback` was simply missing from one control: the duplication, not any one file,
+ * was the defect.
+ */
+export interface FormValueAdapter<TValue> {
+  /**
+   * The value of a control that has never been assigned one, the value a form reset falls back to
+   * when no `value` attribute is present, and the substitute for a `null`/`undefined` assignment.
+   *
+   * Handed to every instance by reference, so it must be treated as immutable — freeze an array or
+   * object empty value rather than letting one instance's mutation reach every other.
+   */
+  readonly empty: TValue;
+
+  /**
+   * Serializes the live value into the entry the owning `<form>` submits. Returning `null` omits
+   * the control from `FormData` entirely, exactly as an unchecked native checkbox does.
+   */
+  toFormValue(value: TValue): FormSubmissionValue;
+
+  /**
+   * Serializes the session-history/autofill state, when it must differ from the submission entry —
+   * an unchecked checkbox submits nothing but still has to *restore* as unchecked, and a
+   * multi-valued control submits one entry per value but restores from a single `FormData`
+   * ({@linkcode createStringArrayFormDataState} builds that shape).
+   *
+   * Omitted entirely means "the state is the submission value", which is `setFormValue()`'s own
+   * one-argument behaviour — not the same as returning `null`, which would erase the state.
+   */
+  toFormState?(value: TValue): FormSubmissionValue;
+
+  /**
+   * Whether this value counts as missing for `valueMissing`. Defaults to
+   * {@linkcode isEmptyFormValue}, which is `=== ''` for a string and never assumes it for anything
+   * else. Override it whenever the default is wrong for the type — a `0`-valued rating is empty,
+   * an epoch `Date` is not.
+   */
+  isEmpty?(value: TValue): boolean;
+
+  /**
+   * Parses the reflected `value` content attribute (never `null` — an absent attribute is handled
+   * by the mixin and does not reach here). Defaults to the identity, which is only correct when
+   * `TValue` is `string`; any other type must supply one or its declarative markup is ignored.
+   */
+  fromAttribute?(attribute: string): TValue;
+
+  /**
+   * Serializes the reset default back to the `value` content attribute. Returning `null` removes
+   * the attribute. Defaults to `String(value)`, which is only meaningful when `TValue` is `string`.
+   */
+  toAttribute?(value: TValue): string | null;
+
+  /**
+   * Reads back what {@linkcode toFormState} (or {@linkcode toFormValue}) persisted, for
+   * `formStateRestoreCallback`. Defaults to "a string state restores verbatim, anything else falls
+   * back to {@linkcode empty}" — the string mixin's long-standing behaviour, which fails closed
+   * rather than restoring a wrongly-shaped state.
+   */
+  fromFormState?(state: FormSubmissionValue): TValue;
+}
+
+/** An adapter with every optional member resolved, so the mixin never branches on `undefined`. */
+type ResolvedFormValueAdapter<TValue> = Required<Omit<FormValueAdapter<TValue>, 'toFormState'>> &
+  Pick<FormValueAdapter<TValue>, 'toFormState'>;
+
+/**
+ * The default `valueMissing` emptiness test: `null`/`undefined`, the empty string, an empty array,
+ * and an empty plain object are missing; everything else — including `0`, `false`, a `Date`, a
+ * `File`, and any class instance — is a real value.
+ *
+ * Deliberately conservative about objects: only a *plain* object is inspected by key count, because
+ * `Object.keys()` reports `0` for a populated `FormData`, `Map` or `Set` and would silently call a
+ * filled-in control empty.
+ */
+export function isEmptyFormValue(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === 'string') return value === '';
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === 'object') {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype === Object.prototype || prototype === null) return Object.keys(value).length === 0;
+  }
+  return false;
+}
+
+/**
+ * The string adapter — the mixin's default, and a byte-for-byte statement of the behaviour every
+ * existing consumer already has. Exported so a control that wraps or extends the string contract
+ * can spread it rather than restating it.
+ */
+export const stringFormValueAdapter: ResolvedFormValueAdapter<string> = {
+  empty: '',
+  toFormValue: (value) => value,
+  isEmpty: (value) => value === '',
+  fromAttribute: (attribute) => attribute,
+  toAttribute: (value) => value,
+  fromFormState: (state) => (typeof state === 'string' ? state : ''),
+};
+
+/** Fills an adapter's optional members with their documented defaults. */
+function resolveFormValueAdapter<TValue>(
+  adapter: FormValueAdapter<TValue> | undefined,
+): ResolvedFormValueAdapter<TValue> {
+  if (adapter === undefined) {
+    return stringFormValueAdapter as unknown as ResolvedFormValueAdapter<TValue>;
+  }
+  return {
+    empty: adapter.empty,
+    toFormValue: (value) => adapter.toFormValue(value),
+    ...(adapter.toFormState ? { toFormState: (value: TValue) => adapter.toFormState!(value) } : {}),
+    isEmpty: adapter.isEmpty ? (value) => adapter.isEmpty!(value) : isEmptyFormValue,
+    fromAttribute: adapter.fromAttribute
+      ? (attribute) => adapter.fromAttribute!(attribute)
+      : (attribute) => attribute as unknown as TValue,
+    toAttribute: adapter.toAttribute
+      ? (value) => adapter.toAttribute!(value)
+      : (value) => (value == null ? null : String(value)),
+    fromFormState: adapter.fromFormState
+      ? (state) => adapter.fromFormState!(state)
+      : (state) => (typeof state === 'string' ? (state as unknown as TValue) : adapter.empty),
+  };
+}
+
+/**
+ * The shape {@linkcode isBarredFromValidation} reads. Every member is optional because the same
+ * predicate answers for the mixin and for the eighteen controls that drive `ElementInternals`
+ * directly, and those differ in which barring conditions they can even express (`<lr-checkbox>`
+ * has no `readonly`, `<lr-rating>` has no fieldset-independent `effectiveDisabled`, and a control
+ * constructed under a DOM shim has no real `ElementInternals` at all).
+ */
+export interface ValidationCandidate {
+  /** Own `disabled` OR any inherited disablement (fieldset, owning group). Preferred over `disabled`. */
+  readonly effectiveDisabled?: boolean;
+  readonly disabled?: boolean;
+  readonly readonly?: boolean;
+}
+
+/**
+ * Whether constraint validation must not run for this control — the single predicate behind every
+ * "barred from constraint validation" condition, so no control can implement three of the four and
+ * silently miss the fourth (`<lr-rating required readonly>` reported `valueMissing` while
+ * `<lr-otp-input required readonly>` did not, because the `readonly` bar was copy-pasted into four
+ * files and never reached the fifth).
+ *
+ * A barred control is neither `:valid` nor `:invalid` natively — verified against a real
+ * `<input required disabled>` and `<input required readonly>`, both of which match neither — so
+ * publishing `:state(invalid)`/`:state(user-invalid)` from a disabled required field is what makes
+ * the documented `lr-input:state(user-invalid) { border-color: red }` rule paint every disabled
+ * field red.
+ *
+ * `internals.willValidate` is consulted last and only for a real `ElementInternals`: it folds in the
+ * platform conditions this library does not model itself (fieldset cascading, a `<datalist>`
+ * ancestor), but the `createFallbackInternals()` substitute reports `false` unconditionally, and
+ * treating that as "barred" would silently disable validation everywhere `attachInternals()` is
+ * missing.
+ */
+export function isBarredFromValidation(
+  host: ValidationCandidate,
+  internals?: ElementInternals,
+): boolean {
+  if (host.effectiveDisabled ?? host.disabled) return true;
+  if (host.readonly) return true;
+  if (internals && isNativeInternals(internals)) return !internals.willValidate;
+  return false;
+}
+
+/** Distinguishes a browser `ElementInternals` from {@linkcode createFallbackInternals}'s stand-in. */
+function isNativeInternals(internals: ElementInternals): boolean {
+  return typeof ElementInternals === 'function' && internals instanceof ElementInternals;
+}
+
 interface DirectCustomErrorHost extends LitElement {
   setCustomValidity(message: string): void;
 }
@@ -60,7 +249,7 @@ interface DirectCustomErrorHost extends LitElement {
 /**
  * Installs the reflected `customError` IDL on a direct-FACE control. The shared string-valued mixin
  * owns the same accessor itself; controls with array/object/number/checked values use this helper
- * so the public validity contract cannot drift across fourteen hand-written implementations.
+ * so the public validity contract cannot drift across seventeen hand-written implementations.
  */
 export function installCustomErrorProperty(
   host: DirectCustomErrorHost,
@@ -92,13 +281,18 @@ export function installCustomErrorProperty(
   });
 }
 
-/** Public surface a `FormAssociated`-mixed element exposes to consumers and subclasses. */
-export interface FormAssociatedInterface {
+/**
+ * Public surface a `FormAssociated`-mixed element exposes to consumers and subclasses.
+ *
+ * `TValue` defaults to `string`, so every existing reference to the bare
+ * `FormAssociatedInterface` keeps its exact former meaning.
+ */
+export interface FormAssociatedInterface<TValue = string> {
   internals: ElementInternals;
   get name(): string;
   set name(next: string | null);
-  value: string;
-  defaultValue: string;
+  value: TValue;
+  defaultValue: TValue;
   customError: string | null;
   disabled: boolean;
   required: boolean;
@@ -109,7 +303,7 @@ export interface FormAssociatedInterface {
   readonly validity: ValidityState;
   readonly validationMessage: string;
   readonly willValidate: boolean;
-  setFormValue(next: string): void;
+  setFormValue(next: TValue): void;
   getForm(): HTMLFormElement | null;
   checkValidity(): boolean;
   reportValidity(): boolean;
@@ -117,7 +311,7 @@ export interface FormAssociatedInterface {
   resetValidity(): void;
   formResetCallback(): void;
   formStateRestoreCallback(
-    state: string | File | FormData | null,
+    state: FormSubmissionValue,
     reason: 'autocomplete' | 'restore',
   ): void;
   /** @internal */
@@ -137,10 +331,12 @@ export interface FormAssociatedInterface {
  * `:state()` matching without a real `ElementInternals` behind it — it degrades to an
  * observable-but-unstyled record of the same state names a browser would expose.
  *
- * Exported for the form-associated controls that manage `ElementInternals` directly instead of
- * through this mixin (their value isn't a plain string, so the mixin's contract doesn't fit) --
- * `<lr-voice-picker>` and friends call `attachInternalsSafely()` below rather than hand-maintaining
- * a second copy of this shape.
+ * Exported for the form-associated controls that still manage `ElementInternals` directly instead
+ * of through this mixin -- `<lr-voice-picker>` and friends call `attachInternalsSafely()` below
+ * rather than hand-maintaining a second copy of this shape. ("Their value isn't a plain string" was
+ * the reason for years and no longer is: the mixin takes a `FormValueAdapter` and carries any value
+ * type. Those controls are a migration backlog, frozen shrink-only by rule (f) of
+ * `scripts/check-form-associated.mjs`, not a second supported pattern.)
  */
 export function createFallbackInternals(): ElementInternals {
   let flags: ValidityStateFlags = {};
@@ -210,19 +406,48 @@ export function attachInternalsSafely(host: HTMLElement): ElementInternals {
  * `value` uses a hand-written accessor (`noAccessor`) so `setFormValue` runs
  * synchronously on assignment rather than on the async update cycle.
  *
+ * The value type is a parameter, not a fixture. `FormAssociated(Base)` is the string control every
+ * existing consumer already has — `TValue` defaults to `string` and the supplied-adapter branches
+ * below all collapse to the literal code that shipped before. `FormAssociated(Base, adapter)`
+ * carries any other type through the same one implementation: `Date`, `string[]`, a structured
+ * record. See {@linkcode FormValueAdapter} for the facts an adapter supplies; everything else
+ * — the synchronous `noAccessor` accessors, dirty/default tracking, the `input`/`change`/`focusout`
+ * interaction signal, `isBarredFromValidation()` short-circuiting, anchored intrinsic/custom
+ * validity layering, `formResetCallback` (restores the default, clears dirty and interacted, and
+ * deliberately preserves a `setCustomValidity()` message) — is type-independent and is not
+ * reimplemented per value type.
+ *
  * The explicit return-type annotation is required so TypeScript can emit a
  * declaration file for the (otherwise anonymous) mixin class (avoids TS4094).
  */
-export function FormAssociated<T extends Constructor<LitElement>>(
+export function FormAssociated<T extends Constructor<LitElement>, TValue = string>(
   Base: T,
-): T & Constructor<FormAssociatedInterface> {
+  valueAdapter?: FormValueAdapter<TValue>,
+): T & Constructor<FormAssociatedInterface<TValue>> {
+  const adapter = resolveFormValueAdapter<TValue>(valueAdapter);
+
+  // Installed ONLY when a caller supplied an adapter. The string case keeps Lit's own default
+  // converter, byte for byte, rather than an equivalent-looking hand-written one: the reflected
+  // `value` attribute is the reset default of every shipped control, and "equivalent-looking" is
+  // how a `null` (attribute removed) quietly becomes `''` (attribute set to empty).
+  const defaultValueConverter: ComplexAttributeConverter<TValue | null> = {
+    fromAttribute: (attribute) => (attribute === null ? null : adapter.fromAttribute(attribute)),
+    toAttribute: (value) => (value == null ? null : adapter.toAttribute(value)),
+  };
+
   class FormAssociatedElement extends Base {
     static formAssociated = true;
 
     static properties = {
       name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
       value: { attribute: false, noAccessor: true },
-      defaultValue: { attribute: 'value', reflect: true, useDefault: true, noAccessor: true },
+      defaultValue: {
+        attribute: 'value',
+        reflect: true,
+        useDefault: true,
+        noAccessor: true,
+        ...(valueAdapter ? { converter: defaultValueConverter } : {}),
+      },
       customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
       form: { noAccessor: true },
       disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -243,7 +468,7 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     // same-tick `new FormData(form)`/submit.
     private _name = '';
 
-    private _value = '';
+    private _value: TValue = adapter.empty;
     // What native `defaultValue`/`form.reset()` restores to. Mirrors the
     // `value` *content attribute* only (see `attributeChangedCallback`
     // below) — exactly like native `<input>`: setting the `.value` IDL
@@ -253,7 +478,7 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     // property setter itself to capture "whichever assignment happens
     // first" would wrongly let a user's first-ever edit become permanent
     // (a required field could never be reset back to blank again).
-    private _defaultValue = '';
+    private _defaultValue: TValue = adapter.empty;
     private _valueDirty = false;
     private settingDefaultValue = false;
     private reflectingDefaultValue = false;
@@ -277,11 +502,17 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       );
       // Native <input> always has a submission value ("") from construction —
       // without this, a control whose `value` is never touched is entirely
-      // absent from FormData instead of present as "".
-      this.internals.setFormValue('');
-      installInvalidEventAlias(this, () => {
-        (this as unknown as { emit(name: string): CustomEvent<undefined> }).emit('lr-invalid');
-      });
+      // absent from FormData instead of present as "". An adapter whose empty
+      // value serializes to `null` (an unchecked checkbox's shape) opts out of
+      // that on purpose, which is the platform's own behaviour for it.
+      this.commitFormValue(this._value);
+      installInvalidEventAlias(this, (init) =>
+        (
+          this as unknown as {
+            emit(name: string, detail?: undefined, options?: { cancelable: boolean }): CustomEvent<undefined>;
+          }
+        ).emit('lr-invalid', undefined, init),
+      );
       // Interaction signals, listened for on the host itself so subclasses need no wiring:
       // `input`/`change` from an internal native control are composed and reach the host (as are
       // the components' own re-emitted copies), and `focusout` is the blur signal — native `blur`
@@ -376,12 +607,28 @@ export function FormAssociated<T extends Constructor<LitElement>>(
 
     /**
      * Publishes the six validity custom states. The implementation lives in
-     * `internal/custom-states.ts` because only 11 of the library's 28 form-associated controls use
-     * this mixin — the rest drive `ElementInternals` directly, and they publish the same six
-     * states by calling the same helper.
+     * `internal/custom-states.ts` because only 11 of the library's 31 form-associated components
+     * use this mixin today — 18 still drive `ElementInternals` directly (and publish the same six
+     * states by calling the same helper), and 2 carry no value at all. That split is a migration
+     * backlog, not a design: since the mixin became value-generic there is no value type it cannot
+     * carry.
      */
     protected syncValidityStates(): void {
-      syncValidityStates(this.internals, { required: this.required, hasInteracted: this._hasInteracted });
+      syncValidityStates(this.internals, {
+        required: this.required,
+        hasInteracted: this._hasInteracted,
+        barred: this.isBarredFromValidation(),
+      });
+    }
+
+    /**
+     * Whether constraint validation is currently barred — own `disabled`, an ancestor
+     * `<fieldset disabled>`, a subclass's `readonly`, or any platform condition `willValidate`
+     * knows about. Subclasses read this instead of rebuilding the condition list; overriding it is
+     * how a control with an extra barring channel of its own extends the set.
+     */
+    protected isBarredFromValidation(): boolean {
+      return isBarredFromValidation(this as ValidationCandidate, this.internals);
     }
 
     get name(): string {
@@ -399,33 +646,49 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       this.requestUpdate('name', old);
     }
 
-    get value(): string {
+    /**
+     * Pushes `value` to `ElementInternals` through the adapter. The two-argument form is used only
+     * when the adapter distinguishes the restored state from the submitted entry — passing
+     * `undefined` as a second argument is NOT the same as omitting it (it erases the state), so the
+     * call is branched rather than parameterised.
+     */
+    private commitFormValue(value: TValue): void {
+      const submitted = adapter.toFormValue(value);
+      if (adapter.toFormState) this.internals.setFormValue(submitted, adapter.toFormState(value));
+      else this.internals.setFormValue(submitted);
+    }
+
+    get value(): TValue {
       return this._value;
     }
 
-    set value(next: string) {
+    set value(next: TValue | null) {
       const old = this._value;
-      this._value = next ?? '';
+      this._value = next ?? adapter.empty;
       if (!this.settingDefaultValue) this._valueDirty = true;
-      this.internals.setFormValue(this._value);
+      this.commitFormValue(this._value);
       this.updateValidity();
       this.requestUpdate('value', old);
     }
 
     /** The reflected reset default. Changing it does not overwrite a dirty live value. */
-    get defaultValue(): string {
+    get defaultValue(): TValue {
       return this._defaultValue;
     }
 
-    set defaultValue(next: string | null) {
+    set defaultValue(next: TValue | null) {
       if (this.reflectingDefaultValue) return;
       const old = this._defaultValue;
-      this._defaultValue = next ?? '';
+      this._defaultValue = next ?? adapter.empty;
 
       this.reflectingDefaultValue = true;
       try {
-        if (next == null) this.removeAttribute('value');
-        else this.setAttribute('value', this._defaultValue);
+        // `next == null` is the "attribute removed" signal and must remove it rather than serialize
+        // the empty value; a non-null value whose adapter serializes to `null` (a value with no
+        // markup representation) removes it too, which is what Lit's own reflection would do.
+        const attribute = next == null ? null : adapter.toAttribute(this._defaultValue);
+        if (attribute == null) this.removeAttribute('value');
+        else this.setAttribute('value', attribute);
       } finally {
         this.reflectingDefaultValue = false;
       }
@@ -466,6 +729,11 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       // FACE omission and barred validation are driven by the live host
       // attribute, so reflection must happen before same-tick form APIs run.
       this.toggleAttribute('disabled', this._disabled);
+      // Disabling bars constraint validation, so the intrinsic violation and the `invalid`/
+      // `user-invalid` states have to go with it — synchronously, for the same reason the
+      // attribute does.
+      this.updateValidity();
+      this.syncValidityStates();
       this.requestUpdate('disabled', old);
     }
 
@@ -492,7 +760,7 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     }
 
     /** Programmatically set the submitted value (alias kept for clarity). */
-    setFormValue(next: string): void {
+    setFormValue(next: TValue): void {
       this.value = next;
     }
 
@@ -500,9 +768,21 @@ export function FormAssociated<T extends Constructor<LitElement>>(
      * Recomputes `ElementInternals`'s validity state. Without this,
      * `internals` defaults to permanently "valid" and `required` never
      * blocks form submission.
+     *
+     * A control barred from constraint validation (disabled, fieldset-disabled, readonly) reports
+     * no violation at all, exactly like a native control: the browser already refuses to *enforce*
+     * such a state, and leaving `valueMissing` raised anyway is what leaked `:state(invalid)` onto
+     * every disabled required field. Subclasses that override this must start with the same guard;
+     * `isBarredFromValidation()` is shared for exactly that reason.
      */
     protected updateValidity(): void {
-      if (this.required && this._value === '') {
+      if (this.isBarredFromValidation()) {
+        this[SET_ANCHORED_VALIDITY]({});
+        return;
+      }
+      // Emptiness is the adapter's answer, never `=== ''`: a `[]`, a `null` date and a `0` rating
+      // are each "missing" for their own control and none of them is the empty string.
+      if (this.required && adapter.isEmpty(this._value)) {
         const localize = (this as unknown as { localize?: (key: string) => string }).localize;
         const message = localize?.call(this, 'fieldRequired') ?? resolveLyraString(this, 'fieldRequired');
         this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, message);
@@ -511,11 +791,42 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       }
     }
 
+    /**
+     * Pushes any constraint change still queued in Lit's async update onto the internal native
+     * control, so a validity query answers from the constraints the consumer has *already* set
+     * rather than from the previous render's.
+     *
+     * `pattern`/`min`/`max`/`step`/`minlength`/`maxlength` reach the inner `<input>`/`<textarea>`
+     * through the component's own template, one Lit cycle after assignment — so
+     * `el.pattern = '[0-9]+'; el.checkValidity()` in one synchronous block used to answer from the
+     * pre-change constraints. Flushing the pending render is what makes them current, rather than
+     * re-writing a hand-listed set of attributes here: the template is the only place that knows
+     * which constraints a control actually forwards, and several forward a *computed* value
+     * (`<lr-time-input>` converts `step` before handing it to its native input), which a blind
+     * attribute copy would silently overwrite with the wrong one.
+     *
+     * Only ever flushes an already-rendered control: forcing the FIRST render early (from the
+     * `connectedCallback()` validity pass, say) would move every control's `firstUpdated`/
+     * `slotchange` timing, which is not this method's business.
+     */
+    protected syncConstraintsToNative(): void {
+      // Cast rather than `this.performUpdate()`: `performUpdate`/`hasUpdated` are protected on
+      // `ReactiveElement`, and this class extends a *generic* base, so they are not statically
+      // reachable through `super`'s type here.
+      const host = this as unknown as { hasUpdated: boolean; performUpdate(): void };
+      if (!host.hasUpdated) return;
+      host.performUpdate();
+    }
+
     checkValidity(): boolean {
+      this.syncConstraintsToNative();
+      this.updateValidity();
       return this.internals.checkValidity();
     }
 
     reportValidity(): boolean {
+      this.syncConstraintsToNative();
+      this.updateValidity();
       // Reporting is what a submit attempt does, and a failed submit is precisely when native
       // `:user-invalid` starts matching — so it counts as interaction.
       this._hasInteracted = true;
@@ -545,11 +856,11 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     }
 
     formStateRestoreCallback(
-      state: string | File | FormData | null,
+      state: FormSubmissionValue,
       reason: 'autocomplete' | 'restore',
     ): void {
       void reason;
-      this.value = typeof state === 'string' ? state : '';
+      this.value = adapter.fromFormState(state);
     }
 
     /**
@@ -561,7 +872,26 @@ export function FormAssociated<T extends Constructor<LitElement>>(
      */
     formDisabledCallback(fieldsetDisabled: boolean): void {
       this._fieldsetDisabled = fieldsetDisabled;
+      // Cascaded disablement bars constraint validation exactly like the control's own `disabled`,
+      // so validity has to be recomputed here rather than merely re-rendered — recording the flag
+      // and requesting an update left `valueMissing` (and `:state(invalid)`) raised on every
+      // required control inside a `<fieldset disabled>`.
+      this.updateValidity();
+      this.syncValidityStates();
       this.requestUpdate();
+    }
+
+    /**
+     * Recomputes validity after a barring-relevant property has been reflected. `disabled` has a
+     * hand-written setter that already does this synchronously; a subclass's `readonly` is a plain
+     * reactive property, and the platform reads its reflected *attribute* when it answers
+     * `internals.willValidate`, so the recomputation can only be correct once `update()` has run.
+     */
+    protected override updated(changed: PropertyValues): void {
+      super.updated(changed);
+      if (!changed.has('readonly') && !changed.has('disabled')) return;
+      this.updateValidity();
+      this.syncValidityStates();
     }
 
     override connectedCallback(): void {
@@ -574,5 +904,5 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     }
   }
 
-  return FormAssociatedElement as unknown as T & Constructor<FormAssociatedInterface>;
+  return FormAssociatedElement as unknown as T & Constructor<FormAssociatedInterface<TValue>>;
 }

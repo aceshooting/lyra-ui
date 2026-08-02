@@ -148,7 +148,8 @@ restores `value` for session history/autofill without changing submitter-only fo
 (disabled while `disabled` or `loading`). The internal button's `focus` and `blur` — which do not
 cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
 events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail). `lr-invalid` (no
-detail) fires when a validity check finds the button invalid.
+detail, cancelable) fires when a validity check finds the button invalid; `preventDefault()` on it
+suppresses the native validation bubble and `reportValidity()`'s focus/scroll.
 
 **Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content),
 plus Shoelace aliases `prefix` → `start` and `suffix` → `end`.

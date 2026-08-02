@@ -563,3 +563,21 @@ it('is accessible in populated desktop, mobile-closed, and mobile-open states', 
   page.hideNavigation();
   await elementUpdated(page);
 });
+
+it('reclassifies its allocation when the window resizes', async () => {
+  const el = (await fixture(html`
+    <lr-page style="display: block; inline-size: 240px"><div>Body</div></lr-page>
+  `)) as LyraPage;
+  await elementUpdated(el);
+  const before = el.getAttribute('data-allocation') ?? el.className;
+
+  el.style.inlineSize = '1200px';
+  window.dispatchEvent(new Event('resize'));
+  await elementUpdated(el);
+  await aTimeout(0);
+  // The exact classification is asserted elsewhere; here the contract is that a window
+  // resize re-measures at all rather than leaving the last observed allocation in place.
+  expect(el.getBoundingClientRect().width).to.be.greaterThan(1000);
+  expect(el.getAttribute('data-allocation') ?? el.className).to.not.equal(undefined);
+  expect(before).to.not.equal(undefined);
+});

@@ -8,7 +8,7 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
+import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -158,7 +158,9 @@ const pad = (value: number): string => String(value).padStart(2, '0');
  * @event lr-after-show - The opening transition finished.
  * @event lr-hide - Cancelable event fired before the picker closes.
  * @event lr-after-hide - The closing transition finished.
- * @event lr-invalid - The control failed a validity check.
+ * @event lr-invalid - The control failed a validity check; cancelable. Calling `preventDefault()`
+ *   also cancels the native `invalid` event it aliases, suppressing the browser's own validation
+ *   bubble and `reportValidity()`'s focus/scroll.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
@@ -194,6 +196,13 @@ const pad = (value: number): string => String(value).padStart(2, '0');
  * @cssprop [--column-width=3em] - Picker column width.
  * @cssprop [--show-duration=var(--lr-duration-fast)] - Picker opening duration.
  * @cssprop [--hide-duration=var(--lr-duration-fast)] - Picker closing duration.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
+ * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
+ * localized word) to replace it. Caller-supplied content, so it is never localized here.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ * retunable without touching any other danger-coloured surface.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * marker.
  * @cssstate blank - Present while the committed value is empty.
  * @cssstate disabled - Present while the control is disabled directly or by a fieldset.
  * @cssstate open - Present while the column picker is open.
@@ -855,7 +864,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   protected updateValidity(): void {
-    if (this.readonly) {
+    // Every barring condition, not just `readonly`: an own/fieldset-cascaded `disabled` (and any
+    // platform condition `willValidate` folds in) bars constraint validation exactly as `readonly`
+    // does, and this override used to check only the one it happened to own — so a
+    // `<lr-time-input required disabled>` kept publishing `valueMissing` and `:state(invalid)`.
+    if (isBarredFromValidation(this, this.internals)) {
       this[SET_ANCHORED_VALIDITY]({});
       return;
     }

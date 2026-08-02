@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
+import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
@@ -83,7 +83,9 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @event lr-change - Compatibility alias for `change`; `detail: { value }`.
  * @event lr-blur - Prefixed compatibility alias for the native-style `blur` relay.
  * @event lr-focus - Prefixed compatibility alias for the native-style `focus` relay.
- * @event lr-invalid - The textarea failed a validity check.
+ * @event lr-invalid - The textarea failed a validity check. Cancelable: `preventDefault()` forwards
+ *   to the native `invalid` event, suppressing the browser's own validation bubble and the
+ *   focus/scroll `reportValidity()` would otherwise perform.
  * @event blur - Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and
  *   composed (unlike the native event, which is neither), so a listener above the shadow boundary
  *   can observe it.
@@ -123,6 +125,13 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * `appearance`; the documented default is `appearance="outlined"`'s value.
  * @cssprop [--lr-textarea-border-color=var(--lr-color-border)] - Border color of the field,
  * swapped per `appearance` in the same way as `--lr-textarea-fill`.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
+ * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
+ * localized word) to replace it. Caller-supplied content, so it is never localized here.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ * retunable without touching any other danger-coloured surface.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * marker.
  * @cssstate blank - The live value is empty.
  * @status stable
  * @since 4.0.0
@@ -452,9 +461,14 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    * over-length value assigned from script would report valid. `lengthViolations()` recomputes
    * both from `value` and they are OR-ed into the native flags (see
    * `internal/length-constraints.ts`).
+   *
+   * Barred controls short-circuit first, through the same `isBarredFromValidation()` predicate the
+   * base mixin uses — this override used to check `readonly` alone, so a `<lr-textarea required
+   * disabled>` (or one inside a `<fieldset disabled>`) still reported `valueMissing` and published
+   * `:state(invalid)`/`:state(user-invalid)`, which no native `<textarea required disabled>` does.
    */
   protected updateValidity(): void {
-    if (this.readonly) {
+    if (isBarredFromValidation(this, this.internals)) {
       this[SET_ANCHORED_VALIDITY]({});
       return;
     }

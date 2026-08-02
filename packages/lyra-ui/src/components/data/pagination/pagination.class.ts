@@ -6,6 +6,7 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './pagination.styles.js';
@@ -165,7 +166,10 @@ function paginationItems(
  * @csspart next-icon - The next-page directional icon.
  * @csspart last-button - The last-page button, rendered with `with-edges`.
  * @csspart last-icon - The last-page directional icon.
- * @csspart live-region - The visually hidden applied-page announcement.
+ * @csspart live-region - The visually hidden, `aria-hidden` mirror of the applied-page
+ * announcement. The announcement itself lands in the shared light-DOM polite region
+ * (`acquireAnnouncementSink()` in `internal/announcer.ts`), because a live region inside a shadow
+ * root is not reliably announced; this part is a styling/inspection surface only.
  * @cssstate disabled - Applied when the public `disabled` property is true.
  * @cssprop --lr-pagination-control-size - Control inline/block size; defaults from the `size` variant.
  * @cssprop --lr-pagination-font-size - Control font size; defaults from the `size` variant.
@@ -245,6 +249,10 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   @query('[part="page-input"]') private pageInput?: HTMLInputElement;
   private readonly internals = attachInternalsSafely(this);
   private initialized = false;
+  /** Handle on the shared light-DOM live region page changes actually announce through -- a region
+   *  rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores one
+   *  outright), so `[part="live-region"]` is only an `aria-hidden` mirror. */
+  private sink?: AnnouncementSink;
   private pendingFocusPage?: number;
   private pendingFocusOrigin: Element | null = null;
 
@@ -260,8 +268,17 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     );
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // Acquired on connect, not on the first page change: assistive tech has to have been observing
+    // a live region *before* text arrives for the change to be announced at all.
+    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
+  }
+
   override disconnectedCallback(): void {
     this.clearPendingFocus();
+    this.sink?.release();
+    this.sink = undefined;
     super.disconnectedCallback();
   }
 
@@ -392,6 +409,10 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
         page: this.formatNumber(this.currentPage),
         totalPages: this.formatNumber(this.pageCount),
       });
+      // Announced from the computation, not from a rendered text change: the shared region appends
+      // each announcement as its own node, so returning to a page already announced is read again
+      // instead of being a silent no-op.
+      this.sink?.announce(this.liveText);
     }
     this.initialized = true;
   }
@@ -684,13 +705,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
           ${this.withoutNav ? nothing : this.renderNavButton('next')}
           ${this.withEdges ? this.renderEdgeButton('last') : nothing}
         </div>
-        <span
-          part="live-region"
-          class="sr-only"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-        >${this.liveText}</span>
+        <span part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</span>
       </nav>
     `;
   }

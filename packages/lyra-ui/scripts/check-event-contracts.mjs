@@ -6,6 +6,14 @@
 //   * custom-elements.json,
 //   * and the authored llms/<family>.md Events contract.
 //
+// This script only compares those four surfaces to each other, so all four could once agree while
+// disagreeing with the code that actually dispatches: `emit()` took a bare `string` name and an
+// unconstrained detail. That fifth surface is now gated by the type system instead —
+// `LyraElement.emit()` is keyed by the component's own EventMap (see `LyraEmitArgs` in
+// `src/internal/lyra-element.ts`, asserted by `type-tests/emit.ts`), so a name or detail that this
+// script would call undeclared fails `tsc` first. A component that declares no EventMap keeps the
+// permissive default and is checked here only.
+//
 // Interface inheritance is intentionally asymmetric. Events declared directly by a component's
 // own EventMap must be advertised by that component. Inherited mixin events may instead be
 // documented once as a shared contract, but any event a component does advertise still has to be

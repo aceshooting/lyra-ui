@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -75,7 +75,7 @@ when the semantic dropzone (the actual keyboard-focusable element, not the hidde
 gains/loses focus.
 `lr-invalid` is the bubbling/composed alias of native invalidity.
 
-Each rejected file also renders as its own line in the visible `[part="rejection"]` alert, naming
+Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
 the file and the reason via one of four locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
@@ -95,14 +95,43 @@ content still activates the dropzone.
 **CSS parts:** `file-input`, `form-control-label`, `label`, `hint`, `dropzone`, `dropzone-icon`,
 `dropzone-text`, `base` (the native dropzone button, visually behind but semantically beside the
 slotted content), `input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
-`file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden `role="status" aria-live="polite"`
-element carrying the drag accept/reject announcement and the aggregate accepted/rejected count),
-`rejection` (a **visible** `role="alert"` region, rendered only while a rejection exists, listing
-each currently-rejected file next to a per-reason message — in addition to, never in place of, the
-sr-only `status` summary above)
+`file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden,
+`aria-hidden` mirror of the drag accept/reject state and the aggregate accepted/rejected count),
+`rejection` (a **visible** region, rendered only while a rejection exists, listing each
+currently-rejected file next to a per-reason message — in addition to, never in place of, the
+sr-only `status` mirror above)
+
+**Both live regions moved out of the shadow root (public surface change).** Neither `status` nor
+`rejection` carries a live-region role any more: `status` is an `aria-hidden` mirror, and
+`rejection` is plain visible text. A live region inside a shadow root is not reliably announced
+(JAWS with Firefox ignores one outright), so the announcements now go to the library's shared
+**light-DOM** regions appended to the consumer's `<body>` and marked
+`data-lr-live-region="polite"` / `data-lr-live-region="assertive"` — the drag/selection summary
+politely, and a rejection assertively, so it still interrupts.
+
+What this changes for you:
+
+- **Nothing about what the visible text says or where it renders.** `[part="rejection"]`'s text is
+  ordinary visible content and stays in the accessibility tree, so a user who reaches it reads it
+  normally. Both parts remain the right styling hooks.
+- **A test that asserted `::part(rejection)` had `role="alert"`, or that read announcements out of
+  `::part(status)`, now fails.** Assert against the shared light-DOM region instead — query
+  `[data-lr-live-region="assertive"]` (or `"polite"`) in the document, which is also where every
+  other Lyra announcement lands.
+- **A `::part(rejection)[role]`-style selector never matched anyway** — an attribute selector
+  cannot follow `::part()`. Nothing that worked before stopped working.
 
 **CSS custom states:** `blank` and `dragging`, plus the shared validity states `required`,
-`optional`, `valid`, `invalid`, `user-valid`, and `user-invalid`.
+`optional`, `valid`, `invalid`, `user-valid`, and `user-invalid`. As on every other form-associated
+control, `valid`/`invalid` and `user-valid`/`user-invalid` stop matching entirely while the control
+is barred from constraint validation (its own `disabled`, or an ancestor `<fieldset disabled>`),
+matching native `:invalid`; `required`/`optional` keep publishing.
+
+**The required marker.** With `required` set and a populated `label`, `[part="form-control-label"]`
+paints the library's shared required marker — the same `::after` rule every labelled control in
+the library uses, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. See `llms/shared.md` → "The required-field marker".
 
 **Themeable custom properties:** `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
 `[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default

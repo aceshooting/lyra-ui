@@ -194,7 +194,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     // wrong, undocumented name -- this component's own contract is `lr-retrieval-select` below.
     event.stopPropagation();
     this.selectedRetrievalIds = event.detail.ids;
-    this.emit<RetrievalResultsSelectDetail>('lr-retrieval-select', event.detail);
+    this.emit('lr-retrieval-select', event.detail);
   };
 
   private onMessageRetry = (event: CustomEvent<{ messageId?: string }>): void => {

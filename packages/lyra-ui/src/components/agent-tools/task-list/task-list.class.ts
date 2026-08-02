@@ -265,7 +265,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private toggle = (): void => {
     if (!this.collapsible) return;
     this.expanded = !this.expanded;
-    this.emit<TaskListToggleDetail>('lr-toggle', { expanded: this.expanded });
+    this.emit('lr-toggle', { expanded: this.expanded });
   };
 
   private renderItem(item: TaskItem, depth: 0 | 1): TemplateResult {

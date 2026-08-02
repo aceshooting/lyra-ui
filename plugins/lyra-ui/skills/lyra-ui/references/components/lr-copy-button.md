@@ -70,8 +70,13 @@ the built-in button. Exactly one named icon is rendered at a time.
 - `base-error` — the same while the failure state shows (`part="base button base-error"`).
 - `copy-icon`, `success-icon`, `error-icon` — the resting, confirmation and failure glyphs. Exactly
   one is rendered at a time; all three are `aria-hidden`.
-- `feedback` — the visually hidden `role="status"` region that announces the outcome. Empty at rest,
-  so nothing is announced before a real outcome.
+- `feedback` — the visually hidden, `aria-hidden` mirror of the outcome text. Empty at rest, so
+  nothing is announced before a real outcome. It carries no live-region role of its own: the
+  announcement goes to the library's shared **light-DOM** polite region, appended to the consumer's
+  `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a shadow root is
+  not reliably announced (JAWS with Firefox ignores one outright). Assert against that
+  document-level region rather than `::part(feedback)`; the part is a styling and inspection
+  surface, and still tells you what the button last announced.
 - `tooltip__base`, `tooltip__base__popup`, `tooltip__base__arrow`, `tooltip__body` — exported nested
   tooltip parts.
 
@@ -128,7 +133,8 @@ import type {
 - **Changed in 8.0.0:** the button used to enter the "Copied" confirmation on activation whether or
   not the clipboard write succeeded. It now waits for `navigator.clipboard.writeText()` to settle: a
   rejection renders the failure glyph instead, announces the localized failure text through the
-  `feedback` region, and emits `lr-error` plus `lr-copy-error`. `lr-copy` still fires for every
+  shared polite region mirrored by `[part="feedback"]`, and emits `lr-error` plus `lr-copy-error`.
+  `lr-copy` still fires for every
   activation, so code that treated it as proof the text reached the clipboard must pair it with an
   error event.
 - An empty `value`, missing `from` target/member, or empty resolved source is an error; no clipboard

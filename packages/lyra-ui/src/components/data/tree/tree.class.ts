@@ -32,6 +32,29 @@ export interface LyraTreeEventMap {
 const TREE_SELECTIONS = new Set<TreeSelection>(['single', 'multiple', 'leaf', 'leaf-multiple']);
 
 /**
+ * Whether `node` is inert *because of markup inside this tree* — its own `inert`, or that of an
+ * ancestor item between it and `root`.
+ *
+ * `role="treeitem"` and the roving `tabindex` both live on the `<lr-tree-item>` host itself, so an
+ * inert item literally refuses `focus()`: stepping the roving index onto one leaves focus behind on
+ * `<body>` and every later arrow press dies. It therefore belongs in the navigability predicate
+ * alongside `isDisabled`, matching `<lr-menu>`'s own item predicate.
+ *
+ * The walk stops at `root` (this `<lr-tree>`) on purpose, rather than using a plain
+ * `closest('[inert]')`. When an ancestor *outside* the tree is inert — the page behind an open
+ * modal — every item is inert together; excluding them all would empty the visible walk, null out
+ * `activeId`, and leave the tree with zero `tabindex="0"` stops that nothing restores once the
+ * dialog closes (the child observer never sees a mutation outside its own subtree). Uniform
+ * inertness needs no special handling: focus cannot be inside the tree at all.
+ */
+function isInertWithin(node: Element, root: Element): boolean {
+  for (let current: Element | null = node; current && current !== root; current = current.parentElement) {
+    if (current instanceof HTMLElement && current.inert) return true;
+  }
+  return false;
+}
+
+/**
  * `<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.
  *
  * **Two child models are accepted.** Nested `<lr-tree-item>` elements written as light-DOM children
@@ -49,6 +72,14 @@ const TREE_SELECTIONS = new Set<TreeSelection>(['single', 'multiple', 'leaf', 'l
  * `keydown` listener. Native `KeyboardEvent`s are `composed: true` and
  * bubble across shadow-DOM boundaries, so a press inside a deeply-nested
  * `<lr-tree-item>`'s own shadow root still reaches this listener.
+ *
+ * **`inert` excludes an item and its whole subtree from that navigation exactly as `disabled`
+ * does** — the roving `tabindex` and `role="treeitem"` live on the `<lr-tree-item>` host itself, so
+ * an inert item refuses `focus()` outright. Marking the focused item inert therefore moves the
+ * roving target, and real focus with it, instead of stranding focus on `<body>`. Only `inert`
+ * *inside* the tree counts: a tree the page behind an open modal has inerted keeps its selection,
+ * its roving target, and its `activeId` untouched. Selection is deliberately unaffected either way
+ * — inert means "not interactive right now", never "deselected".
  *
  * Set `reorderable` to opt into keyboard reordering: Ctrl/Cmd+ArrowUp/ArrowDown on the focused
  * node emits `lr-reorder` — a *request*, exactly like every other event here. `data` is
@@ -129,6 +160,12 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   private readonly generatedNodes = new WeakSet<LyraTreeItem>();
   private selectionSyncPending = true;
   private dataSyncPending = false;
+  /** Set when the child observer reports an `inert` attribute mutation, consumed by
+   *  `resolveActiveFromDom()`'s focus repair below. */
+  private inertMutationPending = false;
+  /** The last item this tree saw take real focus. Read only as corroboration that a focus loss the
+   *  platform caused (see `resolveActiveFromDom()`) actually happened *here*. */
+  private lastFocusedNodeId: string | null = null;
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
@@ -143,6 +180,14 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   private childrenOf(node: LyraTreeItem): LyraTreeItem[] {
     return node.childItems();
+  }
+
+  /** Whether `node` can hold the roving `tabindex` and receive arrow-key focus. `inert` counts
+   *  alongside `isDisabled` — see `isInertWithin()`. Deliberately *not* consulted by the selection
+   *  engine: an inert subtree is temporarily non-interactive, not deselected, and a modal inerting
+   *  the page must never silently wipe a tree's selection. */
+  private isNavigable(node: LyraTreeItem): boolean {
+    return !node.isDisabled && !isInertWithin(node, this);
   }
 
   /** Every item in document order, including descendants of collapsed branches. */
@@ -315,7 +360,9 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const acc: LyraTreeItem[] = [];
     const walk = (nodes: LyraTreeItem[]): void => {
       for (const n of nodes) {
-        if (n.isDisabled) continue;
+        // Skipping the whole branch, not just this node: an inert item inerts its own descendants
+        // too, so none of them can take focus either.
+        if (!this.isNavigable(n)) continue;
         acc.push(n);
         if (n.expanded) walk(this.childrenOf(n));
       }
@@ -436,18 +483,48 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   /**
    * The declarative child model's answer to the `data`-driven `activeId` resolution below: there is
    * no `data` change to hang it off, so it is re-derived from the DOM on every update instead. If
-   * `activeId` no longer names a currently *visible* node -- removed, disabled, or hidden inside a
-   * collapsed ancestor -- the first visible one takes over, so the tree never ends up with zero
+   * `activeId` no longer names a currently *visible* node -- removed, disabled, inert, or hidden
+   * inside a collapsed ancestor -- the first visible one takes over, so the tree never ends up with zero
    * `tabindex="0"` stops and silently drops out of the tab order. Deliberately in `willUpdate()`
    * rather than `updated()`: the nodes are light-DOM children, so they already exist before this
    * element renders, and assigning here folds into the current update instead of scheduling
    * another one.
    */
   private resolveActiveFromDom(): void {
+    const inertMutation = this.inertMutationPending;
+    this.inertMutationPending = false;
     const visible = this.visibleNodeElements();
     if (visible.some((node) => node.nodeId === this.activeId)) return;
+    const displaced = this.activeId;
     this.activeId = visible[0]?.nodeId ?? null;
+    // An item that becomes `inert` while it holds real DOM focus is dropped by the platform, and
+    // focus lands on `<body>` -- outside this tree's own delegated keydown handler, so every later
+    // arrow press dies with no visible cause. Hand it to the newly-resolved roving target instead.
+    // Guarded three ways so this can never *steal* focus: an `inert` mutation must actually have
+    // arrived, the displaced item must be the one this tree last saw focused, and focus must be
+    // stranded rather than on something that legitimately claimed it. "Stranded" covers both
+    // orderings observed in Chromium: focus already dropped to `<body>`, or still nominally parked
+    // on the now-inert item (the drop is deferred past this microtask, but that item can no longer
+    // be re-focused or receive input either way).
+    if (!inertMutation || this.activeId == null) return;
+    if (displaced == null || displaced !== this.lastFocusedNodeId) return;
+    const active = deepActiveElementIn(document);
+    const strandedOnDisplaced =
+      active instanceof HTMLElement &&
+      active.localName === tag('tree-item') &&
+      (active as LyraTreeItem).nodeId === displaced;
+    if (active !== null && active !== document.body && !strandedOnDisplaced) return;
+    this.pendingFocusId = this.activeId;
   }
+
+  /** Remembers which item last held real focus -- see `resolveActiveFromDom()`'s focus repair. */
+  private onTreeFocusIn = (e: FocusEvent): void => {
+    const item = e.composedPath().find(
+      (target): target is LyraTreeItem =>
+        target instanceof HTMLElement && target.localName === tag('tree-item'),
+    );
+    if (item) this.lastFocusedNodeId = item.nodeId;
+  };
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -491,6 +568,11 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
             ? focusedId
             : this.activeId;
     }
+    // `TreeItem` has no `inert` field, but a consumer can still mark a *generated* node inert
+    // through the DOM. Nothing else re-checks `activeId` against the live elements in this model,
+    // so without this the roving `tabindex` would stay parked on a node that refuses focus. Also
+    // what clears the flag, so a mutation can never outlive the update it raised.
+    if (this.inertMutationPending) this.resolveActiveFromDom();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -527,14 +609,22 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    *  each item still owns its own child-slot reconciliation. */
   private childObserver?: MutationObserver;
 
+  /** The observer's own entry point: it additionally records whether an `inert` toggle was among
+   *  the records, which `resolveActiveFromDom()` needs to tell a platform-caused focus loss apart
+   *  from any other reason the active item stopped being navigable. */
+  private onChildMutations = (records: MutationRecord[]): void => {
+    if (records.some((record) => record.attributeName === 'inert')) this.inertMutationPending = true;
+    this.onChildrenChanged();
+  };
+
   override connectedCallback(): void {
     super.connectedCallback();
-    this.childObserver = new MutationObserver(this.onChildrenChanged);
+    this.childObserver = new MutationObserver(this.onChildMutations);
     this.childObserver.observe(this, {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['selected', 'disabled', 'lazy'],
+      attributeFilter: ['selected', 'disabled', 'inert', 'lazy'],
     });
   }
 
@@ -679,7 +769,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const { parentId, total, index } = found;
     const toIndex = index + delta;
     if (toIndex < 0 || toIndex >= total) return;
-    this.emit<LyraTreeEventMap['lr-reorder']['detail']>('lr-reorder', { id, parentId, fromIndex: index, toIndex });
+    this.emit('lr-reorder', { id, parentId, fromIndex: index, toIndex });
     this.liveRegion?.announce(
       this.localize('treeNodeMoved', undefined, {
         label: node.nodeLabel,
@@ -816,11 +906,11 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const topLevel = this.nodeElements;
     setAll(topLevel);
     const activeTopLevel = this.hasAuthoredItems
-      ? topLevel.some((node) => !node.isDisabled && node.nodeId === this.activeId)
+      ? topLevel.some((node) => this.isNavigable(node) && node.nodeId === this.activeId)
       : this.data.some((item) => !item.disabled && item.id === this.activeId);
     if (!activeTopLevel) {
       this.activeId = this.hasAuthoredItems
-        ? (topLevel.find((node) => !node.isDisabled)?.nodeId ?? null)
+        ? (topLevel.find((node) => this.isNavigable(node))?.nodeId ?? null)
         : this.firstEnabledId(this.data);
     }
     if (focused) this.pendingFocusId = this.activeId;
@@ -832,6 +922,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         part="base tree"
         role="tree"
         aria-label=${this.label || this.getAttribute('aria-label') || nothing}
+        @focusin=${this.onTreeFocusIn}
         @keydown=${this.onTreeKeyDown}
         @lr-node-toggle=${this.onNodeActivate}
         @lr-node-select=${this.onNodeSelect}

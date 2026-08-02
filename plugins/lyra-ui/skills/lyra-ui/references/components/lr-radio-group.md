@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,6 +55,14 @@ child validity owner.
 **CSS parts:** `base`, `form-control`, `label` / `form-control-label`, `radios` /
 `form-control-input` / `button-group` / `button-group__base`, `hint` /
 `form-control-help-text`, and `error`.
+
+**The required marker.** `required` with a non-empty group `label` paints the library's shared
+marker on the `form-control-label` node — the one `::after` rule described under "The
+required-field marker" above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. It marks the **group**, not the individual radios: an owned
+`<lr-radio>` has no label box of its own and paints nothing. With no group label text the node is
+hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its

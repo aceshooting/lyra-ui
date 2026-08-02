@@ -60,6 +60,15 @@ mirrored Left/Right navigation, and expose the selected item with `aria-current`
 allocations the sidebar moves below the video through a container query; long titles ellipsize
 without widening the host.
 
+**A child marked `inert` is excluded exactly as a `disabled` one is:** it never becomes the active
+video, `next()`/`previous()`/`goTo()` and auto-advance step past it, and its playlist row renders
+`disabled` so the roving `tabindex` can never strand focus on it — an inert element refuses focus,
+which would leave `focus()` a silent no-op and kill the next arrow press. Only the child's **own**
+`inert` counts: a playlist inerted wholesale by an open modal keeps playing. The attribute is
+watched live, so marking the *current* video inert moves the selection to the nearest enabled child
+(emitting `lr-video-change`) and hands the roving focus to the row that replaced it, instead of
+leaving a stale tab stop on a row that can no longer take focus.
+
 ```html
 <lr-video-playlist controls="full" repeat="all">
   <lr-video title="Introduction" poster="/posters/introduction.jpg">

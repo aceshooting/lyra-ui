@@ -7,7 +7,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { scopeFromElement, buildQuoteAnchor } from '../../../internal/text-quote.js';
 import { acquireHighlightHandle, type HighlightHandle } from '../../../internal/text-highlights.js';
-import type { LyraAnchor, LyraAnchorKind, HighlightActivateDetail } from '../../viewers/document-viewer/anchors.js';
+import type { LyraAnchor, LyraAnchorKind } from '../../viewers/document-viewer/anchors.js';
 import type { MarkdownDeps } from './markdown-loader.js';
 import {
   loadShikiHighlighterCore,
@@ -644,7 +644,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   private onContentClick = (e: MouseEvent): void => {
     const highlightId = hitTestHighlightRanges(this.resolvedHighlightRanges, e.clientX, e.clientY);
     if (highlightId) {
-      this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: highlightId });
+      this.emit('lr-highlight-activate', { id: highlightId });
       return;
     }
     const href = internalLinkHrefFrom(e, this.internalLinkPrefix);

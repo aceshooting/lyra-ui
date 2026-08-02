@@ -1084,6 +1084,16 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 
 **Slots:** `hint` (custom hint content), `error` (custom error content).
 
+**The required marker and barred validity.** With `required` set and `label` non-empty,
+`[part="form-control-label"]` paints the library's shared required marker — the same `::after` rule
+every labelled control in the library uses, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it here
+exactly as they do on `lr-input` (see `llms/shared.md` → "The required-field marker"). With no visible label there
+is nothing to mark and no stray glyph is rendered. Correspondingly, while the picker is barred from
+constraint validation — its own `disabled`, or an ancestor `<fieldset disabled>`; this control has no
+`readonly` — it reports no violation and publishes neither `:state(invalid)` nor
+`:state(user-invalid)`, matching native `:invalid`. `required`/`optional` keep publishing.
+
 **CSS parts:** `form-control-label` (the `<label>` element — only rendered, and only contributes to
 the accessible name, once `label` is non-empty), `trigger` (closed-dropdown mode's
 `<button role="combobox">`, also its positioning anchor), `combobox` (free-text mode's input
@@ -2459,6 +2469,14 @@ started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` a
 `lr-invalid` alias when native validity fails.
 
 **Slots:** `hint`, `error`.
+
+**The required marker and barred validity.** Identical to `lr-model-select`'s (see that section): a
+`required` picker with a non-empty `label` paints the shared required marker on
+`[part="form-control-label"]`, retunable or suppressible through
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset`; and while the picker is barred from
+constraint validation (own `disabled`, or an ancestor `<fieldset disabled>` — there is no `readonly`
+here) it reports no violation and publishes neither `:state(invalid)` nor `:state(user-invalid)`.
 
 **CSS parts:** `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
 (free-text mode), `provider-badge`, `listbox`, `option`, `option-label`, `option-meta` (the quiet

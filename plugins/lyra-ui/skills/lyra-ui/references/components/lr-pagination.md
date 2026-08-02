@@ -134,6 +134,13 @@ one — the state lives in the part name because `::part(page)[aria-current='pag
 and would silently never match. `first-button`/`first-icon` and `last-button`/`last-icon` exist only
 while `with-edges` is set.
 
+`live-region` is a visually hidden, `aria-hidden` **mirror** of the applied-page announcement — a
+styling and inspection surface, with no live-region role of its own. The announcement itself goes
+to the library's shared **light-DOM** polite region, appended to the consumer's `<body>` and marked
+`data-lr-live-region="polite"`, because a live region inside a shadow root is not reliably
+announced (JAWS with Firefox ignores one outright). Assert against that document-level region
+rather than `::part(live-region)`.
+
 **CSS custom states:** `disabled` matches when the public `disabled` property is true. The state
 does not match for the separate `loading` or empty-data conditions, even though those conditions
 also make the rendered controls inert.

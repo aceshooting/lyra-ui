@@ -43,7 +43,12 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
     throw new Error('component-inventory.json contains duplicate registrationModule entries');
   }
 
-  const required = new Set(['./src/lyra.ts', './dist/lyra.js']);
+  // The two compatibility entries are the modules whose documented behavior *is* an import-time
+  // side effect (they register every component). The package root (`src/lyra.ts`) is deliberately
+  // absent: it is registration-free from 8.0.0 onward, and declaring a pure re-export barrel as
+  // side-effectful would force bundlers to evaluate it — and therefore every module it re-exports
+  // from — defeating the tree-shaking the registration-free root exists to enable.
+  const required = new Set(['./src/all.ts', './dist/all.js', './src/ssr/all.ts', './dist/ssr/all.js']);
 
   for (const entry of CURATED_PUBLIC_SIDE_EFFECT_ENTRIES) {
     const sourcePath = join(packageDir, entry.source);

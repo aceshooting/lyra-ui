@@ -187,8 +187,16 @@ first, with the Lyra/token values as fallbacks. Otherwise shared tokens —
 ```
 
 **Known gotchas:**
+- **`inert` on a child excludes its tab from arrow-key navigation, exactly as `disabled` does.** An
+  inert element refuses focus outright, so a roving `tabindex` that stepped onto one would leave
+  `focus()` a silent no-op and strand the arrow key with focus back on `<body>`. The tab button
+  rendered for an inert source child is itself marked `inert`, so the two can never disagree,
+  Home/End skip it, and `active` is never resolved to it. Only the child's **own** `inert` counts,
+  never an ancestor's: a tab group inside a subtree an open modal has inerted is inert as a whole,
+  and treating every tab as unreachable there would reset `active` to `''` and blank every panel for
+  as long as the dialog is open.
 - Tabs are rebuilt from direct children via a `MutationObserver` watching `childList` plus
-  `attributeFilter: ['slot', 'label', 'disabled', 'closable']` — not `slotchange` — because a brand-new tab's
+  `attributeFilter: ['slot', 'label', 'disabled', 'inert', 'closable']` — not `slotchange` — because a brand-new tab's
   `slot` name has no matching `<slot>` to fire `slotchange` on until this component has already
   rendered one for it, and neither `slotchange` nor any Lit lifecycle hook observes a plain
   attribute edit on a light-DOM child at all.

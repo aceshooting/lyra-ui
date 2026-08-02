@@ -2,6 +2,16 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { render } from 'lit';
 import './ingestion-queue.js';
 import type { LyraIngestionQueue, IngestionQueueItem } from './ingestion-queue.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
+  const element = sinkElement(politeness);
+  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
 
 function item(overrides: Partial<IngestionQueueItem> & Pick<IngestionQueueItem, 'id' | 'stage'>): IngestionQueueItem {
   return { document: { id: overrides.id, name: `Doc ${overrides.id}` }, ...overrides };
@@ -205,7 +215,11 @@ describe('populated rows', () => {
     expect(error.textContent!.trim()).to.equal('Unsupported file type');
     expect(error.hasAttribute('role')).to.be.false;
     const live = el.shadowRoot!.querySelector('[part="failure-live"]') as HTMLElement;
-    expect(live.getAttribute('role')).to.equal('alert');
+    // The retained part is a styling/inspection mirror only -- a live region inside a shadow root
+    // is not reliably announced, and leaving it live would double-announce where it *is* honored.
+    expect(live.getAttribute('role')).to.equal(null);
+    expect(live.getAttribute('aria-live')).to.equal(null);
+    expect(live.getAttribute('aria-hidden')).to.equal('true');
     expect(live.textContent!.trim()).to.equal('');
   });
 
@@ -228,6 +242,53 @@ describe('populated rows', () => {
     ];
     await el.updateComplete;
     expect(liveText()).to.equal('Network unavailable');
+  });
+
+  it('routes fresh failures into the shared light-DOM assertive sink', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        .items=${[item({ id: '1', stage: 'queued' })]}
+      ></lr-ingestion-queue>`,
+    )) as LyraIngestionQueue;
+    expect(sinkTexts('assertive'), 'mounting must not announce a resting state').to.deep.equal([]);
+
+    el.items = [item({ id: '1', stage: 'failed', error: 'Unsupported file type' })];
+    await el.updateComplete;
+    expect(sinkTexts('assertive')).to.deep.equal(['Unsupported file type']);
+  });
+
+  it('announces an identical repeat failure again instead of silently rewriting one text node', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        .items=${[item({ id: '1', stage: 'queued' })]}
+      ></lr-ingestion-queue>`,
+    )) as LyraIngestionQueue;
+
+    el.items = [item({ id: '1', stage: 'failed', error: 'Network unavailable' })];
+    await el.updateComplete;
+    el.items = [item({ id: '1', stage: 'queued' })];
+    await el.updateComplete;
+    el.items = [item({ id: '1', stage: 'failed', error: 'Network unavailable' })];
+    await el.updateComplete;
+
+    expect(
+      sinkTexts('assertive'),
+      'an identical repeat must be a second addition so assistive tech reads it again',
+    ).to.deep.equal(['Network unavailable', 'Network unavailable']);
+  });
+
+  it('ref-counts the shared assertive sink away once the last queue disconnects', async () => {
+    const first = (await fixture(
+      html`<lr-ingestion-queue></lr-ingestion-queue>`,
+    )) as LyraIngestionQueue;
+    const second = (await fixture(
+      html`<lr-ingestion-queue></lr-ingestion-queue>`,
+    )) as LyraIngestionQueue;
+    expect(sinkElement('assertive') !== null, 'a connected queue holds the sink').to.be.true;
+    first.remove();
+    expect(sinkElement('assertive') !== null, 'a still-connected queue keeps it mounted').to.be.true;
+    second.remove();
+    expect(sinkElement('assertive') === null, 'the last disconnect unmounts it').to.be.true;
   });
 });
 

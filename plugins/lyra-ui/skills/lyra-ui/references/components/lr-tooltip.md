@@ -110,12 +110,16 @@ arrow — use `<lr-popover>` when a floating surface needs both.
 ```
 
 While open, trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
-not the shadow-private popup. Native triggers resolve that ID directly. `lr-button` and
-`lr-icon-button` resolve the same proxy onto their focused shadow-internal controls through
-`ariaDescribedByElements`; in supporting browsers that explicit element-reference assignment
-intentionally leaves the internal control's serialized `aria-describedby` value empty. Existing
-author-provided descriptions are merged while open and restored when the trigger is replaced or
-the tooltip disconnects.
+not the shadow-private popup. Native triggers resolve that ID directly. A description is only
+announced on the node that actually holds focus, so when the trigger is a custom element the same
+proxy is applied to the first focusable descendant as well — across slots and nested open shadow
+roots — which covers `lr-select`, `lr-switch`, `lr-chip` and any consumer-authored wrapper, not
+just the components that forward their own host `aria-describedby`. A descendant in the same tree
+receives the serialized ID; one inside a shadow root is linked through `ariaDescribedByElements`,
+whose explicit element-reference assignment intentionally leaves that control's serialized
+`aria-describedby` value empty in supporting browsers. Existing author-provided descriptions —
+including a control's own internal hint/error text — are merged while open and restored when the
+tooltip closes, the trigger is replaced, or the tooltip disconnects.
 
 Plain content keeps `role="tooltip"`. If actionable content appears anywhere in the assigned
 default-slot subtree — including inside a nested custom element's open shadow root — the popup

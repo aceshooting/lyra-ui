@@ -171,12 +171,12 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
   }
 
   private onTitleClick = (): void => {
-    this.emit<SourceCardOpenDetail>('lr-open', { sourceId: this.sourceId, href: this.href });
+    this.emit('lr-open', { sourceId: this.sourceId, href: this.href });
   };
 
   private toggleFull = (): void => {
     this.fullExpanded = !this.fullExpanded;
-    this.emit<SourceCardExpandDetail>('lr-expand', { sourceId: this.sourceId, expanded: this.fullExpanded });
+    this.emit('lr-expand', { sourceId: this.sourceId, expanded: this.fullExpanded });
   };
 
   override render(): TemplateResult {

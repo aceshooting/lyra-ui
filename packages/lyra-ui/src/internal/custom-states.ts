@@ -41,17 +41,25 @@ export type LyraValidityState = (typeof VALIDITY_STATES)[number];
  * INTERACTED (an `input`/`change`/blur on this control, or a `reportValidity()` call, which is what
  * a submit attempt runs) — that is the whole point of the pair: a pristine required field is
  * invalid, but styling it red before the user has typed anything is hostile.
+ *
+ * `barred` (see `isBarredFromValidation()` in `internal/form-associated.ts`) silences BOTH pairs:
+ * a control barred from constraint validation — disabled, fieldset-disabled, readonly — matches
+ * neither `:valid` nor `:invalid` natively, and publishing `invalid`/`user-invalid` from one is
+ * what made the documented `lr-input:state(user-invalid) { border-color: red }` rule paint every
+ * disabled required field red. `required`/`optional` describe the attribute rather than the
+ * validation outcome, so they keep publishing exactly like native `:required`/`:optional`.
  */
 export function syncValidityStates(
   internals: ElementInternals | undefined,
-  options: { required: boolean; hasInteracted: boolean },
+  options: { required: boolean; hasInteracted: boolean; barred?: boolean },
 ): void {
-  const valid = internals?.validity?.valid !== false;
-  const { required, hasInteracted } = options;
+  const { required, hasInteracted, barred = false } = options;
+  const valid = !barred && internals?.validity?.valid !== false;
+  const invalid = !barred && internals?.validity?.valid === false;
   setCustomState(internals, 'required', required);
   setCustomState(internals, 'optional', !required);
   setCustomState(internals, 'valid', valid);
-  setCustomState(internals, 'invalid', !valid);
+  setCustomState(internals, 'invalid', invalid);
   setCustomState(internals, 'user-valid', valid && hasInteracted);
-  setCustomState(internals, 'user-invalid', !valid && hasInteracted);
+  setCustomState(internals, 'user-invalid', invalid && hasInteracted);
 }

@@ -1,0 +1,64 @@
+{
+  "packageJson": {
+    "name": "@aceshooting/lyra-ui",
+    "version": "8.0.0",
+    "exports": {
+      ".": {
+        "types": "./dist/lyra.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "manifest": {
+    "schemaVersion": "1.0.0",
+    "modules": [
+      {
+        "kind": "javascript-module",
+        "path": "src/components/forms/sample/sample.class.ts",
+        "declarations": [
+          {
+            "kind": "class",
+            "name": "LyraSample",
+            "customElement": true,
+            "tagName": "lr-sample",
+            "members": [
+              {
+                "kind": "field",
+                "name": "mode",
+                "type": { "text": "'quiet'" },
+                "default": "'loud'",
+                "attribute": "mode",
+                "reflects": false
+              },
+              {
+                "kind": "method",
+                "name": "show",
+                "parameters": [
+                  { "name": "reason", "type": { "text": "string" } }
+                ],
+                "return": { "type": { "text": "void" } }
+              }
+            ],
+            "attributes": [
+              { "name": "mode", "fieldName": "mode", "type": { "text": "'quiet'" }, "default": "'loud'" }
+            ],
+            "events": [],
+            "slots": [
+              { "name": "", "description": "Content." }
+            ],
+            "cssParts": [],
+            "cssProperties": [
+              { "name": "--lr-sample-gap", "default": "2rem" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "declarations": {
+    "named": "export { LyraSample } from './components/forms/sample/sample.js';\n",
+    "react": "export type LyraSampleReactProps = { mode: 'quiet' };\nexport interface LyraReactIntrinsicElements { 'lr-sample': LyraSampleReactProps; }\n",
+    "vue": "export interface LyraVueGlobalComponents {}\n",
+    "svelte": "export interface LyraSvelteElements { 'lr-sample': { mode: 'quiet' }; }\n"
+  }
+}

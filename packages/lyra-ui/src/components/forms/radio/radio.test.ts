@@ -5,7 +5,7 @@ import './radio-group.js';
 import type { LyraRadio } from './radio.js';
 import type { LyraRadioGroup } from './radio-group.js';
 
-it('emits one group-owned lr-invalid alias when its aggregate validity fails a check', async () => {
+it('emits one cancelable group-owned lr-invalid alias when its aggregate validity fails a check', async () => {
   const group = (await fixture(html`
     <lr-radio-group required label="Choice">
       <lr-radio value="a">A</lr-radio>
@@ -16,12 +16,35 @@ it('emits one group-owned lr-invalid alias when its aggregate validity fails a c
   await Promise.all(radios.map((radio) => radio.updateComplete));
   const aliases: CustomEvent[] = [];
   group.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+  const natives: Event[] = [];
+  group.addEventListener('invalid', (event) => natives.push(event));
 
   expect(group.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
   expect(aliases[0].target).to.equal(group);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.false;
+  expect(aliases[0].cancelable).to.be.true;
+  // Nothing cancelled it, so the browser's own validation UI stays enabled.
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.false;
+});
+
+it('cancels the native invalid event when the group-owned lr-invalid alias is cancelled', async () => {
+  const group = (await fixture(html`
+    <lr-radio-group required label="Choice">
+      <lr-radio value="a">A</lr-radio>
+      <lr-radio value="b">B</lr-radio>
+    </lr-radio-group>
+  `)) as LyraRadioGroup;
+  const radios = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+  await Promise.all(radios.map((radio) => radio.updateComplete));
+  group.addEventListener('lr-invalid', (event) => event.preventDefault());
+  const natives: Event[] = [];
+  group.addEventListener('invalid', (event) => natives.push(event));
+
+  expect(group.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.true;
 });
 
 it('renders radio semantics and explicit false states', async () => {
@@ -1623,4 +1646,54 @@ describe('lr-radio setCustomValidity()', () => {
     expect(group.validationMessage).to.equal('Server says no');
     expect(form.checkValidity()).to.be.false;
   });
+});
+
+it('exposes the group willValidate flag and reports validity on demand', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-radio-group name="choice" required label="Choice">
+        <lr-radio value="a">A</lr-radio>
+        <lr-radio value="b">B</lr-radio>
+      </lr-radio-group>
+    </form>
+  `)) as HTMLFormElement;
+  const group = form.querySelector('lr-radio-group') as LyraRadioGroup;
+  await group.updateComplete;
+  expect(group.willValidate).to.equal(true);
+  expect(group.checkValidity()).to.equal(false);
+  expect(group.reportValidity()).to.equal(false);
+  await group.updateComplete;
+  expect(group.matches(':state(user-invalid)')).to.equal(true);
+
+  group.value = 'a';
+  await group.updateComplete;
+  expect(group.reportValidity()).to.equal(true);
+});
+
+it('bars the group from constraint validation while disabled, like a native disabled control', async () => {
+  const group = (await fixture(html`
+    <lr-radio-group required disabled label="Choice">
+      <lr-radio value="a">A</lr-radio>
+      <lr-radio value="b">B</lr-radio>
+    </lr-radio-group>
+  `)) as LyraRadioGroup;
+  await group.updateComplete;
+  expect(group.validity.valueMissing, 'a barred group raises no violation').to.be.false;
+  expect(group.checkValidity()).to.be.true;
+
+  group.disabled = false;
+  await group.updateComplete;
+  expect(group.validity.valueMissing, 'the violation returns once it is enforceable again').to.be
+    .true;
+});
+
+it('bars a standalone radio from constraint validation while disabled', async () => {
+  const el = (await fixture(html`<lr-radio required disabled value="a">A</lr-radio>`)) as LyraRadio;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'a barred radio raises no violation').to.be.false;
+  expect(el.checkValidity()).to.be.true;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'the violation returns once it is enforceable again').to.be.true;
 });

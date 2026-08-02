@@ -1,6 +1,7 @@
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
@@ -144,7 +145,10 @@ export interface LyraCopyButtonEventMap {
  * @csspart copy-icon - The resting copy glyph.
  * @csspart success-icon - The confirmation glyph.
  * @csspart error-icon - The failure glyph.
- * @csspart feedback - The visually hidden `role="status"` region announcing the outcome.
+ * @csspart feedback - The visually hidden, `aria-hidden` mirror of the outcome text. The
+ * announcement itself lands in the shared light-DOM polite region (`acquireAnnouncementSink()` in
+ * `internal/announcer.ts`), because a live region inside a shadow root is not reliably announced;
+ * this part is a styling/inspection surface only.
  * @csspart tooltip__base - The nested tooltip's base wrapper.
  * @csspart tooltip__base__popup - The nested tooltip's popup wrapper.
  * @csspart tooltip__base__arrow - The nested tooltip's arrow.
@@ -196,6 +200,10 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   @property({ type: Number, attribute: 'feedback-duration' }) feedbackDuration = DEFAULT_FEEDBACK_DURATION;
 
   @state() private status: CopyStatus = 'rest';
+  /** Handle on the shared light-DOM live region outcomes actually announce through -- a region
+   *  rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores one
+   *  outright), so `[part="feedback"]` is only an `aria-hidden` mirror. */
+  private sink?: AnnouncementSink;
 
   @state() private hasCustomTrigger = false;
 
@@ -231,11 +239,17 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     // Axe cannot yet see ElementInternals' default ARIA role in every engine, so expose the same
     // default through markup while still preserving any role the author supplied before connect.
     if (!this.hasAttribute('role')) this.setAttribute('role', 'group');
+    // Acquired on connect, not on the first outcome: assistive tech has to have been observing a
+    // live region *before* text arrives for the change to be announced at all, and the first copy
+    // can land in the same task this element is appended in.
+    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resetFeedback();
+    this.sink?.release();
+    this.sink = undefined;
   }
 
   private resetFeedback(): void {
@@ -328,6 +342,10 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   private showStatus(status: CopyStatus): void {
     this.setStatus(status);
+    // Announced from the transition, not from a rendered text change: the shared region appends
+    // each announcement as its own node, so copying twice in a row is read twice instead of the
+    // second one being a silent no-op.
+    this.sink?.announce(this.statusLabel(status));
     clearTimeout(this.copyTimeoutId);
     // A NaN/negative feedbackDuration (a bad attribute, or a stray programmatic assignment) must
     // not reach setTimeout() unsanitized -- self-heals to the constructed default instead.
@@ -448,7 +466,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
             `}
         <slot @slotchange=${this.onDefaultSlotChange} @click=${this.onCustomTriggerClick}></slot>
       </lr-tooltip>
-      <span part="feedback" role="status">${feedback}</span>
+      <span part="feedback" aria-hidden="true">${feedback}</span>
     `;
   }
 }

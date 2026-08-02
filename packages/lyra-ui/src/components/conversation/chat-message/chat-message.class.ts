@@ -384,7 +384,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
 
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
-    this.emit<boolean>('lr-collapse-toggle', this.collapsed);
+    this.emit('lr-collapse-toggle', this.collapsed);
   };
 
   private onRetryClick = (): void => {

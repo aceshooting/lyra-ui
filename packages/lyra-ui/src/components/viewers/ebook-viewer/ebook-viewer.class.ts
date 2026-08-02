@@ -17,11 +17,8 @@ import { announceSearchResult } from '../../../internal/viewer-search.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import type {
-  AnchorResultDetail,
   LyraAnchor,
   LyraHighlightTone,
-  HighlightActivateDetail,
-  TextSelectDetail,
 } from '../document-viewer/anchors.js';
 import { getEpubJs, type EpubBook, type EpubRendition } from './ebook-loader.js';
 import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
@@ -288,7 +285,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         if (!text.trim()) return;
         const rects: DOMRect[] =
           selection && selection.rangeCount > 0 ? (Array.from(selection.getRangeAt(0).getClientRects()) as DOMRect[]) : [];
-        this.emit<TextSelectDetail>('lr-text-select', { text, anchor: { kind: 'cfi', cfi: cfiRange }, rects });
+        this.emit('lr-text-select', { text, anchor: { kind: 'cfi', cfi: cfiRange }, rects });
       });
       this.book = book;
       this.rendition = rendition;
@@ -394,7 +391,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       if (operation !== this.anchorOperationGeneration) return false;
       const rendition = this.rendition;
       if (rendition) this.reportRenditionFailure(error, rendition, this.generation);
-      this.emit<AnchorResultDetail>('lr-anchor-result', { found: false });
+      this.emit('lr-anchor-result', { found: false });
       return false;
     }
   }
@@ -461,7 +458,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.rendition.annotations.highlight(
         cfi,
         { id: highlight.id },
-        () => this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: highlight.id }),
+        () => this.emit('lr-highlight-activate', { id: highlight.id }),
         `lr-hl-${tone}`,
         this.resolveHighlightFill(TONE_FILL_TOKEN[tone]),
       );

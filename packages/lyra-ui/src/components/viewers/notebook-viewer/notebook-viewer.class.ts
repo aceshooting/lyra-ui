@@ -165,6 +165,11 @@ export interface LyraNotebookViewerEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
+// Same one-line base every other `DocumentAnchorTarget()` adopter uses: the mixin takes a
+// constructor, so the event map has to be bound before it is applied -- otherwise this component
+// keeps `LyraElement`'s permissive default and its own `emit()` calls go unchecked.
+class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
+
 /**
  * `<lr-notebook-viewer>` — read-only Jupyter notebook (nbformat 4.x) renderer, composing existing
  * components per cell. Execution is a hard non-goal.
@@ -219,7 +224,7 @@ export interface LyraNotebookViewerEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
+export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and parse as a notebook. Ignored once `notebook` is set. */

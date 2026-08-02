@@ -13,7 +13,13 @@ import {
 } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
-import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import {
+  getFormOwner,
+  installCustomErrorProperty,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -102,7 +108,9 @@ export interface LyraSwitchEventMap {
  * non-bubbling native `blur`, re-dispatched as bubbling and composed.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-invalid - The switch failed a validity check.
+ * @event lr-invalid - The switch failed a validity check. Cancelable: calling
+ * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
+ * browser's own validation bubble so an app can present the failure its own way.
  * @cssstate required - Matches while `required` is set. Style with `lr-switch:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
  * @cssstate valid - Matches while the control satisfies its constraints, including any
@@ -271,7 +279,9 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
-    this.reflectValidityStates();
+    // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
+    // the states republished.
+    this.updateValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -320,7 +330,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   constructor() {
     super();
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
@@ -405,8 +415,18 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     }
   }
 
+  /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   private updateValidity(): void {
-    if (this.required && !this.checked) {
+    if (this.barredFromValidation) {
+      // A barred control reports no violation at all, exactly like a native disabled checkbox --
+      // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required
+      // switches, and with it the documented `:state(user-invalid)` error styling.
+      this.validityController.setValidity({});
+    } else if (this.required && !this.checked) {
       this.validityController.setValidity(
         { valueMissing: true },
         this.localize('switchRequired'),
@@ -421,7 +441,11 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
    *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. Called from
    *  every path that can move either validity or the interaction flag. */
   private reflectValidityStates(): void {
-    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.hasInteracted });
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.hasInteracted,
+      barred: this.barredFromValidation,
+    });
     setCustomState(this.internals, 'checked', this.checked);
     setCustomState(this.internals, 'disabled', this.effectiveDisabled);
   }
@@ -452,7 +476,8 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
-    this.reflectValidityStates();
+    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
+    this.updateValidity();
     this.requestUpdate();
   }
   checkValidity(): boolean {

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 11 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,8 +56,9 @@ inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width` — inherited from `LyraChart`,
-identical in meaning, together with the mirrored `--border-color-1`, `--border-color-2`,
+`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width`, `--lr-chart-pattern-step` —
+inherited from `LyraChart`, identical in meaning, together with the mirrored `--border-color-1`,
+`--border-color-2`,
 `--border-color-3`, `--border-color-4`, `--border-color-5`, `--border-color-6`, `--fill-color-1`,
 `--fill-color-2`, `--fill-color-3`, `--fill-color-4`, `--fill-color-5`, `--fill-color-6`,
 `--border-radius`, `--border-width`, `--grid-border-width`, `--grid-color`,

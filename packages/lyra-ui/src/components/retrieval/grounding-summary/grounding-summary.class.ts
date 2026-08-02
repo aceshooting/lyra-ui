@@ -101,7 +101,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   }
 
   private onCitationSelect(citation: Citation): void {
-    this.emit<CitationSelectEventDetail>('lr-citation-select', { citation });
+    this.emit('lr-citation-select', { citation });
   }
 
   private renderEvidenceItem = (citation: Citation, index: number): TemplateResult => {

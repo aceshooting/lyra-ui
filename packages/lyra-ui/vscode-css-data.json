@@ -1808,6 +1808,13 @@
       }
     },
     {
+      "name": "--lr-chart-pattern-step",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-space-2xs)`) — Tile size of the texture painted on `[part='legend-swatch']` while `forced-colors: active` matches, where every series collapses to one system color and the stripe/crosshatch pattern becomes the only channel keeping series apart. Declared on the swatch part rather than the host; the stripe width within a tile stays `--lr-border-width-thin`, so a larger step spaces the stripes further apart."
+      }
+    },
+    {
       "name": "--lr-chart-tick-color",
       "description": {
         "kind": "markdown",
@@ -3569,6 +3576,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-success)`) — Success count-dot color."
+      }
+    },
+    {
+      "name": "--lr-form-control-required-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `var(--lr-color-danger)`) — Required-marker color, themeable independently of error text and invalid borders.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-known-date>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-tool-param-form>`** (default: `var(--lr-color-danger)`) — Color of that marker, retunable without touching any other danger-coloured surface."
+      }
+    },
+    {
+      "name": "--lr-form-control-required-content",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `' *'`) — The required marker appended to `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`** (default: `' *'`) — The required-field marker rendered after the label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here.\n\n**`<lr-known-date>`** (default: `' *'`) — The required-field marker, rendered after the fieldset `legend` here rather than after the inner label span, so it follows the whole label rather than sitting inside it. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here.\n\n**`<lr-tool-param-form>`** (default: `' *'`) — The required-field marker rendered after the `label` part of every field whose key is listed in the schema's `required` array — per field here, not per host, because this control's value is a whole object. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here."
+      }
+    },
+    {
+      "name": "--lr-form-control-required-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `0`) — Inline space between the label text and the required marker.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-known-date>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-tool-param-form>`** (default: `0`) — Inline space between the label text and the marker."
       }
     },
     {

@@ -40,7 +40,14 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
 badge).
 
 **CSS parts:** `base`, `summary` (the "{done} of {total} steps complete" line), `count` (one per
-status present, text + tone dot, never color-only), `live-region` (step-transition announcement).
+status present, text + tone dot, never color-only), `live-region` (a visually-hidden, `aria-hidden`
+mirror of the last step-transition announcement).
+
+`live-region` carries no live-region role of its own — it is a styling and inspection surface. The
+announcement itself goes to the library's shared **light-DOM** polite region, appended to the
+consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a
+shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
+document-level region rather than `::part(live-region)`.
 
 **Themeable custom properties:** `--lr-flow-run-overlay-status-color` controls a count dot without
 an execution status. `--lr-flow-run-overlay-status-{pending|running|success|error|denied}-color`

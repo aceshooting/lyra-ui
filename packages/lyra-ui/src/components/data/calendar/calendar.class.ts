@@ -80,7 +80,9 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     const dayLabelFmt = getDateTimeFormat(this.effectiveLocale, { dateStyle: 'full' });
     const agendaDateFmt = getDateTimeFormat(this.effectiveLocale, { dateStyle: 'medium' });
     const dayNumberFmt = getNumberFormat(this.effectiveLocale);
-    const agenda = this.events.filter((event) => event.date.startsWith(this.viewDate.slice(0, 7))).sort((a, b) => a.date.localeCompare(b.date));
+    const agenda = this.events
+      .filter((event) => event.date.startsWith(this.viewDate.slice(0, 7)))
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     const eventsByDate = this.view === 'month' ? this.bucketEventsByDate() : undefined;
     // The roving tab stop prefers focusedDate/value/today, in that order, but
     // any of those can point outside the currently visible 6-week grid (e.g.

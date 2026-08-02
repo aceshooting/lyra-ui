@@ -1,17 +1,17 @@
 import { expect } from '@open-wc/testing';
-import './lyra.js';
+import './all.js';
 import {
   ROOT_BARREL_OPTIONAL_PEER_TAGS,
   ROOT_BARREL_TAGS,
 } from './internal/root-registration-allowlist.js';
 
-it('registers every manifest component assigned to the root barrel', () => {
+it('registers every manifest component assigned to the all.js compatibility entry', () => {
   for (const tag of ROOT_BARREL_TAGS) {
     expect(customElements.get(tag), tag).to.exist;
   }
 });
 
-it('does NOT register the optional-peer-dependent chart/map/graph families from the root barrel', () => {
+it('does NOT register the optional-peer-dependent chart/map/graph families from all.js', () => {
   for (const tag of ROOT_BARREL_OPTIONAL_PEER_TAGS) {
     // Compare to `undefined` outside chai rather than asserting `.to.not.exist` on the
     // constructor directly: when the assertion fails, chai's failure-message inspector
@@ -20,7 +20,7 @@ it('does NOT register the optional-peer-dependent chart/map/graph families from 
     // constructor out of the assertion entirely avoids that failure mode for good.
     expect(
       customElements.get(tag) === undefined,
-      `${tag} should not be pre-registered by the root barrel`,
+      `${tag} should not be pre-registered by all.js`,
     ).to.be.true;
   }
 });

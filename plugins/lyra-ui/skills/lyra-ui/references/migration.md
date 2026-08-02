@@ -11,13 +11,26 @@ and receive location-aware warnings.
 pnpm migrate-wa -- --dry-run --report=lyra-migration.json src
 ```
 
+The same version-matched CLI ships with the package and can be run without a repository
+checkout. Replace `<version>` with the installed Lyra major/minor/patch you are targeting:
+
+```bash
+npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --check src
+```
+
+`--check` never writes source files and exits nonzero while rewrites or warnings remain, which
+makes it suitable for CI after an applied migration.
+
 The tool scans HTML, JavaScript, TypeScript, JSX, Vue, Svelte, MDX, and Markdown. It rewrites
 inventory-declared tags, members, defaults, and supported side-effect registration imports.
 Imports with bindings remain manual because exported names cannot be inferred safely. An
 aliased component value that uses a rewritten member blocks that mapping across the scanned
 target set, preventing a registration import from changing while an old member remains. A root
-Web Awesome or Shoelace registration import changes only when that ecosystem has a proven-safe
-automatic component use and no manual component use anywhere in the scanned target set.
+Web Awesome or Shoelace registration import changes only when that package identity has a
+proven-safe automatic component use and no manual component use anywhere in the scanned target
+set. Root-included targets use `@aceshooting/lyra-ui/all.js`; root-excluded targets receive granular registration imports.
+Targets with optional runtime peers also emit an `OPTIONAL_PEER_REQUIRED` report entry naming
+each package that must be installed.
 Re-running the tool is idempotent; comments, prose, partial strings, and unrelated packages are
 left alone.
 
@@ -53,9 +66,9 @@ set with a warning. Expand or classify them before applying, then rerun to verif
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Web Awesome | 38 | 46 | 3 | 0 | 0 | 84 | 3 |
+| Web Awesome | 37 | 45 | 5 | 0 | 0 | 82 | 5 |
 | Shoelace | 18 | 37 | 3 | 0 | 0 | 55 | 3 |
-| **Total** | **56** | **83** | **6** | **0** | **0** | **139** | **6** |
+| **Total** | **55** | **82** | **8** | **0** | **0** | **137** | **8** |
 
 ## Web Awesome (87)
 
@@ -106,7 +119,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-intersection-observer>` | `<lr-intersection-observer>` | `rewritten` | Automatic: tag/import plus events: wa-intersect → lr-intersect. |
 | `<wa-known-date>` | `<lr-known-date>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. |
 | `<wa-line-chart>` | `<lr-line-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-markdown>` | `<lr-markdown>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-markdown>` | `<lr-markdown>` | `warning-required` | Manual: The source and target light-DOM Markdown content models and optional-peer runtime requirements are not mechanically equivalent; migration leaves the use unchanged and reports the required review. |
 | `<wa-mutation-observer>` | `<lr-mutation-observer>` | `rewritten` | Automatic: tag/import plus events: wa-mutation → lr-mutation. |
 | `<wa-number-input>` | `<lr-number-input>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-option>` | `<lr-option>` | `exact` | Automatic: tag and supported side-effect registration import. |
@@ -123,7 +136,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-radar-chart>` | `<lr-radar-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-radio>` | `<lr-radio>` | `exact` | Automatic: tag and supported side-effect registration import. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-radio-group>` | `<lr-radio-group>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
-| `<wa-random-content>` | `<lr-random-content>` | `rewritten` | Automatic: tag/import plus events: wa-content-change → lr-content-change. |
+| `<wa-random-content>` | `<lr-random-content>` | `warning-required` | Manual: Light-DOM candidate eligibility and selection behavior require an explicit compatibility review; migration leaves the use unchanged instead of assuming behavioral equivalence from matching members. |
 | `<wa-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: wa-hover → lr-hover; events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; getSymbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
 | `<wa-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-resize-observer>` | `<lr-resize-observer>` | `rewritten` | Automatic: tag/import plus events: wa-resize → lr-resize. |

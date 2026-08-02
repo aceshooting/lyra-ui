@@ -127,22 +127,37 @@ import '@aceshooting/lyra-ui/components/forms/input/input.js';  // just <lr-inpu
 ```
 
 A family entry point is **side-effectful by design**: importing it registers every tag in that
-family, the same way the root barrel registers all of them — including the peer-gated tags the root
-barrel leaves out (see below), whose optional peers still load lazily, on first use. Reach for one
-when you genuinely use most of a family and want a single import; reach for the granular path — which
-is what every example in these docs uses — when you don't, because a barrel cannot be tree-shaken
-down to the two elements you actually render.
+family — including the peer-gated tags `all.js` leaves out (see below), whose optional peers still
+load lazily, on first use. Reach for one when you genuinely use most of a family and want a single
+import; reach for the granular path — which is what every example in these docs uses — when you
+don't, because a barrel cannot be tree-shaken down to the two elements you actually render.
 
 …or pull the whole library:
 
 ```js
-import '@aceshooting/lyra-ui';
+import '@aceshooting/lyra-ui/all.js';
 ```
 
-This registers every component **except** the 15 inventory-designated optional-peer-family tags:
-`<lr-chart>` and its 8 typed subclasses, `<lr-box-plot>`, `<lr-histogram>`, `<lr-map>`,
-`<lr-graph>`, `<lr-knowledge-graph-explorer>`, and `<lr-geojson-view>` (see Install above). Those
-always require their own explicit subpath import, even when pulling the rest of the library in bulk:
+> **Breaking in 8.0.0 — the package root no longer registers anything.** In 7.x, a bare
+> `import '@aceshooting/lyra-ui'` had the side effect of defining every root-included tag. It does
+> not any more: the root is now a **pure export surface**. `@aceshooting/lyra-ui/all.js` is the
+> explicit compatibility path that carries that side effect, and rewriting the one specifier is the
+> whole migration.
+>
+> Every named and type export stays on the root, at the same specifier, with the same name —
+> `import { LyraSelect, type LyraSelectEventMap } from '@aceshooting/lyra-ui'` is unchanged, and it
+> now costs you nothing at runtime. Only the side effect moved.
+>
+> Watch for this, because it is the genuinely nasty part: a missed migration does **not** throw a
+> module error. The import still resolves, the build still succeeds, and the tags simply never
+> upgrade — `<lr-select>` renders as an unknown inert element with its light DOM showing through and
+> no console message. If elements stopped working after upgrading and nothing failed, this is why.
+
+`all.js` registers 268 tags — every component **except** the 15 inventory-designated
+optional-peer-family tags: `<lr-chart>` and its 8 typed subclasses, `<lr-box-plot>`,
+`<lr-histogram>`, `<lr-map>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>`, and
+`<lr-geojson-view>` (see Install above). Those always require their own explicit subpath import,
+even when pulling the rest of the library in bulk:
 
 ```js
 import '@aceshooting/lyra-ui/components/charts/chart/chart.js';
@@ -150,7 +165,11 @@ import '@aceshooting/lyra-ui/components/media/map/map.js';
 import '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';
 ```
 
-The root import registers `<lr-flag>` without pulling in the optional flag asset graph. If a
+Granular per-component imports remain the recommendation. `all.js` exists so a 7.x application can
+upgrade in one line, not because pulling 268 elements into a bundle to render four of them is a good
+idea.
+
+`all.js` registers `<lr-flag>` without pulling in the optional flag asset graph. If a
 flag uses `country` or `language`, also import the peer registration entry once:
 
 ```js
@@ -162,8 +181,8 @@ Passing a pre-resolved `src` does not require that entry.
 ### Optional autoloader and CDN entry
 
 Applications that receive arbitrary Lyra markup can opt into the inventory-driven autoloader
-instead of importing the root barrel. The manual entry is side-effect-free and loads only known
-tags already present below the supplied root:
+instead of registering the whole library up front. The manual entry is side-effect-free and loads
+only known tags already present below the supplied root:
 
 ```ts
 import {
@@ -493,31 +512,35 @@ rewrites the declarative default.
 <sl-resize-observer @sl-resize="sync">  →  <lr-resize-observer @lr-resize="sync">
 ```
 
-**Automating the safe subset.** This repo ships a contract-aware codemod:
-[`scripts/migrate-wa.mjs`](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/migrate-wa.mjs)
-(run from a checkout of this repository — it isn't published as part of the npm package). It reads
-the checked-in component inventory, applies only contract-recorded tag/member/default/registration-import
-rewrites, and can write a stable JSON report for CI or human review:
+**Automating the safe subset.** The package ships the version-matched `lyra-ui-migrate` CLI. It
+reads the packaged component inventory, applies only contract-recorded
+tag/member/default/registration-import rewrites, and can write a stable JSON report for CI or human
+review. Replace `<version>` with the exact Lyra version you are migrating to:
 
 ```bash
-node packages/lyra-ui/scripts/migrate-wa.mjs --dry-run --report=migration.json path/to/your/src
-node packages/lyra-ui/scripts/migrate-wa.mjs path/to/your/src
+npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --check \
+  --report=migration.json path/to/your/src
+npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate path/to/your/src
 ```
 
 The report records file, line, column, migration origin, tag/member, action, target, and warning code.
 Supported side-effect component deep imports are routed through the target's inventory registration
-module. Imports with bindings, unknown subpaths, dynamic values, aliased component values that use a
-rewritten member, unsafe security/default changes, conceptual mappings, and unsupported components
-remain unchanged with an actionable warning. An aliased member blocks that mapping across the whole
-scanned target set so the codemod never rewrites its registration import while leaving an old member
-behind. A second run is byte-idempotent. Comments, prose, unrelated identifiers/packages, and
-partial strings are not treated as component uses.
+module. Proven root-included registration closures use `@aceshooting/lyra-ui/all.js`; root-excluded
+targets receive granular registration imports instead. A target with optional runtime dependencies
+adds an `OPTIONAL_PEER_REQUIRED` entry naming every package the consumer must install. Imports with
+bindings, unknown subpaths, dynamic values, aliased component values that use a rewritten member,
+unsafe security/default changes, conceptual mappings, and unsupported components remain unchanged
+with an actionable warning. An aliased member blocks that mapping across the whole scanned target set
+so the codemod never rewrites its registration import while leaving an old member behind. A second
+run is byte-idempotent. Comments, prose, unrelated identifiers/packages, and partial strings are not
+treated as component uses. `--check` never writes files and exits nonzero while a rewrite or warning
+remains.
 
 **Preserving Lyra 7 overlay defaults.** This is a separate, opt-in profile; the default command
 above continues to scan only Web Awesome and Shoelace uses. Run it first in dry-run mode:
 
 ```bash
-node packages/lyra-ui/scripts/migrate-wa.mjs --origin=lyra-v7 --dry-run \
+npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --origin=lyra-v7 --dry-run \
   --report=lyra-v7-migration.json path/to/your/src
 ```
 
@@ -701,9 +724,13 @@ remains available for the complete M+1 line and cannot be removed before M+2. Se
 
 ## SSR & Declarative Shadow DOM
 
-Lyra's root barrel and every granular registration module are server-safe under Node 20+. The
-`@aceshooting/lyra-ui/ssr-loader.js` entry installs Lit's hydration hook before registering Lyra and
-exports the machine-readable `LYRA_SSR_SUPPORT_MATRIX`. It has two explicit tiers:
+Every Lyra entry point is server-safe under Node 20+ — the package root, `all.js`, the family
+barrels, and every granular registration module alike. The `@aceshooting/lyra-ui/ssr-loader.js`
+entry installs Lit's hydration hook before registering Lyra (it still pulls the whole `all.js`
+closure, so it is unaffected by the 8.0.0 root split) and exports the machine-readable
+`LYRA_SSR_SUPPORT_MATRIX`. New integrations that want granular registration can import
+`@aceshooting/lyra-ui/hydration.js` first instead, then their own component modules. The matrix has
+two explicit tiers:
 
 - `render-and-hydrate` components emit Declarative Shadow DOM (DSD) and reuse that shadow root and
   its nodes during browser hydration.
@@ -744,7 +771,12 @@ const diagnostics = await diagnoseLyraHydration(document);
 Root-excluded optional-peer families still use their granular registration import after the loader;
 the loader does not make optional peers eager. Property bindings cannot be serialized by a fallback
 renderer, so express initial fallback state as attributes/light DOM or assign properties on the
-client. Layout measurement, observers, canvas, and media playback start after hydration; remote
+client. A `render-and-hydrate` component whose rendering depends on something only a browser can
+answer — its own light-DOM children, or a browser global such as `EyeDropper` — reproduces the
+server's answer on the hydrating render and corrects itself on the very next update rather than
+contradicting the markup it is hydrating, so a slotted override or an eyedropper button appears one
+frame after hydration. A browser-only mount (no server markup) is unaffected and still renders the
+final result the first time. Layout measurement, observers, canvas, and media playback start after hydration; remote
 content remains client-only. CI renders every inventory tag, verifies both tiers, and crawls a real
 Chromium DSD response (including `lr-page`) with strict hydration warnings/errors and DOM-identity
 checks. The exported matrix is the authoritative per-tag list as components evolve.
@@ -1124,7 +1156,7 @@ each one-liner below.
 | `<lr-notebook-viewer>` | — (extra) | Read-only Jupyter notebook (nbformat 4.x) renderer composing existing components per cell — Markdown cells through `<lr-markdown>`, code cells through `<lr-code-block>`, rich outputs preferring image/HTML/JSON/plain-text in order; optional-DOMPurify sanitizes raw HTML/SVG output |
 | `<lr-spreadsheet-viewer>` | — (extra) | Optional-SheetJS `.xlsx`/`.xls` workbook viewer with sheet tabs and virtualized rows |
 | `<lr-csv-viewer>` | — (extra) | Optional-PapaParse CSV viewer with quoted-field support and virtualized rows |
-| `<lr-geojson-view>` | — (extra) | Document-registry bridge that renders a fetched `.geojson`/`application/geo+json` file through `<lr-map>`'s `dataLayers` (falls back to `<lr-json-viewer>` without the optional `maplibre-gl` peer); registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel |
+| `<lr-geojson-view>` | — (extra) | Document-registry bridge that renders a fetched `.geojson`/`application/geo+json` file through `<lr-map>`'s `dataLayers` (falls back to `<lr-json-viewer>` without the optional `maplibre-gl` peer); registered by importing `geojson-view/geojson-view.js` directly — not part of `all.js` |
 | `<lr-docx-viewer>` | — (extra) | Optional-Mammoth DOCX viewer that renders sanitized semantic HTML |
 | `<lr-email-viewer>` | — (extra) | Optional-PostalMime `.eml` viewer with sanitized HTML and plain-text fallback |
 | `<lr-calendar-viewer>` | — (extra) | Optional-ical.js `.ics` viewer for event summaries and times |

@@ -19,6 +19,31 @@ a missing feature.
   accessible-name override, not visible text; a chat composer is a composite input, not a labeled
   field) — silence isn't an exception on its own; a component relying on this carve-out states it
   explicitly in its class doc comment the next time it's touched.
+- **The required marker is one shared sheet, never a re-typed `::after`.** A control that accepts
+  `required` and renders a `form-control-label` part gets its asterisk from
+  `formControlRequiredMarker` (`src/internal/form-control.styles.ts`), interpolated into the
+  component's own `css` template (`${formControlRequiredMarker}`) rather than appended to `static
+  styles` — the marker belongs beside the rule that owns the label part. It covers both shapes the
+  library has: `:host([required]) [part~='form-control-label']::after` for a whole-host required
+  field, and `[part='field'][data-required] [part='label']::after` for a composite form rendering
+  many fields in one host (`lr-tool-param-form`). Never re-declare the three
+  `content`/`color`/`margin-inline-start` lines locally and never render a literal `<span>*</span>`
+  in the template: the copy-pasted version had already drifted (several `required`-accepting
+  controls shipped no marker at all), and the hardcoded `content: ' *'` gave a consumer no way to
+  mark *optional* fields instead, to substitute a localized word, or to retune the colour without
+  moving every other danger-coloured surface on the page. The three escape hatches
+  (`--lr-form-control-required-content`, `-color`, `-offset`) are consumer-supplied content and are
+  therefore never localized by the component.
+- **`formResetCallback()` restores the default value; it does not blank the field.** Native reset
+  semantics are "return to the value the element was parsed/constructed with", not "empty". The
+  `FormAssociated` mixin does this (`_valueDirty = false`, restore `_defaultValue`,
+  `_hasInteracted = false`, `syncValidityStates()`), and a control driving `ElementInternals`
+  directly (`lr-checkbox`, `lr-rating`, `lr-radio-group`, …) implements the same three moves
+  itself: restore from its own captured default, clear the interacted/touched flags so the
+  `:state(user-*)` mirrors stop matching, then re-sync validity. A custom error set through
+  `setCustomValidity()` deliberately **survives** a reset — that is also native behavior. Blanking
+  instead of restoring is invisible until a form with prefilled defaults is reset, which no
+  component test exercises unless it is written on purpose.
 - **ARIA-name forwarding.** Any component that computes its own internal accessible name lets a
   host-level `aria-label` win over that computed default. Two established patterns, by the
   component's own label sources: an `accessibleLabel` property

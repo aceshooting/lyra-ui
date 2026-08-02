@@ -110,6 +110,9 @@ export const styles = css`
        consumer's ::part(swatch-fill) background rule can still win when overriding it. */
     background-color: var(--lr-swatch-color);
     transition: transform var(--lr-transition-fast);
+    /* The fill is the option's data, not component chrome. Preserve it while the enclosing button
+       and its focus/selection affordances continue to use system colors in forced-colors mode. */
+    forced-color-adjust: none;
   }
   [part='swatch-icon'] {
     display: flex;
@@ -122,6 +125,7 @@ export const styles = css`
        smaller default button font size. Consumer-provided em-sized icons benefit identically. */
     font-size: var(--lr-swatch-picker-fill-size);
     transition: transform var(--lr-transition-fast);
+    forced-color-adjust: none;
   }
   [part='swatch']:hover [part='swatch-fill'],
   [part='swatch']:hover [part='swatch-icon'] {

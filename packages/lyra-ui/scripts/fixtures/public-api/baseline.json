@@ -1,0 +1,80 @@
+{
+  "packageJson": {
+    "name": "@aceshooting/lyra-ui",
+    "version": "8.0.0",
+    "exports": {
+      ".": {
+        "types": "./dist/lyra.d.ts",
+        "default": "./dist/lyra.js"
+      },
+      "./custom-elements.json": "./custom-elements.json"
+    }
+  },
+  "manifest": {
+    "schemaVersion": "1.0.0",
+    "modules": [
+      {
+        "kind": "javascript-module",
+        "path": "src/components/forms/sample/sample.class.ts",
+        "declarations": [
+          {
+            "kind": "class",
+            "name": "LyraSample",
+            "customElement": true,
+            "tagName": "lr-sample",
+            "members": [
+              {
+                "kind": "field",
+                "name": "mode",
+                "type": { "text": "'quiet' | 'loud'" },
+                "default": "'quiet'",
+                "attribute": "mode",
+                "reflects": true
+              },
+              {
+                "kind": "method",
+                "name": "show",
+                "parameters": [
+                  { "name": "reason", "type": { "text": "string | undefined" }, "optional": true }
+                ],
+                "return": { "type": { "text": "void" } }
+              },
+              {
+                "kind": "field",
+                "name": "internalState",
+                "privacy": "private",
+                "type": { "text": "number" }
+              }
+            ],
+            "attributes": [
+              {
+                "name": "mode",
+                "fieldName": "mode",
+                "type": { "text": "'quiet' | 'loud'" },
+                "default": "'quiet'"
+              }
+            ],
+            "events": [
+              { "name": "lr-change", "type": { "text": "CustomEvent<{ mode: 'quiet' | 'loud' }>" } }
+            ],
+            "slots": [
+              { "name": "", "description": "Content." }
+            ],
+            "cssParts": [
+              { "name": "base", "description": "The base." }
+            ],
+            "cssProperties": [
+              { "name": "--lr-sample-gap", "default": "1rem", "description": "The gap." }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "declarations": {
+    "named": "export { LyraSample } from './components/forms/sample/sample.js';\nexport type { SampleMode } from './components/forms/sample/sample.js';\n",
+    "react": "export type LyraSampleReactProps = { mode?: 'quiet' | 'loud' };\nexport interface LyraReactIntrinsicElements { 'lr-sample': LyraSampleReactProps; }\n",
+    "vue": "export interface LyraVueGlobalComponents { 'lr-sample': typeof import('./sample.js').LyraSample; }\n",
+    "svelte": "export interface LyraSvelteElements { 'lr-sample': { mode?: 'quiet' | 'loud' }; }\n"
+  }
+}

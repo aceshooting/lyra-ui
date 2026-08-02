@@ -183,7 +183,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
         // An unresolvable highlight id still reports a definite (negative) result instead of
         // leaving a caller's `lr-anchor-result` listener waiting indefinitely.
         this.announceAnchorResult(undefined, false);
-        this.emit<AnchorResultDetail>('lr-anchor-result', { found: false });
+        this.emit('lr-anchor-result', { found: false });
         return false;
       }
 
@@ -191,7 +191,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
       if (generation !== this.anchorGeneration) return false;
       if (ok && highlightId) this.activeHighlightId = highlightId;
       this.announceAnchorResult(anchor, ok);
-      this.emit<AnchorResultDetail>('lr-anchor-result', { found: ok });
+      this.emit('lr-anchor-result', { found: ok });
       return ok;
     }
 
@@ -265,7 +265,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
         if (!text) return;
         const anchor = this.computeSelectionAnchor(range, text);
         const rects = Array.from(range.getClientRects());
-        this.emit<TextSelectDetail>('lr-text-select', { text, anchor, rects });
+        this.emit('lr-text-select', { text, anchor, rects });
       };
 
       let debounceHandle: number | undefined;

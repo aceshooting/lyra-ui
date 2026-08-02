@@ -14,7 +14,9 @@ const tsc = join(
 await rm(join(packageDir, 'dist'), { recursive: true, force: true });
 
 await new Promise((resolve, reject) => {
-  const child = spawn(tsc, ['-p', join(packageDir, 'tsconfig.json')], {
+  // tsconfig.build.json, not tsconfig.json: the published tree ships `dist` only,
+  // so the emit config turns source maps off (see that file's comment).
+  const child = spawn(tsc, ['-p', join(packageDir, 'tsconfig.build.json')], {
     cwd: packageDir,
     stdio: 'inherit',
     shell: process.platform === 'win32',

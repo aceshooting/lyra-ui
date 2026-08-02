@@ -170,7 +170,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
 
   private toggle = (): void => {
     this.expanded = !this.expanded;
-    this.emit<SourceListToggleDetail>('lr-toggle', { expanded: this.expanded });
+    this.emit('lr-toggle', { expanded: this.expanded });
   };
 
   override render(): TemplateResult {

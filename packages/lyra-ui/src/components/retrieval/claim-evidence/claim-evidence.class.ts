@@ -114,7 +114,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
                       .label=${citation.label ?? ''}
                       @lr-citation-activate=${(event: Event) => {
                         event.stopPropagation();
-                        this.emit<CitationSelectEventDetail>('lr-citation-select', { citation });
+                        this.emit('lr-citation-select', { citation });
                       }}
                     ></lr-citation-badge>
                     ${citation.quote ? html`<q>${citation.quote}</q>` : nothing}

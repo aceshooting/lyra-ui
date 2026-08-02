@@ -9,7 +9,13 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './radio.styles.js';
 import { appearanceStyles } from './radio-button.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import {
+  getFormOwner,
+  installCustomErrorProperty,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 
@@ -63,7 +69,9 @@ export type RadioAppearance = 'default' | 'button';
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-invalid - The standalone radio failed a validity check. Aggregate groups emit their
- *   own alias instead.
+ *   own alias instead. Cancelable: calling `preventDefault()` also cancels the native `invalid`
+ *   event behind it, suppressing the browser's own validation bubble so an app can present the
+ *   failure its own way.
  * @cssstate required - Matches while the radio is required, either by its own `required` attribute
  * or by an owning `<lr-radio-group required>`. Style with `lr-radio:state(required)`.
  * @cssstate optional - Matches while it is neither — the complement of `required`.
@@ -213,7 +221,9 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(value);
     this.toggleAttribute('disabled', this._disabled);
-    this.reflectValidityStates();
+    // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
+    // the states republished.
+    this.updateValidity();
     this.requestUpdate('disabled', old);
   }
   get required(): boolean { return this._required; }
@@ -277,7 +287,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       this,
       () => this.currentGroup()?.customError ?? this.validityController.customValidityMessage,
     );
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
     this.syncFormState();
   }
 
@@ -359,14 +369,24 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
-    this.reflectValidityStates();
+    // Cascaded disablement bars constraint validation exactly like the radio's own `disabled`.
+    this.updateValidity();
     this.requestUpdate();
+  }
+
+  /** Shared with every other form control: disabled (own, fieldset, or group) bars validation. */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
   }
 
   private updateValidity(): void {
     const owned = Boolean(this.currentGroup());
+    // A barred control reports no violation at all, exactly like a native disabled radio --
+    // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required radios.
+    const violates =
+      !this.barredFromValidation && !owned && this.effectiveRequired && !this.checked;
     this.validityController.setValidity(
-      !owned && this.effectiveRequired && !this.checked ? { valueMissing: true } : {},
+      violates ? { valueMissing: true } : {},
       this.localize('radioRequired'),
     );
     this.reflectValidityStates();
@@ -380,6 +400,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     syncValidityStates(this.internals, {
       required: this.effectiveRequired,
       hasInteracted: this.hasInteracted,
+      barred: this.barredFromValidation,
     });
     setCustomState(this.internals, 'checked', this.checked);
     setCustomState(this.internals, 'disabled', this.effectiveDisabled);
@@ -388,7 +409,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   setGroupDisabled(value: boolean): void {
     if (this._groupDisabled === value) return;
     this._groupDisabled = value;
-    this.reflectValidityStates();
+    // Group disablement bars constraint validation exactly like the radio's own `disabled`.
+    this.updateValidity();
     this.requestUpdate();
   }
   /** @internal Driven by an owning `<lr-radio-group>`; released when the radio leaves the group's control. */

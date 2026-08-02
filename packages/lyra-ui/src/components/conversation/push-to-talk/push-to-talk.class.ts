@@ -205,7 +205,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     this._state = next;
     this.setAttribute('data-state', next);
     this.requestUpdate('state', old);
-    this.emit<{ state: PushToTalkState }>('lr-state-change', { state: next });
+    this.emit('lr-state-change', { state: next });
   }
 
   private announce(text: string): void {
@@ -246,7 +246,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       this.recorder.ondataavailable = (e: BlobEvent) => {
         if (!e.data || e.data.size === 0) return;
         this.chunks.push(e.data);
-        if (this.timesliceMs > 0) this.emit<{ blob: Blob }>('lr-record-chunk', { blob: e.data });
+        if (this.timesliceMs > 0) this.emit('lr-record-chunk', { blob: e.data });
       };
       this.recorder.onstop = () => this.finalizeStop();
       // Both duration-like properties are clamped right here, at the point they reach a native
@@ -259,7 +259,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       this.recordingStartedAt = performance.now();
       this.elapsedMs = 0;
       this.setState('recording');
-      this.emit<{ stream: MediaStream }>('lr-record-start', { stream });
+      this.emit('lr-record-start', { stream });
       this.announce(this.localize('pushToTalkStarted'));
       if (this.levelEvents) this.startLevelMeter(stream);
       if (this.maxDurationMs > 0) {
@@ -283,7 +283,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       }
       const denied = err instanceof DOMException && err.name === 'NotAllowedError';
       this.setState(denied ? 'denied' : 'error');
-      this.emit<{ error: DOMException | Error }>('lr-record-error', { error: err as DOMException | Error });
+      this.emit('lr-record-error', { error: err as DOMException | Error });
       this.announce(this.localize(denied ? 'pushToTalkDenied' : 'pushToTalkError'));
       return false;
     }
@@ -324,7 +324,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       this.emit('lr-record-cancel');
       this.announce(this.localize('pushToTalkCancelled'));
     } else {
-      this.emit<{ blob: Blob; durationMs: number }>('lr-record-stop', { blob, durationMs });
+      this.emit('lr-record-stop', { blob, durationMs });
       this.announce(this.localize('pushToTalkStopped'));
     }
     this.cancelRequested = false;
@@ -369,7 +369,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       sumSquares += norm * norm;
     }
     const rms = Math.sqrt(sumSquares / this.levelData.length);
-    this.emit<{ level: number }>('lr-level', { level: Math.min(1, rms) });
+    this.emit('lr-level', { level: Math.min(1, rms) });
     this.levelRafId = requestAnimationFrame(this.tickLevel);
   };
 

@@ -119,7 +119,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
 
   private requestIndex(next: number): void {
     if (next < 0 || next > this.normalizedCount - 1 || next === this.normalizedIndex) return;
-    this.emit<{ index: number }>('lr-branch-change', { index: next });
+    this.emit('lr-branch-change', { index: next });
   }
 
   // `previous-glyph`/`next-glyph` render as plain wrapping `<span>`s around the shared

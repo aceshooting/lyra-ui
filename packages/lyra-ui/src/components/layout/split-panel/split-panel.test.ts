@@ -529,3 +529,19 @@ it('is accessible with populated start, end, and custom divider slots', async ()
   `);
   await expect(element).to.be.accessible();
 });
+
+it('re-synchronizes its split when the window resizes', async () => {
+  const el = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px">
+      <div slot="start">Start</div>
+      <div slot="end">End</div>
+    </lr-split-panel>
+  `)) as LyraSplitPanel;
+  await elementUpdated(el);
+
+  el.style.inlineSize = '800px';
+  window.dispatchEvent(new Event('resize'));
+  await elementUpdated(el);
+  expect(divider(el)).to.exist;
+  expect(el.position).to.be.a('number');
+});

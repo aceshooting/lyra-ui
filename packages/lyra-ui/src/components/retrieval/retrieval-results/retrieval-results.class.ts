@@ -366,7 +366,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const ids = [...next];
     this.selectedIds = ids;
     const selectedChunks = this.dedupedChunks.filter((c) => next.has(c.id));
-    this.emit<RetrievalResultsSelectDetail>('lr-select', { ids, chunks: selectedChunks });
+    this.emit('lr-select', { ids, chunks: selectedChunks });
   }
 
   private formatMetadataValue(value: unknown): string {

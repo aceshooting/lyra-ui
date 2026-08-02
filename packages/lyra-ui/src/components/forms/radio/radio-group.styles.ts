@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const groupStyles = css`
   :host {
@@ -13,7 +14,7 @@ export const groupStyles = css`
   [part='form-control'] { display: flex; flex-direction: column; gap: var(--lr-radio-group-row-gap); }
   [part~='label'] { color: var(--lr-color-text); font-weight: var(--lr-font-weight-semibold); font-size: var(--lr-form-control-font-size); }
   [part~='label'][hidden], [part~='hint'][hidden], [part='error'][hidden] { display: none; }
-  :host([required]) [part~='label']::after { content: ' *'; color: var(--lr-color-danger); }
+  ${formControlRequiredMarker}
   [part~='radios'] { display: flex; flex-direction: column; gap: var(--lr-radio-group-row-gap); }
   :host([orientation='horizontal']) [part~='radios'] {
     flex-direction: row;

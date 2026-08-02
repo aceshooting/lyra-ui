@@ -108,10 +108,13 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @event lr-change - Shoelace-compatible commit alias carrying the newly serialized value;
  *   emitted alongside the native `change` event.
  * @event lr-input - Shoelace-compatible edit alias, emitted alongside each native `input` event.
- * @event lr-show - The colour panel opened.
+ * @event lr-show - The colour panel is about to open, however `open` became true. Cancelable —
+ *   `preventDefault()` leaves it closed. Not cancelable for initial markup, a disconnect, or a
+ *   close forced by disablement, none of which a listener may hold open.
  * @event {CustomEvent} lr-after-show - The colour panel finished opening. There is no animated
  *   delay, so it follows `lr-show` in the same completed update.
- * @event lr-hide - The colour panel closed.
+ * @event lr-hide - The colour panel is about to close. Cancelable on the same terms as
+ *   `lr-show`.
  * @event {CustomEvent} lr-after-hide - The colour panel finished closing; follows `lr-hide` in the
  *   same update.
  * @event lr-focus - Shoelace-compatible alias emitted when focus enters the control.
@@ -119,7 +122,9 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @event {FocusEvent} focus - Native-constructor relay when focus enters an internal control;
  *   bubbling and composed across the shadow boundary.
  * @event {FocusEvent} blur - Native-constructor relay when focus leaves the internal controls.
- * @event lr-invalid - The color picker failed a validity check.
+ * @event lr-invalid - The color picker failed a validity check; cancelable. Calling
+ *   `preventDefault()` also cancels the native `invalid` event it aliases, suppressing the
+ *   browser's own validation bubble and `reportValidity()`'s focus/scroll.
  * @method show - `show(): void` — opens the popup unless disabled; inline visibility is unchanged.
  * @method hide - `hide(): void` — closes the popup and returns focus to the trigger; inline
  *   visibility is unchanged.
@@ -204,6 +209,13 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  *   Rewritten on every render, like `--lr-color-picker-swatch-color`.
  * @cssprop --lr-color-picker-opacity-gradient - The opacity slider's transparent-to-opaque ramp,
  *   built from the current colour and text direction. Rewritten on every render.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
+ * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
+ * localized word) to replace it. Caller-supplied content, so it is never localized here.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ * retunable without touching any other danger-coloured surface.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * marker.
  * @status stable
  * @since 4.0.0
  */
@@ -266,8 +278,28 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   set open(next: boolean) {
     const normalized = Boolean(next) && !this.effectiveDisabled;
     if (normalized === this._open) return;
+    // The veto point sits in the setter because the setter is the one funnel every path uses --
+    // `show()`/`hide()`, the trigger toggle, a direct `el.open = true`, and the reflected
+    // attribute all land here, and here the transition has not happened yet. Three paths are
+    // deliberately not vetoable: initial declarative markup (no transition to veto), a disconnect
+    // (the element is already gone), and a disablement-forced close (a disabled control must not
+    // be held open by a listener).
+    if (this.forcedOpenChange || !this.hasRenderedOnce || !this.isConnected) {
+      this.applyOpenState(normalized);
+      return;
+    }
+    if (this.emit(normalized ? 'lr-show' : 'lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+      // A veto reached through the reflected attribute would otherwise leave `open` present on an
+      // element whose property says closed.
+      this.toggleAttribute('open', this._open);
+      return;
+    }
+    this.applyOpenState(normalized);
+  }
+
+  private applyOpenState(next: boolean): void {
     const old = this._open;
-    this._open = normalized;
+    this._open = next;
     this.requestUpdate('open', old);
   }
 
@@ -299,6 +331,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private eyeDropperAbort?: AbortController;
   private eyeDropperGeneration = 0;
   private suppressDisconnectedClose = false;
+  /** Set while a close is imposed by disablement, which no listener may veto. */
+  private forcedOpenChange = false;
   private interactionGeneration = 0;
   private hasRenderedOnce = false;
 
@@ -317,12 +351,18 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // first <slot> elements, so relying on it alone rendered label/hint/error chrome `hidden` on
     // the very first paint for a color picker mounted with declarative slotted content, only
     // revealing it on the following render. Mirrors lr-checkbox-group's identical fix.
-    const hasSlot = (name: string): boolean =>
-      Array.from(this.children).some((el) => el.getAttribute('slot') === name);
-    this.hasLabel = hasSlot('label');
-    this.hasHint = hasSlot('hint');
-    this.hasError = hasSlot('error');
-    this.hasEyeDropper = eyeDropperConstructor() !== undefined;
+    const seedEnvironmentState = (): void => {
+      const hasSlot = (name: string): boolean =>
+        Array.from(this.children).some((el) => el.getAttribute('slot') === name);
+      this.hasLabel = hasSlot('label');
+      this.hasHint = hasSlot('hint');
+      this.hasError = hasSlot('error');
+      // A server renderer has neither those children nor an `EyeDropper` constructor, so on a
+      // hydrating mount this runs one update after the render it would otherwise contradict.
+      this.hasEyeDropper = eyeDropperConstructor() !== undefined;
+    };
+    if (this.hasUpdated) seedEnvironmentState();
+    else this.seedFirstRenderState(seedEnvironmentState);
   }
 
   override disconnectedCallback(): void {
@@ -354,7 +394,14 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // `disabled` can flip (directly, or through an ancestor fieldset) while the panel is already
     // showing; the open-guard in the setter only covers the opening direction.
     if (this.effectiveDisabled) {
-      if (this.open) this.open = false;
+      if (this.open) {
+        this.forcedOpenChange = true;
+        try {
+          this.open = false;
+        } finally {
+          this.forcedOpenChange = false;
+        }
+      }
       this.keyboardChanged = false;
       this.endDrag();
     }
@@ -389,14 +436,10 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       }
       // A declaratively-open picker must not announce a transition it never made, and a close
       // driven by disconnection has nowhere to dispatch to.
+      // `lr-show`/`lr-hide` already fired from the `open` setter, one step earlier, so a listener
+      // can still veto the transition; only the settled notifications remain here.
       if (this.hasRenderedOnce && this.isConnected && !suppressClose) {
-        if (this.open) {
-          this.emit('lr-show');
-          this.emit('lr-after-show');
-        } else {
-          this.emit('lr-hide');
-          this.emit('lr-after-hide');
-        }
+        this.emit(this.open ? 'lr-after-show' : 'lr-after-hide');
       }
     } else if (changed.has('inline')) {
       if (this.inline) {

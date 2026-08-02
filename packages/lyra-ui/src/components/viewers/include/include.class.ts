@@ -42,9 +42,21 @@ export type LyraIncludeErrorReason =
   | 'resource-too-large'
   | 'missing-fragment';
 
+/** The detail both spellings of Include's failure notification carry. */
+export interface LyraIncludeErrorDetail {
+  status: number;
+  reason: LyraIncludeErrorReason;
+  error?: unknown;
+}
+
 export interface LyraIncludeEventMap extends LyraTextViewerTargetEventMap {
   'lr-load': CustomEvent<{ src: string }>;
-  'lr-include-error': CustomEvent<{ status: number; reason: LyraIncludeErrorReason; error?: unknown }>;
+  'lr-include-error': CustomEvent<LyraIncludeErrorDetail>;
+  /**
+   * Shoelace spells this failure `sl-error` where Web Awesome spells it `wa-include-error`, so
+   * both migrated spellings resolve here. Neither is deprecated.
+   */
+  'lr-error': CustomEvent<LyraIncludeErrorDetail>;
 }
 
 class LyraIncludeBase extends LyraElement<LyraIncludeEventMap> {}
@@ -134,6 +146,13 @@ function elementWithId(root: ParentNode, id: string): Element | null {
  * always yields an opaque response (`status` `0`, unreadable body), a Fetch
  * API platform limitation rather than a bug here.
  *
+ * A failure is announced twice under two names that always carry the same
+ * detail object and always fire together: `lr-include-error` (Web Awesome
+ * spells it `wa-include-error`) and `lr-error` (Shoelace spells it
+ * `sl-error`, and it is the name every other Lyra component uses for a load
+ * failure). The two upstreams disagree, so both spellings are supported and
+ * neither is deprecated — listen to whichever one your migration produced.
+ *
  * This is a deliberately bare transclusion primitive with no label/hint/
  * error chrome — its interaction idiom (silently swapping light-DOM content)
  * is incompatible with a generic label/hint/error frame. Listen for
@@ -155,7 +174,8 @@ function elementWithId(root: ParentNode, id: string): Element | null {
  * @customElement lr-include
  * @slot - Fallback content shown until (or unless) a fetch succeeds; overwritten with the sanitized fragment once one does.
  * @event lr-load - The source fragment was sanitized and written into the light DOM.
- * @event lr-include-error - Loading, selecting, or sanitizing the fragment failed; see `LyraIncludeErrorReason` for `detail.reason`.
+ * @event lr-include-error - Loading, selecting, or sanitizing the fragment failed; see `LyraIncludeErrorReason` for `detail.reason`. Mirrors Web Awesome's `wa-include-error`.
+ * @event lr-error - The same failure under the spelling Shoelace's `sl-error` migrates to; it always fires alongside `lr-include-error` with the identical detail object. Neither spelling is deprecated.
  * @csspart base - The non-layout (`display: contents`) wrapper around the default slot.
  * @status stable
  * @since 4.0.0
@@ -353,7 +373,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
 
     const source = this.resolveSource();
     if (!source) {
-      this.emit('lr-include-error', { status: 0, reason: 'blocked-url' });
+      this.emitError({ status: 0, reason: 'blocked-url' });
       return;
     }
 
@@ -409,7 +429,18 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
 
   private fail(status: number, reason: LyraIncludeErrorReason, error?: unknown): void {
     this.setAttribute('aria-busy', 'false');
-    this.emit('lr-include-error', { status, reason, error });
+    this.emitError({ status, reason, error });
+  }
+
+  /**
+   * Announces one failure under both supported spellings. The two upstreams disagree on the name
+   * (`wa-include-error` vs `sl-error`), so a migrated listener finds whichever it was written
+   * against; the *same* detail object is dispatched to both so a consumer reading `detail.reason`
+   * cannot observe a difference between them.
+   */
+  private emitError(detail: LyraIncludeErrorDetail): void {
+    this.emit('lr-include-error', detail);
+    this.emit('lr-error', detail);
   }
 
   override render(): TemplateResult {

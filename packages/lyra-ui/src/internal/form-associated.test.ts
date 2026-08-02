@@ -1,8 +1,24 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { nothing } from 'lit';
 import { LyraElement } from './lyra-element.js';
-import { FormAssociated } from './form-associated.js';
+import {
+  createStringArrayFormDataState,
+  FormAssociated,
+  isBarredFromValidation,
+  isEmptyFormValue,
+  readStringArrayFormDataState,
+  stringFormValueAdapter,
+  type FormValueAdapter,
+} from './form-associated.js';
+import { SET_ANCHORED_VALIDITY } from './anchored-validity.js';
 import { tag } from './prefix.js';
 import { LyraTextarea } from '../components/forms/textarea/textarea.js';
+import '../components/forms/checkbox/checkbox.js';
+import '../components/forms/select/select.js';
+import '../components/overlays/rating/rating.js';
+import type { LyraCheckbox } from '../components/forms/checkbox/checkbox.js';
+import type { LyraSelect } from '../components/forms/select/select.js';
+import type { LyraRating } from '../components/overlays/rating/rating.js';
 
 class Ctl extends FormAssociated(LyraElement) {
   render() {
@@ -10,6 +26,88 @@ class Ctl extends FormAssociated(LyraElement) {
   }
 }
 customElements.define(tag('demo-ctl'), Ctl);
+
+/** A mixin consumer that carries the (non-mixin) `readonly` property every editable wrapper has. */
+class ReadonlyCtl extends FormAssociated(LyraElement) {
+  static properties = { readonly: { type: Boolean, reflect: true } };
+  readonly = false;
+  render() {
+    return html``;
+  }
+}
+customElements.define(tag('demo-readonly-ctl'), ReadonlyCtl);
+
+/**
+ * A mixin consumer shaped like `<lr-input>`: its constraints live on an inner native input that
+ * Lit writes on its own async cycle, and its `updateValidity()` override reads that input back.
+ */
+class NativeCtl extends FormAssociated(LyraElement) {
+  static properties = { pattern: { reflect: true } };
+  pattern = '';
+  render() {
+    return html`<input pattern=${this.pattern || nothing} .value=${this.value} />`;
+  }
+  protected updateValidity(): void {
+    const native = this.renderRoot?.querySelector('input');
+    if (!native) return;
+    native.value = this.value;
+    const validity = native.validity;
+    this[SET_ANCHORED_VALIDITY](
+      validity.valid ? {} : { patternMismatch: validity.patternMismatch },
+      native.validationMessage,
+    );
+  }
+}
+customElements.define(tag('demo-native-ctl'), NativeCtl);
+
+// --- non-string value types through the same mixin ----------------------------------------------
+//
+// The mixin is generic over its value type; these two demo elements are the proof, and they are
+// deliberately defined here rather than by converting a shipped control: the point under test is
+// the PRIMITIVE (every guarantee the string case has, reached by a `Date` and a `string[]`), not a
+// migration. `Date | null` covers a value with no useful "empty" instance and a non-trivial
+// attribute round-trip; `string[]` covers a value for which `=== ''` is not merely wrong but not
+// even type-correct, and which needs a session state shaped differently from its submission entry.
+
+const isoDateAdapter: FormValueAdapter<Date | null> = {
+  empty: null,
+  toFormValue: (value) => value?.toISOString() ?? null,
+  isEmpty: (value) => value === null,
+  fromAttribute: (attribute) => {
+    const parsed = new Date(attribute);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  },
+  toAttribute: (value) => value?.toISOString() ?? null,
+  fromFormState: (state) => (typeof state === 'string' && state ? new Date(state) : null),
+};
+
+class DateCtl extends FormAssociated(LyraElement, isoDateAdapter) {
+  render() {
+    return html``;
+  }
+}
+customElements.define(tag('demo-date-ctl'), DateCtl);
+
+const EMPTY_TAGS: readonly string[] = Object.freeze([]);
+
+const tagListAdapter: FormValueAdapter<readonly string[]> = {
+  empty: EMPTY_TAGS,
+  // One submission entry keyed by the control's own `name` (a joined string), but a name-independent
+  // FormData for the restored state -- exactly the split `toFormState` exists for.
+  toFormValue: (value) => (value.length > 0 ? value.join(',') : null),
+  toFormState: (value) => createStringArrayFormDataState('value', value),
+  isEmpty: (value) => value.length === 0,
+  fromAttribute: (attribute) => attribute.split(',').filter((entry) => entry !== ''),
+  toAttribute: (value) => (value.length > 0 ? value.join(',') : null),
+  fromFormState: (state) => readStringArrayFormDataState(state),
+};
+
+class TagsCtl extends FormAssociated(LyraElement, tagListAdapter) {
+  render() {
+    return html``;
+  }
+}
+customElements.define(tag('demo-tags-ctl'), TagsCtl);
 
 it('submits its value via the form and restores the constructed default value on reset', async () => {
   const form = await fixture<HTMLFormElement>(html`
@@ -262,7 +360,7 @@ it('maps the reflected custom-error property to custom validity without losing i
   expect(ctl.validationMessage).to.equal('This field is required.');
 });
 
-it('emits exactly one bubbling, composed, non-cancelable lr-invalid alias for a failed check', async () => {
+it('emits exactly one bubbling, composed, cancelable lr-invalid alias for a failed check', async () => {
   const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
   const aliases: CustomEvent[] = [];
   (ctl as unknown as HTMLElement).addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
@@ -281,7 +379,37 @@ it('emits exactly one bubbling, composed, non-cancelable lr-invalid alias for a 
   expect(aliases[0]?.target).to.equal(ctl);
   expect(aliases[0]?.bubbles).to.be.true;
   expect(aliases[0]?.composed).to.be.true;
-  expect(aliases[0]?.cancelable).to.be.false;
+  expect(aliases[0]?.cancelable).to.be.true;
+});
+
+it('lets a cancelled lr-invalid suppress the native invalid default (the browser validation bubble)', async () => {
+  const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+  const host = ctl as unknown as HTMLElement;
+  let nativeCancelable: boolean | undefined;
+  let nativeDefaultPrevented: boolean | undefined;
+  host.addEventListener('invalid', (event) => {
+    nativeCancelable = event.cancelable;
+    nativeDefaultPrevented = event.defaultPrevented;
+  });
+  host.addEventListener('lr-invalid', (event) => event.preventDefault());
+
+  expect(ctl.reportValidity()).to.be.false;
+
+  expect(nativeCancelable, 'the native invalid event is cancelable').to.be.true;
+  expect(nativeDefaultPrevented, 'cancelling lr-invalid cancels the native invalid').to.be.true;
+});
+
+it('leaves the native invalid event alone when nothing cancels the alias', async () => {
+  const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+  const host = ctl as unknown as HTMLElement;
+  let nativeDefaultPrevented: boolean | undefined;
+  host.addEventListener('invalid', (event) => {
+    nativeDefaultPrevented = event.defaultPrevented;
+  });
+
+  expect(ctl.checkValidity()).to.be.false;
+
+  expect(nativeDefaultPrevented, 'an uncancelled alias must not cancel the native event').to.be.false;
 });
 
 it('restores a string state synchronously without emitting a user event', async () => {
@@ -430,6 +558,126 @@ describe('setCustomValidity()', () => {
     expect(el.validity.valid).to.be.true;
     expect(el.checkValidity()).to.be.true;
     expect(el.validationMessage).to.equal('');
+  });
+});
+
+// A control barred from constraint validation matches NEITHER `:valid` NOR `:invalid` natively
+// (verified against a real `<input required disabled>` / `<input required readonly>` in Chromium),
+// so the six custom states must go quiet the same way rather than painting a disabled required
+// field with the documented `:state(user-invalid)` error styling.
+describe('barred from constraint validation', () => {
+  it('drops the intrinsic violation and both validity states while the control is disabled', async function () {
+    if (!supportsCustomStates) this.skip();
+    const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+    const host = ctl as unknown as HTMLElement;
+    host.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    expect(ctl.internals.states.has('user-invalid'), 'user-invalid before disabling').to.be.true;
+
+    ctl.disabled = true;
+    expect(ctl.validity.valueMissing, 'valueMissing while disabled').to.be.false;
+    expect(ctl.validity.valid, 'validity.valid while disabled').to.be.true;
+    expect(ctl.internals.states.has('invalid'), 'invalid while disabled').to.be.false;
+    expect(ctl.internals.states.has('user-invalid'), 'user-invalid while disabled').to.be.false;
+    expect(ctl.internals.states.has('valid'), 'valid while disabled').to.be.false;
+    expect(ctl.internals.states.has('user-valid'), 'user-valid while disabled').to.be.false;
+    // `required`/`optional` describe the attribute, not the validation outcome, and stay published.
+    expect(ctl.internals.states.has('required'), 'required while disabled').to.be.true;
+
+    ctl.disabled = false;
+    expect(ctl.validity.valueMissing, 'valueMissing once re-enabled').to.be.true;
+    expect(ctl.internals.states.has('invalid'), 'invalid once re-enabled').to.be.true;
+    expect(ctl.internals.states.has('user-invalid'), 'user-invalid once re-enabled').to.be.true;
+  });
+
+  it('re-runs validity when an ancestor <fieldset disabled> toggles', async function () {
+    if (!supportsCustomStates) this.skip();
+    const form = await fixture<HTMLFormElement>(html`
+      <form><fieldset><lr-demo-ctl name="x" required></lr-demo-ctl></fieldset></form>
+    `);
+    const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl;
+    const fieldset = form.querySelector('fieldset')!;
+    expect(ctl.internals.states.has('invalid'), 'invalid to begin with').to.be.true;
+
+    fieldset.disabled = true;
+    expect(ctl.effectiveDisabled, 'effectiveDisabled').to.be.true;
+    expect(ctl.validity.valueMissing, 'valueMissing under a disabled fieldset').to.be.false;
+    expect(ctl.internals.states.has('invalid'), 'invalid under a disabled fieldset').to.be.false;
+
+    fieldset.disabled = false;
+    expect(ctl.validity.valueMissing, 'valueMissing once the fieldset re-enables').to.be.true;
+    expect(ctl.internals.states.has('invalid'), 'invalid once the fieldset re-enables').to.be.true;
+  });
+
+  it('bars a `readonly` control through the shared predicate, without each wrapper copy-pasting it', async function () {
+    if (!supportsCustomStates) this.skip();
+    const ctl = (await fixture(
+      html`<lr-demo-readonly-ctl required readonly></lr-demo-readonly-ctl>`,
+    )) as unknown as ReadonlyCtl;
+    expect(isBarredFromValidation(ctl), 'isBarredFromValidation()').to.be.true;
+    expect(ctl.validity.valueMissing, 'valueMissing while readonly').to.be.false;
+    expect(ctl.checkValidity(), 'checkValidity() while readonly').to.be.true;
+    expect(ctl.internals.states.has('invalid'), 'invalid while readonly').to.be.false;
+
+    ctl.readonly = false;
+    // The platform reads the reflected `readonly` *attribute* when it answers `willValidate`, and
+    // Lit reflects on its own update cycle -- so the control is writable again one render later.
+    await (ctl as unknown as LyraElement).updateComplete;
+    expect(ctl.validity.valueMissing, 'valueMissing once writable').to.be.true;
+    expect(ctl.internals.states.has('invalid'), 'invalid once writable').to.be.true;
+  });
+
+  it('reaches <lr-rating readonly>, whose validity never barred on readonly at all', async function () {
+    if (!supportsCustomStates) this.skip();
+    const rating = await fixture<LyraRating>(
+      html`<lr-rating required readonly aria-label="Score"></lr-rating>`,
+    );
+    expect(rating.validity.valueMissing, 'valueMissing while readonly').to.be.false;
+    expect(rating.checkValidity(), 'checkValidity() while readonly').to.be.true;
+    expect(rating.matches(':state(invalid)'), ':state(invalid) while readonly').to.be.false;
+
+    rating.readonly = false;
+    await rating.updateComplete;
+    expect(rating.validity.valueMissing, 'valueMissing once writable').to.be.true;
+    expect(rating.matches(':state(invalid)'), ':state(invalid) once writable').to.be.true;
+  });
+
+  it('reaches the direct-ElementInternals controls (lr-checkbox, lr-select, lr-rating)', async function () {
+    if (!supportsCustomStates) this.skip();
+    const checkbox = await fixture<LyraCheckbox>(html`<lr-checkbox required>Accept</lr-checkbox>`);
+    const select = await fixture<LyraSelect>(html`<lr-select required label="Fruit"></lr-select>`);
+    const rating = await fixture<LyraRating>(html`<lr-rating required aria-label="Score"></lr-rating>`);
+    for (const control of [checkbox, select, rating]) {
+      expect(control.matches(':state(invalid)'), `${control.localName} invalid to begin with`).to.be.true;
+      control.disabled = true;
+      await control.updateComplete;
+      expect(control.validity.valueMissing, `${control.localName} valueMissing while disabled`).to.be.false;
+      expect(control.matches(':state(invalid)'), `${control.localName} invalid while disabled`).to.be.false;
+      expect(control.matches(':state(valid)'), `${control.localName} valid while disabled`).to.be.false;
+      control.disabled = false;
+      await control.updateComplete;
+      expect(control.matches(':state(invalid)'), `${control.localName} invalid once re-enabled`).to.be.true;
+    }
+  });
+});
+
+describe('checkValidity()/reportValidity()', () => {
+  it('answers from constraints assigned in the same synchronous block, not the previous Lit cycle', async () => {
+    const ctl = (await fixture(html`<lr-demo-native-ctl></lr-demo-native-ctl>`)) as unknown as NativeCtl;
+    ctl.value = 'abc';
+    ctl.pattern = '[0-9]+';
+
+    expect(ctl.checkValidity(), 'checkValidity() after a same-tick constraint change').to.be.false;
+    expect(ctl.validity.patternMismatch, 'patternMismatch').to.be.true;
+
+    ctl.value = '123';
+    expect(ctl.checkValidity(), 'checkValidity() once the value matches').to.be.true;
+  });
+
+  it('recomputes for reportValidity() too', async () => {
+    const ctl = (await fixture(html`<lr-demo-native-ctl></lr-demo-native-ctl>`)) as unknown as NativeCtl;
+    ctl.value = 'abc';
+    ctl.pattern = '[0-9]+';
+    expect(ctl.reportValidity(), 'reportValidity() after a same-tick constraint change').to.be.false;
   });
 });
 
@@ -684,5 +932,231 @@ describe('fallback ElementInternals when attachInternals() is unavailable', () =
     } finally {
       proto.attachInternals = original;
     }
+  });
+});
+
+// A control whose value is a `Date` or a `string[]` must get EVERY guarantee the string control
+// has, from the same one implementation -- that is the whole point of parameterising the mixin
+// rather than hand-rolling `ElementInternals` a nineteenth time. Each block below re-asserts a
+// specific guarantee named in the mixin's own contract.
+describe('a non-string value type through the same mixin', () => {
+  describe('Date-valued', () => {
+    it('parses the reflected `value` attribute into the reset default and submits the serialized form', async () => {
+      const form = await fixture<HTMLFormElement>(html`
+        <form><lr-demo-date-ctl name="due" value="2026-01-02T03:04:05.000Z"></lr-demo-date-ctl></form>
+      `);
+      const ctl = form.querySelector('lr-demo-date-ctl') as unknown as DateCtl;
+
+      expect(ctl.defaultValue?.toISOString()).to.equal('2026-01-02T03:04:05.000Z');
+      expect(ctl.value?.toISOString()).to.equal('2026-01-02T03:04:05.000Z');
+      expect(new FormData(form).get('due')).to.equal('2026-01-02T03:04:05.000Z');
+    });
+
+    it('restores the constructed default on form.reset(), and keeps a dirty live value until then', async () => {
+      const form = await fixture<HTMLFormElement>(html`
+        <form><lr-demo-date-ctl name="due" value="2026-01-02T03:04:05.000Z"></lr-demo-date-ctl></form>
+      `);
+      const ctl = form.querySelector('lr-demo-date-ctl') as unknown as DateCtl;
+
+      ctl.value = new Date('2030-06-07T08:09:10.000Z');
+      expect(new FormData(form).get('due')).to.equal('2030-06-07T08:09:10.000Z');
+
+      // A default change must not overwrite a dirty live value (the string case's rule, unchanged).
+      ctl.defaultValue = new Date('2027-02-03T00:00:00.000Z');
+      expect((ctl as unknown as HTMLElement).getAttribute('value')).to.equal('2027-02-03T00:00:00.000Z');
+      expect(ctl.value?.toISOString()).to.equal('2030-06-07T08:09:10.000Z');
+
+      form.reset();
+      expect(ctl.value?.toISOString()).to.equal('2027-02-03T00:00:00.000Z');
+    });
+
+    it('reports valueMissing from the adapter`s emptiness, never from `=== ""`', async () => {
+      const ctl = (await fixture(html`<lr-demo-date-ctl required></lr-demo-date-ctl>`)) as unknown as DateCtl;
+      expect(ctl.value).to.equal(null);
+      expect(ctl.validity.valueMissing, 'valueMissing while unset').to.be.true;
+      expect(ctl.validationMessage).to.equal('This field is required.');
+
+      ctl.value = new Date('2026-01-02T03:04:05.000Z');
+      expect(ctl.validity.valueMissing, 'valueMissing once filled').to.be.false;
+      expect(ctl.checkValidity()).to.be.true;
+
+      // A null assignment falls back to the adapter's empty value, exactly as `next ?? ''` does.
+      ctl.value = null;
+      expect(ctl.value).to.equal(null);
+      expect(ctl.validity.valueMissing, 'valueMissing once cleared again').to.be.true;
+    });
+
+    it('omits the control from FormData entirely when its empty value serializes to null', async () => {
+      const form = await fixture<HTMLFormElement>(html`
+        <form><lr-demo-date-ctl name="due"></lr-demo-date-ctl></form>
+      `);
+      expect(new FormData(form).has('due')).to.be.false;
+    });
+
+    it('keeps the barred-validation short-circuit and the synchronous `disabled`/`required` accessors', async () => {
+      const form = await fixture<HTMLFormElement>(html`
+        <form><lr-demo-date-ctl name="due" required></lr-demo-date-ctl></form>
+      `);
+      const ctl = form.querySelector('lr-demo-date-ctl') as unknown as DateCtl;
+      const host = ctl as unknown as HTMLElement;
+      expect(ctl.checkValidity(), 'invalid to begin with').to.be.false;
+
+      ctl.disabled = true;
+      expect(host.hasAttribute('disabled'), 'disabled reflected synchronously').to.be.true;
+      expect(ctl.validity.valueMissing, 'valueMissing while barred').to.be.false;
+      expect(ctl.checkValidity(), 'checkValidity() while barred').to.be.true;
+
+      ctl.disabled = false;
+      expect(ctl.checkValidity(), 'invalid again once unbarred').to.be.false;
+      ctl.required = false;
+      expect(ctl.checkValidity(), 'valid once optional, with no await').to.be.true;
+    });
+
+    it('restores a serialized state through the adapter, and survives setCustomValidity across a reset', async () => {
+      const form = await fixture<HTMLFormElement>(html`
+        <form><lr-demo-date-ctl name="due" value="2026-01-02T03:04:05.000Z"></lr-demo-date-ctl></form>
+      `);
+      const ctl = form.querySelector('lr-demo-date-ctl') as unknown as DateCtl & {
+        formStateRestoreCallback(state: string | File | FormData | null, reason: 'restore'): void;
+      };
+
+      ctl.formStateRestoreCallback('2031-12-25T00:00:00.000Z', 'restore');
+      expect(ctl.value?.toISOString()).to.equal('2031-12-25T00:00:00.000Z');
+
+      ctl.setCustomValidity('Rejected by the server.');
+      form.reset();
+      expect(ctl.value?.toISOString(), 'reset restores the default').to.equal('2026-01-02T03:04:05.000Z');
+      expect(ctl.validity.customError, 'the custom error survives a reset').to.be.true;
+      expect(ctl.validationMessage).to.equal('Rejected by the server.');
+
+      ctl.setCustomValidity('');
+      expect(ctl.validity.valid).to.be.true;
+    });
+  });
+
+  describe('string[]-valued', () => {
+    it('treats an empty array as missing for `required`, and a populated one as present', async () => {
+      const ctl = (await fixture(html`<lr-demo-tags-ctl required></lr-demo-tags-ctl>`)) as unknown as TagsCtl;
+      expect(ctl.value.length).to.equal(0);
+      expect(ctl.validity.valueMissing, 'valueMissing while empty').to.be.true;
+      expect(ctl.validationMessage).to.equal('This field is required.');
+
+      ctl.value = ['alpha', 'beta'];
+      expect(ctl.validity.valueMissing, 'valueMissing once populated').to.be.false;
+      expect(ctl.checkValidity()).to.be.true;
+
+      ctl.value = [];
+      expect(ctl.validity.valueMissing, 'valueMissing once emptied again').to.be.true;
+    });
+
+    it('round-trips through the `value` attribute and submits one entry keyed by `name`', async () => {
+      const form = await fixture<HTMLFormElement>(html`
+        <form><lr-demo-tags-ctl name="tags" value="alpha,beta"></lr-demo-tags-ctl></form>
+      `);
+      const ctl = form.querySelector('lr-demo-tags-ctl') as unknown as TagsCtl;
+      expect([...ctl.defaultValue]).to.deep.equal(['alpha', 'beta']);
+      expect([...ctl.value]).to.deep.equal(['alpha', 'beta']);
+      expect(new FormData(form).get('tags')).to.equal('alpha,beta');
+
+      ctl.value = ['gamma'];
+      expect(new FormData(form).get('tags')).to.equal('gamma');
+
+      form.reset();
+      expect([...ctl.value]).to.deep.equal(['alpha', 'beta']);
+    });
+
+    it('restores from the FormData state shape `toFormState` persisted, not from the submission entry', async () => {
+      const ctl = (await fixture(html`<lr-demo-tags-ctl name="tags"></lr-demo-tags-ctl>`)) as unknown as TagsCtl & {
+        formStateRestoreCallback(state: string | File | FormData | null, reason: 'restore'): void;
+      };
+      ctl.formStateRestoreCallback(createStringArrayFormDataState('value', ['one', 'two']), 'restore');
+      expect([...ctl.value]).to.deep.equal(['one', 'two']);
+
+      // A wrongly-shaped state fails closed to the empty value rather than throwing.
+      ctl.formStateRestoreCallback('not-a-form-data', 'restore');
+      expect([...ctl.value]).to.deep.equal([]);
+    });
+
+    it('removes the `value` attribute when the default serializes to null instead of writing an empty one', async () => {
+      const ctl = (await fixture(
+        html`<lr-demo-tags-ctl value="alpha"></lr-demo-tags-ctl>`,
+      )) as unknown as TagsCtl;
+      const host = ctl as unknown as HTMLElement;
+      expect(host.getAttribute('value')).to.equal('alpha');
+      ctl.defaultValue = [];
+      expect(host.hasAttribute('value')).to.be.false;
+      expect([...ctl.defaultValue]).to.deep.equal([]);
+    });
+
+    it('publishes the same validity custom states, gated on the same interaction signal', async function () {
+      if (!supportsCustomStates) this.skip();
+      const ctl = (await fixture(html`<lr-demo-tags-ctl required></lr-demo-tags-ctl>`)) as unknown as TagsCtl;
+      const host = ctl as unknown as HTMLElement;
+      expect(ctl.internals.states.has('required')).to.be.true;
+      expect(ctl.internals.states.has('invalid')).to.be.true;
+      expect(ctl.internals.states.has('user-invalid'), 'pristine control').to.be.false;
+
+      host.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+      expect(ctl.internals.states.has('user-invalid')).to.be.true;
+
+      ctl.value = ['alpha'];
+      expect(ctl.internals.states.has('user-valid')).to.be.true;
+      expect(ctl.internals.states.has('user-invalid')).to.be.false;
+    });
+  });
+
+  it('never mutates the shared empty value across instances', async () => {
+    const first = (await fixture(html`<lr-demo-tags-ctl></lr-demo-tags-ctl>`)) as unknown as TagsCtl;
+    const second = (await fixture(html`<lr-demo-tags-ctl></lr-demo-tags-ctl>`)) as unknown as TagsCtl;
+    first.value = ['alpha'];
+    expect([...second.value], 'the second instance still starts empty').to.deep.equal([]);
+  });
+});
+
+describe('the default (string) adapter', () => {
+  it('states the exact behaviour the mixin shipped with, so the default path stays a no-op', () => {
+    expect(stringFormValueAdapter.empty).to.equal('');
+    expect(stringFormValueAdapter.toFormValue('hello')).to.equal('hello');
+    expect(stringFormValueAdapter.isEmpty('')).to.be.true;
+    expect(stringFormValueAdapter.isEmpty('0')).to.be.false;
+    expect(stringFormValueAdapter.fromAttribute('hello')).to.equal('hello');
+    expect(stringFormValueAdapter.toAttribute('')).to.equal('');
+    expect(stringFormValueAdapter.fromFormState('hello')).to.equal('hello');
+    expect(stringFormValueAdapter.fromFormState(null)).to.equal('');
+    expect(stringFormValueAdapter.fromFormState(new FormData())).to.equal('');
+  });
+
+  it('is what an adapter-less mixin application still uses -- the string control is unchanged', async () => {
+    const form = await fixture<HTMLFormElement>(html`<form><lr-demo-ctl name="x" required></lr-demo-ctl></form>`);
+    const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl;
+    // Present as "" from construction (the native-<input> guarantee), and missing for `required`.
+    expect(new FormData(form).get('x')).to.equal('');
+    expect(ctl.validity.valueMissing).to.be.true;
+    ctl.value = '0';
+    expect(ctl.validity.valueMissing, '"0" is a real value, not emptiness').to.be.false;
+  });
+});
+
+describe('isEmptyFormValue()', () => {
+  it('answers emptiness for the value shapes a form control actually carries', () => {
+    expect(isEmptyFormValue(null), 'null').to.be.true;
+    expect(isEmptyFormValue(undefined), 'undefined').to.be.true;
+    expect(isEmptyFormValue(''), 'empty string').to.be.true;
+    expect(isEmptyFormValue([]), 'empty array').to.be.true;
+    expect(isEmptyFormValue({}), 'empty plain object').to.be.true;
+
+    expect(isEmptyFormValue('x'), 'non-empty string').to.be.false;
+    expect(isEmptyFormValue(['x']), 'non-empty array').to.be.false;
+    expect(isEmptyFormValue({ a: 1 }), 'non-empty plain object').to.be.false;
+    // A real value, however falsy or however key-less: `0`/`false` are choices a user made, and
+    // `Object.keys()` reports 0 for a populated FormData/Map/Set, so those are never key-counted.
+    expect(isEmptyFormValue(0), 'zero').to.be.false;
+    expect(isEmptyFormValue(false), 'false').to.be.false;
+    expect(isEmptyFormValue(new Date(0)), 'the epoch Date').to.be.false;
+    const populated = new FormData();
+    populated.append('a', '1');
+    expect(isEmptyFormValue(populated), 'a populated FormData').to.be.false;
+    expect(isEmptyFormValue(new FormData()), 'an empty FormData is not key-counted').to.be.false;
+    expect(isEmptyFormValue(new Map([['a', 1]])), 'a populated Map').to.be.false;
   });
 });

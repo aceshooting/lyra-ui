@@ -1,5 +1,63 @@
 import { expect } from '@open-wc/testing';
 
+import {
+  ROOT_BARREL_OPTIONAL_PEER_TAGS,
+  ROOT_BARREL_TAGS,
+} from './internal/root-registration-allowlist.js';
+
+// The eager-import counterpart of the root's registration-free contract. A bundler drops all of
+// this (`./dist/lyra.js` is not in package.json#sideEffects), but an unconditional import evaluates
+// three curated imperative re-exports that cannot work without their element: `toast()` reaches
+// toast/toast-item, `confirm()` reaches dialog, and the widget-renderer default registry reaches
+// the elements it renders. Anything BEYOND this set means a registration import has crept back into
+// `src/lyra.ts`, which is precisely the regression the 8.0.0 split exists to prevent.
+const ROOT_HELPER_REGISTERED_TAGS = [
+  'lr-badge',
+  'lr-button',
+  'lr-card',
+  'lr-dialog',
+  'lr-markdown',
+  'lr-media-card',
+  'lr-result-card',
+  'lr-result-field',
+  'lr-stat',
+  'lr-toast',
+  'lr-toast-item',
+];
+
+const definedAmong = (tags: readonly string[]): string[] =>
+  tags.filter((tag) => customElements.get(tag) !== undefined);
+
+// Declared FIRST on purpose: the three stages are only meaningful in order, in a registry that no
+// earlier import has warmed. Split into three `it`s, or reordered after a test that imports a
+// registration entry, each stage would still pass with the others broken.
+it('registers nothing from the root, exactly one tag from a granular entry, and the set from all.js', async function () {
+  this.timeout(120_000);
+
+  // 1. The root carries the named/type surface WITHOUT registering the library.
+  const root = await import('@aceshooting/lyra-ui');
+  expect(typeof root.LyraEmpty).to.equal('function');
+  expect(definedAmong([...ROOT_BARREL_TAGS, ...ROOT_BARREL_OPTIONAL_PEER_TAGS]).join(',')).to.equal(
+    ROOT_HELPER_REGISTERED_TAGS.join(','),
+  );
+
+  // 2. A granular registration entry registers EXACTLY its own tag -- and registers the very class
+  //    the root re-exports, which a `typeof` check could not tell from a duplicated class module.
+  await import('@aceshooting/lyra-ui/components/overlays/empty/empty.js');
+  expect(customElements.get('lr-empty')).to.equal(root.LyraEmpty);
+  expect(definedAmong([...ROOT_BARREL_TAGS, ...ROOT_BARREL_OPTIONAL_PEER_TAGS]).join(',')).to.equal(
+    [...ROOT_HELPER_REGISTERED_TAGS, 'lr-empty'].sort().join(','),
+  );
+
+  // 3. `all.js` is the documented compatibility path for the pre-8 root side effect: the whole
+  //    root-included set, and still nothing from an optional-peer family.
+  await import('@aceshooting/lyra-ui/all.js');
+  // Compare counts and names, never element constructors: a failed assertion carrying a DOM-ish
+  // value as chai's `actual` hangs the whole file.
+  expect(definedAmong(ROOT_BARREL_TAGS).length).to.equal(ROOT_BARREL_TAGS.length);
+  expect(definedAmong(ROOT_BARREL_OPTIONAL_PEER_TAGS).join(',')).to.equal('');
+});
+
 it('resolves the published root entry and representative granular subpaths', async function () {
   // Importing the complete barrel can contend with the other module-heavy
   // test files when the full suite starts them concurrently.
@@ -12,6 +70,17 @@ it('resolves the published root entry and representative granular subpaths', asy
   expect(typeof localization.registerLyraLocale).to.equal('function');
   expect(typeof localization.setLyraLocale).to.equal('function');
   expect(typeof localization.resolveLyraString).to.equal('function');
+  // The rest of the surface `llms/shared.md` tells applications to import from exactly this entry.
+  // `getLyraLocaleDirection` is the 8.0.0 addition, and is asserted by its answer rather than its
+  // `typeof` so a re-export that resolved to some unrelated function could not satisfy it.
+  expect(typeof localization.getLyraLocale).to.equal('function');
+  expect(typeof localization.getLyraLocaleDirection).to.equal('function');
+  expect(localization.getLyraLocaleDirection('en')).to.equal('ltr');
+  expect(typeof localization.getRegisteredLyraLocales).to.equal('function');
+  expect(typeof localization.subscribeLyraLocaleRegistry).to.equal('function');
+  expect(typeof localization.resolveLyraLocale).to.equal('function');
+  expect(typeof localization.resolveLyraDirection).to.equal('function');
+  expect(typeof localization.LYRA_DEFAULT_STRINGS).to.equal('object');
   expect(typeof root.LyraElement).to.equal('function');
   expect(typeof root.groupByRecency).to.equal('function');
   expect(typeof classEntry.LyraEmpty).to.equal('function');

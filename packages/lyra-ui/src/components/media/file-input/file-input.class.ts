@@ -3,6 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
@@ -10,6 +11,7 @@ import {
   attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
+  isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
@@ -68,7 +70,9 @@ export interface LyraFileInputEventMap {
  * and non-cancelable.
  * @event {FocusEvent} blur - Fired when the semantic dropzone loses focus; bubbling, composed, and
  * non-cancelable.
- * @event lr-invalid - The file input failed a validity check.
+ * @event lr-invalid - The file input failed a validity check. Cancelable: calling
+ * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the browser's
+ * own validation bubble so an app can present the failure its own way.
  * @csspart file-input - The complete form-control wrapper.
  * @csspart form-control-label - The form-control label.
  * @csspart label - Compatibility wrapper around the visible label content.
@@ -79,10 +83,14 @@ export interface LyraFileInputEventMap {
  * @csspart base - The native dropzone button, visually backing the slotted content while remaining
  *   its sibling in the accessibility tree so arbitrary slotted controls are never nested in it.
  * @csspart input - The visually-hidden native `<input type="file">`.
- * @csspart status - The visually-hidden live region announcing drag accept/reject state and
- * accepted/rejected selection counts.
- * @csspart rejection - The visible `role="alert"` region listing each currently-rejected file
- * alongside its reason, rendered in addition to (never in place of) the sr-only `status` summary.
+ * @csspart status - The visually-hidden, `aria-hidden` mirror of the drag accept/reject state and
+ * accepted/rejected selection counts. The announcement itself lands in the shared light-DOM polite
+ * region (`acquireAnnouncementSink()` in `internal/announcer.ts`) — a live region inside a shadow
+ * root is not reliably announced — so this part is a styling/inspection surface only.
+ * @csspart rejection - The visible region listing each currently-rejected file alongside its
+ * reason, rendered in addition to (never in place of) the sr-only `status` summary. Its text stays
+ * in the accessibility tree as ordinary visible content; the interrupting announcement it used to
+ * make as a shadow `role="alert"` now goes through the shared light-DOM assertive region instead.
  * @csspart file-list - The current selected-file list.
  * @csspart file - One selected-file row.
  * @csspart file-thumbnail - One selected file's thumbnail/icon wrapper.
@@ -109,6 +117,13 @@ export interface LyraFileInputEventMap {
  * `[part="base"][data-drag-state="reject"]`.
  * @cssprop [--lr-file-input-reject-bg=color-mix(in srgb, var(--lr-color-danger) 8%, transparent)] -
  * Background of `[part="base"][data-drag-state="reject"]`.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
+ * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
+ * other quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Required-marker color,
+ * themeable independently of error text and invalid borders.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * required marker.
  * @status stable
  * @since 4.0.0
  */
@@ -182,6 +197,14 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   declare customError: string | null;
   private dragCounter = 0;
   private dropToken = 0;
+  /** Shared light-DOM live regions this element announces through. A region rendered inside this
+   *  shadow root is not reliably announced (JAWS with Firefox ignores one outright), so
+   *  `[part="status"]` is only an `aria-hidden` mirror and `[part="rejection"]` is plain visible
+   *  text. */
+  private politeSink?: AnnouncementSink;
+  private assertiveSink?: AnnouncementSink;
+  /** False until the first render has committed, so mounting never announces a resting state. */
+  private announcementsArmed = false;
   private _name: string | null = null;
   private _files: File[] = [];
   private _disabled = false;
@@ -195,7 +218,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
     this.internals.setFormValue(null);
   }
 
@@ -273,7 +296,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       this.dropToken++;
       this.resetDragSession();
     }
-    this.publishCustomStates();
+    // Disabling bars constraint validation, so the intrinsic violation has to be dropped with it --
+    // synchronously, for the same reason the attribute is reflected synchronously.
+    this.updateValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -322,6 +347,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     super.connectedCallback();
     this.syncThumbnailUrls();
     this.updateValidity();
+    // Acquired on connect, not on the first announcement: assistive tech has to have been
+    // observing a live region *before* text arrives for the change to be announced at all, and a
+    // drag can start in the same task this element is appended in.
+    this.politeSink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
+    this.assertiveSink ??= acquireAnnouncementSink('assertive', { document: this.ownerDocument });
   }
 
   override disconnectedCallback(): void {
@@ -329,7 +359,31 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.resetDragSession();
     for (const url of this.thumbnailUrls.values()) URL.revokeObjectURL(url);
     this.thumbnailUrls.clear();
+    this.politeSink?.release();
+    this.politeSink = undefined;
+    this.assertiveSink?.release();
+    this.assertiveSink = undefined;
+    // Re-arm so a reconnect never replays the state it disconnected holding.
+    this.announcementsArmed = false;
     super.disconnectedCallback();
+  }
+
+  // Untyped `PropertyValues` (not `PropertyValues<this>`): the announced transitions are tracked
+  // on private `@state()` fields, which `keyof this` does not include.
+  protected override updated(changed: PropertyValues): void {
+    // The very first render is a mount, not a transition: a component appearing on the page must
+    // not announce its resting state.
+    if (this.announcementsArmed) {
+      if (changed.has('dragState') || changed.has('resultStatus')) {
+        this.politeSink?.announce(this.statusText());
+      }
+      if (changed.has('rejectedFiles') && this.rejectedFiles.length > 0) {
+        this.assertiveSink?.announce(
+          this.rejectedFiles.map((rejected) => this.rejectionMessage(rejected)).join(' '),
+        );
+      }
+    }
+    this.announcementsArmed = true;
   }
 
   private syncFormValue(): void {
@@ -352,8 +406,21 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.internals.setFormValue(file, file);
   }
 
+  /**
+   * Shared with every other form control: own `disabled` and a `<fieldset disabled>` ancestor bar
+   * constraint validation (this control has no `readonly` of its own — a file picker with nothing
+   * to pick from is spelled `disabled`). A barred control matches neither `:valid` nor `:invalid`
+   * natively, so leaving `valueMissing` raised on a disabled required dropzone is what painted it
+   * red under the documented `:state(user-invalid)` rule.
+   */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   private updateValidity(): void {
-    if (this.required && this._files.length === 0) {
+    if (this.barredFromValidation) {
+      this.validityController.setValidity({});
+    } else if (this.required && this._files.length === 0) {
       this.validityController.setValidity({ valueMissing: true }, this.localize('fieldRequired'));
     } else {
       this.validityController.setValidity({});
@@ -362,7 +429,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
 
   private publishCustomStates(): void {
-    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.touched,
+      barred: this.barredFromValidation,
+    });
     setCustomState(this.internals, 'blank', this._files.length === 0);
     setCustomState(this.internals, 'dragging', this.dragging);
     this.toggleAttribute('dragging', this.dragging);
@@ -413,7 +484,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       this.dropToken++;
       this.resetDragSession();
     }
-    this.publishCustomStates();
+    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
+    this.updateValidity();
     this.requestUpdate();
   }
 
@@ -797,10 +869,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
           ${this.hint}<slot name="hint"></slot>
         </div>
       </div>
-      <div part="status" class="sr-only" role="status" aria-live="polite">${this.statusText()}</div>
+      <div part="status" class="sr-only" aria-hidden="true">${this.statusText()}</div>
       ${this.rejectedFiles.length
         ? html`
-            <div part="rejection" role="alert">
+            <div part="rejection">
               <ul>
                 ${this.rejectedFiles.map((r) => html`<li>${this.rejectionMessage(r)}</li>`)}
               </ul>

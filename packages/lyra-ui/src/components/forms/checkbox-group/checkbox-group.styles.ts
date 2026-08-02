@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -14,6 +15,15 @@ export const styles = css`
   /* The rendered legend's real part is "form-control-label" (see checkbox-group.class.ts's
      render()), not "label" -- this must match it exactly or the rule is dead code. */
   [part~='form-control-label'] { font-weight: var(--lr-font-weight-semibold); color: var(--lr-color-text); font-size: var(--lr-form-control-font-size); }
+  /* The required marker comes from the one shared sheet (internal/form-control.styles.ts) like
+     every other labelled control's, so its glyph, colour and spacing are consumer-settable. The
+     rule below suppresses this component's older hand-rolled glyph -- a literal <span> the legend
+     template still renders -- so the two never double up; it is dead the moment that span is
+     dropped from checkbox-group.class.ts's render(). */
+  :host([required]) [part~='form-control-label'] > span[aria-hidden='true'] {
+    display: none;
+  }
+  ${formControlRequiredMarker}
   [part~='options'] {
     display: flex;
     flex-direction: column;

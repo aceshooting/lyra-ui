@@ -88,6 +88,27 @@ export function inventoryRootRegistrationSpecifiers(inventory) {
   });
 }
 
+export function inventoryAllRegistrationSpecifiers(inventory) {
+  inventoryRootRegistrationSets(inventory);
+  const seen = new Set();
+  return inventory.components
+    .slice()
+    .sort((left, right) => left.tag.localeCompare(right.tag))
+    .map((component) => {
+      assert.match(
+        component.registrationModule ?? '',
+        /^src\/components\/[a-z0-9/-]+\.ts$/,
+        `${component.tag}: invalid inventory registrationModule`,
+      );
+      assert.ok(
+        !seen.has(component.registrationModule),
+        `${component.tag}: duplicate inventory registrationModule ${component.registrationModule}`,
+      );
+      seen.add(component.registrationModule);
+      return `../${component.registrationModule.slice('src/'.length).replace(/\.ts$/, '.js')}`;
+    });
+}
+
 export function rootRegistrationSpecifiers(source) {
   const program = parseProgram(source);
   return program.body
@@ -95,7 +116,7 @@ export function rootRegistrationSpecifiers(source) {
       (statement) =>
         statement.type === 'ImportDeclaration' &&
         statement.specifiers.length === 0 &&
-        literalValue(statement.source)?.startsWith('./components/'),
+        /^\.\.?\/components\//.test(literalValue(statement.source) ?? ''),
     )
     .map((statement) => literalValue(statement.source));
 }
@@ -462,9 +483,17 @@ function scopedBindings(statements, parentBindings, parentNamespaces) {
   return { bindings, namespaces };
 }
 
-function programRegistersElement(program) {
+/**
+ * `options.capabilityReexportRegisters` (default `true`) decides whether merely re-exporting
+ * `defineElement` counts as registering. For `*.class.ts` purity the answer has to be yes: handing
+ * the registrar onward is a capability escape the audit cannot follow, so it fails closed. For the
+ * package-root audit the answer is no — `export { defineElement } from './internal/prefix.js'` is
+ * the documented way a consumer registers its own tags, and re-exporting a function defines
+ * nothing at import time.
+ */
+function programRegistersElement(program, options = {}) {
   const imported = defineElementBindings(program);
-  if (reexportsDefineElement(program)) return true;
+  if ((options.capabilityReexportRegisters ?? true) && reexportsDefineElement(program)) return true;
   if (imported.bindings.size === 0 && imported.namespaces.size === 0) return false;
   let found = false;
 
@@ -787,7 +816,7 @@ export function findTransitiveRegistrationPaths(classFiles, modules, options = {
   const registering = new Set();
   for (const [file, source] of modules) {
     const program = parseProgram(source);
-    if (programRegistersElement(program)) registering.add(file);
+    if (programRegistersElement(program, options)) registering.add(file);
     const analysis = moduleSpecifiers(source);
     const specifiers = analysis.eager;
     if (options.includeDynamic) specifiers.push(...analysis.dynamic);
@@ -833,63 +862,198 @@ function collectSourceFiles(directory, output = []) {
   return output;
 }
 
+
+const REGENERATE_HINT = 'Run `pnpm registrations` and commit the regenerated files.';
+
+/**
+ * Lazy (dynamic-import) registration edges that are deliberate opt-in loaders rather than eager
+ * registrations. Each entry is a full `a -> b` module path.
+ */
+const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
+  'src/components/forms/phone-input/phone-input.class.ts -> src/components/media/flag/flag.ts',
+];
+
+/**
+ * Registration edges the package root is allowed to reach. Both are imperative helpers that build
+ * their element at call time (`toast()` renders an `<lr-toast>`, `confirm()` an `<lr-dialog>`), so
+ * the helper module has to own that element's registration. Neither costs a consumer who never
+ * imports the helper: the root barrel is registration-free, so a bundler drops the helper — and
+ * with it the registration entry — unless the helper is actually named.
+ */
+const DOCUMENTED_ROOT_REGISTRATION_EDGES = [
+  // `registerDefaultWidgetTypes()` maps widget names onto eight built-in tags, so it has to
+  // register exactly those eight. A host that wants a leaner graph supplies its own registry.
+  ...[
+    'src/components/agent-tools/result-card/result-card.ts',
+    'src/components/agent-tools/result-card/result-field.ts',
+    'src/components/conversation/markdown/markdown.ts',
+    'src/components/data/stat/stat.ts',
+    'src/components/forms/button/button.ts',
+    'src/components/layout/card/card.ts',
+    'src/components/media/media-card/media-card.ts',
+    'src/components/overlays/badge/badge.ts',
+  ].map((target) => `src/lyra.ts -> src/components/conversation/widget-renderer/default-registry.ts -> ${target}`),
+  'src/lyra.ts -> src/components/overlays/dialog/confirm.ts -> src/components/overlays/dialog/dialog.ts',
+  'src/lyra.ts -> src/components/overlays/toast/toaster.ts -> src/components/overlays/toast/toast.ts',
+].sort();
+
+function preview(entries, limit = 12) {
+  const shown = entries.slice(0, limit).map((entry) => `    ${entry}`);
+  if (entries.length > limit) shown.push(`    …and ${entries.length - limit} more`);
+  return shown.join('\n');
+}
+
+/**
+ * Renders an actionable diff for two lists instead of letting `assert.deepEqual` dump several
+ * hundred lines of raw array. Returns `null` when the lists match exactly (order included).
+ */
+function describeListMismatch(label, actual, expected, hint) {
+  const expectedSet = new Set(expected);
+  const actualSet = new Set(actual);
+  const missing = expected.filter((entry) => !actualSet.has(entry));
+  const unexpected = actual.filter((entry) => !expectedSet.has(entry));
+  const sameMembers = missing.length === 0 && unexpected.length === 0;
+  if (sameMembers && actual.length === expected.length && actual.every((entry, index) => entry === expected[index])) {
+    return null;
+  }
+  const details = [`${label} (${actual.length} present, ${expected.length} expected)`];
+  if (missing.length > 0) details.push(`  missing ${missing.length}:\n${preview(missing)}`);
+  if (unexpected.length > 0) details.push(`  unexpected ${unexpected.length}:\n${preview(unexpected)}`);
+  if (sameMembers) details.push('  entries are correct but out of order');
+  if (hint) details.push(`  → ${hint}`);
+  return details.join('\n');
+}
+
+function describeCountMismatch(label, actual, expected, hint) {
+  if (actual === expected) return null;
+  return `${label}: expected ${expected}, found ${actual}${hint ? `\n  → ${hint}` : ''}`;
+}
+
 async function checkRegistrationArchitecture() {
+  const failures = [];
+  const fail = (finding) => {
+    if (finding) failures.push(finding);
+  };
+
   const classFiles = await findFiles(components);
   assert.ok(classFiles.length >= 80, 'expected pure class modules for the component families');
   const sourceFiles = collectSourceFiles(sourceRoot);
   const modules = new Map(sourceFiles.map((file) => [file, readFileSync(file, 'utf8')]));
-  const registrationPaths = findTransitiveRegistrationPaths(classFiles, modules);
   const pathKey = (path) => path.map((file) => relative(packageRoot, file)).join(' -> ');
-  const eagerPathKeys = new Set(registrationPaths.map(pathKey));
+
+  const registrationPaths = findTransitiveRegistrationPaths(classFiles, modules).map(pathKey).sort();
+  const eagerPathKeys = new Set(registrationPaths);
   const lazyRegistrationPaths = findTransitiveRegistrationPaths(classFiles, modules, {
     includeDynamic: true,
   })
     .map(pathKey)
     .filter((path) => !eagerPathKeys.has(path))
     .sort();
-  assert.deepEqual(
-    lazyRegistrationPaths,
-    [
-      'src/components/forms/phone-input/phone-input.class.ts -> src/components/media/flag/flag.ts',
-    ],
-    'lazy registration edges must remain limited to the documented opt-in flag loader',
+  fail(
+    describeListMismatch(
+      'lazy registration edges must remain limited to the documented opt-in loaders',
+      lazyRegistrationPaths,
+      DOCUMENTED_LAZY_REGISTRATION_EDGES,
+      'a new dynamic import into a registration entry needs an explicit entry in ' +
+        'DOCUMENTED_LAZY_REGISTRATION_EDGES, with the reason it stays lazy.',
+    ),
   );
-  assert.equal(
-    registrationPaths.length,
-    0,
-    `class modules must not reach registration entries at runtime:\n${registrationPaths
-      .map((path) => `  ${pathKey(path)}`)
-      .join('\n')}`,
-  );
+  if (registrationPaths.length > 0) {
+    failures.push(
+      `class modules must not reach registration entries at runtime (${registrationPaths.length} path(s)):\n` +
+        `${preview(registrationPaths)}\n` +
+        '  → move the `defineElement()` call into the sibling registration module, or import the ' +
+        '`*.class.js` module instead of the registration entry.',
+    );
+  }
 
-  console.log(`registration architecture verified: ${classFiles.length} pure class modules`);
-
-  const rootBarrel = await readFile(join(sourceRoot, 'lyra.ts'), 'utf8');
+  const rootPath = join(sourceRoot, 'lyra.ts');
+  const rootBarrel = await readFile(rootPath, 'utf8');
   const allowlist = await readFile(join(sourceRoot, 'internal', 'root-registration-allowlist.ts'), 'utf8');
   const inventory = JSON.parse(readFileSync(inventoryPath, 'utf8'));
   const inventorySets = inventoryRootRegistrationSets(inventory);
   const allowlistSets = parseRootRegistrationAllowlist(allowlist);
-  assert.deepEqual(
-    allowlistSets.rootTags,
-    inventorySets.rootTags,
-    'ROOT_BARREL_TAGS must match inventory rootIncluded entries',
+  fail(
+    describeListMismatch(
+      'ROOT_BARREL_TAGS must match the inventory rootIncluded entries',
+      allowlistSets.rootTags,
+      inventorySets.rootTags,
+      REGENERATE_HINT,
+    ),
   );
-  assert.deepEqual(
-    allowlistSets.optionalTags,
-    inventorySets.optionalTags,
-    'ROOT_BARREL_OPTIONAL_PEER_TAGS must match inventory optional-peer exclusions',
+  fail(
+    describeListMismatch(
+      'ROOT_BARREL_OPTIONAL_PEER_TAGS must match the inventory optional-peer exclusions',
+      allowlistSets.optionalTags,
+      inventorySets.optionalTags,
+      REGENERATE_HINT,
+    ),
   );
-  const rootSpecifiers = rootRegistrationSpecifiers(rootBarrel);
-  const componentSpecifiers = rootSpecifiers.filter((specifier) => !specifier.endsWith('-register.js'));
-  assert.deepEqual(
-    rootSpecifiers,
-    [...new Set(rootSpecifiers)],
-    'root barrel side-effect imports must not contain duplicates',
+
+  fail(
+    describeListMismatch(
+      'the package root (src/lyra.ts) must be registration-free',
+      rootRegistrationSpecifiers(rootBarrel),
+      [],
+      'move the side-effect import to src/all.ts — `@aceshooting/lyra-ui/all.js` is the explicit ' +
+        'compatibility entry that registers the whole root-included set.',
+    ),
   );
-  assert.deepEqual(
-    componentSpecifiers,
-    inventoryRootRegistrationSpecifiers(inventory),
-    'root barrel imports must match the exact, tag-sorted inventory registration modules',
+  // The root audit deliberately does not treat a `defineElement` re-export as a registration:
+  // re-exporting the registrar is the public API consumers use to define their own tags.
+  const rootRegistrationPaths = findTransitiveRegistrationPaths([rootPath], modules, {
+    capabilityReexportRegisters: false,
+  })
+    .map(pathKey)
+    .sort();
+  fail(
+    describeListMismatch(
+      'the package root must not reach registration entries at runtime',
+      rootRegistrationPaths,
+      DOCUMENTED_ROOT_REGISTRATION_EDGES,
+      're-export the component from its `*.class.js` module, not from the sibling registration ' +
+        'entry; an imperative helper that must register its own element needs an explicit entry in ' +
+        'DOCUMENTED_ROOT_REGISTRATION_EDGES.',
+    ),
+  );
+
+  const allBarrel = await readFile(join(sourceRoot, 'all.ts'), 'utf8');
+  const allSpecifiers = rootRegistrationSpecifiers(allBarrel);
+  const allComponentSpecifiers = allSpecifiers.filter((specifier) => !specifier.endsWith('-register.js'));
+  const duplicateAllSpecifiers = allSpecifiers.filter(
+    (specifier, index) => allSpecifiers.indexOf(specifier) !== index,
+  );
+  if (duplicateAllSpecifiers.length > 0) {
+    failures.push(
+      `all.js side-effect imports must not contain duplicates:\n${preview([...new Set(duplicateAllSpecifiers)])}`,
+    );
+  }
+  fail(
+    describeListMismatch(
+      'all.js must import the exact, tag-sorted root-included registration modules',
+      allComponentSpecifiers,
+      inventoryRootRegistrationSpecifiers(inventory),
+      REGENERATE_HINT,
+    ),
+  );
+
+  const ssrAllBarrel = await readFile(join(sourceRoot, 'ssr', 'all.ts'), 'utf8');
+  const ssrAllSpecifiers = rootRegistrationSpecifiers(ssrAllBarrel);
+  const duplicateSsrSpecifiers = ssrAllSpecifiers.filter(
+    (specifier, index) => ssrAllSpecifiers.indexOf(specifier) !== index,
+  );
+  if (duplicateSsrSpecifiers.length > 0) {
+    failures.push(
+      `ssr/all.js side-effect imports must not contain duplicates:\n${preview([...new Set(duplicateSsrSpecifiers)])}`,
+    );
+  }
+  fail(
+    describeListMismatch(
+      'ssr/all.js must register every inventory tag, including the optional-peer families',
+      ssrAllSpecifiers,
+      inventoryAllRegistrationSpecifiers(inventory),
+      REGENERATE_HINT,
+    ),
   );
 
   const manifest = JSON.parse(readFileSync(join(sourceRoot, '..', 'custom-elements.json'), 'utf8'));
@@ -899,18 +1063,46 @@ async function checkRegistrationArchitecture() {
     .map((declaration) => declaration.tagName)
     .filter((tag, index, tags) => tags.indexOf(tag) === index)
     .sort();
-  assert.deepEqual(
-    inventorySets.allTags,
-    manifestTags,
-    'component inventory must cover every manifest custom element exactly once',
+  fail(
+    describeListMismatch(
+      'the component inventory must cover every manifest custom element exactly once',
+      inventorySets.allTags,
+      manifestTags,
+      'regenerate the inventory (`pnpm run inventory`) and the manifest (`pnpm manifest`) together.',
+    ),
+  );
+  fail(
+    describeCountMismatch(
+      'all.js registration count',
+      allComponentSpecifiers.length,
+      inventorySets.rootTags.length,
+      REGENERATE_HINT,
+    ),
   );
 
+  if (failures.length > 0) {
+    console.error(`registration architecture check failed (${failures.length} finding(s)):\n`);
+    console.error(failures.map((finding, index) => `${index + 1}. ${finding}`).join('\n\n'));
+    return false;
+  }
+
+  console.log(`registration architecture verified: ${classFiles.length} pure class modules`);
   console.log(
-    `root registration inventory verified: ${inventorySets.rootTags.length} root + ` +
-      `${inventorySets.optionalTags.length} optional-peer tags`,
+    `registration entries verified: registration-free root + ${inventorySets.rootTags.length} all.js + ` +
+      `${inventorySets.allTags.length} ssr/all.js tags`,
   );
+  return true;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  await checkRegistrationArchitecture();
+  try {
+    if (!(await checkRegistrationArchitecture())) process.exitCode = 1;
+  } catch (error) {
+    // A thrown error here is an input-shape violation (malformed inventory, unparseable source),
+    // not a policy finding. Surface the message first so the failure is readable, and keep the
+    // stack for genuine tooling bugs.
+    console.error(`registration architecture check could not run: ${error.message}`);
+    if (!(error instanceof assert.AssertionError)) console.error(error.stack);
+    process.exitCode = 1;
+  }
 }

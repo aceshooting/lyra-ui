@@ -235,12 +235,18 @@ pnpm run check:secrets
 step "registration artifact freshness"
 pnpm registrations
 freshness_diff "registration artifacts (pnpm registrations)" \
-  packages/lyra-ui/src/lyra.ts \
+  packages/lyra-ui/src/all.ts \
+  packages/lyra-ui/src/ssr/all.ts \
   packages/lyra-ui/src/internal/root-registration-allowlist.ts \
   packages/lyra-ui/package.json
 
 step "lyra-ui test:coverage"
 pnpm --filter @aceshooting/lyra-ui test:coverage
+# The per-metric floors in packages/lyra-ui/scripts/coverage-floors.json are the blocking gate the
+# CI build-and-coverage job runs right after test:coverage; without it this aggregate silently
+# accepts a coverage regression that CI rejects.
+step "lyra-ui check:coverage-floors"
+pnpm --filter @aceshooting/lyra-ui check:coverage-floors
 
 step "manifest freshness"
 pnpm manifest

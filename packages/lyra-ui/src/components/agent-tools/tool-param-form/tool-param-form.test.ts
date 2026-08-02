@@ -1259,6 +1259,50 @@ describe('validity custom states', () => {
       .false;
   });
 
+  it('publishes neither invalid nor user-invalid while disabled', async function () {
+    if (!supportsCustomStates) this.skip();
+    // A native `<input required disabled>` matches neither `:valid` nor `:invalid`. Publishing
+    // `invalid`/`user-invalid` from a barred control is what painted every disabled required field
+    // red under the documented `lr-tool-param-form:state(user-invalid) { ... }` rule.
+    const el = (await fixture(
+      html`<lr-tool-param-form .schema=${basicSchema} disabled></lr-tool-param-form>`,
+    )) as LyraToolParamForm;
+    await el.updateComplete;
+    expect(el.checkValidity(), 'a barred control reports no violation').to.be.true;
+    expect(el.validity.valueMissing).to.be.false;
+    expect(states(el).has('invalid')).to.be.false;
+    expect(states(el).has('valid'), 'barred matches neither half of the pair').to.be.false;
+    expect(states(el).has('required'), 'requiredness describes the schema, not the outcome').to.be.true;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(states(el).has('user-invalid')).to.be.false;
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.checkValidity(), 'the constraint returns with the control').to.be.false;
+    expect(states(el).has('invalid')).to.be.true;
+  });
+
+  it('publishes neither invalid nor user-invalid inside a disabled fieldset', async function () {
+    if (!supportsCustomStates) this.skip();
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <fieldset disabled>
+          <lr-tool-param-form name="args" .schema=${basicSchema}></lr-tool-param-form>
+        </fieldset>
+      </form>
+    `);
+    const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+    await el.updateComplete;
+    expect(el.disabled, 'a fieldset never mutates the control own disabled').to.be.false;
+    expect(el.validity.valueMissing, 'fieldset-disabled bars validation exactly like own disabled').to.be
+      .false;
+    expect(states(el).has('invalid')).to.be.false;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(states(el).has('user-invalid')).to.be.false;
+  });
+
   it('matches the states through a :state() selector, not just the CustomStateSet', async function () {
     if (!supportsCustomStates || !supportsStateSelector) this.skip();
     const el = (await fixture(

@@ -20,6 +20,11 @@
     "useDefineForClassFields": false,
     "experimentalDecorators": true,
     "declaration": true,
+    // Local-only: the published build runs through tsconfig.build.json, which turns
+    // both of these off because `dist` ships without `src`, leaving every emitted map
+    // dangling (and a dangling declarationMap breaks Go-to-Definition rather than
+    // falling back to the .d.ts). Keep them here so editors, `tsc --noEmit -p
+    // tsconfig.json` and the type tests that extend this file keep full mapping.
     "sourceMap": true,
     "declarationMap": true,
     "noEmitOnError": true,

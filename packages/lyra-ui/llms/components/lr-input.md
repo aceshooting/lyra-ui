@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -162,6 +162,13 @@ sequence). `lr-invalid` (no detail) fires when a validity check finds the input 
 `clear-button` (non-empty clearable `text`/`search` inputs only),
 `hint`/`form-control-help-text` (compatibility names on the same hint node), and `error`.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, and the reference implementation every other labelled control in the library shares, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it. With no label text the part is hidden and
+no glyph is painted.
+
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
 `--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
 (`2xs`…`xl`), the same pattern
@@ -258,7 +265,8 @@ submission must never shadow it: `lr-textarea` and `lr-code-editor` insert a new
 whole point of a multi-line surface; `lr-select`'s `role="combobox"` trigger opens the listbox (and
 then commits the active option), per the ARIA pattern; and `lr-date-picker` selects the focused day
 in the calendar grid. The controls that *do* wire it are `lr-input` (and its `lr-number-input`/
-`lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input` and `lr-token-input`.
+`lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input` and
+`lr-otp-input`.
 
 ### Exact-height hatches — the one rule that applies to all of them
 

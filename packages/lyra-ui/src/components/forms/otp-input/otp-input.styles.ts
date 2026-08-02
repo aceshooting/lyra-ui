@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -42,10 +43,7 @@ export const styles = css`
   [part='error'][hidden] {
     display: none;
   }
-  :host([required]) [part~='form-control-label']::after {
-    content: ' *';
-    color: var(--lr-color-danger);
-  }
+  ${formControlRequiredMarker}
 
   /* One real <input> stretched invisibly across the presentational segments. It remains the native
      integration point for SMS autofill, IME composition, mobile keyboards and selection, while the

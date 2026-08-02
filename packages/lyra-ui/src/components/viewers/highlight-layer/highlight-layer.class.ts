@@ -176,7 +176,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   }
 
   private onRectClick(id: string): void {
-    this.emit<HighlightActivateDetail>('lr-highlight-activate', { id });
+    this.emit('lr-highlight-activate', { id });
   }
 
   private onRectFocus(item: HighlightLayerItem): void {

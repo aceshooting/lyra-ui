@@ -400,12 +400,12 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   }
 
   private onCancelClick = (): void => {
-    this.emit<CancelEventDetail>('lr-cancel', {});
+    this.emit('lr-cancel', {});
   };
 
   private onRetryClick = (): void => {
     this.retryAttempt += 1;
-    this.emit<RetryEventDetail>('lr-retry', { attempt: this.retryAttempt });
+    this.emit('lr-retry', { attempt: this.retryAttempt });
   };
 
   override render(): TemplateResult {

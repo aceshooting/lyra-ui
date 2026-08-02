@@ -1270,6 +1270,24 @@ export type LyraMessageKey =
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, LyraMessage>> &
   Record<string, LyraMessage | undefined>;
 
+/** A catalog's writing direction, in the same vocabulary as the platform `dir` attribute. */
+export type LyraLocaleDirection = 'ltr' | 'rtl';
+
+/**
+ * Optional catalog metadata, supplied as `registerLyraLocale()`'s third argument. Everything here
+ * describes the *locale*, never a message: nothing in it is rendered by a component, and omitting
+ * it entirely keeps the two-argument call working exactly as before.
+ */
+export interface LyraLocaleMeta {
+  /** The locale's writing direction. Declared because no component may infer it: components read
+   *  the inherited `dir` cascade and never force one from `lang`. Supplying it is what lets an
+   *  application answer "does this locale need `dir="rtl"`?" without its own tag table. */
+  dir?: LyraLocaleDirection;
+  /** The locale's own endonym ("العربية"), for a UI that lists locales. Purely informational —
+   *  `<lr-locale-picker>` derives its row labels from its own language map. */
+  name?: string;
+}
+
 const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   noData: 'No data',
   graphLegendLabel: 'Graph legend',
@@ -2514,6 +2532,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
+const localeMeta = new Map<string, LyraLocaleMeta>();
 const listeners = new Set<() => void>();
 const registryListeners = new Set<() => void>();
 let activeLocale = '';
@@ -2522,12 +2541,59 @@ function normalizeLocale(locale: string): string {
   return locale.trim().replace(/_/g, '-').toLowerCase();
 }
 
+/**
+ * Every registered catalog whose *base language* matches `subtags[0]` but which is not itself a
+ * step of the requested tag's truncation chain — the reverse direction of BCP-47 lookup, and the
+ * only way `lang="zh"` can reach a `zh-CN`-only catalog.
+ *
+ * Ordering is deterministic and independent of registration order, so the same page always
+ * resolves the same way regardless of which translation module happened to be imported first:
+ *
+ *   1. **Most shared subtags first.** A candidate scores one point per subtag of the requested
+ *      tag it also carries, so `zh-Hant-TW` prefers a registered `zh-TW` over a registered
+ *      `zh-CN` even though neither is a prefix of it.
+ *   2. **Then alphabetically**, purely as a tie-break: with `zh-CN` and `zh-TW` both registered
+ *      and a bare `zh` requested, `zh-CN` wins. This is an arbitrary-but-stable choice, not a
+ *      claim that Simplified is the better default — an application that cares registers the
+ *      regional tag it means, or offers `zh` itself.
+ */
+function regionalFallbacks(subtags: string[]): string[] {
+  const language = subtags[0];
+  if (!language) return [];
+  const requested = new Set(subtags);
+  const score = (key: string): number => key.split('-').filter((subtag) => requested.has(subtag)).length;
+  return [...locales.keys()]
+    .filter((key) => key.split('-')[0] === language && !isPrefixOf(key, subtags))
+    .sort((a, b) => score(b) - score(a) || (a < b ? -1 : a > b ? 1 : 0));
+}
+
+/** Whether `key` is one of the truncation steps of `subtags` (and therefore already in the chain). */
+function isPrefixOf(key: string, subtags: string[]): boolean {
+  const parts = key.split('-');
+  return parts.length <= subtags.length && parts.every((part, index) => part === subtags[index]);
+}
+
+/**
+ * The ordered lookup chain for a locale tag, terminating at `'en'` (the built-in catalog, always
+ * available through `DEFAULT_STRINGS`).
+ *
+ * The chain is the full BCP-47 truncation walk, most specific first —
+ * `zh-Hans-CN` → `zh-Hans` → `zh` — followed by {@link regionalFallbacks}. Truncation comes first
+ * so an exactly-matching catalog always wins over a sibling region: with both `zh` and `zh-CN`
+ * registered, `zh-Hans-CN` resolves to `zh`.
+ *
+ * Both halves matter in practice, because the shipped catalogs are a mix: `fa` and `he` are base
+ * tags reached from `fa-IR`/`he-IL` by truncation, while `pt-BR` and `zh-CN` are regional-only and
+ * reachable from `pt`/`zh` only through the fallback half.
+ */
 function localeCandidates(locale: string): string[] {
   const normalized = normalizeLocale(locale);
+  const subtags = normalized.split('-').filter(Boolean);
   const candidates: string[] = [];
-  if (normalized) candidates.push(normalized);
-  const language = normalized.split('-')[0];
-  if (language && language !== normalized) candidates.push(language);
+  for (let length = subtags.length; length > 0; length--) {
+    candidates.push(subtags.slice(0, length).join('-'));
+  }
+  candidates.push(...regionalFallbacks(subtags));
   if (!candidates.includes('en')) candidates.push('en');
   return candidates;
 }
@@ -2554,14 +2620,69 @@ export function subscribeLyraLocaleRegistry(listener: () => void): () => void {
   return () => registryListeners.delete(listener);
 }
 
-/** Register or extend messages for a locale. */
-export function registerLyraLocale(locale: string, strings: LyraLocaleStrings): void {
+/**
+ * Register or extend messages for a locale.
+ *
+ * `meta` is optional and merged the same way `strings` is, so a later two-argument call adding
+ * messages never drops metadata a previous call declared (and vice versa). Passing it is the only
+ * way the library can answer {@link getLyraLocaleDirection} for a locale whose direction the
+ * runtime's `Intl` cannot report.
+ */
+export function registerLyraLocale(locale: string, strings: LyraLocaleStrings, meta?: LyraLocaleMeta): void {
   const key = normalizeLocale(locale);
   if (!key) throw new TypeError('A locale is required.');
   locales.set(key, { ...(locales.get(key) ?? {}), ...strings });
-  if (normalizeLocale(activeLocale) === key || normalizeLocale(activeLocale).startsWith(`${key}-`)) notify();
+  if (meta) localeMeta.set(key, { ...(localeMeta.get(key) ?? {}), ...meta });
+  // A new registry key can change what `localeCandidates()` resolves to (a regional-only catalog
+  // becoming reachable from its base language), and `pluralLocale()` memoizes that chain.
+  pluralLocaleCache.clear();
+  // A connected component may resolve its locale from the document, a composed ancestor, or its
+  // own override instead of `activeLocale`. Catalog imports are rare, so notifying every locale
+  // subscriber is both simpler and correct for every inheritance source and fallback chain.
+  notify();
   for (const listener of [...registryListeners]) listener();
 }
+
+/**
+ * The writing direction to use for `locale`, as an application would put in `dir`.
+ *
+ * Resolution order, stopping at the first answer:
+ *
+ *   1. A `dir` declared by {@link registerLyraLocale}'s `meta` argument, walked through the same
+ *      candidate chain messages use — so `ar-EG` inherits the `ar` catalog's declaration.
+ *   2. `Intl.Locale`'s text-info surface, which is feature-detected rather than assumed: it is
+ *      spelled as a `textInfo` accessor in some engines, a `getTextInfo()` method in others, and
+ *      is absent in older ones. A structurally invalid tag throws here and is caught.
+ *   3. `'ltr'`, the platform default.
+ *
+ * This never *applies* a direction. Components read the inherited `dir` cascade and no component
+ * forces one from `lang`; this is the lookup an application needs to set `dir` itself.
+ */
+export function getLyraLocaleDirection(locale: string): LyraLocaleDirection {
+  const normalized = normalizeLocale(locale);
+  if (!normalized) return 'ltr';
+  for (const candidate of localeCandidates(normalized)) {
+    const declared = localeMeta.get(candidate)?.dir;
+    if (declared) return declared;
+  }
+  try {
+    const resolved = new Intl.Locale(normalized) as LocaleWithTextInfo;
+    const direction = resolved.textInfo?.direction ?? resolved.getTextInfo?.().direction;
+    return direction === 'rtl' ? 'rtl' : 'ltr';
+  } catch {
+    return 'ltr';
+  }
+}
+
+/**
+ * `Intl.Locale`'s text-info surface, still shifting between runtimes — the same accessor-vs-method
+ * split `calendar-core.ts` documents for week info. Intentionally an intersection rather than an
+ * `extends`, so an ambient lib.dom that types either member as required is not illegally narrowed.
+ */
+type LocaleWithTextInfo = Intl.Locale & {
+  textInfo?: { direction?: string };
+  getTextInfo?: () => { direction?: string };
+};
 
 /** Set the page-level locale used by Lyra components without an explicit locale. */
 export function setLyraLocale(locale: string): void {
@@ -2704,9 +2825,12 @@ function pluralSelector(values: Record<string, string | number>): number | undef
  * structurally valid language tag (`lang="x-test"`, `lang="en_US"`,
  * `lang=""`), which would otherwise turn a stray attribute into a render-time
  * exception. Walking `localeCandidates()` reuses the exact chain message
- * lookup already uses — full tag, base language, then `'en'` — so plural
- * selection and message selection can never disagree about which locale is in
- * force. Memoized because a rejected tag throws on every construction.
+ * lookup already uses — the full BCP-47 truncation walk, then any registered
+ * catalog sharing the base language, then `'en'` — so plural selection and
+ * message selection can never disagree about which locale is in force.
+ * Memoized because a rejected tag throws on every construction;
+ * `registerLyraLocale()` clears the memo, since registering a catalog can
+ * lengthen the chain.
  */
 const pluralLocaleCache = new Map<string, string | undefined>();
 const MAX_PLURAL_LOCALE_ENTRIES = 64;

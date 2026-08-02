@@ -71,6 +71,20 @@ version. If an API is deprecated in major version M, it remains available for th
 release line and cannot be removed before M+2. This policy applies equally to stable and
 experimental public APIs.
 
+### The support window
+
+Compatibility promises are bounded by a published support window, not by "evergreen browsers":
+Chromium 120+, Gecko 121+, WebKit 16.4+, and Node 20+ (ESM only; there is no CommonJS entry point).
+Those floors are derived from platform features the source actually uses — `:dir()`, `:has()`,
+`@container`, `color-mix()`, `ElementInternals` form association — because the package ships
+untranspiled ES2022 modules with no polyfills and no build-time downleveling. There is deliberately
+no `browserslist` field: it would describe a build step this package does not have. CI proves the
+current stable build of each engine (the full suite on Chromium, a contract subset on Firefox and
+WebKit, on Node 20 and 22); the version floors are derived rather than tested. Raising any floor is
+a semver-major change. Full policy, including the known WebKit cross-shadow-selection gap and the
+rule for when a `@supports` fallback may be dropped:
+<https://github.com/aceshooting/lyra-ui/blob/main/docs/support-policy.md>.
+
 ## Importing and registering components
 
 Every component is a side-effect entry point that registers its own tag. The path always carries
@@ -97,6 +111,34 @@ import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
 module-resolution failure, not a silent no-op — `exports` maps `./components/*` straight onto
 `./dist/components/*`.
 
+**Breaking in 8.0.0 — the package root no longer registers anything.** Through 7.x, importing the
+bare `@aceshooting/lyra-ui` root had the side effect of defining every non-optional-peer tag, so a
+project that only wanted a type or a helper from it silently pulled 268 component definitions into
+its eager bundle. The root is now a pure, side-effect-free export surface, and the registrations
+moved to an explicit entry:
+
+```js
+import '@aceshooting/lyra-ui/all.js'; // exactly the pre-8 root behaviour, opted into by name
+```
+
+*Nothing was removed from the root's named surface.* Every class, helper, and type it exported in
+7.x is still exported, from the same specifier; `all.js` re-exports that identical surface, so
+`import { LyraTable } from '@aceshooting/lyra-ui';` and the `@aceshooting/lyra-ui/all.js` form of it
+both keep working. Only the registration side effect changed.
+
+*Migrating.* If a bare `import '@aceshooting/lyra-ui';` (or a bundler entry that relied on it) was
+how your tags got defined, add the `/all.js` specifier — a one-line change with identical behaviour.
+If instead the root was only ever imported for values or types, delete nothing: those imports now
+cost what they should. The symptom of a missed migration is an unupgraded element — the tag renders
+as an empty inert box with its light DOM visible — not a module error, because the specifier still
+resolves and still hands back everything it used to.
+
+*Granular imports remain the recommendation.* `all.js` is a compatibility and prototyping
+convenience, not the intended production shape: it is side-effectful by definition and cannot be
+tree-shaken down to the handful of elements a page actually renders.
+
+The entry points, then:
+
 - **Class without registration.** Each entry has a `.class.js` sibling exporting the class (and the
   `HTMLElementTagNameMap` augmentation) without touching `customElements`:
   `import { LyraTable } from '@aceshooting/lyra-ui/components/data/table/table.class.js';`. Use it
@@ -106,15 +148,22 @@ module-resolution failure, not a silent no-op — `exports` maps `./components/*
   one warning for that exact conflict with the existing/incoming package versions, constructor
   names, and both constructor references. An existing non-Lyra definition is reported with an
   `unknown` existing version rather than guessed provenance.
-- **Root barrel.** `import '@aceshooting/lyra-ui';` registers everything **except** the 15
-  inventory-designated optional-peer-family tags: `lr-chart` and its 8 typed subclasses (`lr-line-chart`,
-  `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`,
-  `lr-bubble-chart`, `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
-  `lr-knowledge-graph-explorer`, and `lr-geojson-view`. Those always need their own subpath import.
-  The barrel also re-exports a broad compatibility surface of commonly used classes, helpers, and
-  types, but it is not an exhaustive promise that every component-owned type or future export is
-  present. It is the one import that defeats tree-shaking — prefer the owning component entry in
-  application code, both for the smallest bundle and the complete contract of that component.
+- **Root barrel.** `import '@aceshooting/lyra-ui';` registers **nothing** (see the 8.0.0 note
+  above). It re-exports a broad compatibility surface of commonly used classes, helpers, and types,
+  but it is not an exhaustive promise that every component-owned type or future export is present.
+  Prefer the owning component entry in application code, both for the smallest bundle and the
+  complete contract of that component.
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 268
+  root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
+  `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
+  `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
+  `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
+  `lr-knowledge-graph-explorer`, and `lr-geojson-view`. Those always need their own subpath import,
+  from `all.js` exactly as from the root — the entry deliberately preserves the optional-peer
+  isolation contract rather than putting `chart.js`, `maplibre-gl`, or the `d3-*` set on the
+  critical path of every install. It is the one import that defeats tree-shaking.
+  (Server-side, `@aceshooting/lyra-ui/ssr/all.js` is the counterpart that *does* register the
+  complete inventory, optional-peer families included; see "SSR and declarative shadow DOM".)
 - **Document anchor/highlight types.** The granular document-viewer entry owns and exports
   `LyraAnchor`, `LyraAnchorKind`, `LyraHighlight`, `LyraHighlightTone`,
   `AnchorTargetCapabilities`, `HighlightActivateDetail`, `TextSelectDetail`, and
@@ -321,6 +370,23 @@ Methods include `checkValidity()`, `reportValidity()`, and `setCustomValidity()`
   `setCustomValidity()`; assign `null` to clear it and remove `custom-error`. Whenever the native
   non-bubbling `invalid` event fires, the host also emits exactly one bubbling, composed
   `lr-invalid` alias with no detail.
+
+  **`lr-invalid` is cancelable, and cancelling it cancels the native event too.** It is one of the
+  library's few real veto points: `event.preventDefault()` on `lr-invalid` forwards the cancellation
+  to the platform `invalid` event that triggered it, which suppresses that event's default —
+  the browser's own validation bubble, and the focus/scroll `reportValidity()` performs on the first
+  invalid control. That is what lets an app render its own error banner from `lr-invalid` without the
+  native UI appearing alongside it. Nothing else changes: the control is still invalid, still fails
+  `checkValidity()`, and still blocks submission.
+  ```ts
+  form.addEventListener('lr-invalid', (event) => {
+    event.preventDefault();          // no native bubble, no auto-scroll
+    showMyOwnErrorSummary(event.target as HTMLElement);
+  });
+  ```
+  Leave it uncancelled to keep the platform behavior. The listener has to be attached before the
+  validity check runs (`lr-invalid` bubbles and composes, so the form or `document` is a fine place);
+  a `preventDefault()` after the fact does nothing.
 - **Validation anchoring.** An internal controller passes
   `internals.setValidity(flags, message, anchor)` with `anchor` = the first focusable descendant in
   the shadow root (`input:not([type='hidden']), textarea, select, button, [tabindex]:not([tabindex='-1'])`),
@@ -406,6 +472,25 @@ every field that failed. `form.reset()` makes the control pristine again and the
 `setCustomValidity()` participates like any other constraint: raising a custom error flips `invalid`
 immediately, and `user-invalid` too if the control has already been touched.
 
+**A control barred from constraint validation publishes neither `valid` nor `invalid`** — and
+therefore neither `user-valid` nor `user-invalid`. "Barred" is the platform's own term and the
+platform's own list: the control's own `disabled`, an ancestor `<fieldset disabled>`, `readonly`
+where the control has it, or anything else that makes `willValidate` false. A native
+`<input required disabled>` matches neither `:valid` nor `:invalid`, and these states match native.
+This matters because the idiomatic rule is written against the *tag*:
+
+```css
+lr-input:state(user-invalid)::part(input-wrapper) {
+  border-color: var(--lr-color-danger-border-loud);
+}
+```
+
+A disabled required field that still published `invalid` painted every greyed-out control in the
+form red. `required`/`optional` are unaffected — they describe the attribute, not the validation
+outcome, so they keep publishing exactly like native `:required`/`:optional`, and a disabled
+required field still matches `:state(required)`. Style the barred case through
+`:state(disabled)`/`:disabled` and `:state(readonly)`, not through the validity pair.
+
 The states are published the same way whether a control uses the `FormAssociated` mixin or drives
 `ElementInternals` directly, so a rule written against `lr-input` behaves identically on
 `lr-checkbox`. `lr-button` and `lr-icon-button` are the exception noted above: form-associated, but
@@ -413,6 +498,52 @@ with no value and therefore no validity to publish. Where an engine cannot regis
 at all, the styling hook is simply absent — validity, submission blocking and
 `checkValidity()`/`reportValidity()` are unaffected, so never make a `:state()` rule the only signal
 that a field is wrong.
+
+## The required-field marker
+
+A labelled control with `required` set paints a marker after its label text — by default ` *` in
+`--lr-color-danger`. It is **one shared rule**, rendered as an `::after` on the `form-control-label`
+part, so it looks and sits identically on every control that has that part, in every family: the
+labelled form controls, plus `lr-file-input`, `lr-model-select`, `lr-voice-picker`, and
+`lr-tool-param-form`, which marks its *per-field* labels the same way. A control with no
+`form-control-label` part — `lr-checkbox`, `lr-switch`, `lr-radio`, whose default slot *is* the
+visible label — has no label box to hang a marker on and paints none; a control that renders the
+part with no label text set paints none either, so no stray glyph is ever orphaned.
+
+Three custom properties control it. Each is read as an inline `var()` fallback at the point of use,
+never declared on `:host`, so setting one on **any ancestor** of the control reaches it — and one
+declaration on `:root` retunes every marker in the application at once:
+
+| Property | Default | What it does |
+| --- | --- | --- |
+| `--lr-form-control-required-content` | `' *'` | The marker itself, as a CSS `content` string. Must be *quoted*. |
+| `--lr-form-control-required-color` | `var(--lr-color-danger)` | The marker's colour, independent of every other danger surface. |
+| `--lr-form-control-required-offset` | `0` | Inline space between the label text and the marker (a logical `margin-inline-start`, so it flips under RTL). |
+
+```css
+/* mark the requirement in words, in the page's language */
+:root {
+  --lr-form-control-required-content: ' (required)';
+  --lr-form-control-required-color: var(--lr-color-text-quiet);
+  --lr-form-control-required-offset: var(--lr-space-2xs);
+}
+
+/* or suppress the marker entirely and rely on your own label copy */
+lr-input.no-marker { --lr-form-control-required-content: ''; }
+```
+
+Three things follow from `content` being a consumer-supplied string:
+
+- **It is never localized by the library.** `localize()` covers strings the library authors; this
+  one is yours, so a translated marker (` (obligatoire)`, ` (必須)`) is set per locale by the
+  application — one declaration on the root element beside whatever else the locale switch changes.
+- **The default's leading space is part of the glyph**, which is why
+  `--lr-form-control-required-offset` defaults to `0`. A replacement string that omits the space
+  should set an offset rather than baking one in, so the spacing stays a length.
+- **Suppressing the marker is a styling change, not a semantic one.** `required` still reflects,
+  still reaches the accessibility tree through the control's own `aria-required`, still publishes
+  `:state(required)`, and still fails `valueMissing`. If the marker is the only way a form
+  communicates requiredness, replace it with visible copy rather than removing it.
 
 ## The shared styling vocabulary
 
@@ -749,7 +880,23 @@ consult it rather than guessing a token name.
 With `theme.css` imported, switch modes by putting `class="lr-light"`/`class="lr-dark"` (or
 `data-lr-theme="light"`/`"dark"`) on any ancestor; it also sets `color-scheme`. Without it, the token
 layer still ships a `prefers-color-scheme: dark` fallback that re-points the hardcoded defaults at a
-dark palette — that fallback applies only where no real `--lr-theme-*` value is set.
+dark palette. Two things switch that fallback off:
+
+- **A real `--lr-theme-*` value**, which the fallback only substitutes for.
+- **`data-lr-theme="light"` on the component itself**, which pins light mode regardless of the OS.
+  Both layers honour it now: the palette layer always did, and the token layer — the hardcoded
+  surface/text/border defaults — does too, so `<lr-card data-lr-theme="light">` on a dark machine is
+  light throughout rather than light chrome over a dark colour grid. The mirror-image
+  `data-lr-theme="dark"` pins dark on a light machine the same way, and a `.lr-dark` /
+  `data-lr-theme="dark"` *ancestor* is followed as well (through `:host-context()` where the engine
+  has it, and through `theme.css`'s inheriting custom properties everywhere else).
+
+Note the asymmetry: the *light* pin is read on the component itself (`:host([data-lr-theme='light'])`),
+while a *dark* ancestor is followed through `:host-context()`. Putting `data-lr-theme="light"` on
+`<html>` — what `theme.js`'s `setLyraTheme({ mode: 'light' })` does — pins the page through
+`theme.css`'s real `--lr-theme-*` values, which inherit into every shadow root. Without `theme.css`
+there are no such values to inherit, so put the attribute on the components you actually need
+pinned.
 
 The token layer also sets `:host([hidden]) { display: none !important; }` and an inherited
 `box-sizing: border-box` reset.
@@ -981,16 +1128,56 @@ setLyraLocale('fr'); // …or just set <html lang="fr"> and let components inher
 ```
 
 The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
-`registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getRegisteredLyraLocales`,
-`subscribeLyraLocaleRegistry`, `resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`,
-`LYRA_DEFAULT_STRINGS`, and the types `LyraLocaleStrings`, `LyraMessageKey`, `LyraMessage`,
+`registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getLyraLocaleDirection`,
+`getRegisteredLyraLocales`, `subscribeLyraLocaleRegistry`, `resolveLyraLocale`,
+`resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
+`LyraLocaleStrings`, `LyraLocaleMeta`, `LyraLocaleDirection`, `LyraMessageKey`, `LyraMessage`,
 `LyraPluralMessage` and `LyraPluralCategory`. The package root continues to re-export the same
 surface for compatibility, but it also registers the non-peer-gated component graph; use the
 dedicated entry when the application only needs locale setup.
 **`LYRA_DEFAULT_STRINGS` is the authoritative key list** (matching the `LyraMessageKey` union) —
-read it to find the key to override rather than guessing one. Lookup
-falls back exact locale → base language → English. Date, number, byte, relative-time and calendar
-output goes through `Intl`.
+read it to find the key to override rather than guessing one. Date, number, byte, relative-time and
+calendar output goes through `Intl`.
+
+**Lookup order for a tag.** Every message resolves through one chain, and `Intl.PluralRules`
+category selection walks the same chain, so the two can never disagree:
+
+1. **The full BCP-47 truncation walk, most specific first** — `zh-Hans-CN` → `zh-Hans` → `zh`.
+   Casing and `_` separators are normalized, so `pt_BR` and `pt-br` are the same key.
+2. **Then any registered catalog sharing the base language**, which is how a *regional-only*
+   catalog is reached from a less specific tag: `lang="zh"` and `lang="zh-Hans"` both find the
+   shipped `zh-CN` catalog, and `lang="pt"`/`lang="pt-PT"` both find `pt-BR`. Order within this
+   step is deterministic and independent of import order — most shared subtags first
+   (`zh-Hant-TW` prefers a registered `zh-TW` over `zh-CN`), then alphabetically as the tie-break
+   (bare `zh` with both registered picks `zh-CN`). Register the regional tag you actually mean if
+   the tie-break isn't the answer you want.
+3. **Then `en`**, always available through the built-in English defaults.
+
+Step 1 always beats step 2: with both `zh` and `zh-CN` registered, `zh-Hans-CN` resolves to `zh`.
+
+```ts
+import { getLyraLocaleDirection } from '@aceshooting/lyra-ui/localization.js';
+
+getLyraLocaleDirection('ar-EG'); // 'rtl' — declared by the shipped `ar` catalog, inherited by the region
+getLyraLocaleDirection('de');    // 'ltr'
+```
+
+`getLyraLocaleDirection(tag): 'ltr' | 'rtl'` answers "does this locale need `dir="rtl"`?" without
+an application keeping its own tag table. It reads a `dir` declared by `registerLyraLocale()`'s
+optional third argument first (walked through the same chain above, so a region inherits its base
+language's declaration), then `Intl.Locale`'s text-info surface where the engine has it, and
+finally `'ltr'`. It only *reports* a direction — nothing in the library applies one; see
+[RTL and direction](#rtl-and-direction).
+
+```ts
+registerLyraLocale('ar', { close: 'إغلاق' }, { dir: 'rtl', name: 'العربية' });
+```
+
+`registerLyraLocale(tag, strings, meta?)`'s third argument is optional catalog metadata —
+`{ dir?: 'ltr' | 'rtl'; name?: string }` (`LyraLocaleMeta`). Nothing in it is ever rendered: `dir`
+feeds `getLyraLocaleDirection()`, `name` is the locale's endonym for an application's own locale
+list. It merges the same way `strings` does, so a later two-argument call adding messages never
+drops metadata, and the two-argument call remains the normal way to register a catalog.
 
 `getRegisteredLyraLocales(): string[]` lists every locale with strings registered via
 `registerLyraLocale()`, plus `'en'` (always available through the built-in English fallback),
@@ -1011,14 +1198,22 @@ modules**: import one bare, read nothing from it, and it calls `registerLyraLoca
 
 ```ts
 import '@aceshooting/lyra-ui/translations/de.js';
-import '@aceshooting/lyra-ui/translations/ar.js'; // RTL catalog; direction still comes from dir
+import '@aceshooting/lyra-ui/translations/ar.js'; // declares dir: 'rtl'; direction still comes from dir
 import '@aceshooting/lyra-ui/translations/fa.js'; // fa-IR falls back to this base catalog
 import '@aceshooting/lyra-ui/translations/he.js'; // he-IL falls back to this base catalog
+import '@aceshooting/lyra-ui/translations/pt-BR.js'; // also serves pt and pt-PT
+import '@aceshooting/lyra-ui/translations/zh-CN.js'; // also serves zh, zh-Hans and zh-Hans-CN
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
-`one`/`two`/`other`). Locale selection does not force writing direction: set `dir="rtl"` on the
-page or an ancestor alongside `lang="fa-IR"`/`lang="he-IL"`, just as for Arabic.
+`one`/`two`/`other`). `ar`, `fa` and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
+answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not *force*
+writing direction: set `dir="rtl"` on the page or an ancestor yourself.
+
+`pt-BR` and `zh-CN` are the only Portuguese and Chinese catalogs, and they are regional tags. Step 2
+of the lookup order above is what makes them reachable from `lang="pt"`, `lang="pt-PT"`,
+`lang="zh"`, `lang="zh-Hans"` and `lang="zh-Hans-CN"` — no separate `pt`/`zh` alias registration is
+needed. They are still listed under their real tags in `getRegisteredLyraLocales()`.
 
 Import only the locales the application can actually offer — each is a separate module, so unimported
 ones cost nothing. A catalog registered this way is merged like any other, so a later
@@ -1073,7 +1268,10 @@ key becomes an unused entry and the singular renders for every count. Fold the p
 ## RTL and direction
 
 Direction is inherited from the platform `dir` cascade; locale/`lang` selection does not change it,
-and no component forces its own. Pair an RTL locale with `dir="rtl"`. Layout mirrors through CSS
+and no component forces its own. Pair an RTL locale with `dir="rtl"` — ask
+`getLyraLocaleDirection(tag)` rather than hard-coding a list of RTL tags, and note that
+`<lr-locale-picker>`'s `lr-change` detail already carries the picked locale's `direction`, so
+applying it is `document.documentElement.dir = event.detail.direction`. Layout mirrors through CSS
 logical properties. Where physical math is unavoidable — drag ratios, arrow-key direction, anchored
 placement — components share one internal direction helper: `isRtl(el)` (used by `lr-split`,
 `lr-time-range`, `lr-dock-panel`), plus `rtlAwareSide(side, el)` and `rtlAwarePlacement(placement,
@@ -1179,7 +1377,11 @@ installing or shipping a wrapper; import the normal granular registration entry 
 
 ## SSR and declarative shadow DOM
 
-Root and granular component imports are server-safe under Node 20+. Use the public
+Root, `all.js`, and granular component imports are server-safe under Node 20+.
+`@aceshooting/lyra-ui/ssr/all.js` is the **server-only** convenience entry: unlike the browser
+`all.js`, it registers the complete inventory including the optional-peer families — defining those
+tags never imports their peers (each component loads its own lazily, client-side), and the
+browser-bundle argument for excluding them does not apply to a server render. Use the public
 `@aceshooting/lyra-ui/ssr-loader.js` entry for the tested Lit SSR contract. Its exported
 `LYRA_SSR_SUPPORT_MATRIX`, `LYRA_SSR_RENDER_AND_HYDRATE_TAGS`, and
 `LYRA_SSR_CLIENT_RENDER_TAGS` classify every inventory tag exactly once:
@@ -1211,7 +1413,11 @@ updates, and reports `hydrated`, `client-rendered`, `unregistered`, `missing-sha
 
 The loader preserves optional-peer isolation: import a root-excluded component's granular
 registration after the loader. A fallback cannot serialize JS property bindings, so put initial
-server state in attributes/light DOM or assign it client-side. Layout/observer/canvas/media work
+server state in attributes/light DOM or assign it client-side. A `render-and-hydrate` component
+whose rendering depends on something only a browser can answer — its own light-DOM children, or a
+browser global such as `EyeDropper` — reproduces the server's answer on the hydrating render and
+corrects itself on the next update, so a slotted override lands one frame after hydration; a
+browser-only mount is unaffected and renders the final result the first time. Layout/observer/canvas/media work
 begins after hydration, and remote content is client-only. CI imports every granular module, renders
 every inventory tag through its declared tier, and crawls a real Chromium DSD page (including
 `lr-page`) while failing hydration warnings/errors or DOM-identity replacement.
@@ -1238,6 +1444,23 @@ toggle/selection/expansion ARIA attributes and deliberate host-name forwarding. 
 controls preserve `ElementInternals`, reset, validity, focus, and native editing behavior. Reusable
 layouts respond to their allocated container rather than the viewport, and decorative or infinite
 motion simplifies under `prefers-reduced-motion: reduce`.
+
+Keyboard model: a composite widget (menu, tab group, tree, table, calendar, carousel, segmented
+control) is a single tab stop using a roving `tabindex`; arrow keys move within it and skip disabled, hidden,
+`aria-hidden` and `inert` items; `Home`/`End` jump to the ends; `Enter` and `Space` both activate;
+`Escape` dismisses the topmost dismissible overlay and returns focus to whatever opened it.
+`ArrowLeft`/`ArrowRight` mean previous/next and swap under `dir="rtl"`.
+
+**What that contract is verified by, precisely.** Every one of the 283 components carries at least
+one axe-core assertion in its own directory's tests, in a test that mounts its own tag; contrast
+(4.5:1 text, 3:1 control borders, in both the light and dark palettes), a 40px minimum target size,
+pressed-state coverage for every hoverable part, and `::part()` reachability are separate blocking
+gates. All of that is automated. **No screen reader has been run against this library, in any
+pairing, and no human accessibility audit exists** — so treat "accessible" here as "passes an
+automated rule engine and a written role/name/state contract", never as verified assistive-technology
+behavior, and expect no conformance claim or VPAT. The full statement of what is and is not covered,
+plus how to report an accessibility bug, is at
+<https://github.com/aceshooting/lyra-ui/blob/main/docs/accessibility.md>.
 
 ## Editor and tooling integration
 
@@ -1275,7 +1498,8 @@ They existed for three families before 8.0.0, were in the exports map, and were 
 so they were effectively unreachable. All eleven now exist and are listed here.
 
 A family barrel is **side-effectful by design**: importing it registers every tag in that family, the
-same way the root barrel registers all of them. Reach for one when you genuinely use most of a family
+same way `all.js` registers all of them (the package root itself registers nothing as of 8.0.0 — see
+"Importing and registering components"). Reach for one when you genuinely use most of a family
 and want a single import; reach for the granular
 `@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` path — which is what every example in
 these docs uses — when you do not, because a barrel cannot be tree-shaken down to the two elements
@@ -1420,8 +1644,14 @@ entry point — open an issue and it can be promoted deliberately.
   The handle is document-scoped and nestable. While any
   such handle is active, Lyra yields Escape/Tab ownership and keeps only the external modal paths
   non-inert; disconnecting or adopting the external root releases its handle automatically.
-- **`announcer` → `Announcer`** — throttled live-region announcements, paired with
-  `lr-live-region`.
+- **`announcer` → `Announcer` and `acquireAnnouncementSink()`** — throttled live-region
+  announcements, paired with `lr-live-region`. `Announcer` is the DOM-free coalescing engine;
+  `acquireAnnouncementSink(politeness, options?)` hands back the ref-counted, visually hidden region
+  in the **host document's light DOM** that every Lyra announcement lands in (a live region inside a
+  shadow root is not reliably announced). The module also exports `ANNOUNCEMENT_SINK_ATTRIBUTE` —
+  the `data-lr-live-region` marker those regions carry — so a consumer's DOM diffing, snapshot
+  testing, or `MutationObserver` can recognize and ignore them. Both are documented in full in
+  `llms/components/lr-live-region.md`.
 
 **Known gotchas:**
 - `formResetCallback()` restores the *content attribute* default, so `el.value = 'x'` never redefines
@@ -1520,6 +1750,64 @@ literal text `"null"`.
 
 These are setter-only input types, not nullable states: code that reads any member above continues
 to receive a `string`.
+
+## The validity alias is cancelable in 8.0.0
+
+Every form-associated control emits `lr-invalid` (no detail, bubbling, composed) as the alias of the
+native, non-bubbling `invalid` event. In 8.0.0 that alias is **cancelable**, and its cancellation is
+forwarded to the native event that produced it:
+
+```ts
+form.addEventListener('lr-invalid', (event) => {
+  event.preventDefault();            // suppresses the browser's own validation bubble,
+  showMyOwnErrorSummary(event.target); // and reportValidity()'s focus/scroll of this control
+});
+```
+
+`preventDefault()` suppresses only the platform's *default UI* — the validation bubble, and the
+focus/scroll `reportValidity()` performs on the first invalid control. The control stays invalid,
+still fails `checkValidity()`, and still blocks submission. Cancelling a copy of a platform event
+could only ever mean cancelling the original, which is why the forwarding exists at all: before it,
+an app wiring `lr-invalid` to its own error banner had no way to stop the native UI appearing
+alongside it.
+
+Nothing changes for code that ignores the event, and the listener has to be attached before the
+validity check runs. Every per-control mention of `lr-invalid` below inherits this contract; the
+per-control sections repeat only what is specific to that control.
+
+## The required-field marker
+
+A labelled control with `required` set paints ` *` after its label text. It is one shared rule on
+the `form-control-label` part, so it looks and sits identically on every control that renders that
+part — here, and on `lr-file-input`, `lr-model-select`, `lr-voice-picker` and `lr-tool-param-form`
+in the other families. `lr-checkbox`, `lr-switch` and `lr-radio` have no label box of their own and
+paint none; a control with the part but no label text set paints none either, so no stray glyph is
+orphaned.
+
+Three consumer-settable properties replace it, retune its colour, or suppress it entirely —
+`--lr-form-control-required-content` (a quoted CSS `content` string; `''` suppresses the marker),
+`--lr-form-control-required-color` (default `var(--lr-color-danger)`), and
+`--lr-form-control-required-offset` (default `0`). Each is an inline `var()` fallback rather than a
+`:host` declaration, so setting one on any ancestor — `:root` included — reaches every marker at
+once. Full description, worked examples, and why the content string is never localized by the
+library: `llms/shared.md` → "The required-field marker".
+
+## Disabled and readonly controls publish no invalid state
+
+A control **barred from constraint validation** — its own `disabled`, an ancestor
+`<fieldset disabled>`, `readonly` on the controls that have it, or anything else that makes
+`willValidate` false — matches neither `:state(invalid)` nor `:state(user-invalid)`, and reports no
+violation from `checkValidity()`. That is the native rule: `<input required disabled>` and
+`<input required readonly>` both match neither `:valid` nor `:invalid`.
+
+It matters because the idiomatic stylesheet rule keys off the tag —
+`lr-input:state(user-invalid) { border-color: … }` — so a disabled required field that still
+published `invalid` painted every greyed-out control in the form red.
+
+`required`/`optional` are unaffected: they describe the attribute, not the outcome, so a disabled
+required field still matches `:state(required)`, exactly like native `:required`. Style the barred
+case through `:state(disabled)`/`:disabled` and `:state(readonly)` instead. Full description in
+`llms/shared.md` → "CSS custom states".
 
 ## `lr-combobox` / `lr-option`
 
@@ -1664,7 +1952,8 @@ the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user e
 `detail: { inputValue }` and is the one cancelable event: preventing it suppresses the default
 append/select action so the host can normalize and commit its own option.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
-`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
+`lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
+validity fails — see "The validity alias is cancelable in 8.0.0" above.
 
 **The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
 committed selection and an in-progress filter query, so the button renders whenever either has
@@ -1725,6 +2014,12 @@ adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`
 leading visual for an async row), `option-label`, `option-sub` (a row's secondary line, when `sub`
 is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"
 indicator from `maxRender`), `error`, `hint`
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-combobox-trigger-padding`,
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
@@ -2012,7 +2307,7 @@ announces a no-op),
 trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
 its unprefixed counterpart. `lr-after-show` and `lr-after-hide` fire after the corresponding
 listbox transition has settled; an interrupted transition drops its stale after-event.
-`lr-invalid` (no detail) fires when a validity check finds the control invalid.
+`lr-invalid` (no detail, cancelable) fires when a validity check finds the control invalid.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `help-text` (alias), `error` (overrides
 the `errorText` attribute when provided), `start`/`prefix` (aliases before the selected-value label),
@@ -2038,6 +2333,12 @@ get no heading),
 `option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
 `--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
@@ -2290,7 +2591,9 @@ internal native date input.
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
 bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
-settle. `lr-clear` and `lr-invalid` are non-cancelable.
+settle. `lr-clear` is non-cancelable. `lr-invalid` **is** cancelable: `preventDefault()` on it
+suppresses the browser's native validation bubble and `reportValidity()`'s focus/scroll of this
+control, without making the control valid — see "The validity alias is cancelable in 8.0.0" above.
 
 **Slots (10):** `clear-icon`, dynamic `day-YYYY-MM-DD`, `end`, `expand-icon`, `footer`, `hint`,
 `label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
@@ -2310,6 +2613,12 @@ endpoint remains visible in `value` but contributes the empty string to `FormDat
 endpoint is selected. `min`/`max`, past/future limits, disabled dates/weekdays, the predicate,
 range length, `required`, and configured validators all feed FACE validity. Reset and state restore
 use the same normalization path as direct property writes.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-date-input-padding-block` (default `--lr-space-xs`) and
 `--lr-date-input-padding-inline` (default `--lr-space-s`) — the `input-wrapper`'s padding;
@@ -2543,7 +2852,7 @@ the shadow boundary.
 | `focus` | none | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`. |
 | `lr-blur` | none | Prefixed compatibility alias, fired immediately after `blur`. |
 | `lr-focus` | none | Prefixed compatibility alias, fired immediately after `focus`. |
-| `lr-invalid` | none | Fired when a validity check finds the control invalid. |
+| `lr-invalid` | none | Fired when a validity check finds the control invalid. **Cancelable** — `preventDefault()` suppresses the native validation bubble and `reportValidity()`'s focus/scroll. |
 
 Programmatic property assignments, selection changes, `setRangeText()`, form reset, and form-state
 restoration are silent. User edits update `value`, submitted form data, and required validity before
@@ -2580,6 +2889,12 @@ on every keystroke. Lengths count UTF-16 code units (one emoji counts as two), m
 script-assigned value can exceed `maxlength`, and the `tooLong` validity flag already reports that
 state better than a negative number would. An unparseable `maxlength` (`maxlength="oops"`) is
 dropped rather than rendered as `NaN`, and the count counts up from zero instead.
+
+`required` with a non-empty `label` paints the library's shared marker on `form-control-label` —
+the one `::after` rule described under "The required-field marker" above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 ### Themeable custom properties
 
@@ -2740,7 +3055,8 @@ restores `value` for session history/autofill without changing submitter-only fo
 (disabled while `disabled` or `loading`). The internal button's `focus` and `blur` — which do not
 cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
 events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail). `lr-invalid` (no
-detail) fires when a validity check finds the button invalid.
+detail, cancelable) fires when a validity check finds the button invalid; `preventDefault()` on it
+suppresses the native validation bubble and `reportValidity()`'s focus/scroll.
 
 **Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content),
 plus Shoelace aliases `prefix` → `start` and `suffix` → `end`.
@@ -3156,6 +3472,13 @@ sequence). `lr-invalid` (no detail) fires when a validity check finds the input 
 `clear-button` (non-empty clearable `text`/`search` inputs only),
 `hint`/`form-control-help-text` (compatibility names on the same hint node), and `error`.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, and the reference implementation every other labelled control in the library shares, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it. With no label text the part is hidden and
+no glyph is painted.
+
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
 `--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
 (`2xs`…`xl`), the same pattern
@@ -3252,7 +3575,8 @@ submission must never shadow it: `lr-textarea` and `lr-code-editor` insert a new
 whole point of a multi-line surface; `lr-select`'s `role="combobox"` trigger opens the listbox (and
 then commits the active option), per the ARIA pattern; and `lr-date-picker` selects the focused day
 in the calendar grid. The controls that *do* wire it are `lr-input` (and its `lr-number-input`/
-`lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input` and `lr-token-input`.
+`lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input` and
+`lr-otp-input`.
 
 ### Exact-height hatches — the one rule that applies to all of them
 
@@ -3496,6 +3820,13 @@ precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion set
 
 **Custom states:** `blank`, `disabled`, and `open`, plus the shared validity states.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+the `form-control-label` node — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
+painted.
+
 **Themeable custom properties:** upstream-compatible `--column-item-height`, `--column-width`,
 `--show-duration`, and `--hide-duration`, each with a Lyra design-token fallback.
 
@@ -3676,6 +4007,12 @@ such as a consumer-owned `<lr-flag>`; no flag package is imported automatically)
 `flags`), `country-code` (selected alpha-2 code, `data-placeholder` when no country exists),
 `expand-icon`, `calling-code`, `input`, `hint`, `error`.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
+
 **Themeable custom properties:** `--lr-phone-input-padding-block`, `--lr-phone-input-font-size`,
 and `--lr-phone-input-control-min-height` (each scaled by `size`), plus `--lr-phone-input-control-height`
 to pin an exact input-wrapper height (both floors and caps it — use it for pixel-matching an
@@ -3800,6 +4137,37 @@ clears it. The error survives handle moves, preset picks and a form reset, exact
 control — so a consumer re-validating a range on every `lr-input` calls this with the new message
 (or `''`) each time rather than expecting the movement itself to clear it. The message is
 caller-supplied and is used verbatim, never localized.
+
+**`form.reset()` — `formResetCallback()`.** The control has no submitted value, but it does take
+part in its owning form's reset, and a reset undoes everything the *user* did to it:
+
+- **The range** goes back to the declared `start`/`end` **content attributes** — the markup default,
+  the way a native `<input>` resets to its `value` attribute rather than to its current IDL value. A
+  handle with no attribute falls back to the domain bound it started at. The restored pair is
+  normalized the same way a preset pick is (clamped into `[min, max]`, then ordered so
+  `start <= end`), so an inverted or out-of-range declared range still restores to a legal one.
+- **The interaction flag** is cleared, which makes the control pristine again: `:state(user-valid)`
+  and `:state(user-invalid)` stop matching until the user touches it again. Without this, a range a
+  consumer had rejected kept rendering as the user's mistake on a form they had just reset.
+- **An in-flight keyboard gesture** is dropped, so the next key-up cannot commit an `lr-change` for
+  a step the reset already discarded. A drag in progress is left alone — only the pointer sequence
+  itself ends it.
+
+Two things deliberately **survive** the reset, matching native semantics:
+
+- **A `setCustomValidity()` message**, and with it `customError`, `validationMessage`,
+  `:state(invalid)` and blocked submission. Only another `setCustomValidity('')` clears it. The
+  reset stops it looking like the user's error; it does not decide the consumer's constraint is
+  satisfied. If a reset should also clear your rejection, call `setCustomValidity('')` from your own
+  `reset` listener.
+- **`disabled`, `min`/`max`, `step`, `presets`, and every other author-set property** — a reset
+  restores the user's edits, not the component's configuration.
+
+The reset **emits nothing**: like a native control, it is the form's edit rather than the user's, so
+no `input`/`change`/`lr-input`/`lr-change` fires. Read `start`/`end` in a `reset` listener on the
+form if you need to react. There is deliberately no `formStateRestoreCallback()` beside it — this
+control never calls `setFormValue()`, so the browser has no serialized state to hand back for
+autofill or back/forward restore.
 
 **Slots:** none.
 
@@ -4397,6 +4765,14 @@ the part name because `::part(tooltip)[data-visible]` is invalid CSS and never m
 **Breaking in 8.0.0:** the `fill` part was **renamed to `indicator`**, matching `wa-slider`. A
 `::part(fill)` rule silently matches nothing now — rename it.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+the `form-control-label` node — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the node is hidden and no glyph is
+painted. It is purely a visual convention here, for the reason the custom states note above gives:
+a slider always has a value, so the marker never accompanies a `valueMissing` violation.
+
 **Themeable custom properties:** three geometry knobs ride the shared `size` ladder, so a tier moves
 them all without a per-tier rule, and the values in brackets are what they resolve to at the default
 `m`:
@@ -4704,8 +5080,11 @@ emit `input` immediately and one `change` when the field settles on blur or Ente
 composition events stay on the real input without sanitizing or committing; the final
 non-composing input commits and relays once. `lr-complete` (`detail: { value }`) fires only on an
 incomplete-to-complete transition, so replacing a filled cell does not complete again. It always
-bubbles, composes, and is cancelable. With `autosubmit`, the component calls `requestSubmit()` on
-its owning form after the event unless a listener calls `preventDefault()`. The real input's native
+bubbles, composes, and is cancelable. With `autosubmit`, the component submits its owning form
+after the event unless a listener calls `preventDefault()`. That submission is deferred one task,
+so a listener that decides asynchronously (`await`-ing a check before letting the form go) can
+still veto it; it then goes through the same resolved default button as Enter-to-submit, so
+`SubmitEvent.submitter` and the button's own `name`/`value` reach the submission. The real input's native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
 do not cross the shadow boundary; each is followed by its prefixed alias `lr-focus` / `lr-blur` (no
 detail). `lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.
@@ -4717,7 +5096,10 @@ mirrored in RTL. Backspace clears the current cell and moves back; Delete clears
 Neither operation shifts later characters. Typing replaces the active cell and advances. A
 nonempty native selection maps its compact-string offsets back to occupied visual cells: typing
 replaces the selection at its first cell, while either deletion key clears every selected cell.
-Enter flushes a pending `change` and requests exactly one submission from the owning form. Pasting
+A bare Enter flushes a pending `change` and requests exactly one submission from the owning form,
+through the shared Enter-to-submit gate above — so a modifier-held Enter, an Enter that commits an
+IME candidate, an already-vetoed keydown, and a `readonly` field all leave the form alone, and the
+keystroke itself is never cancelled. Pasting
 fills accepted characters from the first cell in one input operation. The public and submitted
 `value` concatenates occupied cells; a middle hole is a visual editing state and is not encoded in
 that string.
@@ -4729,7 +5111,11 @@ nonempty `label`/`hint` attribute wins when both sources are supplied. The `erro
 **CSS parts:** `base` / `form-control` (aliases on the outer wrapper), `label` /
 `form-control-label` (aliases on the label), `field` / `segments` (aliases on the segment wrapper),
 `control` (the real, transparent input), `segment`, `separator` / `segment-literal` (aliases on
-separators), `hint`, and `error`. A populated required label paints the shared required asterisk.
+separators), `hint`, and `error`. A populated required label paints the shared required marker —
+the same `::after` rule and the same three properties every other labelled control uses (see "The
+required-field marker" above), not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here too.
 `segment` carries `active`, `masked`, `placeholder-mask`, and `invalid` as additional part tokens.
 
 **Themeable custom properties:** `--mask-char` (mapped mask-glyph alias, defaulting to the retained
@@ -4814,6 +5200,14 @@ child validity owner.
 `form-control-input` / `button-group` / `button-group__base`, `hint` /
 `form-control-help-text`, and `error`.
 
+**The required marker.** `required` with a non-empty group `label` paints the library's shared
+marker on the `form-control-label` node — the one `::after` rule described under "The
+required-field marker" above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. It marks the **group**, not the individual radios: an owned
+`<lr-radio>` has no label box of its own and paints nothing. With no group label text the node is
+hidden and no glyph is painted.
+
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
 options and its messages, scaled by `size` through the shared control ladder.
@@ -4852,6 +5246,14 @@ of the control's current `name`, preserves duplicate-value cardinality, waits fo
 option children, and falls back to an empty selection for malformed state. Restoration is silent.
 **CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
 `error`.
+**The required marker.** `required` with a non-empty group `label` paints the library's shared
+marker on `[part="form-control-label"]` — here the `<legend>` of the group's fieldset. It is the
+one `::after` rule described under "The required-field marker" above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`. It
+marks the **group**, not the individual checkboxes: an owned `<lr-checkbox>` has no label box of
+its own and paints nothing. With no group label text the legend is hidden and no glyph is painted.
+
 **Themeable custom properties:** `--lr-checkbox-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.1)`), the vertical gap between the group's label, options
 and messages, and `--lr-checkbox-group-option-gap` (default
@@ -4945,6 +5347,13 @@ does not work** — that is the four-character string `null`. Use `delimiter="no
 (both of which the attribute converter maps to `null`), or a property binding
 (`.delimiter=${null}`). Removing the attribute restores the `,` default.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. It marks the control, not an individual token. With no label
+text the part is hidden and no glyph is painted.
+
 **Themeable custom properties:** `--lr-token-input-padding` (the input-wrapper padding, scaled by
 `size`), `--lr-token-input-font-size` (the input-wrapper and token font size, scaled by `size`),
 `--lr-token-input-control-min-height` (the input-wrapper's block-size floor, scaled by `size`),
@@ -5009,9 +5418,16 @@ validity fails.
 
 **Slots:** `label`, `hint`, `error`.
 
-**CSS parts:** `form-control`, `label` (**not** `form-control-label` as on the other form
-components), `editor` (the bordered frame and the single scroll viewport), `gutter` (line numbers,
-`aria-hidden`, only when `lineNumbers`), `textarea`, `hint`, `error`.
+**CSS parts:** `form-control`, `label` / `form-control-label` (both tokens sit on the same `<label>`
+element — `label` is the historical name, `form-control-label` the one every other form component
+in this family uses), `editor` (the bordered frame and the single scroll viewport), `gutter` (line
+numbers, `aria-hidden`, only when `lineNumbers`), `textarea`, `hint`, `error`.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+that label element — the one `::after` rule described under "The required-field marker" above, not
+a copy of it, so `--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the element is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-code-editor-min-block-size` (default `--lr-size-8rem`, the
 frame's and textarea's height floor) and `--lr-code-editor-line-height` (default `1.5`, applied to
@@ -5203,6 +5619,13 @@ The eyedropper aliases are also addressable individually as `eyedropper-button__
 `eyedropper-button__caret`, `eye-dropper-button__base`, `eye-dropper-button__prefix`,
 `eye-dropper-button__label`, `eye-dropper-button__suffix`, and `eye-dropper-button__caret`.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
+painted.
+
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
 not the button's minimum target. It is auto-swapped per `size` tier (default `'m'` reads `2.5rem`,
 `'2xs'` reads `1.25rem`, etc.), matching the visual-density ladder `lr-input` uses. The trigger's
@@ -5355,6 +5778,13 @@ error message). While windowing is active the rows are wrapped in `virtual-space
 `aria-hidden` spacer standing in for a row's missing `group-label`), and `virtual-items` (the row's
 emoji flex line).
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
+painted.
+
 **Themeable custom properties:** `--lr-emoji-picker-item-size` (default `--lr-icon-button-size`,
 each emoji button's box; scaled by the `size` property), `--lr-emoji-picker-glyph-size` (default
 `--lr-font-size-lg`, the font size of the emoji glyph; scaled by the `size` property to keep the glyph
@@ -5487,12 +5917,31 @@ list, no filter/free-text mode.
 - `open: boolean = false` (reflected).
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`).
 
-**Events:** `lr-change` (`detail: { value, previousValue }`, **cancelable**) — fired on every
-explicit pick; if not `defaultPrevented`, the component applies the pick itself via
+**Events:** `lr-change` (`detail: { value, previousValue, direction }`, **cancelable**) — fired on
+every explicit pick; if not `defaultPrevented`, the component applies the pick itself via
 `setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
 active locale untouched, so a host can persist the choice first and apply it later. `blur`/`focus`
 re-dispatched from the internal trigger as bubbling, composed events. `lr-invalid` is the single
-bubbling/composed alias of a failed native validity check.
+bubbling/composed, cancelable alias of a failed native validity check.
+
+`direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing
+direction, resolved through `getLyraLocaleDirection(value)` — a catalog's declared
+`registerLyraLocale(tag, strings, { dir })` first, then `Intl.Locale`'s text-info surface where the
+engine has it, then `'ltr'`. It is present on every `lr-change`, cancelled or not, and it is carried
+precisely so applying the direction is a one-liner instead of an application-maintained table of RTL
+tags:
+
+```js
+picker.addEventListener('lr-change', (e) => {
+  document.documentElement.lang = e.detail.value;
+  document.documentElement.dir = e.detail.direction;
+});
+```
+
+The component still never writes `lang`/`dir` itself — a picker does not own the page — but it no
+longer leaves the host to work the direction out. `getLyraLocaleDirection()` is exported from
+`@aceshooting/lyra-ui/localization.js` for the same lookup outside an event handler (a persisted
+choice applied on boot).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` — all forward to the internal trigger
 button, same convention as `lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
@@ -5506,6 +5955,13 @@ required picker with nothing committed goes back to `valueMissing`. It survives 
 **CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `option`,
 `option-flag` (present only while `showFlags` is on), `option-label`, `option-tag` (the row's
 secondary line — the raw BCP-47 tag), `expand-icon`, `hint`, `error`.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. The part is rendered only when there is label text, so an
+unlabelled picker paints no stray glyph.
 
 **Themeable custom properties:** `--lr-locale-picker-trigger-padding`,
 `--lr-locale-picker-trigger-min-height`, `--lr-locale-picker-trigger-height` (unset by default, a
@@ -5532,7 +5988,9 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
 **Known gotchas:**
 - selecting a row applies `setLyraLocale()` itself unless the listener calls
   `event.preventDefault()` on `lr-change` — it does not touch
-  `document.documentElement.lang`/`dir`; apply writing-direction changes to the page yourself.
+  `document.documentElement.lang`/`dir`. Applying those is still the host's job, but the direction
+  is no longer the host's to *derive*: read `event.detail.direction` (or call
+  `getLyraLocaleDirection(tag)`), rather than keeping a hand-maintained list of RTL tags.
 - no filter/free-text mode — for a catalog with hundreds+ of rows, roll your own with `lr-select`
   or `lr-combobox` instead.
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no
@@ -5874,6 +6332,14 @@ cancelable.
 `page-current`, `page-size`, `pager`, `pager-button`, `pin-indicator`, `previous-button`,
 `resize-handle`, `row`, `row-detail`, `search`, `select-all-checkbox`, `sort-indicator`,
 `sort-number`, `table`, `toolbar`.
+
+`[part="live-region"]` is a visually-hidden, `aria-hidden` **mirror** of the last polite
+announcement — a styling and inspection surface, with no live-region role of its own. The
+announcement itself goes to the library's shared **light-DOM** polite region, appended to the
+consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a
+shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
+document-level region rather than `::part(live-region)`; the part still tells you what the grid
+last announced.
 
 **Themeable custom properties:** `--accent-color`, `--background-color`, `--border-color`,
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
@@ -6412,6 +6878,13 @@ pages into its skipped run. `button` is shared by every page, ellipsis, and navi
 one — the state lives in the part name because `::part(page)[aria-current='page']` is invalid CSS
 and would silently never match. `first-button`/`first-icon` and `last-button`/`last-icon` exist only
 while `with-edges` is set.
+
+`live-region` is a visually hidden, `aria-hidden` **mirror** of the applied-page announcement — a
+styling and inspection surface, with no live-region role of its own. The announcement itself goes
+to the library's shared **light-DOM** polite region, appended to the consumer's `<body>` and marked
+`data-lr-live-region="polite"`, because a live region inside a shadow root is not reliably
+announced (JAWS with Firefox ignores one outright). Assert against that document-level region
+rather than `::part(live-region)`.
 
 **CSS custom states:** `disabled` matches when the public `disabled` property is true. The state
 does not match for the separate `loading` or empty-data conditions, even though those conditions
@@ -7114,6 +7587,22 @@ binding is deliberately **not** RTL-swapped — "down" always means later in the
 If a same-id data refresh disables an expanded branch, that reused branch collapses immediately;
 enabled descendants are never left visibly stranded outside this navigation walk.
 
+**`inert` excludes an item and its whole subtree from that walk, exactly as `disabled` does.**
+`role="treeitem"` and the roving `tabindex` both live on the `<lr-tree-item>` host itself, so an
+inert item literally refuses `focus()` — stepping the roving index onto one would leave focus behind
+on `<body>` and kill every later arrow press. Marking the focused item inert therefore moves the
+roving stop to the next reachable row instead of stranding it, and the state is observed live
+(`attributeFilter: ['selected', 'disabled', 'inert', 'lazy']`). Two deliberate limits:
+
+- **Only inertness *inside* the tree counts** — the item's own `inert`, or that of an ancestor item
+  between it and the `<lr-tree>`. An inert ancestor *outside* the tree (the page behind an open
+  modal) inerts every item uniformly, and excluding them all would empty the walk, null out
+  `activeId`, and leave the tree with no `tabindex="0"` stop for anything to restore once the dialog
+  closes. That case needs no handling: focus cannot be inside the tree at all.
+- **Selection ignores it.** An inert subtree is temporarily non-interactive, not deselected, so
+  `selectedItems` and the multiple-mode cascade are unchanged and a modal that inerts the page can
+  never silently wipe a tree's selection.
+
 **Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
 cycle).
 
@@ -7638,7 +8127,14 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
 badge).
 
 **CSS parts:** `base`, `summary` (the "{done} of {total} steps complete" line), `count` (one per
-status present, text + tone dot, never color-only), `live-region` (step-transition announcement).
+status present, text + tone dot, never color-only), `live-region` (a visually-hidden, `aria-hidden`
+mirror of the last step-transition announcement).
+
+`live-region` carries no live-region role of its own — it is a styling and inspection surface. The
+announcement itself goes to the library's shared **light-DOM** polite region, appended to the
+consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a
+shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
+document-level region rather than `::part(live-region)`.
 
 **Themeable custom properties:** `--lr-flow-run-overlay-status-color` controls a count dot without
 an execution status. `--lr-flow-run-overlay-status-{pending|running|success|error|denied}-color`
@@ -8811,8 +9307,16 @@ first, with the Lyra/token values as fallbacks. Otherwise shared tokens —
 ```
 
 **Known gotchas:**
+- **`inert` on a child excludes its tab from arrow-key navigation, exactly as `disabled` does.** An
+  inert element refuses focus outright, so a roving `tabindex` that stepped onto one would leave
+  `focus()` a silent no-op and strand the arrow key with focus back on `<body>`. The tab button
+  rendered for an inert source child is itself marked `inert`, so the two can never disagree,
+  Home/End skip it, and `active` is never resolved to it. Only the child's **own** `inert` counts,
+  never an ancestor's: a tab group inside a subtree an open modal has inerted is inert as a whole,
+  and treating every tab as unreachable there would reset `active` to `''` and blank every panel for
+  as long as the dialog is open.
 - Tabs are rebuilt from direct children via a `MutationObserver` watching `childList` plus
-  `attributeFilter: ['slot', 'label', 'disabled', 'closable']` — not `slotchange` — because a brand-new tab's
+  `attributeFilter: ['slot', 'label', 'disabled', 'inert', 'closable']` — not `slotchange` — because a brand-new tab's
   `slot` name has no matching `<slot>` to fire `slotchange` on until this component has already
   rendered one for it, and neither `slotchange` nor any Lit lifecycle hook observes a plain
   attribute edit on a light-DOM child at all.
@@ -9981,6 +10485,20 @@ wrapping the default slot), `footer` (wrapper around the `footer` slot, below th
 
 **Optional peer deps:** none.
 
+**Which items arrow keys reach.** An item is navigable unless it is `disabled` (or `loading`),
+`hidden`, `aria-hidden="true"`, **`inert`, or has an `inert` ancestor** — the last two alongside the
+rest because an inert element *refuses* focus: stepping the roving `tabindex` onto one leaves
+`focus()` a silent no-op, so roving focus stays wherever it was (or falls to `<body>`) and every
+later arrow press dies. The state is observed live —
+`attributeFilter: ['disabled', 'hidden', 'aria-hidden', 'inert']` on every item — so marking the
+*currently active* item inert rehomes roving focus to the next reachable one instead of leaving a
+stale `tabindex="0"` on an unfocusable row. `lr-tab-group`, `lr-tree` and `lr-video-playlist` mirror
+the same rule for their own roving navigation, with one deliberate difference: those three read only
+a child's **own** inertness (plus, in `lr-tree`, an inert ancestor *inside* the tree), because a list
+inerted wholesale by an open modal must not lose its selection and its tab stop for as long as the
+dialog is up — focus cannot be inside it anyway. A menu is itself the overlay, so it takes the
+simpler ancestor-inclusive read.
+
 ### `lr-menu-item`
 
 Not meaningful standalone — it exists purely as `<lr-menu>`'s light-DOM child, the same
@@ -10000,7 +10518,8 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
   single compact row inside an otherwise default menu needs no wrapper — and, conversely, sizing a
   whole menu means setting it on every item
 - `disabled: boolean = false` (reflected — disables selection and excludes this item from
-  `<lr-menu>`'s roving-tabindex navigation entirely)
+  `<lr-menu>`'s roving-tabindex navigation entirely; the native `inert` attribute, `hidden`, and
+  `aria-hidden="true"` exclude it the same way — see "Which items arrow keys reach" above)
 - `destructive: boolean = false` (reflected — tints the row with `--lr-color-danger`, for a
   dangerous action like "Delete"; retained as a behavior-identical alias)
 - `variant: LyraVariant | 'default' = 'default'` (reflected) — `danger` is the mapped dangerous
@@ -11498,6 +12017,22 @@ empty). The `label` and `header-actions` slots are new in 8.0.0.
 additive aliases on the same functional node, so a mapped `::part(title)` rule styles the same
 visible title as Lyra's `::part(heading)`.
 
+**The body is keyboard-reachable while it overflows.** `[part="body"]` is the element that scrolls,
+so it carries `tabindex="-1"` and joins the focus order **only while its content actually
+overflows** — a dialog whose content is nothing but prose, a table, or a rendered document used to
+be scrollable with a mouse and completely unreachable from the keyboard, because a scroll container
+with no focusable child is not a stop of its own. A short body never becomes a gratuitous stop.
+
+It takes focus like any other stop, so it styles like one: `::part(body):focus-visible` draws the
+standard `--lr-focus-ring-*` ring, inset (`outline-offset` is negative) because the body is flush
+with the panel edges, where an outset ring would be clipped or would collide with the header rule.
+Restyle it through `::part(body)` as usual; do not remove the outline without replacing it.
+
+It never steals initial focus from real content: an `[autofocus]` element wins, then the first
+focusable control *inside* the body, and the body itself is used only when there is nothing else to
+focus. So a dialog full of form controls behaves exactly as before, and a dialog full of text is now
+scrollable with the arrow keys, Page Up/Down and Home/End once Tab reaches it.
+
 **Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--width`, `--spacing`,
 `--header-spacing`, `--body-spacing`, `--footer-spacing`, `--show-duration`, and
 `--hide-duration`. The individual region properties override `--spacing`; mapped properties in
@@ -12222,12 +12757,16 @@ arrow — use `<lr-popover>` when a floating surface needs both.
 ```
 
 While open, trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
-not the shadow-private popup. Native triggers resolve that ID directly. `lr-button` and
-`lr-icon-button` resolve the same proxy onto their focused shadow-internal controls through
-`ariaDescribedByElements`; in supporting browsers that explicit element-reference assignment
-intentionally leaves the internal control's serialized `aria-describedby` value empty. Existing
-author-provided descriptions are merged while open and restored when the trigger is replaced or
-the tooltip disconnects.
+not the shadow-private popup. Native triggers resolve that ID directly. A description is only
+announced on the node that actually holds focus, so when the trigger is a custom element the same
+proxy is applied to the first focusable descendant as well — across slots and nested open shadow
+roots — which covers `lr-select`, `lr-switch`, `lr-chip` and any consumer-authored wrapper, not
+just the components that forward their own host `aria-describedby`. A descendant in the same tree
+receives the serialized ID; one inside a shadow root is linked through `ariaDescribedByElements`,
+whose explicit element-reference assignment intentionally leaves that control's serialized
+`aria-describedby` value empty in supporting browsers. Existing author-provided descriptions —
+including a control's own internal hint/error text — are merged while open and restored when the
+tooltip closes, the trigger is replaced, or the tooltip disconnects.
 
 Plain content keeps `role="tooltip"`. If actionable content appears anywhere in the assigned
 default-slot subtree — including inside a nested custom element's open shadow root — the popup
@@ -12993,8 +13532,13 @@ the built-in button. Exactly one named icon is rendered at a time.
 - `base-error` — the same while the failure state shows (`part="base button base-error"`).
 - `copy-icon`, `success-icon`, `error-icon` — the resting, confirmation and failure glyphs. Exactly
   one is rendered at a time; all three are `aria-hidden`.
-- `feedback` — the visually hidden `role="status"` region that announces the outcome. Empty at rest,
-  so nothing is announced before a real outcome.
+- `feedback` — the visually hidden, `aria-hidden` mirror of the outcome text. Empty at rest, so
+  nothing is announced before a real outcome. It carries no live-region role of its own: the
+  announcement goes to the library's shared **light-DOM** polite region, appended to the consumer's
+  `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a shadow root is
+  not reliably announced (JAWS with Firefox ignores one outright). Assert against that
+  document-level region rather than `::part(feedback)`; the part is a styling and inspection
+  surface, and still tells you what the button last announced.
 - `tooltip__base`, `tooltip__base__popup`, `tooltip__base__arrow`, `tooltip__body` — exported nested
   tooltip parts.
 
@@ -13051,7 +13595,8 @@ import type {
 - **Changed in 8.0.0:** the button used to enter the "Copied" confirmation on activation whether or
   not the clipboard write succeeded. It now waits for `navigator.clipboard.writeText()` to settle: a
   rejection renders the failure glyph instead, announces the localized failure text through the
-  `feedback` region, and emits `lr-error` plus `lr-copy-error`. `lr-copy` still fires for every
+  shared polite region mirrored by `[part="feedback"]`, and emits `lr-error` plus `lr-copy-error`.
+  `lr-copy` still fires for every
   activation, so code that treated it as proof the text reached the clipboard must pair it with an
   error event.
 - An empty `value`, missing `from` target/member, or empty resolved source is an error; no clipboard
@@ -13240,17 +13785,31 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
 
 ---
 
-## `lr-live-region` (+ internal `Announcer`)
+## `lr-live-region` (+ the `Announcer` helper)
 
-A throttled screen-reader announcement helper, split into a DOM-free coalescing engine
-(`internal/announcer.ts`'s `Announcer` class) and a real custom element that wraps it.
+A throttled screen-reader announcement helper, split into a DOM-free coalescing engine (the
+`Announcer` class), the shared light-DOM region a flush writes into (`acquireAnnouncementSink()`),
+and a real custom element that composes both. The two helpers are public — part of the curated,
+semver-covered `utilities/` surface documented in `llms/shared.md`, not internals:
 
-### Internal: `Announcer` (`internal/announcer.ts`)
+```ts
+import {
+  Announcer,
+  acquireAnnouncementSink,
+} from '@aceshooting/lyra-ui/utilities/announcer.js';
+```
 
-Not a custom element — pure timing/coalescing logic with no DOM dependency, composed by
-`<lr-live-region>` (below) and intended for reuse by any other component that needs throttled
-announcements (a stream-status indicator, a tool-call chip's status transitions, a chat message's
-streaming state).
+The `.js` is required (`./utilities/*` maps straight onto `./dist/utilities/*`). Both symbols are
+also re-exported from the extensionless `@aceshooting/lyra-ui/utilities` barrel and from the package
+root, but the single-helper subpath above is the form to copy — it reaches nothing else.
+
+### `Announcer` — `@aceshooting/lyra-ui/utilities/announcer.js`
+
+Not a custom element — the `Announcer` class itself is pure timing/coalescing logic with no DOM
+dependency, composed by `<lr-live-region>` (below) and intended for reuse by any other component
+that needs throttled announcements (a stream-status indicator, a tool-call chip's status
+transitions, a chat message's streaming state). The same module also exports the DOM half a flush
+writes into — `acquireAnnouncementSink()`, documented after `Announcer` below.
 
 Streaming UIs (token-by-token chat responses, progress ticks, etc.) naturally produce far more
 candidate announcements than a screen-reader user can usefully absorb — reading every incremental
@@ -13272,18 +13831,48 @@ latest text: superseded intermediate text is dropped outright, never queued or c
 - `throttleMs` — a plain public field, safe to change between bursts; a flush already scheduled
   keeps the deadline it was scheduled with.
 
+### `acquireAnnouncementSink()` — `@aceshooting/lyra-ui/utilities/announcer.js`
+
+The shared live region announcements actually land in. A live region rendered **inside a shadow
+root is not reliably announced** — JAWS with Firefox ignores one entirely — so every announcement
+this library makes goes into a visually hidden element in the *host document's* light DOM instead.
+
+- `acquireAnnouncementSink(politeness: AnnouncementPoliteness, options?: AnnouncementSinkOptions)`
+  where `AnnouncementPoliteness = 'polite' | 'assertive'` and
+  `AnnouncementSinkOptions = { document?: Document /* = the ambient document */; messageTtlMs?: number /* = 5000 */ }`.
+  Returns an `AnnouncementSink` handle: `element`, `politeness`, a writable `messageTtlMs`,
+  `announce(text: string): void` and `release(): void`.
+- One region per `(document, politeness)` pair, shared by every consumer and **ref-counted**: it is
+  mounted on the first `acquire()` and removed from the DOM when the last handle `release()`s.
+  Mounting happens at acquire time, ahead of any text, because assistive tech has to have been
+  observing a region *before* content arrives for the change to be announced at all.
+- `announce()` **appends a child node** (`aria-relevant="additions"`, `aria-atomic="false"`) rather
+  than rewriting one text node. That is what makes an identical repeat announce a second time — no
+  clear-then-restore-across-a-frame dance is needed — and each appended node is swept after
+  `messageTtlMs`, so returning focus to the page never finds stale text to re-read. Empty text is
+  ignored; `announce()` after `release()` is a no-op; `release()` is idempotent and removes that
+  handle's own not-yet-swept nodes.
+- The region carries `data-lr-live-region="<politeness>"` (exported as
+  `ANNOUNCEMENT_SINK_ATTRIBUTE`) so a consumer's DOM diffing, snapshot testing or `MutationObserver`
+  can recognize and ignore library-owned nodes appearing at the end of `<body>`.
+- Under SSR (no `document`) the call returns an inert handle instead of throwing, so callers need
+  no environment check.
+
 ### `lr-live-region`
 
 A visually-hidden ARIA live region that throttles and coalesces announcements instead of relaying
-every call verbatim, by composing an internal `Announcer`. A consumer typically mounts one
-`<lr-live-region>` per page/surface (much like `<lr-toast>` is one region per placement) and
-keeps a reference to call `announce()` from application code or a parent component.
+every call verbatim, by composing an internal `Announcer` with the shared light-DOM sink above. A
+consumer typically mounts one `<lr-live-region>` per page/surface (much like `<lr-toast>` is one
+region per placement) and keeps a reference to call `announce()` from application code or a parent
+component. The announced copy does **not** live in this element's shadow root: it is appended to
+the shared, ref-counted region in the host document, while the shadow `part="region"` element stays
+behind as an `aria-hidden` mirror of the latest text.
 
 **Properties:**
 
-- `mode: 'polite' | 'assertive' = 'polite'` (reflected) — `'polite'` renders `role="status"` +
-  `aria-live="polite"` (waits for the user to be idle); `'assertive'` renders `role="alert"` +
-  `aria-live="assertive"` (interrupts)
+- `mode: 'polite' | 'assertive' = 'polite'` (reflected) — selects which shared region announcements
+  land in: `'polite'` uses the `role="status"` + `aria-live="polite"` one (waits for the user to be
+  idle), `'assertive'` the `role="alert"` + `aria-live="assertive"` one (interrupts)
 - `throttleMs: number = 500` (attribute `throttle-ms`) — the coalescing window; see `Announcer`
   above
 
@@ -13295,10 +13884,14 @@ window and flushes immediately.
 
 **Slots:** none.
 
-**CSS parts:** `region` — the visually-hidden element carrying `role`/`aria-live`/`aria-atomic="true"`.
+**CSS parts:** `region` — the visually-hidden, `aria-hidden` mirror of the latest announced text.
+It carries no `role`/`aria-live` of its own: a second live region holding the same text would make
+browsers that *do* announce shadow live regions read every message twice.
 
-**Themeable custom properties:** none component-specific — the region is hidden via the shared
-`.sr-only` helper class (`internal/a11y.ts`), not tokenized CSS.
+**Themeable custom properties:** none component-specific — the shadow mirror is hidden via the
+shared `.sr-only` helper class (`internal/a11y.ts`) and the light-DOM region via the same
+visually-hidden algorithm inline (no stylesheet of this package reaches the consumer's light DOM),
+neither of them tokenized CSS.
 
 **Optional peer deps:** none.
 
@@ -13318,19 +13911,19 @@ A parent Lit component would instead hold the reference via `@query('lr-live-reg
 
 **Known gotchas:**
 
-- Re-announcing text identical to what was last written is special-cased: screen readers announce a
-  live region only on text-content _change_, so the component clears `textContent` first and
-  re-sets it on the next animation frame (not the same tick, which can coalesce into nothing ever
-  appearing to change) to give assistive tech a real empty-to-populated transition to observe. The
-  frame is scheduled and canceled through the region's own document window, including after the
-  element is adopted into an iframe.
-- The region's DOM is tracked outside Lit's own template bindings (`write()` mutates
-  `regionEl.textContent` directly) — an `announce()`/flush landing before `firstUpdated()` has run
-  (e.g. a consumer creates, appends, and calls `announce()` synchronously) is buffered and applied
-  on the next `firstUpdated()` rather than dropped.
-- `disconnectedCallback()` cancels any pending (unflushed) announcement, any before-first-render
-  buffered write, and any in-flight re-announce animation-frame callback — an element removed before
-  a deferred write lands silently drops it, including across a later reconnect.
+- The element mounts (and shares) a region in `document.body` for as long as it is connected — an
+  expected side effect, not a leak: it is ref-counted and removed once the last `<lr-live-region>`
+  of that politeness disconnects. Announcements are appended nodes, so re-announcing identical text
+  is read again with no special-casing, and each node is swept a few seconds later.
+- The announcement never waits on a render: it is appended as soon as the flush happens, including
+  when a consumer creates, appends and `announce()`s synchronously. Only the shadow mirror waits —
+  a write landing before `firstUpdated()` is buffered and applied on the next `firstUpdated()`.
+- Changing `mode` re-targets the shared region synchronously at announce time, so setting `mode`
+  and force-announcing in the same turn lands with the new urgency instead of racing Lit's
+  re-render. Adopting the element into an iframe likewise re-targets to that document's own region.
+- `disconnectedCallback()` cancels any pending (unflushed) announcement and any before-first-render
+  buffered write, and releases the shared region — an element removed before a deferred write lands
+  silently drops it, including across a later reconnect.
 - Changing `throttle-ms` updates the live `Announcer`'s window immediately, but a flush already
   scheduled under the old window keeps the deadline it was scheduled with.
 
@@ -14075,6 +14668,17 @@ The `label` part alias was deprecated in 8.0.0 in favor of the shared form vocab
 `form-control-label`. Both names remain on the same node during the compatibility window; use
 `::part(form-control-label)` in new CSS. The alias will not be removed before 10.0.0.
 
+**The required marker.** The `*` the legend grows while `required` is the library's shared
+required-field marker, and it takes the same three consumer-settable properties every other
+labelled control in the library does: `--lr-form-control-required-content` (the glyph, as a quoted
+CSS `content` string; `''` suppresses it), `--lr-form-control-required-color` (default
+`var(--lr-color-danger)`) and `--lr-form-control-required-offset` (default `0`). One declaration on
+an ancestor — `:root` included — retunes this marker along with every other one in the page. The
+one detail specific to this component: the glyph hangs off `[part="legend"]` rather than
+`[part="form-control-label"]`, because the label part here is a `<span>` *inside* the legend and
+the marker belongs after the whole label. With no label the legend is hidden and nothing is
+painted. Full description in `llms/shared.md` → "The required-field marker".
+
 **CSS states:** `:state(blank)` while the composite value is empty/incomplete;
 `:state(disabled)` for direct or fieldset-cascaded disablement.
 
@@ -14722,7 +15326,7 @@ when the semantic dropzone (the actual keyboard-focusable element, not the hidde
 gains/loses focus.
 `lr-invalid` is the bubbling/composed alias of native invalidity.
 
-Each rejected file also renders as its own line in the visible `[part="rejection"]` alert, naming
+Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
 the file and the reason via one of four locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
@@ -14742,14 +15346,43 @@ content still activates the dropzone.
 **CSS parts:** `file-input`, `form-control-label`, `label`, `hint`, `dropzone`, `dropzone-icon`,
 `dropzone-text`, `base` (the native dropzone button, visually behind but semantically beside the
 slotted content), `input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
-`file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden `role="status" aria-live="polite"`
-element carrying the drag accept/reject announcement and the aggregate accepted/rejected count),
-`rejection` (a **visible** `role="alert"` region, rendered only while a rejection exists, listing
-each currently-rejected file next to a per-reason message — in addition to, never in place of, the
-sr-only `status` summary above)
+`file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden,
+`aria-hidden` mirror of the drag accept/reject state and the aggregate accepted/rejected count),
+`rejection` (a **visible** region, rendered only while a rejection exists, listing each
+currently-rejected file next to a per-reason message — in addition to, never in place of, the
+sr-only `status` mirror above)
+
+**Both live regions moved out of the shadow root (public surface change).** Neither `status` nor
+`rejection` carries a live-region role any more: `status` is an `aria-hidden` mirror, and
+`rejection` is plain visible text. A live region inside a shadow root is not reliably announced
+(JAWS with Firefox ignores one outright), so the announcements now go to the library's shared
+**light-DOM** regions appended to the consumer's `<body>` and marked
+`data-lr-live-region="polite"` / `data-lr-live-region="assertive"` — the drag/selection summary
+politely, and a rejection assertively, so it still interrupts.
+
+What this changes for you:
+
+- **Nothing about what the visible text says or where it renders.** `[part="rejection"]`'s text is
+  ordinary visible content and stays in the accessibility tree, so a user who reaches it reads it
+  normally. Both parts remain the right styling hooks.
+- **A test that asserted `::part(rejection)` had `role="alert"`, or that read announcements out of
+  `::part(status)`, now fails.** Assert against the shared light-DOM region instead — query
+  `[data-lr-live-region="assertive"]` (or `"polite"`) in the document, which is also where every
+  other Lyra announcement lands.
+- **A `::part(rejection)[role]`-style selector never matched anyway** — an attribute selector
+  cannot follow `::part()`. Nothing that worked before stopped working.
 
 **CSS custom states:** `blank` and `dragging`, plus the shared validity states `required`,
-`optional`, `valid`, `invalid`, `user-valid`, and `user-invalid`.
+`optional`, `valid`, `invalid`, `user-valid`, and `user-invalid`. As on every other form-associated
+control, `valid`/`invalid` and `user-valid`/`user-invalid` stop matching entirely while the control
+is barred from constraint validation (its own `disabled`, or an ancestor `<fieldset disabled>`),
+matching native `:invalid`; `required`/`optional` keep publishing.
+
+**The required marker.** With `required` set and a populated `label`, `[part="form-control-label"]`
+paints the library's shared required marker — the same `::after` rule every labelled control in
+the library uses, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. See `llms/shared.md` → "The required-field marker".
 
 **Themeable custom properties:** `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
 `[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default
@@ -15019,8 +15652,26 @@ mimeType, src }`, emitted when the preview action opens the document viewer)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size`, `status-text`, `progress`,
-`progress-fill`, `spinner`, `retry-button`, `preview-button`, `remove-button`
+**CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size`, `status-text` (the visible text twin of
+the status accent color, so the state is carried in words and not only in color; empty and hidden
+for `pending`/`done`), `progress`, `progress-fill`, `spinner`, `retry-button`, `preview-button`,
+`remove-button`
+
+**`status-text` carries no live-region role (public surface change).** It is plain visible text
+that stays in the accessibility tree and reads normally once a user reaches the chip. The
+interrupting announcement a transition *into* `status="error"` makes — so a screen-reader user not
+already focused on the chip still hears an upload failure — goes to the library's shared
+**light-DOM** assertive region instead, appended to the consumer's `<body>` and marked
+`data-lr-live-region="assertive"`: a live region inside a shadow root is not reliably announced
+(JAWS with Firefox ignores one outright). Two consequences worth knowing:
+
+- Only a *transition* into `error` announces. A chip that mounts already failed is history the user
+  can read at their own pace, and a retry that fails the same way twice is announced twice rather
+  than being a silent no-op. The ticking `uploading` readout announces nothing at all — a live
+  region re-announcing every progress tick is noise, not information.
+- A test that asserted `::part(status-text)` had `role="alert"` now fails; query
+  `[data-lr-live-region="assertive"]` in the document instead. `::part(status-text)` is still the
+  styling hook, and still the place to read the visible status wording.
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
@@ -16022,6 +16673,15 @@ mirrored Left/Right navigation, and expose the selected item with `aria-current`
 allocations the sidebar moves below the video through a container query; long titles ellipsize
 without widening the host.
 
+**A child marked `inert` is excluded exactly as a `disabled` one is:** it never becomes the active
+video, `next()`/`previous()`/`goTo()` and auto-advance step past it, and its playlist row renders
+`disabled` so the roving `tabindex` can never strand focus on it — an inert element refuses focus,
+which would leave `focus()` a silent no-op and kill the next arrow press. Only the child's **own**
+`inert` counts: a playlist inerted wholesale by an open modal keeps playing. The attribute is
+watched live, so marking the *current* video inert moves the selection to the nearest enabled child
+(emitting `lr-video-change`) and hands the roving focus to the row that replaced it, instead of
+leaving a stale tab stop on a row that can no longer take focus.
+
 ```html
 <lr-video-playlist controls="full" repeat="all">
   <lr-video title="Introduction" poster="/posters/introduction.jpg">
@@ -16190,9 +16850,14 @@ override and no `::part()` rule. Charts are canvas-rendered, so a live theme cha
 the built-in `ThemeWatcher` (or `refreshTheme()`) rather than by CSS alone.
 
 Under `forced-colors: active` the ramp deliberately collapses onto the three system colors the mode
-actually guarantees (`Highlight`/`LinkText`/`CanvasText`, cycling), so more than three series stop
-being distinguishable by colour there — a chart that must stay readable in forced colors needs a
-non-colour channel (dashes, point styles, direct labels via `dataLabels`) as well.
+actually guarantees (`Highlight`/`LinkText`/`CanvasText`, cycling), so colour alone stops separating
+more than three series there. The chart therefore adds a **non-colour encoding automatically** in
+that mode, cycling eight variants by series index: a canvas fill pattern (stripes, crosshatch, dots,
+checker), a `borderDash` stroke pattern, a `pointStyle` shape, and the matching texture on the DOM
+legend's `legend-swatch`, which carries a `data-encoding` attribute naming the variant (`solid`,
+`horizontal`, `vertical`, `diagonal`, `reverse-diagonal`, `crosshatch`, `dots`, `checker`). Nothing
+is opt-in and no author colour is substituted. Direct labels via `dataLabels` are still worth adding
+when a chart must stay readable with no legend at all.
 
 The instance method `seriesPalette(): string[]` resolves that ramp through `getComputedStyle` and
 returns the concrete, theme-aware colors — the exact same values the chart hands an uncolored
@@ -16249,7 +16914,27 @@ legend text, and tooltip background/text respectively; plus
 declaration on a DOM element (the outline is painted by the stylesheet, not by Chart.js), so it is
 consumed directly with no `getComputedStyle` bridging; it is an inline `var()` fallback at the point
 of use, so it can be set on the element or any ancestor, and left unset the outline is exactly the
-`--lr-border-width-thin` it always was. Plus shared `--lr-space-xs`.
+`--lr-border-width-thin` it always was.
+
+`--lr-chart-pattern-step` (default `var(--lr-space-2xs)`) is the tile size of the texture painted on
+`[part="legend-swatch"]` while `forced-colors: active` matches — the legend half of the non-colour
+encoding described under "The categorical series ramp" above, and the reason repeated system colours
+stay tellable apart in the DOM legend. It has no effect outside forced colors, where the swatch is a
+plain colour chip. It scales the tile, not the mark inside it: the stripe/crosshatch line width
+stays `--lr-border-width-thin` and the `dots` radius stays absolute, so a larger step spaces those
+marks further apart rather than thickening them (the percentage-based `checker` variant is the one
+that scales with the step). It does not touch the **canvas** pattern, whose 8×8 bitmap geometry is
+part of the encoding algorithm and is not themeable. Unlike
+the properties above it is declared by the shadow stylesheet on the swatch itself, not inherited
+from the host, so setting it on `lr-chart` does nothing — override it through the part:
+
+```css
+lr-chart::part(legend-swatch) {
+  --lr-chart-pattern-step: 0.5rem;
+}
+```
+
+Plus shared `--lr-space-xs`.
 
 The mirrored Chart styling hooks are also available on all nine tags. All canvas-bound values are
 resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live root font size and
@@ -16557,9 +17242,9 @@ rendered in place of `canvas` when the optional `chart.js` peer dependency fails
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width` — all inherited from `LyraChart`,
-identical in meaning and default (see `lr-chart` above); each of the eight variants below reads the
-same set, so one rule retunes them together. The mirrored hooks are `--border-color-1`,
+`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width`, `--lr-chart-pattern-step` — all
+inherited from `LyraChart`, identical in meaning and default (see `lr-chart` above); each of the
+eight variants below reads the same set, so one rule retunes them together. The mirrored hooks are `--border-color-1`,
 `--border-color-2`, `--border-color-3`, `--border-color-4`, `--border-color-5`,
 `--border-color-6`, `--fill-color-1`, `--fill-color-2`, `--fill-color-3`, `--fill-color-4`,
 `--fill-color-5`, `--fill-color-6`, `--border-radius`, `--border-width`, `--grid-border-width`,
@@ -16633,8 +17318,9 @@ inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width` — inherited from `LyraChart`,
-identical in meaning, together with the mirrored `--border-color-1`, `--border-color-2`,
+`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width`, `--lr-chart-pattern-step` —
+inherited from `LyraChart`, identical in meaning, together with the mirrored `--border-color-1`,
+`--border-color-2`,
 `--border-color-3`, `--border-color-4`, `--border-color-5`, `--border-color-6`, `--fill-color-1`,
 `--fill-color-2`, `--fill-color-3`, `--fill-color-4`, `--fill-color-5`, `--fill-color-6`,
 `--border-radius`, `--border-width`, `--grid-border-width`, `--grid-color`,
@@ -17746,6 +18432,13 @@ against the new fragment rather than leaving results from the previous content.
   cap), or `'missing-fragment'` (the requested id was absent after sanitization). Non-HTTP reasons
   use status `0`; `'http'` normally carries the response code, but an opaque `mode="no-cors"`
   response is also classified as `'http'` with status `0`.
+- `lr-error` — the same failure under a second name, carrying the **identical detail object** and
+  always fired alongside `lr-include-error`, never instead of it. The two upstreams disagree on the
+  spelling — Web Awesome's is `wa-include-error`, Shoelace's is `sl-error` — so both are supported
+  and **neither is deprecated**; listen to whichever one your migration produced. `lr-error` is
+  also the name every other Lyra component uses for a load failure, so a generic page-level
+  listener catches this one too. Listening to both names on the same element runs your handler
+  twice for one failure.
 
 **Slots:** default — fallback content shown until (or unless) a fetch succeeds. It is overwritten by
 the sanitized fragment on success, and left untouched on failure (as is any previously successful
@@ -19187,6 +19880,16 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 
 **Slots:** `hint` (custom hint content), `error` (custom error content).
 
+**The required marker and barred validity.** With `required` set and `label` non-empty,
+`[part="form-control-label"]` paints the library's shared required marker — the same `::after` rule
+every labelled control in the library uses, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it here
+exactly as they do on `lr-input` (see `llms/shared.md` → "The required-field marker"). With no visible label there
+is nothing to mark and no stray glyph is rendered. Correspondingly, while the picker is barred from
+constraint validation — its own `disabled`, or an ancestor `<fieldset disabled>`; this control has no
+`readonly` — it reports no violation and publishes neither `:state(invalid)` nor
+`:state(user-invalid)`, matching native `:invalid`. `required`/`optional` keep publishing.
+
 **CSS parts:** `form-control-label` (the `<label>` element — only rendered, and only contributes to
 the accessible name, once `label` is non-empty), `trigger` (closed-dropdown mode's
 `<button role="combobox">`, also its positioning anchor), `combobox` (free-text mode's input
@@ -20563,6 +21266,14 @@ started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` a
 
 **Slots:** `hint`, `error`.
 
+**The required marker and barred validity.** Identical to `lr-model-select`'s (see that section): a
+`required` picker with a non-empty `label` paints the shared required marker on
+`[part="form-control-label"]`, retunable or suppressible through
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset`; and while the picker is barred from
+constraint validation (own `disabled`, or an ancestor `<fieldset disabled>` — there is no `readonly`
+here) it reports no violation and publishes neither `:state(invalid)` nor `:state(user-invalid)`.
+
 **CSS parts:** `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
 (free-text mode), `provider-badge`, `listbox`, `option`, `option-label`, `option-meta` (the quiet
 `language · description` second line), `option-badge` (the "not in catalog" badge on a synthetic
@@ -21800,6 +22511,19 @@ fails a native validity check.
 
 **Slots:** none.
 
+**The required marker.** A field whose key is listed in `schema.required` marks its `[part="label"]`
+with the library's shared required marker — the same `::after` rule and the same three properties
+every labelled control in the library uses (`--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset`), so retuning or
+suppressing the marker application-wide reaches this form's fields
+too (see `llms/shared.md` → "The required-field marker"). Requiredness here is **per field**, not per host:
+the host carries no `required` attribute, so the marker keys off a `data-required` attribute the
+component sets on each `[part="field"]` wrapper. That attribute is component-owned bookkeeping —
+never write it, and note that `::part(field)[data-required]` is invalid CSS (an attribute selector
+cannot follow `::part()`), so it is not a selector hook you can use from outside. An enum field
+renders as an `<lr-select>` that receives the same `required`, and marks itself through its own
+label.
+
 **CSS parts:** `base`, `field`, `label`, `control`, `description`, `error`, `unsupported`, `empty`.
 `control` is the native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'` field — one
 shared part name across both the text and number inputs, and deliberately *not* present on the
@@ -22158,8 +22882,15 @@ text, anchor, rects }`).
 `data-line-number`/`data-match`/`data-highlight-tone`, and is forwarded via `exportparts` so
 `lr-terminal::part(line)` reaches the rendered lines from a consumer stylesheet despite them living
 in the internal `<lr-virtual-list>`'s shadow root), `jump-to-latest` (shown while `follow` is
-disengaged and new output has arrived), and `announcer` (the visually-hidden `role="status"` region
-used when `announce-output` is set).
+disengaged and new output has arrived), and `announcer` (the visually-hidden, `aria-hidden` mirror
+of the text last announced while `announce-output` is set).
+
+`[part="announcer"]` is a styling and inspection surface only — it carries **no** live-region role
+of its own. The announcement itself goes to the library's shared **light-DOM** polite region,
+appended to the consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live
+region inside a shadow root is not reliably announced (JAWS with Firefox ignores one outright). A
+test therefore asserts against that shared region, not `::part(announcer)`; the part remains the
+right hook for styling, and for reading back what the terminal last announced.
 
 **Themeable custom properties:** `--lr-terminal-height` (default `var(--lr-size-20rem)`) — the
 viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.
@@ -23128,7 +23859,13 @@ PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`
 `PromptStudioState = { messages, variables }`.
 
 **Events:** `lr-change`, `lr-run`, `lr-save` (all carry complete messages/variables);
-`lr-version-select` (`{ version }`).
+`lr-version-select` (`{ version }`). Plus `focus` and `blur` (no detail), re-dispatched from the
+host — bubbling and composed — whenever a message textarea or a variable input gains or loses
+focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
+boundary, so without the re-dispatch an
+`editor.addEventListener('focus', …)` would never fire at all. They are re-dispatches of real
+focus movement, not a synthetic host-level focus signal: moving between two fields inside the
+studio emits a `blur` and then a `focus`.
 
 **CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
 `message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,
@@ -24474,10 +25211,17 @@ Both `RetryEventDetail` and `CancelEventDetail` come from `@aceshooting/lyra-ui/
 per-item stage label), `item-progress`,
 `item-chunk-count`, `item-embedding-status` (the "N of M chunks embedded" text, only once both
 `chunkCount` and `embeddedChunkCount` are set), `item-attempts` (only once `attempts > 0`),
-`item-error` (only for `stage="failed"` with `error` set), `failure-live` (the visually hidden
-assertive region that announces only failures added or transitioned after mount; historical failed
-rows remain visible without being re-announced), `item-actions`, `retry-button`, `cancel-button`,
-`empty`.
+`item-error` (only for `stage="failed"` with `error` set), `failure-live` (the visually hidden,
+`aria-hidden` mirror of the last announced batch of fresh failures), `item-actions`,
+`retry-button`, `cancel-button`, `empty`.
+
+`failure-live` is a styling and inspection surface and carries no live-region role of its own. The
+announcement itself goes to the library's shared **light-DOM** assertive region, appended to the
+consumer's `<body>` and marked `data-lr-live-region="assertive"`, because a live region inside a
+shadow root is not reliably announced (JAWS with Firefox ignores one outright). What is announced
+is unchanged: only failures added or transitioned *after* mount, so historical failed rows stay
+visible without being re-announced. Assert against that document-level region rather than
+`::part(failure-live)`.
 
 In virtualized mode (at or above `virtualizeThreshold`) the rows live in the internal
 `lr-virtual-list`'s shadow root, and `item`, `item-header`, `item-name`, `item-progress`,

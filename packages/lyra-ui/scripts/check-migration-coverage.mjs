@@ -22,13 +22,41 @@ const CLASSIFICATIONS = [
 const NEGATING = /^(?:no|not|without|hide|disable)-/;
 const ASSERTING = /^(?:with|show|enable)-/;
 
+function manifestDeclarations(manifest) {
+  return (manifest.modules ?? [])
+    .flatMap((module) => module.declarations ?? [])
+    .filter((declaration) => declaration.customElement && declaration.tagName);
+}
+
 function manifestTags(manifest) {
-  return new Set(
-    (manifest.modules ?? [])
-      .flatMap((module) => module.declarations ?? [])
-      .filter((declaration) => declaration.customElement && declaration.tagName)
-      .map((declaration) => declaration.tagName),
-  );
+  return new Set(manifestDeclarations(manifest).map((declaration) => declaration.tagName));
+}
+
+/** tag -> the set of event names custom-elements.json says that tag dispatches. */
+function manifestEvents(manifest) {
+  const events = new Map();
+  for (const declaration of manifestDeclarations(manifest)) {
+    const names = events.get(declaration.tagName) ?? new Set();
+    for (const event of declaration.events ?? []) if (event.name) names.add(event.name);
+    events.set(declaration.tagName, names);
+  }
+  return events;
+}
+
+/**
+ * The Lyra event name a migrated listener for `name` ends up on: an explicit inventory rewrite
+ * when one exists, otherwise the mechanical prefix swap the codemod performs. A native
+ * (unprefixed) upstream event keeps its name on both sides.
+ */
+function migratedEventName(name, ecosystem, eventRewrites) {
+  const rewritten = eventRewrites.get(name);
+  if (rewritten) return rewritten;
+  const prefix = ecosystem === 'webawesome' ? 'wa-' : 'sl-';
+  return name.startsWith(prefix) ? `lr-${name.slice(prefix.length)}` : name;
+}
+
+function eventExemptionKey(upstreamTag, event) {
+  return `${upstreamTag} ${event}`;
 }
 
 function polarity(name) {
@@ -78,8 +106,19 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
   const expected = catalog(upstreamTags);
   const knownUpstream = new Set(expected.map((entry) => entry.tag));
   const lyraTags = manifestTags(lyraManifest);
+  const lyraEvents = manifestEvents(lyraManifest);
   const inventoryMappings = Array.isArray(inventory?.mappings) ? inventory.mappings : [];
   const mappingByTag = new Map();
+  const upstreamSurfaces = new Map(
+    ['webawesome', 'shoelace'].flatMap((ecosystem) =>
+      (inventory?.upstreams?.[ecosystem]?.components ?? []).map((component) => [
+        component.tag,
+        { ecosystem, component },
+      ]),
+    ),
+  );
+  const eventExemptions = upstreamTags.unaliasedEvents ?? {};
+  const usedEventExemptions = new Set();
 
   try {
     buildMigrationContract(inventory);
@@ -128,6 +167,43 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
       if (hasInvertedPolarity(rewrite.from, rewrite.to)) {
         errors.push(`${mapping.upstreamTag}: ${rewrite.from} -> ${rewrite.to} inverts attribute polarity`);
       }
+    }
+
+    // Every event a mirrored upstream tag dispatches has to land on an event the Lyra target
+    // actually dispatches. A renamed mirrored event is the quietest possible parity break: the
+    // migrated markup parses, the codemod reports success, and the consumer's listener simply
+    // never fires again. Silence is the defect, so an event Lyra genuinely does not mirror takes
+    // a documented `unaliasedEvents` reason instead of just being absent.
+    const surface = upstreamSurfaces.get(mapping.upstreamTag);
+    if (surface && mapping.classification !== 'unsupported' && lyraTags.has(mapping.targetTag)) {
+      const eventRewrites = new Map(
+        (mapping.rewrites?.events ?? []).map((rewrite) => [rewrite.from, rewrite.to]),
+      );
+      const targetEvents = lyraEvents.get(mapping.targetTag) ?? new Set();
+      for (const event of surface.component.surface?.events ?? []) {
+        const migrated = migratedEventName(event.name, surface.ecosystem, eventRewrites);
+        const key = eventExemptionKey(mapping.upstreamTag, event.name);
+        const reason = eventExemptions[key];
+        if (typeof reason === 'string') usedEventExemptions.add(key);
+        if (targetEvents.has(migrated)) {
+          if (typeof reason === 'string') {
+            errors.push(
+              `${key}: unaliasedEvents exemption is stale -- ${mapping.targetTag} now dispatches ${migrated}`,
+            );
+          }
+          continue;
+        }
+        if (typeof reason === 'string' && reason.trim()) continue;
+        errors.push(
+          `${mapping.upstreamTag}: ${event.name} migrates to ${migrated}, which ${mapping.targetTag} does not dispatch; ` +
+            'alias the event or document it in upstream-tags.json unaliasedEvents',
+        );
+      }
+    }
+  }
+  for (const key of Object.keys(eventExemptions)) {
+    if (!usedEventExemptions.has(key)) {
+      errors.push(`${key}: unaliasedEvents exemption no longer applies to any pinned upstream event`);
     }
   }
   for (const { tag } of expected) {

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-flags`, `libphonenumber-js` — see `llms/peers.md`
-- **Themeable via** 14 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -153,6 +153,12 @@ such as a consumer-owned `<lr-flag>`; no flag package is imported automatically)
 `country-trigger` (visible, `aria-hidden` closed-state box), `flag` (the `<lr-flag>`, only with
 `flags`), `country-code` (selected alpha-2 code, `data-placeholder` when no country exists),
 `expand-icon`, `calling-code`, `input`, `hint`, `error`.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-phone-input-padding-block`, `--lr-phone-input-font-size`,
 and `--lr-phone-input-control-min-height` (each scaled by `size`), plus `--lr-phone-input-control-height`

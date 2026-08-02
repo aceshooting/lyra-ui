@@ -373,6 +373,12 @@ export class ThemeWatcher implements ReactiveController {
         attributeFilter: [
           'class',
           'style',
+          // The library's own light/dark switch. Both palette.styles.ts and tokens.styles.ts key
+          // their dark grids off :host([data-lr-theme='dark']) and an ancestor
+          // [data-lr-theme='dark'], so toggling it changes every resolved token value with no Lit
+          // property update and no stylesheet mutation to observe. Omitting it left a canvas
+          // component painted in the previous mode until something else invalidated the watcher.
+          'data-lr-theme',
           'data-theme',
           'data-color-scheme',
           'media',

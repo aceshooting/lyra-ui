@@ -4,7 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import { tag } from '../../../internal/prefix.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { Announcer } from '../../../internal/announcer.js';
+import {
+  Announcer,
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import type { FlowRunDecorations, FlowRunStatus } from '../flow-canvas/flow-canvas.class.js';
 import { styles } from './flow-run-overlay.styles.js';
@@ -32,7 +36,10 @@ interface FlowCanvasLike extends HTMLElement {
  * @csspart base - The root wrapper. Drops its floating-surface chrome under `frame="plain"`.
  * @csspart summary - The "{done} of {total} steps complete" line.
  * @csspart count - One per status present (text + tone dot, never color-only).
- * @csspart live-region - The step-transition announcement.
+ * @csspart live-region - The visually-hidden, `aria-hidden` mirror of the last step-transition
+ *   announcement. The announcement itself lands in the shared light-DOM polite region
+ *   (`acquireAnnouncementSink()` in `internal/announcer.ts`), because a live region inside a shadow
+ *   root is not reliably announced; this part is a styling/inspection surface only.
  * @cssprop [--lr-flow-run-overlay-status-color=var(--lr-color-border-strong)] - Count-dot color
  *   when no execution status is set.
  * @cssprop [--lr-flow-run-overlay-status-pending-color=var(--lr-color-border-strong)] - Pending
@@ -58,7 +65,16 @@ export class LyraFlowRunOverlay extends LyraElement {
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @state() private liveText = '';
-  private readonly announcer = new Announcer({ onFlush: (text) => (this.liveText = text) });
+  private readonly announcer = new Announcer({
+    onFlush: (text) => {
+      this.sink?.announce(text);
+      this.liveText = text;
+    },
+  });
+  /** Handle on the shared light-DOM live region every flush actually announces through -- a region
+   *  rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores one
+   *  outright), so `[part="live-region"]` is only an `aria-hidden` mirror. */
+  private sink?: AnnouncementSink;
   private canvasEl?: FlowCanvasLike;
   private canvasWatcher?: MutationObserver;
   /** The exact `FlowRunDecorations` object reference this element itself last wrote into the
@@ -68,6 +84,9 @@ export class LyraFlowRunOverlay extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // Acquired on connect, not on the first announcement: assistive tech has to have been
+    // observing a live region *before* text arrives for the change to be announced at all.
+    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
     this.watchCanvasTarget();
     this.rebindCanvas();
   }
@@ -81,6 +100,9 @@ export class LyraFlowRunOverlay extends LyraElement {
     this.lastWrittenDecorations = null;
     this.canvasWatcher?.disconnect();
     this.canvasWatcher = undefined;
+    this.announcer.cancel();
+    this.sink?.release();
+    this.sink = undefined;
   }
 
   // `announceTransitions()` runs from `willUpdate()`, not `updated()`: it force-flushes into the
@@ -223,7 +245,7 @@ export class LyraFlowRunOverlay extends LyraElement {
               )}</span>`,
             )}
           `}
-      <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">${this.liveText}</div>
+      <div part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</div>
       <slot></slot>
     </div>`;
   }

@@ -324,6 +324,14 @@ cancelable.
 `resize-handle`, `row`, `row-detail`, `search`, `select-all-checkbox`, `sort-indicator`,
 `sort-number`, `table`, `toolbar`.
 
+`[part="live-region"]` is a visually-hidden, `aria-hidden` **mirror** of the last polite
+announcement — a styling and inspection surface, with no live-region role of its own. The
+announcement itself goes to the library's shared **light-DOM** polite region, appended to the
+consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a
+shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
+document-level region rather than `::part(live-region)`; the part still tells you what the grid
+last announced.
+
 **Themeable custom properties:** `--accent-color`, `--background-color`, `--border-color`,
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
 `--header-row-height`, `--header-text-color`, `--indent-size`, `--max-height`, `--row-height`,
@@ -861,6 +869,13 @@ pages into its skipped run. `button` is shared by every page, ellipsis, and navi
 one — the state lives in the part name because `::part(page)[aria-current='page']` is invalid CSS
 and would silently never match. `first-button`/`first-icon` and `last-button`/`last-icon` exist only
 while `with-edges` is set.
+
+`live-region` is a visually hidden, `aria-hidden` **mirror** of the applied-page announcement — a
+styling and inspection surface, with no live-region role of its own. The announcement itself goes
+to the library's shared **light-DOM** polite region, appended to the consumer's `<body>` and marked
+`data-lr-live-region="polite"`, because a live region inside a shadow root is not reliably
+announced (JAWS with Firefox ignores one outright). Assert against that document-level region
+rather than `::part(live-region)`.
 
 **CSS custom states:** `disabled` matches when the public `disabled` property is true. The state
 does not match for the separate `loading` or empty-data conditions, even though those conditions
@@ -1563,6 +1578,22 @@ binding is deliberately **not** RTL-swapped — "down" always means later in the
 If a same-id data refresh disables an expanded branch, that reused branch collapses immediately;
 enabled descendants are never left visibly stranded outside this navigation walk.
 
+**`inert` excludes an item and its whole subtree from that walk, exactly as `disabled` does.**
+`role="treeitem"` and the roving `tabindex` both live on the `<lr-tree-item>` host itself, so an
+inert item literally refuses `focus()` — stepping the roving index onto one would leave focus behind
+on `<body>` and kill every later arrow press. Marking the focused item inert therefore moves the
+roving stop to the next reachable row instead of stranding it, and the state is observed live
+(`attributeFilter: ['selected', 'disabled', 'inert', 'lazy']`). Two deliberate limits:
+
+- **Only inertness *inside* the tree counts** — the item's own `inert`, or that of an ancestor item
+  between it and the `<lr-tree>`. An inert ancestor *outside* the tree (the page behind an open
+  modal) inerts every item uniformly, and excluding them all would empty the walk, null out
+  `activeId`, and leave the tree with no `tabindex="0"` stop for anything to restore once the dialog
+  closes. That case needs no handling: focus cannot be inside the tree at all.
+- **Selection ignores it.** An inert subtree is temporarily non-interactive, not deselected, so
+  `selectedItems` and the multiple-mode cascade are unchanged and a modal that inerts the page can
+  never silently wipe a tree's selection.
+
 **Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
 cycle).
 
@@ -2087,7 +2118,14 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
 badge).
 
 **CSS parts:** `base`, `summary` (the "{done} of {total} steps complete" line), `count` (one per
-status present, text + tone dot, never color-only), `live-region` (step-transition announcement).
+status present, text + tone dot, never color-only), `live-region` (a visually-hidden, `aria-hidden`
+mirror of the last step-transition announcement).
+
+`live-region` carries no live-region role of its own — it is a styling and inspection surface. The
+announcement itself goes to the library's shared **light-DOM** polite region, appended to the
+consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a
+shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
+document-level region rather than `::part(live-region)`.
 
 **Themeable custom properties:** `--lr-flow-run-overlay-status-color` controls a count dot without
 an execution status. `--lr-flow-run-overlay-status-{pending|running|success|error|denied}-color`

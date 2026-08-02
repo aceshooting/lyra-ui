@@ -2,6 +2,16 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './pagination.js';
 import type { LyraPagination } from './pagination.js';
 import { styles } from './pagination.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
+  const element = sinkElement(politeness);
+  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
 
 async function pagination(
   template = html`<lr-pagination total="95" page-size="10" with-summary></lr-pagination>`,
@@ -197,6 +207,36 @@ it('announces a page after the controlled value is applied', async () => {
 
   const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]')!;
   expect(liveRegion.textContent).to.equal('Page 4 of 10');
+  expect(sinkTexts('polite')).to.deep.equal(['Page 4 of 10']);
+  // The retained part is a styling/inspection mirror only -- a live region inside a shadow root is
+  // not reliably announced, and leaving it live would double-announce where it *is* honored.
+  expect(liveRegion.getAttribute('role')).to.equal(null);
+  expect(liveRegion.getAttribute('aria-live')).to.equal(null);
+  expect(liveRegion.getAttribute('aria-hidden')).to.equal('true');
+});
+
+it('announces the same page again when it is revisited, instead of rewriting one text node', async () => {
+  const el = await pagination();
+  el.page = 4;
+  await el.updateComplete;
+  el.page = 5;
+  await el.updateComplete;
+  el.page = 4;
+  await el.updateComplete;
+  expect(
+    sinkTexts('polite').filter((text) => text === 'Page 4 of 10').length,
+    'an identical repeat must be a second addition so assistive tech reads it again',
+  ).to.equal(2);
+});
+
+it('ref-counts the shared sink away once the last pagination disconnects', async () => {
+  const first = await pagination();
+  const second = await pagination();
+  expect(sinkElement('polite') !== null, 'a connected pagination holds the sink').to.be.true;
+  first.remove();
+  expect(sinkElement('polite') !== null, 'a still-connected pagination keeps it mounted').to.be.true;
+  second.remove();
+  expect(sinkElement('polite') === null, 'the last disconnect unmounts it').to.be.true;
 });
 
 it('commits a valid numeric page jump on Enter', async () => {

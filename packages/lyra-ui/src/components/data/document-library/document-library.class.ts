@@ -232,7 +232,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
 
   private emitFilterChange(): void {
-    this.emit<DocumentLibraryFilterChangeDetail>('lr-filter-change', {
+    this.emit('lr-filter-change', {
       text: this.searchText,
       tags: this.tagFilter,
       matchCount: this.visibleDocuments.length,
@@ -257,16 +257,16 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       this.sortKey = key;
       this.sortDirection = 'ascending';
     }
-    this.emit<DocumentLibrarySortDetail>('lr-sort', { key: this.sortKey, direction: this.sortDirection });
+    this.emit('lr-sort', { key: this.sortKey, direction: this.sortDirection });
   };
 
   private openDocument(document: LibraryDocument): void {
-    this.emit<DocumentLibraryOpenDetail>('lr-open', { id: document.id });
+    this.emit('lr-open', { id: document.id });
   }
 
   private setSelected(ids: Iterable<string>): void {
     this.selectedIds = [...new Set(ids)];
-    this.emit<DocumentLibrarySelectionChangeDetail>('lr-selection-change', { ids: this.selectedIds });
+    this.emit('lr-selection-change', { ids: this.selectedIds });
   }
 
   private toggleSelection(document: LibraryDocument, checked: boolean): void {

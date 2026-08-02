@@ -327,7 +327,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // it the same as Escape rather than firing a no-op (or blanking) rename
     // for the consumer to deal with.
     if (!next || next === this.title) return;
-    this.emit<ConversationItemRenameDetail>('lr-rename', { title: next });
+    this.emit('lr-rename', { title: next });
   }
 
   private cancelRename(restoreFocus = false): void {

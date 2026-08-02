@@ -18,6 +18,7 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import {
   attachInternalsSafely,
   getFormOwner,
+  isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
@@ -53,7 +54,9 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
  * @event {Event} change - Native event fired after `input` for the same group selection.
  * @event lr-input - Prefixed alias for `input`; `detail: { value, radio }`.
  * @event lr-change - A radio was selected. `detail: { value, radio }`.
- * @event lr-invalid - The group's owned validity control failed a validity check.
+ * @event lr-invalid - The group's owned validity control failed a validity check. Cancelable:
+ * calling `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
+ * browser's own validation bubble so an app can present the failure its own way.
  * @cssstate required - Matches while `required` is set.
  * @cssstate optional - Matches while `required` is not set.
  * @cssstate valid - Matches while the aggregate value satisfies every constraint.
@@ -73,6 +76,13 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
  * @csspart error - Validation text.
  * @cssprop [--lr-radio-group-row-gap=calc(var(--lr-form-control-height) * 0.2)] - Vertical gap
  * between the group's label, options and messages, scaled by `size`.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
+ * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
+ * other quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Required-marker color,
+ * themeable independently of error text and invalid borders.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * required marker.
  * @status stable
  * @since 4.0.0
  */
@@ -211,7 +221,10 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    // `syncRadios()` recomputes validity itself, but only once radios exist -- an empty or
+    // not-yet-upgraded group still has to drop its own barred violation synchronously.
     this.syncRadios();
+    this.updateValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -242,9 +255,12 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   private onInvalid = (event: Event): void => {
     const target = event.target;
-    if (target === this || (target instanceof Element && this.ownsRadio(target))) {
-      this.emit('lr-invalid');
-    }
+    if (target !== this && !(target instanceof Element && this.ownsRadio(target))) return;
+    // A real veto point, exactly as in `installInvalidEventAlias()`: cancelling the alias cancels
+    // the native `invalid` behind it, so an app presenting the failure its own way can suppress
+    // the browser's validation bubble.
+    const alias = this.emit('lr-invalid', undefined, { cancelable: true });
+    if (alias.defaultPrevented) event.preventDefault();
   };
 
   override connectedCallback(): void {
@@ -495,16 +511,29 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     this.internals.setFormValue(this.name && this.value ? this.value : null, this.value);
   }
 
+  /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   private updateValidity(): void {
     if (!this.validityController) return;
-    const missing = this.required && !this.value;
+    // A barred group reports no violation at all, exactly like a native disabled control --
+    // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required groups.
+    const missing = !this.barredFromValidation && this.required && !this.value;
     this.validityController.setValidity(
       missing ? { valueMissing: true } : {},
       missing ? this.localize('radioRequired') : '',
     );
+    this.reflectValidityStates();
+  }
+
+  /** Republishes the six validity custom states from whatever `ElementInternals` currently holds. */
+  private reflectValidityStates(): void {
     syncValidityStates(this.internals, {
       required: this.required,
       hasInteracted: this.hasInteracted,
+      barred: this.barredFromValidation,
     });
   }
 
@@ -516,10 +545,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
   setCustomValidity(message: string = ''): void {
     this.validityController.setCustomValidity(message ?? '');
-    syncValidityStates(this.internals, {
-      required: this.required,
-      hasInteracted: this.hasInteracted,
-    });
+    this.reflectValidityStates();
     this.requestUpdate();
   }
   /** Clears consumer-supplied validity and restores the current required/value constraint. */
@@ -553,7 +579,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    // Cascaded disablement bars constraint validation exactly like the group's own `disabled`.
     this.syncRadios();
+    this.updateValidity();
     this.requestUpdate();
   }
 

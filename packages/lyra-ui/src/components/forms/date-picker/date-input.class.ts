@@ -7,7 +7,7 @@ import {
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
+import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -204,7 +204,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   composed, non-cancelable event, unlike the native event.
  * @event {FocusEvent} focus - Re-dispatched from the internal `<input>`'s own `focus` as a
  *   bubbling, composed, non-cancelable event, unlike the native event.
- * @event lr-invalid - The date input failed a validity check.
+ * @event lr-invalid - The date input failed a validity check; cancelable. Calling
+ *   `preventDefault()` also cancels the native `invalid` event it aliases, suppressing the
+ *   browser's own validation bubble and `reportValidity()`'s focus/scroll.
  * @csspart date-input - The date-input wrapper.
  * @csspart base - Deprecated alias wrapper for `date-input`.
  * @csspart form-control - The outer form-control wrapper.
@@ -244,6 +246,13 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   this pins a shorter row.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Popup enter-transition duration.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Popup exit-transition duration.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
+ * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
+ * localized word) to replace it. Caller-supplied content, so it is never localized here.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ * retunable without touching any other danger-coloured surface.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * marker.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot start - Adornment at the inline-start of the input row, before the text field.
@@ -685,7 +694,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   protected updateValidity(): void {
-    if (this.readonly) {
+    // Every barring condition, not just `readonly`: an own/fieldset-cascaded `disabled` (and any
+    // platform condition `willValidate` folds in) bars constraint validation exactly as `readonly`
+    // does, and this override used to check only the one it happened to own — so a
+    // `<lr-date-input required disabled>` kept publishing `valueMissing` and `:state(invalid)`.
+    if (isBarredFromValidation(this, this.internals)) {
       this[SET_ANCHORED_VALIDITY]({});
       return;
     }
@@ -1438,7 +1451,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 .max=${this.max}
                 .months=${normalizeCalendarMonths(this.months)}
                 .size=${this.size}
-                .locale=${this.effectiveLocale}
+                .locale=${this.effectiveMessageLocale}
                 .disabled=${this.effectiveDisabled}
                 .readonly=${this.readonly}
                 .disabledDates=${this.disabledDates}

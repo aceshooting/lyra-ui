@@ -1132,3 +1132,122 @@ describe('lr-known-date implicit form submission', () => {
     expect(submits, 'a bare Enter still submits').to.equal(1);
   });
 });
+
+it('falls back to month/day/year ordering and ASCII digits under an unusable locale', async () => {
+  const el = (await fixture(html`<lr-known-date lang="!!"></lr-known-date>`)) as LyraKnownDate;
+  await el.updateComplete;
+  expect(fieldOrder(el)).to.deep.equal(['month', 'day', 'year']);
+
+  const month = fieldFor(el, 'month');
+  month.value = '0a3';
+  month.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(month.value).to.equal('03');
+});
+
+it('normalizes locale-native digits into the canonical ISO value', async () => {
+  const el = (await fixture(html`<lr-known-date lang="fa"></lr-known-date>`)) as LyraKnownDate;
+  await el.updateComplete;
+  const type = (name: 'day' | 'month' | 'year', text: string): void => {
+    const input = fieldFor(el, name);
+    input.value = text;
+    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  };
+  type('year', '۲۰۲۴');
+  type('month', '۰۳');
+  type('day', '۰۹');
+  await el.updateComplete;
+  expect(el.value).to.equal('2024-03-09');
+});
+
+it('uses caller-supplied field labels ahead of the localized defaults', async () => {
+  const el = (await fixture(html`
+    <lr-known-date day-label="Jour" month-label="Mois" year-label="Annee"></lr-known-date>
+  `)) as LyraKnownDate;
+  await el.updateComplete;
+  const labels = [...el.shadowRoot!.querySelectorAll('[part="field-label"]')].map(
+    (label) => label.textContent!.trim(),
+  );
+  expect(labels).to.include.members(['Jour', 'Mois', 'Annee']);
+});
+
+it('treats a null min/max assignment as no bound at all', async () => {
+  const el = (await fixture(
+    html`<lr-known-date value="2024-03-09" min="2024-01-01" max="2024-12-31"></lr-known-date>`,
+  )) as LyraKnownDate;
+  await el.updateComplete;
+  expect(el.checkValidity()).to.equal(true);
+
+  el.min = null as unknown as string;
+  el.max = null as unknown as string;
+  await el.updateComplete;
+  expect(el.min).to.equal('');
+  expect(el.max).to.equal('');
+  expect(el.checkValidity()).to.equal(true);
+});
+
+it('rejects a non-padded or calendar-impossible declarative value', async () => {
+  const loose = (await fixture(html`<lr-known-date value="2007-3-27"></lr-known-date>`)) as LyraKnownDate;
+  await loose.updateComplete;
+  expect(loose.value).to.equal('');
+
+  const impossible = (await fixture(
+    html`<lr-known-date value="2007-02-30"></lr-known-date>`,
+  )) as LyraKnownDate;
+  await impossible.updateComplete;
+  expect(impossible.value).to.equal('');
+
+  const valid = (await fixture(html`<lr-known-date value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;
+  await valid.updateComplete;
+  expect(valid.value).to.equal('2007-03-27');
+  valid.value = '';
+  await valid.updateComplete;
+  expect(valid.value).to.equal('');
+  expect(fields(valid).map((input) => input.value)).to.deep.equal(['', '', '']);
+});
+
+// A control barred from constraint validation is neither :valid nor :invalid natively -- a real
+// `<input required disabled>` and `<input required readonly>` both match neither -- so a barred
+// composite date must publish no violation at all. This override used to guard only `readonly`, so
+// a disabled required field kept `valueMissing` raised and `:state(invalid)` published.
+describe('lr-known-date barred from constraint validation', () => {
+  it('reports no violation while disabled, and restores it on re-enable', async () => {
+    const el = (await fixture(
+      html`<lr-known-date required disabled></lr-known-date>`,
+    )) as LyraKnownDate;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing while disabled').to.be.false;
+    expect(el.validationMessage, 'no message while disabled').to.equal('');
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing once enabled').to.be.true;
+  });
+
+  it('reports no range violation while disabled', async () => {
+    const el = (await fixture(
+      html`<lr-known-date value="2026-07-15" min="2026-08-01" disabled></lr-known-date>`,
+    )) as LyraKnownDate;
+    await el.updateComplete;
+    expect(el.validity.rangeUnderflow, 'rangeUnderflow while disabled').to.be.false;
+    expect(el.validity.valid, 'valid while disabled').to.be.true;
+  });
+
+  it('reports no violation inside a disabled fieldset', async () => {
+    const form = (await fixture(html`
+      <form><fieldset disabled><lr-known-date required></lr-known-date></fieldset></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-known-date') as LyraKnownDate;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing inside a disabled fieldset').to.be.false;
+    expect(el.checkValidity(), 'checkValidity() inside a disabled fieldset').to.be.true;
+  });
+
+  it('still reports no violation while readonly', async () => {
+    const el = (await fixture(
+      html`<lr-known-date required readonly></lr-known-date>`,
+    )) as LyraKnownDate;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing while readonly').to.be.false;
+  });
+});

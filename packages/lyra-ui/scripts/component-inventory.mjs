@@ -27,7 +27,20 @@ export const NORMALIZATION_SECTIONS = [
   'derivedDefaultEquivalences',
   'inferredAttributeSuppressions',
   'unknownMethodReturnTypes',
+  'cancelabilityEquivalences',
+  'cancelabilityPathAdditions',
 ];
+
+// Cancelability is a summary label over every path that emits an event, ordered by how much veto
+// power it hands a listener. A rename may only ever move an event *up* this ladder: widening is a
+// superset, because `preventDefault()` on an event that was never cancelable is a silent no-op that
+// no shipped consumer can be depending on, while narrowing silently turns a working veto into that
+// same no-op.
+const CANCELABILITY_RANK = new Map([
+  ['never', 0],
+  ['conditional', 1],
+  ['always', 2],
+]);
 
 export const LOCAL_MIGRATION_ORIGINS = ['lyra-v7'];
 
@@ -649,6 +662,28 @@ function reviewedTypeEquivalent(normalizations, memberKind, member, upstreamType
   );
 }
 
+// Both cancelability reviews are keyed on the upstream event name and pin both observed labels, so
+// a rule stops matching the moment either side moves and `validateMappingNormalizations` reports it
+// as stale rather than letting it keep suppressing a difference nobody reviewed. The direction test
+// lives here as well as in that validator on purpose: a hand-written rule pointing the wrong way is
+// a finding, not a suppression, so the drift it names has to survive the comparison too.
+function reviewedCancelability(normalizations, event, upstreamCancelable, targetCancelable) {
+  const upstreamRank = CANCELABILITY_RANK.get(upstreamCancelable);
+  const targetRank = CANCELABILITY_RANK.get(targetCancelable);
+  if (upstreamRank === undefined || targetRank === undefined) return false;
+  const matches = (entry) =>
+    entry.event === event && entry.upstream === upstreamCancelable && entry.target === targetCancelable;
+  if (targetRank > upstreamRank) return (normalizations.cancelabilityEquivalences ?? []).some(matches);
+  // The single reviewable narrowing is a Lyra-only emission path that announces itself
+  // non-cancelable while every upstream-documented path stays vetoable. A target that drops to
+  // `never` has given up the veto outright and is reviewable by nobody.
+  return (
+    upstreamCancelable === 'always' &&
+    targetCancelable === 'conditional' &&
+    (normalizations.cancelabilityPathAdditions ?? []).some(matches)
+  );
+}
+
 function insertionPreservesDefault(rewrites, memberKind, member, upstreamDefault) {
   return (rewrites.defaults ?? []).some(
     (rule) =>
@@ -988,7 +1023,8 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
     } else {
       if (
         event.cancelable !== UNSPECIFIED_PUBLIC_DOCUMENTATION &&
-        candidate.cancelable !== event.cancelable
+        candidate.cancelable !== event.cancelable &&
+        !reviewedCancelability(normalizations, event.name, event.cancelable, candidate.cancelable)
       ) {
         drift.push({
           code: 'cancelability-mismatch',
@@ -1400,6 +1436,63 @@ export function validateMappingNormalizations(mapping, { upstream, target } = {}
       )
     ) {
       findings.push(`${mapping.upstreamTag}: stale concrete target return normalization ${rule.method}`);
+    }
+  }
+
+  // Two shapes of reviewed cancelability difference, kept apart so the safe one can be checked
+  // mechanically. `cancelabilityEquivalences` only ever widens (the target hands listeners strictly
+  // more veto power than upstream documents), which is a superset no shipped consumer can be
+  // relying against. `cancelabilityPathAdditions` covers the one reviewable narrowing: the target
+  // stays cancelable on every path upstream documents and adds its own path — named in `addedPath`
+  // — that announces itself non-cancelable, so no documented veto is lost. Everything else,
+  // above all any target that drops to `never`, keeps reporting cancelability-mismatch.
+  const seenCancelabilities = new Set();
+  const cancelabilityPrefix = mapping.upstreamTag?.startsWith('sl-') ? 'sl-' : 'wa-';
+  const cancelabilityEventRewrites = new Map(
+    (mapping.rewrites?.events ?? []).map((entry) => [entry.from, entry.to]),
+  );
+  for (const [section, allowedKeys] of [
+    ['cancelabilityEquivalences', ['event', 'upstream', 'target']],
+    ['cancelabilityPathAdditions', ['event', 'upstream', 'target', 'addedPath']],
+  ]) {
+    for (const rule of normalizations[section] ?? []) {
+      const keys = rule && typeof rule === 'object' ? Object.keys(rule) : [];
+      const valid =
+        typeof rule?.event === 'string' &&
+        Boolean(rule.event) &&
+        CANCELABILITY_RANK.has(rule.upstream) &&
+        CANCELABILITY_RANK.has(rule.target) &&
+        keys.length === allowedKeys.length &&
+        keys.every((key) => allowedKeys.includes(key)) &&
+        (section === 'cancelabilityEquivalences'
+          ? CANCELABILITY_RANK.get(rule.target) > CANCELABILITY_RANK.get(rule.upstream)
+          : rule.upstream === 'always' &&
+            rule.target === 'conditional' &&
+            typeof rule.addedPath === 'string' &&
+            Boolean(rule.addedPath));
+      if (!valid) {
+        findings.push(`${mapping.upstreamTag}: invalid normalizations.${section} rule`);
+        continue;
+      }
+      if (seenCancelabilities.has(rule.event)) {
+        findings.push(`${mapping.upstreamTag}: duplicate cancelability normalization ${rule.event}`);
+      }
+      seenCancelabilities.add(rule.event);
+
+      const upstreamEvent = (upstream?.events ?? []).find((entry) => entry.name === rule.event);
+      const targetName =
+        cancelabilityEventRewrites.get(rule.event) || mappedEventName(rule.event, cancelabilityPrefix);
+      const targetEvent = (target?.events ?? []).find((entry) => entry.name === targetName);
+      if (!upstreamEvent) {
+        findings.push(`${mapping.upstreamTag}: dangling upstream cancelability normalization ${rule.event}`);
+      } else if (upstreamEvent.cancelable !== rule.upstream) {
+        findings.push(`${mapping.upstreamTag}: stale upstream cancelability normalization ${rule.event}`);
+      }
+      if (!targetEvent) {
+        findings.push(`${mapping.upstreamTag}: dangling target cancelability normalization ${rule.event}`);
+      } else if (targetEvent.cancelable !== rule.target) {
+        findings.push(`${mapping.upstreamTag}: stale target cancelability normalization ${rule.event}`);
+      }
     }
   }
 

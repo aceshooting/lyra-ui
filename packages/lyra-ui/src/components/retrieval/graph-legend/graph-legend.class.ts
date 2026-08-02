@@ -96,7 +96,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     this.liveText = this.localize(wasVisible ? 'legendTypeHidden' : 'legendTypeShown', undefined, {
       label: type.label,
     });
-    this.emit<LyraGraphLegendVisibilityDetail>('lr-visibility-change', { hiddenTypes: next });
+    this.emit('lr-visibility-change', { hiddenTypes: next });
   }
 
   private renderSwatchShape(shape: LyraGraphLegendType['shape'], color: string): TemplateResult {

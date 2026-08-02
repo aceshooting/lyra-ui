@@ -123,6 +123,20 @@ wrapping the default slot), `footer` (wrapper around the `footer` slot, below th
 
 **Optional peer deps:** none.
 
+**Which items arrow keys reach.** An item is navigable unless it is `disabled` (or `loading`),
+`hidden`, `aria-hidden="true"`, **`inert`, or has an `inert` ancestor** — the last two alongside the
+rest because an inert element *refuses* focus: stepping the roving `tabindex` onto one leaves
+`focus()` a silent no-op, so roving focus stays wherever it was (or falls to `<body>`) and every
+later arrow press dies. The state is observed live —
+`attributeFilter: ['disabled', 'hidden', 'aria-hidden', 'inert']` on every item — so marking the
+*currently active* item inert rehomes roving focus to the next reachable one instead of leaving a
+stale `tabindex="0"` on an unfocusable row. `lr-tab-group`, `lr-tree` and `lr-video-playlist` mirror
+the same rule for their own roving navigation, with one deliberate difference: those three read only
+a child's **own** inertness (plus, in `lr-tree`, an inert ancestor *inside* the tree), because a list
+inerted wholesale by an open modal must not lose its selection and its tab stop for as long as the
+dialog is up — focus cannot be inside it anyway. A menu is itself the overlay, so it takes the
+simpler ancestor-inclusive read.
+
 ### `lr-menu-item`
 
 Not meaningful standalone — it exists purely as `<lr-menu>`'s light-DOM child, the same
@@ -142,7 +156,8 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
   single compact row inside an otherwise default menu needs no wrapper — and, conversely, sizing a
   whole menu means setting it on every item
 - `disabled: boolean = false` (reflected — disables selection and excludes this item from
-  `<lr-menu>`'s roving-tabindex navigation entirely)
+  `<lr-menu>`'s roving-tabindex navigation entirely; the native `inert` attribute, `hidden`, and
+  `aria-hidden="true"` exclude it the same way — see "Which items arrow keys reach" above)
 - `destructive: boolean = false` (reflected — tints the row with `--lr-color-danger`, for a
   dangerous action like "Delete"; retained as a behavior-identical alias)
 - `variant: LyraVariant | 'default' = 'default'` (reflected) — `danger` is the mapped dangerous

@@ -116,9 +116,12 @@ for (const file of walk(componentsRoot)) {
   if (!sideEffects.has(distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
 }
 
-// The root barrel (`src/lyra.ts` / `dist/lyra.js`) registers every non-optional-peer component via
-// its own bare imports; both forms of that all-components barrel must stay declared too.
-for (const barrelEntry of ['./src/lyra.ts', './dist/lyra.js']) {
+// The compatibility entries (`src/all.ts` / `dist/all.js`, and their server-only `ssr/all`
+// counterpart) register every component via their own bare imports; all four forms of those
+// all-components barrels must stay declared too. The package root (`src/lyra.ts`) is deliberately
+// NOT listed: from 8.0.0 it is registration-free, and declaring a pure re-export barrel as
+// side-effectful would force bundlers to evaluate every module it re-exports from.
+for (const barrelEntry of ['./src/all.ts', './dist/all.js', './src/ssr/all.ts', './dist/ssr/all.js']) {
   if (!sideEffects.has(barrelEntry)) errors.push(`package.json#sideEffects is missing "${barrelEntry}"`);
 }
 

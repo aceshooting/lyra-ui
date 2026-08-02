@@ -23,7 +23,7 @@ import {
   type TextQuoteScope,
 } from '../../../internal/text-quote.js';
 import type { LyraHighlightLayer, HighlightLayerItem } from '../highlight-layer/highlight-layer.class.js';
-import type { LyraAnchor, HighlightActivateDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import type { LyraAnchor } from '../document-viewer/anchors.js';
 import { loadPdfJs, type PdfJsApi } from './pdf-loader.js';
 import { styles } from './pdf-viewer.styles.js';
 import { getNumberFormat, getSegmenter } from '../../../internal/intl-cache.js';
@@ -745,7 +745,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       if (!text) return;
       const anchor = this.computeSelectionAnchor(range);
       const rects = Array.from(range.getClientRects());
-      this.emit<TextSelectDetail>('lr-text-select', { text, anchor, rects });
+      this.emit('lr-text-select', { text, anchor, rects });
     };
 
     let debounceHandle: ReturnType<typeof requestAnimationFrame> | undefined;
@@ -1207,7 +1207,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         (rect) => xPct >= rect.x && xPct <= rect.x + rect.width && yPct >= rect.y && yPct <= rect.y + rect.height,
       );
       if (hit) {
-        this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: item.id });
+        this.emit('lr-highlight-activate', { id: item.id });
         return;
       }
     }

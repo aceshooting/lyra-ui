@@ -290,7 +290,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     // or another pointermove before a paint) must each see the size the
     // previous step just committed, not a stale pre-update box.
     this.applyHostSize();
-    this.emit<DockPanelResizeDetail>("lr-resize", { extent: this.extent });
+    this.emit("lr-resize", { extent: this.extent });
   }
 
   private onPointerDown = (e: PointerEvent): void => {
@@ -355,7 +355,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
-    this.emit<DockPanelCollapseChangeDetail>("lr-collapse-change", {
+    this.emit("lr-collapse-change", {
       collapsed: this.collapsed,
     });
   };

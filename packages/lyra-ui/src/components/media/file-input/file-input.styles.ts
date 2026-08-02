@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -23,6 +24,10 @@ export const styles = css`
   [part='hint'][hidden] {
     display: none;
   }
+  /* This control accepts a required attribute and renders a visible label like every other field
+     in the library, so it marks it the same way -- the [hidden] rule above is what keeps the
+     marker from orphaning a stray glyph when no label is set. */
+  ${formControlRequiredMarker}
   .dropzone {
     position: relative;
     display: grid;

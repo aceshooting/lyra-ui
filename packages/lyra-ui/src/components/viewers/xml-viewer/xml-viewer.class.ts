@@ -123,6 +123,11 @@ export interface LyraXmlViewerEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
+// Same one-line base every other `DocumentAnchorTarget()` adopter uses: the mixin takes a
+// constructor, so the event map has to be bound before it is applied -- otherwise this component
+// keeps `LyraElement`'s permissive default and its own `emit()` calls go unchecked.
+class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
+
 /**
  * `<lr-xml-viewer>` — collapsible, copyable, `DOMParser`-based tree view for XML documents,
  * mirroring `lr-json-viewer`'s UX (`collapsed-depth`, `copyable`, structural-path-keyed expand
@@ -182,7 +187,7 @@ export interface LyraXmlViewerEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
+export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and parse as XML. Ignored once `xml` is set. */

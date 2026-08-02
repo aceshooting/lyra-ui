@@ -132,6 +132,11 @@ function frozenTrack(
  * preserve the mirrored ended behavior; `repeat="one"` restarts the current video and
  * `repeat="all"` wraps the final video to the first.
  *
+ * A child marked `inert` is excluded exactly as a `disabled` one is: it never becomes the active
+ * video, `next()`/`previous()`/auto-advance step past it, and its playlist row renders `disabled`
+ * so the roving `tabindex` can never strand focus on it. Only the child's *own* `inert` counts — a
+ * playlist inerted wholesale by an open modal keeps playing.
+ *
  * @customElement lr-video-playlist
  * @slot - Direct `<lr-video>` children. Other elements are not playlist items.
  * @event lr-video-change - Emitted when `goTo()`, `next()`, `previous()`, or automatic advancement
@@ -224,6 +229,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       attributeFilter: [
         'default',
         'disabled',
+        'inert',
         'kind',
         'label',
         'media',
@@ -243,8 +249,21 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     );
   }
 
+  /**
+   * Whether `video` can be selected, played, and reached by the playlist's roving `tabindex`.
+   *
+   * `inert` counts alongside `disabled`, matching `<lr-menu>`'s own item predicate: an inert
+   * element refuses focus and pointer input, so a roving index that steps onto its row leaves
+   * `focus()` a silent no-op and strands the user's arrow key. The row this component renders for
+   * an inert video is itself `disabled`, so the two states can never disagree.
+   *
+   * Deliberately the child's **own** inert state, never an ancestor's. A playlist sitting in a
+   * subtree an open modal has inerted is inert *as a whole*; treating every video as unavailable
+   * there would drop the active video, pause it, and unload its media element for as long as the
+   * dialog stayed open.
+   */
   private isEnabled(video: LyraVideo): boolean {
-    return !video.hasAttribute('disabled');
+    return !video.hasAttribute('disabled') && !video.inert;
   }
 
   private nearestEnabledIndex(videos: readonly LyraVideo[], preferred: number): number {
@@ -265,6 +284,12 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     const previousActive = this.activeVideo;
     const previousIndex = this.activeIndex;
     const previousRoving = previousVideos[this.rovingIndex];
+    // Read before the render that disables the outgoing row: once that row carries `disabled` the
+    // platform has already blurred it, and there is no way left to tell "the user was on this row"
+    // apart from "focus was never in the playlist at all".
+    const rovingHadFocus =
+      this.shadowRoot?.activeElement instanceof HTMLElement &&
+      this.shadowRoot.activeElement.getAttribute('part') === 'playlist-item';
     const videos = this.directVideos();
 
     for (const video of previousVideos) {
@@ -317,6 +342,11 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       ? videos.indexOf(previousRoving)
       : -1;
     this.rovingIndex = keptRoving >= 0 ? keptRoving : nextIndex;
+    // The row that held the roving tabindex just stopped being reachable (removed, disabled, or
+    // inert) while the user was standing on it. Its button is about to render `disabled`, which
+    // drops focus to `<body>` -- beyond reach of the list's own keydown handler, leaving the
+    // playlist keyboard-dead. Hand focus to the row that replaced it instead.
+    if (rovingHadFocus && keptRoving < 0 && this.rovingIndex >= 0) this.focusItem(this.rovingIndex);
 
     if (activeChanged && previousActive && active) {
       this.emitChange(previousIndex, nextIndex, active);
@@ -535,7 +565,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   }
 
   private emitChange(previousIndex: number, currentIndex: number, video: LyraVideo): void {
-    this.emit<LyraVideoPlaylistChangeDetail>('lr-video-change', Object.freeze({
+    this.emit('lr-video-change', Object.freeze({
       previousIndex,
       currentIndex,
       video: this.snapshotVideo(video),

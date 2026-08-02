@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecated part** `label` since `8.0.0`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window.
 - **Optional peers** none
-- **Themeable via** 17 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -91,6 +91,17 @@ small per-field text label), `hint`, `error` (`role="alert"`).
 The `label` part alias was deprecated in 8.0.0 in favor of the shared form vocabulary
 `form-control-label`. Both names remain on the same node during the compatibility window; use
 `::part(form-control-label)` in new CSS. The alias will not be removed before 10.0.0.
+
+**The required marker.** The `*` the legend grows while `required` is the library's shared
+required-field marker, and it takes the same three consumer-settable properties every other
+labelled control in the library does: `--lr-form-control-required-content` (the glyph, as a quoted
+CSS `content` string; `''` suppresses it), `--lr-form-control-required-color` (default
+`var(--lr-color-danger)`) and `--lr-form-control-required-offset` (default `0`). One declaration on
+an ancestor — `:root` included — retunes this marker along with every other one in the page. The
+one detail specific to this component: the glyph hangs off `[part="legend"]` rather than
+`[part="form-control-label"]`, because the label part here is a `<span>` *inside* the legend and
+the marker belongs after the whole label. With no label the legend is hidden and nothing is
+painted. Full description in `llms/shared.md` → "The required-field marker".
 
 **CSS states:** `:state(blank)` while the composite value is empty/incomplete;
 `:state(disabled)` for direct or fieldset-cascaded disablement.

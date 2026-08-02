@@ -73,8 +73,26 @@ mimeType, src }`, emitted when the preview action opens the document viewer)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size`, `status-text`, `progress`,
-`progress-fill`, `spinner`, `retry-button`, `preview-button`, `remove-button`
+**CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size`, `status-text` (the visible text twin of
+the status accent color, so the state is carried in words and not only in color; empty and hidden
+for `pending`/`done`), `progress`, `progress-fill`, `spinner`, `retry-button`, `preview-button`,
+`remove-button`
+
+**`status-text` carries no live-region role (public surface change).** It is plain visible text
+that stays in the accessibility tree and reads normally once a user reaches the chip. The
+interrupting announcement a transition *into* `status="error"` makes — so a screen-reader user not
+already focused on the chip still hears an upload failure — goes to the library's shared
+**light-DOM** assertive region instead, appended to the consumer's `<body>` and marked
+`data-lr-live-region="assertive"`: a live region inside a shadow root is not reliably announced
+(JAWS with Firefox ignores one outright). Two consequences worth knowing:
+
+- Only a *transition* into `error` announces. A chip that mounts already failed is history the user
+  can read at their own pace, and a retry that fails the same way twice is announced twice rather
+  than being a silent no-op. The ticking `uploading` readout announces nothing at all — a live
+  region re-announcing every progress tick is noise, not information.
+- A test that asserted `::part(status-text)` had `role="alert"` now fails; query
+  `[data-lr-live-region="assertive"]` in the document instead. `::part(status-text)` is still the
+  styling hook, and still the place to read the visible status wording.
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),

@@ -153,6 +153,14 @@ cancelable.
 `resize-handle`, `row`, `row-detail`, `search`, `select-all-checkbox`, `sort-indicator`,
 `sort-number`, `table`, `toolbar`.
 
+`[part="live-region"]` is a visually-hidden, `aria-hidden` **mirror** of the last polite
+announcement — a styling and inspection surface, with no live-region role of its own. The
+announcement itself goes to the library's shared **light-DOM** polite region, appended to the
+consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a
+shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
+document-level region rather than `::part(live-region)`; the part still tells you what the grid
+last announced.
+
 **Themeable custom properties:** `--accent-color`, `--background-color`, `--border-color`,
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
 `--header-row-height`, `--header-text-color`, `--indent-size`, `--max-height`, `--row-height`,

@@ -280,7 +280,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
       // Some clipboard shims and restricted browser contexts throw before returning a promise.
       // The event contract remains best-effort and still reports the intended snapshot below.
     }
-    this.emit<{ text: string }>('lr-copy', { text });
+    this.emit('lr-copy', { text });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
     this.copyTimeoutId = setTimeout(() => {

@@ -5,16 +5,34 @@ import type { LyraSwitch } from './switch.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 
-it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = (await fixture(html`<lr-switch required>Enable</lr-switch>`)) as LyraSwitch;
   const aliases: CustomEvent[] = [];
   el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+  // Registered after the component's own constructor-time relay, so it observes the native event
+  // once the alias has had its turn at it.
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
   expect(aliases[0].target).to.equal(el);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.false;
+  expect(aliases[0].cancelable).to.be.true;
+  // Nothing cancelled it, so the browser's own validation UI stays enabled.
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.false;
+});
+
+it('cancels the native invalid event when the lr-invalid alias is cancelled', async () => {
+  const el = (await fixture(html`<lr-switch required>Enable</lr-switch>`)) as LyraSwitch;
+  el.addEventListener('lr-invalid', (event) => event.preventDefault());
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.true;
 });
 
 it('reflects the pinned Web Awesome value property', async () => {
@@ -1096,4 +1114,15 @@ describe('lr-switch setCustomValidity()', () => {
     el.setCustomValidity('');
     expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
   });
+});
+
+it('bars constraint validation while disabled, like a native disabled required control', async () => {
+  const el = (await fixture(html`<lr-switch required disabled>Enable</lr-switch>`)) as LyraSwitch;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'a barred control raises no violation').to.be.false;
+  expect(el.checkValidity()).to.be.true;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'the violation returns once it is enforceable again').to.be.true;
 });

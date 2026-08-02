@@ -246,3 +246,239 @@ describe('lr-time-input popup and actions', () => {
     expect([...new FormData(form).entries()]).to.deep.equal([['start', '09:30']]);
   });
 });
+
+describe('lr-time-input popup dismissal, autofill, and stepping', () => {
+  it('normalizes the declarative step, hour-format, and placement attributes', async () => {
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input step="any" hour-format="bogus" placement="top-end"></lr-time-input>
+    `);
+    expect(el.step).to.equal('any');
+    expect(el.hourFormat).to.equal('auto');
+    expect(el.placement).to.equal('top-end');
+
+    el.setAttribute('step', '-5');
+    el.setAttribute('hour-format', '12');
+    el.setAttribute('placement', 'nowhere');
+    await el.updateComplete;
+    expect(el.step).to.equal(60);
+    expect(el.hourFormat).to.equal('12');
+    expect(el.placement).to.equal('bottom-start');
+  });
+
+  it('toggles the popup from the expand button and closes on an outside pointer press', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input value="10:00"></lr-time-input>`);
+    const expand = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="expand-button"]')!;
+    expand.click();
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(expand.getAttribute('aria-expanded')).to.equal('true');
+
+    // Pressing a column option keeps focus on the segment rather than moving it into the popup.
+    const option = el.shadowRoot!.querySelector<HTMLElement>('[part~="column-item"]')!;
+    const insidePress = new PointerEvent('pointerdown', { bubbles: true, composed: true, cancelable: true });
+    option.dispatchEvent(insidePress);
+    await el.updateComplete;
+    expect(insidePress.defaultPrevented).to.equal(true);
+    expect(el.open).to.equal(true);
+
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+
+    expand.click();
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expand.click();
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+  });
+
+  it('closes the popup on Escape and returns focus to the active segment', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input value="10:00"></lr-time-input>`);
+    await el.show();
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+  });
+
+  it('closes the popup when the control becomes disabled', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input value="10:00"></lr-time-input>`);
+    await el.show();
+    expect(el.open).to.equal(true);
+    el.disabled = true;
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+
+    el.disabled = false;
+    await el.updateComplete;
+    await el.show();
+    expect(el.open).to.equal(true);
+  });
+
+  it('refuses to open while disabled', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input disabled value="10:00"></lr-time-input>`);
+    await el.show();
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.hasAttribute('open')).to.equal(false);
+  });
+
+  it('commits the current clock from the now action and ignores it when readonly', async () => {
+    const el = await fixture<LyraTimeInput>(
+      html`<lr-time-input with-now hour-format="24" step="1"></lr-time-input>`,
+    );
+    await el.show();
+    await el.updateComplete;
+    const changed = oneEvent(el, 'lr-change');
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="now-button"]')!.click();
+    await changed;
+    expect(el.value).to.match(/^\d{2}:\d{2}:\d{2}$/);
+
+    const readonly = await fixture<LyraTimeInput>(
+      html`<lr-time-input with-now readonly value="09:30"></lr-time-input>`,
+    );
+    await readonly.show();
+    await readonly.updateComplete;
+    readonly.shadowRoot!.querySelector<HTMLButtonElement>('[part="now-button"]')!.click();
+    expect(readonly.value).to.equal('09:30');
+  });
+
+  it('adopts a value written into the hidden autofill seam', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input autocomplete="bday"></lr-time-input>`);
+    const native = el.shadowRoot!.querySelector<HTMLInputElement>('input[data-autofill]')!;
+
+    const input = oneEvent(el, 'lr-input');
+    native.value = '07:45';
+    native.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertReplacementText' }));
+    await input;
+    expect(el.value).to.equal('07:45');
+
+    const change = oneEvent(el, 'lr-change');
+    native.value = '18:15';
+    native.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await change;
+    expect(el.value).to.equal('18:15');
+
+    native.value = 'not a time';
+    native.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    native.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.value).to.equal('18:15');
+  });
+
+  it('ignores autofill writes while readonly', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input readonly value="09:30"></lr-time-input>`);
+    const native = el.shadowRoot!.querySelector<HTMLInputElement>('input[data-autofill]')!;
+    native.value = '07:45';
+    native.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    native.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.value).to.equal('09:30');
+  });
+
+  it('steps and wraps each segment with the arrow keys', async () => {
+    const el = await fixture<LyraTimeInput>(
+      html`<lr-time-input hour-format="24" step="1" value="00:00:00"></lr-time-input>`,
+    );
+    key(segment(el, 'hour'), 'ArrowDown');
+    await el.updateComplete;
+    expect(segment(el, 'hour').textContent?.trim()).to.equal('23');
+
+    key(segment(el, 'hour'), 'ArrowUp');
+    await el.updateComplete;
+    expect(segment(el, 'hour').textContent?.trim()).to.equal('00');
+
+    key(segment(el, 'second'), 'ArrowDown');
+    await el.updateComplete;
+    expect(segment(el, 'second').textContent?.trim()).to.equal('59');
+
+    const twelve = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="12"></lr-time-input>`);
+    key(segment(twelve, 'dayPeriod'), 'ArrowUp');
+    await twelve.updateComplete;
+    const first = segment(twelve, 'dayPeriod').textContent?.trim();
+    key(segment(twelve, 'dayPeriod'), 'ArrowUp');
+    await twelve.updateComplete;
+    expect(segment(twelve, 'dayPeriod').textContent?.trim()).to.not.equal(first);
+
+    const readonly = await fixture<LyraTimeInput>(
+      html`<lr-time-input hour-format="24" readonly value="10:00"></lr-time-input>`,
+    );
+    key(segment(readonly, 'hour'), 'ArrowUp');
+    await readonly.updateComplete;
+    expect(segment(readonly, 'hour').textContent?.trim()).to.equal('10');
+  });
+
+  it('forwards a host click to the active segment unless disabled', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" value="10:00"></lr-time-input>`);
+    el.click();
+    expect(el.shadowRoot!.activeElement).to.equal(segment(el, 'hour'));
+    el.blur();
+    expect(el.shadowRoot!.activeElement).to.equal(null);
+
+    const disabled = await fixture<LyraTimeInput>(html`<lr-time-input disabled value="10:00"></lr-time-input>`);
+    disabled.click();
+    expect(disabled.shadowRoot!.activeElement).to.equal(null);
+  });
+
+  it('marks the control touched and announces the message from reportValidity()', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input required></lr-time-input>`);
+    expect(el.checkValidity()).to.equal(false);
+    expect(el.reportValidity()).to.equal(false);
+    await el.updateComplete;
+    const error = el.shadowRoot!.querySelector('[part="error"]')!;
+    expect(error.hasAttribute('hidden')).to.equal(false);
+    expect(error.textContent?.trim().length).to.be.greaterThan(0);
+
+    el.value = '09:30';
+    await el.updateComplete;
+    expect(el.reportValidity()).to.equal(true);
+  });
+});
+
+// A control barred from constraint validation is neither :valid nor :invalid natively -- a real
+// `<input required disabled>` and `<input required readonly>` both match neither -- so a barred
+// time input must publish no violation at all. This override used to guard only `readonly`, so a
+// disabled required field kept `valueMissing` raised and `:state(invalid)` published.
+describe('lr-time-input barred from constraint validation', () => {
+  it('reports no violation while disabled, and restores it on re-enable', async () => {
+    const el = (await fixture(
+      html`<lr-time-input required disabled></lr-time-input>`,
+    )) as LyraTimeInput;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing while disabled').to.be.false;
+    expect(el.validationMessage, 'no message while disabled').to.equal('');
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing once enabled').to.be.true;
+  });
+
+  it('reports no range violation while disabled', async () => {
+    const el = (await fixture(
+      html`<lr-time-input value="08:00" min="09:00" disabled></lr-time-input>`,
+    )) as LyraTimeInput;
+    await el.updateComplete;
+    expect(el.validity.rangeUnderflow, 'rangeUnderflow while disabled').to.be.false;
+    expect(el.validity.valid, 'valid while disabled').to.be.true;
+  });
+
+  it('reports no violation inside a disabled fieldset', async () => {
+    const form = (await fixture(html`
+      <form><fieldset disabled><lr-time-input required></lr-time-input></fieldset></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-input') as LyraTimeInput;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing inside a disabled fieldset').to.be.false;
+    expect(el.checkValidity(), 'checkValidity() inside a disabled fieldset').to.be.true;
+  });
+
+  it('still reports no violation while readonly', async () => {
+    const el = (await fixture(
+      html`<lr-time-input required readonly></lr-time-input>`,
+    )) as LyraTimeInput;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing while readonly').to.be.false;
+  });
+});

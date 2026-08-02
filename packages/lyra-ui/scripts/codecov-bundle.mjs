@@ -3,8 +3,10 @@
 //
 // Why this exists rather than a bundler plugin: `pnpm build` is plain `tsc`, so dist/ is ~800
 // unbundled ES modules with no bundler in the loop at all. Codecov's vite/rollup/webpack plugins
-// have nothing to hook into here. scripts/check-bundle-size.mjs already esbuild-bundles the six
-// representative entry points a consumer would actually import (optional peers externalized), so
+// have nothing to hook into here. scripts/check-bundle-size.mjs already esbuild-bundles the
+// representative entry points a consumer would actually import -- the set enumerated in
+// scripts/bundle-budgets.json, deliberately uncounted here so the list can grow -- with the
+// optional peers externalized, so
 // `--emit` writes those exact bundles to disk and this script points the standalone analyzer at
 // them. The numbers therefore match the gzip budgets in scripts/bundle-budgets.json by
 // construction -- same esbuild invocation, same externals -- with Codecov adding the per-PR delta

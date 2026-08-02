@@ -346,7 +346,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   close(reason: ToolResultDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit<ToolResultDialogCloseReason>('lr-close', reason);
+    this.emit('lr-close', reason);
   }
 
   private onBackdropClick = (): void => {
@@ -359,7 +359,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   private toggleMaximized = (): void => {
     this.maximized = !this.maximized;
-    this.emit<boolean>('lr-maximize-change', this.maximized);
+    this.emit('lr-maximize-change', this.maximized);
   };
 
   private activateOverlay(): void {

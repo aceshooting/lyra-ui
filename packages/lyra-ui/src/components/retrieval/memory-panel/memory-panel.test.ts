@@ -738,3 +738,74 @@ it('keeps focus when a controlled longTerm replacement closes an open forget-all
     'focus returns to the Forget all action',
   ).to.equal('forget-all-button');
 });
+
+describe('lr-memory-panel controlled-list focus restoration', () => {
+  const shortTerm: LyraMemoryItem[] = [
+    { id: 's1', text: 'First short-term memory.' },
+    { id: 's2', text: 'Second short-term memory.' },
+    { id: 's3', text: 'Third short-term memory.' },
+  ];
+  const longTerm: LyraMemoryItem[] = [{ id: 'l1', text: 'Long-term memory.' }];
+
+  async function controlled(): Promise<LyraMemoryPanel> {
+    const el = (await fixture(html`<lr-memory-panel></lr-memory-panel>`)) as LyraMemoryPanel;
+    el.shortTerm = [...shortTerm];
+    el.longTerm = [...longTerm];
+    await el.updateComplete;
+    return el;
+  }
+
+  function focusRowAction(el: LyraMemoryPanel, id: string): void {
+    const row = el.shadowRoot!.querySelector(`[part="item"][data-id="${id}"]`)!;
+    (row.querySelector('[part="remove-button"]') as HTMLButtonElement).focus();
+  }
+
+  it('keeps focus in the same section when the focused row disappears', async () => {
+    const el = await controlled();
+    focusRowAction(el, 's2');
+    expect(el.shadowRoot!.activeElement).to.exist;
+
+    el.shortTerm = [shortTerm[0]!, shortTerm[2]!];
+    await settleFocus(el);
+    const focused = el.shadowRoot!.activeElement!;
+    expect(focused.closest('[part="item"]')?.getAttribute('data-id')).to.equal('s3');
+  });
+
+  it('clamps to the last surviving row when the tail is removed', async () => {
+    const el = await controlled();
+    focusRowAction(el, 's3');
+    el.shortTerm = [shortTerm[0]!];
+    await settleFocus(el);
+    expect(
+      el.shadowRoot!.activeElement!.closest('[part="item"]')?.getAttribute('data-id'),
+    ).to.equal('s1');
+  });
+
+  it('leaves focus alone when the focused row keeps its position', async () => {
+    const el = await controlled();
+    focusRowAction(el, 's2');
+    el.shortTerm = [...shortTerm];
+    await settleFocus(el);
+    expect(
+      el.shadowRoot!.activeElement!.closest('[part="item"]')?.getAttribute('data-id'),
+    ).to.equal('s2');
+  });
+
+  it('parks focus on the panel itself once every memory is gone', async () => {
+    const el = await controlled();
+    focusRowAction(el, 's1');
+    el.shortTerm = [];
+    el.longTerm = [];
+    await settleFocus(el);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  });
+
+  it('ignores a replacement of the other section entirely', async () => {
+    const el = await controlled();
+    focusRowAction(el, 's2');
+    const before = el.shadowRoot!.activeElement;
+    el.longTerm = [];
+    await settleFocus(el);
+    expect(el.shadowRoot!.activeElement).to.equal(before);
+  });
+});

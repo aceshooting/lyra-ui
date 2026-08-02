@@ -12,9 +12,15 @@
 import assert from 'node:assert/strict';
 import {
   carriesFormValue,
+  declaresFormResetCallback,
   declaresSetCustomValidity,
   findFormAssociatedViolations,
+  HAND_ROLLED_FORM_VALUE,
+  hasRequiredMarker,
+  rendersFormControlLabelPart,
   stripComments,
+  tracksInteractionState,
+  usesSharedFormAssociatedMixin,
 } from './check-form-associated.mjs';
 
 let passed = 0;
@@ -80,6 +86,7 @@ const HARDENED_JSDOC = [
   ' */',
 ].join('\n');
 
+// Carries a value AND satisfies rule (e), so the rule-(c) cases below assert exactly one rule.
 const valueCarryingBody = `
   static formAssociated = true;
 
@@ -89,6 +96,10 @@ const valueCarryingBody = `
 
   private commit(next: string): void {
     this.internals.setFormValue(next);
+  }
+
+  formResetCallback(): void {
+    this.value = this.getAttribute('value') ?? '';
   }
 `;
 
@@ -182,11 +193,16 @@ export class LyraFixture extends LyraCheckbox {
   @property() value = '';
 }
 `;
+  const providers = new Set(['FormAssociated', 'LyraCheckbox']);
   assert.deepEqual(
-    rulesFor(source, { validityProviders: new Set(['FormAssociated', 'LyraCheckbox']) }),
+    rulesFor(source, { validityProviders: providers, formResetProviders: providers }),
     [],
   );
-  assert.deepEqual(rulesFor(source), ['c'], 'an unknown base cannot vouch for the method');
+  assert.deepEqual(
+    rulesFor(source).filter((rule) => rule === 'c'),
+    ['c'],
+    'an unknown base cannot vouch for the method',
+  );
 });
 
 check('a form-associated control that carries no value is exempt', () => {
@@ -271,6 +287,266 @@ export class LyraFixture extends FormAssociated(LyraFixtureBase) {
 }
 `;
   assert.deepEqual(rulesFor(source), []);
+});
+
+// --- rule (d): required + a form-control-label part means a rendered required marker ------------
+
+check('a part token list is split, never substring-matched', () => {
+  assert.equal(rendersFormControlLabelPart(`<label part="form-control-label">`), true);
+  assert.equal(rendersFormControlLabelPart(`<div part="label form-control-label">`), true);
+  assert.equal(rendersFormControlLabelPart(`<div part="form-control-label-icon">`), false);
+  assert.equal(rendersFormControlLabelPart(`<div part="form-control-input">`), false);
+});
+
+check('every shipped marker shape counts as a marker, and prose does not', () => {
+  assert.equal(
+    hasRequiredMarker('', [`:host([required]) [part~='form-control-label']::after { content: ' *'; }`]),
+    true,
+    'a hand-rolled stylesheet glyph',
+  );
+  assert.equal(hasRequiredMarker('', ['${formControlRequiredMarker}']), true, 'the shared sheet');
+  assert.equal(
+    hasRequiredMarker('${this.required ? html`<span aria-hidden="true">*</span>` : nothing}'),
+    true,
+    'a literal template glyph',
+  );
+  assert.equal(hasRequiredMarker('', [`[part='form-control-label'] { display: block; }`]), false);
+});
+
+const REQUIRED_LABEL_BODY = `
+  static formAssociated = true;
+  static properties = { required: { type: Boolean, reflect: true, noAccessor: true } };
+  private _required = false;
+  get required(): boolean { return this._required; }
+  set required(next: boolean) { this._required = Boolean(next); }
+  formResetCallback(): void { this._required = this.hasAttribute('required'); }
+  override render() {
+    return html\`<label part="form-control-label">\${this.label}</label>\`;
+  }
+`;
+
+check('a required-capable labelled control with no marker anywhere is flagged', () => {
+  const source = `export class LyraFixture extends LyraElement {${REQUIRED_LABEL_BODY}}`;
+  const result = findFormAssociatedViolations(source, {
+    file: 'src/components/x/fixture.class.ts',
+    styleSources: [`[part='form-control-label'] { font-weight: 600; }`],
+  });
+  assert.deepEqual(result.violations.map((violation) => violation.rule), ['d']);
+  assert.match(result.violations[0].message, /formControlRequiredMarker/);
+});
+
+check('adopting the shared marker sheet satisfies the rule', () => {
+  const source = `export class LyraFixture extends LyraElement {${REQUIRED_LABEL_BODY}}`;
+  assert.deepEqual(
+    rulesFor(source, {
+      styleSources: [`export const styles = css\`\${formControlRequiredMarker}\`;`],
+    }),
+    [],
+  );
+});
+
+check('a control with no `required` at all, or no label part, is out of scope', () => {
+  const noRequired = `
+export class LyraFixture extends LyraElement {
+  static formAssociated = true;
+  override render() { return html\`<label part="form-control-label">x</label>\`; }
+}
+`;
+  assert.deepEqual(rulesFor(noRequired), []);
+
+  const noLabelPart = `export class LyraFixture extends LyraElement {${REQUIRED_LABEL_BODY.replace(
+    'part="form-control-label"',
+    'part="fieldset"',
+  )}}`;
+  assert.deepEqual(rulesFor(noLabelPart), []);
+});
+
+check('`static override properties` is read like `static properties`', () => {
+  // The spelling every component with a property-declaring base class uses. A plain
+  // `indexOf('static properties')` missed all of them, which made rules (b) and (d) vacuous there.
+  const source = `
+export class LyraFixture extends LyraFixtureBase {
+  static formAssociated = true;
+  static override properties = { required: { type: Boolean, reflect: true } };
+  formResetCallback(): void {}
+  override render() { return html\`<label part="form-control-label">x</label>\`; }
+}
+`;
+  assert.deepEqual(rulesFor(source), ['b', 'd']);
+});
+
+// --- rule (e): state a reset has to undo needs formResetCallback -------------------------------
+
+check('only a declaration counts as declaring formResetCallback, never a call', () => {
+  assert.equal(declaresFormResetCallback(`formResetCallback(): void { this.reset(); }`), true);
+  assert.equal(declaresFormResetCallback(`override formResetCallback(): void {}`), true);
+  assert.equal(declaresFormResetCallback(`formResetCallback = (): void => {};`), true);
+  assert.equal(declaresFormResetCallback(`this.controller.formResetCallback();`), false);
+});
+
+check('an interaction flag is state a reset has to undo, on its own', () => {
+  assert.equal(tracksInteractionState(`private hasInteracted = false;`), true);
+  assert.equal(tracksInteractionState(`private _hasInteracted = false;`), true);
+  assert.equal(tracksInteractionState(`private touched = false;`), true);
+  assert.equal(tracksInteractionState(`private dragging = false;`), false);
+});
+
+check('a value-carrying control with no formResetCallback is flagged', () => {
+  const source = `
+export class LyraFixture extends LyraElement {
+  static formAssociated = true;
+  @property({ reflect: true }) value = '';
+  setCustomValidity(message: string): void { this.internals.setValidity({}, message); }
+  private commit(next: string): void { this.internals.setFormValue(next); }
+}
+`;
+  assert.deepEqual(rulesFor(source), ['e']);
+});
+
+check('a control with no submitted value is still flagged when it tracks interaction', () => {
+  // `<lr-time-range>`'s shape: form-associated for the fieldset cascade and setCustomValidity only,
+  // never calling setFormValue -- but its `hasInteracted` flag gates `:state(user-invalid)`, which
+  // must stop matching once the form is reset.
+  const source = `
+export class LyraFixture extends LyraElement {
+  static formAssociated = true;
+  private hasInteracted = false;
+  setCustomValidity(message: string): void { this.internals.setValidity({}, message); }
+}
+`;
+  assert.deepEqual(rulesFor(source), ['e']);
+
+  const withCallback = source.replace(
+    'private hasInteracted = false;',
+    'private hasInteracted = false;\n  formResetCallback(): void { this.hasInteracted = false; }',
+  );
+  assert.deepEqual(rulesFor(withCallback), []);
+});
+
+check('a form-associated control with no value and no interaction flag is exempt', () => {
+  const source = `
+export class LyraIconButtonFixture extends LyraElement {
+  static formAssociated = true;
+  private submit(): void { this.closest('form')?.requestSubmit(); }
+}
+`;
+  assert.deepEqual(rulesFor(source), []);
+});
+
+check('extending a base that declares formResetCallback inherits it', () => {
+  const source = `
+export class LyraFixture extends LyraCheckbox {
+  static formAssociated = true;
+  @property() value = '';
+  setCustomValidity(message: string): void { this.internals.setValidity({}, message); }
+}
+`;
+  const providers = new Set(['FormAssociated', 'LyraCheckbox']);
+  assert.deepEqual(rulesFor(source, { formResetProviders: providers }), []);
+  assert.deepEqual(rulesFor(source), ['e'], 'an unknown base cannot vouch for the callback');
+});
+
+// --- rule (f): the hand-rolled ElementInternals backlog is frozen shrink-only -------------------
+
+// Fully hardened apart from being hand-rolled, so the rule-(f) cases below assert exactly one rule.
+const HAND_ROLLED_BODY = `
+  static formAssociated = true;
+
+  internals = attachInternalsSafely(this);
+
+  static properties = { value: { attribute: false, noAccessor: true } };
+  private _value: string[] = [];
+  get value(): string[] { return this._value; }
+  set value(next: string[]) {
+    this._value = next ?? [];
+    this.internals.setFormValue(this._value.join(','));
+  }
+
+  setCustomValidity(message: string): void { this.internals.setValidity({}, message); }
+  formResetCallback(): void { this.value = []; }
+`;
+
+check('the mixin is recognised through a direct application and a local alias, and nothing else', () => {
+  assert.equal(usesSharedFormAssociatedMixin('class X extends FormAssociated(LyraElement) {}'), true);
+  assert.equal(
+    usesSharedFormAssociatedMixin('const Base = FormAssociated(LyraElement);\nclass X extends Base {}'),
+    true,
+  );
+  assert.equal(usesSharedFormAssociatedMixin('class X extends LyraElement {}'), false);
+  // Merely importing or naming the mixin is not extending it.
+  assert.equal(usesSharedFormAssociatedMixin("import { FormAssociated } from './form-associated.js';"), false);
+});
+
+check('a hand-rolled value-carrying control that is not on the backlog is flagged', () => {
+  const source = `export class LyraFixture extends LyraElement {${HAND_ROLLED_BODY}}`;
+  const result = findFormAssociatedViolations(source, {
+    file: 'src/components/x/fixture.class.ts',
+    handRolledAllowlist: new Set(['src/components/other/other.class.ts']),
+  });
+  assert.equal(result.handRolledFormValue, true);
+  assert.deepEqual(result.violations.map((violation) => violation.rule), ['f']);
+  assert.match(result.violations[0].message, /FormValueAdapter/);
+});
+
+check('the same control passes while it is still on the backlog', () => {
+  const source = `export class LyraFixture extends LyraElement {${HAND_ROLLED_BODY}}`;
+  assert.deepEqual(
+    rulesFor(source, {
+      file: 'src/components/x/fixture.class.ts',
+      handRolledAllowlist: new Set(['src/components/x/fixture.class.ts']),
+    }),
+    [],
+  );
+});
+
+check('extending the shared mixin is never hand-rolled, backlog or no backlog', () => {
+  const source = `
+export class LyraFixture extends FormAssociated(LyraElement, tagListAdapter) {
+  @property({ attribute: false }) override value: string[] = [];
+}
+`;
+  const result = findFormAssociatedViolations(source, {
+    file: 'src/components/x/fixture.class.ts',
+    handRolledAllowlist: new Set(),
+  });
+  assert.equal(result.handRolledFormValue, false, 'a migrated control drops off the backlog');
+  assert.deepEqual(result.violations, []);
+});
+
+check('rule (f) stays off unless a caller supplies the census, so a bare fixture is never judged by it', () => {
+  // The allowlist is repo-wide; an isolated source fixture is not in it and must not be flagged for
+  // that. Every other case in this file relies on this, which is why it is asserted explicitly.
+  const source = `export class LyraFixture extends LyraElement {${HAND_ROLLED_BODY}}`;
+  assert.deepEqual(rulesFor(source, { file: 'src/components/x/fixture.class.ts' }), []);
+});
+
+check('a submitter carries a value only so the pressed button serialises, and is exempt', () => {
+  const source = `
+export class LyraButtonFixture extends LyraElement {
+  static formAssociated = true;
+  internals = attachInternalsSafely(this);
+  @property({ reflect: true }) type: 'button' | 'submit' | 'reset' = 'submit';
+  @property({ attribute: 'formaction' }) formAction = '';
+  @property({ reflect: true }) value = '';
+  private commit(): void { this.internals.setFormValue(this.value); }
+}
+`;
+  const result = findFormAssociatedViolations(source, {
+    file: 'src/components/x/fixture.class.ts',
+    handRolledAllowlist: new Set(),
+  });
+  assert.equal(result.handRolledFormValue, false);
+  assert.deepEqual(result.violations, []);
+});
+
+check('the backlog is a real, non-empty census of shipped paths', () => {
+  // A gate whose allowlist silently emptied would pass vacuously in the other direction: every
+  // hand-rolled control would be flagged, someone would "fix" it by turning the rule off. Assert
+  // the shape instead -- entries are package-relative class-file paths under src/components/.
+  assert.ok(HAND_ROLLED_FORM_VALUE.size > 0, 'the backlog is not empty');
+  for (const entry of HAND_ROLLED_FORM_VALUE) {
+    assert.match(entry, /^src\/components\/[\w-]+\/[\w-]+\/[\w-]+\.class\.ts$/, entry);
+  }
 });
 
 console.log(`Form-associated checker self-tests passed (${passed} checks).`);

@@ -206,7 +206,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   private togglePause = (): void => {
     if (!this.active) return;
     this.paused = !this.paused;
-    this.emit<boolean>('lr-pause-change', this.paused);
+    this.emit('lr-pause-change', this.paused);
   };
 
   private formatCountdown(): string {

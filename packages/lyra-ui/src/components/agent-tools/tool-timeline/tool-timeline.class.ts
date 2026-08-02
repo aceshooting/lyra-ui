@@ -236,7 +236,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     event.stopPropagation();
     const invocationId = this.reviewingEntryId;
     if (invocationId === undefined) return;
-    const wrapperEvent = this.emit<ToolTimelineApprovalDetail>(
+    const wrapperEvent = this.emit(
       'lr-tool-approval-decide',
       {
         invocationId,
@@ -256,7 +256,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     event.stopPropagation();
     const invocationId = this.reviewingEntryId;
     if (invocationId === undefined) return;
-    const wrapperEvent = this.emit<ToolTimelineApprovalDetail>(
+    const wrapperEvent = this.emit(
       'lr-tool-approval-decide',
       { invocationId, approved: false },
       { cancelable: true },

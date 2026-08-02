@@ -14,10 +14,7 @@ import {
   scopeFromElement,
 } from '../../../internal/text-quote.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../../media/attachment-chip/attachment-chip.class.js';
-import type {
-  LyraAnchor,
-  TextSelectDetail,
-} from '../document-viewer/anchors.js';
+import type { LyraAnchor } from '../document-viewer/anchors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { loadArchiveLibraryCached, type ArchiveLibraryApi } from './archive-loader.js';
 import { styles, virtualListHighlightStyles } from './archive-viewer.styles.js';
@@ -412,7 +409,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
           if (!text) return;
           const anchor = this.computeSelectionAnchor(range);
           const rects = Array.from(range.getClientRects());
-          this.emit<TextSelectDetail>('lr-text-select', { text, anchor, rects });
+          this.emit('lr-text-select', { text, anchor, rects });
         };
         root.addEventListener('pointerup', emitSelection);
         root.addEventListener('keyup', emitSelection);

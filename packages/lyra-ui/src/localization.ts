@@ -6,6 +6,7 @@
  */
 export {
   getLyraLocale,
+  getLyraLocaleDirection,
   getRegisteredLyraLocales,
   registerLyraLocale,
   resolveLyraDirection,
@@ -16,6 +17,8 @@ export {
   LYRA_DEFAULT_STRINGS,
 } from './internal/localization.js';
 export type {
+  LyraLocaleDirection,
+  LyraLocaleMeta,
   LyraLocaleStrings,
   LyraMessage,
   LyraMessageKey,

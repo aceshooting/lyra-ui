@@ -71,6 +71,22 @@
       "types": "./dist/ssr-loader.d.ts",
       "default": "./dist/ssr-loader.js"
     },
+    "./ssr.js": {
+      "types": "./dist/ssr.d.ts",
+      "default": "./dist/ssr.js"
+    },
+    "./ssr/all.js": {
+      "types": "./dist/ssr/all.d.ts",
+      "default": "./dist/ssr/all.js"
+    },
+    "./hydration.js": {
+      "types": "./dist/hydration.d.ts",
+      "default": "./dist/hydration.js"
+    },
+    "./all.js": {
+      "types": "./dist/all.d.ts",
+      "default": "./dist/all.js"
+    },
     "./autoloader.js": {
       "types": "./dist/autoloader.d.ts",
       "default": "./dist/autoloader.js"
@@ -120,6 +136,7 @@
     "./package.json": "./package.json"
   },
   "sideEffects": [
+    "./dist/all.js",
     "./dist/autoloader-cdn.js",
     "./dist/components/agent-tools/activity-feed/activity-feed.js",
     "./dist/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.js",
@@ -418,8 +435,8 @@
     "./dist/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js",
     "./dist/components/viewers/svg-viewer/svg-viewer.js",
     "./dist/components/viewers/xml-viewer/xml-viewer.js",
-    "./dist/lyra.js",
     "./dist/ssr-loader.js",
+    "./dist/ssr/all.js",
     "./dist/styles/native.css",
     "./dist/styles/utilities.css",
     "./dist/theme.css",
@@ -433,6 +450,7 @@
     "./dist/translations/pt-BR.js",
     "./dist/translations/ru.js",
     "./dist/translations/zh-CN.js",
+    "./src/all.ts",
     "./src/autoloader-cdn.ts",
     "./src/components/agent-tools/activity-feed/activity-feed.ts",
     "./src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.ts",
@@ -731,8 +749,8 @@
     "./src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
     "./src/components/viewers/svg-viewer/svg-viewer.ts",
     "./src/components/viewers/xml-viewer/xml-viewer.ts",
-    "./src/lyra.ts",
     "./src/ssr-loader.ts",
+    "./src/ssr/all.ts",
     "./src/styles/native.css",
     "./src/styles/utilities.css",
     "./src/theme.css",
@@ -748,7 +766,8 @@
     "./src/translations/zh-CN.ts"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/build.mjs && node scripts/check-build-artifacts.mjs",
+    "check:build-artifacts": "node scripts/check-build-artifacts.mjs",
     "test": "wtr",
     "test:ssr": "node scripts/check-ssr.mjs",
     "test:hydration": "node scripts/check-hydration.mjs",
@@ -756,6 +775,9 @@
     "test:platform": "wtr src/internal/form-associated.test.ts src/internal/overlay-manager.test.ts src/internal/rendered-state.test.ts src/internal/overlay-components.test.ts src/components/forms/input/input.test.ts src/components/forms/textarea/textarea.test.ts src/components/forms/checkbox/checkbox.test.ts src/components/forms/radio/radio.test.ts src/components/forms/slider/slider.test.ts src/components/forms/phone-input/phone-input.test.ts src/components/forms/token-input/token-input.test.ts src/components/forms/combobox/combobox.test.ts src/components/forms/select/select.test.ts src/components/forms/date-picker/date-input.test.ts src/components/layout/menu/menu.test.ts src/components/layout/split-panel/split-panel.test.ts src/components/overlays/overlay/overlay.test.ts src/components/overlays/dialog/dialog.test.ts src/components/overlays/drawer/drawer.test.ts src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts src/components/layout/tab-group/tab-group.test.ts src/components/data/tree/tree.test.ts src/components/layout/carousel/carousel.test.ts src/components/data/table/table.test.ts src/components/layout/virtual-list/virtual-list.test.ts",
     "test:full-engine-shard": "node scripts/full-engine-shard.mjs",
     "test:coverage": "WTR_COVERAGE=1 wtr $(find src -name '*.test.ts' -print)",
+    "check:coverage-floors": "node scripts/write-coverage-floors.mjs",
+    "check:palette-freshness": "node scripts/check-palette-freshness.mjs",
+    "coverage-floors": "node scripts/write-coverage-floors.mjs --write-floors",
     "test:watch": "wtr --watch",
     "test:architecture": "node scripts/check-registration-architecture.test.mjs && node scripts/check-registration-architecture.mjs",
     "package-metadata": "node scripts/generate-package-metadata.mjs",
@@ -780,6 +802,14 @@
     "check:script-paths": "node scripts/check-script-paths.mjs",
     "test:script-paths": "node scripts/check-script-paths.test.mjs",
     "check:form-associated": "node scripts/check-form-associated.mjs",
+    "check:component-dependencies": "node scripts/check-component-dependencies.mjs",
+    "test:component-dependencies": "node scripts/check-component-dependencies.test.mjs",
+    "check:qualification": "node scripts/check-qualification.mjs",
+    "test:qualification": "node --test scripts/check-qualification.test.mjs",
+    "check:package-size": "node scripts/check-package-size.mjs",
+    "test:package-size": "node --test scripts/check-package-size.test.mjs",
+    "check:public-api": "node scripts/public-api-diff.mjs",
+    "test:public-api": "node --test scripts/public-api-diff.test.mjs",
     "check:event-barrel": "node scripts/check-event-barrel.mjs",
     "check:event-contracts": "node scripts/check-event-contracts.mjs",
     "test:event-contracts": "node scripts/check-event-contracts.test.mjs",
@@ -816,7 +846,7 @@
     "llms-freshness": "node scripts/check-llms-freshness.mjs",
     "migrate-wa": "node scripts/migrate-wa.mjs",
     "test:migrate-wa": "node scripts/migrate-wa.test.mjs",
-    "contract-policy": "pnpm run check:script-paths && pnpm run test:script-paths && pnpm run check:package-metadata && pnpm run test:package-metadata && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && node scripts/check-contrast.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run check:framework-types && pnpm run test:framework-types && pnpm run llms-freshness && pnpm run llms:check && pnpm run check:component-inventory && pnpm run test:component-inventory && pnpm run check:component-metadata && pnpm run test:component-metadata && pnpm run check:autoloader-manifest && pnpm run test:autoloader-manifest && pnpm run check:registrations && pnpm run test:registrations && pnpm run test:architecture && pnpm run check-side-effects && pnpm run test:side-effects && pnpm run check:form-associated && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:cycles && pnpm run check:interaction-states && pnpm run check:value-named-tokens && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:numeric-guards && pnpm run check:default-strings && pnpm run check:translations && pnpm run test:translation-reviews && pnpm run check:style-vocabulary && pnpm run test:style-vocabulary && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps",
+    "contract-policy": "pnpm run check:script-paths && pnpm run test:script-paths && pnpm run check:package-metadata && pnpm run test:package-metadata && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && node scripts/check-contrast.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run check:framework-types && pnpm run test:framework-types && pnpm run llms-freshness && pnpm run llms:check && pnpm run check:component-inventory && pnpm run test:component-inventory && pnpm run check:component-metadata && pnpm run test:component-metadata && pnpm run check:autoloader-manifest && pnpm run test:autoloader-manifest && pnpm run check:registrations && pnpm run test:registrations && pnpm run test:architecture && pnpm run check-side-effects && pnpm run test:side-effects && pnpm run check:form-associated && pnpm run check:component-dependencies && pnpm run test:component-dependencies && pnpm run test:package-size && pnpm run check:qualification && pnpm run test:qualification && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:cycles && pnpm run check:interaction-states && pnpm run check:value-named-tokens && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:numeric-guards && pnpm run check:palette-freshness && pnpm run check:default-strings && pnpm run check:translations && pnpm run test:translation-reviews && pnpm run check:style-vocabulary && pnpm run test:style-vocabulary && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps",
     "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types",
     "prepack": "pnpm run manifest && pnpm run framework-types && pnpm run build && pnpm run generate-editor-data && pnpm run llms",
     "check:translations": "node scripts/check-translations.mjs",

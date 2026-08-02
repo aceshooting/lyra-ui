@@ -1285,3 +1285,172 @@ it('paints the live colour on both slider handles, not just the trigger and prev
     expect(painted, name).to.equal(expected);
   }
 });
+
+it('tracks a pointer drag across the grid and abandons it when the control becomes disabled', async () => {
+  const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
+  const grid = part(el, 'grid');
+  const rect = grid.getBoundingClientRect();
+  expect(rect.width > 0).to.be.true;
+
+  grid.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    composed: true,
+    pointerId: 31,
+    clientX: rect.left,
+    clientY: rect.top,
+  }));
+  await el.updateComplete;
+  const atStart = el.value;
+
+  window.dispatchEvent(new PointerEvent('pointermove', {
+    pointerId: 31,
+    clientX: rect.left + rect.width / 2,
+    clientY: rect.top + rect.height / 2,
+  }));
+  await el.updateComplete;
+  expect(el.value).to.not.equal(atStart);
+
+  // A stray pointer id belongs to some other gesture and must not steer this drag.
+  const duringDrag = el.value;
+  window.dispatchEvent(new PointerEvent('pointermove', {
+    pointerId: 99,
+    clientX: rect.right,
+    clientY: rect.bottom,
+  }));
+  await el.updateComplete;
+  expect(el.value).to.equal(duringDrag);
+
+  // Window listeners keep firing for a captured pointer, so disabling must end the drag itself.
+  el.disabled = true;
+  await el.updateComplete;
+  window.dispatchEvent(new PointerEvent('pointermove', {
+    pointerId: 31,
+    clientX: rect.right,
+    clientY: rect.bottom,
+  }));
+  await el.updateComplete;
+  expect(el.value).to.equal(duringDrag);
+});
+
+it('commits a typed color on Enter and keeps the draft until then', async () => {
+  const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
+  const field = part(el, 'input') as HTMLInputElement;
+
+  field.value = '#00ff00';
+  field.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.value).to.equal('#ff0000');
+
+  const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true });
+  field.dispatchEvent(enter);
+  await el.updateComplete;
+  expect(enter.defaultPrevented).to.equal(true);
+  expect(el.value.toLowerCase()).to.equal('#00ff00');
+
+  const ignored = new KeyboardEvent('keydown', { key: 'a', bubbles: true, composed: true, cancelable: true });
+  field.dispatchEvent(ignored);
+  await el.updateComplete;
+  expect(ignored.defaultPrevented).to.equal(false);
+  expect(el.value.toLowerCase()).to.equal('#00ff00');
+});
+
+it('drops a consumer validity message through resetValidity()', async () => {
+  const el = (await fixture(
+    html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`,
+  )) as LyraColorPicker;
+  el.setCustomValidity('Use a brand color');
+  await el.updateComplete;
+  expect(el.validity.customError).to.equal(true);
+  expect(el.validationMessage).to.equal('Use a brand color');
+
+  el.resetValidity();
+  await el.updateComplete;
+  expect(el.validity.customError).to.equal(false);
+  expect(el.validationMessage).to.equal('');
+});
+
+// This control inherits the shared `FormAssociated` guard rather than overriding updateValidity(),
+// so the bar arrives for free -- these lock that in, since a future override would silently drop it.
+describe('lr-color-picker barred from constraint validation', () => {
+  it('reports no violation while disabled, and restores it on re-enable', async () => {
+    const el = (await fixture(
+      html`<lr-color-picker required disabled></lr-color-picker>`,
+    )) as LyraColorPicker;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing while disabled').to.be.false;
+    expect(el.validationMessage, 'no message while disabled').to.equal('');
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing once enabled').to.be.true;
+  });
+
+  it('reports no violation inside a disabled fieldset', async () => {
+    const form = (await fixture(html`
+      <form><fieldset disabled><lr-color-picker required></lr-color-picker></fieldset></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-color-picker') as LyraColorPicker;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'valueMissing inside a disabled fieldset').to.be.false;
+    expect(el.checkValidity(), 'checkValidity() inside a disabled fieldset').to.be.true;
+  });
+});
+
+it('honours preventDefault() on lr-show and lr-hide', async () => {
+  const el = (await fixture(html`<lr-color-picker label="Accent"></lr-color-picker>`)) as LyraColorPicker;
+  await el.updateComplete;
+
+  el.addEventListener('lr-show', (event) => event.preventDefault(), { once: true });
+  (part(el, 'trigger') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(el.open, 'a vetoed open never applies').to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+  expect(part(el, 'trigger').getAttribute('aria-expanded')).to.equal('false');
+
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  el.addEventListener('lr-hide', (event) => event.preventDefault(), { once: true });
+  el.open = false;
+  await el.updateComplete;
+  expect(el.open, 'a vetoed close stays open').to.be.true;
+  expect(el.hasAttribute('open')).to.be.true;
+});
+
+it('keeps the reflected open attribute in step when a veto arrives through the attribute', async () => {
+  const el = (await fixture(html`<lr-color-picker label="Accent"></lr-color-picker>`)) as LyraColorPicker;
+  await el.updateComplete;
+  el.addEventListener('lr-show', (event) => event.preventDefault());
+  el.setAttribute('open', '');
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open'), 'the attribute cannot outlive the vetoed property').to.be.false;
+});
+
+it('does not let a listener hold a disabled picker open', async () => {
+  const el = (await fixture(html`<lr-color-picker label="Accent" open></lr-color-picker>`)) as LyraColorPicker;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+  el.addEventListener('lr-hide', (event) => event.preventDefault());
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.open, 'disablement closes the panel regardless of any veto').to.be.false;
+});
+
+it('makes lr-show/lr-hide cancelable and the after-events not', async () => {
+  const el = (await fixture(html`<lr-color-picker label="Accent"></lr-color-picker>`)) as LyraColorPicker;
+  await el.updateComplete;
+  const seen: CustomEvent[] = [];
+  for (const type of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+    el.addEventListener(type, (event) => seen.push(event as CustomEvent));
+  }
+  el.open = true;
+  await el.updateComplete;
+  el.open = false;
+  await el.updateComplete;
+  expect(seen.map((event) => event.type)).to.deep.equal([
+    'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide',
+  ]);
+  expect(seen.map((event) => event.cancelable)).to.deep.equal([true, false, true, false]);
+});

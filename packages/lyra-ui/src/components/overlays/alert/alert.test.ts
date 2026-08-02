@@ -104,15 +104,15 @@ it('localizes the close action and lets per-instance strings reach the rendered 
   expect(close.getAttribute('aria-label')).to.equal('Dismiss notification');
 });
 
-it('show() and hide() emit the exact noncancelable lifecycle in order', async () => {
+it('show() and hide() emit the exact lifecycle in order, vetoable only at lr-show/lr-hide', async () => {
   const el = (await fixture(html`<lr-alert style=${motionless}>Message</lr-alert>`)) as LyraAlert;
   const seen: string[] = [];
   for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'] as const) {
     el.addEventListener(name, (event) => {
       expect(event.bubbles).to.be.true;
       expect(event.composed).to.be.true;
-      expect(event.cancelable).to.be.false;
-      event.preventDefault();
+      // `lr-show`/`lr-hide` are veto points library-wide; the settled after-events are not.
+      expect(event.cancelable).to.equal(!name.startsWith('lr-after'));
       seen.push(name);
     });
   }
@@ -329,4 +329,58 @@ it('is accessible while closed and when populated/open/closable', async () => {
   `)) as LyraAlert;
   expect(open.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('alert');
   await expect(open).to.be.accessible();
+});
+
+it('pauses the auto-hide timer while focus is inside and resumes when it leaves', async () => {
+  const el = (await fixture(html`
+    <lr-alert duration="80" closable style=${motionless}>Focusable message</lr-alert>
+  `)) as LyraAlert;
+  await el.show();
+
+  el.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+  await delay(120);
+  expect(el.open, 'focus inside pauses the timer').to.be.true;
+
+  // A focusout whose next target is still inside the alert must not resume the timer.
+  const closeButton = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement;
+  el.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: closeButton }));
+  await delay(120);
+  expect(el.open, 'focus moving within the alert keeps the timer paused').to.be.true;
+
+  el.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }));
+  await waitUntil(() => !el.open, 'leaving the alert should restart and finish the timer', { timeout: 400 });
+});
+
+it('honours preventDefault() on lr-show and lr-hide', async () => {
+  const el = (await fixture(html`<lr-alert style=${motionless}>Message</lr-alert>`)) as LyraAlert;
+  el.addEventListener('lr-show', (event) => event.preventDefault(), { once: true });
+  await el.show();
+  expect(el.open, 'a vetoed open never applies').to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+
+  await el.show();
+  expect(el.open, 'the veto was one-shot').to.be.true;
+
+  el.addEventListener('lr-hide', (event) => event.preventDefault(), { once: true });
+  await el.hide();
+  expect(el.open, 'a vetoed close stays open').to.be.true;
+  expect(el.hasAttribute('open')).to.be.true;
+});
+
+it('keeps the reflected open attribute in step when a veto arrives through the attribute', async () => {
+  const el = (await fixture(html`<lr-alert style=${motionless}>Message</lr-alert>`)) as LyraAlert;
+  el.addEventListener('lr-show', (event) => event.preventDefault());
+  el.setAttribute('open', '');
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open'), 'the attribute cannot outlive the vetoed property').to.be.false;
+});
+
+it('never offers a veto for initially-open markup', async () => {
+  let vetoable = 0;
+  const el = (await fixture(html`<lr-alert open style=${motionless}>Message</lr-alert>`)) as LyraAlert;
+  el.addEventListener('lr-show', (event) => { if (event.cancelable) vetoable += 1; });
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+  expect(vetoable, 'declarative state is not a transition').to.equal(0);
 });

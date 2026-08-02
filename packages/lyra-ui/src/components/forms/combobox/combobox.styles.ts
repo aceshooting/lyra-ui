@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -90,10 +91,7 @@ export const styles = css`
   [part='form-control-label'][hidden] {
     display: none;
   }
-  :host([required]) [part='form-control-label']::after {
-    content: ' *';
-    color: var(--lr-color-danger);
-  }
+  ${formControlRequiredMarker}
 
   /* min-block-size is a FLOOR on a border-box, so it only decides the rendered height while this
      row's own content stays under it -- and that content includes the search input, whose text box

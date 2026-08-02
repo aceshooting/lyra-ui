@@ -159,16 +159,16 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   }
 
   private submit(): void {
-    if (this.loading) this.emit<CancelEventDetail>('lr-cancel', { reason: 'superseded' });
-    this.emit<RetrievalQuery>('lr-search', this.buildQuery());
+    if (this.loading) this.emit('lr-cancel', { reason: 'superseded' });
+    this.emit('lr-search', this.buildQuery());
   }
 
   private cancel(): void {
-    this.emit<CancelEventDetail>('lr-cancel', {});
+    this.emit('lr-cancel', {});
   }
 
   private emitFiltersChange(): void {
-    this.emit<RetrievalFiltersChangeDetail>('lr-filters-change', {
+    this.emit('lr-filters-change', {
       filters: { ...this.filters },
       scope: [...this.scope],
     });

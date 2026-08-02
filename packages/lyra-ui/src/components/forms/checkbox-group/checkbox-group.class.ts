@@ -12,6 +12,7 @@ import {
   createStringArrayFormDataState,
   getFormOwner,
   installCustomErrorProperty,
+  isBarredFromValidation,
   readStringArrayFormDataState,
   setFormOwner,
   type FormOwnerValue,
@@ -98,7 +99,9 @@ export type CheckboxGroupOrientation = 'horizontal' | 'vertical';
  * @event input - User selection changed.
  * @event change - User selection changed.
  * @event lr-change - User selection changed; detail is `{ value: string[] }`.
- * @event lr-invalid - The aggregate checkbox group failed a validity check.
+ * @event lr-invalid - The aggregate checkbox group failed a validity check. Cancelable: calling
+ * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
+ * browser's own validation bubble so an app can present the failure its own way.
  * @cssstate required - Matches while `required` is set. Style with
  * `lr-checkbox-group:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
@@ -122,6 +125,13 @@ export type CheckboxGroupOrientation = 'horizontal' | 'vertical';
  * @cssprop [--lr-checkbox-group-option-gap=calc(var(--lr-form-control-height) * 0.2)] - Gap between
  * adjacent options, scaled by `size`.
  * @cssprop [--gap=var(--lr-checkbox-group-option-gap)] - WA-compatible option gap.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
+ * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
+ * other quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Required-marker color,
+ * themeable independently of error text and invalid borders.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * required marker.
  * @status stable
  * @since 4.0.0
  */
@@ -252,6 +262,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
     this.propagateDisabled();
+    // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
+    // the child boxes told about it.
+    this.sync();
     this.requestUpdate('disabled', old);
   }
 
@@ -260,7 +273,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
   }
 
   private checkboxGroupOwner(element: Element): Element | null {
@@ -341,17 +354,31 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       this.name ? data : null,
       createStringArrayFormDataState(this.name, next),
     );
-    if (this.required && next.length === 0) this.validityController.setValidity({ valueMissing: true }, this.localize('checkboxGroupRequired'));
+    // A barred group reports no violation at all, exactly like a native disabled control --
+    // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required groups,
+    // and with it the documented `:state(user-invalid)` error styling.
+    if (!this.barredFromValidation && this.required && next.length === 0) this.validityController.setValidity({ valueMissing: true }, this.localize('checkboxGroupRequired'));
     else this.validityController.setValidity({});
-    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     this.reflectValidityStates();
   }
 
+  /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
-   *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. Called from
-   *  every path that can move either validity or the interaction flag. */
+   *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds, and the
+   *  `data-invalid` styling hook alongside them. Called from every path that can move either
+   *  validity or the interaction flag. */
   private reflectValidityStates(): void {
-    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.hasInteracted });
+    const barred = this.barredFromValidation;
+    this.toggleAttribute('data-invalid', !barred && this.touched && !this.internals.validity.valid);
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.hasInteracted,
+      barred,
+    });
   }
 
   private isOwnedCheckbox(target: EventTarget | null): target is LyraCheckbox {
@@ -516,7 +543,6 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
    */
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
-    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     this.reflectValidityStates();
     // `aria-invalid` is rendered from `internals.validity`, which the call above just moved.
     this.requestUpdate();
@@ -532,6 +558,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     this.propagateDisabled();
+    // Cascaded disablement bars constraint validation exactly like the group's own `disabled`.
+    this.sync();
     this.requestUpdate();
   }
 
@@ -546,7 +574,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       aria-describedby=${described}
       aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
     >
-      <legend part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</legend>
+      <legend part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></legend>
       <div part="options form-control-input">
         <slot @slotchange=${this.onSlotChange}></slot>
       </div>

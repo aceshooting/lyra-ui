@@ -281,17 +281,17 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     if (expanded) next.add(id);
     else next.delete(id);
     this.expandedIds = next;
-    this.emit<EvaluationExampleToggleDetail>('lr-example-toggle', { id, expanded });
+    this.emit('lr-example-toggle', { id, expanded });
   }
 
   private onCitationSelect(exampleId: string, event: CustomEvent<LyraGroundingSummaryEventMap['lr-citation-select']['detail']>): void {
     event.stopPropagation();
-    this.emit<EvaluationCitationSelectDetail>('lr-example-citation-select', { exampleId, citation: event.detail.citation });
+    this.emit('lr-example-citation-select', { exampleId, citation: event.detail.citation });
   }
 
   private onToolApprovalDecide(exampleId: string, event: CustomEvent<LyraToolTimelineEventMap['lr-tool-approval-decide']['detail']>): void {
     event.stopPropagation();
-    this.emit<EvaluationToolApprovalDetail>('lr-example-tool-approval-decide', { exampleId, ...event.detail });
+    this.emit('lr-example-tool-approval-decide', { exampleId, ...event.detail });
   }
 
   private renderContent(

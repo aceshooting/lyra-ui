@@ -268,7 +268,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (!this.isFirstUpdate && changed.has("effectiveMode")) {
-      this.emit<ResponsivePanelModeChangeDetail>("lr-mode-change", {
+      this.emit("lr-mode-change", {
         mode: this.effectiveMode,
       });
     }
@@ -424,7 +424,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   close(reason: ResponsivePanelCloseReason = "api"): void {
     if (!this.open) return;
     this.open = false;
-    this.emit<ResponsivePanelCloseReason>("lr-close", reason);
+    this.emit("lr-close", reason);
   }
 
   private onBackdropClick = (): void => {

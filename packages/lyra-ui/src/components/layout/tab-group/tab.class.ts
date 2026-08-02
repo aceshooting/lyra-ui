@@ -76,7 +76,7 @@ export class LyraTab extends LyraElement<LyraTabEventMap> {
   /** @internal Owning-group seam for the focused tab's `Delete` shortcut. */
   requestCloseFromOwner(): void {
     if (!this.closable || this.disabled) return;
-    this.emit<undefined>('lr-close', undefined);
+    this.emit('lr-close', undefined);
   }
 
   override render(): TemplateResult {

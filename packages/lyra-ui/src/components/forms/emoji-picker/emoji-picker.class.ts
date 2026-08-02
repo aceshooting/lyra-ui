@@ -135,6 +135,13 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  *   this one hook retints both consistently. Declared as an inline `var()` fallback (never on
  *   `:host`), so setting it on the element or an ancestor recolors only the emoji highlight without
  *   hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
+ *   `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
+ *   other quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Required-marker color,
+ *   themeable independently of error text and invalid borders.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ *   required marker.
  * @status stable
  * @since 4.0.0
  */

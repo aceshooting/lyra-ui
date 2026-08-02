@@ -224,7 +224,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   private toggle = (): void => {
     this.expanded = !this.expanded;
-    this.emit<ThinkingPanelToggleDetail>('lr-toggle', { expanded: this.expanded });
+    this.emit('lr-toggle', { expanded: this.expanded });
   };
 
   /** `durationMs` normalized to a finite, non-negative value, or `null` -- `null`/`undefined`

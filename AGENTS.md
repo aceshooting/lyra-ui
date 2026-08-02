@@ -71,7 +71,10 @@ Run from repo root unless noted; package-local equivalents exist from `packages/
 
 ```bash
 pnpm install     # workspace install
-pnpm build       # -r: tsc -p tsconfig.json per package -> dist/ (ESM + .d.ts)
+pnpm build       # -r: per package -> dist/ (ESM + .d.ts). lyra-ui runs scripts/build.mjs:
+                 #     tsc -p tsconfig.build.json (tsconfig.json with source maps OFF, since
+                 #     package.json#files ships dist and not src), copies the CSS assets, then
+                 #     check:build-artifacts fails on any .map or sourceMappingURL left in dist
 pnpm test        # -r: @web/test-runner (wtr) for @aceshooting/lyra-ui;
                  #     @aceshooting/lyra-flags has no test runner, just a plain Node script
 pnpm lint        # -r: for lyra-ui NOT just a type check — the full contract-policy chain
@@ -101,6 +104,10 @@ its baseline in all three engines; see
   freshness-checks those files too.
 - `check:hit-area` (WCAG 2.5.8) and `check:numeric-guards` are blocking parts of `pnpm lint`.
   `ls packages/lyra-ui/scripts/check-*.mjs` remains the real check inventory.
+- Two gates sit outside `contract-policy` because they read build/test output, not source:
+  `check:build-artifacts` (chained inside `build`; no `.map` or `sourceMappingURL` may reach
+  `dist`) and `check:coverage-floors` (CI, right after `test:coverage`; regenerate
+  `scripts/coverage-floors.json` with `--write-floors`).
 
 ## Coding conventions — digest
 
@@ -133,6 +140,9 @@ Full rules, incidents, and patterns:
 - Events via `this.emit()` (bubbles + composed); `{ cancelable: true }` only for real veto
   points that actually branch on `defaultPrevented`; library events carry the `lr-` prefix.
 - Sibling `*.styles.ts` per component; `static styles = [LyraElement.styles, styles]`.
+- A backtick inside a `css`/`html` tagged template terminates the literal — including inside a
+  CSS/HTML comment, which JavaScript does not treat as a comment. The parse error then points at
+  an innocent line far below. `${` in a comment is the same trap.
 - Silently-inert CSS is invisible to all tooling — assert rendered results
   (`getComputedStyle`/hit test), never stylesheet text; only pseudo-classes may follow
   `::part(x)`; encode state in the part name.
@@ -217,6 +227,11 @@ Full rules: **[docs/agents/form-controls.md](docs/agents/form-controls.md)**.
   fieldset-cascaded disablement.
 - Anything overriding `focus()`/`blur()` also overrides host `click()` to forward it.
 - `disabled` gates every self-rendered sub-control, not just the primary one.
+- The required asterisk comes from the shared `formControlRequiredMarker`
+  (`src/internal/form-control.styles.ts`), interpolated into the component's own `css` template —
+  never a re-typed `::after` and never a literal `<span>` in the template.
+- `formResetCallback()` restores the *default* value (and clears the dirty/interacted flags, then
+  re-syncs validity); it never blanks the field, and a `setCustomValidity()` error survives it.
 - `type="submit"|"reset"` needs `static formAssociated`, `attachInternals()`, and
   `closest('form')?.requestSubmit()`/`.reset()` — the attribute alone does nothing.
 
@@ -248,7 +263,12 @@ Release blockers for new components, bugs in existing ones. Full rules:
 - Decorative icons are `aria-hidden`; icon-only actions get localized accessible names.
 - Live-region announcements from `updated()`/`willUpdate()` guard the first update
   (`isMounting` flag).
-- Roving tabindex steps past disabled targets and never leaves zero focusable stops.
+- Roving tabindex steps past disabled targets and never leaves zero focusable stops; the
+  navigable predicate excludes `inert` and `closest('[inert]')` too — an inert element refuses
+  `focus()` silently, stranding roving focus and killing every later key press.
+- Live regions live in the host's light DOM, never a shadow root: announce through
+  `acquireAnnouncementSink()` (`src/internal/announcer.ts`), which mounts the region ahead of the
+  text and appends each message as a new child.
 - Native wrappers forward meaningful native attributes, expose focus/selection/editing methods
   that keep value/validity in sync, and specify the event contract before implementation.
 - Every `:focus-visible` / `cursor: pointer` part has a matching `:hover` rule (the

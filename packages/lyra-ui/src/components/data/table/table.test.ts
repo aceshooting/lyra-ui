@@ -4315,3 +4315,63 @@ it('rejects a column width that would inject extra declarations into the col ele
   expect(cols[0]!.style.getPropertyValue('inline-size').trim(), 'the unsafe width is dropped').to.equal('');
   expect(cols[1]!.style.getPropertyValue('inline-size').trim()).to.equal('8rem');
 });
+
+it('moves the roving tabindex between body rows and back up into the header', async () => {
+  const el = (await fixture(html`<lr-table row-key="id"></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const bodyRows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-row-key]')];
+  expect(bodyRows.length).to.be.greaterThan(1);
+  const headers = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]')];
+
+  headers[0]!.focus();
+  headers[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(bodyRows[0]);
+
+  bodyRows[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(bodyRows[1]);
+
+  bodyRows[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(bodyRows[0]);
+
+  bodyRows[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(headers[0]);
+
+  bodyRows[0]!.focus();
+  bodyRows[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(bodyRows.at(-1));
+
+  bodyRows.at(-1)!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(bodyRows[0]);
+
+  // Keys the grid does not own are left entirely alone.
+  const ignored = new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true });
+  bodyRows[0]!.dispatchEvent(ignored);
+  await el.updateComplete;
+  expect(ignored.defaultPrevented).to.equal(false);
+  expect(el.shadowRoot!.activeElement).to.equal(bodyRows[0]);
+});
+
+it('activates the focused row from Enter and Space', async () => {
+  const el = (await fixture(html`<lr-table row-key="id" selectable></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const first = el.shadowRoot!.querySelector<HTMLElement>('[data-row-key]')!;
+  first.focus();
+
+  const activated = oneEvent(el, 'lr-row-click');
+  first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  expect((await activated).detail.row.id).to.equal(rows[0]!.id);
+
+  const spaceActivated = oneEvent(el, 'lr-row-click');
+  first.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+  expect((await spaceActivated).detail.row.id).to.equal(rows[0]!.id);
+});

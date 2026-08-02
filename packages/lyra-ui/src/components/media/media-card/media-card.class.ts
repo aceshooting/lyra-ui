@@ -223,7 +223,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     // falls back to a trimmed raw src so a whitespace-padded, otherwise-unsafe
     // src still reports the same value the DOM would show if it were safe.
     const src = safeMediaSrc(this.src) ?? safeLinkHref(this.src) ?? this.src.trim();
-    return this.emit<MediaCardOpenDetail>('lr-open', { src, filename: this.filename }, { cancelable: true });
+    return this.emit('lr-open', { src, filename: this.filename }, { cancelable: true });
   }
 
   private onActivate = (): void => {

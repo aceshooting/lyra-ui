@@ -340,11 +340,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     this.cancelDebounce();
     this.touchedFilters = new Set();
     this.value = this.resetValue;
-    this.emit<FilterBarInputDetail>("lr-input", {
+    this.emit("lr-input", {
       value: this.value,
       filterId: undefined,
     });
-    this.emit<FilterBarResetDetail>("lr-reset", { value: this.value });
+    this.emit("lr-reset", { value: this.value });
   }
 
   private get resetValue(): FilterBarValue {
@@ -366,7 +366,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     )
       return;
     this.value = { ...this._value, [id]: value };
-    this.emit<FilterBarInputDetail>("lr-input", {
+    this.emit("lr-input", {
       value: this.value,
       filterId: id,
     });
@@ -587,7 +587,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       const key = JSON.stringify({ valid, invalidFilterIds });
       if (key !== this.lastValidityKey) {
         this.lastValidityKey = key;
-        this.emit<FilterBarValidityDetail>("lr-validity-change", {
+        this.emit("lr-validity-change", {
           valid,
           invalidFilterIds,
         });

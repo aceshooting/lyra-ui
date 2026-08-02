@@ -538,7 +538,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   private commit(item: MentionItem): void {
-    this.emit<MentionSelectDetail>('lr-mention-select', { id: item.id, label: item.label });
+    this.emit('lr-mention-select', { id: item.id, label: item.label });
     this._suppressCloseEvent = true;
     this.open = false;
   }

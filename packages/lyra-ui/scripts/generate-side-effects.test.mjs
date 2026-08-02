@@ -45,7 +45,10 @@ try {
     )}\n`,
   );
   writeFileSync(join(familyDir, 'index.ts'), "export * from './test-control/test-control.js';\n");
-  writeFileSync(join(fixtureRoot, 'src', 'lyra.ts'), "import './components/forms/index.js';\n");
+  writeFileSync(join(fixtureRoot, 'src', 'lyra.ts'), "export * from './components/forms/test-control/test-control.class.js';\n");
+  writeFileSync(join(fixtureRoot, 'src', 'all.ts'), "import './components/forms/index.js';\n");
+  mkdirSync(join(fixtureRoot, 'src', 'ssr'), { recursive: true });
+  writeFileSync(join(fixtureRoot, 'src', 'ssr', 'all.ts'), "import '../components/forms/index.js';\n");
   writeFileSync(join(fixtureRoot, 'src', 'autoloader.ts'), 'export function discover() {}\n');
   writeFileSync(join(fixtureRoot, 'src', 'autoloader-cdn.ts'), "start(document);\n");
   writeFileSync(join(fixtureRoot, 'src', 'ssr-loader.ts'), "installHydrationSupport();\n");
@@ -84,25 +87,37 @@ try {
   const generated = JSON.parse(first).sideEffects;
   assert.deepEqual(generated, [...generated].sort(), 'generated entries must be deterministic and sorted');
   assert.deepEqual(generated, [
+    './dist/all.js',
     './dist/autoloader-cdn.js',
     './dist/components/forms/index.js',
     './dist/components/forms/test-control/test-control.js',
-    './dist/lyra.js',
     './dist/ssr-loader.js',
+    './dist/ssr/all.js',
     './dist/styles/native.css',
     './dist/styles/utilities.css',
     './dist/theme.css',
     './dist/translations/fr.js',
+    './src/all.ts',
     './src/autoloader-cdn.ts',
     './src/components/forms/index.ts',
     './src/components/forms/test-control/test-control.ts',
-    './src/lyra.ts',
     './src/ssr-loader.ts',
+    './src/ssr/all.ts',
     './src/styles/native.css',
     './src/styles/utilities.css',
     './src/theme.css',
     './src/translations/fr.ts',
   ]);
+  assert.equal(
+    generated.includes('./src/lyra.ts'),
+    false,
+    'the registration-free package root must stay tree-shakeable',
+  );
+  assert.equal(
+    generated.includes('./dist/lyra.js'),
+    false,
+    'the compiled registration-free package root must stay tree-shakeable',
+  );
   assert.equal(generated.includes('./src/autoloader.ts'), false, 'manual autoloader must stay tree-shakeable');
   assert.equal(generated.includes('./dist/autoloader.js'), false, 'compiled manual autoloader must stay tree-shakeable');
 

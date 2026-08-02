@@ -1,8 +1,14 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 export const styles = css`
   :host { display: block; --lr-code-editor-min-block-size: var(--lr-size-8rem); --lr-code-editor-line-height: 1.5; --lr-code-editor-tab-size: 2; }
   [part='form-control'] { display: grid; gap: var(--lr-space-xs); }
   [part~='label'] { color: var(--lr-color-text); font-weight: var(--lr-font-weight-semibold); }
+  /* The one required-marker rule the library shares, replacing the literal
+     <span aria-hidden="true">*</span> this template used to render: a marker that lives in the
+     stylesheet is suppressible and retunable by a consumer, and generated content can never leak
+     into the label's accessible name the way a real element can. */
+  ${formControlRequiredMarker}
   /* Keep the editor frame as the single scroll viewport. The textarea must not create a second
      native horizontal scrollbar when wrap="off"; its max-content track lets the frame own both
      axes instead. */

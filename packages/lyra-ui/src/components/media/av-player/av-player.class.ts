@@ -558,7 +558,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private onHighlightActivate = (id: string, start: number): void => {
     this.activeHighlightId = id;
     this.seek(start);
-    this.emit<HighlightActivateDetail>('lr-highlight-activate', { id });
+    this.emit('lr-highlight-activate', { id });
   };
 
   private renderMarkers(): TemplateResult | typeof nothing {

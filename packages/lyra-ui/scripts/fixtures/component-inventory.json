@@ -2616,12 +2616,12 @@
           {
             "name": "lr-hide",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-show",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -8228,6 +8228,12 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-pattern-step",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
             "name": "--lr-chart-tick-color",
             "deprecated": null,
             "hasDefault": true,
@@ -10131,6 +10137,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-pattern-step",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -14189,6 +14201,12 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-pattern-step",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
             "name": "--lr-chart-tick-color",
             "deprecated": null,
             "hasDefault": true,
@@ -16260,7 +16278,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -16920,7 +16938,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -16967,6 +16985,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "calc(var(--lr-form-control-height) * 0.1)"
+          },
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           }
         ],
         "cssStates": [
@@ -19819,7 +19855,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -19874,6 +19910,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 2
+          },
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           }
         ],
         "cssStates": [],
@@ -20741,7 +20795,7 @@
           {
             "name": "lr-hide",
             "type": "CustomEvent",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -20752,12 +20806,12 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-show",
             "type": "CustomEvent",
-            "cancelable": "never",
+            "cancelable": "conditional",
             "constructor": "CustomEvent"
           }
         ],
@@ -21042,6 +21096,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-height,var(--lr-size-2-5rem))"
+          },
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "--slider-handle-size",
@@ -22219,17 +22291,17 @@
           {
             "name": "lr-hide",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-show",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "conditional"
           }
         ],
         "parts": [
@@ -22423,6 +22495,24 @@
             "name": "--lr-combobox-trigger-padding",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "--show-duration",
@@ -29234,7 +29324,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-show",
@@ -29383,6 +29473,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "--show-duration",
@@ -31219,7 +31327,7 @@
           {
             "name": "lr-hide",
             "type": "unknown",
-            "cancelable": "always"
+            "cancelable": "conditional"
           },
           {
             "name": "lr-initial-focus",
@@ -34372,6 +34480,12 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-pattern-step",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
             "name": "--lr-chart-tick-color",
             "deprecated": null,
             "hasDefault": true,
@@ -37391,6 +37505,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           }
         ],
         "cssStates": [],
@@ -39475,12 +39607,12 @@
           {
             "name": "lr-hide",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-show",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -40365,7 +40497,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -40498,6 +40630,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           }
         ],
         "cssStates": [
@@ -47400,6 +47550,12 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-pattern-step",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
             "name": "--lr-chart-tick-color",
             "deprecated": null,
             "hasDefault": true,
@@ -49706,6 +49862,11 @@
         ],
         "events": [
           {
+            "name": "lr-error",
+            "type": "unknown",
+            "cancelable": "never"
+          },
+          {
             "name": "lr-include-error",
             "type": "unknown",
             "cancelable": "never"
@@ -51040,7 +51201,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -51114,6 +51275,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-input-border-color",
             "deprecated": null,
@@ -53454,7 +53633,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -53528,6 +53707,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-known-date-day-field-width",
             "deprecated": null,
@@ -54913,6 +55110,12 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-pattern-step",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
             "name": "--lr-chart-tick-color",
             "deprecated": null,
             "hasDefault": true,
@@ -56058,7 +56261,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -56108,6 +56311,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-locale-picker-expand-size",
             "deprecated": null,
@@ -56539,7 +56760,7 @@
           "upstream": "webawesome",
           "tag": "wa-markdown",
           "tier": "free",
-          "classification": "exact"
+          "classification": "warning-required"
         }
       ],
       "surface": {
@@ -58683,7 +58904,7 @@
           {
             "name": "lr-hide",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-menu-select",
@@ -58698,7 +58919,7 @@
           {
             "name": "lr-show",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -60785,7 +61006,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -60843,6 +61064,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-model-select-expand-size",
             "deprecated": null,
@@ -62629,7 +62868,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -62707,6 +62946,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-input-border-color",
             "deprecated": null,
@@ -64771,7 +65028,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -64869,6 +65126,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-input-border-color",
             "deprecated": null,
@@ -66160,7 +66435,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -66214,6 +66489,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-otp-input-mask-char",
             "deprecated": null,
@@ -69487,7 +69780,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -69549,6 +69842,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-phone-input-control-height",
             "deprecated": null,
@@ -70683,6 +70994,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-pattern-step",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -71869,6 +72186,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-pattern-step",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -74891,6 +75214,17 @@
         "slots": [],
         "events": [
           {
+            "name": "blur",
+            "type": "unknown",
+            "cancelable": "never"
+          },
+          {
+            "name": "focus",
+            "type": "unknown",
+            "cancelable": "never",
+            "bubbles": true
+          },
+          {
             "name": "lr-change",
             "type": "unknown",
             "cancelable": "never"
@@ -75019,7 +75353,10 @@
           "methods": []
         },
         "native": {
-          "forwardedEvents": [],
+          "forwardedEvents": [
+            "blur",
+            "focus"
+          ],
           "delegatedMethods": []
         }
       }
@@ -76888,6 +77225,12 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-pattern-step",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
             "name": "--lr-chart-tick-color",
             "deprecated": null,
             "hasDefault": true,
@@ -77286,7 +77629,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -77890,7 +78233,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -78638,7 +78981,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -78688,6 +79031,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-radio-group-row-gap",
             "deprecated": null,
@@ -79367,7 +79728,7 @@
           "upstream": "webawesome",
           "tag": "wa-random-content",
           "tier": "free",
-          "classification": "rewritten"
+          "classification": "warning-required"
         }
       ],
       "surface": {
@@ -80018,7 +80379,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -84055,6 +84416,12 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-pattern-step",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
             "name": "--lr-chart-tick-color",
             "deprecated": null,
             "hasDefault": true,
@@ -85640,7 +86007,7 @@
           {
             "name": "lr-hide",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-input",
@@ -85650,12 +86017,12 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-show",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "conditional"
           }
         ],
         "parts": [
@@ -85786,6 +86153,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-transition-fast)"
+          },
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "--lr-select-expand-size",
@@ -87508,7 +87893,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -87610,6 +87995,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-slider-row-size",
             "deprecated": null,
@@ -92932,7 +93335,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -97274,7 +97677,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -97332,6 +97735,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-textarea-border-color",
             "deprecated": null,
@@ -99095,7 +99516,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-show",
@@ -99215,6 +99636,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-duration-fast)"
+          },
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "--show-duration",
@@ -100681,12 +101120,12 @@
           {
             "name": "lr-hide",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-show",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           }
         ],
         "parts": [
@@ -101323,7 +101762,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-remove",
@@ -101379,6 +101818,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-token-input-action-hover-bg",
             "deprecated": null,
@@ -102659,7 +103116,26 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          }
+        ],
         "cssStates": [
           {
             "name": "invalid",
@@ -108721,7 +109197,7 @@
           {
             "name": "lr-invalid",
             "type": "unknown",
-            "cancelable": "never"
+            "cancelable": "always"
           },
           {
             "name": "lr-preview-change",
@@ -108801,6 +109277,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-voice-picker-option-active-bg",
             "deprecated": null,
@@ -110719,7 +111213,21 @@
   ],
   "upstreams": {
     "webawesome": {
-      "package": "@awesome.me/webawesome",
+      "packages": [
+        {
+          "name": "@awesome.me/webawesome",
+          "tiers": [
+            "free"
+          ]
+        },
+        {
+          "name": "@awesome.me/webawesome-pro",
+          "tiers": [
+            "free",
+            "pro"
+          ]
+        }
+      ],
       "version": "3.11.0",
       "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf",
       "components": [
@@ -145675,7 +146183,14 @@
       ]
     },
     "shoelace": {
-      "package": "@shoelace-style/shoelace",
+      "packages": [
+        {
+          "name": "@shoelace-style/shoelace",
+          "tiers": [
+            "free"
+          ]
+        }
+      ],
       "version": "2.20.1",
       "commit": "25bd8ec776609670a932f21390be59a495df497d",
       "components": [
@@ -159276,6 +159791,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159321,7 +159845,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159333,6 +159859,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159357,7 +159892,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159369,6 +159906,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159397,7 +159943,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159409,6 +159957,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159442,7 +159999,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159454,6 +160013,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159483,7 +160051,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159495,6 +160065,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159510,7 +160089,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159522,6 +160103,17 @@
       "classification": "warning-required",
       "rationale": "Lyra derives safe rel=\"noopener noreferrer\" behavior from target and does not expose an independently settable rel; migration leaves the use unchanged and reports the security-sensitive difference.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159544,7 +160136,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": [
         {
@@ -159567,6 +160161,17 @@
       "classification": "warning-required",
       "rationale": "Lyra derives safe rel=\"noopener noreferrer\" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159658,7 +160263,9 @@
           }
         ],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": [
         {
@@ -159678,6 +160285,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159693,7 +160309,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159705,6 +160323,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159720,7 +160347,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159732,6 +160361,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159759,7 +160397,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159771,6 +160411,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159786,7 +160435,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159798,6 +160449,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159860,7 +160520,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159872,6 +160534,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -159959,7 +160630,9 @@
           {
             "method": "setCustomValidity"
           }
-        ]
+        ],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -159971,6 +160644,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160002,7 +160684,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160014,6 +160698,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160046,7 +160739,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160058,6 +160753,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160105,7 +160809,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160117,6 +160823,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160132,7 +160847,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160144,6 +160861,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160198,7 +160924,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160210,6 +160938,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160260,7 +160997,9 @@
             "property": "containingElement"
           }
         ],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160272,6 +161011,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160300,7 +161048,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160312,6 +161062,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160394,7 +161153,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160406,6 +161167,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160434,7 +161204,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160446,6 +161218,17 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": [
+            "dompurify"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160470,7 +161253,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160482,6 +161267,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160506,7 +161300,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160518,6 +161314,15 @@
       "classification": "rewritten",
       "rationale": "The public comparison contract is compatible; Shoelace's prefixed change event is deterministically rewritten to the native bubbling and composed change event exposed by Lyra.",
       "decisionSource": "reviewed",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160538,7 +161343,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160550,10 +161357,27 @@
       "classification": "warning-required",
       "rationale": "Lyra intentionally sanitizes included markup and keeps a same-origin default; uses that depend on cross-origin or script-executing behavior require an explicit security warning rather than a silent rename.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": [
+            "dompurify"
+          ]
+        },
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
         "events": [
+          {
+            "from": "sl-error",
+            "to": "lr-error"
+          },
           {
             "from": "sl-load",
             "to": "lr-load"
@@ -160577,7 +161401,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": [
         {
@@ -160591,11 +161417,6 @@
           "member": "mode",
           "expected": "cors",
           "actual": "same-origin"
-        },
-        {
-          "code": "missing-event",
-          "section": "events",
-          "member": "sl-error"
         },
         {
           "code": "missing-property",
@@ -160612,6 +161433,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160684,7 +161514,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160696,6 +161528,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160716,7 +161557,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160728,6 +161571,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160750,7 +161602,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160762,6 +161616,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160777,7 +161640,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160789,6 +161654,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160809,7 +161683,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160821,6 +161697,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160836,7 +161721,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160848,6 +161735,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160928,7 +161824,9 @@
             "property": "shiftBoundary"
           }
         ],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160940,6 +161838,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160955,7 +161862,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160967,6 +161876,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -160982,7 +161900,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -160994,6 +161914,17 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": [
+            "qrcode"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161029,7 +161960,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161041,6 +161974,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161079,7 +162021,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161091,6 +162035,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161129,7 +162082,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161141,6 +162096,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161202,7 +162166,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161214,6 +162180,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [
           {
@@ -161287,7 +162262,9 @@
             "property": "tooltipFormatter"
           }
         ],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161299,6 +162276,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161328,7 +162314,9 @@
             "property": "getSymbol"
           }
         ],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161340,6 +162328,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161368,7 +162365,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161380,6 +162379,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161400,7 +162408,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161412,6 +162422,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161505,7 +162524,9 @@
             "property": "getTag"
           }
         ],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161517,6 +162538,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161539,7 +162569,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161551,6 +162583,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161566,7 +162607,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161578,6 +162621,15 @@
       "classification": "rewritten",
       "rationale": "The public component contract is compatible and the prefixed sl-reposition event has an explicit deterministic rewrite; dir/lang are platform-global passthrough attributes.",
       "decisionSource": "reviewed",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161605,7 +162657,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161617,6 +162671,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161679,7 +162742,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161691,6 +162756,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161711,7 +162785,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161723,6 +162799,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161760,7 +162845,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161772,6 +162859,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161787,7 +162883,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161799,6 +162897,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161833,7 +162940,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161845,6 +162954,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161913,7 +163031,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161925,6 +163045,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -161964,7 +163093,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -161976,6 +163107,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162003,7 +163143,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162015,6 +163157,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162055,7 +163206,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162067,6 +163220,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162082,7 +163244,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162094,6 +163258,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162151,7 +163324,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162163,6 +163338,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162178,7 +163362,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162190,6 +163376,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162214,7 +163409,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162226,6 +163423,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162254,7 +163460,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162266,6 +163474,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162299,7 +163516,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162311,6 +163530,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162358,7 +163586,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162370,6 +163600,19 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "granular",
+          "optionalPeers": [
+            "chart.js",
+            "chartjs-plugin-datalabels",
+            "chartjs-plugin-zoom"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162416,7 +163659,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162428,6 +163673,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162443,7 +163697,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162455,6 +163711,17 @@
       "classification": "warning-required",
       "rationale": "Lyra derives safe rel=\"noopener noreferrer\" behavior from target and does not expose an independently settable rel; migration leaves the use unchanged and reports the security-sensitive difference.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162477,7 +163744,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": [
         {
@@ -162500,6 +163769,19 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "granular",
+          "optionalPeers": [
+            "chart.js",
+            "chartjs-plugin-datalabels",
+            "chartjs-plugin-zoom"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162546,7 +163828,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162558,6 +163842,17 @@
       "classification": "warning-required",
       "rationale": "Lyra derives safe rel=\"noopener noreferrer\" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162628,7 +163923,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": [
         {
@@ -162648,6 +163945,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162670,7 +163976,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162682,6 +163990,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162716,7 +164033,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162728,6 +164047,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162756,7 +164084,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162768,6 +164098,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [
           {
@@ -162800,7 +164139,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162812,6 +164153,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162827,7 +164177,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162839,6 +164191,19 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "granular",
+          "optionalPeers": [
+            "chart.js",
+            "chartjs-plugin-datalabels",
+            "chartjs-plugin-zoom"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162885,7 +164250,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162897,6 +164264,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162943,7 +164319,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162955,6 +164333,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -162983,7 +164370,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -162995,6 +164384,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163069,7 +164467,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163081,6 +164481,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163168,7 +164577,25 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [
+          {
+            "event": "wa-hide",
+            "upstream": "never",
+            "target": "always"
+          },
+          {
+            "event": "wa-invalid",
+            "upstream": "never",
+            "target": "always"
+          },
+          {
+            "event": "wa-show",
+            "upstream": "never",
+            "target": "conditional"
+          }
+        ],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163180,6 +164607,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163195,7 +164631,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163207,6 +164645,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163244,7 +164691,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163256,6 +164705,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163383,7 +164841,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163395,6 +164855,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163502,7 +164971,15 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [
+          {
+            "event": "wa-invalid",
+            "upstream": "never",
+            "target": "always"
+          }
+        ],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163514,6 +164991,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163581,7 +165067,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163593,6 +165081,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163638,7 +165135,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163650,6 +165149,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163682,7 +165190,16 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": [
+          {
+            "event": "wa-hide",
+            "upstream": "always",
+            "target": "conditional",
+            "addedPath": "an open dialog removed from the document, where the close has already happened and no veto could undo it; every dismissal path the upstream tag documents stays cancelable"
+          }
+        ]
       },
       "drift": []
     },
@@ -163694,6 +165211,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163716,7 +165242,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163728,6 +165256,19 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "granular",
+          "optionalPeers": [
+            "chart.js",
+            "chartjs-plugin-datalabels",
+            "chartjs-plugin-zoom"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163774,7 +165315,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163786,6 +165329,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163825,7 +165377,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163837,6 +165391,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163886,7 +165449,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163898,6 +165463,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [
           {
@@ -163931,7 +165505,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163943,6 +165519,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -163982,7 +165567,15 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [
+          {
+            "event": "wa-invalid",
+            "upstream": "never",
+            "target": "always"
+          }
+        ],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -163994,6 +165587,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164022,7 +165624,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164034,6 +165638,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164116,7 +165729,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164128,6 +165743,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164156,7 +165780,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164168,6 +165794,17 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": [
+            "dompurify"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164211,7 +165848,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164223,6 +165862,19 @@
       "classification": "warning-required",
       "rationale": "Lyra intentionally sanitizes included markup and keeps a same-origin default; uses that depend on cross-origin or script-executing behavior require an explicit security warning rather than a silent rename.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": [
+            "dompurify"
+          ]
+        },
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164254,7 +165906,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": [
         {
@@ -164284,6 +165938,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164346,7 +166009,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164358,6 +166023,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164378,7 +166052,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164390,6 +166066,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164429,7 +166114,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164441,6 +166128,19 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "granular",
+          "optionalPeers": [
+            "chart.js",
+            "chartjs-plugin-datalabels",
+            "chartjs-plugin-zoom"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164487,7 +166187,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164496,9 +166198,26 @@
       "upstreamTag": "wa-markdown",
       "upstreamTier": "free",
       "targetTag": "lr-markdown",
-      "classification": "exact",
-      "rationale": null,
+      "classification": "warning-required",
+      "rationale": "The source and target light-DOM Markdown content models and optional-peer runtime requirements are not mechanically equivalent; migration leaves the use unchanged and reports the required review.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "warning-required",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": [
+            "dompurify",
+            "katex",
+            "marked",
+            "shiki"
+          ]
+        },
+        "behaviorReviewFlags": [
+          "light-dom-markdown-source",
+          "optional-peer-runtime"
+        ]
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164521,7 +166240,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164533,6 +166254,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164553,7 +166283,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164565,6 +166297,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164617,7 +166358,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164629,6 +166372,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164644,7 +166396,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164656,6 +166410,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164728,7 +166491,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164740,6 +166505,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164768,7 +166542,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164780,6 +166556,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164817,7 +166602,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164829,6 +166616,19 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "granular",
+          "optionalPeers": [
+            "chart.js",
+            "chartjs-plugin-datalabels",
+            "chartjs-plugin-zoom"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164875,7 +166675,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164887,6 +166689,19 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "granular",
+          "optionalPeers": [
+            "chart.js",
+            "chartjs-plugin-datalabels",
+            "chartjs-plugin-zoom"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164933,7 +166748,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -164945,6 +166762,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -164997,7 +166823,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165009,6 +166837,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165088,7 +166925,9 @@
             "explicit": true
           }
         ],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165100,6 +166939,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165115,7 +166963,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165127,6 +166977,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165142,7 +167001,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165154,6 +167015,17 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": [
+            "qrcode"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165176,7 +167048,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165188,6 +167062,19 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "granular",
+          "optionalPeers": [
+            "chart.js",
+            "chartjs-plugin-datalabels",
+            "chartjs-plugin-zoom"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165234,7 +167121,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165246,6 +167135,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165287,7 +167185,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165299,6 +167199,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165351,7 +167260,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165360,9 +167271,21 @@
       "upstreamTag": "wa-random-content",
       "upstreamTier": "free",
       "targetTag": "lr-random-content",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "warning-required",
+      "rationale": "Light-DOM candidate eligibility and selection behavior require an explicit compatibility review; migration leaves the use unchanged instead of assuming behavioral equivalence from matching members.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "warning-required",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [
+          "light-dom-candidate-model",
+          "selection-semantics"
+        ]
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165396,7 +167319,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165408,6 +167333,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165458,7 +167392,9 @@
             "explicit": true
           }
         ],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165470,6 +167406,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165498,7 +167443,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165510,6 +167457,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165530,7 +167486,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165542,6 +167500,19 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "granular",
+          "optionalPeers": [
+            "chart.js",
+            "chartjs-plugin-datalabels",
+            "chartjs-plugin-zoom"
+          ]
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165588,7 +167559,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165600,6 +167573,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165622,7 +167604,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165634,6 +167618,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165705,7 +167698,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165717,6 +167712,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165739,7 +167743,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165751,6 +167757,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165796,7 +167811,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165808,6 +167825,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165842,7 +167868,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165854,6 +167882,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165869,7 +167906,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165881,6 +167920,15 @@
       "classification": "rewritten",
       "rationale": "The public component contract is compatible and the prefixed wa-reposition event has an explicit deterministic rewrite; dir/lang are platform-global passthrough attributes and did-ssr is upstream hydration bookkeeping.",
       "decisionSource": "reviewed",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165914,7 +167962,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165926,6 +167976,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165972,7 +168031,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -165984,6 +168045,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -165999,7 +168069,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166011,6 +168083,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166048,7 +168129,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166060,6 +168143,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166075,7 +168167,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166087,6 +168181,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166126,7 +168229,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166138,6 +168243,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166190,7 +168304,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166202,6 +168318,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166279,7 +168404,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166291,6 +168418,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166313,7 +168449,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166325,6 +168463,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166370,7 +168517,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166382,6 +168531,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166434,7 +168592,9 @@
         ],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166446,6 +168606,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166473,7 +168642,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166485,6 +168656,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166525,7 +168705,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166537,6 +168719,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "notes": "Lyra adds load(), validates media and thumbnail URLs, preserves consumer source/track nodes, caps thumbnail VTT input, and rejects unsupported fullscreen requests. These fail-closed additions do not change the documented safe-use contract.",
       "rewrites": {
         "attributes": [],
@@ -166566,7 +168757,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166578,6 +168771,15 @@
       "classification": "rewritten",
       "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "notes": "Lyra preserves the reviewed direct-child, first-active, navigation, control-forwarding, immutable event-snapshot, and ended auto-advance behavior. It adds autoAdvance and repeat controls without removing or changing the mapped upstream surface.",
       "rewrites": {
         "attributes": [],
@@ -166606,7 +168808,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     },
@@ -166618,6 +168822,15 @@
       "classification": "exact",
       "rationale": null,
       "decisionSource": "derived",
+      "parity": {
+        "staticApi": "reviewed",
+        "lightDom": "surface-only",
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": []
+      },
       "rewrites": {
         "attributes": [],
         "properties": [],
@@ -166640,7 +168853,9 @@
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
-        "unknownMethodReturnTypes": []
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": []
       },
       "drift": []
     }

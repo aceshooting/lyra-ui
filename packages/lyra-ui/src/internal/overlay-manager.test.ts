@@ -1043,6 +1043,114 @@ it('excludes an inert focus candidate from the collected list', () => {
   root.remove();
 });
 
+function createScrollRegion(overflow: string, contentHeight: string): { root: HTMLDivElement; region: HTMLDivElement } {
+  const root = document.createElement('div');
+  const region = document.createElement('div');
+  region.id = 'scroll-region';
+  region.tabIndex = -1;
+  region.style.overflow = overflow;
+  region.style.blockSize = '40px';
+  region.style.inlineSize = '80px';
+  const filler = document.createElement('div');
+  filler.style.blockSize = contentHeight;
+  filler.textContent = 'prose';
+  region.append(filler);
+  root.append(region);
+  document.body.append(root);
+  return { root, region };
+}
+
+it('treats an overflowing scroll region as a tab stop even when its tabindex is negative', () => {
+  const { root, region } = createScrollRegion('auto', '400px');
+  try {
+    const focusable = collectFocusableElements(root);
+    expect(focusable.length).to.equal(1);
+    expect(focusable[0]?.id).to.equal(region.id);
+  } finally {
+    root.remove();
+  }
+});
+
+it('treats an explicit overflow:scroll region as a tab stop even without real overflow', () => {
+  const { root, region } = createScrollRegion('scroll', '5px');
+  try {
+    const focusable = collectFocusableElements(root);
+    expect(focusable.length).to.equal(1);
+    expect(focusable[0]?.id).to.equal(region.id);
+  } finally {
+    root.remove();
+  }
+});
+
+it('leaves a non-overflowing overflow:auto region out of the tab order', () => {
+  const { root } = createScrollRegion('auto', '5px');
+  try {
+    expect(collectFocusableElements(root).length).to.equal(0);
+  } finally {
+    root.remove();
+  }
+});
+
+it('honours tabindex="-1" on a natively focusable control even when it scrolls', () => {
+  const root = document.createElement('div');
+  const textarea = document.createElement('textarea');
+  textarea.tabIndex = -1;
+  textarea.style.overflow = 'auto';
+  textarea.style.blockSize = '20px';
+  textarea.value = 'line\n'.repeat(40);
+  root.append(textarea);
+  document.body.append(root);
+  try {
+    expect(textarea.scrollHeight, 'fixture must overflow').to.be.greaterThan(textarea.clientHeight);
+    expect(collectFocusableElements(root).length).to.equal(0);
+  } finally {
+    root.remove();
+  }
+});
+
+it('keeps a non-scrolling tabindex="-1" element out of the tab order', () => {
+  const root = document.createElement('div');
+  const panel = document.createElement('div');
+  panel.tabIndex = -1;
+  panel.style.overflow = 'visible';
+  root.append(panel);
+  document.body.append(root);
+  try {
+    expect(collectFocusableElements(root).length).to.equal(0);
+  } finally {
+    root.remove();
+  }
+});
+
+it('keeps Tab inside a panel whose only stop is an overflowing scroll region', () => {
+  const host = document.createElement('section');
+  host.dataset.overlay = 'scroll-panel';
+  const panel = document.createElement('div');
+  panel.tabIndex = -1;
+  const region = document.createElement('div');
+  region.id = 'trapped-scroll-region';
+  region.tabIndex = -1;
+  region.style.overflow = 'auto';
+  region.style.blockSize = '40px';
+  const filler = document.createElement('div');
+  filler.style.blockSize = '400px';
+  region.append(filler);
+  panel.append(region);
+  host.append(panel);
+  document.body.append(host);
+  const handle = activateOverlay({ host, panel: () => panel, onEscape: () => undefined });
+  try {
+    panel.focus();
+    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+    expect(event.defaultPrevented).to.be.true;
+    expect((deepActiveElement(document) as HTMLElement | null)?.id).to.equal(region.id);
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+    host.remove();
+  }
+});
+
 it('falls back to getClientRects when checkVisibility is unavailable on the element', () => {
   const root = document.createElement('div');
   const button = document.createElement('button');

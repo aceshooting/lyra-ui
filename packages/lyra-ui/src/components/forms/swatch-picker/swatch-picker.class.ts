@@ -140,7 +140,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     this.selectedIndex = index;
     this.value = option.value;
     if (previousValue === option.value) this.requestUpdate();
-    this.emit<{ value: string }>('lr-change', { value: option.value });
+    this.emit('lr-change', { value: option.value });
   }
 
   private focusSwatch(index: number): void {

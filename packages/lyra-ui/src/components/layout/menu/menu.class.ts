@@ -170,9 +170,11 @@ export interface LyraMenuEventMap {
  * not). Collapses to no box at all while unfilled.
  * @slot footer - Same as `header`, rendered below the items — an
  * "Apply"/"Done" button, a link to a fuller settings page, a count.
- * @event lr-show - The menu opened. Not fired for markup that renders
- * `open` true from the start (mirrors `<lr-select>`'s identical guard).
- * @event lr-hide - The menu closed. Same first-render guard as `lr-show`.
+ * @event lr-show - The menu is about to open, however `open` became true. Cancelable —
+ *   `preventDefault()` leaves it closed. Not fired for markup that renders open from the start,
+ *   nor by a menu inside an `lr-dropdown`, whose owner runs the lifecycle instead.
+ * @event lr-hide - The menu is about to close. Cancelable on the same terms as `lr-show`, except
+ *   on disconnect, where a veto could not be honoured.
  * @event lr-menu-select - A `<lr-menu-item>` was activated. `detail: {
  * value }` — the consolidated re-fire of that item's own
  * `lr-menu-item-select` (see `<lr-menu-item>`'s doc for why listening
@@ -273,6 +275,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private cleanup?: () => void;
   private itemStateObserver?: MutationObserver;
   private _isFirstUpdate = true;
+  private openVetoed = false;
   private pendingFocus: MenuFocusTarget = "first";
   private submenuOpenTimer?: ReturnType<typeof setTimeout>;
   private submenuCloseTimer?: ReturnType<typeof setTimeout>;
@@ -293,6 +296,34 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
+    this.announceOpenTransition(changed);
+  }
+
+  /**
+   * Emits the cancelable `lr-show`/`lr-hide` veto point for this update's `open` transition.
+   *
+   * It lives here rather than in `updated()` because a veto has to be answered *before* anything
+   * observable happens: `willUpdate()` still runs ahead of render and attribute reflection, so
+   * restoring `open` here leaves the menu, the reflected attribute and the property agreeing with
+   * each other without a visible open-then-close flash. Keeping it on the `open` transition
+   * (rather than inside `show()`/`hide()`) preserves the existing rule that the lifecycle fires
+   * however `open` changed, including a direct `el.open = true` that bypasses both methods. A
+   * dropdown-contained menu announces nothing here -- its owning `lr-dropdown` runs the lifecycle,
+   * and two vetoable events for one transition would be worse than none.
+   */
+  private announceOpenTransition(changed: PropertyValues): void {
+    this.openVetoed = false;
+    if (!changed.has("open") || this._isFirstUpdate || this.dropdownContained) return;
+    const name = this.open ? "lr-show" : "lr-hide";
+    // Removal cannot be vetoed -- the element is already gone -- so the disconnect-driven close
+    // is announced without offering a veto nobody could honour.
+    if (!this.isConnected) {
+      this.emit(name);
+      return;
+    }
+    if (!this.emit(name, undefined, { cancelable: true }).defaultPrevented) return;
+    this.openVetoed = true;
+    this.open = !this.open;
   }
 
   protected override firstUpdated(): void {
@@ -335,20 +366,22 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has("open") || changed.has("dropdownContained")) {
-      const openChanged = changed.has("open");
+    // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it
+    // while nothing about the state actually moved: tearing down and rebuilding the popup
+    // machinery here would undo the veto it was meant to honour.
+    if ((changed.has("open") || changed.has("dropdownContained")) && !this.openVetoed) {
       this.cleanup?.();
       this.cleanup = undefined;
       // All open-driven side effects (positioning, the click-outside
-      // listener, the lr-show/lr-hide events, and moving focus into the
-      // menu) live here rather than in show()/hide() so they fire however
-      // `open` became true -- via show()/hide()'s own user-interaction
-      // paths, or a consumer/test setting `el.open` directly, which bypasses
-      // both. Mirrors lr-select's identical updated()-centralized approach.
+      // listener, and moving focus into the menu) live here rather than in
+      // show()/hide() so they fire however `open` became true -- via
+      // show()/hide()'s own user-interaction paths, or a consumer/test
+      // setting `el.open` directly, which bypasses both. Mirrors lr-select,
+      // whose lr-show/lr-hide veto point likewise runs one step earlier, in
+      // willUpdate().
       if (this.open) {
         if (!this.dropdownContained) {
           document.addEventListener("pointerdown", this.onDocPointer);
-          if (openChanged && !this._isFirstUpdate) this.emit("lr-show");
         } else {
           document.removeEventListener("pointerdown", this.onDocPointer);
         }
@@ -376,7 +409,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         // outside-click listener and, on reopen, come back already expanded.
         this.clearSubmenuTimers();
         this.closeSubmenus();
-        if (!this.dropdownContained && openChanged && !this._isFirstUpdate) this.emit("lr-hide");
       }
       if (!this.dropdownContained) this.syncTriggerA11y();
     } else if (!this.dropdownContained && this.open && (changed.has("placement") || changed.has("anchor"))) {
@@ -566,7 +598,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       for (const item of this.items) {
         this.itemStateObserver.observe(item, {
           attributes: true,
-          attributeFilter: ["disabled", "hidden", "aria-hidden"],
+          attributeFilter: ["disabled", "hidden", "aria-hidden", "inert"],
         });
       }
     }
@@ -591,11 +623,17 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
   };
 
+  /** `inert` counts alongside disabled/hidden because an inert element *refuses* focus: stepping
+   *  onto one leaves `focus()` a silent no-op, so roving focus is stranded on whatever held it
+   *  (or on `<body>`) and every later key press dies. `closest` covers an inert ancestor, which
+   *  inerts the item just as completely as the attribute on the item itself. */
   private isNavigable(item: LyraMenuItem): boolean {
     return (
       !item.interactionDisabled &&
       !item.hidden &&
-      item.getAttribute("aria-hidden") !== "true"
+      item.getAttribute("aria-hidden") !== "true" &&
+      !item.inert &&
+      !item.closest("[inert]")
     );
   }
 
@@ -638,8 +676,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // without stopping it here it would keep bubbling straight through this component under its
     // own, undocumented name, right behind the consolidated lr-menu-select below.
     e.stopPropagation();
-    const selectEvent = this.emit<MenuItemSelectDetail>("lr-select", { item }, { cancelable: true });
-    this.emit<MenuSelectDetail>("lr-menu-select", { value: item.value });
+    const selectEvent = this.emit("lr-select", { item }, { cancelable: true });
+    this.emit("lr-menu-select", { value: item.value });
     if (!selectEvent.defaultPrevented && !this.dropdownStayOpenOnSelect) {
       this.hide({ focusTrigger: true });
     }

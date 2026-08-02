@@ -1,10 +1,11 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
+  isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
@@ -152,7 +153,9 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @event blur - Native blur relayed once from the thumb losing focus.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-invalid - The slider failed a validity check.
+ * @event lr-invalid - The slider failed a validity check. Cancelable: calling `preventDefault()`
+ * also cancels the native `invalid` event behind it, suppressing the browser's own validation
+ * bubble so an app can present the failure its own way.
  * @slot label - Rich visible label content, appended after the plain `label` property.
  * @slot hint - Rich hint content, replacing the plain-text `hint` attribute.
  * @slot help-text - Shoelace-compatible alias for the `hint` slot.
@@ -218,6 +221,13 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  *   `tooltipDistance` property for the internal tooltip-placement calculation.
  * @cssprop --marker-width - Marker inline size.
  * @cssprop --marker-height - Marker block size.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
+ * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
+ * other quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Required-marker color,
+ * themeable independently of error text and invalid borders.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * required marker.
  * @cssstate disabled - The control is disabled directly or by a fieldset.
  * @cssstate dragging - At least one pointer drag is active.
  * @cssstate focused - One of the thumbs owns focus.
@@ -309,7 +319,7 @@ export class LyraSlider extends LyraSliderBase {
       () => this[VALIDITY_ANCHOR](),
     );
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
     this.internals.setFormValue('0', '0');
     this.addEventListener('input', this.markInteracted);
     this.addEventListener('change', this.markInteracted);
@@ -410,6 +420,9 @@ export class LyraSlider extends LyraSliderBase {
     this.toggleAttribute('disabled', this._disabled);
     if (this._disabled) this.pendingKeyHandle = null;
     this.syncInteractionStates();
+    // Disabling bars constraint validation, so the validity states are republished here rather than
+    // left matching `:state(invalid)` on a control the browser will never enforce.
+    this.syncValidityStates();
     this.requestUpdate('disabled', old);
   }
 
@@ -642,6 +655,18 @@ export class LyraSlider extends LyraSliderBase {
     this.syncInteractionStates();
   }
 
+  /**
+   * `readonly` is a plain reactive property, and the platform reads its reflected *attribute* when
+   * it answers `internals.willValidate` — so the barred recomputation behind the validity custom
+   * states can only be correct once reflection has run. `disabled` has a hand-written setter that
+   * already republishes synchronously; this covers the other barring channel.
+   */
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (!changed.has('readonly')) return;
+    this.syncValidityStates();
+  }
+
   protected override firstUpdated(): void {
     if (!this.autofocus) return;
     requestAnimationFrame(() => {
@@ -690,6 +715,8 @@ export class LyraSlider extends LyraSliderBase {
     this._fieldsetDisabled = fieldsetDisabled;
     if (fieldsetDisabled) this.pendingKeyHandle = null;
     this.syncInteractionStates();
+    // Cascaded disablement bars constraint validation exactly like the slider's own `disabled`.
+    this.syncValidityStates();
     this.requestUpdate();
   }
 
@@ -761,10 +788,17 @@ export class LyraSlider extends LyraSliderBase {
     this.syncValidityStates();
   }
 
+  /** Shared with every other form control: disabled (own or fieldset-cascaded) and `readonly` bar
+   *  validation, so neither `:state(invalid)` nor `:state(user-invalid)` may publish from one. */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   private syncValidityStates(): void {
     syncValidityStates(this.internals, {
       required: this.required,
       hasInteracted: this._hasInteracted,
+      barred: this.barredFromValidation,
     });
   }
 

@@ -29,6 +29,8 @@ export interface PromptStudioState {
   variables: PromptStudioVariable[];
 }
 export interface LyraPromptStudioEventMap {
+  focus: CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
   'lr-change': CustomEvent<PromptStudioState>;
   'lr-run': CustomEvent<PromptStudioState>;
   'lr-save': CustomEvent<PromptStudioState>;
@@ -45,6 +47,9 @@ export interface LyraPromptStudioEventMap {
  * @event lr-run - The current prompt was requested for execution.
  * @event lr-save - The current prompt was requested for persistence.
  * @event lr-version-select - A complete saved version was activated.
+ * @event focus - Re-dispatched when the message textarea or a variable input receives focus,
+ *   since native focus neither bubbles nor crosses the shadow boundary.
+ * @event blur - Re-dispatched when the message textarea or a variable input loses focus.
  * @csspart base - The named studio region.
  * @csspart toolbar - Save/run controls.
  * @csspart editor - Messages and variables workspace.

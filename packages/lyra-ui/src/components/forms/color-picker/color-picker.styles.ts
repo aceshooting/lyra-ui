@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -51,16 +52,12 @@ export const styles = css`
   }
   /* [part]:empty never matches -- the part always contains a literal <slot> child element
      regardless of assigned content -- so real emptiness is tracked in JS (hasLabel/hasHint/
-     hasError) and reflected via the hidden attribute instead. Without this, the required-asterisk
-     ::after below (which attaches to this box) would render a stray ' *' with nothing before it
+     hasError) and reflected via the hidden attribute instead. Without this, the required marker below (which attaches to this box) would render a stray glyph with nothing before it
      whenever label is unset. */
   [part~='label'][hidden] {
     display: none;
   }
-  :host([required]) [part~='label']::after {
-    content: ' *';
-    color: var(--lr-color-danger);
-  }
+  ${formControlRequiredMarker}
 
   /* The alpha checkerboard every translucent surface sits on. A conic-gradient tile beats four
      stacked linear gradients and needs no extra element. */
@@ -74,6 +71,33 @@ export const styles = css`
       transparent 270deg 360deg
     );
     background-size: var(--lr-color-picker-checker-size) var(--lr-color-picker-checker-size);
+  }
+
+  /* These pixels communicate the selected color itself. Letting forced-colors replace them with
+     a system color makes every hue, alpha value, and palette entry indistinguishable.
+
+     The opt-out is declared on the color-bearing ELEMENTS, not on the pseudo-elements that happen
+     to paint them. The hue and opacity ramps used to be opted out only through their ::before, and
+     since forced-color-adjust is an INHERITED property that left the slider element itself
+     answering "auto" — so a consumer (or an a11y audit) reading the element's computed value was
+     told the ramp is system-controlled, which is the opposite of the truth, and any colour the
+     element itself paints (its own background, the checkerboard behind the alpha ramp) was still
+     rewritten out from under the ramp drawn on top of it. Declaring it on the element covers the
+     pseudo-element by inheritance, so one rule states one fact.
+
+     Still deliberately limited to the surfaces that ARE the data: the panel, text field, action
+     buttons, focus outlines, and disabled chrome keep the UA default. The trigger element stays off
+     the list for exactly that reason — the button's border, focus ring and disabled treatment are
+     chrome; only the two pseudo-elements painting the swatch inside it are the value. */
+  [part~='grid'],
+  [part~='preview'],
+  [part~='swatch'],
+  [part~='hue-slider'],
+  [part~='opacity-slider'],
+  [part~='slider-handle'],
+  [part~='trigger']::before,
+  [part~='trigger']::after {
+    forced-color-adjust: none;
   }
 
   [part='trigger-container'] {

@@ -439,3 +439,74 @@ it('does not create one gutter element per line for very large values', async ()
   expect(el.shadowRoot!.querySelectorAll('[part="gutter"] > *').length).to.be.lessThan(100);
   expect(el.shadowRoot!.querySelector('[part="gutter"]')!.textContent).to.contain('10000');
 });
+
+it('paints the required marker as generated content the accessible name never sees', async () => {
+  // Rendered proof, not stylesheet text: the marker used to be a literal
+  // <span aria-hidden="true">*</span> in the template, a third shape alongside the shared rule and
+  // the hand-copied per-component ones. Generated content also cannot reach the label's accessible
+  // name, and it stays suppressible/retunable through the three shared custom properties.
+  const el = (await fixture(
+    html`<lr-code-editor label="Config" required></lr-code-editor>`,
+  )) as LyraCodeEditor;
+  const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+  expect(label.querySelector('span')).to.equal(null);
+  expect(getComputedStyle(label, '::after').content).to.contain('*');
+  expect(label.textContent!.trim()).to.equal('Config');
+
+  const optional = (await fixture(
+    html`<lr-code-editor label="Config"></lr-code-editor>`,
+  )) as LyraCodeEditor;
+  const optionalLabel = optional.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(optionalLabel, '::after').content).to.not.contain('*');
+});
+
+it('lets a consumer suppress and retune the required marker through the shared properties', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor label="Config" required style="--lr-form-control-required-content: ''"></lr-code-editor>`,
+  )) as LyraCodeEditor;
+  const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label, '::after').content).to.not.contain('*');
+
+  el.setAttribute(
+    'style',
+    "--lr-form-control-required-content: ' (required)'; --lr-form-control-required-offset: 4px",
+  );
+  await el.updateComplete;
+  const after = getComputedStyle(label, '::after');
+  expect(after.content).to.contain('(required)');
+  expect(after.marginInlineStart).to.equal('4px');
+});
+
+it('bars constraint validation while disabled, fieldset-disabled or readonly', async () => {
+  const el = (await fixture(html`<lr-code-editor required disabled></lr-code-editor>`)) as LyraCodeEditor;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'disabled + required').to.be.false;
+  expect(el.matches(':state(invalid)'), 'disabled must not be :state(invalid)').to.be.false;
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'enabled again').to.be.true;
+
+  el.readonly = true;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'readonly + required').to.be.false;
+  expect(el.matches(':state(invalid)'), 'readonly must not be :state(invalid)').to.be.false;
+});
+
+it('emits a cancelable lr-invalid alias whose cancellation reaches the native invalid event', async () => {
+  const el = (await fixture(html`<lr-code-editor required></lr-code-editor>`)) as LyraCodeEditor;
+  const aliases: CustomEvent[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
+  expect(aliases[0].cancelable).to.be.true;
+
+  el.addEventListener('lr-invalid', (event) => event.preventDefault());
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
+  expect(el.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.true;
+});

@@ -145,6 +145,13 @@ export const styles = css`
     padding: var(--body-spacing, var(--spacing, var(--lr-dialog-spacing, var(--lr-space-l))));
     overflow: auto;
   }
+  /* The body carries tabindex="-1" so an overflowing dialog can be scrolled from the keyboard;
+     once it can hold focus it has to say so. Inset offset because the body is flush with the
+     panel edges, where an outset ring would be clipped or would overlap the header rule. */
+  [part='body']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+  }
   [part='footer'] {
     display: flex;
     align-items: center;

@@ -2,6 +2,7 @@ import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGT
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { closeIcon, expandIcon, fileIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './attachment-chip.styles.js';
@@ -116,7 +117,7 @@ export interface LyraAttachmentChipEventMap {
  * @csspart name - The filename (ellipsis-truncated via CSS; the untruncated name is always available via the native `title` tooltip).
  * @csspart size - The human-readable formatted file size, from `bytes` (or the `file`'s own byte
  * count). Hidden when no size is known.
- * @csspart status-text - The visible text twin of the status accent color — carries the state in text, not just color. Empty/hidden for `pending`/`done`. Gets `role="alert"` for `status="error"` only, so a screen-reader user not already focused on the chip still hears an upload failure; the ticking `'uploading'` readout deliberately stays out of the accessibility tree the same way `<lr-generation-status>`'s per-second elapsed/token readout does — a live region re-announcing every progress tick would be noise, not information, while a one-shot failure is exactly the kind of infrequent, actionable transition a live region exists for.
+ * @csspart status-text - The visible text twin of the status accent color — carries the state in text, not just color. Empty/hidden for `pending`/`done`. Plain visible text, so it reads normally once a user reaches the chip; the interrupting announcement that a transition *into* `status="error"` makes (so a screen-reader user not already focused on the chip still hears an upload failure) goes through the shared light-DOM assertive region (`acquireAnnouncementSink()` in `internal/announcer.ts`) rather than a shadow `role="alert"`, which is not reliably announced. The ticking `'uploading'` readout deliberately announces nothing at all, the same way `<lr-generation-status>`'s per-second elapsed/token readout does — a live region re-announcing every progress tick would be noise, not information, while a one-shot failure is exactly the kind of infrequent, actionable transition a live region exists for.
  * @csspart progress - The numeric upload progress bar (`role="progressbar"`), shown only while `status="uploading"` and `progress` is a meaningful (>0) number.
  * @csspart progress-fill - The filled portion of `progress`.
  * @csspart spinner - The indeterminate upload spinner, shown instead of `progress` while `status="uploading"` and `progress` is unset/0.
@@ -232,6 +233,10 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   private objectUrlFile?: File;
 
   @state() private previewOpen = false;
+  /** Handle on the shared light-DOM assertive region an upload failure announces through -- a
+   *  region rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores
+   *  one outright), so `[part="status-text"]` is plain visible text and carries no live role. */
+  private sink?: AnnouncementSink;
 
   // Last-resort id, generated once per instance -- see the class doc's
   // "Identifying which attachment..." section.
@@ -288,6 +293,9 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // Acquired on connect, not on the first failure: assistive tech has to have been observing a
+    // live region *before* text arrives for the change to be announced at all.
+    this.sink ??= acquireAnnouncementSink('assertive', { document: this.ownerDocument });
     if (this.hasUpdated) this.requestUpdate();
   }
 
@@ -297,6 +305,13 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
       (changed.has('file') || changed.has('previewSrc') || changed.has('mimeType') || changed.has('name'))
     ) {
       this.previewOpen = false;
+    }
+    // Only a *transition* into `error` announces: a chip that mounts already failed is history a
+    // user can read at their own pace, and re-announcing every render would be spam. Announced
+    // from the transition rather than from rendered text, so a retry that fails the same way twice
+    // is read twice instead of the second failure being a silent no-op.
+    if (this.hasUpdated && changed.has('status') && this.status === 'error') {
+      this.sink?.announce(this.localizedUploadFailedLabel);
     }
     // Prepare or revoke the non-reactive cache before render. This keeps URL
     // allocation out of the render phase and also handles a file changing to
@@ -310,20 +325,31 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     super.disconnectedCallback();
     this.previewOpen = false;
     this.revokeObjectUrl();
+    this.sink?.release();
+    this.sink = undefined;
+  }
+
+  /** The localized upload-failure message. Same override-wins-verbatim rule as `untitledLabel`;
+   *  read both by `render()` and by the failure announcement in `willUpdate()`. */
+  private get localizedUploadFailedLabel(): string {
+    return this.localize(
+      'attachmentUploadFailed',
+      this.uploadFailedLabel === 'Upload failed' ? undefined : this.uploadFailedLabel,
+    );
   }
 
   private onRemoveClick = (): void => {
-    this.emit<AttachmentChipIdDetail>('lr-remove', { id: this.resolvedId });
+    this.emit('lr-remove', { id: this.resolvedId });
   };
 
   private onRetryClick = (): void => {
-    this.emit<AttachmentChipIdDetail>('lr-retry', { id: this.resolvedId });
+    this.emit('lr-retry', { id: this.resolvedId });
   };
 
   private onPreviewClick = (): void => {
     if (!this.effectivePreviewSrc) return;
     this.previewOpen = true;
-    this.emit<AttachmentChipPreviewDetail>('lr-preview', {
+    this.emit('lr-preview', {
       id: this.resolvedId,
       name: this.effectiveName,
       mimeType: this.effectiveMimeType,
@@ -378,10 +404,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
           )
         : '';
     // Same override-wins-verbatim rule as `untitledLabel` above.
-    const uploadFailedLabel = this.localize(
-      'attachmentUploadFailed',
-      this.uploadFailedLabel === 'Upload failed' ? undefined : this.uploadFailedLabel,
-    );
+    const uploadFailedLabel = this.localizedUploadFailedLabel;
     const progressPercent = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 0 }).format(
       Math.round(this.clampedProgress),
     );
@@ -422,7 +445,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
         >
           <span part="name" title=${name || untitledLabel}>${displayName}</span>
           <span part="size" ?hidden=${!sizeText}>${sizeText || nothing}</span>
-          <span part="status-text" role=${this.status === 'error' ? 'alert' : nothing} ?hidden=${!text}>${text || nothing}</span>
+          <span part="status-text" ?hidden=${!text}>${text || nothing}</span>
         </span>
         ${uploading
           ? this.hasNumericProgress

@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import {
+  autocorrectConverter,
   presenceTrueDefaultBooleanConverter,
   spellcheckConverter,
   spellcheckFromAttributeConverter,
@@ -40,4 +41,13 @@ it('parses spellcheck using the browser-compatible false vocabulary', () => {
   expect(trueDefaultSpellcheckConverter.toAttribute?.(false, undefined)).to.equal('false');
   expect(spellcheckFromAttributeConverter.fromAttribute?.('false', undefined)).to.equal(false);
   expect(spellcheckFromAttributeConverter.toAttribute).to.equal(undefined);
+});
+
+it('serializes autocorrect through its enumerated on/off vocabulary', () => {
+  expect(autocorrectConverter.fromAttribute?.(null, undefined)).to.equal(true);
+  expect(autocorrectConverter.fromAttribute?.('on', undefined)).to.equal(true);
+  expect(autocorrectConverter.fromAttribute?.('false', undefined)).to.equal(false);
+  expect(autocorrectConverter.fromAttribute?.('off', undefined)).to.equal(false);
+  expect(autocorrectConverter.toAttribute?.(true, undefined)).to.equal('on');
+  expect(autocorrectConverter.toAttribute?.(false, undefined)).to.equal('off');
 });

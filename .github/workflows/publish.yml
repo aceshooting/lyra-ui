@@ -21,6 +21,13 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # A protected environment is the only thing that can hold a publish *before* the job's
+    # npm credentials are minted. Configure required reviewers on it in repository settings;
+    # the deployment gate then applies to `workflow_dispatch` re-publishes too, not just
+    # releases cut through the normal flow.
+    # (No `url:` here -- the deployment is created before any step runs, so the `steps` context
+    # is not yet populated and an expression over it would resolve to the empty string.)
+    environment: npm-publish
     permissions:
       contents: write
       id-token: write
@@ -48,6 +55,71 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.tag.outputs.tag }}
+
+      # Nothing else in this workflow proves the code being published was ever tested. A release
+      # can be cut from a commit whose CI never ran, ran on a *different* commit, or failed --
+      # and `npm publish` is irreversible for a given version. Require that every CI job this
+      # repository gates `main` on concluded `success` for the exact commit the tag resolves to.
+      - name: Require green CI for the exact release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          SHA="$(git rev-parse HEAD^{commit})"
+          echo "Tag '$TAG' resolves to commit $SHA"
+
+          # `?per_page=100 --paginate` covers repos with more check runs than one page; the
+          # matrix legs of platform-contracts alone contribute four.
+          runs="$(gh api \
+            "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs?per_page=100" \
+            --paginate --jq '.check_runs[] | [.name, .status, (.conclusion // "pending")] | @tsv')"
+
+          if [[ -z "$runs" ]]; then
+            echo "::error::No check runs recorded for $SHA -- CI never ran for this commit. Refusing to publish."
+            exit 1
+          fi
+
+          echo "Check runs for $SHA:"
+          printf '%s\n' "$runs" | awk -F'\t' '{printf "  %-46s %s/%s\n", $1, $2, $3}'
+
+          failed=0
+
+          # 1. Nothing may be failing or still in flight. `skipped` is accepted only for jobs a
+          #    path filter legitimately skipped; `neutral` likewise. Anything else is fatal.
+          while IFS=$'\t' read -r name status conclusion; do
+            [[ -z "$name" ]] && continue
+            if [[ "$status" != "completed" ]]; then
+              echo "::error::Check '$name' is '$status' for $SHA -- CI has not finished."
+              failed=1
+            elif [[ "$conclusion" != "success" && "$conclusion" != "skipped" && "$conclusion" != "neutral" ]]; then
+              echo "::error::Check '$name' concluded '$conclusion' for $SHA."
+              failed=1
+            fi
+          done <<< "$runs"
+
+          # 2. Every required job must be *present* and successful -- a deleted or never-started
+          #    job would otherwise pass step 1 vacuously.
+          for required in lint static-checks build-and-coverage packed-consumer docs-and-storybook visual-regression; do
+            if ! printf '%s\n' "$runs" | awk -F'\t' -v j="$required" '$1 == j && $3 == "success" {found=1} END {exit !found}'; then
+              echo "::error::Required CI job '$required' did not record a successful run for $SHA."
+              failed=1
+            fi
+          done
+
+          # 3. platform-contracts is a browser x Node matrix, so its check names are dynamic
+          #    ("firefox / Node 20", ...). Require at least one leg, and no failing leg (already
+          #    enforced by step 1).
+          if ! printf '%s\n' "$runs" | awk -F'\t' '$1 ~ /Node [0-9]+$/ && $3 == "success" {found=1} END {exit !found}'; then
+            echo "::error::No successful platform-contracts matrix leg recorded for $SHA."
+            failed=1
+          fi
+
+          if [[ "$failed" -ne 0 ]]; then
+            echo "::error::Refusing to publish $TAG -- CI is not green for $SHA."
+            exit 1
+          fi
+          echo "All required CI jobs are green for $SHA."
 
       - name: Resolve package from tag
         id: pkg

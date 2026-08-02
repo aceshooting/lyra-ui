@@ -7,6 +7,7 @@ import { resolveCssLength } from '../../../internal/css-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { finiteCount, finiteDuration, finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -176,7 +177,10 @@ function normalizedGroupBy(value: string | string[] | null): string[] {
  * @csspart header - Header row.
  * @csspart header-cell - A column header cell.
  * @csspart last-button - Last-page button.
- * @csspart live-region - Polite assistive-technology announcements.
+ * @csspart live-region - The visually-hidden, `aria-hidden` mirror of the last polite
+ * announcement. The announcement itself lands in the shared light-DOM polite region
+ * (`acquireAnnouncementSink()` in `internal/announcer.ts`), because a live region inside a shadow
+ * root is not reliably announced; this part is a styling/inspection surface only.
  * @csspart loading-overlay - Loading-state overlay.
  * @csspart next-button - Next-page button.
  * @csspart no-results - No-filter-results state.
@@ -340,9 +344,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   private resizeSession?: ResizeSession;
   private lastSelectedIndex = -1;
   private isMounting = true;
+  /** Handle on the shared light-DOM live region announcements actually go through -- a region
+   *  rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores one
+   *  outright), so `[part="live-region"]` is only an `aria-hidden` mirror. */
+  private sink?: AnnouncementSink;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // Acquired on connect, not on the first announcement: assistive tech has to have been
+    // observing a live region *before* text arrives for the change to be announced at all.
+    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
     if (this.dataSource) this.scheduleServerRequest(false);
   }
 
@@ -359,6 +370,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     this.activeColumnMenu = null;
     this.columnsMenuOpen = false;
     this.dragGhost = '';
+    this.sink?.release();
+    this.sink = undefined;
     super.disconnectedCallback();
   }
 
@@ -436,6 +449,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
       this.scheduleServerRequest(delayed);
     }
     this.isMounting = false;
+  }
+
+  /** Send `text` to assistive tech. It goes to the shared light-DOM region -- appended as a new
+   *  child node, so an identical repeat (copying twice in a row) is read again rather than being a
+   *  silent no-op -- and is mirrored into `[part="live-region"]` for styling/inspection only. */
+  private announce(text: string): void {
+    this.sink?.announce(text);
+    this.liveText = text;
   }
 
   private get usesServerData(): boolean {
@@ -573,7 +594,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
       delimiter: format === 'csv' ? ',' : '\t',
     });
     this.writeClipboard(text);
-    if (!this.isMounting) this.liveText = this.localize('copied');
+    if (!this.isMounting) this.announce(this.localize('copied'));
     return rowsToCopy.length;
   }
 
@@ -1480,12 +1501,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
       return;
     }
     const rtlMultiplier = this.effectiveDirection === 'rtl' ? -1 : 1;
-    if (event.ctrlKey && event.key.toLocaleLowerCase() === 'a' && this.selectionMode === 'multiple') {
+    if (event.ctrlKey && event.key.toLowerCase() === 'a' && this.selectionMode === 'multiple') {
       this.selectCurrentPage(true);
       event.preventDefault();
       return;
     }
-    if (event.ctrlKey && event.key.toLocaleLowerCase() === 'c') {
+    if (event.ctrlKey && event.key.toLowerCase() === 'c') {
       this.copySelectedRows();
       event.preventDefault();
       return;
@@ -2095,7 +2116,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
           </div>
         ` : nothing}
         ${this.renderPager()}
-        <div part="live-region" class="sr-only" aria-live="polite" aria-atomic="true">${this.liveText}</div>
+        <div part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</div>
         ${this.dragGhost ? html`<div part="drag-ghost">${this.dragGhost}</div>` : nothing}
       </div>
     `;

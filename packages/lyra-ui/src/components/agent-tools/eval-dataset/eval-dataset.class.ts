@@ -189,7 +189,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
 
   private onAddClick = (): void => {
     if (this.disabled) return;
-    this.emit<undefined>('lr-example-add-request');
+    this.emit('lr-example-add-request');
   };
 
   private onRemoveClick = (): void => {

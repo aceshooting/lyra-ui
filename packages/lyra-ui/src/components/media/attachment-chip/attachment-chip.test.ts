@@ -4,6 +4,16 @@ import type { LyraAttachmentChip } from './attachment-chip.js';
 import { formatFileSize } from './attachment-chip.js';
 import { styles } from './attachment-chip.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
+  const element = sinkElement(politeness);
+  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
 
 function makeFile(name: string, type: string, sizeBytes = 1): File {
   return new File([new Uint8Array(sizeBytes)], name, { type, lastModified: 1700000000000 });
@@ -436,16 +446,67 @@ describe('status accents and progress', () => {
     expect((done.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).hidden).to.be.true;
   });
 
-  it('gives status-text role="alert" only for the one-shot error transition, not the ticking uploading readout', async () => {
+  it('leaves status-text as plain visible text -- no shadow live role for either state', async () => {
     const error = (await fixture(html`<lr-attachment-chip status="error"></lr-attachment-chip>`)) as LyraAttachmentChip;
     const errorText = error.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
-    expect(errorText.getAttribute('role')).to.equal('alert');
+    // A live region inside a shadow root is not reliably announced, and a visible node must stay
+    // readable, so the announcement moves to the shared light-DOM region instead of living here.
+    expect(errorText.getAttribute('role')).to.equal(null);
+    expect(errorText.getAttribute('aria-hidden')).to.equal(null);
 
     const uploading = (await fixture(
       html`<lr-attachment-chip status="uploading" progress="30"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const uploadingText = uploading.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
     expect(uploadingText.hasAttribute('role')).to.be.false;
+  });
+
+  it('announces a transition into error through the shared assertive sink, but never a mount', async () => {
+    const mounted = (await fixture(
+      html`<lr-attachment-chip status="error"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(
+      sinkTexts('assertive'),
+      'a chip that mounts already failed is history, not a fresh interruption',
+    ).to.deep.equal([]);
+    mounted.remove();
+
+    const el = (await fixture(
+      html`<lr-attachment-chip status="uploading"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    el.status = 'error';
+    await el.updateComplete;
+    expect(sinkTexts('assertive')).to.deep.equal(['Upload failed']);
+  });
+
+  it('announces a repeated failure again instead of silently rewriting one text node', async () => {
+    const el = (await fixture(
+      html`<lr-attachment-chip status="uploading"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    el.status = 'error';
+    await el.updateComplete;
+    el.status = 'uploading';
+    await el.updateComplete;
+    el.status = 'error';
+    await el.updateComplete;
+    expect(
+      sinkTexts('assertive'),
+      'an identical repeat must be a second addition so assistive tech reads it again',
+    ).to.deep.equal(['Upload failed', 'Upload failed']);
+  });
+
+  it('ref-counts the shared assertive sink away once the last chip disconnects', async () => {
+    const first = (await fixture(
+      html`<lr-attachment-chip></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const second = (await fixture(
+      html`<lr-attachment-chip></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(sinkElement('assertive') !== null, 'a connected chip holds the sink').to.be.true;
+    first.remove();
+    expect(sinkElement('assertive') !== null, 'a still-connected chip keeps it mounted').to.be.true;
+    second.remove();
+    expect(sinkElement('assertive') === null, 'the last disconnect unmounts it').to.be.true;
   });
 });
 

@@ -6,7 +6,7 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraElement, type LyraEmitOptions } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   place,
@@ -577,7 +577,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  `lr-after-show` once the popup's transition has finished. */
   show(): Promise<void> {
     if (this._open) return Promise.resolve();
-    if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
+    if (this.emitLifecycle('lr-show', { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
@@ -593,7 +593,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  Emits `lr-hide` first — vetoing it leaves the popover open — then `lr-after-hide`. */
   hide(options?: { focusTrigger?: boolean }): Promise<void> {
     if (!this._open) return Promise.resolve();
-    if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+    if (this.emitLifecycle('lr-hide', { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
@@ -618,6 +618,21 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private cancelTransitionAnimation(): void {
     this.transitionAnimation?.cancel();
     this.transitionAnimation = undefined;
+  }
+
+  /**
+   * `emit()` pinned to this class's own base event map.
+   *
+   * `Events` is a type parameter here so `<lr-dropdown>` can widen the map, which leaves
+   * `LyraEmitArgs<Events, K>` an unresolved conditional type that no concrete argument list can be
+   * checked against. The `Events extends LyraPopoverEventMap` constraint already guarantees these
+   * four lifecycle events keep their detail-less shape, so resolve them against the base map.
+   */
+  private emitLifecycle(
+    name: keyof LyraPopoverEventMap,
+    options?: LyraEmitOptions,
+  ): CustomEvent<undefined> {
+    return (this as LyraPopover<LyraPopoverEventMap>).emit(name, undefined, options);
   }
 
   /** Resolves once the registry-backed popup animation has finished, then emits the matching
@@ -651,7 +666,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       this.cancelTransitionAnimation();
     }
     if (event === 'lr-after-hide') this.removeAttribute('data-closing');
-    this.emit(event);
+    this.emitLifecycle(event);
   }
 
   override render(): TemplateResult {

@@ -9,12 +9,15 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
-  ROOT_REGISTRATION_END,
-  ROOT_REGISTRATION_START,
+  ALL_REGISTRATION_END,
+  ALL_REGISTRATION_START,
+  SSR_ALL_REGISTRATION_END,
+  SSR_ALL_REGISTRATION_START,
   checkRegistrationArtifacts,
   deriveRegistrationArtifacts,
   generateRegistrationArtifacts,
-  updateRootBarrel,
+  updateAllBarrel,
+  updateSsrAllBarrel,
 } from './generate-registration-artifacts.mjs';
 import { CURATED_PUBLIC_SIDE_EFFECT_ENTRIES } from './generate-side-effects.mjs';
 
@@ -47,6 +50,7 @@ const inventory = {
 
 const artifacts = deriveRegistrationArtifacts(inventory);
 assert.deepEqual(artifacts.rootTags, ['lr-alpha', 'lr-beta']);
+assert.deepEqual(artifacts.allTags, ['lr-alpha', 'lr-beta', 'lr-optional']);
 assert.deepEqual(artifacts.optionalTags, ['lr-optional']);
 assert.deepEqual(
   artifacts.rootComponents.map((component) => component.specifier),
@@ -54,7 +58,16 @@ assert.deepEqual(
     './components/forms/zeta/alpha-entry.js',
     './components/forms/alpha/beta-entry.js',
   ],
-  'registration imports sort by inventory tag and use the exact inventory module',
+  'all.js registration imports sort by inventory tag and use the exact inventory module',
+);
+assert.deepEqual(
+  artifacts.allComponents.map((component) => component.ssrSpecifier),
+  [
+    '../components/forms/zeta/alpha-entry.js',
+    '../components/forms/alpha/beta-entry.js',
+    '../components/charts/optional/optional.js',
+  ],
+  'ssr/all.js registration imports cover the optional-peer families the browser entry omits',
 );
 
 for (const [description, mutate, expected] of [
@@ -92,38 +105,68 @@ for (const [description, mutate, expected] of [
   assert.throws(() => deriveRegistrationArtifacts(fixture), expected, description);
 }
 
-const legacy = [
-  '// Side-effect imports register every component…',
-  "import './components/forms/alpha/beta-entry.js';",
-  "import './components/viewers/archive/archive-register.js';",
-  "import './components/forms/zeta/alpha-entry.js';",
-  "import './components/forms/alpha/beta-entry.js';",
+const allBarrel = [
+  ALL_REGISTRATION_START,
+  "import './components/stale/stale.js';",
+  ALL_REGISTRATION_END,
   '',
-  '// …and the barrel re-exports classes, helpers, and types.',
-  "export { ManualExport } from './manual.js';",
+  "import './components/viewers/archive/archive-register.js';",
+  '',
+  "export * from './lyra.js';",
   '',
 ].join('\n');
-const migrated = updateRootBarrel(legacy, artifacts);
-assert.ok(migrated.startsWith(ROOT_REGISTRATION_START));
-assert.ok(migrated.includes(ROOT_REGISTRATION_END));
-assert.match(migrated, /Curated companion registrations/);
-assert.equal(
-  migrated.slice(migrated.indexOf('// …and the barrel')),
-  legacy.slice(legacy.indexOf('// …and the barrel')),
-  'the curated named-export region is byte-for-byte stable',
+const generatedAllBarrel = updateAllBarrel(allBarrel, artifacts);
+assert.ok(generatedAllBarrel.startsWith(ALL_REGISTRATION_START));
+assert.ok(generatedAllBarrel.includes("import './components/forms/zeta/alpha-entry.js';"));
+assert.ok(generatedAllBarrel.includes("import './components/forms/alpha/beta-entry.js';"));
+assert.ok(
+  !generatedAllBarrel.includes("import './components/charts/optional/optional.js';"),
+  'optional-peer families stay out of the browser compatibility entry',
 );
-assert.equal(updateRootBarrel(migrated, artifacts), migrated, 'marked regeneration is idempotent');
+assert.ok(!generatedAllBarrel.includes("import './components/stale/stale.js';"));
+assert.equal(
+  generatedAllBarrel.slice(generatedAllBarrel.indexOf("import './components/viewers/archive")),
+  allBarrel.slice(allBarrel.indexOf("import './components/viewers/archive")),
+  'the curated region below the generated block is byte-for-byte stable',
+);
+assert.equal(updateAllBarrel(generatedAllBarrel, artifacts), generatedAllBarrel, 'regeneration is idempotent');
+
+assert.throws(
+  () => updateAllBarrel(allBarrel.replace(ALL_REGISTRATION_END, ''), artifacts),
+  /src\/all\.ts is missing its generated registration block/,
+  'a lost marker pair reports what to restore instead of silently rewriting the file',
+);
+assert.throws(
+  () => updateAllBarrel(`${allBarrel}\n${ALL_REGISTRATION_START}\n${ALL_REGISTRATION_END}\n`, artifacts),
+  /duplicate generated registration markers/,
+  'duplicate marker pairs fail closed',
+);
 assert.throws(
   () =>
-    updateRootBarrel(
-      legacy.replace(
-        "import './components/forms/alpha/beta-entry.js';",
+    updateAllBarrel(
+      allBarrel.replace(
+        "import './components/viewers/archive/archive-register.js';",
         "import './components/manual/untracked.js';",
       ),
       artifacts,
     ),
-  /non-inventory module/,
-  'legacy migration refuses to discard an unclassified side-effect import',
+  /non-inventory side-effect import/,
+  'regeneration refuses to strand an unclassified side-effect import outside the block',
+);
+
+const ssrAllBarrel = [
+  SSR_ALL_REGISTRATION_START,
+  SSR_ALL_REGISTRATION_END,
+  '',
+  "export * from '../lyra.js';",
+  '',
+].join('\n');
+const generatedSsrAllBarrel = updateSsrAllBarrel(ssrAllBarrel, artifacts);
+assert.ok(generatedSsrAllBarrel.includes("import '../components/charts/optional/optional.js';"));
+assert.equal(
+  updateSsrAllBarrel(generatedSsrAllBarrel, artifacts),
+  generatedSsrAllBarrel,
+  'ssr regeneration is idempotent',
 );
 
 const fixtureRoot = mkdtempSync(join(tmpdir(), 'lyra-registration-artifacts-'));
@@ -144,7 +187,9 @@ try {
   for (const entry of CURATED_PUBLIC_SIDE_EFFECT_ENTRIES) {
     write(entry.source, 'export {};\n');
   }
-  write('src/lyra.ts', legacy);
+  write('src/lyra.ts', "export { Manual } from './manual.js';\n");
+  write('src/all.ts', allBarrel);
+  write('src/ssr/all.ts', ssrAllBarrel);
   write('src/internal/root-registration-allowlist.ts', 'export const stale = true;\n');
   write(
     'package.json',
@@ -166,7 +211,8 @@ try {
   assert.deepEqual(
     checkRegistrationArtifacts(fixtureRoot).findings,
     [
-      'src/lyra.ts generated registration block is stale',
+      'src/all.ts generated registration block is stale',
+      'src/ssr/all.ts generated registration block is stale',
       'src/internal/root-registration-allowlist.ts is stale',
       'package.json#sideEffects is stale',
     ],
@@ -175,14 +221,19 @@ try {
   generateRegistrationArtifacts(fixtureRoot);
   assert.deepEqual(checkRegistrationArtifacts(fixtureRoot).findings, []);
 
-  const generatedRoot = readFileSync(join(fixtureRoot, 'src/lyra.ts'), 'utf8');
-  assert.ok(generatedRoot.includes("import './components/forms/zeta/alpha-entry.js';"));
-  assert.ok(generatedRoot.includes("import './components/forms/alpha/beta-entry.js';"));
-  assert.ok(!generatedRoot.includes("import './components/charts/optional/optional.js';"));
-  assert.ok(generatedRoot.includes("import './components/viewers/archive/archive-register.js';"));
+  const generatedAll = readFileSync(join(fixtureRoot, 'src/all.ts'), 'utf8');
+  assert.ok(generatedAll.includes("import './components/forms/zeta/alpha-entry.js';"));
+  assert.ok(generatedAll.includes("import './components/forms/alpha/beta-entry.js';"));
+  assert.ok(!generatedAll.includes("import './components/charts/optional/optional.js';"));
+  assert.ok(generatedAll.includes("import './components/viewers/archive/archive-register.js';"));
+
+  const generatedSsrAll = readFileSync(join(fixtureRoot, 'src/ssr/all.ts'), 'utf8');
+  assert.ok(generatedSsrAll.includes("import '../components/charts/optional/optional.js';"));
+
   assert.equal(
-    generatedRoot.slice(generatedRoot.indexOf('// …and the barrel')),
-    legacy.slice(legacy.indexOf('// …and the barrel')),
+    readFileSync(join(fixtureRoot, 'src/lyra.ts'), 'utf8'),
+    "export { Manual } from './manual.js';\n",
+    'the registration-free package root is never written by the generator',
   );
 
   const allowlist = readFileSync(
@@ -195,31 +246,40 @@ try {
   const sideEffects = JSON.parse(readFileSync(join(fixtureRoot, 'package.json'), 'utf8')).sideEffects;
   assert.deepEqual(sideEffects, [...new Set(sideEffects)].sort());
   for (const entry of [
+    './dist/all.js',
     './dist/autoloader-cdn.js',
     './dist/ssr-loader.js',
+    './dist/ssr/all.js',
     './dist/components/charts/optional/optional.js',
     './dist/components/forms/alpha/beta-entry.js',
     './dist/components/forms/zeta/alpha-entry.js',
     './dist/components/viewers/archive/archive-register.js',
-    './dist/lyra.js',
     './dist/theme.css',
     './dist/translations/fr.js',
+    './src/all.ts',
+    './src/autoloader-cdn.ts',
+    './src/ssr-loader.ts',
+    './src/ssr/all.ts',
     './src/components/charts/optional/optional.ts',
     './src/components/forms/alpha/beta-entry.ts',
     './src/components/forms/zeta/alpha-entry.ts',
     './src/components/viewers/archive/archive-register.ts',
-    './src/autoloader-cdn.ts',
-    './src/lyra.ts',
-    './src/ssr-loader.ts',
     './src/theme.css',
     './src/translations/fr.ts',
   ]) {
     assert.ok(sideEffects.includes(entry), `missing generated side effect ${entry}`);
   }
+  for (const entry of ['./src/lyra.ts', './dist/lyra.js']) {
+    assert.ok(
+      !sideEffects.includes(entry),
+      `${entry} must stay out of sideEffects: the registration-free root has to remain tree-shakeable`,
+    );
+  }
 
   const before = new Map(
     [
-      'src/lyra.ts',
+      'src/all.ts',
+      'src/ssr/all.ts',
       'src/internal/root-registration-allowlist.ts',
       'package.json',
     ].map((file) => [file, readFileSync(join(fixtureRoot, file), 'utf8')]),

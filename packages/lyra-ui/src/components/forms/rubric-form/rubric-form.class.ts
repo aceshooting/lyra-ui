@@ -15,7 +15,13 @@ import '../combobox/option.class.js';
 import '../checkbox/checkbox.class.js';
 import '../checkbox-group/checkbox-group.class.js';
 import '../textarea/textarea.class.js';
-import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import {
+  getFormOwner,
+  installCustomErrorProperty,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 
 export interface RubricKeyOption {
@@ -288,6 +294,10 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    // Disabling bars constraint validation, so the published validity and `:state()` hooks change
+    // even though the value did not. The guard covers a setter call that lands before the
+    // constructor body under a DOM shim.
+    if (this.validityController) this.syncFormState();
     this.requestUpdate('disabled', old);
   }
 
@@ -364,13 +374,22 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       formValue = null;
     }
     this.internals.setFormValue(formValue, formValue);
-    if (Object.keys(flags).length === 0) {
+    if (this.barredFromValidation || Object.keys(flags).length === 0) {
       this.validityController.setValidity({});
     } else {
       const message = Object.values(errors)[0] ?? '';
       this.validityController.setValidity(flags, message);
     }
     this.syncCustomStates();
+  }
+
+  /**
+   * Shared with every other form control in the library: own `disabled` and a `<fieldset disabled>`
+   * ancestor both bar constraint validation, so a barred rubric reports no failure and publishes
+   * neither `:state(invalid)` nor `:state(user-invalid)` — see `internal/custom-states.ts`.
+   */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
   }
 
   /**
@@ -390,6 +409,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     syncValidityStates(this.internals, {
       required: this._keys.some((key) => Boolean(key.required)),
       hasInteracted: this.touchedFields.size > 0,
+      barred: this.barredFromValidation,
     });
   }
 
@@ -461,6 +481,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    this.syncFormState();
     this.requestUpdate();
   }
 

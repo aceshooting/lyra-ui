@@ -7,7 +7,12 @@ import {
 import { property, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { nextId } from '../../../internal/a11y.js';
+import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
+import {
+  describeElement,
+  undescribeElement,
+  type AppliedDescription,
+} from '../../../internal/aria-controls.js';
 import { place, virtualAnchorFromRect, type VirtualAnchor } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
@@ -86,9 +91,13 @@ export interface LyraTooltipEventMap {
  * Motion resolves through `tooltip.show`/`tooltip.hide` in the public animation registry.
  *
  * While open, the trigger's `aria-describedby` targets a hidden text proxy in this component's
- * light DOM rather than the shadow-private popup. Native triggers can resolve that ID directly;
- * `<lr-button>` and `<lr-icon-button>` reflect it onto their focused internal controls through
- * `ariaDescribedByElements`, where the serialized internal attribute is intentionally empty.
+ * light DOM rather than the shadow-private popup. Native triggers can resolve that ID directly.
+ * A description is only announced on the node that actually holds focus, so a custom-element
+ * trigger also has the proxy applied to its first focusable descendant (through slots and nested
+ * open shadow roots) — reaching `<lr-select>`, `<lr-switch>`, `<lr-chip>` and consumer-authored
+ * wrappers, not only the components that forward their own host `aria-describedby`. Descendants
+ * inside a shadow root are linked through `ariaDescribedByElements`, where the serialized internal
+ * attribute is intentionally empty; descriptions the control already had are kept and restored.
  *
  * @customElement lr-tooltip
  * @slot trigger - Web Awesome shape: the element that receives the configured interactions.
@@ -204,6 +213,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'top';
   private triggerDescription?: { had: boolean; value: string | null };
   private triggerDescriptionObserver?: MutationObserver;
+  /** The focusable node inside the trigger that currently carries the description, plus what it
+   *  looked like beforehand. Undefined whenever the trigger is its own focus target. */
+  private accessibleTriggerDescription?: AppliedDescription;
   /** The virtual anchor set by `showAt()`, taking priority over `for`/`trigger` for positioning
    *  while set. Cleared whenever the tooltip closes, so a later `open = true` with no fresh
    *  `showAt()` call reverts to plain trigger-based behavior. */
@@ -580,6 +592,27 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (this.open) descriptions.add(this.descriptionId);
     if (descriptions.size > 0) this.triggerElement.setAttribute('aria-describedby', [...descriptions].join(' '));
     else this.triggerElement.removeAttribute('aria-describedby');
+    this.syncAccessibleTriggerDescription();
+  }
+  /**
+   * A description is only announced on the node that actually holds focus. When the trigger is a
+   * custom element, that node is a control inside its shadow root (or a focusable it wraps in the
+   * light DOM), and the host attribute set above never reaches it -- only the handful of components
+   * that happen to read their own host `aria-describedby` (`<lr-button>`, `<lr-icon-button>`,
+   * `<lr-checkbox>`) forward it today, so `<lr-select>`, `<lr-switch>`, `<lr-chip>` and every
+   * consumer-authored wrapper would silently drop the tooltip. Describe the resolved focus target
+   * as well, and restore exactly what it had when the tooltip closes or the trigger is swapped.
+   */
+  private syncAccessibleTriggerDescription(): void {
+    const proxy = this.descriptionProxy;
+    const target =
+      this.open && this.triggerElement && proxy ? resolveAccessibleTrigger(this.triggerElement) : undefined;
+    if (this.accessibleTriggerDescription && this.accessibleTriggerDescription.target !== target) {
+      undescribeElement(this.accessibleTriggerDescription);
+      this.accessibleTriggerDescription = undefined;
+    }
+    if (!target || !proxy || target === this.triggerElement || this.accessibleTriggerDescription) return;
+    this.accessibleTriggerDescription = describeElement(target, proxy);
   }
   /** Runs `show()`/`hide()` after the matching delay, replacing whatever was pending. */
   private requestTransition(next: boolean): void {
@@ -655,6 +688,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     });
   }
   private restoreTriggerDescription(): void {
+    if (this.accessibleTriggerDescription) {
+      undescribeElement(this.accessibleTriggerDescription);
+      this.accessibleTriggerDescription = undefined;
+    }
     if (!this.triggerElement || !this.triggerDescription) return;
     this.triggerDescriptionObserver?.disconnect();
     if (this.triggerDescription.had) {

@@ -69,14 +69,22 @@ export const styles = css`
      content, so :empty never matches -- real emptiness is tracked in JS
      (hasLabelSlot) and reflected via [hidden] instead (same fix as every
      other lyra form control's label/hint/error chrome). Without this the
-     required-asterisk ::after below (attached to this box) would render a
-     stray ' *' with nothing before it whenever no label is set. */
+     required marker below (attached to this box) would render a stray glyph
+     with nothing before it whenever no label is set. */
   [part='legend'][hidden] {
     display: none;
   }
+  /* The one component that does NOT take its marker rule from
+     internal/form-control.styles.ts, only its custom properties. That sheet
+     attaches the marker to [part~="form-control-label"], which here is a span
+     INSIDE this legend; the marker belongs to the legend box itself, after the
+     whole label, so the selector is local while the glyph, colour and offset
+     stay the same three consumer-settable properties every other control
+     resolves. Keep these declarations identical to that sheet's. */
   :host([required]) [part='legend']::after {
-    content: ' *';
-    color: var(--lr-color-danger);
+    content: var(--lr-form-control-required-content, ' *');
+    color: var(--lr-form-control-required-color, var(--lr-color-danger));
+    margin-inline-start: var(--lr-form-control-required-offset, 0);
   }
 
   [part~='fields'] {

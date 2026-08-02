@@ -17,10 +17,26 @@ import { css } from 'lit';
 // opaque by definition -- so giving this its own --lr-theme-* hook would just reintroduce the
 // same footgun under a new name. The colour channel is irrelevant; only alpha 1 matters.
 //
+// REQUIRED_MARKER -- why --lr-form-control-required-content/-color/-offset are NOT declared here.
+// The required-field marker every labelled form control renders (internal/form-control.styles.ts,
+// restated by known-date.styles.ts for its composite label) reads those three names as inline
+// var() fallbacks and NOTHING declares them. That is the design, not an omission: an undeclared
+// custom property inherits, so one declaration on :root retunes every marker in the application
+// at once, which is exactly how llms/forms.md documents them. Adding the usual
+// `--lr-x: var(--lr-theme-x, default);` line to :host below would take that away -- the host's own
+// declaration wins over the inherited value, so a :root (or any ancestor) setting would stop
+// reaching the marker, leaving only per-element inline styles working. Measured, not reasoned:
+// with the :host line present, an ancestor's --lr-form-control-required-color resolves to the
+// danger default instead of the ancestor's colour; without it, the ancestor's colour reaches the
+// ::after. Nothing in the test suite covers the ancestor route, so the regression would be silent.
+// If these ever do need a --lr-theme-* input, give the call sites a three-deep chain
+// (var(--lr-form-control-required-x, var(--lr-theme-form-control-required-x, default))) the way
+// contextual-vocabulary.styles.ts chains --lr-form-control-height-*; do not declare them on :host.
+//
 // Note this prose lives OUTSIDE the css`` literal on purpose: the build is plain tsc, so the
 // template's contents ship verbatim to every component that pulls in the token sheet -- i.e.
 // all of them. A comment this long inside it pushed the button bundle over its gzip budget.
-export const tokens = css`
+const baseTokens = css`
   :host {
     --lr-color-surface: var(--lr-theme-color-surface-default, #fff);
     --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #f6f8fa);
@@ -364,14 +380,45 @@ export const tokens = css`
     --lr-safe-area-inline-start: env(safe-area-inset-right, 0px);
     --lr-safe-area-inline-end: env(safe-area-inset-left, 0px);
   }
+`;
 
-  /* Standalone (no consumer theme set) dark-mode fallback. A real --lr-theme-* value
-     set by a consumer always wins — this only changes what a bare
-     lyra-ui component renders when dropped, unstyled, onto a dark host page
-     (previously zero dark-mode adaptation existed in the pure-fallback
-     case). */
-  @media (prefers-color-scheme: dark) {
-    :host {
+/**
+ * Standalone (no consumer theme set) dark-mode values. A real --lr-theme-* value set by a consumer
+ * always wins -- these only change what a bare lyra-ui component renders when dropped, unstyled,
+ * onto a dark host page.
+ *
+ * Declared ONCE and composed into all three dark selectors below, because the three routes into
+ * dark mode (OS preference, `data-lr-theme="dark"` on the component, a `.lr-dark` /
+ * `data-lr-theme="dark"` ancestor) must agree to the byte. The semantic grid in
+ * `tokens/palette.styles.ts` already answers to all three; while this layer answered only to the
+ * OS one, `<lr-card data-lr-theme="dark">` on a light machine rendered a dark colour grid on light
+ * surfaces -- a mixed state neither mode was ever contrast-checked in.
+ *
+ * The three selectors that consume it, and why they are three separate rules:
+ *
+ *   @media (prefers-color-scheme: dark) :host(:not([data-lr-theme='light']))
+ *                          the OS preference, with an explicit light override winning over it.
+ *   :host([data-lr-theme='dark'])
+ *                          the attribute an application sets to pin a mode regardless of the OS.
+ *   :host(:not([data-lr-theme='light'])):host-context(.lr-dark | [data-lr-theme='dark'])
+ *                          a dark ancestor, for a consumer who never imported theme.css. Kept out
+ *                          of the previous rule's selector list on purpose: Firefox and Safari
+ *                          ship no :host-context(), and one unsupported selector invalidates a
+ *                          whole list -- which would take the supported attribute branch down with
+ *                          it. Those engines still follow an ancestor .lr-dark through theme.css,
+ *                          whose custom properties inherit across the shadow boundary. The light
+ *                          guard has to be written as its own :host() pseudo: a bare
+ *                          :not([data-lr-theme='light']) appended to :host-context() matches
+ *                          nothing at all, because the shadow host is featureless.
+ *
+ * Placement note: `scripts/check-contrast.mjs` and `scripts/generate-chart-palette.mjs` split this
+ * file at the first occurrence of the string `@media (prefers-color-scheme: dark)` and read
+ * everything after it as the dark set. The media rule that consumes this fragment is composed
+ * further down, so the marker is repeated on the line below to keep that split honest. Nothing
+ * light-mode may be declared past this point.
+ */
+/* @media (prefers-color-scheme: dark) */
+const darkTokens = css`
       --lr-color-surface: var(--lr-theme-color-surface-default, #1a1a1a);
       --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #22272e);
       --lr-color-text: var(--lr-theme-color-text-normal, #f2f2f2);
@@ -445,9 +492,9 @@ export const tokens = css`
     --lr-terminal-bg-bright-cyan: var(--lr-theme-terminal-bg-bright-cyan, #286f76);
     --lr-terminal-bg-bright-white: var(--lr-theme-terminal-bg-bright-white, #696969);
       /* terminal ramp: end */
-    }
-  }
+`;
 
+const auxTokens = css`
   /* Reduced motion is centralized so components using either the shared
      transition tokens or a component animation get the same behavior. The
      tiny non-zero duration keeps animationend/transitionend contracts from
@@ -533,4 +580,20 @@ export const tokens = css`
   *::after {
     box-sizing: inherit;
   }
+`;
+
+export const tokens = css`
+  ${baseTokens}
+
+  @media (prefers-color-scheme: dark) {
+    :host(:not([data-lr-theme='light'])) {${darkTokens}
+    }
+  }
+  :host([data-lr-theme='dark']) {${darkTokens}
+  }
+  :host(:not([data-lr-theme='light'])):host-context(.lr-dark),
+  :host(:not([data-lr-theme='light'])):host-context([data-lr-theme='dark']) {${darkTokens}
+  }
+
+  ${auxTokens}
 `;

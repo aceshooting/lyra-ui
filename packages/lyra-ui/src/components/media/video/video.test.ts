@@ -698,3 +698,144 @@ describe('lr-video public contract', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('lr-video control surface', () => {
+  it('applies the volume slider and playback-rate selector to the media element', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
+    const media = nativeVideo(el);
+    stubPlayback(media);
+    Object.defineProperties(media, {
+      duration: { configurable: true, value: 30 },
+      currentTime: { configurable: true, value: 0, writable: true },
+      volume: { configurable: true, value: 1, writable: true },
+      muted: { configurable: true, value: false, writable: true },
+      playbackRate: { configurable: true, value: 1, writable: true },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+
+    const volume = el.shadowRoot!.querySelector<HTMLInputElement>('[data-control="volume"]')!;
+    volume.value = '0.4';
+    volume.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(media.volume).to.equal(0.4);
+    media.dispatchEvent(new Event('volumechange'));
+    await el.updateComplete;
+    expect(el.volume).to.equal(0.4);
+
+    const rate = el.shadowRoot!.querySelector<HTMLSelectElement>('[data-control="rate"]')!;
+    rate.value = '2';
+    rate.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(media.playbackRate).to.equal(2);
+    media.dispatchEvent(new Event('ratechange'));
+    await el.updateComplete;
+    expect(el.playbackRate).to.equal(2);
+  });
+
+  it('starts playback from the poster overlay', async () => {
+    const el = await fixture<LyraVideo>(html`
+      <lr-video poster="https://example.test/poster.jpg"></lr-video>
+    `);
+    const stub = stubPlayback(nativeVideo(el));
+    const poster = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="poster-play-button"]')!;
+    poster.click();
+    await stub.playResult;
+    expect(stub.playCalls).to.equal(1);
+  });
+
+  it('drives fullscreen and picture-in-picture from their controls and document events', async () => {
+    const fsEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
+    const pipEnabled = Object.getOwnPropertyDescriptor(document, 'pictureInPictureEnabled');
+    const fsElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+    const pipElement = Object.getOwnPropertyDescriptor(document, 'pictureInPictureElement');
+    const requestFs = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'requestFullscreen');
+    const exitFs = Object.getOwnPropertyDescriptor(Document.prototype, 'exitFullscreen');
+    const requestPip = Object.getOwnPropertyDescriptor(HTMLVideoElement.prototype, 'requestPictureInPicture');
+    const exitPip = Object.getOwnPropertyDescriptor(Document.prototype, 'exitPictureInPicture');
+    let fullscreenRequests = 0;
+    let fullscreenExits = 0;
+    let pipRequests = 0;
+    let pipExits = 0;
+    try {
+      Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
+      Object.defineProperty(document, 'pictureInPictureEnabled', { configurable: true, value: true });
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: null, writable: true });
+      Object.defineProperty(document, 'pictureInPictureElement', { configurable: true, value: null, writable: true });
+      Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', {
+        configurable: true,
+        value: () => { fullscreenRequests += 1; return Promise.resolve(); },
+      });
+      Object.defineProperty(Document.prototype, 'exitFullscreen', {
+        configurable: true,
+        value: () => { fullscreenExits += 1; return Promise.resolve(); },
+      });
+      Object.defineProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', {
+        configurable: true,
+        value: () => { pipRequests += 1; return Promise.resolve({} as PictureInPictureWindow); },
+      });
+      Object.defineProperty(Document.prototype, 'exitPictureInPicture', {
+        configurable: true,
+        value: () => { pipExits += 1; return Promise.resolve(); },
+      });
+
+      const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
+      const wrapper = el.shadowRoot!.querySelector('[part="video-wrapper"], [part~="wrapper"]');
+
+      button(el, 'fullscreen')!.click();
+      await el.updateComplete;
+      expect(fullscreenRequests).to.equal(1);
+
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: wrapper });
+      document.dispatchEvent(new Event('fullscreenchange'));
+      await el.updateComplete;
+      expect(el.fullscreen).to.equal(wrapper !== null);
+
+      if (el.fullscreen) {
+        button(el, 'fullscreen')!.click();
+        await el.updateComplete;
+        expect(fullscreenExits).to.equal(1);
+      }
+
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: null });
+      document.dispatchEvent(new Event('fullscreenchange'));
+      await el.updateComplete;
+      expect(el.fullscreen).to.equal(false);
+
+      button(el, 'picture-in-picture')!.click();
+      await el.updateComplete;
+      expect(pipRequests).to.equal(1);
+
+      Object.defineProperty(document, 'pictureInPictureElement', { configurable: true, value: nativeVideo(el) });
+      document.dispatchEvent(new Event('enterpictureinpicture'));
+      await el.updateComplete;
+      expect(el.pictureInPicture).to.equal(true);
+
+      button(el, 'picture-in-picture')!.click();
+      await el.updateComplete;
+      expect(pipExits).to.equal(1);
+
+      Object.defineProperty(document, 'pictureInPictureElement', { configurable: true, value: null });
+      document.dispatchEvent(new Event('leavepictureinpicture'));
+      await el.updateComplete;
+      expect(el.pictureInPicture).to.equal(false);
+    } finally {
+      restoreOwnProperty(document, 'fullscreenEnabled', fsEnabled);
+      restoreOwnProperty(document, 'pictureInPictureEnabled', pipEnabled);
+      restoreOwnProperty(document, 'fullscreenElement', fsElement);
+      restoreOwnProperty(document, 'pictureInPictureElement', pipElement);
+      restoreOwnProperty(HTMLElement.prototype, 'requestFullscreen', requestFs);
+      restoreOwnProperty(Document.prototype, 'exitFullscreen', exitFs);
+      restoreOwnProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', requestPip);
+      restoreOwnProperty(Document.prototype, 'exitPictureInPicture', exitPip);
+    }
+  });
+
+  it('clears the timeline thumbnail when the pointer leaves the track', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
+    const timeline = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline"]')!;
+    timeline.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 10 }));
+    await el.updateComplete;
+    timeline.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="thumbnail"]')).to.equal(null);
+  });
+});

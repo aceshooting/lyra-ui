@@ -1,10 +1,10 @@
 import { expect } from '@open-wc/testing';
-import './lyra.js';
+import './all.js';
 import { ROOT_BARREL_TAGS } from './internal/root-registration-allowlist.js';
 
 /**
- * Universal lifecycle contracts, applied uniformly to every tag the root
- * barrel registers (the optional-peer chart/map/graph families are excluded
+ * Universal lifecycle contracts, applied uniformly to every tag the all.js
+ * compatibility entry registers (the optional-peer chart/map/graph families are excluded
  * because importing them requires peers this environment must not assume).
  *
  * Three contracts per tag, each in its default state (no attributes, no

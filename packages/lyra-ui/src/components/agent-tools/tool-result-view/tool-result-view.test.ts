@@ -408,3 +408,39 @@ describe('status / context.reportStatus', () => {
     expect(seen).to.deep.equal({ result: { tempC: 19 }, args: { location: 'Brussels' } });
   });
 });
+
+it('registers and upgrades the copy button it renders, through its own entry point alone', async () => {
+  // This file imports `./tool-result-view.js` and nothing else, so the granular entry point is the
+  // whole module graph -- exactly what a consumer importing one component gets. `<lr-copy-button>`
+  // was rendered but never registered there (only its side-effect-free `.class.js` was imported),
+  // so it reached the page as an inert, never-upgrading element that swallowed every click.
+  expect(customElements.get('lr-copy-button') !== undefined, 'registered by the entry point').to.be
+    .true;
+
+  const el = (await fixture(
+    html`<lr-tool-result-view
+      tool-name="unregistered"
+      fallback="text"
+      copyable
+      .result=${'copy me'}
+    ></lr-tool-result-view>`,
+  )) as LyraToolResultView;
+  await el.updateComplete;
+
+  const copy = base(el).querySelector('lr-copy-button') as (HTMLElement & { value?: string }) | null;
+  // Compared as booleans, never as DOM nodes: a failing chai assertion carrying an element hangs
+  // the whole file.
+  expect(copy !== null, 'rendered alongside the text fallback').to.be.true;
+  await (copy as unknown as { updateComplete?: Promise<unknown> }).updateComplete;
+
+  // Presence in the DOM proves nothing -- an unregistered custom element still parses into an
+  // element with the right tag name. Only an upgraded one is an instance of its class and has a
+  // shadow root with the real button inside it.
+  expect(copy instanceof customElements.get('lr-copy-button')!, 'upgraded, not inert').to.be.true;
+  expect(copy!.shadowRoot !== null, 'an upgraded element renders its own shadow root').to.be.true;
+  expect(
+    copy!.shadowRoot!.querySelector('button') !== null,
+    'the clickable affordance an inert element never grew',
+  ).to.be.true;
+  expect(copy!.value).to.equal('copy me');
+});

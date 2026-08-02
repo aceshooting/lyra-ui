@@ -23,7 +23,10 @@ pnpm lint         # -r: for @aceshooting/lyra-ui this is NOT just tsc --noEmit �
                   #     then tsc --noEmit, then a type-level test suite. A green `pnpm lint` failing
                   #     for a reason that has nothing to do with TypeScript types is expected, not a
                   #     tooling bug — see AGENTS.md's Dev commands section for the full chain.
-pnpm build        # -r: tsc -p tsconfig.json per package -> dist/
+pnpm build        # -r: per package -> dist/. For @aceshooting/lyra-ui this is
+                  #     scripts/build.mjs: tsc -p tsconfig.build.json (tsconfig.json with
+                  #     source maps off — the tarball ships dist, not src, so a .js.map's
+                  #     paths would dangle), the CSS asset copy, then check:build-artifacts
 pnpm docs         # Storybook docs site at localhost:6006, demos every component live
 ```
 

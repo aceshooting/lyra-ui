@@ -40,9 +40,11 @@ export interface LyraExportButtonEventMap {
  * @event lr-export-complete - Fired after a non-cancelled download completes.
  * @event lr-export-error - Fired when a built-in CSV/JSON export cannot be serialized or
  *   downloaded. `detail: { format, error }`.
- * @event lr-show - The format menu opened. Not fired for markup that renders
- *   open from the start.
- * @event lr-hide - The format menu closed. Same first-render guard as `lr-show`.
+ * @event lr-show - The format menu is about to open, however `open` became true. Cancelable —
+ *   `preventDefault()` leaves it closed. Not fired for markup that renders open from the start.
+ * @event lr-hide - The format menu is about to close. Cancelable on the same terms as `lr-show`,
+ *   except for a close this component imposes on itself (disablement, `loading`, or a format list
+ *   collapsing to one entry), which is neither announced nor vetoable.
  * @csspart trigger - The button that triggers the export (or opens the format menu).
  * @csspart menu - The format-choice menu, shown when more than one format is configured.
  * @csspart menu-item - A single format option inside the menu.
@@ -84,6 +86,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   private readonly menuId = nextId('export-menu');
   private cleanup?: () => void;
   private _isFirstUpdate = true;
+  private openVetoed = false;
   /** Which menu item to focus the next time `open` flips true; reset after use. */
   private pendingMenuFocusIndex = 0;
   private formatsFocusSnapshot?: { index: number; id: string };
@@ -224,33 +227,54 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
             : 'state';
       this.open = false;
     }
+    this.announceMenuTransition(changed);
+  }
+
+  /**
+   * Emits the cancelable `lr-show`/`lr-hide` veto point for this update's `open` transition.
+   *
+   * It runs at the end of `willUpdate()` -- after the forced closes above, and still ahead of
+   * render and attribute reflection -- so restoring `open` on a veto leaves the menu, the
+   * reflected attribute and the property agreeing without a visible open-then-close flash. A close
+   * this component imposed on itself (disablement, loading, or a format list collapsing to one
+   * entry) is never offered as a veto: no listener may hold a menu open that has nothing to show.
+   */
+  private announceMenuTransition(changed: PropertyValues): void {
+    this.openVetoed = false;
+    if (!changed.has('open') || this._isFirstUpdate || this.forcedMenuClose) return;
+    const name = this.open ? 'lr-show' : 'lr-hide';
+    if (!this.emit(name, undefined, { cancelable: true }).defaultPrevented) return;
+    this.openVetoed = true;
+    this.open = !this.open;
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const forcedMenuClose = this.forcedMenuClose;
     this.forcedMenuClose = undefined;
-    if (changed.has('open') || forcedMenuClose === 'formats' || forcedMenuClose === 'state') {
+    // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it
+    // while nothing actually moved; rebuilding the popup machinery here would undo the veto.
+    if (
+      (changed.has('open') || forcedMenuClose === 'formats' || forcedMenuClose === 'state') &&
+      !this.openVetoed
+    ) {
       this.cleanup?.();
       this.cleanup = undefined;
       // Reacting to the `open` property itself (not just inside
-      // openMenu()) means this fires however `open` became true -- via
+      // openMenu()) means this runs however `open` became true -- via
       // openMenu()'s own click path, or a consumer/test setting
       // `el.open = true` directly (valid API on a `reflect: true`
       // property), which bypasses openMenu() entirely. Mirrors lr-menu/
-      // lr-select/lr-combobox's identical updated()-centralized
-      // lr-show/lr-hide emission.
+      // lr-select/lr-combobox, whose lr-show/lr-hide veto point likewise
+      // runs one step earlier, in willUpdate().
       document.removeEventListener('pointerdown', this.onDocPointer);
       if (this.open) {
         const anchor = this.triggerEl;
         const menu = this.menuEl;
         if (anchor && menu) this.cleanup = place(anchor, menu);
         document.addEventListener('pointerdown', this.onDocPointer);
-        if (!this._isFirstUpdate) this.emit('lr-show');
         this.focusMenuItem(this.pendingMenuFocusIndex);
         this.pendingMenuFocusIndex = 0;
-      } else {
-        if (!this._isFirstUpdate && forcedMenuClose !== 'invalid-open') this.emit('lr-hide');
       }
     }
     if (changed.has('formats') && this.formatsFocusSnapshot) {

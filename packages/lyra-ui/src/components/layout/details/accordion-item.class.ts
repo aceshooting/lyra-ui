@@ -1,10 +1,15 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { LyraElement, type LyraEmitOptions } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEmitArgs,
+  type LyraEmitOptions,
+  type LyraEmittedEvent,
+} from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 import { styles } from './accordion-item.styles.js';
-import { LyraDetails } from './details.class.js';
+import { LyraDetails, type LyraDetailsEventMap } from './details.class.js';
 
 export type LyraAccordionIconPlacement = 'start' | 'end';
 /** A heading level string. Values other than 1–6 and `none` render the documented h3 fallback. */
@@ -97,16 +102,39 @@ export class LyraAccordionItem extends LyraDetails {
     super.disconnectedCallback();
   }
 
-  protected override emit<T = unknown>(
-    name: string,
-    detail?: T,
-    options?: LyraEmitOptions,
-  ): CustomEvent<T> {
+  protected override emit<K extends keyof LyraDetailsEventMap & string>(
+    name: K,
+    ...args: LyraEmitArgs<LyraDetailsEventMap, K>
+  ): LyraEmittedEvent<LyraDetailsEventMap, K> {
     // The inherited Details lifecycle owns the real rendered-motion wait. Drop the custom state
     // immediately before publishing its completion boundary so every lr-after-* listener observes
     // a settled item rather than the one-microtask race produced by a second parallel waiter.
     if (name === 'lr-after-show' || name === 'lr-after-hide') this.setAnimating(false);
-    return super.emit(name, detail, options);
+    return super.emit(name, ...args);
+  }
+
+  /**
+   * The private child->parent protocol `<lr-accordion>` listens for.
+   *
+   * Deliberately not routed through `emit()`: these two names appear in no event map, no
+   * `@event` tag, no manifest entry and no docs page, because they are coordination signals
+   * rather than public API. `emit()` now type-checks its name against the component's declared
+   * event map, so dispatching them there would mean advertising them as public events.
+   * The dispatch itself is identical to `emit()`'s -- bubbling and composed, so it still reaches
+   * the owning accordion across the item's shadow boundary.
+   */
+  private emitAccordionProtocol(
+    name: 'lr-accordion-item-state-change' | 'lr-accordion-item-trigger',
+    options?: LyraEmitOptions,
+  ): CustomEvent<{ item: LyraAccordionItem }> {
+    const event = new CustomEvent(name, {
+      detail: { item: this },
+      bubbles: true,
+      composed: true,
+      cancelable: options?.cancelable ?? false,
+    });
+    this.dispatchEvent(event);
+    return event;
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -125,7 +153,7 @@ export class LyraAccordionItem extends LyraDetails {
       this.toggleAttribute('expanded', this.open);
     }
     if (changed.has('disabled')) {
-      this.emit('lr-accordion-item-state-change', { item: this });
+      this.emitAccordionProtocol('lr-accordion-item-state-change');
     }
   }
 
@@ -207,7 +235,7 @@ export class LyraAccordionItem extends LyraDetails {
 
   private handleTriggerClick = (): void => {
     if (this.disabled) return;
-    const handled = this.emit('lr-accordion-item-trigger', { item: this }, { cancelable: true });
+    const handled = this.emitAccordionProtocol('lr-accordion-item-trigger', { cancelable: true });
     if (!handled.defaultPrevented) this.toggle();
   };
 

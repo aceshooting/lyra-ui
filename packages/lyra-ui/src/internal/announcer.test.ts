@@ -1,5 +1,22 @@
-import { expect, waitUntil } from '@open-wc/testing';
-import { Announcer } from './announcer.js';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import {
+  ANNOUNCEMENT_SINK_ATTRIBUTE,
+  Announcer,
+  acquireAnnouncementSink,
+  type AnnouncementPoliteness,
+} from './announcer.js';
+
+function sinkElement(
+  politeness: AnnouncementPoliteness,
+  doc: Document = document,
+): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function sinkTexts(politeness: AnnouncementPoliteness, doc: Document = document): string[] {
+  const element = sinkElement(politeness, doc);
+  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
 
 /** Real-timer throttle window used across these tests -- generous enough that
  *  normal CI scheduling jitter never flips a pass/fail outcome. */
@@ -150,4 +167,169 @@ it('changing throttleMs between bursts affects the next burst, not one already s
     timeout: 2000,
   });
   expect(flushes).to.deep.equal(['a']);
+});
+
+it('creates the announcement sink in the document light DOM, not in any shadow root', () => {
+  const sink = acquireAnnouncementSink('polite');
+  try {
+    const element = sinkElement('polite');
+    // Node identity is compared as a boolean on purpose: a failing chai assertion carrying a DOM
+    // node as actual/expected hangs the whole test file.
+    expect(element === sink.element, 'the sink must be a light-DOM element').to.be.true;
+    expect(element!.parentElement === document.body, 'the sink must hang off document.body').to.be
+      .true;
+    expect(element!.getRootNode() === document, 'the sink must not live inside a shadow root').to.be
+      .true;
+    expect(element!.getAttribute('role')).to.equal('status');
+    expect(element!.getAttribute('aria-live')).to.equal('polite');
+    expect(element!.getAttribute('aria-relevant')).to.equal('additions');
+    expect(element!.getAttribute('aria-atomic')).to.equal('false');
+  } finally {
+    sink.release();
+  }
+});
+
+it('renders the sink visually hidden but present in the accessibility tree', () => {
+  const sink = acquireAnnouncementSink('polite');
+  try {
+    sink.announce('measurable');
+    const rect = sink.element.getBoundingClientRect();
+    expect(rect.width).to.be.at.most(1);
+    expect(rect.height).to.be.at.most(1);
+    expect(getComputedStyle(sink.element).position).to.equal('absolute');
+  } finally {
+    sink.release();
+  }
+});
+
+it('announces by appending a child node rather than rewriting one text node', () => {
+  const sink = acquireAnnouncementSink('polite');
+  try {
+    sink.announce('first');
+    sink.announce('second');
+    expect(sinkTexts('polite')).to.deep.equal(['first', 'second']);
+  } finally {
+    sink.release();
+  }
+});
+
+it('announces an identical repeat again instead of silently rewriting the same string', () => {
+  const sink = acquireAnnouncementSink('polite');
+  try {
+    sink.announce('same');
+    sink.announce('same');
+    expect(
+      sinkTexts('polite'),
+      'a repeat must be a second addition, so assistive tech reads it twice',
+    ).to.deep.equal(['same', 'same']);
+  } finally {
+    sink.release();
+  }
+});
+
+it('removes an announced node once its ttl elapses so stale text is never re-read', async () => {
+  const sink = acquireAnnouncementSink('polite', { messageTtlMs: 40 });
+  try {
+    sink.announce('transient');
+    expect(sinkTexts('polite')).to.deep.equal(['transient']);
+    await waitUntil(() => sinkTexts('polite').length === 0, 'expected the node to be swept', {
+      timeout: 2000,
+    });
+  } finally {
+    sink.release();
+  }
+});
+
+it('shares one sink per politeness and ref-counts it away when the last consumer releases', () => {
+  const first = acquireAnnouncementSink('polite');
+  const second = acquireAnnouncementSink('polite');
+  expect(second.element === first.element, 'both consumers must share one region').to.be.true;
+
+  first.release();
+  expect(sinkElement('polite') !== null, 'a still-held sink must stay mounted').to.be.true;
+
+  second.release();
+  expect(sinkElement('polite') === null, 'the last release must unmount the sink').to.be.true;
+});
+
+it('release() is idempotent and never over-decrements the shared ref count', () => {
+  const first = acquireAnnouncementSink('polite');
+  const second = acquireAnnouncementSink('polite');
+  first.release();
+  first.release();
+  expect(sinkElement('polite') !== null, 'a double release must not unmount a held sink').to.be.true;
+  second.release();
+  expect(sinkElement('polite') === null).to.be.true;
+});
+
+it('release() drops the releasing consumer own pending nodes and their sweep timers', async () => {
+  const first = acquireAnnouncementSink('polite', { messageTtlMs: 5000 });
+  const second = acquireAnnouncementSink('polite', { messageTtlMs: 5000 });
+  try {
+    first.announce('from first');
+    second.announce('from second');
+    expect(sinkTexts('polite')).to.deep.equal(['from first', 'from second']);
+
+    first.release();
+    expect(sinkTexts('polite'), 'only the releasing consumer nodes go').to.deep.equal([
+      'from second',
+    ]);
+    first.announce('after release');
+    expect(sinkTexts('polite'), 'a released sink must not announce again').to.deep.equal([
+      'from second',
+    ]);
+  } finally {
+    second.release();
+  }
+});
+
+it('keeps polite and assertive sinks separate', () => {
+  const polite = acquireAnnouncementSink('polite');
+  const assertive = acquireAnnouncementSink('assertive');
+  try {
+    polite.announce('calm');
+    assertive.announce('urgent');
+    expect(sinkTexts('polite')).to.deep.equal(['calm']);
+    expect(sinkTexts('assertive')).to.deep.equal(['urgent']);
+    expect(assertive.element.getAttribute('role')).to.equal('alert');
+    expect(assertive.element.getAttribute('aria-live')).to.equal('assertive');
+  } finally {
+    polite.release();
+    assertive.release();
+  }
+});
+
+it('keys the sink by document so an adopted consumer announces in its own document', async () => {
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerDocument = iframe.contentDocument!;
+  const sink = acquireAnnouncementSink('polite', { document: ownerDocument });
+  try {
+    sink.announce('inside the frame');
+    expect(sinkTexts('polite', ownerDocument)).to.deep.equal(['inside the frame']);
+    expect(sinkElement('polite') === null, 'the host document must be untouched').to.be.true;
+  } finally {
+    sink.release();
+    expect(sinkElement('polite', ownerDocument) === null).to.be.true;
+  }
+});
+
+it('ignores an empty announcement instead of appending a silent node', () => {
+  const sink = acquireAnnouncementSink('polite');
+  try {
+    sink.announce('');
+    expect(sinkTexts('polite')).to.deep.equal([]);
+  } finally {
+    sink.release();
+  }
+});
+
+it('falls back to the default ttl for a NaN/negative messageTtlMs instead of sweeping instantly', async () => {
+  const sink = acquireAnnouncementSink('polite', { messageTtlMs: NaN });
+  try {
+    sink.announce('sticky');
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(sinkTexts('polite'), 'a NaN ttl must not clamp to a ~0ms sweep').to.deep.equal(['sticky']);
+  } finally {
+    sink.release();
+  }
 });

@@ -618,7 +618,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     const old = this._mode;
     this._mode = next;
     this.requestUpdate('mode', old);
-    this.emit<AppRailModeChangeDetail>('lr-mode-change', { mode: next });
+    this.emit('lr-mode-change', { mode: next });
     // 'open' is only meaningful in 'mobile' mode -- leaving it while open
     // closes the overlay as a side effect (through setOpen, so it still
     // emits lr-toggle and releases the scroll lock/focus trap normally)
@@ -635,10 +635,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // `mode` is no longer `'mobile'` (where `open` is documented as meaningless).
     if (options?.force) {
       this.open = next;
-      this.emit<AppRailToggleDetail>('lr-toggle', { open: next });
+      this.emit('lr-toggle', { open: next });
       return;
     }
-    const event = this.emit<AppRailToggleDetail>('lr-toggle', { open: next }, { cancelable: true });
+    const event = this.emit('lr-toggle', { open: next }, { cancelable: true });
     if (event.defaultPrevented) return;
     this.open = next;
   }
@@ -692,7 +692,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (isRtl(this)) delta = -delta;
     const next = Math.min(this.safeMaxRailWidthPx, Math.max(this.safeMinRailWidthPx, this.resizeStartWidth + delta));
     this.railWidthPx = next;
-    this.emit<AppRailResizeDetail>('lr-rail-resize', { widthPx: next });
+    this.emit('lr-rail-resize', { widthPx: next });
   };
 
   private onResizerPointerUp = (e: PointerEvent): void => {
@@ -718,12 +718,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       e.preventDefault();
       const next = Math.min(this.safeMaxRailWidthPx, this.effectiveRailWidthPx + step);
       this.railWidthPx = next;
-      this.emit<AppRailResizeDetail>('lr-rail-resize', { widthPx: next });
+      this.emit('lr-rail-resize', { widthPx: next });
     } else if (e.key === backwardKey) {
       e.preventDefault();
       const next = Math.max(this.safeMinRailWidthPx, this.effectiveRailWidthPx - step);
       this.railWidthPx = next;
-      this.emit<AppRailResizeDetail>('lr-rail-resize', { widthPx: next });
+      this.emit('lr-rail-resize', { widthPx: next });
     }
   };
 

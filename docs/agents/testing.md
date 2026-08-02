@@ -118,6 +118,27 @@
   restore in `afterEach`). A leaked stub bleeds into later, unrelated tests and produces
   state-dependent failures — this bit `lr-push-to-talk`'s
   `MediaRecorder`/`getUserMedia`/`AudioContext` stubs during the voice-component work.
+- **A failing coverage run points at `scripts/coverage-floors.json`.** `pnpm test:coverage`
+  (`WTR_COVERAGE=1 wtr …`) runs the suite with istanbul instrumentation and hands `wtr`'s blocking
+  `coverageConfig.threshold` the four per-metric floors read out of that file —
+  `statements`/`branches`/`functions`/`lines`. A red "coverage threshold" line names the metric that
+  dropped; the fix is to cover the code you just added, not to edit the number. The file also
+  records the `measured` snapshot and `measuredAt` date the floors were derived from, so the diff
+  says what the suite was actually at.
+  - Floors are **generated, not hand-written**: `pnpm run coverage-floors` (i.e.
+    `node scripts/write-coverage-floors.mjs --write-floors`, run from `packages/lyra-ui` after a
+    coverage run has populated `coverage/`) re-derives each floor as `floor(measured − margin)`,
+    with a default 1.5-point margin (`--margin N` overrides it). `pnpm run check:coverage-floors`
+    is the read-only form the `build-and-coverage` CI job runs right after `test:coverage`; it fails
+    both when a floor sits *above* the measurement (the suite can never pass) and when it has fallen
+    more than 5 points *below* it (the floor stopped gating anything).
+  - **Lowering a floor needs `--allow-lower` on top of `--write-floors`.** Without it the refresh
+    keeps the higher floor, prints which metrics it blocked, and exits non-zero — so a coverage
+    regression cannot be silently re-baselined by whoever last ran the command. The flag exists to
+    make accepting one an explicit act that lands as a reviewable one-line drop in
+    `coverage-floors.json`, next to the `measured` values that justify it. Hand-edited floors are
+    exactly the failure this replaced: they were last left at 75/65/65/75 while the suite measured
+    99/94/99/99, so about a quarter of the tree could have gone uncovered without the gate firing.
 - **A newly-added opt-in property gets an explicit unset-regression test.** When an
   already-shipped component gains a new opt-in `@property`/attribute, add a test proving that,
   left unset, the component's rendered DOM/events/behavior are unchanged from before the property

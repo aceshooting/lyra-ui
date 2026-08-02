@@ -165,7 +165,9 @@ internal native date input.
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
 bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
-settle. `lr-clear` and `lr-invalid` are non-cancelable.
+settle. `lr-clear` is non-cancelable. `lr-invalid` **is** cancelable: `preventDefault()` on it
+suppresses the browser's native validation bubble and `reportValidity()`'s focus/scroll of this
+control, without making the control valid — see "The validity alias is cancelable in 8.0.0" above.
 
 **Slots (10):** `clear-icon`, dynamic `day-YYYY-MM-DD`, `end`, `expand-icon`, `footer`, `hint`,
 `label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
@@ -185,6 +187,12 @@ endpoint remains visible in `value` but contributes the empty string to `FormDat
 endpoint is selected. `min`/`max`, past/future limits, disabled dates/weekdays, the predicate,
 range length, `required`, and configured validators all feed FACE validity. Reset and state restore
 use the same normalization path as direct property writes.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-date-input-padding-block` (default `--lr-space-xs`) and
 `--lr-date-input-padding-inline` (default `--lr-space-s`) — the `input-wrapper`'s padding;

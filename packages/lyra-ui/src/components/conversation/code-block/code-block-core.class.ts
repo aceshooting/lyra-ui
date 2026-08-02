@@ -437,7 +437,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
-    this.emit<{ collapsed: boolean }>('lr-toggle', { collapsed: this.collapsed });
+    this.emit('lr-toggle', { collapsed: this.collapsed });
   };
 
   // The header row and the whole body/skeleton/`<pre>` shell come from

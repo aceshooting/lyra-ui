@@ -2,10 +2,14 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './data-grid.js';
 import type { LyraDataGrid } from './data-grid.js';
 import type { DataGridColumn, DataGridState } from './data-grid-types.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import {
   aggregateValues,
+  columnId,
+  columnValue,
   filterRows,
   matchesFilter,
+  pathValue,
   rowsAsDelimited,
   searchRows,
   sortRows,
@@ -42,6 +46,58 @@ async function dataGrid(
 
 const delay = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
+  const element = sinkElement(politeness);
+  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
+
+it('routes the copy announcement into the shared light-DOM sink, leaving the shadow part a mirror', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  expect(sinkTexts('polite'), 'mounting must not announce a resting state').to.deep.equal([]);
+
+  element.copySelectedRows({ includeHeaders: false });
+  await element.updateComplete;
+  expect(sinkTexts('polite')).to.deep.equal(['Copied!']);
+
+  const region = element.shadowRoot!.querySelector('[part="live-region"]')!;
+  // The retained part is a styling/inspection mirror only -- a live region inside a shadow root is
+  // not reliably announced, and leaving it live would double-announce where it *is* honored.
+  expect(region.getAttribute('role')).to.equal(null);
+  expect(region.getAttribute('aria-live')).to.equal(null);
+  expect(region.getAttribute('aria-hidden')).to.equal('true');
+  expect(region.textContent).to.equal('Copied!');
+});
+
+it('announces a second identical copy again instead of silently rewriting one text node', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.copySelectedRows({ includeHeaders: false });
+  await element.updateComplete;
+  element.copySelectedRows({ includeHeaders: false });
+  await element.updateComplete;
+  expect(
+    sinkTexts('polite'),
+    'an identical repeat must be a second addition so assistive tech reads it again',
+  ).to.deep.equal(['Copied!', 'Copied!']);
+});
+
+it('ref-counts the shared sink away once the last grid disconnects', async () => {
+  const first = await dataGrid();
+  const second = await dataGrid();
+  expect(sinkElement('polite') !== null, 'a connected grid holds the sink').to.be.true;
+  first.remove();
+  expect(sinkElement('polite') !== null, 'a still-connected grid keeps it mounted').to.be.true;
+  second.remove();
+  expect(sinkElement('polite') === null, 'the last disconnect unmounts it').to.be.true;
+});
 
 function header(element: LyraDataGrid<unknown>, id: string): HTMLElement {
   const result = element.shadowRoot!.querySelector<HTMLElement>(
@@ -1213,4 +1269,855 @@ it('aborts stale server requests and applies only the latest response', async ()
   await first;
   expect(firstRequest.signal?.aborted).to.equal(true);
   expect(element.data).to.deep.equal([rows[2]]);
+});
+
+interface CellValueRow {
+  id: number;
+  value: unknown;
+}
+
+async function valueGrid(data: CellValueRow[]): Promise<LyraDataGrid<CellValueRow>> {
+  const valueColumns: DataGridColumn<CellValueRow>[] = [{ field: 'value', label: 'Value' }];
+  const element = (await fixture(html`
+    <lr-data-grid label="Values" .columns=${valueColumns} .data=${data}></lr-data-grid>
+  `)) as LyraDataGrid<CellValueRow>;
+  await element.updateComplete;
+  return element;
+}
+
+it('stringifies object, array, date, and unserializable cell values', async () => {
+  const circular: Record<string, unknown> = {};
+  circular.self = circular;
+  const element = await valueGrid([
+    { id: 1, value: { a: 1 } },
+    { id: 2, value: [1, 'two'] },
+    { id: 3, value: new Date(Date.UTC(2020, 0, 2)) },
+    { id: 4, value: new Date(Number.NaN) },
+    { id: 5, value: circular },
+    { id: 6, value: { big: 10n } },
+    { id: 7, value: undefined },
+  ]);
+  expect(dataCells(element).map((cell) => cell.textContent!.trim())).to.deep.equal([
+    '{"a":1}',
+    '1, two',
+    '2020-01-02T00:00:00.000Z',
+    '',
+    '',
+    '{"big":"10"}',
+    '',
+  ]);
+});
+
+it('re-applies the current page and search term through the public handlers', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" paginate page-size="2" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.page = 1;
+  await element.updateComplete;
+  const pageChange = oneEvent(element, 'lr-page-change');
+  element.handlePageChange();
+  const { detail } = await pageChange;
+  expect(detail.page).to.equal(1);
+  expect(detail.pageSize).to.equal(2);
+
+  element.searchTerm = 'ada';
+  element.page = 1;
+  element.handleSearchTermChange();
+  await element.updateComplete;
+  expect(element.searchTerm).to.equal('ada');
+  expect(element.page).to.equal(0);
+});
+
+it('reorders columns through header drag and drop', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" reorderable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const transfer = new DataTransfer();
+  header(element, 'name').dispatchEvent(
+    new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: transfer }),
+  );
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]')?.textContent?.trim()).to.equal('Name');
+
+  const moved = oneEvent(element, 'lr-column-move');
+  header(element, 'score').dispatchEvent(
+    new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }),
+  );
+  const { detail } = await moved;
+  expect(detail.columnOrder).to.deep.equal(['team', 'score', 'name']);
+  expect(detail.finished).to.equal(true);
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]')).to.not.exist;
+});
+
+it('refuses to start a header drag for a column that cannot move', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const dragStart = new DragEvent('dragstart', {
+    bubbles: true,
+    cancelable: true,
+    dataTransfer: new DataTransfer(),
+  });
+  header(element, 'name').dispatchEvent(dragStart);
+  await element.updateComplete;
+  expect(dragStart.defaultPrevented).to.equal(true);
+  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]')).to.not.exist;
+});
+
+it('ignores a header drop onto the same column or from an unknown source', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" reorderable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  let moves = 0;
+  element.addEventListener('lr-column-move', () => { moves += 1; });
+
+  const empty = new DataTransfer();
+  header(element, 'name').dispatchEvent(
+    new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: empty }),
+  );
+
+  const same = new DataTransfer();
+  header(element, 'name').dispatchEvent(
+    new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: same }),
+  );
+  await element.updateComplete;
+  header(element, 'name').dispatchEvent(
+    new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: same }),
+  );
+  await element.updateComplete;
+
+  expect(moves).to.equal(0);
+  expect(element.columnOrder).to.deep.equal([]);
+  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]')).to.not.exist;
+});
+
+it('clears the drag ghost when a header drag ends without a drop', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" reorderable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  header(element, 'name').dispatchEvent(
+    new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }),
+  );
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]')).to.exist;
+  header(element, 'name').dispatchEvent(new DragEvent('dragend', { bubbles: true }));
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]')).to.not.exist;
+});
+
+it('renders grouped rows with aggregates and group-level selection', async () => {
+  const groupColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name' },
+    { field: 'team', label: 'Team' },
+    { field: 'score', label: 'Score', aggregation: 'sum' },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      group-by="team"
+      selectable="multiple"
+      .columns=${groupColumns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const groupRows = [...element.shadowRoot!.querySelectorAll('[part~="group-row"]')];
+  expect(groupRows.length).to.equal(2);
+  expect(groupRows[0]!.textContent).to.contain('Compiler');
+  expect(groupRows[0]!.textContent).to.contain('16');
+  expect(groupRows[1]!.textContent).to.contain('10');
+
+  const groupCheckbox = groupRows[0]!.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+  const selection = oneEvent(element, 'lr-row-select');
+  groupCheckbox.checked = true;
+  groupCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+  await selection;
+  expect(element.selectedRows.map((row) => row.name)).to.deep.equal(['Ada', 'Grace']);
+
+  groupCheckbox.checked = false;
+  groupCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+  await element.updateComplete;
+  expect(element.selectedRows).to.deep.equal([]);
+
+  element.expandAllRows();
+  await element.updateComplete;
+  expect(element.expandedKeys.every((key) => String(key).startsWith('group:'))).to.equal(true);
+  expect(element.expandedKeys.length).to.equal(2);
+  await expect(element).to.be.accessible();
+});
+
+it('applies a caller-supplied aggregated formatter to a group row', async () => {
+  const groupColumns: DataGridColumn<Person>[] = [
+    { field: 'team', label: 'Team' },
+    {
+      field: 'score',
+      label: 'Score',
+      aggregation: 'mean',
+      aggregatedFormatter: (value) => `avg ${Number(value).toFixed(1)}`,
+    },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" group-by="team" .columns=${groupColumns} .data=${rows}></lr-data-grid>
+  `);
+  const groupRows = [...element.shadowRoot!.querySelectorAll('[part~="group-row"]')];
+  expect(groupRows[0]!.textContent).to.contain('avg 8.0');
+});
+
+it('renders a footer row from string and function column footers', async () => {
+  const footerColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name', footer: 'Total' },
+    { field: 'team', label: 'Team' },
+    {
+      field: 'score',
+      label: 'Score',
+      footer: (footerRows) => String(footerRows.reduce((sum, row) => sum + row.score, 0)),
+    },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${footerColumns} .data=${rows}></lr-data-grid>
+  `);
+  const footerCells = [...element.shadowRoot!.querySelectorAll('[part="footer-cell"]')].map(
+    (cell) => cell.textContent!.trim(),
+  );
+  expect(footerCells).to.deep.equal(['Total', '', '26']);
+});
+
+it('falls back to a temporary textarea when the async clipboard is unavailable', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const originalExecCommand = document.execCommand;
+  let copied: string | null = null;
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+  document.execCommand = ((command: string): boolean => {
+    if (command === 'copy') {
+      copied = document.body.querySelector<HTMLTextAreaElement>(':scope > textarea')?.value ?? null;
+    }
+    return true;
+  }) as typeof document.execCommand;
+  try {
+    expect(element.copySelectedRows({ includeHeaders: false })).to.equal(3);
+  } finally {
+    document.execCommand = originalExecCommand;
+    if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+  }
+  expect(copied).to.equal('Ada\tCompiler\t7\nLin\tRuntime\t10\nGrace\tCompiler\t9');
+  expect(document.body.querySelector(':scope > textarea')).to.not.exist;
+});
+
+it('copies and raises a context menu from the grid keyboard contract', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  let written = '';
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: (text: string) => { written = text; return Promise.resolve(); } },
+  });
+  try {
+    const cell = dataCells(element)[0]!;
+    const copy = new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true, cancelable: true });
+    cell.dispatchEvent(copy);
+    expect(copy.defaultPrevented).to.equal(true);
+    expect(written.split('\r\n')).to.deep.equal([
+      'Name\tTeam\tScore',
+      'Ada\tCompiler\t7',
+      'Lin\tRuntime\t10',
+      'Grace\tCompiler\t9',
+    ]);
+  } finally {
+    if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+  }
+
+  const menu = oneEvent(element, 'lr-cell-contextmenu');
+  dataCells(element)[0]!.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, bubbles: true, cancelable: true }),
+  );
+  const { detail } = await menu;
+  expect(detail.index).to.equal(0);
+  expect(detail.value).to.equal('Ada');
+});
+
+it('moves and resizes a column from the header keyboard contract', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" reorderable resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const moved = oneEvent(element, 'lr-column-move');
+  const move = new KeyboardEvent('keydown', {
+    key: 'ArrowRight',
+    shiftKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+  header(element, 'name').dispatchEvent(move);
+  const moveDetail = (await moved).detail;
+  expect(moveDetail.columnOrder).to.deep.equal(['team', 'name', 'score']);
+  expect(move.defaultPrevented).to.equal(true);
+  await element.updateComplete;
+
+  const resized = oneEvent(element, 'lr-column-resize');
+  const resize = new KeyboardEvent('keydown', {
+    key: 'ArrowRight',
+    altKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+  header(element, 'name').dispatchEvent(resize);
+  const resizeDetail = (await resized).detail;
+  expect(resizeDetail.columnId).to.equal('name');
+  expect(resizeDetail.finished).to.equal(true);
+  expect(resize.defaultPrevented).to.equal(true);
+});
+
+it('scrolls a virtualized focus target into the body viewport', async () => {
+  const many: Person[] = Array.from({ length: 300 }, (_value, index) => ({
+    id: index,
+    name: `Person ${index}`,
+    team: index % 2 === 0 ? 'Compiler' : 'Runtime',
+    score: index,
+  }));
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" style="height: 240px" .columns=${columns} .data=${many}></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  expect(body.scrollTop).to.equal(0);
+  const end = new KeyboardEvent('keydown', { key: 'End', ctrlKey: true, bubbles: true, cancelable: true });
+  dataCells(element)[0]!.dispatchEvent(end);
+  await element.updateComplete;
+  expect(end.defaultPrevented).to.equal(true);
+  expect(body.scrollTop).to.be.greaterThan(0);
+});
+
+it('pins, unpins, and hides a column from the per-column menu', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" with-column-menu pinnable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const menuButton = header(element, 'name').querySelector<HTMLButtonElement>(
+    '[part="column-menu-button"]',
+  )!;
+  menuButton.click();
+  await element.updateComplete;
+  const items = [
+    ...header(element, 'name').querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+  ];
+  expect(items.length).to.equal(3);
+
+  const pinned = oneEvent(element, 'lr-column-pin');
+  items[1]!.click();
+  expect((await pinned).detail.side).to.equal('right');
+  await element.updateComplete;
+  expect(element.getColumnPin('name')).to.equal('right');
+
+  items[0]!.click();
+  await element.updateComplete;
+  expect(element.getColumnPin('name')).to.equal('left');
+
+  items[2]!.click();
+  await element.updateComplete;
+  expect(element.getColumnPin('name')).to.equal(false);
+
+  const checkbox = header(element, 'name').querySelector<HTMLInputElement>(
+    '[role="menuitemcheckbox"] input',
+  )!;
+  expect(checkbox.checked).to.equal(true);
+  const visibility = oneEvent(element, 'lr-column-visibility-change');
+  checkbox.checked = false;
+  checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+  expect((await visibility).detail).to.deep.equal({ columnId: 'name', visible: false });
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelector('[part~="header-cell"][data-column-id="name"]')).to.not.exist;
+});
+
+it('omits the visibility checkbox for a column that cannot be hidden', async () => {
+  const lockedColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name', hideable: false },
+    { field: 'team', label: 'Team' },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" with-column-menu .columns=${lockedColumns} .data=${rows}></lr-data-grid>
+  `);
+  header(element, 'name').querySelector<HTMLButtonElement>('[part="column-menu-button"]')!.click();
+  await element.updateComplete;
+  expect(header(element, 'name').querySelector('[role="menuitemcheckbox"]')).to.not.exist;
+  expect(header(element, 'name').querySelector('[role="menuitem"]')).to.not.exist;
+});
+
+it('selects a range of descendant rows with a shift-click', async () => {
+  const tree: Person[] = [
+    { id: 1, name: 'Ada', team: 'Compiler', score: 7, children: [
+      { id: 11, name: 'Ada Jr', team: 'Compiler', score: 1 },
+    ] },
+    { id: 2, name: 'Lin', team: 'Runtime', score: 10 },
+    { id: 3, name: 'Grace', team: 'Compiler', score: 9 },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      selectable="multiple"
+      child-rows="children"
+      row-key="id"
+      .columns=${columns}
+      .data=${tree}
+    ></lr-data-grid>
+  `);
+  const checkboxes = [
+    ...element.shadowRoot!.querySelectorAll<HTMLInputElement>('[part~="row"] input[type="checkbox"]'),
+  ];
+  // Dispatching a click on a checkbox runs its activation behavior, which is what flips
+  // `checked` before the listener reads it -- pre-assigning `checked` here would be undone.
+  checkboxes[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await element.updateComplete;
+  const last = [
+    ...element.shadowRoot!.querySelectorAll<HTMLInputElement>('[part~="row"] input[type="checkbox"]'),
+  ].at(-1)!;
+  last.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+  await element.updateComplete;
+  // The shift range covers every visible row, and multi-select cascades to collapsed descendants.
+  expect(element.selectedRows.map((row) => row.id)).to.deep.equal([1, 11, 2, 3]);
+  expect(element.selectedKeys).to.contain(11);
+});
+
+it('walks the grid with every supported navigation key', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" paginate page-size="2" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const focused = (): string =>
+    element.shadowRoot!.querySelector('[data-focus-cell][tabindex="0"]')?.getAttribute('data-row-position') ??
+    'header';
+  const press = (key: string, init: KeyboardEventInit = {}): KeyboardEvent => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+    element.shadowRoot!.querySelector<HTMLElement>('[data-focus-cell][tabindex="0"]')!.dispatchEvent(event);
+    return event;
+  };
+
+  header(element, 'name').focus();
+  await element.updateComplete;
+  expect(focused()).to.equal('header');
+
+  expect(press('ArrowDown').defaultPrevented).to.equal(true);
+  await element.updateComplete;
+  expect(focused()).to.equal('0');
+
+  press('ArrowRight');
+  await element.updateComplete;
+  press('ArrowDown');
+  await element.updateComplete;
+  expect(focused()).to.equal('1');
+
+  press('ArrowUp');
+  await element.updateComplete;
+  expect(focused()).to.equal('0');
+
+  press('ArrowLeft');
+  await element.updateComplete;
+  press('PageDown');
+  await element.updateComplete;
+  expect(focused()).to.equal('1');
+
+  // A page step of two rows from row 1 clamps past row 0 onto the header row.
+  press('PageUp');
+  await element.updateComplete;
+  expect(focused()).to.equal('header');
+
+  press('End');
+  await element.updateComplete;
+  expect(
+    element.shadowRoot!.querySelector('[data-focus-cell][tabindex="0"]')!.getAttribute('data-column-position'),
+  ).to.equal('2');
+
+  press('Home', { ctrlKey: true });
+  await element.updateComplete;
+  expect(focused()).to.equal('header');
+
+  const sorted = oneEvent(element, 'lr-sort-change');
+  press('Enter');
+  expect((await sorted).detail.sort).to.deep.equal([{ id: 'name', desc: false }]);
+
+  press('End', { ctrlKey: true });
+  await element.updateComplete;
+  const clicked = oneEvent(element, 'lr-cell-click');
+  press('Enter');
+  expect((await clicked).detail.index).to.equal(1);
+});
+
+it('toggles row selection with the space key', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" selectable="multiple" row-key="id" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const cell = dataCells(element)[0]!;
+  cell.focus();
+  const selected = oneEvent(element, 'lr-row-select');
+  const press = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+  cell.dispatchEvent(press);
+  expect((await selected).detail.selectedKeys).to.deep.equal([1]);
+  expect(press.defaultPrevented).to.equal(true);
+
+  await element.updateComplete;
+  dataCells(element)[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+  expect(element.selectedKeys).to.deep.equal([]);
+});
+
+it('aligns a programmatic scroll to the start, center, and end of the viewport', async () => {
+  const many: Person[] = Array.from({ length: 400 }, (_value, index) => ({
+    id: index,
+    name: `Person ${index}`,
+    team: 'Compiler',
+    score: index,
+  }));
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" style="height: 240px" .columns=${columns} .data=${many}></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+
+  element.scrollToIndex(300, { align: 'end' });
+  await element.updateComplete;
+  const atEnd = body.scrollTop;
+  expect(atEnd).to.be.greaterThan(0);
+
+  element.scrollToIndex(300, { align: 'center' });
+  await element.updateComplete;
+  expect(body.scrollTop).to.be.greaterThan(atEnd);
+
+  element.scrollToIndex(0, { align: 'start' });
+  await element.updateComplete;
+  expect(body.scrollTop).to.equal(0);
+
+  element.scrollToIndex(Number.NaN);
+  await element.updateComplete;
+  expect(body.scrollTop).to.equal(0);
+});
+
+it('reads the page and search term from their own pager and toolbar controls', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      paginate
+      with-search
+      page-size="1"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const search = element.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
+  search.value = 'compiler';
+  search.dispatchEvent(new Event('input', { bubbles: true }));
+  await element.updateComplete;
+  expect(element.searchTerm).to.equal('compiler');
+  expect(element.page).to.equal(0);
+
+  const sizeSelect = element.shadowRoot!.querySelector<HTMLSelectElement>('[part="page-size"]')!;
+  const resized = oneEvent(element, 'lr-page-change');
+  sizeSelect.value = '10';
+  sizeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  expect((await resized).detail.pageSize).to.equal(10);
+  expect(element.page).to.equal(0);
+});
+
+it('navigates a grouped grid from a group row that names no column', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" group-by="team" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const groupCell = element.shadowRoot!.querySelector<HTMLElement>('[part="group-value"]')!;
+  const down = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+  groupCell.dispatchEvent(down);
+  await element.updateComplete;
+  expect(down.defaultPrevented).to.equal(true);
+  expect(
+    element.shadowRoot!.querySelector('[data-focus-cell][tabindex="0"]')!.getAttribute('data-row-position'),
+  ).to.equal('1');
+});
+
+it('drops per-column state for columns that disappear', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      pinnable
+      resizable
+      with-column-menu
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  element.columnOrder = ['score', 'name', 'team'];
+  element.pinColumn('score', 'left');
+  element.toggleColumn('team', false);
+  element.setColumnWidth('score', 320);
+  await element.updateComplete;
+  expect(element.getColumnPin('score')).to.equal('left');
+
+  element.columns = [{ field: 'name', label: 'Name' }];
+  await element.updateComplete;
+  expect(element.columnOrder).to.deep.equal(['name']);
+  expect(element.getColumnPin('score')).to.equal(false);
+  expect(element.getState().widths).to.deep.equal({});
+  expect(element.getState().visibility).to.deep.equal({});
+});
+
+it('resolves child rows from a callback and filters from leaf matches', async () => {
+  const tree: Person[] = [
+    {
+      id: 1,
+      name: 'Parent',
+      team: 'Compiler',
+      score: 1,
+      children: [{ id: 2, name: 'Needle', team: 'Runtime', score: 2 }],
+    },
+    { id: 3, name: 'Other', team: 'Runtime', score: 3 },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      row-key="id"
+      filter-from-leaf-rows
+      .childRows=${(row: Person) => row.children ?? []}
+      .columns=${columns}
+      .data=${tree}
+      .expandedKeys=${[1]}
+    ></lr-data-grid>
+  `);
+  expect(dataCells(element).length).to.be.greaterThan(0);
+
+  element.searchTerm = 'Needle';
+  await element.updateComplete;
+  const names = [...element.shadowRoot!.querySelectorAll('[part~="cell"][data-column-id="name"]')].map(
+    (cell) => cell.textContent!.trim(),
+  );
+  expect(names).to.deep.equal(['Parent', 'Needle']);
+});
+
+it('reports facets without a range for a non-numeric column', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const teams = element.getColumnFacets('team');
+  expect([...teams.uniqueValues.keys()]).to.deep.equal(['Compiler', 'Runtime']);
+  expect(teams.minMax).to.equal(undefined);
+  expect(element.getColumnFacets('score').minMax).to.deep.equal([7, 10]);
+  expect([...element.getColumnFacets('missing').uniqueValues]).to.deep.equal([]);
+});
+
+it('renders plain rows when a grouped field names no column', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" group-by="missing" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  expect(element.shadowRoot!.querySelector('[part~="group-row"]')).to.not.exist;
+  expect(dataCells(element).length).to.equal(9);
+  element.expandAllRows();
+  await element.updateComplete;
+  expect(element.expandedKeys).to.deep.equal([]);
+});
+
+it('abandons an in-flight server request when the data source is replaced', async () => {
+  let firstSignal: AbortSignal | undefined;
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      server
+      .columns=${columns}
+      .dataSource=${(request: { signal?: AbortSignal }) => {
+        firstSignal = request.signal;
+        return new Promise<never>(() => undefined);
+      }}
+    ></lr-data-grid>
+  `);
+  void element.reload();
+  await delay(0);
+  expect(element.loading).to.equal(true);
+
+  element.dataSource = () => Promise.resolve({ rows: [rows[0]!], total: 1 });
+  await element.updateComplete;
+  expect(firstSignal?.aborted).to.equal(true);
+  expect(element.loading).to.equal(false);
+});
+
+describe('data-grid processing helpers', () => {
+  const locale = 'en';
+
+  it('derives a column id from id, field, then position', () => {
+    expect(columnId({ id: 'explicit', field: 'name' }, 0)).to.equal('explicit');
+    expect(columnId({ field: 'name' }, 0)).to.equal('name');
+    expect(columnId({}, 2)).to.equal('column-3');
+  });
+
+  it('reads dot paths defensively', () => {
+    expect(pathValue({ a: { b: 1 } }, 'a.b')).to.equal(1);
+    expect(pathValue({ a: { b: 1 } }, '')).to.equal(undefined);
+    expect(pathValue({ a: 1 }, 'a.b')).to.equal(undefined);
+    expect(pathValue(null, 'a')).to.equal(undefined);
+  });
+
+  it('prefers a column value callback over its field path', () => {
+    const row = { name: 'Ada' };
+    expect(columnValue({ value: () => 'computed', field: 'name' }, row)).to.equal('computed');
+    expect(columnValue({ field: 'name' }, row)).to.equal('Ada');
+    expect(columnValue({}, row)).to.equal(undefined);
+  });
+
+  it('compares number and date ranges, including an inclusive end day', () => {
+    const numberColumn: DataGridColumn<{ v: unknown }> = { field: 'v', filterType: 'number-range' };
+    expect(matchesFilter({ v: 5 }, numberColumn, 'not-an-array', locale)).to.equal(true);
+    expect(matchesFilter({ v: 5 }, numberColumn, [1, 10], locale)).to.equal(true);
+    expect(matchesFilter({ v: 0 }, numberColumn, [1, 10], locale)).to.equal(false);
+    expect(matchesFilter({ v: 20 }, numberColumn, [1, 10], locale)).to.equal(false);
+    expect(matchesFilter({ v: 20 }, numberColumn, [1, undefined], locale)).to.equal(true);
+    expect(matchesFilter({ v: '' }, numberColumn, [1, 10], locale)).to.equal(false);
+    expect(matchesFilter({ v: 'x' }, numberColumn, [1, 10], locale)).to.equal(false);
+
+    const dateColumn: DataGridColumn<{ v: unknown }> = { field: 'v', filterType: 'date-range' };
+    const start = new Date(2024, 0, 1);
+    const end = new Date(2024, 0, 31);
+    expect(matchesFilter({ v: new Date(2024, 0, 31, 23, 30) }, dateColumn, [start, end], locale)).to.equal(true);
+    expect(matchesFilter({ v: new Date(2024, 1, 1) }, dateColumn, [start, end], locale)).to.equal(false);
+    expect(matchesFilter({ v: '2024-01-15' }, dateColumn, [start, end], locale)).to.equal(true);
+    expect(matchesFilter({ v: new Date(Number.NaN) }, dateColumn, [start, end], locale)).to.equal(false);
+    expect(matchesFilter({ v: { nested: true } }, dateColumn, [start, end], locale)).to.equal(false);
+  });
+
+  it('matches equality, set, includes-any, includes-all, and free-text filters', () => {
+    const row = { tags: ['alpha', 'beta'], name: 'Ada' };
+    const tags = (filterType: DataGridFilterType): DataGridColumn<typeof row> => ({ field: 'tags', filterType });
+
+    expect(matchesFilter(row, { field: 'name', filterType: 'equals' }, 'ada', locale)).to.equal(true);
+    expect(matchesFilter(row, { field: 'name', filterType: 'equals' }, 'lin', locale)).to.equal(false);
+
+    expect(matchesFilter(row, tags('set'), [], locale)).to.equal(true);
+    expect(matchesFilter(row, tags('set'), new Set(['beta']), locale)).to.equal(true);
+    expect(matchesFilter(row, tags('includes-any'), ['gamma', 'beta'], locale)).to.equal(true);
+    expect(matchesFilter(row, tags('includes-all'), ['alpha', 'beta'], locale)).to.equal(true);
+    expect(matchesFilter(row, tags('includes-all'), ['alpha', 'gamma'], locale)).to.equal(false);
+
+    expect(matchesFilter(row, { field: 'name' }, 'AD', locale)).to.equal(true);
+    expect(matchesFilter(row, { field: 'name' }, 'zz', locale)).to.equal(false);
+    expect(matchesFilter(row, { field: 'name', filterFn: () => true }, 'ignored', locale)).to.equal(true);
+
+    const scalar = { value: new Set(['x']) };
+    expect(matchesFilter(scalar, { field: 'value', filterType: 'set' }, 'x', locale)).to.equal(true);
+  });
+
+  it('stringifies exotic values consistently for text comparison and CSV', () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const exotic = [
+      { v: new Date(Date.UTC(2024, 0, 2)) },
+      { v: new Date(Number.NaN) },
+      { v: ['a', 'b'] },
+      { v: { big: 7n } },
+      { v: circular },
+      { v: null },
+    ];
+    const csv = rowsAsDelimited(exotic, [{ field: 'v', label: 'V' }], { includeHeaders: false });
+    expect(csv.split('\r\n')).to.deep.equal([
+      '2024-01-02T00:00:00.000Z',
+      '',
+      'a b',
+      '"{""big"":""7""}"',
+      '',
+      '',
+    ]);
+  });
+
+  it('ranks missing values by the sortUndefined policy', () => {
+    const withHoles = [{ v: 2 }, { v: null }, { v: 1 }];
+    const ids = (policy: DataGridColumn<{ v: unknown }>['sortUndefined'], desc: boolean): unknown[] =>
+      sortRows(withHoles, [{ id: 'v', field: 'v', sortUndefined: policy }], [{ id: 'v', desc }], locale)
+        .map((row) => row.v);
+
+    expect(ids('last', false)).to.deep.equal([1, 2, null]);
+    expect(ids('first', false)).to.deep.equal([null, 1, 2]);
+    expect(ids(-1, false)).to.deep.equal([null, 1, 2]);
+    expect(ids(1, false)).to.deep.equal([1, 2, null]);
+    // A numeric policy is direction-aware; the string spellings pin the hole to one end.
+    expect(ids(1, true)).to.deep.equal([null, 2, 1]);
+    expect(ids('last', true)).to.deep.equal([2, 1, null]);
+    expect(sortRows(withHoles, [{ field: 'v' }], [{ id: 'missing', desc: false }], locale))
+      .to.deep.equal(withHoles);
+  });
+
+  it('honors every sort algorithm and a custom comparator', () => {
+    const dated = [{ v: '2024-03-01' }, { v: '2024-01-01' }];
+    expect(sortRows(dated, [{ id: 'v', field: 'v', sortFn: 'datetime' }], [{ id: 'v', desc: false }], locale))
+      .to.deep.equal([{ v: '2024-01-01' }, { v: '2024-03-01' }]);
+
+    const basic = [{ v: 10 }, { v: 2 }];
+    expect(sortRows(basic, [{ id: 'v', field: 'v', sortFn: 'basic' }], [{ id: 'v', desc: false }], locale))
+      .to.deep.equal([{ v: 2 }, { v: 10 }]);
+
+    const mixedCase = [{ v: 'b' }, { v: 'A' }];
+    expect(
+      sortRows(mixedCase, [{ id: 'v', field: 'v', sortFn: 'textCaseSensitive' }], [{ id: 'v', desc: false }], locale)
+        .map((row) => row.v),
+    ).to.deep.equal(['A', 'b']);
+    expect(
+      sortRows(
+        [{ v: 'item10' }, { v: 'item2' }],
+        [{ id: 'v', field: 'v', sortFn: 'alphanumericCaseSensitive' }],
+        [{ id: 'v', desc: false }],
+        locale,
+      ).map((row) => row.v),
+    ).to.deep.equal(['item2', 'item10']);
+
+    expect(
+      sortRows(
+        [{ v: 1 }, { v: 3 }],
+        [{ id: 'v', field: 'v', comparator: (left, right) => Number(right) - Number(left) }],
+        [{ id: 'v', desc: false }],
+        locale,
+      ).map((row) => row.v),
+    ).to.deep.equal([3, 1]);
+
+    // Non-parsable datetimes fall through to the collator rather than producing NaN ordering.
+    expect(
+      sortRows(
+        [{ v: 'zeta' }, { v: 'alpha' }],
+        [{ id: 'v', field: 'v', sortFn: 'datetime' }],
+        [{ id: 'v', desc: false }],
+        locale,
+      ).map((row) => row.v),
+    ).to.deep.equal(['alpha', 'zeta']);
+  });
+
+  it('computes every named aggregation and its empty-input fallbacks', () => {
+    const numbers = [1, 2, 3, 4];
+    const asRows = numbers.map((value) => ({ value }));
+    expect(aggregateValues('count', asRows, numbers)).to.equal(4);
+    expect(aggregateValues('sum', asRows, numbers)).to.equal(10);
+    expect(aggregateValues('min', asRows, numbers)).to.equal(1);
+    expect(aggregateValues('max', asRows, numbers)).to.equal(4);
+    expect(aggregateValues('mean', asRows, numbers)).to.equal(2.5);
+    expect(aggregateValues('median', asRows, numbers)).to.equal(2.5);
+    expect(aggregateValues('median', asRows.slice(0, 3), [1, 2, 3])).to.equal(2);
+    expect(aggregateValues('extent', asRows, numbers)).to.deep.equal([1, 4]);
+    expect(aggregateValues('unique', asRows, [1, 1, 2])).to.deep.equal([1, 2]);
+    expect(aggregateValues('uniqueCount', asRows, [1, 1, 2])).to.equal(2);
+    expect(aggregateValues((rows) => rows.length * 2, asRows, numbers)).to.equal(8);
+
+    expect(aggregateValues('sum', [], [])).to.equal(undefined);
+    expect(aggregateValues('extent', [], [])).to.deep.equal([]);
+    expect(aggregateValues('unique', [], [null, undefined])).to.deep.equal([]);
+  });
+
+  it('escapes formulas, delimiters, and quotes when serializing rows', () => {
+    const tricky = [{ text: '=cmd()', other: 'a,b', quoted: 'say "hi"', amount: -5 }];
+    const cols: DataGridColumn<(typeof tricky)[number]>[] = [
+      { field: 'text', label: 'Text' },
+      { field: 'other', label: 'Other' },
+      { field: 'quoted', label: 'Quoted' },
+      { field: 'amount', label: 'Amount' },
+    ];
+    expect(rowsAsDelimited(tricky, cols, { includeHeaders: false })).to.equal(
+      `'=cmd(),"a,b","say ""hi""",-5`,
+    );
+    expect(rowsAsDelimited(tricky, cols, { includeHeaders: false, escapeFormulas: false })).to.equal(
+      `=cmd(),"a,b","say ""hi""",-5`,
+    );
+    expect(rowsAsDelimited(tricky, cols, { columnIds: ['other'] })).to.equal('Other\r\n"a,b"');
+    expect(rowsAsDelimited(tricky, cols, { columns: ['amount'], delimiter: '\t' })).to.equal('Amount\r\n-5');
+    expect(
+      rowsAsDelimited(tricky, [...cols.slice(0, 1), { field: 'other', label: 'Other', hidden: true }], {}),
+    ).to.equal(`Text\r\n'=cmd()`);
+  });
 });

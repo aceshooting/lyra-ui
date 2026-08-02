@@ -21,7 +21,13 @@ import {
 } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
-import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import {
+  getFormOwner,
+  installCustomErrorProperty,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { tag } from '../../../internal/prefix.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -160,9 +166,12 @@ export interface LyraComboboxEventMap {
  * @event {CustomEvent<{ value: string | string[] }>} lr-change - Prefixed compatibility alias fired
  * after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s `lr-change`.
  * `detail: { value }`. Not fired for typing or a programmatic `value` assignment.
- * @event lr-show - The listbox opened.
+ * @event lr-show - The listbox is about to open, however `open` became true. Cancelable —
+ *   `preventDefault()` leaves it closed and the reflected attribute untouched. Not cancelable on
+ *   the one path where a veto is meaningless: an already-removed element closing on disconnect.
  * @event lr-after-show - The listbox finished opening and its transition settled.
- * @event lr-hide - The listbox closed.
+ * @event lr-hide - The listbox is about to close, however `open` became false. Cancelable on the
+ *   same terms as `lr-show`.
  * @event lr-after-hide - The listbox finished closing and its transition settled.
  * @event lr-clear - The value was cleared.
  * @event {CustomEvent<{ inputValue: string }>} lr-create - Cancelable request to create a
@@ -177,7 +186,9 @@ export interface LyraComboboxEventMap {
  * non-cancelable event.
  * @event {FocusEvent} focus - Re-dispatched from the internal native input as a bubbling, composed,
  * non-cancelable event.
- * @event lr-invalid - The combobox failed a validity check.
+ * @event lr-invalid - The combobox failed a validity check. Cancelable: calling
+ * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
+ * browser's own validation bubble so an app can present the failure its own way.
  * @csspart form-control - The outer wrapper around label, combobox, listbox, error and hint.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Compatibility wrapper around the visible label content.
@@ -239,6 +250,13 @@ export interface LyraComboboxEventMap {
  * @cssprop [--tag-max-size=var(--lr-size-5rem)] - Maximum inline size of a built-in selected tag.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Listbox enter-transition duration.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Listbox exit-transition duration.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
+ * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
+ * other quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Required-marker color,
+ * themeable independently of error text and invalid borders.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * required marker.
  * @cssstate blank - Matches while no value is selected.
  * @cssstate disabled - Matches while disabled directly or by an ancestor fieldset.
  * @cssstate required - Matches while `required` is set, so a consumer can mark the field without
@@ -422,6 +440,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private inputId = nextId('combobox-input');
   private cleanup?: () => void;
   private _isFirstUpdate = true;
+  private openVetoed = false;
   private transitionToken = 0;
   private transitionWaiters = new Map<'lr-after-show' | 'lr-after-hide', Set<() => void>>();
   private _selected: string[] = [];
@@ -466,7 +485,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
   }
 
   get form(): HTMLFormElement | null {
@@ -602,6 +621,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // -- capture that distinction here, while it's still reliable, for
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
+    this.announceOpenTransition(changed);
     if (changed.has('source')) {
       clearTimeout(this.sourceTimer);
       this.sourceAbort?.abort();
@@ -666,7 +686,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
     if (this._disabled) this.hide();
-    this.syncCustomStates();
+    // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
+    // the states republished.
+    this.updateValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -776,8 +798,18 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       .filter((row): row is ComboboxSourceRow => row != null);
   }
 
+  /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   private updateValidity(): void {
-    if (this.required && this._selected.length === 0) {
+    if (this.barredFromValidation) {
+      // A barred control reports no violation at all, exactly like a native disabled `<select>` --
+      // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required
+      // comboboxes, and with it the documented `:state(user-invalid)` error styling.
+      this.validityController.setValidity({});
+    } else if (this.required && this._selected.length === 0) {
       this.validityController.setValidity({ valueMissing: true }, this.localize('comboboxRequired'));
     } else {
       this.validityController.setValidity({});
@@ -796,7 +828,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
    * `:user-invalid` does.
    */
   private syncCustomStates(): void {
-    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.touched,
+      barred: this.barredFromValidation,
+    });
     setCustomState(this.internals, 'blank', this._selected.length === 0);
     setCustomState(this.internals, 'disabled', this.effectiveDisabled);
   }
@@ -873,7 +909,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     if (disabled) this.hide();
-    this.syncCustomStates();
+    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
+    this.updateValidity();
     this.requestUpdate();
   }
   checkValidity(): boolean {
@@ -1133,6 +1170,34 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return this._selected[0] ? this.labelFor(this._selected[0]) : '';
   }
 
+  /**
+   * Emits the cancelable `lr-show`/`lr-hide` veto point for this update's `open` transition.
+   *
+   * It lives here rather than in `updated()` because a veto has to be answered *before* anything
+   * observable happens: `willUpdate()` still runs ahead of render and attribute reflection, so
+   * restoring `open` here leaves the listbox, the reflected attribute and the property agreeing
+   * with each other without a visible open-then-close flash. Keeping it on the `open` transition
+   * (rather than inside `show()`/`hide()`) preserves the existing rule that the lifecycle fires
+   * however `open` changed, including a direct `el.open = true` that bypasses both methods.
+   */
+  private announceOpenTransition(changed: PropertyValues): void {
+    this.openVetoed = false;
+    if (!changed.has('open') || this._isFirstUpdate) return;
+    const name = this.open ? 'lr-show' : 'lr-hide';
+    // Removal cannot be vetoed -- the element is already gone -- so the disconnect-driven close
+    // is announced without offering a veto nobody could honour.
+    if (!this.isConnected) {
+      this.emit(name);
+      return;
+    }
+    if (!this.emit(name, undefined, { cancelable: true }).defaultPrevented) return;
+    this.openVetoed = true;
+    this.open = !this.open;
+    // `show()`/`hide()` already registered a waiter for the transition this veto just cancelled;
+    // without resolving it their returned promise would never settle.
+    this.resolveTransitionWaiters(this.open ? 'lr-after-hide' : 'lr-after-show');
+  }
+
   /** Opens the listbox and resolves after `lr-after-show`. */
   show(): Promise<void> {
     if (this.open || this.effectiveDisabled) return Promise.resolve();
@@ -1173,21 +1238,23 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
-    if (changed.has('open')) {
+    // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it
+    // while nothing about the state actually moved: tearing down and rebuilding the popup
+    // machinery here would undo the veto it was meant to honour.
+    if (changed.has('open') && !this.openVetoed) {
       this.cleanup?.();
       this.cleanup = undefined;
-      // All `open`-driven side effects (positioning, the click-outside
-      // listener, and the lr-show/lr-hide events) live here rather than
-      // in show()/hide() so they fire however `open` became true -- via
+      // All `open`-driven side effects (positioning and the click-outside listener) live here
+      // rather than in show()/hide() so they run however `open` became true -- via
       // show()/hide()'s own user-interaction paths, or a consumer/test
-      // setting `el.open` directly, which bypasses both entirely.
+      // setting `el.open` directly, which bypasses both entirely. The lr-show/lr-hide veto point
+      // itself runs one step earlier, in willUpdate().
       if (this.open) {
         this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
-        // Don't announce a "show" transition for markup that's simply
+        // Don't settle a "show" transition for markup that's simply
         // rendering open for the first time (e.g. `<lr-combobox open>`) --
         // only for an actual closed-to-open transition.
         if (!this._isFirstUpdate) {
-          this.emit('lr-show');
           void this.settleTransition('lr-after-show');
         }
         const anchor = this.renderRoot.querySelector('[part="combobox"]') as HTMLElement | null;
@@ -1199,7 +1266,6 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       } else {
         this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
         if (!this._isFirstUpdate) {
-          this.emit('lr-hide');
           void this.settleTransition('lr-after-hide');
         }
       }

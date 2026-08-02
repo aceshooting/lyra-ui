@@ -98,9 +98,11 @@ export class LyraUsageBadge extends LyraElement {
   private focused = false;
 
   protected override willUpdate(changed: PropertyValues<this>): void {
-    if (!this.hasUpdated) {
+    // A server render sees no light-DOM children at all, so a hydrating badge reproduces the
+    // server's slot-less rendering first and picks the slotted content up one update later.
+    this.seedFirstRenderState(() => {
       this.hasDefaultSlot = Array.from(this.children).length > 0;
-    }
+    });
     if (
       this.hasUpdated &&
       (changed.has('tokensIn') ||
@@ -228,13 +230,13 @@ export class LyraUsageBadge extends LyraElement {
   };
 
   override render(): TemplateResult {
-    if (!this.hasVisibleContent && !this.hasDefaultSlot) {
-      // Nothing to show and nothing to describe -- render an inert shell (no tabindex, no
-      // role/aria-label) rather than a pointless, empty focus stop. The default slot's own
-      // slotchange handler still needs a live <slot> to observe, so it stays in the template.
-      return html`<div part="base"><slot @slotchange=${this.onDefaultSlotChange}></slot></div>`;
-    }
-
+    // Nothing to show and nothing to describe -- an inert shell (no tabindex, no role/aria-label)
+    // rather than a pointless, empty focus stop. The default slot's own slotchange handler still
+    // needs a live <slot> to observe, so it stays in the template. It is a branch *inside* the
+    // shared [part="base"] element, not a separate top-level template: a server renderer cannot see
+    // slotted content, so a hydrating badge starts inert and fills itself in on the next update,
+    // and swapping the outer template would throw the server's markup away instead of reusing it.
+    const inert = !this.hasVisibleContent && !this.hasDefaultSlot;
     const tokensIn = this.hasTokensIn ? finiteCount(this.tokensIn!) : undefined;
     const tokensOut = this.hasTokensOut ? finiteCount(this.tokensOut!) : undefined;
     const hasBoth = tokensIn !== undefined && tokensOut !== undefined;
@@ -242,16 +244,31 @@ export class LyraUsageBadge extends LyraElement {
     return html`
       <div
         part="base"
-        role="group"
-        tabindex="0"
-        aria-label=${this.getAttribute('aria-label') || this.localize('usageBadgeLabel')}
-        aria-describedby=${this.tooltipOpen ? this.tooltipId : nothing}
+        role=${inert ? nothing : 'group'}
+        tabindex=${inert ? nothing : '0'}
+        aria-label=${inert
+          ? nothing
+          : this.getAttribute('aria-label') || this.localize('usageBadgeLabel')}
+        aria-describedby=${!inert && this.tooltipOpen ? this.tooltipId : nothing}
         @mouseenter=${this.onMouseEnter}
         @mouseleave=${this.onMouseLeave}
         @focus=${this.onFocus}
         @blur=${this.onBlur}
         @keydown=${this.onKeyDown}
       >
+        ${inert
+          ? html`<slot @slotchange=${this.onDefaultSlotChange}></slot>`
+          : this.renderBadgeContent(tokensIn, tokensOut, hasBoth)}
+      </div>
+    `;
+  }
+
+  private renderBadgeContent(
+    tokensIn: number | undefined,
+    tokensOut: number | undefined,
+    hasBoth: boolean,
+  ): TemplateResult {
+    return html`
         ${tokensIn !== undefined
           ? html`<span part="tokens-in">${this.localize('usageBadgeTokensIn', undefined, { count: this.formatTokenCount(tokensIn) })}</span>`
           : nothing}
@@ -280,7 +297,6 @@ export class LyraUsageBadge extends LyraElement {
             <slot @slotchange=${this.onDefaultSlotChange}></slot>
           </span>
         </div>
-      </div>
     `;
   }
 }

@@ -1163,6 +1163,24 @@ const INCLUDE_SECURITY_DRIFT = [
 
 const DECISION_OVERRIDES = new Map([
   [
+    'wa-markdown',
+    {
+      classification: 'warning-required',
+      rationale:
+        'The source and target light-DOM Markdown content models and optional-peer runtime requirements are not mechanically equivalent; migration leaves the use unchanged and reports the required review.',
+      expectedDrift: [],
+    },
+  ],
+  [
+    'wa-random-content',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Light-DOM candidate eligibility and selection behavior require an explicit compatibility review; migration leaves the use unchanged instead of assuming behavioral equivalence from matching members.',
+      expectedDrift: [],
+    },
+  ],
+  [
     'wa-breadcrumb-item',
     {
       classification: 'warning-required',
@@ -1213,14 +1231,46 @@ const DECISION_OVERRIDES = new Map([
       classification: 'warning-required',
       rationale:
         'Lyra intentionally sanitizes included markup and keeps a same-origin default; uses that depend on cross-origin or script-executing behavior require an explicit security warning rather than a silent rename.',
-      expectedDrift: [
-        ...INCLUDE_SECURITY_DRIFT.slice(0, 2),
-        { code: 'missing-event', section: 'events', member: 'sl-error' },
-        INCLUDE_SECURITY_DRIFT[2],
-      ],
+      // 8.0.0: lr-include gained the upstream-compatible `lr-error` alias alongside its canonical
+      // `lr-include-error`, so `sl-error` is no longer missing and this drift now matches
+      // wa-include's exactly. The remaining entries are the deliberate security divergence.
+      expectedDrift: INCLUDE_SECURITY_DRIFT,
     },
   ],
 ]);
+
+const BEHAVIOR_PARITY_OVERRIDES = new Map([
+  [
+    'wa-markdown',
+    {
+      lightDom: 'warning-required',
+      behaviorReviewFlags: ['light-dom-markdown-source', 'optional-peer-runtime'],
+    },
+  ],
+  [
+    'wa-random-content',
+    {
+      lightDom: 'warning-required',
+      behaviorReviewFlags: ['light-dom-candidate-model', 'selection-semantics'],
+    },
+  ],
+]);
+
+export function migrationParityMetadata({ upstream, target, classification }) {
+  const behaviorOverride = BEHAVIOR_PARITY_OVERRIDES.get(upstream.tag);
+  const hasLightDomSurface = (upstream.surface.slots?.length ?? 0) > 0;
+  return {
+    staticApi: upstream.review?.status === 'complete' ? 'reviewed' : upstream.review?.status === 'tag-only' ? 'tag-only' : 'unreviewed',
+    lightDom: behaviorOverride?.lightDom ?? (hasLightDomSurface ? 'surface-only' : 'not-applicable'),
+    runtime: {
+      registration: !target ? 'unavailable' : target.rootIncluded === false ? 'granular' : 'all',
+      optionalPeers: [...(target?.optionalPeers ?? [])].sort(),
+    },
+    behaviorReviewFlags:
+      behaviorOverride?.behaviorReviewFlags ??
+      (classification === 'exact' || classification === 'rewritten' ? [] : [`${classification}-mapping`]),
+  };
+}
 
 const DECISION_NOTES = new Map([
   [
@@ -1365,6 +1415,25 @@ const reviewedTypeEquivalence = (memberKind, member, upstream, target) => ({
   member,
   upstream,
   target,
+});
+
+// Widening an event's cancelability is a superset of the contract it replaces: `preventDefault()`
+// on an event that was never cancelable is a silent no-op, and no shipped consumer writes code that
+// depends on that no-op happening. A migrated listener that vetoes therefore cannot start behaving
+// worse, only start working. Narrowing is the opposite and stays a blocking mismatch, so each rule
+// below pins both observed labels per tag and per event rather than blanket-suppressing the code.
+const reviewedCancelabilityEquivalence = (event, upstream, target) => ({ event, upstream, target });
+
+// The one reviewable narrowing: Lyra keeps the event cancelable on every path the upstream tag
+// documents and adds a path of its own that announces itself non-cancelable, which drops the
+// summary label from `always` to `conditional` without taking any documented veto away. `addedPath`
+// records which Lyra-only path that is, so the claim survives in the generated inventory instead of
+// living only in a reviewer's head.
+const reviewedCancelabilityPathAddition = (event, addedPath) => ({
+  event,
+  upstream: 'always',
+  target: 'conditional',
+  addedPath,
 });
 
 // Both upstream and Lyra create one modal-coordination controller per instance. Their published
@@ -2396,6 +2465,44 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
   ['wa-button', { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] }],
   ['wa-checkbox', { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] }],
   ['wa-color-picker', { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] }],
+  [
+    'wa-combobox',
+    {
+      // `wa-invalid` is `preventDefault()`-able on `<lr-combobox>` because vetoing it also cancels
+      // the native `invalid` event behind it, which is what suppresses the browser's own validation
+      // bubble. `lr-show`/`lr-hide` are cancelable except on the one path where the veto could not
+      // mean anything: an already-removed element closing on disconnect.
+      cancelabilityEquivalences: [
+        reviewedCancelabilityEquivalence('wa-hide', 'never', 'always'),
+        reviewedCancelabilityEquivalence('wa-invalid', 'never', 'always'),
+        reviewedCancelabilityEquivalence('wa-show', 'never', 'conditional'),
+      ],
+    },
+  ],
+  [
+    'wa-date-input',
+    {
+      cancelabilityEquivalences: [reviewedCancelabilityEquivalence('wa-invalid', 'never', 'always')],
+    },
+  ],
+  [
+    'wa-dialog',
+    {
+      cancelabilityPathAdditions: [
+        reviewedCancelabilityPathAddition(
+          'wa-hide',
+          'an open dialog removed from the document, where the close has already happened and no ' +
+            'veto could undo it; every dismissal path the upstream tag documents stays cancelable',
+        ),
+      ],
+    },
+  ],
+  [
+    'wa-file-input',
+    {
+      cancelabilityEquivalences: [reviewedCancelabilityEquivalence('wa-invalid', 'never', 'always')],
+    },
+  ],
   ['wa-input', { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] }],
   ['wa-number-input', { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] }],
   ['wa-otp-input', { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] }],
@@ -2526,6 +2633,7 @@ function mappingDecisions({ fixture, readme, components, upstreams, existing }) 
         classification,
         rationale,
         decisionSource,
+        parity: migrationParityMetadata({ upstream: component, target, classification }),
         ...(DECISION_NOTES.has(upstreamTag) ? { notes: DECISION_NOTES.get(upstreamTag) } : {}),
         rewrites,
         normalizations,
@@ -2564,13 +2672,16 @@ export function generateInventory({
   const components = lyraComponents(lyraManifestJson, existing, packageJson);
   const upstreams = {
     webawesome: {
-      package: '@awesome.me/webawesome',
+      packages: [
+        { name: '@awesome.me/webawesome', tiers: ['free'] },
+        { name: '@awesome.me/webawesome-pro', tiers: ['free', 'pro'] },
+      ],
       version: fixture.webawesome.version,
       commit: fixture.webawesome.commit,
       components: upstreamComponents(readJson(webawesomeManifest), 'webawesome', fixture, existing),
     },
     shoelace: {
-      package: '@shoelace-style/shoelace',
+      packages: [{ name: '@shoelace-style/shoelace', tiers: ['free'] }],
       version: fixture.shoelace.version,
       commit: fixture.shoelace.commit,
       components: upstreamComponents(readJson(shoelaceManifest), 'shoelace', fixture, existing),

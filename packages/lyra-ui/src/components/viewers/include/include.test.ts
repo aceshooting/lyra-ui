@@ -161,6 +161,53 @@ describe('lr-include', () => {
     expect(event.detail.reason).to.equal('blocked-url');
   });
 
+  it('announces the same failure under both upstream spellings, with one shared detail object', async () => {
+    // Web Awesome spells this `wa-include-error` and Shoelace spells it `sl-error`, so both
+    // migrated listeners have to reach identical behaviour. Neither spelling is deprecated.
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response('', { ok: false, status: 503 }))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraInclude>(html`<lr-include>Fallback</lr-include>`);
+      const canonicalPromise = oneEvent(el, 'lr-include-error');
+      const aliasPromise = oneEvent(el, 'lr-error');
+      el.src = 'https://example.test/unavailable.html';
+      const [canonical, alias] = await Promise.all([canonicalPromise, aliasPromise]);
+      expect(alias.detail, 'both names carry the very same detail object').to.equal(canonical.detail);
+      expect(alias.detail.status).to.equal(503);
+      expect(alias.detail.reason).to.equal('http');
+      expect(alias.bubbles).to.equal(canonical.bubbles);
+      expect(alias.composed).to.equal(canonical.composed);
+      expect(alias.cancelable, 'neither spelling is a veto point').to.equal(false);
+      expect(canonical.cancelable).to.equal(false);
+    } finally { window.fetch = original; }
+  });
+
+  it('emits the alias for a rejected src that never reaches fetch()', async () => {
+    // The blocked-url path returns before `fail()`, so it needs its own coverage: an alias that
+    // only fires from one of the two failure paths is worse than no alias at all.
+    const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+    const aliasPromise = oneEvent(el, 'lr-error');
+    el.src = 'javascript:alert(1)';
+    const event = await aliasPromise;
+    expect(event.detail.status).to.equal(0);
+    expect(event.detail.reason).to.equal('blocked-url');
+  });
+
+  it('does not emit the alias on a successful include', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response('<p>Loaded</p>'))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      let aliasCount = 0;
+      el.addEventListener('lr-error', () => { aliasCount += 1; });
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/ok.html';
+      await loaded;
+      await aTimeout(10);
+      expect(aliasCount).to.equal(0);
+    } finally { window.fetch = original; }
+  });
+
   it('emits lr-include-error with reason http for a failed fetch, without an unhandled rejection', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('', { ok: false, status: 404 }))) as typeof window.fetch;

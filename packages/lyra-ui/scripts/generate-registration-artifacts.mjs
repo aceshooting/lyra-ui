@@ -1,24 +1,25 @@
-// Generates the root component-registration imports, the root-registration allowlist, and
-// package.json#sideEffects from the authoritative component inventory. The named exports below
-// the generated block in src/lyra.ts remain curated by hand.
+// Generates the component-registration imports for the two compatibility entries
+// (`src/all.ts`, `src/ssr/all.ts`), the root-registration allowlist, and package.json#sideEffects
+// from the authoritative component inventory. The package root (`src/lyra.ts`) is deliberately
+// registration-free and is not written by this script: its named exports stay curated by hand.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deriveSideEffects, generateSideEffects } from './generate-side-effects.mjs';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
-const ROOT_EXPORTS_SENTINEL = '// …and the barrel re-exports classes, helpers, and types.';
-const LEGACY_ROOT_IMPORTS_HEADER = '// Side-effect imports register every component…';
 
-export const ROOT_REGISTRATION_START = '// <generated:root-component-registrations>';
-export const ROOT_REGISTRATION_END = '// </generated:root-component-registrations>';
+export const ALL_REGISTRATION_START = '// <generated:all-component-registrations>';
+export const ALL_REGISTRATION_END = '// </generated:all-component-registrations>';
+export const SSR_ALL_REGISTRATION_START = '// <generated:ssr-all-component-registrations>';
+export const SSR_ALL_REGISTRATION_END = '// </generated:ssr-all-component-registrations>';
 
 function invariant(condition, message) {
   if (!condition) throw new Error(`Invalid component registration inventory: ${message}`);
 }
 
-function registrationSpecifier(registrationModule) {
-  return `./${registrationModule.slice('src/'.length).replace(/\.ts$/, '.js')}`;
+function registrationSpecifier(registrationModule, prefix) {
+  return `${prefix}${registrationModule.slice('src/'.length).replace(/\.ts$/, '.js')}`;
 }
 
 export function deriveRegistrationArtifacts(inventory) {
@@ -28,6 +29,7 @@ export function deriveRegistrationArtifacts(inventory) {
   const seenTags = new Set();
   const seenModules = new Set();
   const rootComponents = [];
+  const allComponents = [];
   const optionalTags = [];
 
   for (const component of inventory.components) {
@@ -53,13 +55,17 @@ export function deriveRegistrationArtifacts(inventory) {
     );
     invariant(Array.isArray(component.optionalPeers), `${component.tag}: optionalPeers must be an array`);
 
+    const entry = {
+      tag: component.tag,
+      registrationModule: component.registrationModule,
+      specifier: registrationSpecifier(component.registrationModule, './'),
+      ssrSpecifier: registrationSpecifier(component.registrationModule, '../'),
+    };
+    allComponents.push(entry);
+
     if (component.rootIncluded) {
       invariant(component.rootExclusion === null, `${component.tag}: included component cannot have rootExclusion`);
-      rootComponents.push({
-        tag: component.tag,
-        registrationModule: component.registrationModule,
-        specifier: registrationSpecifier(component.registrationModule),
-      });
+      rootComponents.push(entry);
     } else {
       invariant(
         component.rootExclusion === 'optional-peer-family',
@@ -73,69 +79,101 @@ export function deriveRegistrationArtifacts(inventory) {
     }
   }
 
-  rootComponents.sort((left, right) => left.tag.localeCompare(right.tag));
+  const byTag = (left, right) => left.tag.localeCompare(right.tag);
+  rootComponents.sort(byTag);
+  allComponents.sort(byTag);
   optionalTags.sort();
   return {
     rootComponents,
+    allComponents,
     rootTags: rootComponents.map((component) => component.tag),
+    allTags: allComponents.map((component) => component.tag),
     optionalTags,
   };
 }
 
-export function renderRootRegistrationBlock(artifacts) {
+export function renderAllRegistrationBlock(artifacts) {
   return [
-    ROOT_REGISTRATION_START,
+    ALL_REGISTRATION_START,
     '// Generated from scripts/fixtures/component-inventory.json. Run `pnpm registrations` to refresh.',
-    '// Side-effect imports register every component whose inventory row is rootIncluded.',
+    '// The compatibility entry registers every root-included component; optional-peer families remain',
+    '// granular so importing all.js preserves the package\'s optional-peer isolation contract.',
     ...artifacts.rootComponents.map((component) => `import '${component.specifier}';`),
-    ROOT_REGISTRATION_END,
+    ALL_REGISTRATION_END,
     '',
   ].join('\n');
 }
 
-function markerRange(source) {
-  const start = source.indexOf(ROOT_REGISTRATION_START);
-  const end = source.indexOf(ROOT_REGISTRATION_END);
-  if (start < 0 && end < 0) return null;
-  invariant(start >= 0 && end > start, 'src/lyra.ts has an incomplete generated registration block');
+export function renderSsrAllRegistrationBlock(artifacts) {
+  return [
+    SSR_ALL_REGISTRATION_START,
+    '// Generated from scripts/fixtures/component-inventory.json. Run `pnpm registrations` to refresh.',
+    '// The server-only convenience entry registers the complete inventory, including components whose',
+    '// optional-peer families are intentionally excluded from the browser all.js compatibility entry.',
+    ...artifacts.allComponents.map((component) => `import '${component.ssrSpecifier}';`),
+    SSR_ALL_REGISTRATION_END,
+    '',
+  ].join('\n');
+}
+
+function markerRange(source, label, startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  const end = source.indexOf(endMarker);
   invariant(
-    source.indexOf(ROOT_REGISTRATION_START, start + ROOT_REGISTRATION_START.length) < 0 &&
-      source.indexOf(ROOT_REGISTRATION_END, end + ROOT_REGISTRATION_END.length) < 0,
-    'src/lyra.ts has duplicate generated registration markers',
+    start >= 0 && end > start,
+    `${label} is missing its generated registration block; restore the ` +
+      `\`${startMarker}\` … \`${endMarker}\` marker pair and rerun \`pnpm registrations\``,
   );
-  const lineEnd = source.indexOf('\n', end + ROOT_REGISTRATION_END.length);
+  invariant(
+    source.indexOf(startMarker, start + startMarker.length) < 0 &&
+      source.indexOf(endMarker, end + endMarker.length) < 0,
+    `${label} has duplicate generated registration markers`,
+  );
+  const lineEnd = source.indexOf('\n', end + endMarker.length);
   return { start, end: lineEnd < 0 ? source.length : lineEnd + 1 };
 }
 
-function legacyCompanionBlock(source, start, end, artifacts) {
-  const legacyBlock = source.slice(start, end);
-  const expected = new Set(artifacts.rootComponents.map((component) => component.specifier));
-  const imports = [...legacyBlock.matchAll(/^import '([^']+)';$/gm)].map((match) => match[1]);
-  const companions = [...new Set(imports.filter((specifier) => /-register\.js$/.test(specifier)))].sort();
-  const unknown = [...new Set(imports.filter((specifier) => !expected.has(specifier) && !companions.includes(specifier)))];
+/**
+ * Bare side-effect imports outside the generated block are curated companion registrations
+ * (`*-register.js`, which register a document-viewer renderer rather than a custom element and so
+ * have no inventory row). Anything else outside the block would be silently stranded by the next
+ * regeneration, so it fails closed here instead.
+ */
+function assertCuratedOutsideImports(source, range, label) {
+  const outside = source.slice(0, range.start) + source.slice(range.end);
+  const unknown = [...outside.matchAll(/^import '([^']+)';$/gm)]
+    .map((match) => match[1])
+    .filter((specifier) => !/-register\.js$/.test(specifier));
   invariant(
     unknown.length === 0,
-    `legacy src/lyra.ts import block contains non-inventory module(s): ${unknown.join(', ')}`,
+    `${label} has non-inventory side-effect import(s) outside the generated block: ${unknown.join(', ')}`,
   );
-  if (companions.length === 0) return '';
-  return [
-    '// Curated companion registrations have no custom-element inventory row.',
-    ...companions.map((specifier) => `import '${specifier}';`),
-    '',
-  ].join('\n');
 }
 
-export function updateRootBarrel(source, artifacts) {
-  const generated = renderRootRegistrationBlock(artifacts);
-  const range = markerRange(source);
-  if (range) return source.slice(0, range.start) + generated + source.slice(range.end);
+function updateBarrel(source, generated, label, startMarker, endMarker) {
+  const range = markerRange(source, label, startMarker, endMarker);
+  assertCuratedOutsideImports(source, range, label);
+  return source.slice(0, range.start) + generated + source.slice(range.end);
+}
 
-  const start = source.indexOf(LEGACY_ROOT_IMPORTS_HEADER);
-  const exportsStart = source.indexOf(ROOT_EXPORTS_SENTINEL);
-  invariant(start >= 0, 'src/lyra.ts is missing the legacy registration header and generated markers');
-  invariant(exportsStart > start, 'src/lyra.ts is missing the curated-export sentinel');
-  const companions = legacyCompanionBlock(source, start, exportsStart, artifacts);
-  return source.slice(0, start) + generated + companions + source.slice(exportsStart);
+export function updateAllBarrel(source, artifacts) {
+  return updateBarrel(
+    source,
+    renderAllRegistrationBlock(artifacts),
+    'src/all.ts',
+    ALL_REGISTRATION_START,
+    ALL_REGISTRATION_END,
+  );
+}
+
+export function updateSsrAllBarrel(source, artifacts) {
+  return updateBarrel(
+    source,
+    renderSsrAllRegistrationBlock(artifacts),
+    'src/ssr/all.ts',
+    SSR_ALL_REGISTRATION_START,
+    SSR_ALL_REGISTRATION_END,
+  );
 }
 
 function renderTagArray(name, tags) {
@@ -163,7 +201,8 @@ export function renderRootRegistrationAllowlist(artifacts) {
 function artifactPaths(packageDir) {
   return {
     inventory: join(packageDir, 'scripts', 'fixtures', 'component-inventory.json'),
-    rootBarrel: join(packageDir, 'src', 'lyra.ts'),
+    allBarrel: join(packageDir, 'src', 'all.ts'),
+    ssrAllBarrel: join(packageDir, 'src', 'ssr', 'all.ts'),
     allowlist: join(packageDir, 'src', 'internal', 'root-registration-allowlist.ts'),
     packageJson: join(packageDir, 'package.json'),
   };
@@ -175,7 +214,8 @@ function expectedArtifacts(packageDir) {
   const artifacts = deriveRegistrationArtifacts(inventory);
   return {
     paths,
-    rootBarrel: updateRootBarrel(readFileSync(paths.rootBarrel, 'utf8'), artifacts),
+    allBarrel: updateAllBarrel(readFileSync(paths.allBarrel, 'utf8'), artifacts),
+    ssrAllBarrel: updateSsrAllBarrel(readFileSync(paths.ssrAllBarrel, 'utf8'), artifacts),
     allowlist: renderRootRegistrationAllowlist(artifacts),
     sideEffects: deriveSideEffects(packageDir),
     artifacts,
@@ -185,8 +225,11 @@ function expectedArtifacts(packageDir) {
 export function checkRegistrationArtifacts(packageDir = defaultPackageDir) {
   const expected = expectedArtifacts(packageDir);
   const findings = [];
-  if (readFileSync(expected.paths.rootBarrel, 'utf8') !== expected.rootBarrel) {
-    findings.push('src/lyra.ts generated registration block is stale');
+  if (readFileSync(expected.paths.allBarrel, 'utf8') !== expected.allBarrel) {
+    findings.push('src/all.ts generated registration block is stale');
+  }
+  if (readFileSync(expected.paths.ssrAllBarrel, 'utf8') !== expected.ssrAllBarrel) {
+    findings.push('src/ssr/all.ts generated registration block is stale');
   }
   if (!existsSync(expected.paths.allowlist) || readFileSync(expected.paths.allowlist, 'utf8') !== expected.allowlist) {
     findings.push('src/internal/root-registration-allowlist.ts is stale');
@@ -200,7 +243,8 @@ export function checkRegistrationArtifacts(packageDir = defaultPackageDir) {
 
 export function generateRegistrationArtifacts(packageDir = defaultPackageDir) {
   const expected = expectedArtifacts(packageDir);
-  writeFileSync(expected.paths.rootBarrel, expected.rootBarrel);
+  writeFileSync(expected.paths.allBarrel, expected.allBarrel);
+  writeFileSync(expected.paths.ssrAllBarrel, expected.ssrAllBarrel);
   writeFileSync(expected.paths.allowlist, expected.allowlist);
   generateSideEffects(packageDir);
   return expected.artifacts;
@@ -219,16 +263,17 @@ function run(argv) {
       return 1;
     }
     console.log(
-      `registration artifacts are current: ${result.artifacts.rootTags.length} root + ` +
-        `${result.artifacts.optionalTags.length} optional-peer tags`,
+      `registration artifacts are current: ${result.artifacts.rootTags.length} all.js + ` +
+        `${result.artifacts.allTags.length} ssr/all.js tags ` +
+        `(${result.artifacts.optionalTags.length} optional-peer)`,
     );
     return 0;
   }
 
   const artifacts = generateRegistrationArtifacts();
   console.log(
-    `registration artifacts regenerated: ${artifacts.rootTags.length} root + ` +
-      `${artifacts.optionalTags.length} optional-peer tags`,
+    `registration artifacts regenerated: ${artifacts.rootTags.length} all.js + ` +
+      `${artifacts.allTags.length} ssr/all.js tags (${artifacts.optionalTags.length} optional-peer)`,
   );
   return 0;
 }

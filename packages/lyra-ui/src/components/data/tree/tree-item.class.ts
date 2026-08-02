@@ -378,6 +378,14 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
    *  light-DOM child model. */
   private childObserver?: MutationObserver;
 
+  /** `hasSlottedLabel` and the declarative model's own `hasChildren`, sampled once per update in
+   *  `willUpdate()` rather than read live from `render()`. Both answers come from the light DOM,
+   *  which a server renderer cannot see at all, so a hydrating item has to reproduce the server's
+   *  "no children" render first and sample one update later — see `seedFirstRenderState()`. Every
+   *  later update re-samples, so they stay exactly as live as the getters they cache. */
+  @state() private slottedLabel = false;
+  @state() private slottedChildren = false;
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.assignChildSlots();
@@ -420,6 +428,14 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     super.willUpdate(changed);
     // Runs before render so a nested child is never briefly painted inside [part="label"].
     this.assignChildSlots();
+    const sampleLightDom = (): void => {
+      this.slottedLabel = this.hasSlottedLabel;
+      // Only the declarative model answers this from the light DOM; the data model's children come
+      // from `item`, which a server render receives as an ordinary property binding.
+      this.slottedChildren = !this.item && this.hasChildren;
+    };
+    if (this.hasUpdated) sampleLightDom();
+    else this.seedFirstRenderState(sampleLightDom);
     // A same-id data refresh deliberately reuses this element and its disclosure state. Once the
     // refreshed item becomes disabled, though, the owning tree removes this entire subtree from
     // keyboard navigation. Collapse immediately so enabled descendants cannot remain visibly
@@ -721,12 +737,12 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
         <div part=${this.itemPartNames()}>
           ${this.renderRow({
             icon: nothing,
-            label: this.hasSlottedLabel ? html`<slot></slot>` : this.label,
+            label: this.slottedLabel ? html`<slot></slot>` : this.label,
             description: nothing,
             badges: nothing,
           })}
         </div>
-        ${this.expanded && this.hasChildren
+        ${this.expanded && this.slottedChildren
           ? html`<div part="group" role="group"><div part="children"><slot name=${CHILDREN_SLOT}></slot></div></div>`
           : nothing}
       </div>`;

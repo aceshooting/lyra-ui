@@ -539,3 +539,89 @@ describe('lr-video-playlist public contract', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('lr-video-playlist inert handling', () => {
+  it('skips an inert video for activation and for the roving tabindex', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="One"></lr-video><lr-video title="Two" inert></lr-video><lr-video title="Three"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    let buttons = items(el);
+    // The row standing in for inert content is itself disabled, so it refuses focus outright --
+    // which is exactly why arrow navigation must never step onto it.
+    expect(buttons[1]!.disabled).to.be.true;
+    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, -1, -1]);
+
+    buttons[0]!.focus();
+    expect(press(buttons[0]!, 'ArrowDown').defaultPrevented).to.be.true;
+    await el.updateComplete;
+    buttons = items(el);
+    expect(el.shadowRoot!.activeElement === buttons[2]).to.be.true;
+    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, -1, 0]);
+
+    press(buttons[2]!, 'ArrowUp');
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === items(el)[0]).to.be.true;
+  });
+
+  it('never activates an inert video, and steps past it on next()', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="One"></lr-video><lr-video title="Two" inert></lr-video><lr-video title="Three"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    el.goTo(1);
+    await settle(el);
+    expect(childVideos(el)[1]!.hidden).to.be.true;
+
+    el.next();
+    await settle(el);
+    expect(childVideos(el)[1]!.hidden).to.be.true;
+    expect(childVideos(el)[2]!.hidden).to.be.false;
+  });
+
+  it('rehomes roving focus when the row it sits on becomes inert', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="One"></lr-video><lr-video title="Two"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    items(el)[0]!.focus();
+
+    childVideos(el)[0]!.inert = true;
+    await settle(el);
+    await settle(el);
+
+    const buttons = items(el);
+    expect(buttons[0]!.disabled).to.be.true;
+    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
+    expect(el.shadowRoot!.activeElement === buttons[1]).to.be.true;
+  });
+
+  it('keeps the active video playable when an ancestor inerts the whole playlist', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-video-playlist>
+          <lr-video title="One"></lr-video><lr-video title="Two"></lr-video>
+        </lr-video-playlist>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-video-playlist') as LyraVideoPlaylist;
+    await settle(el);
+    expect(childVideos(el)[0]!.hidden).to.be.false;
+
+    // A modal inerting the page behind it inerts every child alike. Treating them all as
+    // unavailable would drop the active video, pause it, and unload its media element.
+    wrapper.inert = true;
+    el.iconLibrary = 'system-2';
+    await settle(el);
+
+    expect(items(el)[0]!.disabled).to.be.false;
+    expect(items(el)[0]!.tabIndex).to.equal(0);
+    expect(childVideos(el)[0]!.hidden).to.be.false;
+  });
+});

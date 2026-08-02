@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -76,6 +76,14 @@ started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` a
 `lr-invalid` alias when native validity fails.
 
 **Slots:** `hint`, `error`.
+
+**The required marker and barred validity.** Identical to `lr-model-select`'s (see that section): a
+`required` picker with a non-empty `label` paints the shared required marker on
+`[part="form-control-label"]`, retunable or suppressible through
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset`; and while the picker is barred from
+constraint validation (own `disabled`, or an ancestor `<fieldset disabled>` — there is no `readonly`
+here) it reports no violation and publishes neither `:state(invalid)` nor `:state(user-invalid)`.
 
 **CSS parts:** `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
 (free-text mode), `provider-badge`, `listbox`, `option`, `option-label`, `option-meta` (the quiet

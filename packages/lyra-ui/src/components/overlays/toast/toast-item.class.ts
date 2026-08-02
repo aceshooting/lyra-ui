@@ -46,9 +46,12 @@ export interface LyraToastItemEventMap {
  * @customElement lr-toast-item
  * @slot - The message content.
  * @slot icon - Optional icon shown at the start.
- * @event lr-show - Fired when the item begins showing.
+ * @event lr-show - The item is about to show. Cancelable — `preventDefault()` suppresses the
+ *   toast, leaving it in the region invisible and with no auto-dismiss timer; the listener then
+ *   owns removing it.
  * @event lr-after-show - Fired after the show animation completes.
- * @event lr-hide - Fired when the item begins hiding.
+ * @event lr-hide - The item is about to hide, including an auto-dismiss expiry. Cancelable —
+ *   `preventDefault()` leaves it visible and still counting down.
  * @event lr-after-hide - Fired after the hide animation completes (item then removes itself).
  * @csspart toast-item - The outer container.
  * @csspart accent - The colored accent bar.
@@ -198,8 +201,12 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       // (e.g. a caller creates the toast and immediately dismisses it) --
       // don't resurrect the show sequence on top of an already-hiding item.
       if (this.hiding) return;
+      // The veto point precedes the state change, so `preventDefault()` genuinely suppresses the
+      // toast rather than hiding one that already animated in. A vetoed item stays in the toast
+      // region, invisible and with no auto-dismiss timer -- a listener that blocks a toast owns
+      // removing it, exactly as a listener that blocks `lr-hide` owns dismissing it later.
+      if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) return;
       this.setAttribute('data-visible', '');
-      this.emit('lr-show');
       void this.waitForVisualCompletion('show').then(() => {
         if (this.isConnected && !this.hiding) this.emit('lr-after-show');
       });
@@ -382,11 +389,13 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   /** Hide with animation, then remove from the DOM. */
   async hide(): Promise<void> {
     if (this.hiding) return;
+    // Emitted before any teardown so a veto leaves the item exactly as it was -- still visible,
+    // still counting down -- instead of half-dismissed.
+    if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) return;
     this.hiding = true;
     this.cancelShowAnimation?.();
     this.cancelShowAnimation = undefined;
     this.clearTimer();
-    this.emit('lr-hide');
     this.removeAttribute('data-visible');
     this.setAttribute('data-hiding', '');
     await this.completeHide();

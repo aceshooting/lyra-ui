@@ -7,6 +7,7 @@ import {
   attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
+  isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
@@ -95,7 +96,9 @@ function starSolid(): SVGTemplateResult {
  * @event blur - Native blur relayed once from the internal slider control.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-invalid - The rating failed a validity check.
+ * @event lr-invalid - The rating failed a validity check. Cancelable: calling
+ * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
+ * browser's own validation bubble so an app can present the failure its own way.
  * @method focus - Forwards focus to the internal slider control.
  * @method blur - Forwards blur to the internal slider control.
  * @method click - Forwards activation to the internal slider control.
@@ -219,7 +222,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   constructor() {
     super();
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
     // Shares the mixin's attach-or-degrade helper so both paths handle a missing *and* a throwing
     // `attachInternals()` (SSR/test DOMs, partial polyfills) without breaking construction.
     this.internals = attachInternalsSafely(this);
@@ -310,6 +313,9 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // the live host attribute, which same-tick form APIs read.
     this.toggleAttribute('disabled', this._disabled);
     if (this._disabled) this.resetHover();
+    // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
+    // the states republished.
+    this.updateValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -342,10 +348,12 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   checkValidity(): boolean {
+    this.updateValidity();
     return this.internals.checkValidity();
   }
 
   reportValidity(): boolean {
+    this.updateValidity();
     // Reporting is what a submit attempt does, and a failed submit is precisely when native
     // `:user-invalid` starts matching — so it counts as interaction here too.
     this.markInteracted();
@@ -403,6 +411,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   formDisabledCallback(fieldsetDisabled: boolean): void {
     this._fieldsetDisabled = fieldsetDisabled;
     if (fieldsetDisabled) this.resetHover();
+    this.updateValidity();
     this.requestUpdate();
   }
 
@@ -450,9 +459,21 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this.updateValidity();
   }
 
+  /**
+   * Shared with every other form control: own `disabled`, a `<fieldset disabled>` ancestor, and
+   * `readonly` all bar constraint validation. `readonly` used to be missing here -- every other
+   * read-only-capable control barred on it, so `<lr-rating required readonly>` reported
+   * `valueMissing` while `<lr-otp-input required readonly>` did not.
+   */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   private updateValidity(): void {
     if (!this.validityController) return;
-    if (this.required && this.safeValue <= 0) {
+    if (this.barredFromValidation) {
+      this.validityController.setValidity({});
+    } else if (this.required && this.safeValue <= 0) {
       this.validityController.setValidity({ valueMissing: true }, this.localize('fieldRequired'));
     } else {
       this.validityController.setValidity({});
@@ -466,7 +487,11 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
    * `lr-rating:state(user-invalid)` rule behaves identically to the same rule on `lr-input`.
    */
   private syncValidityStates(): void {
-    syncValidityStates(this.internals, { required: this.required, hasInteracted: this._hasInteracted });
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this._hasInteracted,
+      barred: this.barredFromValidation,
+    });
   }
 
   /** Idempotent, and an arrow so it can be handed straight to `addEventListener`. */
@@ -595,6 +620,14 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // `formDisabledCallback`, and `readonly` is a plain reactive property — so a rating that
     // becomes non-settable mid-hover drops its preview here.
     if (changed.has('readonly') && !this.interactive) this.resetHover();
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    // `readonly` bars constraint validation, and unlike `disabled` it has no hand-written setter to
+    // recompute from. It has to be recomputed *after* `update()` rather than in `willUpdate()`:
+    // the platform reads the reflected `readonly` *attribute* when it answers
+    // `internals.willValidate`, and that attribute is only current once reflection has run.
+    if (changed.has('readonly')) this.updateValidity();
   }
 
   /** One symbol: the consumer's `getSymbol` when set, otherwise the built-in star. */

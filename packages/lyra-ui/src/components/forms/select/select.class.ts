@@ -24,7 +24,13 @@ import {
 } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
-import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import {
+  getFormOwner,
+  installCustomErrorProperty,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import {
   isOptionSelectedDirty,
@@ -180,11 +186,16 @@ export interface LyraSelectEventMap {
  *   `lr-change`. Not fired for a programmatic `value` assignment.
  * @event lr-clear - The `with-clear` button emptied the selection, fired after the
  *   `input`/`lr-input`/`change`/`lr-change` sequence. Never fired when there was nothing to clear.
- * @event lr-show - The listbox opened.
- * @event lr-hide - The listbox closed.
+ * @event lr-show - The listbox is about to open, however `open` became true. Cancelable —
+ *   `preventDefault()` leaves it closed and the reflected attribute untouched. Not cancelable on
+ *   the one path where a veto is meaningless: an already-removed element closing on disconnect.
+ * @event lr-hide - The listbox is about to close, however `open` became false. Cancelable on the
+ *   same terms as `lr-show`.
  * @event lr-after-show - The listbox finished opening and its transition settled.
  * @event lr-after-hide - The listbox finished closing and its transition settled.
- * @event lr-invalid - The select failed a validity check.
+ * @event lr-invalid - The select failed a validity check. Cancelable: calling
+ * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
+ * browser's own validation bubble so an app can present the failure its own way.
  * @event blur - Re-dispatched from the trigger as a bubbling, composed event.
  * @event focus - Re-dispatched from the trigger as a bubbling, composed event.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
@@ -272,6 +283,13 @@ export interface LyraSelectEventMap {
  *   trigger (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never
  *   declared by the component itself, it can be set from an ancestor or an outer-tree rule as well
  *   as inline on the element.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
+ * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
+ * other quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Required-marker color,
+ * themeable independently of error text and invalid borders.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * required marker.
  * @status stable
  * @since 4.0.0
  */
@@ -375,6 +393,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private triggerId = nextId('select-trigger');
   private cleanup?: () => void;
   private _isFirstUpdate = true;
+  private openVetoed = false;
   private transitionToken = 0;
   private transitionWaiters = new Map<'lr-after-show' | 'lr-after-hide', Set<() => void>>();
   // The committed selection, always an array -- capped to one entry outside
@@ -441,7 +460,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   constructor() {
     super();
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
@@ -493,6 +512,35 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // -- capture that distinction here, while it's still reliable, for
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
+    this.announceOpenTransition(changed);
+  }
+
+  /**
+   * Emits the cancelable `lr-show`/`lr-hide` veto point for this update's `open` transition.
+   *
+   * It lives here rather than in `updated()` because a veto has to be answered *before* anything
+   * observable happens: `willUpdate()` still runs ahead of render and attribute reflection, so
+   * restoring `open` here leaves the listbox, the reflected attribute and the property agreeing
+   * with each other without a visible open-then-close flash. Keeping it on the `open` transition
+   * (rather than inside `show()`/`hide()`) preserves the existing rule that the lifecycle fires
+   * however `open` changed, including a direct `el.open = true` that bypasses both methods.
+   */
+  private announceOpenTransition(changed: PropertyValues): void {
+    this.openVetoed = false;
+    if (!changed.has('open') || this._isFirstUpdate) return;
+    const name = this.open ? 'lr-show' : 'lr-hide';
+    // Removal cannot be vetoed -- the element is already gone -- so the disconnect-driven close
+    // is announced without offering a veto nobody could honour.
+    if (!this.isConnected) {
+      this.emit(name);
+      return;
+    }
+    if (!this.emit(name, undefined, { cancelable: true }).defaultPrevented) return;
+    this.openVetoed = true;
+    this.open = !this.open;
+    // `show()`/`hide()` already registered a waiter for the transition this veto just cancelled;
+    // without resolving it their returned promise would never settle.
+    this.resolveTransitionWaiters(this.open ? 'lr-after-hide' : 'lr-after-show');
   }
 
   /** Submission name.
@@ -558,6 +606,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
     if (this._disabled) void this.hide();
+    // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
+    // the states republished.
+    this.updateValidity();
     this.requestUpdate('disabled', old);
   }
 
@@ -686,8 +737,18 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return resolved;
   }
 
+  /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
+  private get barredFromValidation(): boolean {
+    return isBarredFromValidation(this, this.internals);
+  }
+
   private updateValidity(): void {
-    if (this.required && this._selected.length === 0) {
+    if (this.barredFromValidation) {
+      // A barred control reports no violation at all, exactly like a native disabled `<select>` --
+      // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required
+      // selects, and with it the documented `:state(user-invalid)` error styling.
+      this.validityController.setValidity({});
+    } else if (this.required && this._selected.length === 0) {
       this.validityController.setValidity({ valueMissing: true }, this.localize('selectValueMissing'));
     } else {
       this.validityController.setValidity({});
@@ -699,7 +760,11 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. Called from
    *  every path that can move either validity or the interaction flag. */
   private reflectValidityStates(): void {
-    syncValidityStates(this.internals, { required: this.required, hasInteracted: this.hasInteracted });
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.hasInteracted,
+      barred: this.barredFromValidation,
+    });
     if (this._selected.length === 0) this.internals.states?.add('blank');
     else this.internals.states?.delete('blank');
   }
@@ -783,12 +848,15 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     if (disabled) void this.hide();
+    this.updateValidity();
     this.requestUpdate();
   }
   checkValidity(): boolean {
+    this.updateValidity();
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
+    this.updateValidity();
     // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
     // point, so it counts as interaction for the `user-*` custom states. `checkValidity()`
     // deliberately does not: it is the silent query.
@@ -967,8 +1035,22 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    */
   private get onlyOption(): LyraOption | undefined {
     if (!this.autoCommitSingleOption) return undefined;
-    const navigable = this.options.filter((o) => !o.disabled);
+    const navigable = this.navigableOptions();
     return navigable.length === 1 ? navigable[0] : undefined;
+  }
+
+  /**
+   * The options arrow keys, type-ahead and the active-descendant index may land on. `inert` counts
+   * alongside `disabled` for the same reason it does in `<lr-menu>`'s `isNavigable()`: an inert
+   * element refuses interaction outright, so an active index pointing at one describes a row the
+   * user can neither reach nor commit. `closest('[inert]')` covers an inert ancestor, which inerts
+   * the option just as completely as the attribute on the option itself. The severity is lower here
+   * than in a menu -- this listbox keeps DOM focus on the trigger and moves only
+   * `aria-activedescendant` -- but the predicate has to agree across all four call sites or the
+   * rendered `data-active` row and the committed option can disagree.
+   */
+  private navigableOptions(options: LyraOption[] = this.options): LyraOption[] {
+    return options.filter((o) => !o.disabled && !o.inert && !o.closest('[inert]'));
   }
 
   // Fired by `option.ts`'s `lr-option-change` (a MutationObserver on the
@@ -1009,21 +1091,23 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
-    if (changed.has('open')) {
+    // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it
+    // while nothing about the state actually moved: tearing down and rebuilding the popup
+    // machinery here would undo the veto it was meant to honour.
+    if (changed.has('open') && !this.openVetoed) {
       this.cleanup?.();
       this.cleanup = undefined;
-      // All `open`-driven side effects (positioning, the click-outside
-      // listener, and the lr-show/lr-hide events) live here rather than
-      // in show()/hide() so they fire however `open` became true -- via
+      // All `open`-driven side effects (positioning and the click-outside listener) live here
+      // rather than in show()/hide() so they run however `open` became true -- via
       // show()/hide()'s own user-interaction paths, or a consumer/test
-      // setting `el.open` directly, which bypasses both entirely.
+      // setting `el.open` directly, which bypasses both entirely. The lr-show/lr-hide veto point
+      // itself runs one step earlier, in willUpdate().
       if (this.open) {
         this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
-        // Don't announce a "show" transition for markup that's simply
+        // Don't settle a "show" transition for markup that's simply
         // rendering open for the first time (e.g. `<lr-select open>`) --
         // only for an actual closed-to-open transition.
         if (!this._isFirstUpdate) {
-          this.emit('lr-show');
           void this.settleTransition('lr-after-show');
         }
         const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
@@ -1039,7 +1123,6 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       } else {
         this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
         if (!this._isFirstUpdate) {
-          this.emit('lr-hide');
           void this.settleTransition('lr-after-hide');
         }
       }
@@ -1196,7 +1279,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       this.typeAheadBuffer = '';
     }, 500);
 
-    const navigable = this.options.filter((o) => !o.disabled);
+    const navigable = this.navigableOptions();
     if (!navigable.length) return;
     const currentOption = this.open
       ? navigable[this.activeIndex]
@@ -1221,7 +1304,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    const navigable = this.options.filter((o) => !o.disabled);
+    const navigable = this.navigableOptions();
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
@@ -1368,7 +1451,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   override render(): TemplateResult {
     const options = this.options;
-    const navigable = options.filter((o) => !o.disabled);
+    const navigable = this.navigableOptions(options);
     const active = this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;
     const activeId = active ? `${this.listId}-opt-${options.indexOf(active)}` : '';
     const selectedLabel = this._selected.length > 0 ? this.labelFor(this._selected[0]!) : '';

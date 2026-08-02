@@ -415,7 +415,7 @@ when the semantic dropzone (the actual keyboard-focusable element, not the hidde
 gains/loses focus.
 `lr-invalid` is the bubbling/composed alias of native invalidity.
 
-Each rejected file also renders as its own line in the visible `[part="rejection"]` alert, naming
+Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
 the file and the reason via one of four locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
@@ -435,14 +435,43 @@ content still activates the dropzone.
 **CSS parts:** `file-input`, `form-control-label`, `label`, `hint`, `dropzone`, `dropzone-icon`,
 `dropzone-text`, `base` (the native dropzone button, visually behind but semantically beside the
 slotted content), `input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
-`file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden `role="status" aria-live="polite"`
-element carrying the drag accept/reject announcement and the aggregate accepted/rejected count),
-`rejection` (a **visible** `role="alert"` region, rendered only while a rejection exists, listing
-each currently-rejected file next to a per-reason message — in addition to, never in place of, the
-sr-only `status` summary above)
+`file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden,
+`aria-hidden` mirror of the drag accept/reject state and the aggregate accepted/rejected count),
+`rejection` (a **visible** region, rendered only while a rejection exists, listing each
+currently-rejected file next to a per-reason message — in addition to, never in place of, the
+sr-only `status` mirror above)
+
+**Both live regions moved out of the shadow root (public surface change).** Neither `status` nor
+`rejection` carries a live-region role any more: `status` is an `aria-hidden` mirror, and
+`rejection` is plain visible text. A live region inside a shadow root is not reliably announced
+(JAWS with Firefox ignores one outright), so the announcements now go to the library's shared
+**light-DOM** regions appended to the consumer's `<body>` and marked
+`data-lr-live-region="polite"` / `data-lr-live-region="assertive"` — the drag/selection summary
+politely, and a rejection assertively, so it still interrupts.
+
+What this changes for you:
+
+- **Nothing about what the visible text says or where it renders.** `[part="rejection"]`'s text is
+  ordinary visible content and stays in the accessibility tree, so a user who reaches it reads it
+  normally. Both parts remain the right styling hooks.
+- **A test that asserted `::part(rejection)` had `role="alert"`, or that read announcements out of
+  `::part(status)`, now fails.** Assert against the shared light-DOM region instead — query
+  `[data-lr-live-region="assertive"]` (or `"polite"`) in the document, which is also where every
+  other Lyra announcement lands.
+- **A `::part(rejection)[role]`-style selector never matched anyway** — an attribute selector
+  cannot follow `::part()`. Nothing that worked before stopped working.
 
 **CSS custom states:** `blank` and `dragging`, plus the shared validity states `required`,
-`optional`, `valid`, `invalid`, `user-valid`, and `user-invalid`.
+`optional`, `valid`, `invalid`, `user-valid`, and `user-invalid`. As on every other form-associated
+control, `valid`/`invalid` and `user-valid`/`user-invalid` stop matching entirely while the control
+is barred from constraint validation (its own `disabled`, or an ancestor `<fieldset disabled>`),
+matching native `:invalid`; `required`/`optional` keep publishing.
+
+**The required marker.** With `required` set and a populated `label`, `[part="form-control-label"]`
+paints the library's shared required marker — the same `::after` rule every labelled control in
+the library uses, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. See `llms/shared.md` → "The required-field marker".
 
 **Themeable custom properties:** `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
 `[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default
@@ -712,8 +741,26 @@ mimeType, src }`, emitted when the preview action opens the document viewer)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size`, `status-text`, `progress`,
-`progress-fill`, `spinner`, `retry-button`, `preview-button`, `remove-button`
+**CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size`, `status-text` (the visible text twin of
+the status accent color, so the state is carried in words and not only in color; empty and hidden
+for `pending`/`done`), `progress`, `progress-fill`, `spinner`, `retry-button`, `preview-button`,
+`remove-button`
+
+**`status-text` carries no live-region role (public surface change).** It is plain visible text
+that stays in the accessibility tree and reads normally once a user reaches the chip. The
+interrupting announcement a transition *into* `status="error"` makes — so a screen-reader user not
+already focused on the chip still hears an upload failure — goes to the library's shared
+**light-DOM** assertive region instead, appended to the consumer's `<body>` and marked
+`data-lr-live-region="assertive"`: a live region inside a shadow root is not reliably announced
+(JAWS with Firefox ignores one outright). Two consequences worth knowing:
+
+- Only a *transition* into `error` announces. A chip that mounts already failed is history the user
+  can read at their own pace, and a retry that fails the same way twice is announced twice rather
+  than being a silent no-op. The ticking `uploading` readout announces nothing at all — a live
+  region re-announcing every progress tick is noise, not information.
+- A test that asserted `::part(status-text)` had `role="alert"` now fails; query
+  `[data-lr-live-region="assertive"]` in the document instead. `::part(status-text)` is still the
+  styling hook, and still the place to read the visible status wording.
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
@@ -1714,6 +1761,15 @@ The playlist buttons use one roving tab stop, skip disabled children, support Up
 mirrored Left/Right navigation, and expose the selected item with `aria-current`. At narrow
 allocations the sidebar moves below the video through a container query; long titles ellipsize
 without widening the host.
+
+**A child marked `inert` is excluded exactly as a `disabled` one is:** it never becomes the active
+video, `next()`/`previous()`/`goTo()` and auto-advance step past it, and its playlist row renders
+`disabled` so the roving `tabindex` can never strand focus on it — an inert element refuses focus,
+which would leave `focus()` a silent no-op and kill the next arrow press. Only the child's **own**
+`inert` counts: a playlist inerted wholesale by an open modal keeps playing. The attribute is
+watched live, so marking the *current* video inert moves the selection to the nearest enabled child
+(emitting `lr-video-change`) and hands the roving focus to the row that replaced it, instead of
+leaving a stale tab stop on a row that can no longer take focus.
 
 ```html
 <lr-video-playlist controls="full" repeat="all">

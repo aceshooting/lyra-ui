@@ -126,10 +126,11 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
     if (changed.has('image')) this.failedSrc = undefined;
     // Set from light-DOM children before the first render so the initial paint already reflects
     // any icon content present at parse time, rather than waiting a render behind `slotchange`.
-    if (!this.hasUpdated) {
+    // A server render sees no children at all, so hydration seeds one update later instead.
+    this.seedFirstRenderState(() => {
       this.hasIcon = this.hasDefaultSlotContent(this.childNodes);
       this.hasIconSlot = this.hasIconSlotContent(this.childNodes);
-    }
+    });
   }
 
   private onImageError = (event: Event): void => {

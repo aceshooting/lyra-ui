@@ -615,7 +615,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     this._effectiveOrientation = next;
     this.requestUpdate();
     if (shouldEmit) {
-      this.emit<SplitOrientationChangeDetail>("lr-split-orientation-change", {
+      this.emit("lr-split-orientation-change", {
         orientation: next,
       });
     }
@@ -662,7 +662,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     this._collapseState = next;
     this.requestUpdate("collapseState", old);
     if (shouldEmit)
-      this.emit<SplitCollapseChangeDetail>("lr-split-collapse-change", {
+      this.emit("lr-split-collapse-change", {
         state: next,
       });
     if (next !== "floating" && this.open) this.open = false;
@@ -1345,7 +1345,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     if (issueKey !== this.constraintIssueKey) {
       this.constraintIssueKey = issueKey;
       if (issue)
-        this.emit<SplitConstraintIssueDetail>(
+        this.emit(
           "lr-split-constraints-invalid",
           issue
         );

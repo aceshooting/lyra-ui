@@ -998,6 +998,13 @@ against the new fragment rather than leaving results from the previous content.
   cap), or `'missing-fragment'` (the requested id was absent after sanitization). Non-HTTP reasons
   use status `0`; `'http'` normally carries the response code, but an opaque `mode="no-cors"`
   response is also classified as `'http'` with status `0`.
+- `lr-error` — the same failure under a second name, carrying the **identical detail object** and
+  always fired alongside `lr-include-error`, never instead of it. The two upstreams disagree on the
+  spelling — Web Awesome's is `wa-include-error`, Shoelace's is `sl-error` — so both are supported
+  and **neither is deprecated**; listen to whichever one your migration produced. `lr-error` is
+  also the name every other Lyra component uses for a load failure, so a generic page-level
+  listener catches this one too. Listening to both names on the same element runs your handler
+  twice for one failure.
 
 **Slots:** default — fallback content shown until (or unless) a fetch succeeds. It is overwritten by
 the sanitized fragment on success, and left untouched on failure (as is any previously successful

@@ -1,6 +1,5 @@
-function resolveIdReferences(host: HTMLElement, value: string | null): Element[] {
+function resolveIdReferencesIn(root: Node, value: string | null): Element[] {
   if (!value) return [];
-  const root = host.getRootNode();
   if (!('getElementById' in root)) return [];
   const getElementById = (root as Document | ShadowRoot).getElementById.bind(root);
   return value
@@ -8,6 +7,10 @@ function resolveIdReferences(host: HTMLElement, value: string | null): Element[]
     .split(/\s+/)
     .map((id) => getElementById(id) as Element | null)
     .filter((target): target is Element => target !== null);
+}
+
+function resolveIdReferences(host: HTMLElement, value: string | null): Element[] {
+  return resolveIdReferencesIn(host.getRootNode(), value);
 }
 
 /**
@@ -61,4 +64,68 @@ export function syncAriaDescribedByElements(
   if (targets.length > 0) reflected.ariaDescribedByElements = targets;
   else if (!describedBy) reflected.ariaDescribedByElements = null;
   return targets.length > 0;
+}
+
+/** What a described element looked like before a transient description was applied to it. */
+export interface AppliedDescription {
+  readonly target: HTMLElement;
+  readonly had: boolean;
+  readonly value: string | null;
+  /** Whether the element-reference list (rather than the serialized attribute) carries the link. */
+  readonly assigned: boolean;
+}
+
+type DescribedByElementsTarget = HTMLElement & { ariaDescribedByElements: Element[] | null };
+
+/** The description relationships already on `target`, read the way the browser resolves them: an
+ *  explicitly assigned element-reference list wins, otherwise the serialized IDs are resolved
+ *  inside the target's own root (a shadow root for an internal control). */
+function existingDescriptions(target: HTMLElement, value: string | null): Element[] {
+  const reflected =
+    'ariaDescribedByElements' in target ? (target as DescribedByElementsTarget).ariaDescribedByElements : null;
+  return reflected ? [...reflected] : resolveIdReferencesIn(target.getRootNode(), value);
+}
+
+/**
+ * Adds `description` to whatever already describes `target`, and returns the snapshot
+ * `undescribeElement()` needs to put it back.
+ *
+ * An ID reference only resolves inside the referring node's own root, so a description element
+ * living in one tree cannot be pointed at from a control inside a shadow root. The reflected
+ * `ariaDescribedByElements` property carries an element reference across that boundary, so prefer
+ * it whenever the browser exposes it -- feature-detected, because it only reaches the platform
+ * gradually. The serialized attribute is still written first: it is the whole relationship on
+ * browsers without the property, and assigning the property afterwards clears it
+ * (`getAttribute('aria-describedby') === ''`) exactly as the reflected-element contract specifies.
+ * Existing relationships are carried into the assigned list rather than replaced -- a control such
+ * as `<lr-select>`'s internal trigger already points at its own hint and error text, and dropping
+ * those to add a tooltip would trade one lost description for another.
+ */
+export function describeElement(target: HTMLElement, description: Element): AppliedDescription {
+  const value = target.getAttribute('aria-describedby');
+  const snapshot = { target, had: target.hasAttribute('aria-describedby'), value };
+  const existing = existingDescriptions(target, value);
+  if (existing.includes(description)) return { ...snapshot, assigned: false };
+
+  const root = target.getRootNode() as Document | ShadowRoot;
+  const resolvableById = description.id !== '' && root.getElementById?.(description.id) === description;
+  const ids = new Set((value ?? '').split(/\s+/).filter(Boolean));
+  if (description.id !== '') ids.add(description.id);
+  if (ids.size > 0) target.setAttribute('aria-describedby', [...ids].join(' '));
+
+  // Same-root targets are fully served by the attribute; leave the reflected list untouched there
+  // so the serialized relationship stays inspectable (and consumer-overridable) as before.
+  if (resolvableById || !('ariaDescribedByElements' in target)) return { ...snapshot, assigned: false };
+  (target as DescribedByElementsTarget).ariaDescribedByElements = [...existing, description];
+  return { ...snapshot, assigned: true };
+}
+
+/** Reverts `describeElement()`, restoring both the element-reference list and the attribute. */
+export function undescribeElement(applied: AppliedDescription): void {
+  const { target, had, value, assigned } = applied;
+  if (assigned && 'ariaDescribedByElements' in target) {
+    (target as DescribedByElementsTarget).ariaDescribedByElements = null;
+  }
+  if (had) target.setAttribute('aria-describedby', value ?? '');
+  else target.removeAttribute('aria-describedby');
 }

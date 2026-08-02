@@ -684,3 +684,54 @@ it('defines a focus-visible outline for the close button using the shared focus-
     /outline:\s*var\(--lr-focus-ring-width\)\s*solid\s*var\(--lr-focus-ring-color\)/,
   );
 });
+
+it('honours preventDefault() on lr-show, leaving the item present but never shown', async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="0">suppressed</lr-toast-item>`,
+  )) as LyraToastItem;
+  el.addEventListener('lr-show', (event) => event.preventDefault());
+  let afterShows = 0;
+  el.addEventListener('lr-after-show', () => { afterShows += 1; });
+
+  await aTimeout(80);
+  expect(el.hasAttribute('data-visible'), 'a vetoed toast never becomes visible').to.be.false;
+  expect(afterShows, 'a transition that never happened has no after-event').to.equal(0);
+  expect(el.isConnected, 'the vetoed item is left for its listener to remove').to.be.true;
+});
+
+it('honours preventDefault() on lr-hide, leaving the toast up', async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="0">stays</lr-toast-item>`,
+  )) as LyraToastItem;
+  await oneEvent(el, 'lr-show');
+  el.addEventListener('lr-hide', (event) => event.preventDefault(), { once: true });
+
+  await el.hide();
+  await aTimeout(60);
+  expect(el.isConnected, 'a vetoed dismissal never removes the item').to.be.true;
+  expect(el.hasAttribute('data-visible')).to.be.true;
+  expect(el.hasAttribute('data-hiding')).to.be.false;
+
+  // The veto was one-shot, so the next dismissal completes normally.
+  setTimeout(() => void el.hide());
+  await oneEvent(el, 'lr-after-hide');
+  expect(el.isConnected).to.be.false;
+});
+
+it('makes lr-show/lr-hide cancelable and the after-events not', async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="0">lifecycle</lr-toast-item>`,
+  )) as LyraToastItem;
+  const seen: CustomEvent[] = [];
+  for (const type of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+    el.addEventListener(type, (event) => seen.push(event as CustomEvent));
+  }
+  await oneEvent(el, 'lr-show');
+  setTimeout(() => void el.hide());
+  await oneEvent(el, 'lr-after-hide');
+
+  const byType = new Map(seen.map((event) => [event.type, event.cancelable]));
+  expect(byType.get('lr-show')).to.equal(true);
+  expect(byType.get('lr-hide')).to.equal(true);
+  expect(byType.get('lr-after-hide')).to.equal(false);
+});

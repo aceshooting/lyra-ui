@@ -432,10 +432,19 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     }
   }
 
+  /**
+   * The custom-content slot is a *sibling* of the SVG, never a child of it. An HTML parser puts
+   * every element inside `<svg>` into the SVG namespace, so a server-rendered `<slot>` there comes
+   * back as an inert SVG element that assigns nothing and has no `assignedNodes()` at all — the
+   * client-only DOM insertion Lit does is the only reason the nested spelling ever worked. Nothing
+   * is lost by moving it out: slotted geometry never painted through the slot either way (see
+   * `syncCustomNodes`, which clones it into the component-owned SVG), so the slot is purely an
+   * assignment target and `icon.styles.ts` keeps it `display: none`.
+   */
   private renderBuiltIn(): TemplateResult {
     const path = this.path || PATHS[this.name] || '';
     const accessibleLabel = this.accessibleLabel();
-    return html`<svg part="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden=${accessibleLabel ? 'false' : 'true'} aria-label=${accessibleLabel || nothing} focusable="false">${path ? svg`<path d=${path}></path>` : html`<slot @slotchange=${this.onCustomSlotChange}></slot>`}</svg>`;
+    return html`<svg part="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden=${accessibleLabel ? 'false' : 'true'} aria-label=${accessibleLabel || nothing} focusable="false">${path ? svg`<path d=${path}></path>` : nothing}</svg>${path ? nothing : html`<slot @slotchange=${this.onCustomSlotChange}></slot>`}`;
   }
 
   override render(): TemplateResult {

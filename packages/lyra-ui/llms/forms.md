@@ -18,6 +18,64 @@ literal text `"null"`.
 These are setter-only input types, not nullable states: code that reads any member above continues
 to receive a `string`.
 
+## The validity alias is cancelable in 8.0.0
+
+Every form-associated control emits `lr-invalid` (no detail, bubbling, composed) as the alias of the
+native, non-bubbling `invalid` event. In 8.0.0 that alias is **cancelable**, and its cancellation is
+forwarded to the native event that produced it:
+
+```ts
+form.addEventListener('lr-invalid', (event) => {
+  event.preventDefault();            // suppresses the browser's own validation bubble,
+  showMyOwnErrorSummary(event.target); // and reportValidity()'s focus/scroll of this control
+});
+```
+
+`preventDefault()` suppresses only the platform's *default UI* — the validation bubble, and the
+focus/scroll `reportValidity()` performs on the first invalid control. The control stays invalid,
+still fails `checkValidity()`, and still blocks submission. Cancelling a copy of a platform event
+could only ever mean cancelling the original, which is why the forwarding exists at all: before it,
+an app wiring `lr-invalid` to its own error banner had no way to stop the native UI appearing
+alongside it.
+
+Nothing changes for code that ignores the event, and the listener has to be attached before the
+validity check runs. Every per-control mention of `lr-invalid` below inherits this contract; the
+per-control sections repeat only what is specific to that control.
+
+## The required-field marker
+
+A labelled control with `required` set paints ` *` after its label text. It is one shared rule on
+the `form-control-label` part, so it looks and sits identically on every control that renders that
+part — here, and on `lr-file-input`, `lr-model-select`, `lr-voice-picker` and `lr-tool-param-form`
+in the other families. `lr-checkbox`, `lr-switch` and `lr-radio` have no label box of their own and
+paint none; a control with the part but no label text set paints none either, so no stray glyph is
+orphaned.
+
+Three consumer-settable properties replace it, retune its colour, or suppress it entirely —
+`--lr-form-control-required-content` (a quoted CSS `content` string; `''` suppresses the marker),
+`--lr-form-control-required-color` (default `var(--lr-color-danger)`), and
+`--lr-form-control-required-offset` (default `0`). Each is an inline `var()` fallback rather than a
+`:host` declaration, so setting one on any ancestor — `:root` included — reaches every marker at
+once. Full description, worked examples, and why the content string is never localized by the
+library: `llms/shared.md` → "The required-field marker".
+
+## Disabled and readonly controls publish no invalid state
+
+A control **barred from constraint validation** — its own `disabled`, an ancestor
+`<fieldset disabled>`, `readonly` on the controls that have it, or anything else that makes
+`willValidate` false — matches neither `:state(invalid)` nor `:state(user-invalid)`, and reports no
+violation from `checkValidity()`. That is the native rule: `<input required disabled>` and
+`<input required readonly>` both match neither `:valid` nor `:invalid`.
+
+It matters because the idiomatic stylesheet rule keys off the tag —
+`lr-input:state(user-invalid) { border-color: … }` — so a disabled required field that still
+published `invalid` painted every greyed-out control in the form red.
+
+`required`/`optional` are unaffected: they describe the attribute, not the outcome, so a disabled
+required field still matches `:state(required)`, exactly like native `:required`. Style the barred
+case through `:state(disabled)`/`:disabled` and `:state(readonly)` instead. Full description in
+`llms/shared.md` → "CSS custom states".
+
 ## `lr-combobox` / `lr-option`
 
 Filterable single/multi-select combining a text input with a listbox. Mirrors the core
@@ -161,7 +219,8 @@ the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user e
 `detail: { inputValue }` and is the one cancelable event: preventing it suppresses the default
 append/select action so the host can normalize and commit its own option.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
-`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
+`lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
+validity fails — see "The validity alias is cancelable in 8.0.0" above.
 
 **The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
 committed selection and an in-progress filter query, so the button renders whenever either has
@@ -222,6 +281,12 @@ adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`
 leading visual for an async row), `option-label`, `option-sub` (a row's secondary line, when `sub`
 is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"
 indicator from `maxRender`), `error`, `hint`
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-combobox-trigger-padding`,
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
@@ -509,7 +574,7 @@ announces a no-op),
 trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
 its unprefixed counterpart. `lr-after-show` and `lr-after-hide` fire after the corresponding
 listbox transition has settled; an interrupted transition drops its stale after-event.
-`lr-invalid` (no detail) fires when a validity check finds the control invalid.
+`lr-invalid` (no detail, cancelable) fires when a validity check finds the control invalid.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `help-text` (alias), `error` (overrides
 the `errorText` attribute when provided), `start`/`prefix` (aliases before the selected-value label),
@@ -535,6 +600,12 @@ get no heading),
 `option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
 `--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
@@ -787,7 +858,9 @@ internal native date input.
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
 bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
-settle. `lr-clear` and `lr-invalid` are non-cancelable.
+settle. `lr-clear` is non-cancelable. `lr-invalid` **is** cancelable: `preventDefault()` on it
+suppresses the browser's native validation bubble and `reportValidity()`'s focus/scroll of this
+control, without making the control valid — see "The validity alias is cancelable in 8.0.0" above.
 
 **Slots (10):** `clear-icon`, dynamic `day-YYYY-MM-DD`, `end`, `expand-icon`, `footer`, `hint`,
 `label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
@@ -807,6 +880,12 @@ endpoint remains visible in `value` but contributes the empty string to `FormDat
 endpoint is selected. `min`/`max`, past/future limits, disabled dates/weekdays, the predicate,
 range length, `required`, and configured validators all feed FACE validity. Reset and state restore
 use the same normalization path as direct property writes.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-date-input-padding-block` (default `--lr-space-xs`) and
 `--lr-date-input-padding-inline` (default `--lr-space-s`) — the `input-wrapper`'s padding;
@@ -1040,7 +1119,7 @@ the shadow boundary.
 | `focus` | none | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`. |
 | `lr-blur` | none | Prefixed compatibility alias, fired immediately after `blur`. |
 | `lr-focus` | none | Prefixed compatibility alias, fired immediately after `focus`. |
-| `lr-invalid` | none | Fired when a validity check finds the control invalid. |
+| `lr-invalid` | none | Fired when a validity check finds the control invalid. **Cancelable** — `preventDefault()` suppresses the native validation bubble and `reportValidity()`'s focus/scroll. |
 
 Programmatic property assignments, selection changes, `setRangeText()`, form reset, and form-state
 restoration are silent. User edits update `value`, submitted form data, and required validity before
@@ -1077,6 +1156,12 @@ on every keystroke. Lengths count UTF-16 code units (one emoji counts as two), m
 script-assigned value can exceed `maxlength`, and the `tooLong` validity flag already reports that
 state better than a negative number would. An unparseable `maxlength` (`maxlength="oops"`) is
 dropped rather than rendered as `NaN`, and the count counts up from zero instead.
+
+`required` with a non-empty `label` paints the library's shared marker on `form-control-label` —
+the one `::after` rule described under "The required-field marker" above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
 
 ### Themeable custom properties
 
@@ -1237,7 +1322,8 @@ restores `value` for session history/autofill without changing submitter-only fo
 (disabled while `disabled` or `loading`). The internal button's `focus` and `blur` — which do not
 cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
 events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail). `lr-invalid` (no
-detail) fires when a validity check finds the button invalid.
+detail, cancelable) fires when a validity check finds the button invalid; `preventDefault()` on it
+suppresses the native validation bubble and `reportValidity()`'s focus/scroll.
 
 **Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content),
 plus Shoelace aliases `prefix` → `start` and `suffix` → `end`.
@@ -1653,6 +1739,13 @@ sequence). `lr-invalid` (no detail) fires when a validity check finds the input 
 `clear-button` (non-empty clearable `text`/`search` inputs only),
 `hint`/`form-control-help-text` (compatibility names on the same hint node), and `error`.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, and the reference implementation every other labelled control in the library shares, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it. With no label text the part is hidden and
+no glyph is painted.
+
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
 `--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
 (`2xs`…`xl`), the same pattern
@@ -1749,7 +1842,8 @@ submission must never shadow it: `lr-textarea` and `lr-code-editor` insert a new
 whole point of a multi-line surface; `lr-select`'s `role="combobox"` trigger opens the listbox (and
 then commits the active option), per the ARIA pattern; and `lr-date-picker` selects the focused day
 in the calendar grid. The controls that *do* wire it are `lr-input` (and its `lr-number-input`/
-`lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input` and `lr-token-input`.
+`lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input` and
+`lr-otp-input`.
 
 ### Exact-height hatches — the one rule that applies to all of them
 
@@ -1993,6 +2087,13 @@ precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion set
 
 **Custom states:** `blank`, `disabled`, and `open`, plus the shared validity states.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+the `form-control-label` node — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
+painted.
+
 **Themeable custom properties:** upstream-compatible `--column-item-height`, `--column-width`,
 `--show-duration`, and `--hide-duration`, each with a Lyra design-token fallback.
 
@@ -2173,6 +2274,12 @@ such as a consumer-owned `<lr-flag>`; no flag package is imported automatically)
 `flags`), `country-code` (selected alpha-2 code, `data-placeholder` when no country exists),
 `expand-icon`, `calling-code`, `input`, `hint`, `error`.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the part is hidden and no glyph is painted.
+
 **Themeable custom properties:** `--lr-phone-input-padding-block`, `--lr-phone-input-font-size`,
 and `--lr-phone-input-control-min-height` (each scaled by `size`), plus `--lr-phone-input-control-height`
 to pin an exact input-wrapper height (both floors and caps it — use it for pixel-matching an
@@ -2297,6 +2404,37 @@ clears it. The error survives handle moves, preset picks and a form reset, exact
 control — so a consumer re-validating a range on every `lr-input` calls this with the new message
 (or `''`) each time rather than expecting the movement itself to clear it. The message is
 caller-supplied and is used verbatim, never localized.
+
+**`form.reset()` — `formResetCallback()`.** The control has no submitted value, but it does take
+part in its owning form's reset, and a reset undoes everything the *user* did to it:
+
+- **The range** goes back to the declared `start`/`end` **content attributes** — the markup default,
+  the way a native `<input>` resets to its `value` attribute rather than to its current IDL value. A
+  handle with no attribute falls back to the domain bound it started at. The restored pair is
+  normalized the same way a preset pick is (clamped into `[min, max]`, then ordered so
+  `start <= end`), so an inverted or out-of-range declared range still restores to a legal one.
+- **The interaction flag** is cleared, which makes the control pristine again: `:state(user-valid)`
+  and `:state(user-invalid)` stop matching until the user touches it again. Without this, a range a
+  consumer had rejected kept rendering as the user's mistake on a form they had just reset.
+- **An in-flight keyboard gesture** is dropped, so the next key-up cannot commit an `lr-change` for
+  a step the reset already discarded. A drag in progress is left alone — only the pointer sequence
+  itself ends it.
+
+Two things deliberately **survive** the reset, matching native semantics:
+
+- **A `setCustomValidity()` message**, and with it `customError`, `validationMessage`,
+  `:state(invalid)` and blocked submission. Only another `setCustomValidity('')` clears it. The
+  reset stops it looking like the user's error; it does not decide the consumer's constraint is
+  satisfied. If a reset should also clear your rejection, call `setCustomValidity('')` from your own
+  `reset` listener.
+- **`disabled`, `min`/`max`, `step`, `presets`, and every other author-set property** — a reset
+  restores the user's edits, not the component's configuration.
+
+The reset **emits nothing**: like a native control, it is the form's edit rather than the user's, so
+no `input`/`change`/`lr-input`/`lr-change` fires. Read `start`/`end` in a `reset` listener on the
+form if you need to react. There is deliberately no `formStateRestoreCallback()` beside it — this
+control never calls `setFormValue()`, so the browser has no serialized state to hand back for
+autofill or back/forward restore.
 
 **Slots:** none.
 
@@ -2894,6 +3032,14 @@ the part name because `::part(tooltip)[data-visible]` is invalid CSS and never m
 **Breaking in 8.0.0:** the `fill` part was **renamed to `indicator`**, matching `wa-slider`. A
 `::part(fill)` rule silently matches nothing now — rename it.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+the `form-control-label` node — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the node is hidden and no glyph is
+painted. It is purely a visual convention here, for the reason the custom states note above gives:
+a slider always has a value, so the marker never accompanies a `valueMissing` violation.
+
 **Themeable custom properties:** three geometry knobs ride the shared `size` ladder, so a tier moves
 them all without a per-tier rule, and the values in brackets are what they resolve to at the default
 `m`:
@@ -3201,8 +3347,11 @@ emit `input` immediately and one `change` when the field settles on blur or Ente
 composition events stay on the real input without sanitizing or committing; the final
 non-composing input commits and relays once. `lr-complete` (`detail: { value }`) fires only on an
 incomplete-to-complete transition, so replacing a filled cell does not complete again. It always
-bubbles, composes, and is cancelable. With `autosubmit`, the component calls `requestSubmit()` on
-its owning form after the event unless a listener calls `preventDefault()`. The real input's native
+bubbles, composes, and is cancelable. With `autosubmit`, the component submits its owning form
+after the event unless a listener calls `preventDefault()`. That submission is deferred one task,
+so a listener that decides asynchronously (`await`-ing a check before letting the form go) can
+still veto it; it then goes through the same resolved default button as Enter-to-submit, so
+`SubmitEvent.submitter` and the button's own `name`/`value` reach the submission. The real input's native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
 do not cross the shadow boundary; each is followed by its prefixed alias `lr-focus` / `lr-blur` (no
 detail). `lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.
@@ -3214,7 +3363,10 @@ mirrored in RTL. Backspace clears the current cell and moves back; Delete clears
 Neither operation shifts later characters. Typing replaces the active cell and advances. A
 nonempty native selection maps its compact-string offsets back to occupied visual cells: typing
 replaces the selection at its first cell, while either deletion key clears every selected cell.
-Enter flushes a pending `change` and requests exactly one submission from the owning form. Pasting
+A bare Enter flushes a pending `change` and requests exactly one submission from the owning form,
+through the shared Enter-to-submit gate above — so a modifier-held Enter, an Enter that commits an
+IME candidate, an already-vetoed keydown, and a `readonly` field all leave the form alone, and the
+keystroke itself is never cancelled. Pasting
 fills accepted characters from the first cell in one input operation. The public and submitted
 `value` concatenates occupied cells; a middle hole is a visual editing state and is not encoded in
 that string.
@@ -3226,7 +3378,11 @@ nonempty `label`/`hint` attribute wins when both sources are supplied. The `erro
 **CSS parts:** `base` / `form-control` (aliases on the outer wrapper), `label` /
 `form-control-label` (aliases on the label), `field` / `segments` (aliases on the segment wrapper),
 `control` (the real, transparent input), `segment`, `separator` / `segment-literal` (aliases on
-separators), `hint`, and `error`. A populated required label paints the shared required asterisk.
+separators), `hint`, and `error`. A populated required label paints the shared required marker —
+the same `::after` rule and the same three properties every other labelled control uses (see "The
+required-field marker" above), not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here too.
 `segment` carries `active`, `masked`, `placeholder-mask`, and `invalid` as additional part tokens.
 
 **Themeable custom properties:** `--mask-char` (mapped mask-glyph alias, defaulting to the retained
@@ -3311,6 +3467,14 @@ child validity owner.
 `form-control-input` / `button-group` / `button-group__base`, `hint` /
 `form-control-help-text`, and `error`.
 
+**The required marker.** `required` with a non-empty group `label` paints the library's shared
+marker on the `form-control-label` node — the one `::after` rule described under "The
+required-field marker" above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. It marks the **group**, not the individual radios: an owned
+`<lr-radio>` has no label box of its own and paints nothing. With no group label text the node is
+hidden and no glyph is painted.
+
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
 options and its messages, scaled by `size` through the shared control ladder.
@@ -3349,6 +3513,14 @@ of the control's current `name`, preserves duplicate-value cardinality, waits fo
 option children, and falls back to an empty selection for malformed state. Restoration is silent.
 **CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
 `error`.
+**The required marker.** `required` with a non-empty group `label` paints the library's shared
+marker on `[part="form-control-label"]` — here the `<legend>` of the group's fieldset. It is the
+one `::after` rule described under "The required-field marker" above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`. It
+marks the **group**, not the individual checkboxes: an owned `<lr-checkbox>` has no label box of
+its own and paints nothing. With no group label text the legend is hidden and no glyph is painted.
+
 **Themeable custom properties:** `--lr-checkbox-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.1)`), the vertical gap between the group's label, options
 and messages, and `--lr-checkbox-group-option-gap` (default
@@ -3442,6 +3614,13 @@ does not work** — that is the four-character string `null`. Use `delimiter="no
 (both of which the attribute converter maps to `null`), or a property binding
 (`.delimiter=${null}`). Removing the attribute restores the `,` default.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. It marks the control, not an individual token. With no label
+text the part is hidden and no glyph is painted.
+
 **Themeable custom properties:** `--lr-token-input-padding` (the input-wrapper padding, scaled by
 `size`), `--lr-token-input-font-size` (the input-wrapper and token font size, scaled by `size`),
 `--lr-token-input-control-min-height` (the input-wrapper's block-size floor, scaled by `size`),
@@ -3506,9 +3685,16 @@ validity fails.
 
 **Slots:** `label`, `hint`, `error`.
 
-**CSS parts:** `form-control`, `label` (**not** `form-control-label` as on the other form
-components), `editor` (the bordered frame and the single scroll viewport), `gutter` (line numbers,
-`aria-hidden`, only when `lineNumbers`), `textarea`, `hint`, `error`.
+**CSS parts:** `form-control`, `label` / `form-control-label` (both tokens sit on the same `<label>`
+element — `label` is the historical name, `form-control-label` the one every other form component
+in this family uses), `editor` (the bordered frame and the single scroll viewport), `gutter` (line
+numbers, `aria-hidden`, only when `lineNumbers`), `textarea`, `hint`, `error`.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+that label element — the one `::after` rule described under "The required-field marker" above, not
+a copy of it, so `--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
+With no label text the element is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-code-editor-min-block-size` (default `--lr-size-8rem`, the
 frame's and textarea's height floor) and `--lr-code-editor-line-height` (default `1.5`, applied to
@@ -3700,6 +3886,13 @@ The eyedropper aliases are also addressable individually as `eyedropper-button__
 `eyedropper-button__caret`, `eye-dropper-button__base`, `eye-dropper-button__prefix`,
 `eye-dropper-button__label`, `eye-dropper-button__suffix`, and `eye-dropper-button__caret`.
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
+painted.
+
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
 not the button's minimum target. It is auto-swapped per `size` tier (default `'m'` reads `2.5rem`,
 `'2xs'` reads `1.25rem`, etc.), matching the visual-density ladder `lr-input` uses. The trigger's
@@ -3852,6 +4045,13 @@ error message). While windowing is active the rows are wrapped in `virtual-space
 `aria-hidden` spacer standing in for a row's missing `group-label`), and `virtual-items` (the row's
 emoji flex line).
 
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
+painted.
+
 **Themeable custom properties:** `--lr-emoji-picker-item-size` (default `--lr-icon-button-size`,
 each emoji button's box; scaled by the `size` property), `--lr-emoji-picker-glyph-size` (default
 `--lr-font-size-lg`, the font size of the emoji glyph; scaled by the `size` property to keep the glyph
@@ -3984,12 +4184,31 @@ list, no filter/free-text mode.
 - `open: boolean = false` (reflected).
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`).
 
-**Events:** `lr-change` (`detail: { value, previousValue }`, **cancelable**) — fired on every
-explicit pick; if not `defaultPrevented`, the component applies the pick itself via
+**Events:** `lr-change` (`detail: { value, previousValue, direction }`, **cancelable**) — fired on
+every explicit pick; if not `defaultPrevented`, the component applies the pick itself via
 `setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
 active locale untouched, so a host can persist the choice first and apply it later. `blur`/`focus`
 re-dispatched from the internal trigger as bubbling, composed events. `lr-invalid` is the single
-bubbling/composed alias of a failed native validity check.
+bubbling/composed, cancelable alias of a failed native validity check.
+
+`direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing
+direction, resolved through `getLyraLocaleDirection(value)` — a catalog's declared
+`registerLyraLocale(tag, strings, { dir })` first, then `Intl.Locale`'s text-info surface where the
+engine has it, then `'ltr'`. It is present on every `lr-change`, cancelled or not, and it is carried
+precisely so applying the direction is a one-liner instead of an application-maintained table of RTL
+tags:
+
+```js
+picker.addEventListener('lr-change', (e) => {
+  document.documentElement.lang = e.detail.value;
+  document.documentElement.dir = e.detail.direction;
+});
+```
+
+The component still never writes `lang`/`dir` itself — a picker does not own the page — but it no
+longer leaves the host to work the direction out. `getLyraLocaleDirection()` is exported from
+`@aceshooting/lyra-ui/localization.js` for the same lookup outside an event handler (a persisted
+choice applied on boot).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` — all forward to the internal trigger
 button, same convention as `lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
@@ -4003,6 +4222,13 @@ required picker with nothing committed goes back to `valueMissing`. It survives 
 **CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `option`,
 `option-flag` (present only while `showFlags` is on), `option-label`, `option-tag` (the row's
 secondary line — the raw BCP-47 tag), `expand-icon`, `hint`, `error`.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+`[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. The part is rendered only when there is label text, so an
+unlabelled picker paints no stray glyph.
 
 **Themeable custom properties:** `--lr-locale-picker-trigger-padding`,
 `--lr-locale-picker-trigger-min-height`, `--lr-locale-picker-trigger-height` (unset by default, a
@@ -4029,7 +4255,9 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
 **Known gotchas:**
 - selecting a row applies `setLyraLocale()` itself unless the listener calls
   `event.preventDefault()` on `lr-change` — it does not touch
-  `document.documentElement.lang`/`dir`; apply writing-direction changes to the page yourself.
+  `document.documentElement.lang`/`dir`. Applying those is still the host's job, but the direction
+  is no longer the host's to *derive*: read `event.detail.direction` (or call
+  `getLyraLocaleDirection(tag)`), rather than keeping a hand-maintained list of RTL tags.
 - no filter/free-text mode — for a catalog with hundreds+ of rows, roll your own with `lr-select`
   or `lr-combobox` instead.
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no

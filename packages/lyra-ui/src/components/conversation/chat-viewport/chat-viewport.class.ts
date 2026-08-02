@@ -183,7 +183,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         this.performScrollToEnd(behavior);
       }
       if (!wasMounting) {
-        this.emit<{ following: boolean }>('lr-follow-change', { following: this.follow });
+        this.emit('lr-follow-change', { following: this.follow });
       }
     }
     // On the very first update, firstUpdated() -> armObservers() already computed this moments

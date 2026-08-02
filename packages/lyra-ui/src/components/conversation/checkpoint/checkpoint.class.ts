@@ -114,7 +114,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   }
 
   private fireRestore(): void {
-    this.emit<CheckpointRestoreDetail>('lr-restore', {
+    this.emit('lr-restore', {
       checkpointId: this.checkpointId,
       label: this.computedLabel,
     });

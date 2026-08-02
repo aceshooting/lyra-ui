@@ -34,7 +34,13 @@ PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`
 `PromptStudioState = { messages, variables }`.
 
 **Events:** `lr-change`, `lr-run`, `lr-save` (all carry complete messages/variables);
-`lr-version-select` (`{ version }`).
+`lr-version-select` (`{ version }`). Plus `focus` and `blur` (no detail), re-dispatched from the
+host — bubbling and composed — whenever a message textarea or a variable input gains or loses
+focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
+boundary, so without the re-dispatch an
+`editor.addEventListener('focus', …)` would never fire at all. They are re-dispatches of real
+focus movement, not a synthetic host-level focus signal: moving between two fields inside the
+studio emits a `blur` and then a `focus`.
 
 **CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
 `message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,

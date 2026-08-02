@@ -188,7 +188,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     if (file.anchor == null) return;
     this.scheduleAfterUpdate(() => {
       if (generation !== this.generation) return;
-      this.emit<AnchorResultDetail>('lr-anchor-result', { found: false });
+      this.emit('lr-anchor-result', { found: false });
     });
   }
 
@@ -206,7 +206,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
         void (async () => {
           const found = (await this.fallbackPreviewEl?.scrollToAnchor(file.anchor!)) ?? false;
           if (generation !== this.generation) return;
-          this.emit<AnchorResultDetail>('lr-anchor-result', { found });
+          this.emit('lr-anchor-result', { found });
         })();
       });
       return;
@@ -214,7 +214,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     if (this.isAnchorCapable(def, file.anchor)) return;
     this.scheduleAfterUpdate(() => {
       if (generation !== this.generation) return;
-      this.emit<AnchorResultDetail>('lr-anchor-result', { found: false });
+      this.emit('lr-anchor-result', { found: false });
     });
   }
 
@@ -238,7 +238,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private onDialogClose = (event: CustomEvent<DialogCloseReason>): void => {
     event.stopPropagation();
     this.open = false;
-    this.emit<DocumentViewerCloseReason>('lr-close', event.detail);
+    this.emit('lr-close', event.detail);
   };
 
   private onDownload = (): void => {

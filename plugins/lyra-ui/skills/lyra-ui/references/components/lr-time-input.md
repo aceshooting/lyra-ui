@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -73,6 +73,13 @@ precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion set
 `column-item-selected`, `now-button`, `hint`, and `error`.
 
 **Custom states:** `blank`, `disabled`, and `open`, plus the shared validity states.
+
+**The required marker.** `required` with a non-empty `label` paints the library's shared marker on
+the `form-control-label` node — the one `::after` rule described under "The required-field marker"
+above, not a copy of it, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
+here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
+painted.
 
 **Themeable custom properties:** upstream-compatible `--column-item-height`, `--column-width`,
 `--show-duration`, and `--hide-duration`, each with a Lyra design-token fallback.

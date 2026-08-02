@@ -15,6 +15,15 @@
 // chance with, and the gate cannot tell a sentinel from a legitimately identical string ("OK",
 // "JSON", "PDF") anyway. Untranslated coverage is reported by `--report` instead.
 //
+// `registerLyraLocale()`'s third argument -- the locale METADATA -- is preserved, not regenerated.
+// It is the one thing in a catalog that is neither a key nor a translation, and it is load-bearing:
+// `getLyraLocaleDirection()` answers from a registered `dir` first and only then from `Intl.Locale`'s
+// text-info surface, which several shipping engines still do not expose. A `--force` reshape that
+// re-emitted the bare two-argument call would therefore silently turn ar/fa/he LTR for every
+// application asking the library which direction a locale needs. So: an existing file's meta
+// argument is carried across verbatim, and a brand-new RTL catalog is scaffolded WITH one rather
+// than leaving the direction to a runtime that may not know it.
+//
 // Run: node scripts/scaffold-translation.mjs <tag> [--force]
 //      node scripts/scaffold-translation.mjs --report
 
@@ -77,7 +86,70 @@ const quote = (text) =>
     .replace(/\r/g, '\\r')
     .replace(/\t/g, '\\t')}'`;
 
-function emit(tag, entries) {
+// Base languages written right-to-left, as a floor under `Intl.Locale`'s text-info surface. That
+// surface is spelled `textInfo` in some engines, `getTextInfo()` in others and is missing entirely
+// in older ones, so a scaffold that trusted it alone would emit no `dir` at all on exactly the
+// runtimes where the declaration matters most.
+const RTL_BASE_LANGUAGES = new Set(['ar', 'ckb', 'dv', 'fa', 'he', 'ps', 'sd', 'ug', 'ur', 'yi']);
+
+function baseLanguage(tag) {
+  try {
+    return new Intl.Locale(tag).language;
+  } catch {
+    return tag.split(/[-_]/)[0].toLowerCase();
+  }
+}
+
+function localeDirection(tag) {
+  if (RTL_BASE_LANGUAGES.has(baseLanguage(tag))) return 'rtl';
+  try {
+    const resolved = new Intl.Locale(tag);
+    return (resolved.textInfo?.direction ?? resolved.getTextInfo?.().direction) === 'rtl' ? 'rtl' : 'ltr';
+  } catch {
+    return 'ltr';
+  }
+}
+
+/** The locale's own endonym, for the informational `name` slot. Undefined when the runtime has no
+ *  display name for it and would just echo the tag back. */
+function endonym(tag) {
+  try {
+    const language = baseLanguage(tag);
+    const name = new Intl.DisplayNames(tag, { type: 'language' }).of(language);
+    return name && name.toLowerCase() !== language.toLowerCase() ? name : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The meta argument a NEW catalog should carry. LTR is the platform default and needs no
+ * declaration, so only an RTL locale gets one -- an `{ dir: 'ltr' }` on every Latin-script catalog
+ * would be noise a translator is tempted to delete.
+ */
+function deriveMeta(tag) {
+  if (localeDirection(tag) !== 'rtl') return undefined;
+  const name = endonym(tag);
+  return `{ dir: 'rtl'${name ? `, name: ${quote(name)}` : ''} }`;
+}
+
+/** The meta argument the file being overwritten already declared, verbatim, or undefined. */
+function readExistingMeta(file) {
+  if (!existsSync(file)) return undefined;
+  const source = readFileSync(file, 'utf8');
+  const program = parseSync(file, source).program;
+  let meta;
+  visit(program, (node) => {
+    if (meta !== undefined) return;
+    if (node.type !== 'CallExpression') return;
+    if (node.callee?.type !== 'Identifier' || node.callee.name !== 'registerLyraLocale') return;
+    const argument = node.arguments?.[2];
+    if (argument) meta = source.slice(argument.start, argument.end).trim();
+  });
+  return meta;
+}
+
+function emit(tag, entries, meta) {
   const categories = new Intl.PluralRules(tag).resolvedOptions().pluralCategories;
   const lines = entries.map(([key, message]) => {
     if (typeof message === 'string') return `  ${key}: ${quote(message)},`;
@@ -88,6 +160,15 @@ function emit(tag, entries) {
     const body = categories.map((category) => `    ${category}: ${quote(message[category] ?? fallback)},`);
     return [`  ${key}: {`, ...body, '  },'].join('\n');
   });
+  const registration = meta
+    ? [
+        '',
+        `// \`dir\` is declared, not inferred: no component reads it (direction still comes from the`,
+        `// platform \`dir\` cascade), but it is what lets an application ask the library whether this`,
+        `// locale needs \`dir="rtl"\` instead of keeping its own tag table.`,
+        `registerLyraLocale('${tag}', strings, ${meta});`,
+      ].join('\n')
+    : `\nregisterLyraLocale('${tag}', strings);`;
   return `// ${tag} translation catalog for @aceshooting/lyra-ui.
 //
 // A side-effect-only module: a consumer writes a bare
@@ -103,8 +184,7 @@ import { registerLyraLocale, type LyraLocaleStrings } from '../internal/localiza
 const strings: LyraLocaleStrings = {
 ${lines.join('\n')}
 };
-
-registerLyraLocale('${tag}', strings);
+${registration}
 `;
 }
 
@@ -159,8 +239,12 @@ if (existsSync(target) && !args.includes('--force')) {
 function relativeish(path) {
   return path.slice(packageRoot.length);
 }
-writeFileSync(target, emit(tag, entries), 'utf8');
+// Preserved meta beats derived meta: the catalog that is already on disk is the authority on its
+// own direction and endonym, and a reshape may not overwrite a hand-corrected one.
+const meta = readExistingMeta(target) ?? deriveMeta(tag);
+writeFileSync(target, emit(tag, entries, meta), 'utf8');
 console.log(
   `wrote ${relativeish(target)}: ${entries.length} keys, plural categories ` +
-    `[${new Intl.PluralRules(tag).resolvedOptions().pluralCategories.join(', ')}]`,
+    `[${new Intl.PluralRules(tag).resolvedOptions().pluralCategories.join(', ')}]` +
+    (meta ? `, meta ${meta}` : ''),
 );

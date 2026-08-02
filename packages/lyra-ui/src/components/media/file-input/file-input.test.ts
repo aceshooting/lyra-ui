@@ -3,6 +3,16 @@ import './file-input.js';
 import { DEFAULT_MAX_FILE_SIZE_BYTES, type LyraFileInput } from './file-input.js';
 import { styles } from './file-input.styles.js';
 import { resolveValidityAnchor } from '../../../internal/anchored-validity.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
+  const element = sinkElement(politeness);
+  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
 
 function makeFile(name: string, type: string): File {
   return new File(['x'], name, { type });
@@ -35,6 +45,10 @@ function dragEnterWith(el: HTMLElement, files: File[]): void {
   const ev = new DragEvent('dragenter', { bubbles: true, cancelable: true });
   Object.defineProperty(ev, 'dataTransfer', { value: dt });
   el.dispatchEvent(ev);
+}
+
+function dragLeave(el: HTMLElement): void {
+  el.dispatchEvent(new DragEvent('dragleave', { bubbles: true, cancelable: true }));
 }
 
 /** Simulates dropping a folder. A real `DataTransfer` cannot host a synthetic directory entry
@@ -544,22 +558,59 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('announces accept/reject drag state changes via a polite live region', async () => {
+it('announces accept/reject drag state changes via the shared polite light-DOM region', async () => {
   const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
-  expect(status.getAttribute('aria-live')).to.equal('polite');
+  // The retained part is a styling/inspection mirror only -- a live region inside a shadow root is
+  // not reliably announced, and leaving it live would double-announce where it *is* honored.
+  expect(status.getAttribute('aria-live')).to.equal(null);
+  expect(status.getAttribute('role')).to.equal(null);
+  expect(status.getAttribute('aria-hidden')).to.equal('true');
   expect(status.textContent).to.equal('');
+  expect(sinkTexts('polite'), 'mounting must not announce a resting state').to.deep.equal([]);
 
   dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
   await el.updateComplete;
   expect(status.textContent).to.equal('Release to add the file.');
+  expect(sinkTexts('polite')).to.deep.equal(['Release to add the file.']);
 
   el.allowedMimeTypes = ['application/pdf'];
   await el.updateComplete;
   dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
   await el.updateComplete;
   expect(status.textContent).to.equal('This file type is not accepted.');
+  expect(sinkTexts('polite')).to.include('This file type is not accepted.');
+});
+
+it('announces a repeated identical drag state twice instead of silently rewriting one text node', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  dragLeave(base);
+  await el.updateComplete;
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+
+  expect(
+    sinkTexts('polite').filter((text) => text === 'Release to add the file.').length,
+    'an identical repeat must be a second addition so assistive tech reads it again',
+  ).to.equal(2);
+});
+
+it('ref-counts the shared sinks away once the last file input disconnects', async () => {
+  const first = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const second = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  expect(sinkElement('polite') !== null, 'a connected file input holds the polite sink').to.be.true;
+  expect(sinkElement('assertive') !== null, 'and the assertive sink').to.be.true;
+  first.remove();
+  expect(sinkElement('polite') !== null, 'a still-connected file input keeps them mounted').to.be
+    .true;
+  second.remove();
+  expect(sinkElement('polite') === null, 'the last disconnect unmounts the polite sink').to.be.true;
+  expect(sinkElement('assertive') === null, 'and the assertive one').to.be.true;
 });
 
 it('localizes the drag-preview live-region announcements via this.localize(), not hardcoded English', async () => {
@@ -653,8 +704,13 @@ it('renders a visible, per-reason rejection region naming the rejected file (reg
 
   const rejection = el.shadowRoot!.querySelector('[part="rejection"]') as HTMLElement;
   expect(rejection).to.exist;
-  expect(rejection.getAttribute('role')).to.equal('alert');
+  // Visible text, so it stays readable in the accessibility tree without a shadow live role; the
+  // interrupting announcement goes through the shared light-DOM assertive region instead, which is
+  // the one assistive tech actually observes.
+  expect(rejection.getAttribute('role')).to.equal(null);
+  expect(rejection.getAttribute('aria-hidden')).to.equal(null);
   expect(rejection.textContent).to.contain('bad.png: this file type is not accepted.');
+  expect(sinkTexts('assertive')).to.deep.equal(['bad.png: this file type is not accepted.']);
 });
 
 it('keeps the visible rejection region separate from, and in addition to, the sr-only status summary', async () => {
@@ -1059,4 +1115,175 @@ describe('reviewed Web Awesome Pro file-input surface', () => {
 
     expect(el.files.map((file) => file.name)).to.deep.equal(['nested.csv']);
   });
+});
+
+it('exposes the native form-association surface', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <label id="picker-label" for="picker">Attachments</label>
+      <lr-file-input id="picker" name="attachment" required></lr-file-input>
+    </form>
+  `);
+  const el = form.querySelector<LyraFileInput>('lr-file-input')!;
+  expect(el.form).to.equal(form);
+  expect(el.getForm()).to.equal(form);
+  expect(el.willValidate).to.equal(true);
+  expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['picker-label']);
+
+  expect(el.reportValidity()).to.equal(false);
+  await el.updateComplete;
+  expect(el.validity.valueMissing).to.equal(true);
+  expect(el.matches(':state(user-invalid)')).to.equal(true);
+
+  el.files = [makeFile('note.txt', 'text/plain')];
+  await el.updateComplete;
+  expect(el.reportValidity()).to.equal(true);
+});
+
+it('detaches from its form owner when the form property is reassigned', async () => {
+  const root = await fixture(html`
+    <div>
+      <form id="one"></form>
+      <form id="two"></form>
+      <lr-file-input name="attachment"></lr-file-input>
+    </div>
+  `);
+  const el = root.querySelector<LyraFileInput>('lr-file-input')!;
+  const one = root.querySelector<HTMLFormElement>('#one')!;
+  expect(el.form).to.equal(null);
+  el.form = one;
+  await el.updateComplete;
+  expect(el.form).to.equal(one);
+  expect(el.getForm()).to.equal(one);
+  el.form = null;
+  await el.updateComplete;
+  expect(el.form).to.equal(null);
+});
+
+it('clears its own state when the owning form resets', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-file-input name="attachment" multiple accept="text/plain"></lr-file-input></form>
+  `);
+  const el = form.querySelector<LyraFileInput>('lr-file-input')!;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  setTimeout(() => dropWith(base, [makeFile('note.txt', 'text/plain'), makeFile('image.png', 'image/png')]));
+  const dropped = await oneEvent(el, 'lr-files');
+  expect(dropped.detail.rejected.length).to.equal(1);
+  await el.updateComplete;
+  expect(el.files.length).to.equal(1);
+  expect(el.shadowRoot!.textContent).to.contain('image.png');
+
+  form.reset();
+  await el.updateComplete;
+  expect(el.files).to.deep.equal([]);
+  expect(el.shadowRoot!.textContent).to.not.contain('image.png');
+  expect(el.matches(':state(user-invalid)')).to.equal(false);
+});
+
+it('restores single, multiple, and empty submitted state', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input name="attachment" multiple></lr-file-input>`);
+  const single = makeFile('one.txt', 'text/plain');
+  el.formStateRestoreCallback(single, 'restore');
+  await el.updateComplete;
+  expect(el.files).to.deep.equal([single]);
+
+  const bundle = new FormData();
+  const first = makeFile('first.txt', 'text/plain');
+  const second = makeFile('second.txt', 'text/plain');
+  bundle.append('file', first);
+  bundle.append('file', second);
+  bundle.append('note', 'not a file');
+  el.formStateRestoreCallback(bundle, 'restore');
+  await el.updateComplete;
+  expect(el.files).to.deep.equal([first, second]);
+
+  el.formStateRestoreCallback(null, 'restore');
+  await el.updateComplete;
+  expect(el.files).to.deep.equal([]);
+});
+
+it('paints the shared required marker on the label, and lets a consumer retune or suppress it', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input label="Attachments" required></lr-file-input>`);
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label, '::after').content).to.contain('*');
+
+  // The three knobs the shared sheet publishes are what make the glyph translatable, retunable and
+  // suppressible -- a hardcoded `content: ' *'` left a consumer nowhere to say any of that.
+  el.style.setProperty('--lr-form-control-required-content', '" (required)"');
+  el.style.setProperty('--lr-form-control-required-color', 'rgb(1, 2, 3)');
+  await el.updateComplete;
+  expect(getComputedStyle(label, '::after').content).to.contain('required');
+  expect(getComputedStyle(label, '::after').color).to.equal('rgb(1, 2, 3)');
+
+  el.style.setProperty('--lr-form-control-required-content', '""');
+  await el.updateComplete;
+  expect(getComputedStyle(label, '::after').content.replace(/["']/g, '')).to.equal('');
+});
+
+it('leaves the required marker off an optional file input', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input label="Attachments"></lr-file-input>`);
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label, '::after').content).to.not.contain('*');
+});
+
+it('bars constraint validation while disabled, natively and in the published states', async () => {
+  const el = await fixture<LyraFileInput>(html`
+    <lr-file-input label="Attachments" name="attachment" required disabled></lr-file-input>
+  `);
+  await el.updateComplete;
+  // A native `<input required disabled>` matches neither `:valid` nor `:invalid`; publishing
+  // `invalid`/`user-invalid` from one is what painted every disabled required field red.
+  expect(el.checkValidity(), 'a barred control reports no violation').to.equal(true);
+  expect(el.validity.valueMissing).to.equal(false);
+  expect(el.matches(':state(invalid)')).to.equal(false);
+  expect(el.matches(':state(valid)')).to.equal(false);
+  expect(el.matches(':state(required)')).to.equal(true);
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.checkValidity()).to.equal(false);
+  expect(el.validity.valueMissing).to.equal(true);
+  expect(el.matches(':state(invalid)')).to.equal(true);
+});
+
+it('bars constraint validation while an ancestor fieldset is disabled', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <fieldset disabled>
+        <lr-file-input label="Attachments" name="attachment" required></lr-file-input>
+      </fieldset>
+    </form>
+  `);
+  const el = form.querySelector<LyraFileInput>('lr-file-input')!;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'fieldset-disabled bars validation exactly like own disabled')
+    .to.equal(false);
+  expect(el.matches(':state(invalid)')).to.equal(false);
+});
+
+it('emits a cancelable lr-invalid alias whose cancellation cancels the native invalid event', async () => {
+  const el = await fixture<LyraFileInput>(html`
+    <lr-file-input label="Attachments" name="attachment" required></lr-file-input>
+  `);
+  await el.updateComplete;
+  const aliases: CustomEvent[] = [];
+  const nativePrevented: boolean[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+  // Registered after the alias relay's own constructor-installed `invalid` listener, so it reads
+  // the native event exactly as the relay left it.
+  el.addEventListener('invalid', (event) => nativePrevented.push(event.defaultPrevented));
+
+  expect(el.checkValidity()).to.equal(false);
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0].cancelable, 'lr-invalid is a real veto point').to.equal(true);
+  expect(nativePrevented).to.deep.equal([false]);
+
+  el.addEventListener('lr-invalid', (event) => event.preventDefault(), { once: true });
+  expect(el.checkValidity()).to.equal(false);
+  expect(
+    nativePrevented,
+    'preventDefault() on lr-invalid suppresses the native validation bubble',
+  ).to.deep.equal([false, true]);
 });

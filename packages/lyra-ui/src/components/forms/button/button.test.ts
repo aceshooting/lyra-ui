@@ -1694,3 +1694,19 @@ describe('lr-button — mapped Shoelace and Web Awesome surface', () => {
     expect(anchor.hasAttribute('rel')).to.be.false;
   });
 });
+
+it('exposes the native validation surface of its form association', async () => {
+  const form = (await fixture(html`
+    <form>
+      <label id="send-label" for="send">Send</label>
+      <lr-button id="send" name="action" value="send" type="submit">Send</lr-button>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-button') as LyraButton;
+  expect(el.form).to.equal(form);
+  expect(el.getForm()).to.equal(form);
+  expect(el.willValidate).to.equal(true);
+  expect(el.validity.valid).to.equal(true);
+  expect(el.validationMessage).to.equal('');
+  expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['send-label']);
+});

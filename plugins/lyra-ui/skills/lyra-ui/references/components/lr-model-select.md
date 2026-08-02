@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -141,6 +141,16 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 - `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
 
 **Slots:** `hint` (custom hint content), `error` (custom error content).
+
+**The required marker and barred validity.** With `required` set and `label` non-empty,
+`[part="form-control-label"]` paints the library's shared required marker — the same `::after` rule
+every labelled control in the library uses, so `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it here
+exactly as they do on `lr-input` (see `llms/shared.md` → "The required-field marker"). With no visible label there
+is nothing to mark and no stray glyph is rendered. Correspondingly, while the picker is barred from
+constraint validation — its own `disabled`, or an ancestor `<fieldset disabled>`; this control has no
+`readonly` — it reports no violation and publishes neither `:state(invalid)` nor
+`:state(user-invalid)`, matching native `:invalid`. `required`/`optional` keep publishing.
 
 **CSS parts:** `form-control-label` (the `<label>` element — only rendered, and only contributes to
 the accessible name, once `label` is non-empty), `trigger` (closed-dropdown mode's

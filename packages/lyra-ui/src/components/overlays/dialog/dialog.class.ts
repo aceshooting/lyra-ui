@@ -101,6 +101,12 @@ export interface LyraDialogEventMap {
  * no heading text, if neither `heading` nor the `label` slot is set) that closes the dialog via
  * the same `close()` path as Escape/backdrop-dismiss, with reason `'close-button'`.
  *
+ * The `body` part is the element that scrolls, so it carries `tabindex="-1"`: a dialog holding
+ * only prose, a table, or a rendered document would otherwise have no keyboard stop at all and
+ * its content would be readable by mouse alone. It joins the Tab order only while it actually
+ * overflows, sorts behind any control inside it for initial focus, and shows the standard focus
+ * ring on `::part(body)` when it takes focus.
+ *
  * Stacking: opening one `<lr-dialog>` while another is already open (e.g. a
  * `confirm()` launched from within an already-open dialog) is supported --
  * Escape and the Tab focus trap only ever act on the topmost open dialog, so
@@ -117,7 +123,9 @@ export interface LyraDialogEventMap {
  * @event lr-after-show - The dialog is open and its enter animation has finished.
  * @event lr-hide - The dialog is about to close, for every dismissal path. Cancelable —
  *   `preventDefault()` keeps it open and stops `lr-dialog-close` from firing at all. Detail is
- *   `{ source: Element }`, the affordance or host that requested the transition.
+ *   `{ source: Element }`, the affordance or host that requested the transition. The single
+ *   exception is an open dialog being removed from the document: the close has already happened
+ *   and cannot be undone, so that one is announced non-cancelable.
  * @event lr-after-hide - The dialog is closed and its exit animation has finished.
  * @event lr-initial-focus - Emitted immediately before the first automatic focus movement for an
  *   open activation. Cancelable; vetoing it leaves focus where the caller put it. CSS-hidden
@@ -354,8 +362,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
           this.applyOpenState(false);
           // Removal cannot be vetoed -- the element is already gone -- so none of these three is
           // cancelable here, and there is no exit animation left to wait on.
-          this.emit<LyraDialogHideDetail>('lr-hide', { source: this });
-          this.emit<DialogCloseReason>('lr-dialog-close', 'unmount');
+          this.emit('lr-hide', { source: this });
+          this.emit('lr-dialog-close', 'unmount');
           this.emit('lr-after-hide');
         }
       });
@@ -429,11 +437,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   private closeFrom(reason: DialogCloseReason, source: Element): Promise<void> {
     if (!this._open) return Promise.resolve();
-    if (this.emit<LyraDialogHideDetail>('lr-hide', { source }, { cancelable: true }).defaultPrevented) {
+    if (this.emit('lr-hide', { source }, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
-    if (this.emit<DialogCloseReason>('lr-dialog-close', reason, { cancelable: true }).defaultPrevented) {
+    if (this.emit('lr-dialog-close', reason, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
@@ -596,7 +604,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     reason: DialogCloseReason,
     sourceElement: Element,
   ): void {
-    if (this.emit<LyraDialogRequestCloseDetail>('lr-request-close', { source }, { cancelable: true }).defaultPrevented) {
+    if (this.emit('lr-request-close', { source }, { cancelable: true }).defaultPrevented) {
       return;
     }
     void this.closeFrom(reason, sourceElement);
@@ -625,7 +633,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       preferredInitialFocus: () => {
         const panel = this.renderRoot.querySelector<HTMLElement>('[part~="panel"]');
         const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
-        return (body && collectFocusableElements(body)[0]) || panel;
+        const stops = body ? collectFocusableElements(body) : [];
+        // The body itself is in that list only while it is an overflowing scroll region, and it
+        // sorts ahead of its own descendants. A real control inside it still wins the body-first
+        // contract; the scroller is the fallback that keeps pure prose reachable.
+        return stops.find((stop) => stop !== body) ?? stops[0] ?? panel;
       },
       beforeInitialFocus: () => {
         if (this.initialFocusDecision === undefined) {
@@ -691,7 +703,12 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
                 </div>
               `
             : nothing}
-          <div part="body">
+          <!-- tabindex keeps the scrolling body reachable: it is the element that overflows, so a
+               dialog holding only prose, a table, or a rendered document would otherwise be
+               mouse-scrollable with no keyboard way in at all. -1 keeps it out of the page's
+               sequential order; the overlay manager promotes it to a stop only while it actually
+               scrolls (see isOverflowingAndTabbable in internal/overlay-manager.ts). -->
+          <div part="body" tabindex="-1">
             <slot @slotchange=${this.onDefaultSlotChange}></slot>
           </div>
           <div part="footer" ?hidden=${!this.hasFooterSlot && !this.withFooter}>

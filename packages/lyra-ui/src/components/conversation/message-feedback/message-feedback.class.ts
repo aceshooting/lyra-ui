@@ -198,7 +198,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
         this.panelOpen = false;
         this.selectedReasonIds = [];
         this.commentDraft = '';
-        this.emit<{ value: MessageFeedbackValue }>('lr-change', { value: null });
+        this.emit('lr-change', { value: null });
         return;
       }
       if (this.detailApplies(next) && this.hasDetailContent) {
@@ -208,14 +208,14 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
         return;
       }
       this.setValueFromActivation(null);
-      this.emit<{ value: MessageFeedbackValue }>('lr-change', { value: null });
+      this.emit('lr-change', { value: null });
       return;
     }
     this.selectedReasonIds = [];
     this.commentDraft = '';
     this.setValueFromActivation(next);
     this.panelOpen = this.detailApplies(next) && this.hasDetailContent;
-    this.emit<{ value: MessageFeedbackValue }>('lr-change', { value: next });
+    this.emit('lr-change', { value: next });
   }
 
   private focusActiveThumb(): void {
@@ -260,7 +260,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   private onSubmit = (): void => {
     if (this.disabled || !this.value || !this.panelOpen) return;
     const validReasonIds = new Set(this.reasons.map((reason) => reason.id));
-    this.emit<{ value: MessageFeedbackRating; reasonIds: string[]; comment: string }>('lr-submit', {
+    this.emit('lr-submit', {
       value: this.value,
       reasonIds: this.selectedReasonIds.filter((id) => validReasonIds.has(id)),
       comment: this.commentable ? this.commentDraft.trim() : '',

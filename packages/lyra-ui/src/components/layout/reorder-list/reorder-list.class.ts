@@ -236,7 +236,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     reordered.splice(fromIndex, 1);
     reordered.splice(toIndex, 0, item);
 
-    const event = this.emit<ReorderDetail>(
+    const event = this.emit(
       "lr-reorder",
       { order: this.orderValues(reordered), fromIndex, toIndex },
       { cancelable: true }

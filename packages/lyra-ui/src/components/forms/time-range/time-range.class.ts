@@ -16,7 +16,12 @@ import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './time-range.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import { getFormOwner, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import {
+  getFormOwner,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 
 export type TimeRangeHandle = 'start' | 'end';
 
@@ -125,7 +130,9 @@ export interface LyraTimeRangeEventMap {
  * consumer-facing `disabled` property/attribute itself. Unlike `<lr-combobox>`, it never calls
  * `internals.setFormValue()` and has no `name` — the selected range is not included in the owning
  * form's `FormData` on submit; read `start`/`end` directly (e.g. from `lr-change`) instead of
- * relying on native form submission.
+ * relying on native form submission. It still takes part in `form.reset()`, though — see
+ * `formResetCallback()`, which restores the declared `start`/`end` and puts the control back to
+ * pristine so it cannot keep blocking a form the user just reset.
  *
  * It has no constraints of its own — every reachable range is a legal one, so `checkValidity()`
  * passes unless a consumer has set an error through `setCustomValidity()`. That method is the
@@ -164,7 +171,9 @@ export interface LyraTimeRangeEventMap {
  *   runs).
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  *   rather than `invalid`: a range the consumer rejected before the user touched anything is
- *   genuinely invalid, but colouring it red on first paint is hostile.
+ *   genuinely invalid, but colouring it red on first paint is hostile. A `form.reset()` puts the
+ *   control back to pristine, so this stops matching until the user acts again — `invalid` itself
+ *   is unaffected, since a `setCustomValidity()` error survives a reset.
  * @cssprop [--lr-time-range-preset-active-bg=var(--lr-color-brand)] - Background of the active
  *   preset button (`[data-active]`, i.e. the preset whose range matches the current value). Declared
  *   as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor
@@ -308,9 +317,20 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
    *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. `required` is
    *  always `false` here — this control has no such constraint — so it is permanently
-   *  `:state(optional)`, which is the honest answer rather than a missing one. */
+   *  `:state(optional)`, which is the honest answer rather than a missing one.
+   *
+   *  While the control is barred from constraint validation (own `disabled`, an ancestor
+   *  `<fieldset disabled>`) neither `valid` nor `invalid` is published: a native
+   *  `<input disabled>` matches neither `:valid` nor `:invalid` however its validity was set, and a
+   *  consumer's `setCustomValidity()` message is the one thing that could otherwise paint every
+   *  disabled range as an error. The message itself is untouched — only the *states* stop
+   *  publishing, exactly as the platform stops matching. */
   private reflectValidityStates(): void {
-    syncValidityStates(this.internals, { required: false, hasInteracted: this.hasInteracted });
+    syncValidityStates(this.internals, {
+      required: false,
+      hasInteracted: this.hasInteracted,
+      barred: isBarredFromValidation(this, this.internals),
+    });
   }
 
   /** @internal The start handle: a real, focusable shadow descendant, so the browser can anchor
@@ -380,7 +400,12 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   set disabled(next: boolean) {
     const old = this._disabled;
     this._disabled = Boolean(next);
+    // Reflected before the republish below, because `internals.willValidate` answers from the live
+    // host attribute rather than from this field.
     this.toggleAttribute('disabled', this._disabled);
+    // Disabling bars constraint validation, so the `invalid`/`user-invalid` states go with it,
+    // synchronously — a same-tick `matches(':state(invalid)')` must answer from the new state.
+    this.reflectValidityStates();
     this.requestUpdate('disabled', old);
   }
 
@@ -401,7 +426,61 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     if (disabled) this.keyboardChanged = false;
+    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
+    this.reflectValidityStates();
     this.requestUpdate();
+  }
+
+  /** The value a reset restores one handle to: the attribute the consumer declared, exactly as
+   *  native `<input>` resets to its `value` CONTENT attribute rather than to its current IDL value.
+   *  With no attribute there is no declared default, so the domain bound that handle starts at
+   *  stands in — the same value the property defaults resolve to once `willUpdate()` has clamped
+   *  them into `[min, max]`. */
+  private declaredHandleValue(handle: TimeRangeHandle, fallback: number): number {
+    const declared = this.getAttribute(handle);
+    if (declared === null) return fallback;
+    return finiteNumber(Number(declared), fallback);
+  }
+
+  /**
+   * Called by the browser when the owning form is reset.
+   *
+   * A reset has to undo everything the user did to this control, which here is three things: the
+   * range they selected, the fact that they interacted at all, and any keyboard gesture still in
+   * flight. Dropping the interaction flag is the load-bearing half — it is what gates
+   * `:state(user-valid)`/`:state(user-invalid)`, so without it a control a consumer had rejected
+   * keeps rendering as the user's error on a form they just reset, exactly as native
+   * `:user-invalid` would not.
+   *
+   * Deliberately NOT reset: a `setCustomValidity()` error, which is sticky across a reset on native
+   * controls too and only another `setCustomValidity('')` clears (see that method's doc comment).
+   * The control therefore stays invalid and keeps blocking submission until the consumer clears the
+   * message it set — the reset just stops it looking like the user's fault.
+   *
+   * There is deliberately no `formStateRestoreCallback` beside this: that callback hands back a
+   * value the browser previously serialised for autofill/back-forward restore, and this control
+   * never calls `setFormValue()` (see the class comment), so there is nothing for it to restore.
+   *
+   * Emits nothing: like a native control, a reset is the form's edit, not the user's, so a consumer
+   * listening for `lr-change` does not see one. Read `start`/`end` in a `reset` listener instead.
+   */
+  formResetCallback(): void {
+    const { lo, hi } = this.domain();
+    const declaredStart = this.declaredHandleValue('start', lo);
+    const declaredEnd = this.declaredHandleValue('end', hi);
+    // Same normalization order `applyPreset()` uses: clamp into the domain, then keep start <= end,
+    // so a declared range that is inverted or out of bounds still restores to a legal one.
+    const start = finiteRange(declaredStart, lo, lo, hi);
+    const end = finiteRange(declaredEnd, hi, lo, hi);
+    this.start = Math.min(start, end);
+    this.end = Math.max(start, end);
+    // An in-flight keyboard gesture is part of what the reset undoes: leaving `keyboardChanged` set
+    // would let the next keyup commit an `lr-change` for a step the reset has already discarded.
+    // `this.drags` is deliberately left alone -- its entries own the window-level pointer listeners,
+    // which only `endDrag()` may tear down.
+    this.keyboardChanged = false;
+    this.hasInteracted = false;
+    this.reflectValidityStates();
   }
 
   override disconnectedCallback(): void {

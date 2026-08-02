@@ -1,5 +1,6 @@
 import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './otp-input.js';
+import '../button/button.js';
 import type { LyraOtpInput } from './otp-input.class.js';
 
 const controlOf = (el: Element): HTMLInputElement => el.shadowRoot!.querySelector('[part="control"]') as HTMLInputElement;
@@ -36,7 +37,7 @@ const maskGlyphOf = (segment: HTMLElement): string => {
   return content.replace(/^["']|["']$/g, '');
 };
 
-it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input required label="Code"></lr-otp-input>`);
   const aliases: CustomEvent[] = [];
   el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
@@ -45,7 +46,63 @@ it('emits one non-cancelable lr-invalid alias when a validity check fails', asyn
   expect(aliases).to.have.lengthOf(1);
   expect(aliases[0].target).to.equal(el);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.false;
+  expect(aliases[0].cancelable).to.be.true;
+});
+
+it('forwards preventDefault() on lr-invalid to the native invalid event', async () => {
+  // The alias is a real veto point: cancelling it cancels the native `invalid` it aliases, which is
+  // what suppresses the browser's own validation bubble. The host's alias listener is installed in
+  // the constructor, so it runs before this recorder and its preventDefault() is visible here.
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input required label="Code"></lr-otp-input>`);
+  el.addEventListener('lr-invalid', (event) => event.preventDefault());
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].cancelable, 'the native invalid event is cancelable').to.be.true;
+  expect(natives[0].defaultPrevented).to.be.true;
+});
+
+it('leaves the native invalid event alone when the lr-invalid alias is not cancelled', async () => {
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input required label="Code"></lr-otp-input>`);
+  const natives: Event[] = [];
+  el.addEventListener('invalid', (event) => natives.push(event));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(natives).to.have.lengthOf(1);
+  expect(natives[0].defaultPrevented).to.be.false;
+});
+
+it('bars constraint validation while disabled or fieldset-disabled, not only while readonly', async () => {
+  // `readonly` was already suspended (see the readonly suspension test below); `disabled` was not,
+  // so a <lr-otp-input required disabled> reported valueMissing and published :state(invalid)
+  // while no barred native control does.
+  const el = await fixture<LyraOtpInput>(
+    html`<lr-otp-input required label="Code" length="4" disabled></lr-otp-input>`,
+  );
+  expect(el.validity.valueMissing, 'disabled + required').to.equal(false);
+  expect(el.validity.valid).to.equal(true);
+  expect(el.matches(':state(invalid)'), 'disabled must not be :state(invalid)').to.equal(false);
+  el.reportValidity();
+  expect(el.matches(':state(user-invalid)'), 'disabled must not be :state(user-invalid)').to.equal(false);
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, 'enabled again').to.equal(true);
+
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <fieldset disabled>
+        <lr-otp-input required label="Nested" length="4" name="nested"></lr-otp-input>
+      </fieldset>
+    </form>
+  `);
+  const nested = form.querySelector('lr-otp-input') as LyraOtpInput;
+  await nested.updateComplete;
+  expect(nested.disabled, 'a fieldset never mutates the control own disabled').to.equal(false);
+  expect(nested.validity.valueMissing, 'fieldset-disabled + required').to.equal(false);
+  expect(nested.matches(':state(invalid)')).to.equal(false);
 });
 
 const type = async (el: LyraOtpInput, text: string): Promise<void> => {
@@ -621,7 +678,7 @@ it('emits one native change when a fixed-cell keyboard edit settles on blur', as
   expect(changes[0].cancelable).to.equal(false);
 });
 
-it('submits its owning form exactly once on Enter', async () => {
+it('submits its owning form exactly once on Enter, leaving the keystroke uncancelled', async () => {
   const form = await fixture<HTMLFormElement>(html`
     <form><lr-otp-input name="code" label="Code" length="4" value="1234"></lr-otp-input></form>
   `);
@@ -632,8 +689,180 @@ it('submits its owning form exactly once on Enter', async () => {
     submits += 1;
   });
 
-  expect(key(el, 'Enter').defaultPrevented).to.equal(true);
+  // The internal input has no form owner, so the keystroke has no default action to cancel here;
+  // cancelling it would only suppress unrelated handlers downstream.
+  expect(key(el, 'Enter').defaultPrevented).to.equal(false);
   expect(submits).to.equal(1);
+});
+
+it('never submits on an Enter that commits an IME candidate', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-otp-input name="code" label="Code" length="4" value="1234"></lr-otp-input></form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits += 1;
+  });
+
+  const composing = key(el, 'Enter', { isComposing: true });
+  expect(submits, 'Enter commits the highlighted candidate, it does not submit').to.equal(0);
+  expect(composing.defaultPrevented, 'and the keystroke is left to the IME').to.equal(false);
+
+  key(el, 'Enter', { keyCode: 229 });
+  expect(submits, 'keyCode 229 is the fallback for engines that under-report isComposing')
+    .to.equal(0);
+
+  key(el, 'Enter');
+  expect(submits, 'a bare Enter still submits').to.equal(1);
+});
+
+it('never submits on a modifier-held Enter', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-otp-input name="code" label="Code" length="4" value="1234"></lr-otp-input></form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits += 1;
+  });
+
+  for (const modifier of ['ctrlKey', 'metaKey', 'altKey', 'shiftKey'] as const) {
+    const event = key(el, 'Enter', { [modifier]: true });
+    expect(submits, `${modifier}+Enter is an application shortcut, never a submission`).to.equal(0);
+    expect(event.defaultPrevented, `${modifier}+Enter stays available to the application`)
+      .to.equal(false);
+  }
+
+  key(el, 'Enter');
+  expect(submits).to.equal(1);
+});
+
+it('leaves an already-vetoed Enter keydown vetoed', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-otp-input name="code" label="Code" length="4" value="1234"></lr-otp-input></form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits += 1;
+  });
+
+  const veto = (event: Event): void => event.preventDefault();
+  el.addEventListener('keydown', veto, true);
+  key(el, 'Enter');
+  el.removeEventListener('keydown', veto, true);
+  expect(submits).to.equal(0);
+
+  key(el, 'Enter');
+  expect(submits).to.equal(1);
+});
+
+it('does not submit on Enter while readonly', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-otp-input name="code" label="Code" length="4" value="1234" readonly></lr-otp-input></form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits += 1;
+  });
+
+  key(el, 'Enter');
+  expect(submits, 'a non-interactive control stays inert, as every sibling control does').to.equal(0);
+
+  el.readonly = false;
+  await el.updateComplete;
+  key(el, 'Enter');
+  expect(submits).to.equal(1);
+});
+
+it("names the form's first enabled native submit button as SubmitEvent.submitter", async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <lr-otp-input name="code" label="Code" length="4" value="1234"></lr-otp-input>
+      <button type="submit" id="off" disabled>Off</button>
+      <button type="submit" id="go" name="action" value="save">Go</button>
+    </form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  let submitterId = '';
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submitterId = ((event as SubmitEvent).submitter as HTMLElement | null)?.id ?? '';
+  });
+
+  key(el, 'Enter');
+  expect(submitterId, 'the default button carries its own name/value into the submission')
+    .to.equal('go');
+});
+
+it('activates an lr-button submitter, which requestSubmit() itself would reject', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <lr-otp-input name="code" label="Code" length="4" value="1234"></lr-otp-input>
+      <lr-button id="go" type="submit" name="action" value="save">Go</lr-button>
+    </form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  let submits = 0;
+  let submitterName = '';
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits += 1;
+    // lr-button routes its own submission through a transient named native submitter, so the name
+    // proves the button was activated rather than the form being submitted behind it.
+    submitterName = ((event as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
+  });
+
+  key(el, 'Enter');
+  expect(submits).to.equal(1);
+  expect(submitterName, 'the lr-button was the submitter').to.equal('action');
+});
+
+it('autosubmits through the resolved default button rather than behind it', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <lr-otp-input name="code" label="Code" length="3" autosubmit></lr-otp-input>
+      <button type="submit" id="go">Go</button>
+    </form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  let submitterId = '';
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submitterId = ((event as SubmitEvent).submitter as HTMLElement | null)?.id ?? '';
+  });
+
+  await type(el, '123');
+  await aTimeout(0);
+  expect(submitterId).to.equal('go');
+});
+
+it('lets a listener that vetoes lr-complete asynchronously suppress the autosubmission', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-otp-input name="code" label="Code" length="3" autosubmit></lr-otp-input></form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits += 1;
+  });
+  // The veto point is real, so it has to survive one await — a listener that checks the code
+  // before letting the form go cannot decide synchronously.
+  el.addEventListener('lr-complete', async (event) => {
+    await Promise.resolve();
+    event.preventDefault();
+  }, { once: true });
+
+  await type(el, '123');
+  await aTimeout(0);
+  expect(submits).to.equal(0);
 });
 
 it('fills an empty field from a full sanitized paste with one input and one completion', async () => {
@@ -671,6 +900,7 @@ it('emits completion and autosubmits only on an incomplete-to-complete transitio
   });
 
   await type(el, '1234');
+  await aTimeout(0);
   expect(completions).to.equal(1);
   expect(submits).to.equal(1);
 
@@ -678,6 +908,7 @@ it('emits completion and autosubmits only on an incomplete-to-complete transitio
   key(el, 'ArrowLeft');
   key(el, '9');
   await el.updateComplete;
+  await aTimeout(0);
   expect(el.value).to.equal('1294');
   expect(completions, 'a replacement kept the field complete').to.equal(1);
   expect(submits).to.equal(1);
@@ -685,6 +916,7 @@ it('emits completion and autosubmits only on an incomplete-to-complete transitio
   key(el, 'Delete');
   key(el, '8');
   await el.updateComplete;
+  await aTimeout(0);
   expect(completions, 'refilling a cleared cell completes again').to.equal(2);
   expect(submits).to.equal(2);
 });
@@ -789,12 +1021,14 @@ it('autosubmits only after the cancelable completion event and honors preventDef
   });
 
   await type(el, '123');
+  await aTimeout(0);
   expect(order).to.deep.equal(['complete', 'submit']);
 
   el.clear();
   order.length = 0;
   el.addEventListener('lr-complete', (event) => event.preventDefault(), { once: true });
   await type(el, '456');
+  await aTimeout(0);
   expect(order).to.deep.equal(['complete']);
 });
 
@@ -809,6 +1043,7 @@ it('does not submit on completion while autosubmit is unset', async () => {
     submits += 1;
   });
   await type(el, '123');
+  await aTimeout(0);
   expect(submits).to.equal(0);
 });
 

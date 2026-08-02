@@ -5,7 +5,7 @@ import type { LyraInput } from './input.class.js';
 import { styles } from './input.styles.js';
 
 describe('lr-input', () => {
-  it('emits lr-invalid once for a failed check and stays silent once valid', async () => {
+  it('emits one cancelable lr-invalid for a failed check and stays silent once valid', async () => {
     const el = (await fixture(html`<lr-input required aria-label="Name"></lr-input>`)) as LyraInput;
     const aliases: CustomEvent[] = [];
     el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
@@ -14,11 +14,79 @@ describe('lr-input', () => {
     expect(aliases).to.have.lengthOf(1);
     expect(aliases[0].target).to.equal(el);
     expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-    expect(aliases[0].cancelable).to.be.false;
+    expect(aliases[0].cancelable).to.be.true;
 
     el.value = 'Ada';
     expect(el.checkValidity()).to.be.true;
     expect(aliases).to.have.lengthOf(1);
+  });
+
+  it('forwards preventDefault() on lr-invalid to the native invalid event', async () => {
+    // The alias is only a real veto point if cancelling it cancels the event it aliases -- the
+    // native `invalid` is what the platform reads for its own validation bubble and for
+    // reportValidity()'s focus/scroll, and it is dispatched by the platform, so cancelling a copy
+    // can only mean cancelling the original. The host's own alias listener is installed in the
+    // constructor, so it runs before the recorder registered here and its preventDefault() is
+    // already visible on the event this listener receives.
+    const el = (await fixture(html`<lr-input required aria-label="Name"></lr-input>`)) as LyraInput;
+    el.addEventListener('lr-invalid', (event) => event.preventDefault());
+    const natives: Event[] = [];
+    el.addEventListener('invalid', (event) => natives.push(event));
+
+    expect(el.checkValidity()).to.be.false;
+    expect(natives).to.have.lengthOf(1);
+    expect(natives[0].cancelable, 'the native invalid event is cancelable').to.be.true;
+    expect(natives[0].defaultPrevented).to.be.true;
+  });
+
+  it('leaves the native invalid event alone when the alias is not cancelled', async () => {
+    const el = (await fixture(html`<lr-input required aria-label="Name"></lr-input>`)) as LyraInput;
+    const natives: Event[] = [];
+    el.addEventListener('invalid', (event) => natives.push(event));
+
+    expect(el.checkValidity()).to.be.false;
+    expect(natives).to.have.lengthOf(1);
+    expect(natives[0].defaultPrevented).to.be.false;
+  });
+
+  it('bars constraint validation while disabled, fieldset-disabled or readonly', async () => {
+    // A native <input required disabled> and <input required readonly> match neither :valid nor
+    // :invalid, so a barred lyra control must not raise valueMissing or publish
+    // :state(invalid)/:state(user-invalid) either -- otherwise the documented
+    // `lr-input:state(user-invalid) { ... }` error styling paints every disabled required field.
+    const el = (await fixture(
+      html`<lr-input required aria-label="Name" disabled></lr-input>`,
+    )) as LyraInput;
+    expect(el.validity.valueMissing, 'disabled + required').to.be.false;
+    expect(el.validity.valid).to.be.true;
+    expect(el.matches(':state(invalid)'), 'disabled must not be :state(invalid)').to.be.false;
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)'), 'disabled must not be :state(user-invalid)').to.be.false;
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'enabled again').to.be.true;
+    expect(el.matches(':state(invalid)')).to.be.true;
+
+    el.readonly = true;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'readonly + required').to.be.false;
+    expect(el.matches(':state(invalid)'), 'readonly must not be :state(invalid)').to.be.false;
+
+    el.readonly = false;
+    await el.updateComplete;
+    const form = (await fixture(html`
+      <form>
+        <fieldset disabled>
+          <lr-input required aria-label="Nested" name="nested"></lr-input>
+        </fieldset>
+      </form>
+    `)) as HTMLFormElement;
+    const nested = form.querySelector('lr-input') as LyraInput;
+    await nested.updateComplete;
+    expect(nested.disabled, 'a fieldset never mutates the control own disabled').to.be.false;
+    expect(nested.validity.valueMissing, 'fieldset-disabled + required').to.be.false;
+    expect(nested.matches(':state(invalid)')).to.be.false;
   });
 
   it('defaults to type="text" with an empty value', async () => {
@@ -1407,5 +1475,33 @@ describe('lr-input mapped Input parity surface', () => {
     form.reset();
     await el.updateComplete;
     expect(el.value).to.equal('seed');
+  });
+});
+
+describe('lr-input native value views', () => {
+  it('round-trips valueAsDate and valueAsNumber through the native input', async () => {
+    const el = (await fixture(html`<lr-input type="date"></lr-input>`)) as LyraInput;
+    expect(el.valueAsDate).to.equal(null);
+    expect(Number.isNaN(el.valueAsNumber)).to.equal(true);
+
+    el.valueAsDate = new Date(Date.UTC(2024, 4, 17));
+    await el.updateComplete;
+    expect(el.value).to.equal('2024-05-17');
+    expect(el.valueAsDate?.toISOString()).to.equal('2024-05-17T00:00:00.000Z');
+    expect(el.valueAsNumber).to.equal(Date.UTC(2024, 4, 17));
+
+    el.valueAsDate = null;
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+
+    const number = (await fixture(html`<lr-input type="number"></lr-input>`)) as LyraInput;
+    number.valueAsNumber = 42;
+    await number.updateComplete;
+    expect(number.value).to.equal('42');
+    expect(number.valueAsNumber).to.equal(42);
+
+    // A programmatic `value` write must be visible to the native views without a re-render.
+    number.value = '7';
+    expect(number.valueAsNumber).to.equal(7);
   });
 });

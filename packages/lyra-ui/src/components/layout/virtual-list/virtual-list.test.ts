@@ -2373,3 +2373,19 @@ it('never trips Chromium\'s resize-observation loop guard while measuring rows a
     window.removeEventListener("error", captureRoError, true);
   }
 });
+
+it("renders nothing per row until a renderItem callback is supplied", async () => {
+  const el = (await fixture(html`
+    <lr-virtual-list style="block-size: 200px" .items=${[1, 2, 3]}></lr-virtual-list>
+  `)) as LyraVirtualList;
+  await el.updateComplete;
+  const rows = el.shadowRoot!.querySelectorAll('[part="row"]');
+  expect(rows.length).to.be.greaterThan(0);
+  for (const row of rows) expect(row.textContent!.trim()).to.equal("");
+
+  el.renderItem = (item) => `Row ${String(item)}`;
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[part="row"]')!.textContent!.trim()
+  ).to.equal("Row 1");
+});

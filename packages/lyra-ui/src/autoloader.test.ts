@@ -438,3 +438,15 @@ describe('autoloader', () => {
     expect(customElements.get(tag)).to.be.a('function');
   });
 });
+
+it('defaults discovery to the ambient document when no root is given', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  try {
+    // No manifest tag is present, so this exercises the default-root path and returns an
+    // empty result rather than defining anything.
+    expect(await discover()).to.deep.equal([]);
+  } finally {
+    host.remove();
+  }
+});

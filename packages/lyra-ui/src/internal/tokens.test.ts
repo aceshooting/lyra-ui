@@ -76,11 +76,17 @@ function fallbackHex(name: string, mode: PaletteMode): string {
     return step![1];
   }
 
-  const matches = [
+  // The light value is declared once, on `:host`; the dark one is composed into each of the three
+  // dark selectors (OS preference, `data-lr-theme="dark"`, dark ancestor), so it appears more than
+  // once here. All of those copies MUST be the same colour -- dark meaning one thing when the OS
+  // asked for it and another when the attribute did is the bug this shape exists to prevent.
+  const values = [
     ...tokens.cssText.matchAll(new RegExp(`${escaped(name)}:\\s*var\\([^,]+,\\s*(#[0-9a-f]{3,8})\\s*\\)`, 'gi')),
-  ];
-  expect(matches.length, `${name} must define light and dark standalone fallbacks`).to.equal(2);
-  return matches[mode === 'light' ? 0 : 1][1];
+  ].map((match) => match[1]);
+  expect(values.length, `${name} must define a light and at least one dark standalone fallback`).to.be.greaterThan(1);
+  const [light, ...dark] = values;
+  expect(new Set(dark).size, `${name}'s dark fallbacks disagree: ${dark.join(' | ')}`).to.equal(1);
+  return mode === 'light' ? light : dark[0];
 }
 
 function relativeLuminance(hex: string): number {
@@ -601,3 +607,87 @@ it('keeps terminal black and white apart in both modes, and backgrounds off the 
     expect(failures.join('\n')).to.equal('');
   });
 });
+
+// --- data-lr-theme switches the WHOLE token surface, not half of it -------------------
+//
+// Two layers carry mode-dependent values: `palette` (the 45-slot semantic grid) and `tokens`
+// (surface / text / border / chart / graph / overlay / shadow / terminal). A mode signal honoured
+// by one and ignored by the other renders a MIXED state -- a light colour grid on dark surfaces,
+// or the reverse -- and no such combination was ever contrast-checked. Both layers must answer to
+// the same signal, in both directions.
+//
+// The runner cannot emulate the OS colour scheme (`@web/test-runner-commands` is not a dependency
+// of this package and adding a wtr command plugin for one assertion is not worth it), so the
+// shipped rules are re-adopted with ONLY the `(prefers-color-scheme: dark)` condition rewritten
+// through CSSOM. Every selector, declaration and cascade position stays exactly the one that
+// ships, and every assertion below reads a computed value off a mounted host.
+
+/** One token from each layer, plus a second `tokens` entry so a partial fix cannot pass. */
+const MODE_SWITCHED_TOKENS = [
+  '--lr-color-surface', // tokens layer
+  '--lr-color-text', // tokens layer
+  '--lr-color-brand-fill-loud', // palette layer
+] as const;
+
+function schemeForcedSheets(prefersDark: boolean): CSSStyleSheet[] {
+  return [palette, tokens].map((layer) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(layer.cssText);
+    for (const rule of Array.from(sheet.cssRules)) {
+      const media = (rule as CSSMediaRule).media as MediaList | undefined;
+      if (media?.mediaText.includes('prefers-color-scheme: dark')) {
+        media.mediaText = prefersDark ? 'all' : 'not all';
+      }
+    }
+    return sheet;
+  });
+}
+
+async function probeUnderScheme(
+  prefersDark: boolean,
+  themeAttribute?: 'light' | 'dark',
+): Promise<Map<string, string>> {
+  const el = (await fixture(
+    themeAttribute === undefined
+      ? html`<lr-token-probe></lr-token-probe>`
+      : html`<lr-token-probe data-lr-theme=${themeAttribute}></lr-token-probe>`,
+  )) as TokenProbe;
+  await el.updateComplete;
+  el.shadowRoot!.adoptedStyleSheets = schemeForcedSheets(prefersDark);
+  const computed = getComputedStyle(el);
+  return new Map(MODE_SWITCHED_TOKENS.map((name) => [name, squash(computed.getPropertyValue(name))]));
+}
+
+it('moves both token layers together when the OS scheme alone decides the mode', async () => {
+  // Guards the two tests below from passing vacuously: if forcing the media condition stopped
+  // moving anything, "the override held" would be indistinguishable from "nothing ever changes".
+  const light = await probeUnderScheme(false);
+  const dark = await probeUnderScheme(true);
+  const stuck = MODE_SWITCHED_TOKENS.filter((name) => dark.get(name) === light.get(name));
+  expect(stuck.join('\n'), 'tokens that did not move under a forced dark scheme').to.equal('');
+});
+
+it('honours data-lr-theme="light" in both token layers on a dark-scheme OS', async () => {
+  const light = await probeUnderScheme(false);
+  const overridden = await probeUnderScheme(true, 'light');
+  const failures = MODE_SWITCHED_TOKENS.flatMap((name) =>
+    overridden.get(name) === light.get(name) ? [] : [`${name}: ${overridden.get(name)} !== ${light.get(name)}`],
+  );
+  expect(failures.join('\n'), 'still rendering dark values under data-lr-theme="light"').to.equal('');
+});
+
+it('honours data-lr-theme="dark" in both token layers on a light-scheme OS', async () => {
+  const light = await probeUnderScheme(false);
+  const osDark = await probeUnderScheme(true);
+  const overridden = await probeUnderScheme(false, 'dark');
+
+  const stuck = MODE_SWITCHED_TOKENS.filter((name) => overridden.get(name) === light.get(name));
+  expect(stuck.join('\n'), 'still rendering light values under data-lr-theme="dark"').to.equal('');
+  // The attribute route and the media route must agree on the same dark values, or "dark" means
+  // two different palettes depending on how it was asked for.
+  const disagree = MODE_SWITCHED_TOKENS.flatMap((name) =>
+    overridden.get(name) === osDark.get(name) ? [] : [`${name}: ${overridden.get(name)} !== ${osDark.get(name)}`],
+  );
+  expect(disagree.join('\n'), 'the attribute route and the OS route disagree').to.equal('');
+});
+

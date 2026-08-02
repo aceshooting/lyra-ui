@@ -439,6 +439,52 @@ it("moves roving focus when the active item becomes disabled or hidden", async (
   expect(c.tabIndex).to.equal(0);
 });
 
+it("skips an inert item when moving roving focus", async () => {
+  const el = (await fixture(html`
+    <lr-menu>
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b" inert>B</lr-menu-item>
+      <lr-menu-item value="c">C</lr-menu-item>
+    </lr-menu>
+  `)) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  expect(activeItemValue()).to.equal("item:a");
+
+  // An inert element refuses focus, so stepping onto it strands roving focus
+  // on <body> and kills every subsequent key press.
+  (document.activeElement as HTMLElement).dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  await el.updateComplete;
+  expect(activeItemValue()).to.equal("item:c");
+});
+
+it("moves roving focus when the active item becomes inert", async () => {
+  const el = (await fixture(html`
+    <lr-menu>
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b">B</lr-menu-item>
+    </lr-menu>
+  `)) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [a, b] = items(el);
+  expect(activeItemValue()).to.equal("item:a");
+
+  a.inert = true;
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+  expect(activeItemValue()).to.equal("item:b");
+  expect(b.tabIndex).to.equal(0);
+});
+
 // Dynamic *membership* changes (items added/removed/reordered while the menu
 // is open), as distinct from the dynamic *attribute* state (disabled/hidden)
 // the MutationObserver above covers. `activeIndex` is a positional index into
@@ -2191,4 +2237,39 @@ describe("nested submenus", () => {
     await waitUntil(() => getComputedStyle(panel).opacity === "1", "submenu never faded in");
     await expect(el).to.be.accessible();
   });
+});
+
+it("honours preventDefault() on lr-show and lr-hide", async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  await el.updateComplete;
+
+  el.addEventListener("lr-show", (event) => event.preventDefault(), { once: true });
+  el.show();
+  await el.updateComplete;
+  expect(el.open, "a vetoed open never applies").to.be.false;
+  expect(el.hasAttribute("open")).to.be.false;
+
+  el.show();
+  await el.updateComplete;
+  expect(el.open, "the veto was one-shot").to.be.true;
+
+  el.addEventListener("lr-hide", (event) => event.preventDefault(), { once: true });
+  el.hide();
+  await el.updateComplete;
+  expect(el.open, "a vetoed close stays open").to.be.true;
+  expect(el.hasAttribute("open")).to.be.true;
+});
+
+it("makes lr-show/lr-hide cancelable veto points", async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  await el.updateComplete;
+  const seen: CustomEvent[] = [];
+  el.addEventListener("lr-show", (event) => seen.push(event as CustomEvent));
+  el.addEventListener("lr-hide", (event) => seen.push(event as CustomEvent));
+  el.open = true;
+  await el.updateComplete;
+  el.open = false;
+  await el.updateComplete;
+  expect(seen.map((event) => event.type)).to.deep.equal(["lr-show", "lr-hide"]);
+  expect(seen.every((event) => event.cancelable)).to.be.true;
 });

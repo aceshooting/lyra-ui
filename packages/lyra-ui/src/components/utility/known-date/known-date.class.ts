@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
+import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { nextId } from '../../../internal/a11y.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -156,7 +156,9 @@ function addCompatibilityDetail<T extends Event>(event: T, detail: LyraKnownDate
  *   receives focus (native `focus` doesn't bubble or cross a shadow boundary).
  * @event blur - Re-dispatched, bubbling and composed, once when focus leaves all three internal
  *   fields for something outside the control -- not once per internal field-to-field Tab.
- * @event lr-invalid - The composite date failed a validity check.
+ * @event lr-invalid - The composite date failed a validity check; cancelable. Calling
+ *   `preventDefault()` also cancels the native `invalid` event it aliases, suppressing the
+ *   browser's own validation bubble and `reportValidity()`'s focus/scroll.
  * @slot label - Custom label/legend content, alongside the `label` attribute.
  * @slot hint - Custom hint content, alongside the `hint` attribute.
  * @slot error - Custom error content, alongside the `errorText` attribute.
@@ -205,6 +207,15 @@ function addCompatibilityDetail<T extends Event>(event: T, detail: LyraKnownDate
  * @cssprop [--lr-known-date-year-field-width=var(--lr-size-5em)] - Inline size of the year field.
  * @cssprop [--lr-known-date-invalid-border-color=var(--lr-color-danger)] - Border color of each
  *   `field-input` while `:host([data-invalid])` is set.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker, rendered after
+ * the fieldset `legend` here rather than after the inner label span, so it follows the whole label
+ * rather than sitting inside it. Set it to `''` to suppress the marker, or to any other quoted
+ * string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never
+ * localized here.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ * retunable without touching any other danger-coloured surface.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * marker.
  * @cssstate blank - The composite value is empty or incomplete.
  * @cssstate disabled - The control is disabled directly or through an ancestor fieldset.
  * @status stable
@@ -492,7 +503,11 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   }
 
   protected updateValidity(): void {
-    if (this.readonly) {
+    // Every barring condition, not just `readonly`: an own/fieldset-cascaded `disabled` (and any
+    // platform condition `willValidate` folds in) bars constraint validation exactly as `readonly`
+    // does, and this override used to check only the one it happened to own — so a
+    // `<lr-known-date required disabled>` kept publishing `valueMissing` and `:state(invalid)`.
+    if (isBarredFromValidation(this, this.internals)) {
       this[SET_ANCHORED_VALIDITY]({});
       return;
     }

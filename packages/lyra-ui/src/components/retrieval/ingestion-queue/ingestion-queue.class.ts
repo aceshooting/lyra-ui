@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { closeIcon } from '../../../internal/icons.js';
@@ -155,9 +156,12 @@ const DEFAULT_VIRTUALIZE_THRESHOLD = 100;
  *   `chunkCount` and `embeddedChunkCount` are set.
  * @csspart item-attempts - The attempt count, only rendered once `attempts` is greater than 0.
  * @csspart item-error - The failure message, only rendered for `stage="failed"` with `error` set.
- * @csspart failure-live - The visually hidden assertive region that announces only failures that
- *   transition or are added after mount; historical failed rows remain visible but are not
- *   re-announced as fresh failures.
+ * @csspart failure-live - The visually hidden, `aria-hidden` mirror of the last announced batch of
+ *   fresh failures — those that transition or are added after mount; historical failed rows remain
+ *   visible but are not re-announced. The announcement itself lands in the shared light-DOM
+ *   assertive region (`acquireAnnouncementSink()` in `internal/announcer.ts`), because a live
+ *   region inside a shadow root is not reliably announced; this part is a styling/inspection
+ *   surface only.
  * @csspart item-actions - Wrapper around the retry/cancel buttons.
  * @csspart retry-button - Fires `lr-retry`. Only rendered for `stage="failed"` rows.
  * @csspart cancel-button - Fires `lr-cancel`. Only rendered for non-terminal rows.
@@ -185,6 +189,10 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   @state() private failureLiveText = '';
   private isMounting = true;
+  /** Handle on the shared light-DOM assertive region failures actually announce through -- a
+   *  region rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores
+   *  one outright), so `[part="failure-live"]` is only an `aria-hidden` mirror. */
+  private sink?: AnnouncementSink;
 
   /** `virtualizeThreshold`, normalized to a finite non-negative integer (falling back to the
    *  property's own default) -- a raw `NaN` (e.g. an invalid `virtualize-threshold` attribute)
@@ -198,10 +206,19 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     return this.items.length >= this.effectiveVirtualizeThreshold;
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // Acquired on connect, not on the first failure: assistive tech has to have been observing a
+    // live region *before* text arrives for the change to be announced at all.
+    this.sink ??= acquireAnnouncementSink('assertive', { document: this.ownerDocument });
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.failureLiveText = '';
     this.isMounting = true;
+    this.sink?.release();
+    this.sink = undefined;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -220,6 +237,10 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     this.failureLiveText = freshErrors.length
       ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(freshErrors)
       : '';
+    // Announced from the computation, not from a rendered text change: the shared region appends
+    // each announcement as its own node, so an identical repeat (the same row failing the same way
+    // twice) is read again instead of being a silent no-op.
+    if (this.failureLiveText !== '') this.sink?.announce(this.failureLiveText);
   }
 
   private stageLabel(stage: IngestionStage): string {
@@ -258,14 +279,14 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   }
 
   private onRetryClick(item: IngestionQueueItem): void {
-    this.emit<IngestionRetryEventDetail>('lr-retry', {
+    this.emit('lr-retry', {
       itemId: item.id,
       attempt: this.normalizedAttempts(item) + 1,
     });
   }
 
   private onCancelClick(item: IngestionQueueItem): void {
-    this.emit<IngestionCancelEventDetail>('lr-cancel', { itemId: item.id });
+    this.emit('lr-cancel', { itemId: item.id });
   }
 
   private itemTemplate = (item: IngestionQueueItem, ownRole: boolean): TemplateResult => {
@@ -364,13 +385,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     const virtualized = this.isVirtualized;
     return html`
       <div part="base" role="region" aria-label=${ariaLabel}>
-        <div
-          part="failure-live"
-          class="sr-only"
-          role="alert"
-          aria-live="assertive"
-          aria-atomic="true"
-        >${this.failureLiveText}</div>
+        <div part="failure-live" class="sr-only" aria-hidden="true">${this.failureLiveText}</div>
         ${virtualized
           ? html`<lr-virtual-list
               exportparts="item:item, item-header:item-header, item-name:item-name, item-progress:item-progress, item-meta:item-meta, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button"

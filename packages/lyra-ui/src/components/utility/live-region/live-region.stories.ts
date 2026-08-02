@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './live-region.js';
 import type { LyraLiveRegion } from './live-region.js';
 
@@ -11,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          '`<lr-live-region>` is invisible by design (screen-reader only) and throttles/coalesces announcements instead of relaying every `announce()` call verbatim. These stories mirror what actually lands in its shadow DOM into a visible log so the throttling/coalescing behavior is observable without a screen reader running.',
+          '`<lr-live-region>` is invisible by design (screen-reader only) and throttles/coalesces announcements instead of relaying every `announce()` call verbatim. Announcements land in a shared, visually hidden region in the page\'s light DOM (a live region inside a shadow root is not reliably announced); these stories mirror that region into a visible log so the throttling/coalescing behavior is observable without a screen reader running.',
       },
     },
   },
@@ -19,24 +20,29 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-/** Wires a MutationObserver that mirrors a region's real (coalesced) writes into a visible log,
- *  purely for these demos -- a real consumer has no need for this, it just calls `announce()`. */
+/** Wires a MutationObserver over the shared light-DOM region the announcements really land in,
+ *  mirroring each addition into a visible log -- purely for these demos; a real consumer has no
+ *  need for this, it just calls `announce()`. */
 function wireLog(root: HTMLElement): void {
   const region = root.querySelector<LyraLiveRegion>('lr-live-region');
   const log = root.querySelector<HTMLElement>('[data-log]');
   if (!region || !log || region.hasAttribute('data-observed')) return;
   region.setAttribute('data-observed', '');
-  const shadow = region.shadowRoot;
-  if (!shadow) return;
-  const observer = new MutationObserver(() => {
-    const text = shadow.textContent ?? '';
-    if (!text) return;
-    const line = document.createElement('div');
-    const time = new Date().toLocaleTimeString(undefined, { hour12: false });
-    line.textContent = `${time} — "${text}"`;
-    log.prepend(line);
+  const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${region.mode}"]`);
+  if (!sink) return;
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      for (const added of record.addedNodes) {
+        const text = added.textContent ?? '';
+        if (!text) continue;
+        const line = document.createElement('div');
+        const time = new Date().toLocaleTimeString(undefined, { hour12: false });
+        line.textContent = `${time} — "${text}"`;
+        log.prepend(line);
+      }
+    }
   });
-  observer.observe(shadow, { subtree: true, characterData: true, childList: true });
+  observer.observe(sink, { childList: true });
 }
 
 export const Basic: Story = {
@@ -67,8 +73,9 @@ export const Basic: Story = {
         </button>
       </div>
       <p style="margin:0; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
-        The region itself is screen-reader-only; this log mirrors its real (post-throttle) text so
-        the "same text twice" clear-then-reset trick is visible even without a screen reader.
+        The region itself is screen-reader-only; this log mirrors every real (post-throttle)
+        announcement so the "same text twice announces twice" behavior is visible even without a
+        screen reader.
       </p>
       <div data-log style="display:flex; flex-direction:column; gap:0.25rem; font-family:monospace; font-size:0.8125rem;"></div>
     </div>

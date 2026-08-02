@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
+import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -222,7 +222,9 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * @event change - Fired when the native input commits or the country changes.
  * @event focus - Fired when the internal telephone input receives focus.
  * @event blur - Fired when the internal telephone input loses focus.
- * @event lr-invalid - The phone input failed a validity check.
+ * @event lr-invalid - The phone input failed a validity check. Cancelable: `preventDefault()`
+ *   forwards to the native `invalid` event, suppressing the browser's own validation bubble and the
+ *   focus/scroll `reportValidity()` would otherwise perform.
  * @csspart form-control - The outer form-control wrapper.
  * @csspart form-control-label - The visible label.
  * @csspart input-wrapper - The country selector and telephone input wrapper.
@@ -255,6 +257,13 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
  *   never declared by the component itself, it can be set from an ancestor or an outer-tree rule
  *   as well as inline on the element.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
+ *   label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
+ *   localized word) to replace it. Caller-supplied content, so it is never localized here.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ *   retunable without touching any other danger-coloured surface.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ *   marker.
  * @status stable
  * @since 4.0.0
  */
@@ -520,7 +529,19 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     }
   }
 
+  /**
+   * Maps the parsed phone `status` onto the element's validity. A control barred from constraint
+   * validation (own `disabled`, a `<fieldset disabled>` ancestor, any platform condition
+   * `willValidate` folds in) reports no violation at all, exactly like the base mixin and every
+   * native control: without this guard a `<lr-phone-input required disabled>` kept `valueMissing`
+   * raised and published `:state(invalid)`/`:state(user-invalid)`, painting every disabled field
+   * with the documented `:state(user-invalid)` error styling.
+   */
   protected updateValidity(): void {
+    if (isBarredFromValidation(this, this.internals)) {
+      this[SET_ANCHORED_VALIDITY]({});
+      return;
+    }
     const flags: ValidityStateFlags = {};
     let message = '';
     if (this.required && this.status === 'empty') {

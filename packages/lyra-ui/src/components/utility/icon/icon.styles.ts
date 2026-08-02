@@ -18,6 +18,13 @@ export const styles = css`
     overflow: visible;
   }
 
+  /* The custom-content slot is an assignment target only: syncCustomNodes() clones its trusted SVG
+     nodes into the component-owned svg above, where they have a real SVG parent and actually
+     paint. Rendering the slot itself would place the originals a second time, outside that svg. */
+  slot {
+    display: none;
+  }
+
   :host(:where([canvas='auto'])),
   :host(:where([auto-width]:not([canvas]))) {
     inline-size: auto;

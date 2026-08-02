@@ -1,12 +1,13 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
+import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { nextId } from '../../../internal/a11y.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
+import { findImplicitSubmitter, submitOnEnter } from '../../../internal/submit-on-enter.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { styles } from './otp-input.styles.js';
 import {
@@ -70,8 +71,11 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  *
  * Keyboard editing uses fixed cells: physical Left/Right move to the visually adjacent segment
  * (with the index delta mirrored under RTL), Backspace clears the current cell and moves back,
- * Delete clears it in place, and neither deletion shifts trailing characters. Enter requests one
- * submission from the owning form. A full paste into an empty field fills accepted characters from
+ * Delete clears it in place, and neither deletion shifts trailing characters. A bare Enter flushes
+ * a pending `change` and requests one submission from the owning form through the shared
+ * Enter-to-submit gate, so a modifier-held Enter, an Enter that commits an IME candidate, and an
+ * Enter a listener above has already vetoed all leave the form alone, and the form's default button
+ * reaches the submission as `SubmitEvent.submitter`. A full paste into an empty field fills accepted characters from
  * the first cell in one input operation. The public/submitted string concatenates occupied cells;
  * middle empty cells are a visual editing state and are not encoded in that string. A nonempty
  * native selection maps its compact offsets back to occupied cells for replacement or deletion.
@@ -89,9 +93,12 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-clear - The value was cleared. Bubbling, composed, and non-cancelable.
- * @event lr-invalid - The one-time-code input failed a validity check.
+ * @event lr-invalid - The one-time-code input failed a validity check. Cancelable:
+ * `preventDefault()` forwards to the native `invalid` event, suppressing the browser's own
+ * validation bubble and the focus/scroll `reportValidity()` would otherwise perform.
  * @event lr-complete - The field transitions from incomplete to every segment filled.
- * `detail: { value }`. Cancelable; preventing it suppresses `autosubmit` for that completion.
+ * `detail: { value }`. Cancelable; preventing it suppresses `autosubmit` for that completion. The
+ * autosubmission is deferred one task, so a listener may call `preventDefault()` after an `await`.
  * @cssstate --blank - Matches while no characters have been entered.
  * @cssstate --filled - Matches while every segment is filled.
  * @cssstate disabled - Matches while the control is disabled, including through a fieldset.
@@ -137,6 +144,13 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @cssprop [--lr-otp-input-segment-fill=transparent] - Background fill of each segment.
  * @cssprop [--lr-otp-input-segment-radius=var(--lr-form-control-radius,var(--lr-radius))] -
  *   Corner radius of each segment.
+ * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
+ * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
+ * localized word) to replace it. Caller-supplied content, so it is never localized here.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ * retunable without touching any other danger-coloured surface.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
+ * marker.
  * @status stable
  * @since 8.0.0
  */
@@ -152,7 +166,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   @property({ reflect: true }) appearance: OtpInputAppearance = 'outlined';
   /** Automatically focus the real input after the first client render. */
   @property({ type: Boolean }) override autofocus = false;
-  /** Submit the owning form after an un-canceled `lr-complete`. */
+  /** Submit the owning form after an un-canceled `lr-complete`, one task later so an asynchronous
+   *  listener can still veto it. The form's default button is resolved as the submitter. */
   @property({ type: Boolean, reflect: true }) autosubmit = false;
   /** Segment size on the shared form-control ladder. An unset size inherits its containing context;
    *  standalone rendering falls back to `m`. */
@@ -197,6 +212,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   @state() private activeSegmentIndex = 0;
   private segmentValues: string[] = [];
   private segmentEditPendingChange = false;
+  /** Invalidates a deferred autosubmission whose completion has since been superseded. */
+  private autosubmitToken = 0;
   private parsedFormatSource?: string;
   private parsedFormatCells?: Cell[] | null;
 
@@ -310,10 +327,42 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     });
   }
 
+  /**
+   * Submits the owning form the way `internal/submit-on-enter.ts` does for a keystroke: through the
+   * form's resolved default button, so `SubmitEvent.submitter` — and with it the button's own
+   * `name`/`value` entry and its `formaction`/`formmethod`/`formnovalidate` overrides — survives an
+   * autosubmission exactly as it survives a real click. `requestSubmit()`, never `submit()`, so
+   * interactive constraint validation still runs.
+   */
+  private submitOwningForm(): void {
+    const form = this.getForm();
+    if (!form) return;
+    const submitter = findImplicitSubmitter(form);
+    if (!submitter) form.requestSubmit();
+    else if (submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement) {
+      form.requestSubmit(submitter);
+    } else {
+      // A form-associated custom element is never a legal `requestSubmit()` submitter (the platform
+      // throws a TypeError for one); its own `click()` runs the submit path a real click would.
+      submitter.click();
+    }
+  }
+
   private completeIfTransition(previousFilled: number): void {
     if (previousFilled >= this.segmentCount || this.filledSegmentCount !== this.segmentCount) return;
     const completeEvent = this.emit('lr-complete', { value: this.value }, { cancelable: true });
-    if (this.autosubmit && !completeEvent.defaultPrevented) this.getForm()?.requestSubmit();
+    if (!this.autosubmit) return;
+    // One task later, not synchronously: `lr-complete` is a real veto point, and a listener that
+    // decides asynchronously (checking the code before letting the form go) has to be able to call
+    // `preventDefault()` after its own `await`. The token, connectivity and completeness re-checks
+    // make a code that changed again in that window drop the stale submission.
+    const token = (this.autosubmitToken += 1);
+    setTimeout(() => {
+      if (token !== this.autosubmitToken || completeEvent.defaultPrevented) return;
+      if (!this.isConnected || !this.autosubmit) return;
+      if (this.filledSegmentCount !== this.segmentCount) return;
+      this.submitOwningForm();
+    });
   }
 
   private commitSegmentEdit(
@@ -415,14 +464,21 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     setCustomState(this.internals, 'readonly', this.readonly);
   }
 
+  /**
+   * Recomputes the OTP-specific constraints. Barred controls short-circuit first, through the same
+   * `isBarredFromValidation()` predicate the base mixin uses — this override used to check
+   * `readonly` alone, so a `<lr-otp-input required disabled>` (or one inside a `<fieldset disabled>`)
+   * still reported `valueMissing` and published `:state(invalid)`/`:state(user-invalid)`, which no
+   * barred native control does.
+   */
   private updateValidity(): void {
-    const total = this.segmentCount;
-    const filled = this.filledSegmentCount;
-    const complete = filled === total;
-    if (this.readonly) {
+    if (isBarredFromValidation(this, this.internals)) {
       this[SET_ANCHORED_VALIDITY]({});
       return;
     }
+    const total = this.segmentCount;
+    const filled = this.filledSegmentCount;
+    const complete = filled === total;
     if (this.required && filled === 0) {
       this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
       return;
@@ -468,10 +524,15 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
       this.setActiveSegment(this.activeSegmentIndex + delta);
       return;
     }
+    // Implicit form submission, through the shared `internal/submit-on-enter.ts` gate every other
+    // text-bearing control routes through — so the modifier, IME-composition and already-vetoed
+    // rules, and the submitter resolution, are one implementation rather than one per component.
+    // The keystroke is deliberately not cancelled: the internal input has no form owner, so there
+    // is no default action to cancel, and cancelling would suppress unrelated handlers downstream.
     if (event.key === 'Enter') {
-      event.preventDefault();
-      this.flushPendingChange();
-      this.getForm()?.requestSubmit();
+      // `change` is normally deferred to blur, but an Enter that submits is a commit — the pending
+      // change is flushed before the form reads the value, not after the submission or never.
+      if (!this.readonly) submitOnEnter(this, event, { beforeSubmit: () => this.flushPendingChange() });
       return;
     }
     if (this.readonly || event.isComposing) return;

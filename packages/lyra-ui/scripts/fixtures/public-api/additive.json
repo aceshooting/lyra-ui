@@ -1,0 +1,83 @@
+{
+  "packageJson": {
+    "name": "@aceshooting/lyra-ui",
+    "version": "8.0.0",
+    "exports": {
+      "./custom-elements.json": "./custom-elements.json",
+      ".": {
+        "default": "./dist/lyra.js",
+        "types": "./dist/lyra.d.ts"
+      },
+      "./theme.js": "./dist/theme/theme.js"
+    }
+  },
+  "manifest": {
+    "schemaVersion": "1.0.0",
+    "modules": [
+      {
+        "kind": "javascript-module",
+        "path": "src/components/forms/sample/renamed-for-layout-only.ts",
+        "declarations": [
+          {
+            "kind": "class",
+            "name": "LyraSample",
+            "customElement": true,
+            "tagName": "lr-sample",
+            "description": "Changed prose is not API.",
+            "members": [
+              {
+                "kind": "field",
+                "name": "count",
+                "type": { "text": "number" },
+                "default": "0",
+                "attribute": "count"
+              },
+              {
+                "kind": "method",
+                "name": "show",
+                "parameters": [
+                  { "name": "reason", "type": { "text": "undefined | string" }, "optional": true }
+                ],
+                "return": { "type": { "text": "void" } }
+              },
+              {
+                "kind": "field",
+                "name": "mode",
+                "type": { "text": "'loud' | 'quiet' | 'auto'" },
+                "default": "'quiet'",
+                "attribute": "mode",
+                "reflects": true
+              }
+            ],
+            "attributes": [
+              { "name": "count", "fieldName": "count", "type": { "text": "number" }, "default": "0" },
+              { "name": "mode", "fieldName": "mode", "type": { "text": "'auto' | 'loud' | 'quiet'" }, "default": "'quiet'" }
+            ],
+            "events": [
+              { "name": "lr-open", "type": { "text": "CustomEvent<void>" } },
+              { "name": "lr-change", "type": { "text": "CustomEvent<{ mode: 'loud' | 'quiet' }>" } }
+            ],
+            "slots": [
+              { "name": "", "description": "Reworded." },
+              { "name": "label", "description": "A label." }
+            ],
+            "cssParts": [
+              { "name": "label", "description": "The label." },
+              { "name": "base", "description": "Reworded." }
+            ],
+            "cssProperties": [
+              { "name": "--lr-sample-label-color" },
+              { "name": "--lr-sample-gap", "default": "1rem", "description": "Reworded." }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "declarations": {
+    "named": "export type { SampleMode } from './components/forms/sample/sample.js';\nexport { LyraSample } from './components/forms/sample/sample.js';\nexport { invalidateLyraTheme } from './utilities/theme.js';\n",
+    "react": "export interface LyraReactIntrinsicElements { 'lr-sample': LyraSampleReactProps; }\nexport type LyraSampleReactProps = { count?: number; mode?: 'auto' | 'loud' | 'quiet' };\n",
+    "vue": "export interface LyraVueGlobalComponents { 'lr-sample': typeof import('./sample.js').LyraSample; 'lr-new': typeof import('./new.js').LyraNew; }\n",
+    "svelte": "export interface LyraSvelteElements { 'lr-sample': { mode?: 'quiet' | 'loud' | 'auto'; count?: number }; }\n"
+  }
+}

@@ -1231,10 +1231,17 @@ Both `RetryEventDetail` and `CancelEventDetail` come from `@aceshooting/lyra-ui/
 per-item stage label), `item-progress`,
 `item-chunk-count`, `item-embedding-status` (the "N of M chunks embedded" text, only once both
 `chunkCount` and `embeddedChunkCount` are set), `item-attempts` (only once `attempts > 0`),
-`item-error` (only for `stage="failed"` with `error` set), `failure-live` (the visually hidden
-assertive region that announces only failures added or transitioned after mount; historical failed
-rows remain visible without being re-announced), `item-actions`, `retry-button`, `cancel-button`,
-`empty`.
+`item-error` (only for `stage="failed"` with `error` set), `failure-live` (the visually hidden,
+`aria-hidden` mirror of the last announced batch of fresh failures), `item-actions`,
+`retry-button`, `cancel-button`, `empty`.
+
+`failure-live` is a styling and inspection surface and carries no live-region role of its own. The
+announcement itself goes to the library's shared **light-DOM** assertive region, appended to the
+consumer's `<body>` and marked `data-lr-live-region="assertive"`, because a live region inside a
+shadow root is not reliably announced (JAWS with Firefox ignores one outright). What is announced
+is unchanged: only failures added or transitioned *after* mount, so historical failed rows stay
+visible without being re-announced. Assert against that document-level region rather than
+`::part(failure-live)`.
 
 In virtualized mode (at or above `virtualizeThreshold`) the rows live in the internal
 `lr-virtual-list`'s shadow root, and `item`, `item-header`, `item-name`, `item-progress`,

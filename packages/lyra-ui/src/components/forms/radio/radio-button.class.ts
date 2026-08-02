@@ -26,7 +26,9 @@ import { styles } from './radio-button.styles.js';
  * @event focus - The internal control received focus.
  * @event blur - The internal control lost focus.
  * @event lr-invalid - The standalone radio button failed a validity check. Aggregate groups emit
- *   their own alias instead.
+ *   their own alias instead. Cancelable: calling `preventDefault()` also cancels the native
+ *   `invalid` event behind it, suppressing the browser's own validation bubble so an app can
+ *   present the failure its own way.
  * @cssstate required - Matches while the control is required, either by its own `required`
  * attribute or by an owning `<lr-radio-group required>`. Style with
  * `lr-radio-button:state(required)`.

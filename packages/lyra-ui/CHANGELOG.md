@@ -170,17 +170,36 @@
   - **Compound motion tokens are split** into duration and easing.
   - **`--lr-font-size-md` is removed**; use `--lr-font-size-m`. The two were the same value under two names, which is why `lr-button` rendered `size="m"` and `size="l"` at identical text sizes.
   - **New `--lr-form-control-*` tier** (height, font-size, padding, gap, radius), one ladder shared by every control.
+  - **The required-field marker is themeable.** The `*` every labelled control appends to its label reads `--lr-form-control-required-content` (default `' *'`), `--lr-form-control-required-color` (default `--lr-color-danger`) and `--lr-form-control-required-offset` (default `0`) — so a locale that wants `' (required)'`, a design that wants the marker in the label's own colour, or a form that wants no marker at all is one declaration, not a per-component override. Deliberately undeclared rather than given a `--lr-theme-*` input: an undeclared custom property inherits, so a single `:root` rule retunes every marker in the application; declaring them on `:host` would have made the host's own value win and cut off exactly that route.
 
   ### Localization
 
   - **Pluralized messages are now CLDR category objects**, selected through `Intl.PluralRules`, replacing the paired `<key>` + `<key>Plural` convention. A catalog registered through `registerLyraLocale()` or a per-instance `.strings` that used the old pair must be rewritten as `{ one: '…', other: '…' }` — with that locale's real categories, which for Russian is four and for Arabic six.
   - **Ten complete translation catalogs ship**, as side-effect-only modules: `import '@aceshooting/lyra-ui/translations/de.js';` and so on for `ar`, `es`, `fa`, `fr`, `he`, `ja`, `pt-BR`, `ru`, `zh-CN`. Persian and Hebrew add regional fallback and RTL coverage; set `dir="rtl"` explicitly because locale selection does not change writing direction.
 
+  ### Form validation
+
+  - **`lr-invalid` is now `cancelable`.** It is the alias for the platform's own `invalid` event, which is cancelable, and cancelling a copy of an event can only honestly mean cancelling the original — so `event.preventDefault()` on `lr-invalid` now forwards to the native event and suppresses the browser's validation bubble and `reportValidity()`'s focus/scroll. An app that wired `lr-invalid` to its own error banner previously had no way to stop the native UI appearing alongside it. Nothing breaks by adding cancelability, but a listener that already called `preventDefault()` speculatively now actually vetoes something.
+  - **A control barred from constraint validation no longer publishes `:state(invalid)` / `:state(user-invalid)`** — nor `valid`/`user-valid`. Disabled, fieldset-disabled and readonly controls match neither `:valid` nor `:invalid` natively (verified against real `<input required disabled>` and `<input required readonly>`), and publishing `invalid` from one is what made the documented `lr-input:state(user-invalid) { border-color: red }` rule paint every disabled required field red. `:state(required)` / `:state(optional)` describe the attribute rather than the outcome, so they keep publishing exactly like native `:required`/`:optional`. A stylesheet that relied on the old behaviour to style disabled fields must select `:disabled` instead. The `readonly` bar had also been copy-pasted per component and missed one — `<lr-rating required readonly>` reported `valueMissing` while `<lr-otp-input required readonly>` did not; both now route through one shared predicate.
+
+  ### Registration is no longer a side effect of the package root
+
+  **`import '@aceshooting/lyra-ui'` registers nothing. Rewrite it as `import '@aceshooting/lyra-ui/all.js'`.**
+
+  The package root is now a pure export surface. In 7.x it was both: importing it for a type also defined all 268 root-included tags, which meant a consumer could not name a class or an event-map type without conceding the whole library to their bundle. Those 268 registration side effects now live in `all.js`, and `package.json#sideEffects` moved with them, so the root is genuinely free to import.
+
+  - Every named and type export stays on the root, under the same specifier, with the same name. `import { LyraSelect, type LyraSelectEventMap } from '@aceshooting/lyra-ui'` is unchanged — it just no longer registers anything. Only the side effect moved.
+  - `all.js` registers the same 268 tags the root used to, and still excludes the same 15 optional-peer-family tags (`lr-chart` and its 8 typed subclasses, `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`, `lr-geojson-view`), which keep requiring their own granular import. Granular per-component imports remain the recommendation; `all.js` exists so an application can upgrade in one line, not because 268 elements is a sensible bundle.
+  - **A missed migration does not throw.** The import still resolves, the build still succeeds, and the tags simply never upgrade — an unknown inert `<lr-select>` with its light DOM showing through and nothing in the console. That silence is what makes this the nastiest item in the release: every rename above fails loudly, this one does not.
+  - `ssr-loader.js` is unaffected — it still installs Lit's hydration hook and then pulls the full `all.js` closure, exactly as before. A server integration that wants granular registration can import the new `@aceshooting/lyra-ui/hydration.js` first instead, then only the components it renders; `@aceshooting/lyra-ui/ssr/all.js` is the server-side convenience that registers the complete 283-tag inventory.
+
   ### Packaging
 
   - **`@aceshooting/lyra-ui/internal/*` is no longer a published subpath.** The supported helpers live under `@aceshooting/lyra-ui/utilities/*`, which now also carries `FormAssociated` and `groupByRecency` — previously reachable only through the side-effectful root barrel.
   - **`lr-flag`'s deprecated `detailed` boolean is removed**; use `variant="detailed"`.
   - **`lr-combobox`'s `withClear` alias is removed** in favour of the two upstream spellings above.
+  - **Published tarballs no longer contain source maps.** `package.json#files` ships `dist` and not `src`, so every `.js.map` / `.d.ts.map` pointed at a `../../../../src/**/*.ts` path that does not exist in an install and carried no `sourcesContent` — dead weight, and actively worse for `declarationMap`, which routed an editor's Go-to-Definition at that missing `.ts` and failed there instead of falling back to the readable `.d.ts`. Maps stay on for local type-checking and docs; only the published artifact drops them.
+  - **`emit()` is type-checked against each component's event map.** `LyraElement<Events>` now checks both the event name and the detail shape against the same map that types `addEventListener`, so a misspelled name or a detail that disagrees with the JSDoc, manifest and docs is a compile error rather than an event nobody listens for. This is a `protected` member, so it reaches consumers only through subclassing: a subclass that emits an event outside its base class's map must declare its own map. A component that declares no map keeps the permissive default.
 
 ## 7.8.1
 

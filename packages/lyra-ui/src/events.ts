@@ -942,17 +942,18 @@ export type LyraEntityActivateEvent =
 export type LyraEntityOpenEvent = LyraEntityChipEventMap['lr-entity-open'];
 
 /**
- * `lr-error` — dispatched by 4 components: `<lr-animated-image>`, `<lr-avatar>`,
- * `<lr-copy-button>`, `<lr-icon>`.
+ * `lr-error` — dispatched by 5 components: `<lr-animated-image>`, `<lr-avatar>`,
+ * `<lr-copy-button>`, `<lr-icon>`, `<lr-include>`.
  *
- * A union of 4 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 5 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAnimatedImageEventMap['lr-error']`.
  */
 export type LyraErrorEvent =
   | LyraAnimatedImageEventMap['lr-error']
   | LyraAvatarEventMap['lr-error']
   | LyraCopyButtonEventMap['lr-error']
-  | LyraIconEventMap['lr-error'];
+  | LyraIconEventMap['lr-error']
+  | LyraIncludeEventMap['lr-error'];
 
 /**
  * `lr-event-select` — dispatched by `<lr-calendar>`.

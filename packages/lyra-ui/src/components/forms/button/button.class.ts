@@ -27,6 +27,10 @@ import {
 } from '../../../internal/form-associated.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
+import {
+  EXTERNAL_LABEL_ACTIVATION,
+  type ExternalLabelActivation,
+} from '../../../internal/form-control-labels.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 
 /** Alias of the library's one semantic-tone vocabulary, kept as an exported name so existing
@@ -508,6 +512,16 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
     return this.baseEl ?? null;
+  }
+
+  /** A native `<button>`'s label activates it, exactly as if the button itself had been clicked —
+   *  so an external `<label for>` must run this button's submit/reset behavior once, not merely
+   *  move focus to it. The role the internal element exposes cannot say that on its own: the
+   *  triggers of `<lr-select>` and `<lr-color-picker>` are `<button>`s too, and opening their
+   *  popups from a label click is not native behavior.
+   *  @internal */
+  [EXTERNAL_LABEL_ACTIVATION](): ExternalLabelActivation {
+    return 'activate';
   }
 
   checkValidity(): boolean {

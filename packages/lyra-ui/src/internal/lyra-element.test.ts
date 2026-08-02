@@ -14,6 +14,12 @@ class DemoLocale extends LyraElement {
   get exposedLocale() {
     return this.effectiveLocale;
   }
+  get exposedMessageLocale() {
+    return this.effectiveMessageLocale;
+  }
+  get exposedIntlLocale() {
+    return (this as unknown as { effectiveIntlLocale: string }).effectiveIntlLocale;
+  }
   get exposedDirection() {
     return this.effectiveDirection;
   }
@@ -66,16 +72,16 @@ it('resolves the inherited locale at most once per update cycle', async () => {
 
   // The initial render already resolved the locale, so reads reuse the memo
   // without touching the ancestor chain again.
-  expect(el.exposedLocale).to.equal('x-memo');
+  expect(el.exposedMessageLocale).to.equal('x-memo');
   expect(ancestorReads).to.equal(0);
 
   // Scheduling a new update drops the memo; the next read re-walks once and
   // subsequent reads within the same cycle reuse it.
   el.requestUpdate();
-  expect(el.exposedLocale).to.equal('x-memo');
+  expect(el.exposedMessageLocale).to.equal('x-memo');
   expect(ancestorReads).to.be.greaterThan(0);
   const walksAfterFirstRead = ancestorReads;
-  expect(el.exposedLocale).to.equal('x-memo');
+  expect(el.exposedMessageLocale).to.equal('x-memo');
   expect(ancestorReads).to.equal(walksAfterFirstRead);
   await el.updateComplete;
 });
@@ -91,13 +97,13 @@ it('re-resolves locale and direction when reconnected under a different ancestor
   const el = document.createElement('lr-demo-locale') as DemoLocale;
   sections[0]!.append(el);
   await el.updateComplete;
-  expect(el.exposedLocale).to.equal('x-one');
+  expect(el.exposedMessageLocale).to.equal('x-one');
   expect(el.exposedDirection).to.equal('ltr');
 
   // Moving the element disconnects and reconnects it without scheduling an
   // update, so the resolution must not reuse the previous tree's values.
   sections[1]!.append(el);
-  expect(el.exposedLocale).to.equal('x-two');
+  expect(el.exposedMessageLocale).to.equal('x-two');
   expect(el.exposedDirection).to.equal('rtl');
 });
 
@@ -130,6 +136,72 @@ it('re-renders when ancestor lang and dir attributes change the inherited locale
 
   expect(el.exposedLocale).to.equal('tr');
   expect(el.exposedDirection).to.equal('rtl');
+});
+
+it('reads computed direction live after ancestor style and class changes', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="direction: ltr">
+      <style>
+        .rtl-context { direction: rtl; }
+      </style>
+      <section><lr-demo-locale></lr-demo-locale></section>
+    </div>
+  `);
+  const section = wrapper.querySelector('section')!;
+  const el = wrapper.querySelector('lr-demo-locale') as DemoLocale;
+  await el.updateComplete;
+  expect(el.exposedDirection).to.equal('ltr');
+
+  section.style.direction = 'rtl';
+  await Promise.resolve();
+  await el.updateComplete;
+  expect(el.exposedDirection).to.equal('rtl');
+
+  section.style.direction = '';
+  section.className = 'rtl-context';
+  await Promise.resolve();
+  await el.updateComplete;
+  expect(el.exposedDirection).to.equal('rtl');
+});
+
+it('reads computed direction live after a host style change', async () => {
+  const el = await fixture<DemoLocale>(html`<lr-demo-locale style="direction: ltr"></lr-demo-locale>`);
+  expect(el.exposedDirection).to.equal('ltr');
+
+  el.style.direction = 'rtl';
+  expect(el.exposedDirection).to.equal('rtl');
+});
+
+it('disconnects the inherited class/style observer when the component is removed', async () => {
+  const wrapper = await fixture<HTMLDivElement>(
+    html`<div style="direction: ltr"><lr-demo-locale></lr-demo-locale></div>`,
+  );
+  const el = wrapper.querySelector('lr-demo-locale') as DemoLocale;
+  await el.updateComplete;
+
+  let updateRequests = 0;
+  const requestUpdate = el.requestUpdate.bind(el);
+  el.requestUpdate = (...args: Parameters<DemoLocale['requestUpdate']>) => {
+    updateRequests += 1;
+    requestUpdate(...args);
+  };
+
+  el.remove();
+  updateRequests = 0;
+  wrapper.style.direction = 'rtl';
+  wrapper.className = 'changed-after-disconnect';
+  await Promise.resolve();
+
+  expect(updateRequests).to.equal(0);
+});
+
+it('keeps a synthetic message locale raw while exposing a safe effective locale', async () => {
+  const locale = `x_synthetic_${Date.now().toString(36)}`;
+  const el = await fixture<DemoLocale>(html`<lr-demo-locale locale=${locale}></lr-demo-locale>`);
+
+  expect(el.exposedMessageLocale).to.equal(locale);
+  expect(el.exposedLocale).to.equal('en');
+  expect(el.exposedIntlLocale).to.equal('en');
 });
 
 it('inherits and reacts to locale context across a shadow-root host boundary', async () => {

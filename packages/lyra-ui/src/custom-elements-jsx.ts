@@ -1052,6 +1052,7 @@ export type LyraBarChartReactProps = LyraReactElementProps<
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
+  | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
@@ -1223,6 +1224,7 @@ export type LyraBubbleChartReactProps = LyraReactElementProps<
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
+  | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
@@ -1553,6 +1555,7 @@ export type LyraChartReactProps = LyraReactElementProps<
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
+  | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
@@ -1755,7 +1758,10 @@ export type LyraCheckboxGroupReactProps = LyraReactElementProps<
   | 'lr-invalid',
   | '--gap'
   | '--lr-checkbox-group-option-gap'
-  | '--lr-checkbox-group-row-gap',
+  | '--lr-checkbox-group-row-gap'
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset',
   {
     'aria-label'?: LyraCheckboxGroup['accessibleLabel'];
     'custom-error'?: LyraCheckboxGroup['customError'];
@@ -1997,7 +2003,10 @@ export type LyraCodeEditorReactProps = LyraReactElementProps<
   | 'lr-invalid',
   | '--lr-code-editor-line-height'
   | '--lr-code-editor-min-block-size'
-  | '--lr-code-editor-tab-size',
+  | '--lr-code-editor-tab-size'
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset',
   {
     'aria-label'?: LyraCodeEditor['accessibleLabel'];
     'autocorrect'?: LyraCodeEditor['autoCorrect'];
@@ -2070,6 +2079,9 @@ export type LyraColorPickerReactProps = LyraReactElementProps<
   | '--lr-color-picker-slider-handle-size'
   | '--lr-color-picker-swatch-color'
   | '--lr-color-picker-swatch-size'
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--slider-handle-size'
   | '--slider-height'
   | '--swatch-size',
@@ -2164,6 +2176,9 @@ export type LyraComboboxReactProps = LyraReactElementProps<
   | '--lr-combobox-trigger-height'
   | '--lr-combobox-trigger-min-height'
   | '--lr-combobox-trigger-padding'
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--show-duration'
   | '--tag-max-size',
   {
@@ -2675,6 +2690,9 @@ export type LyraDateInputReactProps = LyraReactElementProps<
   | '--lr-date-input-padding-inline'
   | '--lr-date-input-placeholder-color'
   | '--lr-date-input-radius'
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--show-duration',
   {
     'aria-label'?: LyraDateInput['accessibleLabel'];
@@ -3096,6 +3114,7 @@ export type LyraDoughnutChartReactProps = LyraReactElementProps<
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
+  | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
@@ -3350,7 +3369,10 @@ export type LyraEmojiPickerReactProps = LyraReactElementProps<
   | '--lr-emoji-picker-item-size'
   | '--lr-emoji-picker-radius'
   | '--lr-emoji-picker-row-height'
-  | '--lr-emoji-picker-search-hover-border-color',
+  | '--lr-emoji-picker-search-hover-border-color'
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset',
   {
     'aria-label'?: LyraEmojiPicker['accessibleLabel'];
     'custom-error'?: LyraEmojiPicker['customError'];
@@ -3611,7 +3633,10 @@ export type LyraFileInputReactProps = LyraReactElementProps<
   | '--lr-file-input-compact-padding'
   | '--lr-file-input-font-size'
   | '--lr-file-input-reject-bg'
-  | '--lr-file-input-reject-border-color',
+  | '--lr-file-input-reject-border-color'
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset',
   {
     'accepted-message'?: LyraFileInput['acceptedMessage'];
     'aria-label'?: LyraFileInput['accessibleLabel'];
@@ -4229,6 +4254,7 @@ export type LyraHistogramReactProps = LyraReactElementProps<
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
+  | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
@@ -4458,6 +4484,7 @@ export type LyraIncludeReactProps = LyraReactElementProps<
   | 'src'
   | 'strings',
   LyraIncludeEventMap,
+  | 'lr-error'
   | 'lr-include-error'
   | 'lr-load',
 never,
@@ -4542,6 +4569,9 @@ export type LyraInputReactProps = LyraReactElementProps<
   | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-input-border-color'
   | '--lr-input-control-height'
   | '--lr-input-control-min-height'
@@ -4742,6 +4772,9 @@ export type LyraKnownDateReactProps = LyraReactElementProps<
   | 'focus'
   | 'input'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-known-date-day-field-width'
   | '--lr-known-date-field-font-size'
   | '--lr-known-date-field-gap'
@@ -4858,6 +4891,7 @@ export type LyraLineChartReactProps = LyraReactElementProps<
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
+  | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
@@ -4968,6 +5002,9 @@ export type LyraLocalePickerReactProps = LyraReactElementProps<
   | 'focus'
   | 'lr-change'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-locale-picker-expand-size'
   | '--lr-locale-picker-font-size'
   | '--lr-locale-picker-gap'
@@ -5371,6 +5408,9 @@ export type LyraModelSelectReactProps = LyraReactElementProps<
   | 'lr-change'
   | 'lr-focus'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-model-select-expand-size'
   | '--lr-model-select-font-size'
   | '--lr-model-select-option-active-bg'
@@ -5506,6 +5546,9 @@ export type LyraNativeTimeInputReactProps = LyraReactElementProps<
   | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-input-border-color'
   | '--lr-input-control-height'
   | '--lr-input-control-min-height'
@@ -5657,6 +5700,9 @@ export type LyraNumberInputReactProps = LyraReactElementProps<
   | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-input-border-color'
   | '--lr-input-control-height'
   | '--lr-input-control-min-height'
@@ -5745,6 +5791,9 @@ export type LyraOtpInputReactProps = LyraReactElementProps<
   | 'lr-complete'
   | 'lr-focus'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-otp-input-mask-char'
   | '--lr-otp-input-segment-border-color'
   | '--lr-otp-input-segment-fill'
@@ -5976,6 +6025,9 @@ export type LyraPhoneInputReactProps = LyraReactElementProps<
   | 'focus'
   | 'input'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-phone-input-control-height'
   | '--lr-phone-input-control-min-height'
   | '--lr-phone-input-country-hover-bg'
@@ -6060,6 +6112,7 @@ export type LyraPieChartReactProps = LyraReactElementProps<
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
+  | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
@@ -6163,6 +6216,7 @@ export type LyraPolarAreaChartReactProps = LyraReactElementProps<
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
+  | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
@@ -6452,6 +6506,8 @@ export type LyraPromptStudioReactProps = LyraReactElementProps<
   | 'variables'
   | 'versions',
   LyraPromptStudioEventMap,
+  | 'blur'
+  | 'focus'
   | 'lr-change'
   | 'lr-run'
   | 'lr-save'
@@ -6615,6 +6671,7 @@ export type LyraRadarChartReactProps = LyraReactElementProps<
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
+  | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
@@ -6741,6 +6798,9 @@ export type LyraRadioGroupReactProps = LyraReactElementProps<
   | 'lr-change'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-radio-group-row-gap',
   {
     'aria-label'?: LyraRadioGroup['accessibleLabel'];
@@ -7174,6 +7234,7 @@ export type LyraScatterChartReactProps = LyraReactElementProps<
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
+  | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
@@ -7321,6 +7382,9 @@ export type LyraSelectReactProps = LyraReactElementProps<
   | 'lr-invalid'
   | 'lr-show',
   | '--hide-duration'
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-select-expand-size'
   | '--lr-select-font-size'
   | '--lr-select-gap'
@@ -7468,6 +7532,9 @@ export type LyraSliderReactProps = LyraReactElementProps<
   | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-slider-row-size'
   | '--lr-slider-thumb-size'
   | '--lr-slider-tooltip-distance'
@@ -8306,6 +8373,9 @@ export type LyraTextareaReactProps = LyraReactElementProps<
   | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-textarea-border-color'
   | '--lr-textarea-fill'
   | '--lr-textarea-font-size'
@@ -8440,6 +8510,9 @@ export type LyraTimeInputReactProps = LyraReactElementProps<
   | '--column-item-height'
   | '--column-width'
   | '--hide-duration'
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--show-duration',
   {
     'custom-error'?: LyraTimeInput['customError'];
@@ -8613,6 +8686,9 @@ export type LyraTokenInputReactProps = LyraReactElementProps<
   | 'lr-invalid'
   | 'lr-remove'
   | 'lr-token-edit',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-token-input-action-hover-bg'
   | '--lr-token-input-control-height'
   | '--lr-token-input-control-min-height'
@@ -8713,7 +8789,9 @@ export type LyraToolParamFormReactProps = LyraReactElementProps<
   | 'lr-input'
   | 'lr-invalid'
   | 'lr-validity-change',
-never,
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset',
   {
     'custom-error'?: LyraToolParamForm['customError'];
   }
@@ -9195,6 +9273,9 @@ export type LyraVoicePickerReactProps = LyraReactElementProps<
   | 'lr-invalid'
   | 'lr-preview-change'
   | 'lr-preview-request',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-voice-picker-option-active-bg'
   | '--lr-voice-picker-option-selected-bg'
   | '--lr-voice-picker-option-selected-border'

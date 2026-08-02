@@ -48,8 +48,16 @@ function checkmarkGlyph(): SVGTemplateResult {
   `;
 }
 
+/** The navigability flags `<lr-menu>` re-checks its roving tabindex against. */
+export interface MenuItemStateChangeDetail {
+  /** `disabled || loading` — the item's effective `interactionDisabled`. */
+  disabled: boolean;
+  hidden: boolean;
+  inert: boolean;
+}
+
 export interface LyraMenuItemEventMap {
-  'lr-menu-item-state-change': CustomEvent<{ disabled: boolean; hidden: boolean }>;
+  'lr-menu-item-state-change': CustomEvent<MenuItemStateChangeDetail>;
   'lr-menu-item-select': CustomEvent<undefined>;
   'lr-menu-item-change': CustomEvent<MenuItemChangeDetail>;
 }
@@ -130,8 +138,12 @@ export interface LyraMenuItemEventMap {
  * its `checked` state toggled. `detail: { value, checked }` — the item's own
  * `value` and its new `checked` value. Fired in addition to (never instead
  * of) `lr-menu-item-select` above. Never fired for `type="normal"`.
- * @event lr-menu-item-state-change - The item's `disabled` or `hidden` state changed.
- *   `<lr-menu>` consumes this to repair its roving-tabindex state immediately.
+ * @event lr-menu-item-state-change - Something that decides whether this item is navigable changed:
+ *   `disabled`, `loading`, `hidden`, `inert`, or `aria-hidden`. `detail: { disabled, hidden, inert }`,
+ *   where `disabled` is the effective `disabled || loading`. `<lr-menu>` consumes this to repair its
+ *   roving-tabindex state immediately. The last three are plain native attributes rather than
+ *   reactive properties, so they are watched with the item's own `MutationObserver`; `aria-hidden`
+ *   fires the event without appearing in the detail, which carries only the item's own state flags.
  * @csspart base - The row (`role` lives on the host — see the class doc).
  * @csspart icon - Wrapper around the `icon` slot. Not rendered at all when the slot is empty.
  * @csspart prefix - Wrapper around the `prefix` slot.
@@ -204,6 +216,12 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   @state() private slottedLabel = '';
 
   private submenuPanel: SubmenuPanel | null = null;
+  /** `hidden`/`inert`/`aria-hidden` are native attributes, not reactive properties: assigning
+   *  `item.inert = true` schedules no Lit update, so `willUpdate()` can never announce them. This
+   *  observer is what makes the item — rather than every parent that has to care — the authority on
+   *  its own navigability. */
+  private nativeStateObserver?: MutationObserver;
+  private announcedNativeState = '';
   private offsetPopup: HTMLElement | null = null;
   private previousPopupTranslate = '';
   private previousPopupTranslatePriority = '';
@@ -241,6 +259,14 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     // slotchange handler runs). <lr-menu> is the sole subsequent owner of
     // this property -- see the class doc.
     if (this.tabIndex !== 0) this.tabIndex = -1;
+    this.announcedNativeState = this.nativeStateSignature();
+    if (typeof MutationObserver !== 'undefined') {
+      this.nativeStateObserver = new MutationObserver(this.onNativeStateMutation);
+      this.nativeStateObserver.observe(this, {
+        attributes: true,
+        attributeFilter: ['hidden', 'inert', 'aria-hidden'],
+      });
+    }
     // A reconnect follows disconnectedCallback()'s restoration of the nested
     // popup's authored inline style. The panel itself is retained, so reapply
     // our live custom-property bridge once the current microtask's upgrades and
@@ -255,7 +281,32 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     // Transient open state never survives a detach: the panel is a child, so it tears its own
     // `open` down at the same moment, and a reconnect must not resume with a stale aria-expanded.
     this.submenuExpanded = false;
+    this.nativeStateObserver?.disconnect();
+    this.nativeStateObserver = undefined;
     this.releaseSubmenuOffset();
+  }
+
+  /** Every flag a parent's navigability predicate reads, in one comparable string. */
+  private nativeStateSignature(): string {
+    return `${this.hidden}|${this.inert}|${this.getAttribute('aria-hidden')}`;
+  }
+
+  /** A `MutationObserver` re-fires for a write that changes nothing (`item.hidden = item.hidden`),
+   *  so the signature comparison is what keeps a no-op write from waking every parent menu. */
+  private onNativeStateMutation = (): void => {
+    const signature = this.nativeStateSignature();
+    if (signature === this.announcedNativeState) return;
+    this.announcedNativeState = signature;
+    this.emitStateChange();
+  };
+
+  private emitStateChange(): void {
+    this.emit('lr-menu-item-state-change', {
+      disabled: this.interactionDisabled,
+      // `hidden` is `boolean | 'until-found'`, and `until-found` hides the row just as completely.
+      hidden: Boolean(this.hidden),
+      inert: this.inert,
+    });
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -303,7 +354,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       }
     }
     if (changed.has('disabled') || changed.has('loading')) {
-      this.emit('lr-menu-item-state-change', { disabled: this.interactionDisabled, hidden: this.hidden });
+      this.emitStateChange();
     }
   }
 
@@ -323,7 +374,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     }
     if (this.type === 'checkbox') {
       this.checked = !this.checked;
-      this.emit<MenuItemChangeDetail>('lr-menu-item-change', { value: this.value, checked: this.checked });
+      this.emit('lr-menu-item-change', { value: this.value, checked: this.checked });
     }
     this.emit('lr-menu-item-select');
   }

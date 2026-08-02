@@ -254,7 +254,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   close(reason: ToolSelectDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit<ToolSelectDialogCloseReason>('lr-close', reason);
+    this.emit('lr-close', reason);
   }
 
   private onBackdropClick = (): void => {
@@ -262,7 +262,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   };
 
   private emitChange(): void {
-    this.emit<ToolSelectionChangeDetail>('lr-change', {
+    this.emit('lr-change', {
       selected: [...this.selected],
       useDefaults: this.useDefaults,
     });

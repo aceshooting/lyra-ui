@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -42,6 +42,14 @@ of the control's current `name`, preserves duplicate-value cardinality, waits fo
 option children, and falls back to an empty selection for malformed state. Restoration is silent.
 **CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
 `error`.
+**The required marker.** `required` with a non-empty group `label` paints the library's shared
+marker on `[part="form-control-label"]` — here the `<legend>` of the group's fieldset. It is the
+one `::after` rule described under "The required-field marker" above, not a copy of it, so
+`--lr-form-control-required-content`, `--lr-form-control-required-color` and
+`--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`. It
+marks the **group**, not the individual checkboxes: an owned `<lr-checkbox>` has no label box of
+its own and paints nothing. With no group label text the legend is hidden and no glyph is painted.
+
 **Themeable custom properties:** `--lr-checkbox-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.1)`), the vertical gap between the group's label, options
 and messages, and `--lr-checkbox-group-option-gap` (default

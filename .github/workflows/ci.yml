@@ -92,14 +92,23 @@ jobs:
       # the sizes the README badges publish from packages/lyra-ui/scripts/bundle-stats.json cannot
       # silently go stale.
       - run: pnpm --filter @aceshooting/lyra-ui check:bundle-size
-      # Reports the same six esbuild-bundled entry points to Codecov as the `lyra-ui-dist`
-      # bundle, for per-PR size deltas. The blocking weight gate is check:bundle-size above;
+      # Reports the same esbuild-bundled entry points (whichever set bundle-budgets.json currently
+      # lists) to Codecov as the `lyra-ui-dist` bundle, for per-PR size deltas -- same esbuild
+      # invocation, same externals. The blocking weight gate is check:bundle-size above;
       # this step is non-fatal and no-ops entirely without CODECOV_TOKEN.
       - name: Upload library bundle analysis to Codecov
         run: pnpm --filter @aceshooting/lyra-ui codecov:bundle
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - run: pnpm --filter @aceshooting/lyra-ui test:coverage
+      # The per-metric floors in packages/lyra-ui/scripts/coverage-floors.json are what
+      # web-test-runner.config.js enforces on the run above. They only gate anything while they
+      # sit just under the measurement, so this reads the report the previous step just wrote and
+      # fails when a floor drifted far below it (a floor 5+ points low has stopped being a gate)
+      # or above it. Refresh with `--write-floors`; lowering one needs `--allow-lower` and shows up
+      # in the diff. Deliberately its own step so the failure names itself instead of surfacing as
+      # a mystery inside the 4.5-minute test step.
+      - run: pnpm --filter @aceshooting/lyra-ui check:coverage-floors
       - name: Upload coverage to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
@@ -156,6 +165,19 @@ jobs:
       # core-bundle budget, to catch a PR that silently drags something heavy into the eager
       # import graph -- see bundleEntries.button in scripts/check-packed-consumer.mjs.
       - run: pnpm check:packed-consumer
+
+      # Hard tarball budgets (packed/unpacked bytes and file count). Runs here rather than in
+      # contract-policy because it shells out to `npm pack --dry-run`, which needs a built dist/.
+      - run: pnpm --filter @aceshooting/lyra-ui check:package-size
+
+      # NOTE: the public-API semver gate (scripts/public-api-diff.mjs, `check:public-api`) is
+      # deliberately NOT wired here yet. Its .d.ts-parsing half is written against the TypeScript
+      # compiler API (`ts.createSourceFile`, `ts.SyntaxKind`, ...) across 25 call sites, and this
+      # repo pins typescript ^7.0.2 -- the native Go port, whose JS entry exports two keys and
+      # none of those functions. `node --test scripts/public-api-diff.test.mjs` fails 5 of 6 with
+      # `ReferenceError: ts is not defined`. Wiring it in this state would only make CI red.
+      # Wire this step (and `test:public-api` into contract-policy) once that half is reimplemented
+      # without the compiler API. See docs/agents/component-qualification.md for the gate pattern.
 
   # docs:build only needs the already-committed custom-elements.json (via manifest:check), not
   # dist/ -- independent of build-and-coverage/packed-consumer. storybook:check drives Chromium

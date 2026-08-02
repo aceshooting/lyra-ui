@@ -2,7 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraElement, type LyraEmitArgs } from '../../../internal/lyra-element.js';
 import type { AttachmentCapability } from '../../media/attachment-trigger/attachment-trigger.class.js';
 import type { LyraSourceEntry } from '../../retrieval/source-picker/source-picker.class.js';
 import type { MentionItem, LyraMentionPopover } from '../../utility/mention-popover/mention-popover.class.js';
@@ -270,7 +270,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   private reemit<K extends keyof LyraPromptInputEventMap>(event: LyraPromptInputEventMap[K], name: K): void {
     event.stopPropagation();
     if (this.disabled) return;
-    this.emit(name, event.detail);
+    // `event` and `name` are tied to the same `K`, so `event.detail` is by construction the detail
+    // this event map declares for `name` -- but `LyraEmitArgs<…, K>` stays an unresolved
+    // conditional while `K` is a type parameter, so the tie has to be asserted rather than proved.
+    this.emit(name, ...([event.detail] as unknown as LyraEmitArgs<LyraPromptInputEventMap, K>));
   }
 
   private renderAttachment(attachment: PromptInputAttachment): TemplateResult {

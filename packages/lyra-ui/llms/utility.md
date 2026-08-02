@@ -172,8 +172,13 @@ the built-in button. Exactly one named icon is rendered at a time.
 - `base-error` — the same while the failure state shows (`part="base button base-error"`).
 - `copy-icon`, `success-icon`, `error-icon` — the resting, confirmation and failure glyphs. Exactly
   one is rendered at a time; all three are `aria-hidden`.
-- `feedback` — the visually hidden `role="status"` region that announces the outcome. Empty at rest,
-  so nothing is announced before a real outcome.
+- `feedback` — the visually hidden, `aria-hidden` mirror of the outcome text. Empty at rest, so
+  nothing is announced before a real outcome. It carries no live-region role of its own: the
+  announcement goes to the library's shared **light-DOM** polite region, appended to the consumer's
+  `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a shadow root is
+  not reliably announced (JAWS with Firefox ignores one outright). Assert against that
+  document-level region rather than `::part(feedback)`; the part is a styling and inspection
+  surface, and still tells you what the button last announced.
 - `tooltip__base`, `tooltip__base__popup`, `tooltip__base__arrow`, `tooltip__body` — exported nested
   tooltip parts.
 
@@ -230,7 +235,8 @@ import type {
 - **Changed in 8.0.0:** the button used to enter the "Copied" confirmation on activation whether or
   not the clipboard write succeeded. It now waits for `navigator.clipboard.writeText()` to settle: a
   rejection renders the failure glyph instead, announces the localized failure text through the
-  `feedback` region, and emits `lr-error` plus `lr-copy-error`. `lr-copy` still fires for every
+  shared polite region mirrored by `[part="feedback"]`, and emits `lr-error` plus `lr-copy-error`.
+  `lr-copy` still fires for every
   activation, so code that treated it as proof the text reached the clipboard must pair it with an
   error event.
 - An empty `value`, missing `from` target/member, or empty resolved source is an error; no clipboard
@@ -419,17 +425,31 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
 
 ---
 
-## `lr-live-region` (+ internal `Announcer`)
+## `lr-live-region` (+ the `Announcer` helper)
 
-A throttled screen-reader announcement helper, split into a DOM-free coalescing engine
-(`internal/announcer.ts`'s `Announcer` class) and a real custom element that wraps it.
+A throttled screen-reader announcement helper, split into a DOM-free coalescing engine (the
+`Announcer` class), the shared light-DOM region a flush writes into (`acquireAnnouncementSink()`),
+and a real custom element that composes both. The two helpers are public — part of the curated,
+semver-covered `utilities/` surface documented in `llms/shared.md`, not internals:
 
-### Internal: `Announcer` (`internal/announcer.ts`)
+```ts
+import {
+  Announcer,
+  acquireAnnouncementSink,
+} from '@aceshooting/lyra-ui/utilities/announcer.js';
+```
 
-Not a custom element — pure timing/coalescing logic with no DOM dependency, composed by
-`<lr-live-region>` (below) and intended for reuse by any other component that needs throttled
-announcements (a stream-status indicator, a tool-call chip's status transitions, a chat message's
-streaming state).
+The `.js` is required (`./utilities/*` maps straight onto `./dist/utilities/*`). Both symbols are
+also re-exported from the extensionless `@aceshooting/lyra-ui/utilities` barrel and from the package
+root, but the single-helper subpath above is the form to copy — it reaches nothing else.
+
+### `Announcer` — `@aceshooting/lyra-ui/utilities/announcer.js`
+
+Not a custom element — the `Announcer` class itself is pure timing/coalescing logic with no DOM
+dependency, composed by `<lr-live-region>` (below) and intended for reuse by any other component
+that needs throttled announcements (a stream-status indicator, a tool-call chip's status
+transitions, a chat message's streaming state). The same module also exports the DOM half a flush
+writes into — `acquireAnnouncementSink()`, documented after `Announcer` below.
 
 Streaming UIs (token-by-token chat responses, progress ticks, etc.) naturally produce far more
 candidate announcements than a screen-reader user can usefully absorb — reading every incremental
@@ -451,18 +471,48 @@ latest text: superseded intermediate text is dropped outright, never queued or c
 - `throttleMs` — a plain public field, safe to change between bursts; a flush already scheduled
   keeps the deadline it was scheduled with.
 
+### `acquireAnnouncementSink()` — `@aceshooting/lyra-ui/utilities/announcer.js`
+
+The shared live region announcements actually land in. A live region rendered **inside a shadow
+root is not reliably announced** — JAWS with Firefox ignores one entirely — so every announcement
+this library makes goes into a visually hidden element in the *host document's* light DOM instead.
+
+- `acquireAnnouncementSink(politeness: AnnouncementPoliteness, options?: AnnouncementSinkOptions)`
+  where `AnnouncementPoliteness = 'polite' | 'assertive'` and
+  `AnnouncementSinkOptions = { document?: Document /* = the ambient document */; messageTtlMs?: number /* = 5000 */ }`.
+  Returns an `AnnouncementSink` handle: `element`, `politeness`, a writable `messageTtlMs`,
+  `announce(text: string): void` and `release(): void`.
+- One region per `(document, politeness)` pair, shared by every consumer and **ref-counted**: it is
+  mounted on the first `acquire()` and removed from the DOM when the last handle `release()`s.
+  Mounting happens at acquire time, ahead of any text, because assistive tech has to have been
+  observing a region *before* content arrives for the change to be announced at all.
+- `announce()` **appends a child node** (`aria-relevant="additions"`, `aria-atomic="false"`) rather
+  than rewriting one text node. That is what makes an identical repeat announce a second time — no
+  clear-then-restore-across-a-frame dance is needed — and each appended node is swept after
+  `messageTtlMs`, so returning focus to the page never finds stale text to re-read. Empty text is
+  ignored; `announce()` after `release()` is a no-op; `release()` is idempotent and removes that
+  handle's own not-yet-swept nodes.
+- The region carries `data-lr-live-region="<politeness>"` (exported as
+  `ANNOUNCEMENT_SINK_ATTRIBUTE`) so a consumer's DOM diffing, snapshot testing or `MutationObserver`
+  can recognize and ignore library-owned nodes appearing at the end of `<body>`.
+- Under SSR (no `document`) the call returns an inert handle instead of throwing, so callers need
+  no environment check.
+
 ### `lr-live-region`
 
 A visually-hidden ARIA live region that throttles and coalesces announcements instead of relaying
-every call verbatim, by composing an internal `Announcer`. A consumer typically mounts one
-`<lr-live-region>` per page/surface (much like `<lr-toast>` is one region per placement) and
-keeps a reference to call `announce()` from application code or a parent component.
+every call verbatim, by composing an internal `Announcer` with the shared light-DOM sink above. A
+consumer typically mounts one `<lr-live-region>` per page/surface (much like `<lr-toast>` is one
+region per placement) and keeps a reference to call `announce()` from application code or a parent
+component. The announced copy does **not** live in this element's shadow root: it is appended to
+the shared, ref-counted region in the host document, while the shadow `part="region"` element stays
+behind as an `aria-hidden` mirror of the latest text.
 
 **Properties:**
 
-- `mode: 'polite' | 'assertive' = 'polite'` (reflected) — `'polite'` renders `role="status"` +
-  `aria-live="polite"` (waits for the user to be idle); `'assertive'` renders `role="alert"` +
-  `aria-live="assertive"` (interrupts)
+- `mode: 'polite' | 'assertive' = 'polite'` (reflected) — selects which shared region announcements
+  land in: `'polite'` uses the `role="status"` + `aria-live="polite"` one (waits for the user to be
+  idle), `'assertive'` the `role="alert"` + `aria-live="assertive"` one (interrupts)
 - `throttleMs: number = 500` (attribute `throttle-ms`) — the coalescing window; see `Announcer`
   above
 
@@ -474,10 +524,14 @@ window and flushes immediately.
 
 **Slots:** none.
 
-**CSS parts:** `region` — the visually-hidden element carrying `role`/`aria-live`/`aria-atomic="true"`.
+**CSS parts:** `region` — the visually-hidden, `aria-hidden` mirror of the latest announced text.
+It carries no `role`/`aria-live` of its own: a second live region holding the same text would make
+browsers that *do* announce shadow live regions read every message twice.
 
-**Themeable custom properties:** none component-specific — the region is hidden via the shared
-`.sr-only` helper class (`internal/a11y.ts`), not tokenized CSS.
+**Themeable custom properties:** none component-specific — the shadow mirror is hidden via the
+shared `.sr-only` helper class (`internal/a11y.ts`) and the light-DOM region via the same
+visually-hidden algorithm inline (no stylesheet of this package reaches the consumer's light DOM),
+neither of them tokenized CSS.
 
 **Optional peer deps:** none.
 
@@ -497,19 +551,19 @@ A parent Lit component would instead hold the reference via `@query('lr-live-reg
 
 **Known gotchas:**
 
-- Re-announcing text identical to what was last written is special-cased: screen readers announce a
-  live region only on text-content _change_, so the component clears `textContent` first and
-  re-sets it on the next animation frame (not the same tick, which can coalesce into nothing ever
-  appearing to change) to give assistive tech a real empty-to-populated transition to observe. The
-  frame is scheduled and canceled through the region's own document window, including after the
-  element is adopted into an iframe.
-- The region's DOM is tracked outside Lit's own template bindings (`write()` mutates
-  `regionEl.textContent` directly) — an `announce()`/flush landing before `firstUpdated()` has run
-  (e.g. a consumer creates, appends, and calls `announce()` synchronously) is buffered and applied
-  on the next `firstUpdated()` rather than dropped.
-- `disconnectedCallback()` cancels any pending (unflushed) announcement, any before-first-render
-  buffered write, and any in-flight re-announce animation-frame callback — an element removed before
-  a deferred write lands silently drops it, including across a later reconnect.
+- The element mounts (and shares) a region in `document.body` for as long as it is connected — an
+  expected side effect, not a leak: it is ref-counted and removed once the last `<lr-live-region>`
+  of that politeness disconnects. Announcements are appended nodes, so re-announcing identical text
+  is read again with no special-casing, and each node is swept a few seconds later.
+- The announcement never waits on a render: it is appended as soon as the flush happens, including
+  when a consumer creates, appends and `announce()`s synchronously. Only the shadow mirror waits —
+  a write landing before `firstUpdated()` is buffered and applied on the next `firstUpdated()`.
+- Changing `mode` re-targets the shared region synchronously at announce time, so setting `mode`
+  and force-announcing in the same turn lands with the new urgency instead of racing Lit's
+  re-render. Adopting the element into an iframe likewise re-targets to that document's own region.
+- `disconnectedCallback()` cancels any pending (unflushed) announcement and any before-first-render
+  buffered write, and releases the shared region — an element removed before a deferred write lands
+  silently drops it, including across a later reconnect.
 - Changing `throttle-ms` updates the live `Announcer`'s window immediately, but a flush already
   scheduled under the old window keeps the deadline it was scheduled with.
 
@@ -1253,6 +1307,17 @@ small per-field text label), `hint`, `error` (`role="alert"`).
 The `label` part alias was deprecated in 8.0.0 in favor of the shared form vocabulary
 `form-control-label`. Both names remain on the same node during the compatibility window; use
 `::part(form-control-label)` in new CSS. The alias will not be removed before 10.0.0.
+
+**The required marker.** The `*` the legend grows while `required` is the library's shared
+required-field marker, and it takes the same three consumer-settable properties every other
+labelled control in the library does: `--lr-form-control-required-content` (the glyph, as a quoted
+CSS `content` string; `''` suppresses it), `--lr-form-control-required-color` (default
+`var(--lr-color-danger)`) and `--lr-form-control-required-offset` (default `0`). One declaration on
+an ancestor — `:root` included — retunes this marker along with every other one in the page. The
+one detail specific to this component: the glyph hangs off `[part="legend"]` rather than
+`[part="form-control-label"]`, because the label part here is a `<span>` *inside* the legend and
+the marker belongs after the whole label. With no label the legend is hidden and nothing is
+painted. Full description in `llms/shared.md` → "The required-field marker".
 
 **CSS states:** `:state(blank)` while the composite value is empty/incomplete;
 `:state(disabled)` for direct or fieldset-cascaded disablement.
