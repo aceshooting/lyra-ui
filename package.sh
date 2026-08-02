@@ -51,13 +51,28 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 cp -r "${SKILL_DIR}" "${TMP_DIR}/lyra-ui"
 find "${TMP_DIR}" -name '.DS_Store' -delete
-# ZIP stores per-entry timestamps and follows filesystem traversal order. Normalize both so
-# packaging unchanged inputs does not rewrite the tracked archive with metadata-only changes.
+# Build a byte-for-byte stable ZIP: normalize timestamps, permissions, traversal order, and
+# compression settings instead of relying on platform-specific `zip` metadata.
 find "${TMP_DIR}/lyra-ui" -exec touch -t 198001010000.00 {} +
-(
-  cd "${TMP_DIR}/lyra-ui"
-  find . -mindepth 1 -print | LC_ALL=C sort | zip -X -q "${OUTPUT_PATH}" -@
-)
+python3 - "${TMP_DIR}/lyra-ui" "${OUTPUT_PATH}" <<'PY'
+import os
+import sys
+import zipfile
+
+root, output = sys.argv[1:]
+with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+    for current, directories, files in os.walk(root):
+        directories.sort()
+        files.sort()
+        for name in files:
+            absolute = os.path.join(current, name)
+            relative = os.path.relpath(absolute, root).replace(os.sep, "/")
+            info = zipfile.ZipInfo(relative, (1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o100644 << 16
+            with open(absolute, "rb") as source:
+                archive.writestr(info, source.read(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+PY
 
 if [[ -s "${OUTPUT_PATH}" ]]; then
   echo "Created ${OUTPUT_PATH} ($(du -h "${OUTPUT_PATH}" | cut -f1))"
