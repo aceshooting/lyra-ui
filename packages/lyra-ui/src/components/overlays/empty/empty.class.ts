@@ -28,6 +28,8 @@ import { styles } from './empty.styles.js';
  * @cssprop --lr-empty-compact-font-size - Heading font size used in compact mode. Unset by
  * default (no fallback), so the heading keeps its ordinary inherited font size until a consumer
  * opts in.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraEmpty extends LyraElement {
   static override styles = [LyraElement.styles, styles];

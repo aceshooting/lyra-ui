@@ -66,6 +66,8 @@ export interface LyraPromptStudioEventMap {
  * @cssprop [--lr-prompt-studio-version-selected-bg=var(--lr-color-brand-quiet)] - Selected version background.
  * @cssprop [--lr-prompt-studio-version-selected-color=var(--lr-color-text)] - Selected version foreground.
  * @cssprop [--lr-prompt-studio-version-selected-hover-bg=var(--lr-color-brand-quiet)] - Selected version hover background.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   static override styles = [LyraElement.styles, styles];

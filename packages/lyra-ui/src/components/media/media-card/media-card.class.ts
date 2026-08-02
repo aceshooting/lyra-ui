@@ -138,6 +138,8 @@ function detectKind(mimeType: string): MediaCardKind {
  * primary use case) where the surrounding container already provides its own separation, so
  * cards don't double up on chrome. `frame` is the library-wide name for this container
  * treatment.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   static override styles = [LyraElement.styles, styles];

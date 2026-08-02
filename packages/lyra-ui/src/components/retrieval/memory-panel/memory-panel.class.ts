@@ -164,6 +164,8 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * medium-confidence item's confidence indicator.
  * @cssprop [--lr-memory-panel-confidence-danger-color=var(--lr-color-danger)] - Text color for a
  * low-confidence item's confidence indicator.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   static override styles = [LyraElement.styles, styles];

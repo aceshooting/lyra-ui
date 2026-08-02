@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './rag-answer.js';
 import type { LyraRagAnswer } from './rag-answer.class.js';
 describe('lr-rag-answer', () => {
@@ -9,6 +9,59 @@ describe('lr-rag-answer', () => {
     expect(el.shadowRoot!.querySelector('lr-grounding-summary')).to.exist;
     expect(el.shadowRoot!.querySelector('lr-citation-badge')).to.exist;
     expect(el.shadowRoot!.querySelector('lr-source-list')).to.exist;
+  });
+
+  it('settles generated and incremental sources across reconnect without a child change-in-update', async () => {
+    const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+    globalWarnings?.forEach((warning) => {
+      if (warning.includes('scheduled an update')) globalWarnings.delete(warning);
+    });
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+    try {
+      const el = (await fixture(html`<lr-rag-answer
+        answer="Answer"
+        .sources=${[
+          { id: 'd1', name: 'guide.md' },
+          { id: 'd2', name: 'spec.md' },
+        ]}
+      ></lr-rag-answer>`)) as LyraRagAnswer;
+      const sourceList = el.shadowRoot!.querySelector('lr-source-list') as HTMLElement & {
+        sourceCount: number;
+        updateComplete: Promise<boolean>;
+      };
+      await sourceList.updateComplete;
+      await aTimeout(0);
+      expect(sourceList.sourceCount).to.equal(2);
+
+      el.sources = [...el.sources, { id: 'd3', name: 'notes.md' }];
+      await el.updateComplete;
+      await sourceList.updateComplete;
+      await aTimeout(0);
+      expect(sourceList.sourceCount).to.equal(3);
+
+      const fixtureParent = el.parentElement!;
+      el.remove();
+      expect([...sourceList.children].map((child) => child.getAttribute('role'))).to.deep.equal([
+        null,
+        null,
+        null,
+      ]);
+      fixtureParent.append(el);
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(sourceList.sourceCount).to.equal(3);
+      expect([...sourceList.children].map((child) => child.getAttribute('role'))).to.deep.equal([
+        'listitem',
+        'listitem',
+        'listitem',
+      ]);
+    } finally {
+      console.warn = originalWarn;
+    }
+
+    expect(warnings.some((warning) => warning.includes('scheduled an update'))).to.be.false;
   });
   it('is accessible in loading and populated states', async () => {
     await expect((await fixture(html`<lr-rag-answer loading></lr-rag-answer>`)) as LyraRagAnswer).to.be.accessible();

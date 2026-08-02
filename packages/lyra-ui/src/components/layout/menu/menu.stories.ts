@@ -3,7 +3,7 @@ import { html } from 'lit';
 import './menu.js';
 import './menu-item.js';
 import '../../forms/icon-button/icon-button.js';
-import type { MenuSelectDetail } from './menu.js';
+import type { MenuItemSelectDetail } from './menu.js';
 
 const meta: Meta = {
   title: 'Menu',
@@ -208,16 +208,17 @@ export const ImperativeShowHide: Story = {
   `,
 };
 
-/** `lr-menu-select` is the recommended single event to listen to on
- *  `<lr-menu>` itself, rather than every individual `<lr-menu-item>`. */
+/** `lr-select` is the mapped single event to listen to on `<lr-menu>` itself, rather than every
+ * individual `<lr-menu-item>`. Its complete item detail and veto point are retained through nested
+ * submenus. */
 export const SelectEvent: Story = {
   render: () => html`
     <div>
       <lr-menu
         label="Row actions"
-        @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => {
+        @lr-select=${(e: CustomEvent<MenuItemSelectDetail>) => {
           const out = document.getElementById('menu-select-log');
-          if (out) out.textContent = `Selected: ${e.detail.value}`;
+          if (out) out.textContent = `Selected: ${e.detail.item.value}`;
         }}
       >
         <button slot="trigger" aria-label="Row actions" style="cursor:pointer;">⋮</button>
@@ -234,15 +235,15 @@ export const SelectEvent: Story = {
  *  a chevron, and a nested menu that opens beside it. ArrowRight steps in and ArrowLeft steps back
  *  out (swapped under RTL); hovering opens after a short intent delay, with enough grace on the way
  *  out to cut diagonally across the rows in between. Selections made in a submenu arrive as the
- *  outer menu's own single `lr-menu-select`. */
+ *  outer menu as one `lr-select`. */
 export const NestedSubmenus: Story = {
   render: () => html`
     <div>
       <lr-menu
         label="Row actions"
-        @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => {
+        @lr-select=${(e: CustomEvent<MenuItemSelectDetail>) => {
           const out = document.getElementById('menu-submenu-log');
-          if (out) out.textContent = `Selected: ${e.detail.value}`;
+          if (out) out.textContent = `Selected: ${e.detail.item.value}`;
         }}
       >
         <button slot="trigger" aria-label="Row actions" style="cursor:pointer;">⋮</button>

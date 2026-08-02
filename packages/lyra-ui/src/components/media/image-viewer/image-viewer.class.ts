@@ -12,7 +12,7 @@ import type {
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
-import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.js';
+import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -83,7 +83,7 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @customElement lr-image-viewer
  * @slot - None.
  * @event lr-load - Image finished loading. `detail: { naturalWidth, naturalHeight }`.
- * @event lr-zoom-change - `detail: { zoom }`, bubbles from the embedded zoomable-frame.
+ * @event lr-zoom-change - `detail: { zoom }`, bubbles from the embedded pan-zoom surface.
  * @event lr-rotation-change - `detail: { rotation }`.
  * @event lr-fit-change - `detail: { fit }`.
  * @event lr-highlight-activate - A highlight box was clicked/keyboard-activated. `detail: { id }`.
@@ -97,7 +97,7 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @csspart fit-control - The fit-mode select.
  * @csspart rotate-button - The rotate-90-clockwise button.
  * @csspart annotate-toggle - The annotation-mode toggle button.
- * @csspart frame - The embedded `lr-zoomable-frame`.
+ * @csspart frame - The embedded `lr-pan-zoom`.
  * @csspart image-wrapper - The rotated wrapper around the image and its overlays.
  * @csspart image - The `<img>` element.
  * @csspart highlight-layer - The overlay hosting highlight boxes.
@@ -126,6 +126,8 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  *   renders, resolved per tone from the `--lr-image-viewer-highlight-*-bg` knobs above. Its hover
  *   and pressed states are colour mixes taken from this value, so setting it directly retints all
  *   three at once for one highlight; retint a whole tone through the `-bg` knob instead.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -140,24 +142,24 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   /** Base scale at `zoom = 1`: `contain` fits the whole image in the frame, `width` fills the
    *  frame's inline size, `actual` shows the image at its natural pixel dimensions. */
   @property({ reflect: true }) fit: ImageFit = 'contain';
-  /** Multiplier over the fit-derived base scale, delegated to the embedded zoomable-frame. */
-  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeZoom
+  /** Multiplier over the fit-derived base scale, delegated to the embedded pan-zoom surface. */
+  // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeZoom
   @property({ type: Number, reflect: true }) zoom = 1;
 
-  /** Passed through to the embedded `<lr-zoomable-frame>` as `.minZoom`. Same default as
-   *  `<lr-zoomable-frame>` itself. Mirrors `<lr-lightbox>`'s own `minZoom` (name, default,
-   *  pass-through shape) -- both wrap the exact same `<lr-zoomable-frame>` pan/zoom surface. */
-  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeMinZoom
+  /** Passed through to the embedded `<lr-pan-zoom>` as `.minZoom`. Same default as
+   *  `<lr-pan-zoom>` itself. Mirrors `<lr-lightbox>`'s own `minZoom` (name, default,
+   *  pass-through shape) -- both wrap the exact same `<lr-pan-zoom>` surface. */
+  // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeMinZoom
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
 
-  /** Passed through to the embedded `<lr-zoomable-frame>` as `.maxZoom`. Mirrors
+  /** Passed through to the embedded `<lr-pan-zoom>` as `.maxZoom`. Mirrors
    *  `<lr-lightbox>`'s own `maxZoom`. */
-  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeMaxZoom
+  // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeMaxZoom
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
 
-  /** Passed through to the embedded `<lr-zoomable-frame>` as `.zoomStep`. Mirrors
+  /** Passed through to the embedded `<lr-pan-zoom>` as `.zoomStep`. Mirrors
    *  `<lr-lightbox>`'s own `zoomStep`. */
-  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeZoomStep
+  // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeZoomStep
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
   /** Clockwise rotation in 90-degree steps. */
   @property({ type: Number, reflect: true }) rotation: ImageRotation = 0;
@@ -170,7 +172,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   @state() private loadState: ImageLoadState = { kind: 'idle' };
   @state() private draft: AnnotationDraft | null = null;
 
-  @query('lr-zoomable-frame') private frameEl?: LyraZoomableFrame;
+  @query('lr-pan-zoom') private frameEl?: LyraPanZoom;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   @query('[part="image-wrapper"]') private wrapperEl?: HTMLElement;
 
@@ -215,7 +217,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     // Percent-rect geometry needs no scroll math -- the whole image is already laid out inside
-    // the embedded zoomable-frame's viewport. `scrollToAnchor()` (in the mixin) sets
+    // the embedded pan-zoom viewport. `scrollToAnchor()` (in the mixin) sets
     // `activeHighlightId` for an id-form anchor once this resolves `true`, and `renderHighlights()`
     // reflects that through the `[data-active]` highlight styling.
     return anchor.kind === 'region' && this.loadState.kind === 'loaded';
@@ -435,7 +437,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
     }
     const safeSrc = safeMediaSrc(this.src);
-    return html`<lr-zoomable-frame
+    return html`<lr-pan-zoom
       part="frame"
       exportparts="viewport,content,controls"
       .zoom=${this.zoom}
@@ -464,7 +466,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
         ${this.renderHighlights()}
         ${this.renderDraft()}
       </div>
-    </lr-zoomable-frame>`;
+    </lr-pan-zoom>`;
   }
 
   override render(): TemplateResult {

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/time-range/time-range.js';` (registers the tag; side-effect import)
 - **Class** `LyraTimeRange`, also available unregistered from `@aceshooting/lyra-ui/components/forms/time-range/time-range.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -41,17 +43,19 @@ consumer-facing `disabled` property/attribute itself.
   number; end: number }`; optional discrete presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
-  `lr-input`/`lr-change` pair a committed drag or keyboard step would
+  native/prefixed input and change sequences a committed drag or keyboard step would
 
-**Events:** `lr-input` (fired continuously while dragging or on each arrow/Home/End/PageUp/
-PageDown key press, `detail: { start, end }`), `lr-change` (fired on pointer release /
-key-up-commit, or when a preset button is clicked, `detail: { start, end }`)
+**Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),
+both fired continuously while dragging or on each arrow/Home/End/PageUp/PageDown key press; and a
+native-style composed `change` (no detail) then `lr-change` (`detail: { start, end }`), both fired
+on pointer release / key-up-commit, or when a preset button is clicked. The focused handle's native
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
+its prefixed alias `lr-focus` / `lr-blur` (no detail).
 
-**Methods:** `focus(options?)`, `blur()`, and `click()` forward to `[part="handle-start"]`. A
-two-handle control has no single canonical target, so the start handle is the one they address —
-call `.focus()` on `::part(handle-end)` yourself if you need the other. Without these overrides the
-host's own `focus()`/`blur()`/`click()` are no-ops, because the real control lives in the shadow
-root.
+**Methods:** `focus(options?)` and `click()` forward to `[part="handle-start"]`. `blur()` releases
+whichever handle actually owns focus, falling back to the start handle when neither does. Without
+these overrides the host's own `focus()`/`blur()`/`click()` are no-ops, because the real controls
+live in the shadow root. `getForm()` returns the browser-resolved owning form.
 
 `setCustomValidity(message)` is this control's **only** validation channel: every reachable range is
 intrinsically legal, so there is no constraint for it to compute. A non-empty message raises

@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/tab-group/tab-panel.js';` (registers the tag; side-effect import)
 - **Class** `LyraTabPanel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/tab-group/tab-panel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** nothing component-specific — inherits only the shared surface
+- **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,8 +23,10 @@ wrapper this element is projected into, and a second nested tabpanel role would 
 announced twice. Show/hide is the group's job too — this element is always present in the DOM.
 
 **Properties:** `name: string = ''` (reflected) — matches the `panel` of the `<lr-tab>` that reveals
-it. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** none; style the
-group's `panel` part instead. **Themeable custom properties:** none.
+it; `active: boolean = false` (reflected) — SSR visibility hint, synchronized by the owning group
+after hydration. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** `base`
+(the content wrapper); the owning group also exposes its outer `panel` wrapper. **Themeable custom
+properties:** `--padding` (default `0`) — inner padding on the panel's own `base` wrapper.
 ---
 
 ---

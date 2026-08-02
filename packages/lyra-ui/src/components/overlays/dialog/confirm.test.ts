@@ -50,7 +50,7 @@ it('resolves false and removes the dialog on a backdrop click', async () => {
   const dialog = getMountedDialog();
   await dialog.updateComplete;
 
-  (dialog.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+  (dialog.shadowRoot!.querySelector('[part~="backdrop"]') as HTMLElement).click();
 
   expect(await promise).to.be.false;
   expect(document.querySelector('lr-dialog')).to.not.exist;
@@ -121,7 +121,7 @@ it('uses the title as the dialog heading, which drives aria-label', async () => 
 
   const heading = dialog.querySelector('h2') as HTMLElement;
   expect(heading.textContent).to.equal('Delete conversation?');
-  const panel = dialog.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const panel = dialog.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
   expect(panel.getAttribute('aria-label')).to.equal('Delete conversation?');
 
   footerButtons(dialog)[0].click();

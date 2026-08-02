@@ -4,128 +4,165 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Migrating from Web Awesome or Shoelace
 
-Lyra has **no** runtime, theme, or design-token dependency on either library. It is not a fork and
-carries no `wa-` / `sl-` prefix or branding. What it does do, for the components that have a
-counterpart, is keep the same documented public vocabulary — attributes, slots, events, CSS parts,
-CSS custom properties and methods — under the `lr-` prefix.
+Lyra is an independent implementation with no runtime, theme, token, or source dependency on
+either library. Components with a documented counterpart use the corresponding public vocabulary
+under the `lr-` prefix where that is safe, but a relationship is not blanket permission to rename
+every use.
 
-That makes the bulk of a migration two mechanical rewrites: the tag names, and the package import.
+The checked-in migration inventory classifies all **87 Web Awesome 3.11.0** and **58 Shoelace
+2.20.1** tags. Each mapping has one decision:
 
-```
-<wa-combobox value="x" multiple with-clear>  →  <lr-combobox value="x" multiple with-clear>
-<wa-date-input value="2026-07-15">           →  <lr-date-input value="2026-07-15">
-```
+| Classification | Migration behavior |
+| --- | --- |
+| `exact` | Prefix/package substitution is automatic. |
+| `rewritten` | Automatic only with the complete declared member/default/import rewrites. |
+| `warning-required` | Left unchanged with a location-aware security or behavior warning. |
+| `conceptual-only` | A useful component relationship, never an automatic rename. |
+| `unsupported` | No public-surface-safe automatic mapping in this release. |
 
-```diff
-- import '@awesome.me/webawesome';
-+ import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
-+ import '@aceshooting/lyra-ui/components/forms/date-picker/date-input.js';
-```
+The generated
+<a href="./llms/migration.md" target="_blank" rel="noreferrer">`llms/migration.md`</a> is the
+authoritative per-tag list. It records the target, classification, rationale, deterministic
+rewrites, and remaining public-surface differences.
 
-A whole-package import maps to Lyra's root barrel, which registers everything and cannot be
-tree-shaken. Landing on granular per-component entries instead is the one place a migration is worth
-more than a rename — see [Getting started](?path=/docs/guides-getting-started--docs) for the path
-shape, and the import line printed at the top of every component page here for the exact specifier.
+## Start with the report
 
-## The rename tables
-
-The full mapping lives in
-<a href="./llms/migration.md" target="_blank" rel="noreferrer">`llms/migration.md`</a>, generated
-from the mirror tables in the package README: **84** documented `wa-*` mirrors and **58** `sl-*`
-ones. A tag absent from those tables has no documented counterpart — port it by hand, or check
-<a href="./llms/index.md" target="_blank" rel="noreferrer">`llms/index.md`</a> for a Lyra component
-that covers the same job under a different name.
-
-Most renames are the obvious one (`wa-button` → `lr-button`). The ones that are not:
-
-| From | To | Why |
-| --- | --- | --- |
-| `<wa-comparison>` / `<sl-image-comparer>` | `<lr-image-comparer>` | The two upstreams named the same component differently. |
-| `<wa-data-grid>` | `<lr-table>` | Lyra's table covers the data-grid role. |
-| `<wa-split-panel>` / `<sl-split-panel>` | `<lr-split>` | |
-| `<sl-range>` | `<lr-slider>` | |
-| `<sl-alert>` | `<lr-callout>` | |
-
-## The codemod
-
-The repository ships a small codemod that does the mechanical part of either migration. It is run
-from a checkout of the repository — it is **not** part of the published npm package:
+The repository ships a contract-aware codemod. It runs from a checkout of this repository; it is
+not part of the published npm package:
 
 ```bash
-node packages/lyra-ui/scripts/migrate-wa.mjs --dry-run path/to/your/src   # preview only
-node packages/lyra-ui/scripts/migrate-wa.mjs path/to/your/src             # apply
+node packages/lyra-ui/scripts/migrate-wa.mjs --dry-run \
+  --report=migration.json path/to/your/src
+node packages/lyra-ui/scripts/migrate-wa.mjs path/to/your/src
 ```
 
-It accepts directories, files and globs, and takes `--ext=html,ts,tsx,…` to narrow the file types
-(the default set covers HTML, TS/JS and their JSX variants, Vue, Svelte and Markdown/MDX;
-`node_modules`, `dist`, `build` and cache directories are skipped).
+The report is stable JSON suitable for review or CI. Each entry includes file, line, column,
+origin, tag/member, action, target, and warning code. Run the dry pass first, resolve every warning,
+apply, then run it again; the second applied pass is byte-idempotent.
 
-**The rename table is not duplicated inside the script.** It is parsed at run time from the same
-README mirror tables that `llms/migration.md` is generated from, so the codemod cannot drift out of
-sync with what the library documents.
+The default scan covers HTML, TypeScript/JavaScript and JSX variants, Vue, Svelte, Markdown, and
+MDX. Use `--ext=html,ts,tsx,…` to narrow it. Dependency/build/cache directories are skipped.
 
-### What it rewrites
+## What it can rewrite safely
 
-- `<wa-name` / `</wa-name` (and the `sl-` equivalents) — tag opens and closes.
-- A quoted string whose **entire** content is a mapped tag name, which is the
-  `customElements.get('wa-button')` / tag-name-array shape.
-- The package specifiers `@shoelace-style/shoelace` and `@awesome.me/webawesome` →
-  `@aceshooting/lyra-ui`, in `import`, dynamic `import()` and `require()`. That target is the root
-  barrel; narrowing it to per-component entries afterwards is the follow-up described above.
+For an `exact` or fully specified `rewritten` mapping, the codemod can update:
 
-### What it deliberately does not
+- opening/closing tags and exact tag-name string uses;
+- contract-recorded attributes/properties, slots, events, CSS parts, CSS custom properties, and methods;
+- explicit default-preservation attributes where the inventory declares them; and
+- supported side-effect registration imports, routing them to Lyra's real
+  `@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` path.
 
-- **Attribute names.** A rename that silently flipped an attribute's meaning would be worse than no
-  rename at all, so attributes are left for you and the component's own page.
-- **Deep subpath imports.** `@shoelace-style/shoelace/dist/components/button/button.js` has no safe
-  mechanical target, because Lyra's layout
-  (`@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js`) does not mirror either upstream's.
-  These are reported as warnings rather than guessed at — pick the matching entry from
-  <a href="./llms/index.md" target="_blank" rel="noreferrer">`llms/index.md`</a>.
-- **Components with no counterpart.** A row marked `— (extra)` in the README is never touched.
-- **Text that is not a tag usage.** Prose in a comment, a longer identifier, an unrelated class
-  name.
+A whole-package registration import is changed only when every discovered use from that ecosystem
+is automatic. That prevents a root import from being rewritten while a manual component beside it
+remains under the old package.
 
-### It is best-effort, not a guaranteed 1:1 API match
+Comments, prose, unrelated identifiers/packages, and partial strings are not treated as component
+uses. Member aliases are evaluated across the whole scanned target set, so the tool cannot rewrite
+a registration import while leaving a use of the old member behind in another file.
 
-Two limits are worth stating plainly.
+## What remains unchanged with a warning
 
-First, the codemod is a deliberately simple, regex-based text rewriter — not an AST or HTML parser.
-It anchors on the three shapes above to avoid false positives, but a quoted string that happens to
-be exactly a mapped tag name while not being used as a tag would still be rewritten. **Review a
-`--dry-run` before trusting it on unfamiliar code.**
+The codemod fails closed when it cannot prove the complete transformation. Common cases are:
 
-Second, and more importantly: a successful rename does not prove an API match. Mirroring is a
-completeness goal, not a guarantee that every attribute, default and event on every renamed tag
-behaves identically. Intentional differences are always stated on the component's own page and in
-its reference file — read that page for each tag you renamed, and treat the codemod's output as a
-starting point you then review.
+- `warning-required`, `conceptual-only`, `unsupported`, or unknown tags;
+- imports with bindings, dynamic specifiers, and unknown deep subpaths;
+- opaque framework spreads, DOM aliases, or dynamic values that hide an affected member/default;
+- a polarity/security/default difference without a deterministic safe rule; and
+- a conceptual target whose API still needs a manual port.
+
+Review or expand the dynamic use, choose the exact granular target from
+<a href="./llms/index.md" target="_blank" rel="noreferrer">`llms/index.md`</a>, and rerun. A
+warning is intentionally not converted into markup that parses cleanly but has inert members.
+
+## Important targets and v8 compatibility moves
+
+Most compatible relationships keep the suffix (`wa-button` → `lr-button`). These targets or local
+v8 moves deserve an explicit check:
+
+| Source/old surface | Target | Note |
+| --- | --- | --- |
+| `<wa-comparison>` / `<sl-image-comparer>` | `<lr-image-comparer>` | Different upstream names for the same before/after role; follow the generated classification before renaming. |
+| `<sl-range>` | `<lr-slider>` | Different tag name; review the value/event detail contract. |
+| `<wa-split-panel>` / `<sl-split-panel>` | `<lr-split-panel>` | Exact two-pane separator; the richer multi-pane `<lr-split>` is a separate Lyra component. |
+| `<sl-alert>` | `<lr-alert>` | Closed by default, with alert lifecycle/countdown and identity-preserving `toast()`. `<lr-callout>` remains the Web Awesome callout relationship. |
+| Lyra 7 `<lr-tabs>` | `<lr-tab-group>` | The old tag is not registered; update events and `--lr-tabs-*` custom properties too. |
+| Lyra 7 `<lr-tree-node>` | `<lr-tree-item>` | The old tag is not registered. |
+| Lyra 7 native `<lr-time-input>` | `<lr-native-time-input>` | `<lr-time-input>` is now the locale-aware segmented field and popup. |
+| Lyra 7 slotted/image `<lr-zoomable-frame>` | `<lr-pan-zoom>` | `<lr-zoomable-frame>` is now the sandboxed iframe preview. |
+
+The corresponding granular registrations are:
+
+```js
+import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';
+import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
+import '@aceshooting/lyra-ui/components/layout/tab-group/tab-group.js';
+import '@aceshooting/lyra-ui/components/data/tree/tree-item.js';
+import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
+import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
+```
+
+Page and media mappings register from their owning modules:
+
+```js
+import '@aceshooting/lyra-ui/components/layout/page/page.js';
+import '@aceshooting/lyra-ui/components/media/video/video.js';
+import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
+```
+
+## Preserving Lyra 7 overlay defaults
+
+This is a separate opt-in profile. The normal command never scans existing `lr-*` markup:
+
+```bash
+node packages/lyra-ui/scripts/migrate-wa.mjs --origin=lyra-v7 --dry-run \
+  --report=lyra-v7-migration.json path/to/your/src
+```
+
+It inserts these values only when absent and never renames an `lr-*` tag or import:
+
+| Component | Lyra 7 behavior made explicit |
+| --- | --- |
+| `<lr-popup>` | `strategy="fixed"`, `placement="bottom-start"`, `distance="4"`, `flip`, `shift` |
+| `<lr-popover>` | `placement="bottom-start"`, `distance="4"`, `without-arrow` |
+| `<lr-tooltip>` | `distance="6"`, `without-arrow` |
+
+True booleans use canonical attribute presence. Existing explicit values are untouched. An opaque
+spread or DOM alias blocks that component across the scanned target set rather than letting the
+tool guess beside a value it cannot see.
+
+## Security-preserving differences
+
+Some incompatibilities are deliberate and remain manual:
+
+- `<lr-include>` sanitizes every fragment, has no script-executing mode, and defaults to
+  `mode="same-origin"` rather than `cors`. Cross-origin or script-dependent uses get a warning.
+- Link-like Lyra controls derive `rel="noopener noreferrer"` from `target`; they do not expose an
+  independently settable `rel` that could reopen reverse tabnabbing.
+- `<lr-zoomable-frame>` rejects active/non-embeddable schemes, always carries a sandbox, and never
+  combines `allow-scripts` with `allow-same-origin`.
+- Remote media/viewer inputs retain Lyra's URL validation, byte/entry/row caps, sanitization, and
+  stale-request guards.
+
+These differences are part of the target contract, not omissions the migration should hide.
 
 ## Where the two upstreams disagree
 
-They use different names for identical concepts. Lyra accepts **both spellings and deprecates
-neither**, so whichever one you arrive with keeps working:
+Lyra accepts both spellings for equivalent public concepts and deprecates neither:
 
 | Web Awesome | Shoelace | On |
 | --- | --- | --- |
 | `with-clear` | `clearable` | `<lr-input>`, `<lr-select>`, `<lr-combobox>` |
 | `without-scroll-controls` | `no-scroll-controls` | `<lr-tab-group>` |
 
-A deprecation warning on one of two equally valid inputs would tell half the audience their
-migration was stale the day they finished it, so there isn't one.
-
-The same principle applies to CSS parts. Where a name would otherwise have to be swapped, the
-element carries **both** tokens in a space-separated `part` list (`part="label form-control-label"`
-is the shape) rather than renaming — so a copied `::part()` rule keeps matching, and so does the
-Lyra name. A member that quietly survives under a different name is worse than one that is missing,
-because nothing about the migrated markup ever looks wrong.
+Where a CSS part needs two public names, Lyra puts both tokens on the same rendered node rather than
+swapping one for the other. A copied `::part()` selector therefore keeps matching whichever
+upstream vocabulary it used.
 
 ## Themes and tokens
 
-Lyra reads **only** its own `--lr-theme-*` inputs. There is no implicit compatibility layer for
-another library's custom properties, and adding one would silently couple the two design systems.
-
-For a staged migration, map your existing values onto the Lyra inputs explicitly in application CSS:
+Lyra reads only its own `--lr-theme-*` inputs. Map existing values explicitly in application CSS;
+there is no implicit competitor-token compatibility layer:
 
 ```css
 :root {
@@ -134,31 +171,22 @@ For a staged migration, map your existing values onto the Lyra inputs explicitly
 }
 ```
 
-See [Theming](?path=/docs/guides-theming--docs) for what each layer covers and how far an override
-reaches.
+See [Theming](?path=/docs/guides-theming--docs) for the token layers and override reach.
 
-## After the rename
+## After the migration
 
-1. Replace the package import and run the codemod (dry run first).
-2. Open each renamed component's page here, and check the attributes, events and slots you actually
-   use against its documented surface.
-3. Re-check the accessibility story for anything interactive — focus order and roles are where a
-   near-miss surfaces.
-4. Map your theme values onto `--lr-theme-*`.
-5. Register a locale if you were relying on the previous library's translations — Lyra's built-in
-   strings come from its own runtime. See
-   [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs).
-
-## Most of the library has nothing to migrate from
-
-Everything marked `— (extra)` in the mirror tables has no upstream counterpart in the first place,
-so there is nothing to rename: install the package and import what you need. That is the majority of
-this library — every dashboard atom (stat cards, gauges, empty and skeleton states), the whole chart
-family, the temporal, graph and tree components, `<lr-map>`, and the entire conversation and agent
-family (chat messages, streaming states, tool-call chips and dialogs, citations, model and settings
-pickers). Neither upstream ships a chat or agent UI family at all.
+1. Resolve every report warning; do not treat a changed prefix as proof of API compatibility.
+2. Replace broad imports with the exact granular modules shown on each component page.
+3. Check the documented attributes, defaults, slots, events, parts, and methods you actually use.
+4. Exercise keyboard/focus behavior and the populated accessibility story for interactive surfaces.
+5. Map theme inputs and register/select the locales the application offers. Set `dir="rtl"`
+   explicitly for RTL layouts; locale selection alone does not change direction.
+6. Run the codemod again and keep the no-change report as migration evidence.
 
 ## Where to go next
 
-- [Getting started](?path=/docs/guides-getting-started--docs) — install, imports and subpaths.
-- [Theming](?path=/docs/guides-theming--docs) — mapping your existing design tokens across.
+- [Getting started](?path=/docs/guides-getting-started--docs) — granular imports and package
+  subpaths.
+- [Theming](?path=/docs/guides-theming--docs) — mapping design-token values.
+- <a href="./llms/migration.md" target="_blank" rel="noreferrer">`llms/migration.md`</a> — the
+  generated per-tag decision and rewrite details.

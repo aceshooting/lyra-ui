@@ -21,6 +21,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { styles } from './av-player.styles.js';
 
 export type AvKind = 'audio' | 'video';
@@ -168,6 +169,8 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @cssprop [--lr-av-player-cue-active-match-color=var(--lr-color-warning)] - Outline color of the
  *   `[part="cue"]` holding the current search match, leaving the other matches' dashed outline on
  *   the shared warning token.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -240,6 +243,13 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   });
   private lastTimeChangeAt = 0;
   private searchLocale = '';
+
+  constructor() {
+    super();
+    new ThemeWatcher(this, () => {
+      if (this.peaks.length > 0) this.drawWaveform();
+    });
+  }
 
   private get mediaEl(): HTMLMediaElement | undefined {
     return this.mediaController.element;

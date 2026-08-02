@@ -901,29 +901,29 @@ describe('localization', () => {
 });
 
 describe('zoomable (image format)', () => {
-  it('does not wrap in lr-zoomable-frame by default', async () => {
+  it('does not wrap in lr-pan-zoom by default', async () => {
     const el = (await fixture(
       html`<lr-document-preview mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('lr-pan-zoom').length).to.equal(0);
   });
 
-  it('wraps the image in lr-zoomable-frame when zoomable is set', async () => {
+  it('wraps the image in lr-pan-zoom when zoomable is set', async () => {
     const el = (await fixture(
       html`<lr-document-preview zoomable mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     await el.updateComplete;
-    const frame = el.shadowRoot!.querySelector('lr-zoomable-frame');
+    const frame = el.shadowRoot!.querySelector('lr-pan-zoom');
     expect(frame).to.exist;
     expect(frame!.querySelector('img')).to.exist;
   });
 
-  it('does not expose the internal zoomable-frame event', async () => {
+  it('does not expose the internal pan-zoom event', async () => {
     const el = (await fixture(
       html`<lr-document-preview zoomable mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
     )) as LyraDocumentPreview;
-    const frame = el.shadowRoot!.querySelector('lr-zoomable-frame')!;
+    const frame = el.shadowRoot!.querySelector('lr-pan-zoom')!;
     let leaked = 0;
     el.addEventListener('lr-zoom-change', () => leaked++);
     frame.dispatchEvent(new CustomEvent(
@@ -1128,7 +1128,7 @@ describe('back-compat (image format)', () => {
     )) as LyraDocumentPreview;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('img')).to.exist;
-    expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('lr-pan-zoom').length).to.equal(0);
   });
 
   it('text and generic format dispatch are untouched', async () => {
@@ -1136,7 +1136,7 @@ describe('back-compat (image format)', () => {
       html`<lr-document-preview mime-type="text/plain" src="https://example.test/notes.txt"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('lr-pan-zoom').length).to.equal(0);
   });
 });
 

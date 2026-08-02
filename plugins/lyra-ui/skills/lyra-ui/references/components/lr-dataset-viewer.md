@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/dataset-viewer/dataset-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraDatasetViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/dataset-viewer/dataset-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `papaparse` — see `llms/peers.md`
 - **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -24,10 +26,10 @@ is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed
 the virtualized list's `active-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
 focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
-`max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
-`['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
-contract).
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`); invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+`anchorKinds: readonly LyraAnchorKind[] = ['cell-range']` (this viewer's supported `LyraAnchor.kind`
+values for the shared anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every body cell's raw string value, ordered row then column (empty/whitespace query behaves like

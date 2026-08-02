@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraArchiveViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `jszip` — see `llms/peers.md`
 - **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -19,7 +21,8 @@ read straight from JSZip's local file header (`uncompressedSize`) when available
 fully decompressing only the rare entry missing that header field. The list composes
 `<lr-virtual-list>` for large archives.
 
-**Properties:** `src` and `name` are strings — a host-level `aria-label` takes precedence over
+**Properties:** `src: string = ''` and `name: string = ''` — a host-level `aria-label` takes
+precedence over
 `name` when naming the `role="region"` listing. The viewer also exposes the shared text-viewer
 contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
 

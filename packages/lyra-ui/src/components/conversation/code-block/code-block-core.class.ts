@@ -112,6 +112,8 @@ export interface LyraCodeBlockCoreEventMap {
  * @cssprop [--lr-code-block-active-line-outline-color=var(--lr-color-brand)] - Outline color of
  *   the line marked active by `active-highlight-id`, leaving every other `--lr-color-brand`
  *   surface in the component alone.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   static override styles = [LyraElement.styles, styles];

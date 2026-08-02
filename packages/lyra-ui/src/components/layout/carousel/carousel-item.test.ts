@@ -9,6 +9,16 @@ describe('<lr-carousel-item>', () => {
     expect(el.textContent).to.contain('Slide content');
   });
 
+  it('inherits and applies the mapped --aspect-ratio property', async () => {
+    const el = await fixture<LyraCarouselItem>(html`
+      <lr-carousel-item style="inline-size: 300px; --aspect-ratio: 3 / 2">
+        Slide content
+      </lr-carousel-item>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).aspectRatio).to.equal('3 / 2');
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraCarouselItem>(html`<lr-carousel-item>Slide content</lr-carousel-item>`);
     await expect(el).to.be.accessible();

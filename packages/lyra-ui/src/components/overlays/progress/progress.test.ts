@@ -2,11 +2,53 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './progress-bar.js';
 import './progress-ring.js';
 import type { LyraProgressBar } from './progress-bar.js';
-import { ringStyles } from './progress.styles.js';
+import type { LyraProgressRing } from './progress-ring.js';
+
+it('reflects value on both progress components', async () => {
+  const bar = (await fixture(html`<lr-progress-bar></lr-progress-bar>`)) as LyraProgressBar;
+  const ring = (await fixture(html`<lr-progress-ring></lr-progress-ring>`)) as LyraProgressRing;
+  bar.value = 25;
+  ring.value = 30;
+  await Promise.all([bar.updateComplete, ring.updateComplete]);
+  expect(bar.getAttribute('value')).to.equal('25');
+  expect(ring.getAttribute('value')).to.equal('30');
+});
+
+it('accepts both upstream progress custom-property vocabularies', async () => {
+  const bar = await fixture(html`
+    <lr-progress-bar
+      value="50"
+      style="--height: 12px; --track-color: rgb(1, 2, 3); --indicator-color: rgb(4, 5, 6); --label-color: rgb(7, 8, 9)"
+    >Upload</lr-progress-bar>
+  `);
+  const track = bar.shadowRoot!.querySelector<HTMLElement>('[part="track"]')!;
+  const indicator = bar.shadowRoot!.querySelector<HTMLElement>('[part="indicator"]')!;
+  const label = bar.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+  expect(getComputedStyle(track).blockSize).to.equal('12px');
+  expect(getComputedStyle(track).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(indicator).backgroundColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(label).color).to.equal('rgb(7, 8, 9)');
+
+  const ring = await fixture(html`
+    <lr-progress-ring
+      value="50"
+      style="--size: 64px; --track-width: 8px; --indicator-width: 6px; --track-color: rgb(10, 11, 12); --indicator-color: rgb(13, 14, 15); --indicator-transition-duration: 2s"
+    ></lr-progress-ring>
+  `);
+  const ringBase = ring.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const ringTrack = ring.shadowRoot!.querySelector<SVGCircleElement>('[part="track"]')!;
+  const ringIndicator = ring.shadowRoot!.querySelector<SVGCircleElement>('[part="indicator"]')!;
+  expect(getComputedStyle(ringBase).inlineSize).to.equal('64px');
+  expect(getComputedStyle(ringTrack).strokeWidth).to.equal('8px');
+  expect(getComputedStyle(ringIndicator).strokeWidth).to.equal('6px');
+  expect(getComputedStyle(ringTrack).stroke).to.equal('rgb(10, 11, 12)');
+  expect(getComputedStyle(ringIndicator).stroke).to.equal('rgb(13, 14, 15)');
+  expect(getComputedStyle(ringIndicator).transitionDuration).to.equal('2s');
+});
 
 it('renders determinate progress with a bounded value', async () => {
   const el = (await fixture(html`<lr-progress-bar value="25" max="50"></lr-progress-bar>`)) as LyraProgressBar;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-valuenow')).to.equal('25');
   expect(base.querySelector('[part="indicator"]')?.getAttribute('style')).to.contain('50%');
   await expect(el).to.be.accessible();
@@ -20,11 +62,84 @@ it('shows the computed percent, not the raw value, in the show-value label when 
   expect(label?.textContent).to.equal('50%');
 });
 
+it('keeps a default-slot label visible and accessible independently of show-value', async () => {
+  const el = (await fixture(html`
+    <lr-progress-bar value="25">Uploading files</lr-progress-bar>
+  `)) as LyraProgressBar;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[role="progressbar"]') as HTMLElement;
+  expect(label.hidden).to.be.false;
+  const slot = label.querySelector('slot:not([name])') as HTMLSlotElement;
+  expect(slot.assignedNodes().map((node) => node.textContent).join('').trim()).to.equal('Uploading files');
+  expect(getComputedStyle(label).display).to.equal('flex');
+  expect(base.getAttribute('aria-label')).to.equal('Uploading files');
+});
+
+it('supports label plus accessible-label as equivalent progress naming surfaces', async () => {
+  const bar = (await fixture(html`
+    <lr-progress-bar value="25" label="Upload progress"></lr-progress-bar>
+  `)) as LyraProgressBar;
+  expect(bar.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label')).to.equal(
+    'Upload progress',
+  );
+
+  const ring = await fixture(html`
+    <lr-progress-ring value="25" accessible-label="Sync progress"></lr-progress-ring>
+  `);
+  expect(ring.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label')).to.equal(
+    'Sync progress',
+  );
+});
+
+it('applies mapped progress color, size, and transition aliases to rendered parts', async () => {
+  const bar = await fixture(html`
+    <lr-progress-bar
+      value="50"
+      style="
+        --lr-progress-track-height: 12px;
+        --lr-progress-track-color: rgb(1, 2, 3);
+        --lr-progress-indicator-color: rgb(4, 5, 6);
+        --lr-progress-label-color: rgb(7, 8, 9);
+      "
+    >Upload</lr-progress-bar>
+  `);
+  const track = bar.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  const indicator = bar.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+  const label = bar.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect(getComputedStyle(track).blockSize).to.equal('12px');
+  expect(getComputedStyle(track).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(indicator).backgroundColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(label).color).to.equal('rgb(7, 8, 9)');
+
+  const ring = await fixture(html`
+    <lr-progress-ring
+      value="50"
+      style="
+        --lr-progress-ring-size: 64px;
+        --lr-progress-ring-track-width: 8px;
+        --lr-progress-ring-indicator-width: 6px;
+        --lr-progress-ring-track-color: rgb(10, 11, 12);
+        --lr-progress-ring-indicator-color: rgb(13, 14, 15);
+        --lr-progress-ring-indicator-transition-duration: 2s;
+      "
+    ></lr-progress-ring>
+  `);
+  const ringBase = ring.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const ringTrack = ring.shadowRoot!.querySelector('[part="track"]') as SVGCircleElement;
+  const ringIndicator = ring.shadowRoot!.querySelector('[part="indicator"]') as SVGCircleElement;
+  expect(getComputedStyle(ringBase).inlineSize).to.equal('64px');
+  expect(getComputedStyle(ringTrack).strokeWidth).to.equal('8px');
+  expect(getComputedStyle(ringIndicator).strokeWidth).to.equal('6px');
+  expect(getComputedStyle(ringTrack).stroke).to.equal('rgb(10, 11, 12)');
+  expect(getComputedStyle(ringIndicator).stroke).to.equal('rgb(13, 14, 15)');
+  expect(getComputedStyle(ringIndicator).transitionDuration).to.equal('2s');
+});
+
 it('locale-formats visible percentage output and forwards live host naming to both progress roles', async () => {
   const bar = (await fixture(
     html`<lr-progress-bar lang="ar" value="25" max="50" show-value aria-label="Upload"></lr-progress-bar>`,
   )) as LyraProgressBar;
-  const barBase = bar.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const barBase = bar.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(bar.shadowRoot!.querySelector('[part="label"] span')?.textContent).to.equal(
     new Intl.NumberFormat('ar', { style: 'percent', maximumFractionDigits: 0 }).format(0.5),
   );
@@ -34,7 +149,7 @@ it('locale-formats visible percentage output and forwards live host naming to bo
   expect(barBase.getAttribute('aria-label')).to.equal('Download');
 
   const ring = await fixture(html`<lr-progress-ring lang="de" value="25" max="50" aria-label="Sync"></lr-progress-ring>`);
-  const ringBase = ring.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const ringBase = ring.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(ring.shadowRoot!.querySelector('[part="label"]')?.textContent).to.equal(
     new Intl.NumberFormat('de', { style: 'percent', maximumFractionDigits: 0 }).format(0.5),
   );
@@ -45,13 +160,13 @@ it('uses visible consumer labels in the accessible names of both progress roles'
   const bar = (await fixture(html`
     <lr-progress-bar value="25" show-value><span slot="label">Upload files</span></lr-progress-bar>
   `)) as LyraProgressBar;
-  const barBase = bar.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const barBase = bar.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(barBase.getAttribute('aria-label')).to.equal('Upload files');
 
   const ring = await fixture(html`
     <lr-progress-ring value="25"><strong>Sync files</strong></lr-progress-ring>
   `);
-  const ringBase = ring.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const ringBase = ring.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(ringBase.getAttribute('aria-label')).to.equal('Sync files');
 
   const label = bar.querySelector('[slot="label"]')!;
@@ -71,7 +186,7 @@ it('applies --lr-progress-height to the track', async () => {
 
 it('omits aria-valuenow for indeterminate progress', async () => {
   const el = (await fixture(html`<lr-progress-bar indeterminate></lr-progress-bar>`)) as LyraProgressBar;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.hasAttribute('aria-valuenow')).to.be.false;
 });
 
@@ -112,42 +227,65 @@ it('renders an accessible progress ring', async () => {
 
 it('guards against a non-finite or non-positive max (would otherwise divide by zero / render aria-valuemax="NaN")', async () => {
   const nanMax = (await fixture(html`<lr-progress-bar max="abc" value="25"></lr-progress-bar>`)) as LyraProgressBar;
-  const nanBase = nanMax.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const nanBase = nanMax.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(nanBase.getAttribute('aria-valuemax')).to.equal('100');
   expect(nanBase.querySelector('[part="indicator"]')?.getAttribute('style')).to.not.contain('NaN');
 
   const zeroMax = (await fixture(html`<lr-progress-bar max="0" value="25"></lr-progress-bar>`)) as LyraProgressBar;
-  const zeroBase = zeroMax.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const zeroBase = zeroMax.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(zeroBase.getAttribute('aria-valuemax')).to.equal('100');
 
   const ring = await fixture(html`<lr-progress-ring max="-10" value="25"></lr-progress-ring>`);
-  expect(ring.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuemax')).to.equal('100');
+  expect(ring.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuemax')).to.equal('100');
 });
 
 it('clamps an out-of-range or non-finite value to [0, max] for progress-bar and progress-ring', async () => {
   const negative = (await fixture(html`<lr-progress-bar value="-10" max="50"></lr-progress-bar>`)) as LyraProgressBar;
-  expect(negative.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
+  expect(negative.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
 
   const over = (await fixture(html`<lr-progress-bar value="9999" max="50"></lr-progress-bar>`)) as LyraProgressBar;
-  expect(over.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuenow')).to.equal('50');
+  expect(over.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('50');
 
   const nan = (await fixture(html`<lr-progress-bar max="50"></lr-progress-bar>`)) as LyraProgressBar;
   nan.value = NaN;
   await nan.updateComplete;
-  expect(nan.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
+  expect(nan.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
   expect(nan.shadowRoot!.querySelector('[part="indicator"]')?.getAttribute('style')).to.not.contain('NaN');
 
   const ring = await fixture(html`<lr-progress-ring value="9999" max="50"></lr-progress-ring>`);
-  expect(ring.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuenow')).to.equal('50');
+  expect(ring.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('50');
 });
 
 it('spins the indeterminate ring indicator and disables the animation under prefers-reduced-motion', async () => {
   const el = await fixture(html`<lr-progress-ring indeterminate></lr-progress-ring>`);
   const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    expect(getComputedStyle(indicator).animationName).to.equal('none');
+    return;
+  }
   expect(getComputedStyle(indicator).animationName).to.equal('lr-progress-ring-spin');
-  expect(ringStyles.cssText).to.match(
-    /@media \(prefers-reduced-motion: reduce\) \{[^}]*\[part='indicator'\][^}]*animation: none !important/,
-  );
+  const reducedRule = el.shadowRoot!.adoptedStyleSheets
+    .flatMap((sheet) => [...sheet.cssRules])
+    .find(
+      (rule): rule is CSSMediaRule =>
+        rule instanceof CSSMediaRule &&
+        rule.conditionText === '(prefers-reduced-motion: reduce)' &&
+        [...rule.cssRules].some(
+          (nested) =>
+            nested instanceof CSSStyleRule &&
+            nested.selectorText.includes('indicator') &&
+            nested.style.getPropertyPriority('animation') === 'important',
+        ),
+    );
+  expect(reducedRule).to.exist;
+  const originalCondition = reducedRule!.media.mediaText;
+  try {
+    reducedRule!.media.mediaText = 'all';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(getComputedStyle(indicator).animationName).to.equal('none');
+  } finally {
+    reducedRule!.media.mediaText = originalCondition;
+  }
 });
 
 it('inherits the shared ambient timing token for indeterminate bar and ring motion', async () => {

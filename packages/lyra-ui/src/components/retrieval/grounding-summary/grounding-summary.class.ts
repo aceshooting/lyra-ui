@@ -62,6 +62,8 @@ export interface GroundingSummaryThresholds {
  *   when `span` is unset).
  * @csspart claims - Claim-level evidence, when present and enabled.
  * @csspart empty - The empty-state message, shown when `assessment` is `null`.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventMap> {
   static override styles = [LyraElement.styles, styles];

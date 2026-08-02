@@ -8,7 +8,7 @@ import { styles } from './code-editor.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
 
-export interface LyraCodeEditorEventMap { input: CustomEvent<{ value: string }>; change: CustomEvent<{ value: string }>; blur: CustomEvent<undefined>; focus: CustomEvent<undefined>; }
+export interface LyraCodeEditorEventMap { input: CustomEvent<{ value: string }>; change: CustomEvent<{ value: string }>; blur: CustomEvent<undefined>; focus: CustomEvent<undefined>; 'lr-invalid': CustomEvent<undefined>; }
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
@@ -38,6 +38,7 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @event change - Native change timing.
  * @event focus - The internal textarea received focus; re-dispatched as a bubbling, composed event.
  * @event blur - The internal textarea lost focus; re-dispatched as a bubbling, composed event.
+ * @event lr-invalid - The editor failed a validity check.
  * @csspart form-control - Outer wrapper.
  * @csspart form-control-label - Label. Also carries the `label` part token for compatibility.
  * @csspart label - Alias of `form-control-label`.
@@ -49,6 +50,8 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @cssprop [--lr-code-editor-min-block-size=var(--lr-size-8rem)] - Minimum block size of the editor frame and its textarea.
  * @cssprop [--lr-code-editor-line-height=1.5] - Line height shared by the gutter and the textarea, so line numbers stay aligned with their lines.
  * @cssprop [--lr-code-editor-tab-size=2] - The textarea's `tab-size`. The single channel for tab width — the class writes this token rather than setting `tab-size` directly.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   static override styles = [LyraElement.styles, styles];

@@ -127,6 +127,8 @@ interface DragState {
  * @cssprop [--lr-dock-panel-collapsed-size=var(--lr-icon-button-size)] - The extent the panel
  *   keeps along its resize axis while `collapsed` -- enough to still host the toggle button that
  *   re-expands it.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   static override styles = [LyraElement.styles, styles];

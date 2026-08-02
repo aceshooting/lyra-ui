@@ -184,6 +184,8 @@ function isMultiOperator(op: QueryBuilderOperator | ''): boolean {
  * @csspart remove-button - A row's remove `lr-icon-button`.
  * @csspart add-button - The "Add condition" `lr-button`.
  * @csspart empty - The message shown when there are no fields, or no conditions yet.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
   static override styles = [LyraElement.styles, styles];

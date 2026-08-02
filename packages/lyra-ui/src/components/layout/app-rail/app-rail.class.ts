@@ -179,6 +179,8 @@ export interface LyraAppRailEventMap {
  *   </lr-app-rail-item>
  * </lr-app-rail>
  * ```
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   static override styles = [LyraElement.styles, styles];

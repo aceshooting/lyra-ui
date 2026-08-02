@@ -19,56 +19,56 @@ export const styles = css`
        rules each restating a colour. */
     --lr-switch-track-fill: var(--lr-color-border);
   }
-  :host([checked]) {
-    --lr-switch-track-fill: var(--lr-color-brand);
-  }
-  [part='base'] {
+  [part~='base'] {
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-s);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
-  [part='base']:focus-visible {
+  [part~='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* Gives mouse users the same 'this is interactive' cue the :focus-visible ring above already
      gives keyboard users, and a press that reads as deeper than the hover. Gated on
-     :host(:not(:disabled)) the same way lr-checkbox's/lr-radio's [part='base']:hover rules are
-     (this control isn't a native button, so a bare [part='base']:hover would otherwise also fire
+     :host(:not(:disabled)) the same way lr-checkbox's/lr-radio's [part~='base']:hover rules are
+     (this control isn't a native button, so a bare [part~='base']:hover would otherwise also fire
      while disabled).
      Both land on the TRACK, and both are colour mixes. This was a filter: brightness() lift on
-     [part='base'] before 8.0.0, which was wrong twice over: a filter multiplies every channel, so
+     [part~='base'] before 8.0.0, which was wrong twice over: a filter multiplies every channel, so
      it moved the track only by luck of its tone, and it applies to the whole subtree, so it faded
      the label text sitting next to the track as well. */
-  :host(:not(:disabled)) [part='base']:hover [part='track'] {
+  :host(:not(:disabled)) [part~='base']:hover [part~='track'] {
     background: color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
-  :host(:not(:disabled)) [part='base']:active [part='track'] {
+  :host(:not(:disabled)) [part~='base']:active [part~='track'] {
     background: color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  :host(:disabled) [part='base'] {
+  :host(:disabled) [part~='base'] {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
 
-  [part='track'] {
+  [part~='track'] {
     position: relative;
     flex: 0 0 auto;
-    inline-size: var(--lr-switch-track-inline-size);
-    block-size: var(--lr-switch-track-block-size);
+    inline-size: var(--width, var(--lr-switch-track-inline-size));
+    block-size: var(--height, var(--lr-switch-track-block-size));
     border-radius: var(--lr-radius-pill);
     background: var(--lr-switch-track-fill);
     transition: background-color var(--lr-transition-fast);
+  }
+  [part~='track'][part~='checked'] {
+    --lr-switch-track-fill: var(--lr-color-brand);
   }
 
   [part='thumb'] {
     position: absolute;
     inset-block-start: var(--lr-switch-thumb-offset);
     inset-inline-start: var(--lr-switch-thumb-offset);
-    inline-size: calc(var(--lr-switch-track-block-size) - (var(--lr-switch-thumb-offset) * 2));
-    block-size: calc(var(--lr-switch-track-block-size) - (var(--lr-switch-thumb-offset) * 2));
+    inline-size: var(--thumb-size, calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2)));
+    block-size: var(--thumb-size, calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2)));
     border-radius: 50%;
     background: var(--lr-color-surface);
     /* Animates the logical 'inset-inline-start' rather than a physical
@@ -77,9 +77,10 @@ export const styles = css`
        properties approach to RTL (see internal/lyra-element.ts). */
     transition: inset-inline-start var(--lr-transition-fast);
   }
-  :host([checked]) [part='thumb'] {
+  [part~='track'][part~='checked'] [part='thumb'] {
     inset-inline-start: calc(
-      var(--lr-switch-track-inline-size) - var(--lr-switch-track-block-size) +
+      var(--width, var(--lr-switch-track-inline-size)) -
+        var(--thumb-size, calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2))) -
         var(--lr-switch-thumb-offset)
     );
   }
@@ -93,13 +94,13 @@ export const styles = css`
     color: var(--lr-color-text);
   }
 
-  [part='hint'] {
+  [part~='hint'] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
   /* :empty never matches here -- same fix as [part='hint']/[part='error'] on lr-select. */
-  [part='hint'][hidden] {
+  [part~='hint'][hidden] {
     display: none;
   }
   [part='error'] {
@@ -112,14 +113,14 @@ export const styles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    [part='track'],
+    [part~='track'],
     [part='thumb'] {
       transition: none !important;
     }
   }
   [part='form-control'],
   [part='label'],
-  [part='hint'],
+  [part~='hint'],
   [part='error'] {
     min-inline-size: 0;
     max-inline-size: 100%;

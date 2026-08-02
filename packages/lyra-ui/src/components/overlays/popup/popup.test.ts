@@ -19,8 +19,48 @@ it('renders nothing visible until activated', async () => {
   const el = await fixture<LyraPopup>(html`
     <lr-popup><button slot="anchor">Anchor</button><div>Content</div></lr-popup>
   `);
-  expect(getComputedStyle(popupOf(el)).display).to.equal('none');
+  const popupStyle = getComputedStyle(popupOf(el));
+  expect(popupStyle.visibility).to.equal('hidden');
+  expect(popupStyle.pointerEvents).to.equal('none');
   await expect(el).to.be.accessible();
+});
+
+it('exposes the positioned popup and consumes the mapped transition aliases', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup active style="--show-duration: 123ms; --hide-duration: 234ms">
+      <button slot="anchor">Anchor</button><div>Content</div>
+    </lr-popup>
+  `);
+  expect(el.popup.localName).to.equal('div');
+  expect(partsOf(el.popup)).to.include('popup');
+  expect(getComputedStyle(el.popup).transitionDuration).to.equal('0.123s');
+
+  el.active = false;
+  await el.updateComplete;
+  expect(getComputedStyle(el.popup).transitionDuration).to.equal('0.234s');
+  expect(getComputedStyle(el.popup).pointerEvents).to.equal('none');
+  // Leave a real-timer margin above 234ms: under a parallel three-engine run Firefox can defer
+  // the transition's first sampled frame, so a 26ms margin is not enough to prove the end state.
+  await aTimeout(500);
+  expect(getComputedStyle(el.popup).opacity).to.equal('0');
+  expect(getComputedStyle(el.popup).visibility).to.equal('hidden');
+});
+
+it('accepts popup writes without replacing the shadow-owned positioning node', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup active><button slot="anchor">Anchor</button><div>Content</div></lr-popup>
+  `);
+  const renderedPopup = el.popup;
+  const replacement = document.createElement('section');
+
+  expect(() => (el.popup = replacement)).to.not.throw();
+  expect(el.popup).to.equal(renderedPopup);
+  expect(el.popup).to.equal(popupOf(el));
+
+  el.reposition();
+  await settle(el);
+  expect(el.popup.style.position).to.equal('absolute');
+  expect(replacement.style.position).to.equal('');
 });
 
 it('positions the popup against the slotted anchor once active', async () => {
@@ -34,7 +74,7 @@ it('positions the popup against the slotted anchor once active', async () => {
   const popup = popupOf(el);
   const anchor = el.querySelector('button')!;
   expect(getComputedStyle(popup).display).to.not.equal('none');
-  expect(getComputedStyle(popup).position).to.equal('fixed');
+  expect(getComputedStyle(popup).position).to.equal('absolute');
   // Rendered geometry, not stylesheet text: the popup must actually sit below its anchor.
   expect(popup.getBoundingClientRect().top).to.be.greaterThan(anchor.getBoundingClientRect().top);
 });
@@ -43,13 +83,54 @@ it('anchors to an element resolved through for', async () => {
   const wrapper = await fixture(html`
     <div>
       <button id="target" style="margin-block-start: 4rem;">Target</button>
-      <lr-popup active for="target"><div>Content</div></lr-popup>
+      <lr-popup active for="target" placement="bottom"><div>Content</div></lr-popup>
     </div>
   `);
   const el = wrapper.querySelector('lr-popup') as LyraPopup;
   await aTimeout(50);
   const target = wrapper.querySelector('#target')!;
   expect(popupOf(el).getBoundingClientRect().top).to.be.greaterThan(target.getBoundingClientRect().top);
+});
+
+it('accepts anchor as either an id string or an element reference', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="popup-anchor-alias" style="position: fixed; inset-block-start: 80px; inset-inline-start: 90px;">
+        Anchor
+      </button>
+      <lr-popup active anchor="popup-anchor-alias" placement="bottom">
+        <div style="inline-size: 60px;">Content</div>
+      </lr-popup>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-popup') as LyraPopup;
+  const firstAnchor = wrapper.querySelector('button') as HTMLElement;
+  await settle(el);
+  expect(popupOf(el).getBoundingClientRect().top).to.be.closeTo(firstAnchor.getBoundingClientRect().bottom, 2);
+
+  const elementAnchor = document.createElement('button');
+  elementAnchor.style.cssText =
+    'position: fixed; inset-block-start: 180px; inset-inline-start: 190px; inline-size: 40px;';
+  elementAnchor.textContent = 'Second anchor';
+  wrapper.prepend(elementAnchor);
+  el.anchor = elementAnchor;
+  await settle(el);
+  expect(popupOf(el).getBoundingClientRect().top).to.be.closeTo(elementAnchor.getBoundingClientRect().bottom, 2);
+});
+
+it('lets virtualAnchor override anchor without removing either compatibility path', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="popup-anchor-priority" style="position: fixed; inset-block-start: 40px; inset-inline-start: 40px;">
+        Anchor
+      </button>
+      <lr-popup active anchor="popup-anchor-priority" placement="bottom"><div>Content</div></lr-popup>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-popup') as LyraPopup;
+  el.virtualAnchor = { x: 300, y: 220 };
+  await settle(el);
+  expect(popupOf(el).getBoundingClientRect().top).to.be.closeTo(220, 2);
 });
 
 it('anchors to a virtual rect and re-places when the rect moves', async () => {
@@ -84,9 +165,18 @@ it('renders an arrow only when asked', async () => {
   expect(withArrow.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
 });
 
+it('uses the mapped arrow color alias', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup active arrow style="--arrow-color: rgb(1, 2, 3)">
+      <button slot="anchor">A</button><div>C</div>
+    </lr-popup>
+  `);
+  expect(getComputedStyle(arrowOf(el)).backgroundColor).to.equal('rgb(1, 2, 3)');
+});
+
 it('reports the placement it flipped to', async () => {
   const el = await fixture<LyraPopup>(html`
-    <lr-popup placement="top"><button slot="anchor">A</button><div style="block-size: 3rem;">C</div></lr-popup>
+    <lr-popup placement="top" flip><button slot="anchor">A</button><div style="block-size: 3rem;">C</div></lr-popup>
   `);
   // The anchor sits at the very top of the viewport, so `top` cannot fit and `flip()` must move it.
   const repositioned = oneEvent(el, 'lr-reposition');
@@ -97,7 +187,7 @@ it('reports the placement it flipped to', async () => {
 
 it('does not flip when flip is turned off', async () => {
   const el = await fixture<LyraPopup>(html`
-    <lr-popup active placement="top" flip="false">
+    <lr-popup active placement="top">
       <button slot="anchor">A</button><div style="block-size: 3rem;">C</div>
     </lr-popup>
   `);
@@ -106,8 +196,8 @@ it('does not flip when flip is turned off', async () => {
 });
 
 it('is accessible while active, with content rendered', async () => {
-  // The inactive fixture above proves nothing about the state that actually renders: `display:
-  // none` hides every node axe would have had an opinion about.
+  // The inactive fixture above proves nothing about the state that actually renders: hidden
+  // content is absent from the accessibility tree.
   const el = await fixture<LyraPopup>(html`
     <lr-popup active arrow>
       <button slot="anchor">Anchor</button>
@@ -120,19 +210,19 @@ it('is accessible while active, with content rendered', async () => {
 });
 
 describe('positioning strategy', () => {
-  it('positions with the fixed strategy by default (regression)', async () => {
+  it('uses the mapped absolute strategy by default', async () => {
     const el = await fixture<LyraPopup>(html`
       <lr-popup active><button slot="anchor">A</button><div>C</div></lr-popup>
     `);
     await settle(el);
-    expect(el.strategy).to.equal('fixed');
-    expect(getComputedStyle(popupOf(el)).position).to.equal('fixed');
+    expect(el.strategy).to.equal('absolute');
+    expect(getComputedStyle(popupOf(el)).position).to.equal('absolute');
   });
 
   it('places against the offset parent under strategy="absolute"', async () => {
     const wrapper = await fixture(html`
       <div style="position: relative; margin-block-start: 120px;">
-        <lr-popup active strategy="absolute" distance="10">
+        <lr-popup active strategy="absolute" placement="bottom" distance="10">
           <button slot="anchor">Anchor</button>
           <div style="inline-size: 4rem;">C</div>
         </lr-popup>
@@ -152,7 +242,7 @@ describe('positioning strategy', () => {
 describe('sync', () => {
   it('leaves the popup content-sized when sync is unset (regression)', async () => {
     const el = await fixture<LyraPopup>(html`
-      <lr-popup active>
+      <lr-popup active strategy="fixed" placement="bottom" shift>
         <button slot="anchor" style="inline-size: 240px;">Anchor</button>
         <div style="inline-size: 20px;">C</div>
       </lr-popup>
@@ -164,7 +254,7 @@ describe('sync', () => {
 
   it('matches the popup inline size to the anchor for sync="width"', async () => {
     const el = await fixture<LyraPopup>(html`
-      <lr-popup active sync="width">
+      <lr-popup active placement="bottom" sync="width">
         <button slot="anchor" style="inline-size: 240px;">Anchor</button>
         <div style="inline-size: 20px;">C</div>
       </lr-popup>
@@ -176,7 +266,7 @@ describe('sync', () => {
 
   it('releases the anchor sizing when sync is turned back off', async () => {
     const el = await fixture<LyraPopup>(html`
-      <lr-popup active sync="width">
+      <lr-popup active placement="bottom" sync="width">
         <button slot="anchor" style="inline-size: 240px;">Anchor</button>
         <div style="inline-size: 20px;">C</div>
       </lr-popup>
@@ -191,7 +281,7 @@ describe('sync', () => {
 
   it('matches the popup block size to the anchor for sync="height"', async () => {
     const el = await fixture<LyraPopup>(html`
-      <lr-popup active sync="height">
+      <lr-popup active placement="bottom" sync="height">
         <button slot="anchor" style="block-size: 90px;">Anchor</button>
         <div>C</div>
       </lr-popup>
@@ -205,7 +295,7 @@ describe('sync', () => {
 describe('auto-size', () => {
   it('narrows the popup when auto-size-padding exceeds the shared padding', async () => {
     const base = await fixture<LyraPopup>(html`
-      <lr-popup active>
+      <lr-popup active strategy="fixed" placement="bottom" shift>
         <button slot="anchor">A</button>
         <div style="inline-size: 4000px;">C</div>
       </lr-popup>
@@ -214,7 +304,7 @@ describe('auto-size', () => {
     const baseWidth = popupOf(base).getBoundingClientRect().width;
 
     const constrained = await fixture<LyraPopup>(html`
-      <lr-popup active auto-size="horizontal" auto-size-padding="200">
+      <lr-popup active strategy="fixed" placement="bottom" shift auto-size="horizontal" auto-size-padding="200">
         <button slot="anchor">A</button>
         <div style="inline-size: 4000px;">C</div>
       </lr-popup>
@@ -229,7 +319,7 @@ describe('auto-size', () => {
     // Both anchors are viewport-fixed at the same point so the two fixtures stacking in the
     // document cannot move the measurement out from under the comparison.
     const anchored = (extra: unknown) => html`
-      <lr-popup active auto-size=${extra === null ? nothing : (extra as string)} auto-size-padding="200">
+      <lr-popup active strategy="fixed" placement="bottom" auto-size=${extra === null ? nothing : (extra as string)} auto-size-padding="200">
         <button slot="anchor" style="position: fixed; inset-block-start: 60px; inset-inline-start: 40px;">A</button>
         <div style="inline-size: 4000px; block-size: 4000px;">C</div>
       </lr-popup>
@@ -252,7 +342,7 @@ describe('auto-size', () => {
           id="box"
           style="position: fixed; inset-block-start: 40px; inset-inline-start: 40px; inline-size: 260px; block-size: 200px;"
         ></div>
-        <lr-popup active auto-size="horizontal">
+        <lr-popup active strategy="fixed" placement="bottom" auto-size="horizontal">
           <button slot="anchor" style="position: fixed; inset-block-start: 60px; inset-inline-start: 50px;">A</button>
           <div style="inline-size: 4000px;">C</div>
         </lr-popup>
@@ -270,7 +360,7 @@ describe('auto-size', () => {
 describe('flip options', () => {
   it('flips into a requested fallback placement instead of the opposite side', async () => {
     const el = await fixture<LyraPopup>(html`
-      <lr-popup active placement="top" flip-fallback-placements="right">
+      <lr-popup active placement="top" flip flip-fallback-placements="right">
         <button slot="anchor" style="position: fixed; inset-block-start: 0; inset-inline-start: 200px;">A</button>
         <div style="inline-size: 80px; block-size: 40px;">C</div>
       </lr-popup>
@@ -283,7 +373,7 @@ describe('flip options', () => {
 
   it('keeps the initial placement for flip-fallback-strategy="initial-placement"', async () => {
     const bestFit = await fixture<LyraPopup>(html`
-      <lr-popup active placement="top" flip-padding="10000">
+      <lr-popup active placement="top" flip flip-padding="10000">
         <button slot="anchor" style="position: fixed; inset-block-start: 4px; inset-inline-start: 200px;">A</button>
         <div style="inline-size: 80px; block-size: 40px;">C</div>
       </lr-popup>
@@ -292,7 +382,7 @@ describe('flip options', () => {
     expect(sideOf(bestFit)).to.include('bottom');
 
     const initial = await fixture<LyraPopup>(html`
-      <lr-popup active placement="top" flip-padding="10000" flip-fallback-strategy="initial-placement">
+      <lr-popup active placement="top" flip flip-padding="10000" flip-fallback-strategy="initial-placement">
         <button slot="anchor" style="position: fixed; inset-block-start: 4px; inset-inline-start: 200px;">A</button>
         <div style="inline-size: 80px; block-size: 40px;">C</div>
       </lr-popup>
@@ -303,7 +393,7 @@ describe('flip options', () => {
 
   it('flips once flip-padding eats the space the popup needs', async () => {
     const fits = await fixture<LyraPopup>(html`
-      <lr-popup active placement="bottom">
+      <lr-popup active placement="bottom" flip>
         <button slot="anchor" style="position: fixed; inset-block-end: 60px; inset-inline-start: 200px;">A</button>
         <div style="inline-size: 80px; block-size: 30px;">C</div>
       </lr-popup>
@@ -312,7 +402,7 @@ describe('flip options', () => {
     expect(sideOf(fits)).to.include('bottom');
 
     const padded = await fixture<LyraPopup>(html`
-      <lr-popup active placement="bottom" flip-padding="40">
+      <lr-popup active placement="bottom" flip flip-padding="40">
         <button slot="anchor" style="position: fixed; inset-block-end: 60px; inset-inline-start: 200px;">A</button>
         <div style="inline-size: 80px; block-size: 30px;">C</div>
       </lr-popup>
@@ -327,7 +417,7 @@ describe('flip options', () => {
         <div
           style="position: fixed; inset-block-start: 100px; inset-inline-start: 100px; inline-size: 300px; block-size: 150px;"
         >
-          <lr-popup active placement="bottom-start">
+          <lr-popup active placement="bottom-start" flip>
             <button slot="anchor" style="position: absolute; inset-block-start: 100px; inset-inline-start: 20px;">
               A
             </button>
@@ -353,7 +443,7 @@ describe('shift options', () => {
   it('holds shift-padding away from the viewport edge', async () => {
     const build = async (padding: string) =>
       (await fixture<LyraPopup>(html`
-        <lr-popup active placement="bottom-start" shift-padding=${padding}>
+        <lr-popup active placement="bottom-start" shift shift-padding=${padding}>
           <button slot="anchor" style="position: fixed; inset-block-start: 100px; inset-inline-end: 0;">A</button>
           <div style="inline-size: 200px;">C</div>
         </lr-popup>
@@ -369,16 +459,16 @@ describe('shift options', () => {
     expect(tightRight - wideRight).to.be.closeTo(52, 2);
   });
 
-  it('defaults shift padding to the shared padding when shift-padding is unset (regression)', async () => {
+  it('defaults shift padding to zero independently of the shared padding', async () => {
     const el = await fixture<LyraPopup>(html`
-      <lr-popup active placement="bottom-start" padding="50">
+      <lr-popup active placement="bottom-start" shift padding="50">
         <button slot="anchor" style="position: fixed; inset-block-start: 100px; inset-inline-end: 0;">A</button>
         <div style="inline-size: 200px;">C</div>
       </lr-popup>
     `);
     await settle(el);
-    expect(el.shiftPadding).to.equal(null);
-    expect(window.innerWidth - popupOf(el).getBoundingClientRect().right).to.be.closeTo(50, 2);
+    expect(el.shiftPadding).to.equal(0);
+    expect(window.innerWidth - popupOf(el).getBoundingClientRect().right).to.be.closeTo(0, 2);
   });
 
   it('shifts inside shift-boundary rather than the viewport', async () => {
@@ -387,7 +477,7 @@ describe('shift options', () => {
         <div
           style="position: fixed; inset-block-start: 100px; inset-inline-start: 100px; inline-size: 200px; block-size: 200px;"
         >
-          <lr-popup active placement="bottom-start">
+          <lr-popup active placement="bottom-start" shift>
             <button slot="anchor" style="position: absolute; inset-block-start: 10px; inset-inline-start: 120px;">
               A
             </button>
@@ -408,7 +498,7 @@ describe('shift options', () => {
     bounded.el.shiftBoundary = bounded.box;
     await settle(bounded.el);
     expect(popupOf(bounded.el).getBoundingClientRect().right).to.be.at.most(
-      bounded.box.getBoundingClientRect().right - 6,
+      bounded.box.getBoundingClientRect().right + 1,
     );
   });
 });
@@ -529,19 +619,67 @@ it('leaves every new positioning knob at its documented default', async () => {
   const el = await fixture<LyraPopup>(html`
     <lr-popup><button slot="anchor">A</button><div>C</div></lr-popup>
   `);
-  expect(el.strategy).to.equal('fixed');
+  expect(el.placement).to.equal('top');
+  expect(el.strategy).to.equal('absolute');
+  expect(el.distance).to.equal(0);
+  expect(el.flip).to.equal(false);
+  expect(el.shift).to.equal(false);
+  expect(el.padding).to.equal(0);
+  expect(el.boundary).to.equal('viewport');
   expect(el.flipFallbackPlacements).to.equal('');
   expect(el.flipFallbackStrategy).to.equal('best-fit');
   expect(el.flipBoundary).to.equal(null);
   expect(el.flipPadding).to.equal(0);
   expect(el.shiftBoundary).to.equal(null);
-  expect(el.shiftPadding).to.equal(null);
+  expect(el.shiftPadding).to.equal(0);
   expect(el.autoSize).to.equal(null);
   expect(el.autoSizeBoundary).to.equal(null);
   expect(el.autoSizePadding).to.equal(0);
   expect(el.sync).to.equal(null);
   expect(el.hoverBridge).to.equal(false);
   expect(el.arrowPlacement).to.equal('anchor');
+  expect(el.arrowPadding).to.equal(10);
+});
+
+describe('boundary alias', () => {
+  async function clippedPopup(boundary: 'viewport' | 'scroll'): Promise<LyraPopup> {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        style="position: fixed; inset-block-start: 80px; inset-inline-start: 80px;
+          inline-size: 260px; block-size: 150px; overflow: hidden;"
+      >
+        <lr-popup active placement="bottom" flip boundary=${boundary}>
+          <button
+            slot="anchor"
+            style="position: absolute; inset-block-end: 8px; inset-inline-start: 70px;"
+          >
+            Anchor
+          </button>
+          <div style="inline-size: 100px; block-size: 70px;">Content</div>
+        </lr-popup>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-popup') as LyraPopup;
+    await settle(el);
+    return el;
+  }
+
+  it('measures boundary="viewport" against the viewport instead of clipping ancestors', async () => {
+    const el = await clippedPopup('viewport');
+    expect(sideOf(el)).to.include('bottom');
+  });
+
+  it('measures boundary="scroll" against clipping ancestors', async () => {
+    const el = await clippedPopup('scroll');
+    expect(sideOf(el)).to.include('top');
+  });
+
+  it('keeps a separate flipBoundary authoritative over the shared boundary alias', async () => {
+    const el = await clippedPopup('scroll');
+    el.flipBoundary = [];
+    await settle(el);
+    expect(sideOf(el)).to.include('bottom');
+  });
 });
 
 it('ignores an unrecognised auto-size or sync axis rather than half-applying it', async () => {

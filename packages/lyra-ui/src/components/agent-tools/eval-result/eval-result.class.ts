@@ -78,6 +78,8 @@ export interface LyraEvalResultEventMap {
  * @csspart diff-label-old - The baseline run's caption.
  * @csspart diff-label-new - The selected run's caption.
  * @csspart diff-view - The `<lr-diff-view>` comparing the baseline and selected runs' output.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
   static override styles = [LyraElement.styles, styles];

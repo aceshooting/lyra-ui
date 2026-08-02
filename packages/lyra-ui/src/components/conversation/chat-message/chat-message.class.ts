@@ -171,6 +171,8 @@ export interface LyraChatMessageEventMap {
  * @cssprop [--lr-chat-message-bubble-radius=var(--lr-radius)] - Bubble corner radius. Bubble-only by design — `collapse-button` and `retry-button` keep reading the shared `--lr-radius`, so a rounder bubble never desyncs the controls from the rest of the library.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Streaming-indicator animation duration
  *   and timing function.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   static override styles = [LyraElement.styles, styles];

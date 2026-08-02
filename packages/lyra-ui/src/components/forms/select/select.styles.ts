@@ -47,7 +47,7 @@ export const styles = css`
   /* :empty never matches here -- the part always contains a literal slot
      child element regardless of assigned/text content -- so real emptiness
      is tracked in JS (hasLabelSlot) and reflected via the hidden attribute
-     instead (same fix as [part='hint']/[part='error'] below, and as
+     instead (same fix as [part~='hint']/[part='error'] below, and as
      lr-combobox). Without this, the required-asterisk ::after below
      (which attaches to this box) renders a stray ' *' with nothing before
      it whenever label is unset. */
@@ -65,6 +65,10 @@ export const styles = css`
   :host([pill]) {
     --lr-select-radius: var(--lr-radius-pill);
   }
+  :host([filled]) [part='trigger'] {
+    background: var(--lr-color-surface-raised);
+    border-color: transparent;
+  }
 
   /* Positioning context for [part='clear-button'], which is a *sibling* of the trigger rather
      than a child: the trigger is a real <button>, and a nested button would be invalid
@@ -73,7 +77,12 @@ export const styles = css`
      is unchanged. */
   .control {
     position: relative;
-    display: block;
+    display: grid;
+  }
+
+  .control > [part='trigger'],
+  .control > [part='tags'] {
+    grid-area: 1 / 1;
   }
 
   [part='trigger'] {
@@ -200,6 +209,12 @@ export const styles = css`
   .trigger-label[data-placeholder] {
     color: var(--lr-color-text-quiet);
   }
+  /* In multiple mode the real, independently-focusable tags are a sibling layered over the
+     trigger. Keep the trigger's text as its accessible/value fallback and sizing seam, but do not
+     paint a duplicate underneath the chips. */
+  .trigger-label[data-multiple-value] {
+    visibility: hidden;
+  }
 
   /* Multi-select chip row. Wraps rather than scrolls, so a long selection grows the trigger's
      block size instead of hiding chips behind an invisible scroll axis. */
@@ -211,6 +226,14 @@ export const styles = css`
     gap: var(--lr-space-2xs);
     min-inline-size: 0;
   }
+  .control > [part='tags'] {
+    z-index: var(--lr-layer-content);
+    align-self: center;
+    margin-inline-start: var(--lr-form-control-padding-inline);
+    margin-inline-end: calc(var(--lr-select-expand-size) + var(--lr-form-control-padding-inline));
+    padding-block: var(--lr-form-control-padding-block);
+    pointer-events: none;
+  }
   /* [part~=] because the overflow chip carries two part names ('tag tag-overflow'), and an exact
      [part='tag'] match would skip it -- state lives in the part name because a state selector
      after ::part() never matches. */
@@ -218,12 +241,13 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     box-sizing: border-box;
-    max-inline-size: 100%;
+    max-inline-size: min(100%, var(--tag-max-size, var(--lr-size-12rem)));
     padding: var(--lr-select-tag-padding);
     border-radius: var(--lr-radius-xs);
     background: var(--lr-color-surface-raised);
     font-size: var(--lr-select-tag-font-size);
     line-height: var(--lr-line-height-none);
+    pointer-events: auto;
   }
   [part='tag-label'] {
     min-inline-size: 0;
@@ -236,12 +260,45 @@ export const styles = css`
     white-space: nowrap;
   }
 
+  [part~='tag__remove-button'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    margin-block: calc(var(--lr-space-2xs) * -1);
+    margin-inline-end: calc(var(--lr-space-xs) * -1);
+    padding: var(--lr-space-2xs);
+    border: none;
+    border-radius: var(--lr-radius-xs);
+    background: transparent;
+    color: var(--lr-color-text-quiet);
+    cursor: pointer;
+  }
+  [part~='tag__remove-button']:hover {
+    color: var(--lr-color-text);
+    background: var(--lr-color-brand-quiet);
+  }
+  [part~='tag__remove-button']:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part~='tag__remove-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part~='tag__remove-button']:disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
+  }
+
   /* Sits in the trigger's reserved inline-end band (see .control[data-clearable] below), outboard
      of the expand icon: the trigger is a <button>, so the clear action cannot live inside it and
      has to be overlaid from the wrapper instead. Reserving the band with padding rather than
      overlapping keeps the trigger's own content clear of it in both directions. */
   [part='clear-button'] {
     position: absolute;
+    z-index: var(--lr-layer-content);
     inset-inline-end: 0;
     inset-block-start: 50%;
     transform: translateY(-50%);
@@ -302,7 +359,7 @@ export const styles = css`
   }
 
   [part='listbox'] {
-    position: fixed;
+    position: absolute;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
     max-block-size: var(--lr-size-18rem);
@@ -329,14 +386,21 @@ export const styles = css`
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
     transition:
-      opacity var(--lr-transition-fast),
-      transform var(--lr-transition-fast),
-      visibility var(--lr-transition-fast);
+      opacity var(--hide-duration, var(--lr-transition-fast)),
+      transform var(--hide-duration, var(--lr-transition-fast)),
+      visibility var(--hide-duration, var(--lr-transition-fast));
+  }
+  :host([hoist]) [part='listbox'] {
+    position: fixed;
   }
   :host([open]) [part='listbox'] {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
+    transition:
+      opacity var(--show-duration, var(--lr-transition-fast)),
+      transform var(--show-duration, var(--lr-transition-fast)),
+      visibility var(--show-duration, var(--lr-transition-fast));
   }
   @media (prefers-reduced-motion: reduce) {
     [part='listbox'] {
@@ -410,7 +474,7 @@ export const styles = css`
 
   [part='form-control'],
   [part='form-control-label'],
-  [part='hint'],
+  [part~='hint'],
   [part='error'] {
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -441,13 +505,13 @@ export const styles = css`
     letter-spacing: var(--lr-size-0-04em);
     color: var(--lr-color-text-quiet);
   }
-  [part='hint'] {
+  [part~='hint'] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
   /* :empty never matches here either -- same fix as lr-combobox's hint/error. */
-  [part='hint'][hidden] {
+  [part~='hint'][hidden] {
     display: none;
   }
   [part='error'] {

@@ -11,7 +11,7 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lr-carousel aria-label="Product previews">
+  render: () => html`<lr-carousel navigation pagination aria-label="Product previews">
     <div style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">First panel</div>
     <div style="padding: var(--lr-space-2xl); background: var(--lr-color-success-quiet);">Second panel</div>
     <div style="padding: var(--lr-space-2xl); background: var(--lr-color-warning-quiet);">Third panel</div>
@@ -20,19 +20,19 @@ export const Default: Story = {
 
 /** Slides live in a native scroll-snap track: swipe on a touch device, pan with a trackpad, or use
  *  the buttons and arrow keys. However the scroller comes to rest, the resting slide becomes the
- *  active one and `lr-slide-change` fires. */
+ *  active one and `lr-slide-change` fires. `mouse-dragging` adds the equivalent desktop gesture. */
 export const TouchScrolling: Story = {
   name: 'Touch scrolling (scroll-snap)',
   parameters: {
     docs: {
       description: {
         story:
-          'Drag or swipe the slides directly. The active slide is adopted from wherever the scroller settles, so the indicators stay in sync with a gesture exactly as they do with the buttons.',
+          'Drag with a mouse, swipe on touch, or pan with a trackpad. The active slide is adopted from wherever the scroller settles, so pagination stays in sync with a gesture exactly as it does with the buttons.',
       },
     },
   },
   render: () => html`<div style="inline-size: 22rem">
-    <lr-carousel aria-label="Swipeable panels">
+    <lr-carousel mouse-dragging navigation pagination aria-label="Swipeable panels">
       <div style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">Swipe me</div>
       <div style="padding: var(--lr-space-2xl); background: var(--lr-color-success-quiet);">Second panel</div>
       <div style="padding: var(--lr-space-2xl); background: var(--lr-color-warning-quiet);">Third panel</div>
@@ -40,13 +40,15 @@ export const TouchScrolling: Story = {
   </div>`,
 };
 
-/** `--lr-carousel-slide-basis` sets each slide's share of the track, so several can share the view
- *  while every slide still snaps to the viewport's inline start. */
+/** `slides-per-page` controls the visible allocation and `slides-per-move` controls navigation. */
 export const MultipleSlidesPerView: Story = {
-  name: 'Multiple slides per view (--lr-carousel-slide-basis)',
+  name: 'Multiple slides per view',
   render: () => html`<lr-carousel
+    navigation
+    pagination
+    slides-per-page="2"
+    slides-per-move="2"
     aria-label="Product previews"
-    style="--lr-carousel-slide-basis: 50%"
   >
     <div style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">First panel</div>
     <div style="padding: var(--lr-space-2xl); background: var(--lr-color-success-quiet);">Second panel</div>
@@ -56,7 +58,14 @@ export const MultipleSlidesPerView: Story = {
 };
 
 export const LoopingAutoplay: Story = {
-  render: () => html`<lr-carousel loop autoplay autoplay-interval="3000" aria-label="Announcements">
+  render: () => html`<lr-carousel
+    loop
+    autoplay
+    navigation
+    pagination
+    autoplay-interval="3000"
+    aria-label="Announcements"
+  >
     <p>Announcement one</p>
     <p>Announcement two</p>
   </lr-carousel>`,
@@ -76,6 +85,7 @@ export const ThemedIndicator: Story = {
     },
   },
   render: () => html`<lr-carousel
+    pagination
     aria-label="Product previews"
     style="--lr-carousel-indicator-current-bg: ${storyColor(
       'successQuiet',
@@ -84,5 +94,30 @@ export const ThemedIndicator: Story = {
     <div style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">First panel</div>
     <div style="padding: var(--lr-space-2xl); background: var(--lr-color-success-quiet);">Second panel</div>
     <div style="padding: var(--lr-space-2xl); background: var(--lr-color-warning-quiet);">Third panel</div>
+  </lr-carousel>`,
+};
+
+/** Vertical carousels move on the block axis and use Up/Down for keyboard navigation. */
+export const Vertical: Story = {
+  render: () => html`<lr-carousel
+    orientation="vertical"
+    navigation
+    pagination
+    aria-label="Release highlights"
+    style="block-size: var(--lr-size-22rem)"
+  >
+    <div style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">First panel</div>
+    <div style="padding: var(--lr-space-2xl); background: var(--lr-color-success-quiet);">Second panel</div>
+    <div style="padding: var(--lr-space-2xl); background: var(--lr-color-warning-quiet);">Third panel</div>
+  </lr-carousel>`,
+};
+
+/** Both navigation glyphs can be replaced without rebuilding the buttons or their labels. */
+export const CustomNavigationIcons: Story = {
+  render: () => html`<lr-carousel navigation pagination aria-label="Product previews">
+    <span slot="previous-icon" aria-hidden="true">←</span>
+    <span slot="next-icon" aria-hidden="true">→</span>
+    <div style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">First panel</div>
+    <div style="padding: var(--lr-space-2xl); background: var(--lr-color-success-quiet);">Second panel</div>
   </lr-carousel>`,
 };

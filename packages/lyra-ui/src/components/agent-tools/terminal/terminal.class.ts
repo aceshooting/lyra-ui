@@ -164,6 +164,8 @@ export interface LyraTerminalEventMap {
  *   line containing a non-active search match.
  * @cssprop [--lr-terminal-search-active-outline-color=var(--lr-color-brand)] - Outline color for
  *   the active search match's line.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

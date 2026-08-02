@@ -139,6 +139,31 @@ export const WithCaret: Story = {
   `,
 };
 
+export const UpstreamCompatibilityAliases: Story = {
+  name: 'Shoelace and Web Awesome aliases',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Shoelace `caret`, `outline`, `circle`, `prefix`, and `suffix` markup remains functional ' +
+          'beside Web Awesome’s `with-caret`, `start`, and `end` vocabulary. The aliases delegate ' +
+          'to Lyra’s existing state, so canonical properties and defaults are unchanged.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex;align-items:center;gap:var(--lr-space-s);flex-wrap:wrap">
+      <lr-button variant="primary" outline caret>
+        <span slot="prefix" aria-hidden="true">★</span>
+        Migrated action
+        <span slot="suffix" aria-hidden="true">→</span>
+      </lr-button>
+      <lr-button circle aria-label="Settings"><span aria-hidden="true">⚙</span></lr-button>
+      <lr-button with-caret with-start with-end>WA presence hints</lr-button>
+    </div>
+  `,
+};
+
 export const Link: Story = {
   name: 'Link (inline text)',
   parameters: {

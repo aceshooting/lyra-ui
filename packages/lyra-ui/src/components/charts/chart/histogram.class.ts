@@ -16,6 +16,8 @@ import { styles } from './histogram.styles.js';
  * controller; this composes `binValues()` with the plain `bar` type.
  *
  * @customElement lr-histogram
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraHistogram extends LyraChart {
   // Explicit rather than relying on `LyraChart`'s inherited `static styles` —
@@ -33,7 +35,7 @@ export class LyraHistogram extends LyraChart {
   bins = 10;
   @property({ attribute: false }) values: number[] = [];
   /** Dataset label used for the legend/tooltip/accessible summary. Falls back to a localized "Frequency" when unset. */
-  @property() label = '';
+  @property() override label = '';
 
   /**
    * Appends raw finite samples to `values`. The inherited signature is retained so histogram

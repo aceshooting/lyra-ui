@@ -182,6 +182,8 @@ export interface LyraConversationItemEventMap {
  *   `[part="base"]` padding while `compact`.
  * @cssprop [--lr-conversation-item-compact-gap=var(--lr-space-2xs)] - Gap between `[part="base"]`'s
  *   columns while `compact`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraConversationItem extends LyraElement<LyraConversationItemEventMap> {
   static override styles = [LyraElement.styles, styles];

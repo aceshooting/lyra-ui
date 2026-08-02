@@ -151,7 +151,7 @@ it('lr-copy-button value is the assembled label+text of every segment, in order,
     'System prompt\nYou are helpful.\n\nChunk 1\nParis is the capital of France.',
   );
   const listener = oneEvent(el, 'lr-copy');
-  (copyButton.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement).click();
+  (copyButton.shadowRoot!.querySelector('button[part~="button"]') as HTMLButtonElement).click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ text: copyButton.value });
 });

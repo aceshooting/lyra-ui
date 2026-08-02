@@ -31,6 +31,26 @@ export const ValueIsReadOnly: Story = {
   `,
 };
 
+export const Orientations: Story = {
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-l);">
+      <lr-checkbox-group label="Vertical" name="vertical-topics">
+        <lr-checkbox value="news">News</lr-checkbox>
+        <lr-checkbox value="product">Product updates</lr-checkbox>
+      </lr-checkbox-group>
+      <lr-checkbox-group
+        label="Horizontal"
+        name="horizontal-topics"
+        orientation="horizontal"
+        style="--gap:var(--lr-space-l);"
+      >
+        <lr-checkbox value="news">News</lr-checkbox>
+        <lr-checkbox value="product">Product updates</lr-checkbox>
+      </lr-checkbox-group>
+    </div>
+  `,
+};
+
 export const Sizes: StoryObj = {
   name: 'Size ladder',
   parameters: {
@@ -43,9 +63,9 @@ export const Sizes: StoryObj = {
   },
   render: () => html`
     <div style="display: grid; gap: var(--lr-space-m); justify-items: start;">
-      <lr-checkbox-group size="s" name="pick-s" label="Size s"><lr-checkbox value="a" size="s">Alpha</lr-checkbox><lr-checkbox value="b" size="s">Bravo</lr-checkbox></lr-checkbox-group>
-      <lr-checkbox-group size="m" name="pick-m" label="Size m"><lr-checkbox value="a" size="m">Alpha</lr-checkbox><lr-checkbox value="b" size="m">Bravo</lr-checkbox></lr-checkbox-group>
-      <lr-checkbox-group size="l" name="pick-l" label="Size l"><lr-checkbox value="a" size="l">Alpha</lr-checkbox><lr-checkbox value="b" size="l">Bravo</lr-checkbox></lr-checkbox-group>
+      <lr-checkbox-group size="s" name="pick-s" label="Size s"><lr-checkbox value="a">Alpha</lr-checkbox><lr-checkbox value="b">Bravo</lr-checkbox></lr-checkbox-group>
+      <lr-checkbox-group size="m" name="pick-m" label="Size m"><lr-checkbox value="a">Alpha</lr-checkbox><lr-checkbox value="b">Bravo</lr-checkbox></lr-checkbox-group>
+      <lr-checkbox-group size="l" name="pick-l" label="Size l"><lr-checkbox value="a">Alpha</lr-checkbox><lr-checkbox value="b">Bravo</lr-checkbox></lr-checkbox-group>
     </div>
   `,
 };

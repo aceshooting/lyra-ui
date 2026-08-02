@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/include/include.js';` (registers the tag; side-effect import)
 - **Class** `LyraInclude`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/include/include.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -13,7 +15,7 @@
 
 ## `lr-include`
 
-Fetches an HTML fragment from `src` and transcludes it as sanitized **light-DOM** content, so the
+Loads an HTML fragment from `src` and transcludes it as sanitized **light-DOM** content, so the
 fragment participates in the surrounding page's CSS cascade like a native server-side include —
 unlike `<lr-html-viewer>`, which renders a foreign document inside an isolated preview card. The
 markup always passes through the shared DOMPurify-backed sanitizer before it reaches `innerHTML`;
@@ -22,18 +24,30 @@ raw injection option is omitted, not shipped as a no-op).
 
 A bare primitive: no label/hint/error chrome, no implicit role, no computed accessible name, and no
 `aria-live` wrapper (the fragment can carry its own landmarks; wrapping the host would re-announce
-all of it on every load). The host always carries explicit `aria-busy="true"|"false"`: true only
-while a fetch is in flight. Build error UI from `lr-include-error`.
+all of it on every load). The host always carries explicit `aria-busy="true"|"false"`: true while
+the source is loading and being sanitized. Build error UI from `lr-include-error`.
 
 **Properties:**
-- `src: string = ''` (reflected) — URL of the fragment, validated through the shared `safeFetchUrl()`
-  allowlist (`http:`, `https:`, `blob:`, `data:`). Empty/falsy is a no-op: no fetch, no events,
-  existing content untouched.
+- `src: string = ''` (reflected) — source of the fragment. `#id` clones the matching same-page
+  template content or element children without fetching or moving the source nodes.
+  `/partial.html#id` fetches `/partial.html` without its hash, sanitizes the complete response, then
+  clones the target's children; a URL without a hash transcludes the complete sanitized document.
+  Remote URLs pass the shared `safeFetchUrl()` allowlist (`http:`, `https:`, `blob:`, `data:`).
+  Empty/falsy is a no-op: no fetch, no events, existing content untouched.
 - `mode: 'cors' | 'no-cors' | 'same-origin' = 'same-origin'` (reflected) — forwarded to
   `fetch(url, { mode })`. Defaults to `same-origin` (not the upstream components' `cors`) so
   cross-origin fetching is opt-in; an invalid value is normalized back to `same-origin` rather than
   letting `fetch()` throw. `no-cors` is accepted for enum completeness but always yields an opaque
   response (`status` `0`, unreadable body) — a Fetch API limitation, not a bug here.
+- `cache: boolean = true` (attribute is not reflected) — shares matching in-flight work and retains
+  successful sanitized remote documents in a bounded cache. `cache="false"` (including that exact
+  HTML attribute syntax) opts this instance out of both deduplication and retention. Fragment ids
+  are deliberately not part of the key: `/partial.html#one` and `/partial.html#two` share only the
+  fragmentless fetch/sanitize work, then select and clone independently. Request mode, byte cap,
+  and sanitizer profile are part of the key.
+
+**Methods:** `reload(): Promise<void>` invalidates the retained remote document for this URL and
+mode, then loads it again. A same-page source is simply re-cloned from its current DOM.
 
 The shared text-viewer contract is also available for the sanitized light-DOM fragment:
 `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
@@ -46,9 +60,10 @@ against the new fragment rather than leaving results from the previous content.
 - `lr-include-error` — `detail: { status, reason, error? }`. `reason` is a `LyraIncludeErrorReason`:
   `'blocked-url'` (`src` failed the allowlist; `fetch()` never ran), `'network'` (`fetch()` rejected),
   `'http'` (response not `ok`; `status` carries the code), `'missing-sanitizer'` (the optional
-  `dompurify` peer failed to load), or `'resource-too-large'` (the body exceeded the shared 25 MB
-  cap). Non-HTTP reasons use status `0`; `'http'` normally carries the response code, but an opaque
-  `mode="no-cors"` response is also classified as `'http'` with status `0`.
+  `dompurify` peer failed to load), `'resource-too-large'` (the body exceeded the 2 MiB Include
+  cap), or `'missing-fragment'` (the requested id was absent after sanitization). Non-HTTP reasons
+  use status `0`; `'http'` normally carries the response code, but an opaque `mode="no-cors"`
+  response is also classified as `'http'` with status `0`.
 
 **Slots:** default — fallback content shown until (or unless) a fetch succeeds. It is overwritten by
 the sanitized fragment on success, and left untouched on failure (as is any previously successful
@@ -59,3 +74,24 @@ include).
 An absent `dompurify` fails closed: it fires `lr-include-error` with
 `reason: 'missing-sanitizer'` and leaves the existing content in place — unsanitized markup is
 never transcluded.
+
+Every inserted subtree is a clone. Its ids are rebased per Include instance, including references
+from labels, ARIA idrefs, fragment links, and `url(#id)` attributes, so repeating one source does
+not add duplicate document ids. Concurrent consumers lease shared work: disconnecting one aborts
+the request only when no other subscriber still needs it. Rejected work is evicted and can be
+retried; a stale response never paints over a newer `src`.
+
+```html
+<lr-include id="navigation" src="/partials/navigation.html#primary">
+  Loading navigation…
+</lr-include>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/viewers/include/include.js';
+
+  const include = document.querySelector('#navigation');
+  include.addEventListener('lr-include-error', (event) => {
+    console.error(event.detail.reason, event.detail.status);
+  });
+  await include.reload();
+</script>
+```

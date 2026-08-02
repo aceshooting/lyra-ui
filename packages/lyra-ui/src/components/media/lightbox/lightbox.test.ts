@@ -221,7 +221,7 @@ it('formats counter and live-region numbers with the effective locale', async ()
 it('resets view state when the current image source is replaced at the same index', async () => {
   const images = [image, { ...image, caption: 'Second' }];
   const el = (await fixture(html`<lr-lightbox .images=${images} open></lr-lightbox>`)) as LyraLightbox;
-  const frame = el.shadowRoot!.querySelector('lr-zoomable-frame') as HTMLElement & {
+  const frame = el.shadowRoot!.querySelector('lr-pan-zoom') as HTMLElement & {
     resetView(): void;
   };
   let resets = 0;
@@ -278,7 +278,7 @@ it('renders a .strings override for the close/previous/next labels and the count
 // the DocumentAnchorTarget mixin precedent already used elsewhere in this family) would silently
 // never run for <lr-lightbox> if its own overrides shadow the base hook instead of calling it.
 // The patched flag is scoped to `this === el` specifically -- <lr-lightbox> embeds an
-// <lr-zoomable-frame> child in its shadow DOM, which itself extends LyraElement directly with no
+// <lr-pan-zoom> child in its shadow DOM, which itself extends LyraElement directly with no
 // willUpdate/updated override of its own, so an unscoped check would false-positive on the
 // child's own inherited call regardless of whether the lightbox's own override calls super.
 it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in', async () => {

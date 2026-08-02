@@ -8,7 +8,11 @@ import { closeIcon, eyeIcon, eyeOffIcon } from '../../../internal/icons.js';
 import { styles } from './input.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
-import { spellcheckConverter } from '../../../internal/converters.js';
+import {
+  autocorrectConverter,
+  normalizeAutocorrect,
+  spellcheckConverter,
+} from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import {
@@ -16,8 +20,19 @@ import {
   dispatchNativeInputEvent,
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 
-export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time' | 'search';
+export type LyraInputType =
+  | 'text'
+  | 'password'
+  | 'email'
+  | 'number'
+  | 'time'
+  | 'search'
+  | 'date'
+  | 'datetime-local'
+  | 'tel'
+  | 'url';
 /** Alias of the canonical six-step size ladder. The `size` property itself accepts
  *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
 export type LyraInputSize = LyraSizeStep;
@@ -27,7 +42,14 @@ export type LyraInputAppearance = LyraAppearance;
 /** The `type`s whose native `<input>` honors `minlength`/`maxlength` at all. The platform ignores
  *  both on `number`/`time`, so the dirty-value supplement in `updateValidity()` must ignore them
  *  there too rather than being stricter than the control it wraps. */
-const LENGTH_CONSTRAINED_TYPES: readonly LyraInputType[] = ['text', 'password', 'email', 'search'];
+const LENGTH_CONSTRAINED_TYPES: readonly LyraInputType[] = [
+  'text',
+  'password',
+  'email',
+  'search',
+  'tel',
+  'url',
+];
 
 export interface LyraInputEventMap {
   input: InputEvent;
@@ -39,6 +61,7 @@ export interface LyraInputEventMap {
   focus: FocusEvent;
   'lr-blur': CustomEvent<undefined>;
   'lr-focus': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<undefined>;
 }
 class LyraInputBase extends LyraElement<LyraInputEventMap> {}
 
@@ -56,8 +79,8 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * (with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own
  * browser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`
  * — as do `minlength`/`maxlength`/`pattern`, which constrain the text-bearing types.
- * `type="search"`/`type="time"` forward straight through to the native input with no additional
- * chrome or validation, the same as `type="text"`.
+ * `type="date"`/`type="datetime-local"`/`type="search"`/`type="tel"`/`type="time"`/`type="url"`
+ * forward straight through to the matching native input behavior, the same as `type="text"`.
  *
  * A host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;
  * external `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
@@ -85,21 +108,36 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @event focus - Re-dispatched from the internal native `<input>`'s own `focus`, for the same reason as `blur`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-invalid - The input failed a validity check.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @slot start - Adornment before the native input.
  * @slot end - Adornment after the native input and built-in actions.
+ * @slot prefix - Shoelace alias for `start`.
+ * @slot suffix - Shoelace alias for `end`.
+ * @slot help-text - Shoelace alias for `hint`.
+ * @slot clear-icon - Replaces the built-in clear glyph.
+ * @slot show-password-icon - Replaces the glyph shown while the password is hidden.
+ * @slot hide-password-icon - Replaces the glyph shown while the password is visible.
  * @csspart form-control - The outer wrapper around label, input, error and hint.
  * @csspart form-control-label - The `<label>` element.
- * @csspart input-wrapper - The row wrapping the native input and the password-toggle button.
+ * @csspart label - Wrapper around the visible label content.
+ * @csspart base - Compatibility name for the control row; use `input-wrapper`.
+ * @csspart form-control-input - Compatibility name for the control row.
+ * @csspart input-wrapper - The row wrapping the native input and built-in actions. It is the same
+ *   node as `base`.
  * @csspart input - The native `<input>` element.
  * @csspart start - Wrapper around the `start` adornment slot.
  * @csspart end - Wrapper around the `end` adornment slot.
+ * @csspart prefix - Shoelace compatibility part on the `prefix` slot.
+ * @csspart suffix - Shoelace compatibility part on the `suffix` slot.
  * @csspart clear-button - The clear action, rendered for non-empty clearable text/search inputs.
  * @csspart password-toggle - The show/hide-password button, rendered only for `type="password"`
  *   with `password-toggle` set.
+ * @csspart password-toggle-button - Wrapper around the password-toggle icon.
  * @csspart hint - The hint message.
+ * @csspart form-control-help-text - Shoelace compatibility name for the hint message.
  * @csspart error - The error message.
  * @cssprop [--lr-input-control-min-height=var(--lr-form-control-height)] - Outer control height
  *   floor, taken from the active `size` tier of the shared form-control ladder
@@ -122,10 +160,13 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @cssprop [--lr-input-radius=var(--lr-form-control-radius)] - Corner radius of the control row,
  * from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius).
  * `pill` swaps it to `--lr-radius-pill`.
- * @cssprop [--lr-input-fill=var(--lr-color-surface)] - Background of the control row. Swapped per
- * `appearance`; the documented default is `appearance="filled-outlined"`'s value.
+ * @cssprop [--lr-input-fill=transparent] - Background of the control row. Swapped per
+ * `appearance`; the documented default is `appearance="outlined"`'s value.
  * @cssprop [--lr-input-border-color=var(--lr-color-border)] - Border color of the control row,
  * swapped per `appearance` in the same way as `--lr-input-fill`.
+ * @cssstate blank - The live value is empty.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraInput extends FormAssociated(LyraInputBase) {
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
@@ -133,7 +174,16 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   // both spellings of every tier (`s` and `small`, …) work with no per-component rule.
   static override styles = [LyraElement.styles, sizes, styles];
 
-  @property() type: LyraInputType = 'text';
+  /** Live string value. A Web Awesome-compatible null write clears it without widening reads. */
+  override get value(): string {
+    return super.value;
+  }
+
+  override set value(next: string | null) {
+    super.value = next ?? '';
+  }
+
+  @property({ reflect: true }) type: LyraInputType = 'text';
   /** Visual size on the library's one control ladder — shared with `lr-button`/`lr-select`/
    *  `lr-combobox`, so same-tier controls line up in a toolbar row. Accepts both the canonical
    *  `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's `'small'`/`'medium'`/`'large'` spellings of
@@ -141,11 +191,14 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    *  toolbar-embedded controls. */
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Visual treatment of the control row, from the library's shared field vocabulary.
-   *  `'filled-outlined'` (the default) draws both a surface fill and a border; `'outlined'` drops
+   *  `'outlined'` (the mapped default) draws a border without a fill; `'filled-outlined'` draws
    *  the fill, `'filled'` drops the border, `'plain'` drops both, and `'accent'` tints both with
    *  the brand color. Each value only swaps `--lr-input-fill`/`--lr-input-border-color`, so a
    *  consumer can retune any of them without a `::part(input-wrapper)` rule. */
-  @property({ reflect: true }) appearance: LyraAppearance = 'filled-outlined';
+  @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
+  /** Shoelace's boolean spelling for the filled treatment. It does not overwrite an explicit
+   * `appearance`; the style alias simply paints the same fill while present. */
+  @property({ type: Boolean, reflect: true }) filled = false;
   /** Rounds the control row to a full pill by swapping `--lr-input-radius` to
    *  `--lr-radius-pill`. */
   @property({ type: Boolean, reflect: true }) pill = false;
@@ -159,24 +212,56 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property() label = '';
   @property() hint = '';
+  /** Shoelace alias for {@link hint}. `hint` wins when both are supplied. */
+  @property({ attribute: 'help-text' }) helpText = '';
+  /** SSR slot-presence hint for label content that cannot be inspected before hydration. */
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+  /** SSR slot-presence hint for hint/help-text content that cannot be inspected before hydration. */
+  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
   /** Accessible name overriding the label/placeholder-derived default. Takes precedence over both
    *  `label` and `placeholder` when set, matching `<lr-textarea>`'s `accessibleLabel`. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() autocomplete = '';
+  /** Forwarded to the internal native control. */
+  @property() override title = '';
   /** Forwarded to the internal native `<input>`, so the browser's own autofocus algorithm targets
    *  the real text control rather than the (non-focusable) custom-element host. */
   @property({ type: Boolean }) override autofocus = false;
   @property({ converter: spellcheckConverter }) override spellcheck = true;
   @property() override autocapitalize = '';
-  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  private autocorrectValue = true;
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
+  /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
+   * boolean. Writes accept Web Awesome's boolean IDL and Shoelace's `'on'`/`'off'` vocabulary. */
+  @property({ converter: autocorrectConverter })
+  override get autocorrect(): boolean {
+    return this.autocorrectValue;
+  }
+  override set autocorrect(next: boolean | 'off' | 'on') {
+    this.autocorrectValue = normalizeAutocorrect(next);
+    // Attribute presence controls whether the native hint is omitted, so removing an `on`
+    // attribute must render even though the normalized boolean remains `true`.
+    this.requestUpdate();
+  }
+  get inputmode(): string {
+    return this.inputMode;
+  }
+  set inputmode(next: string) {
+    this.inputMode = next ?? '';
+  }
+  get enterkeyhint(): string {
+    return this.enterKeyHint;
+  }
+  set enterkeyhint(next: string) {
+    this.enterKeyHint = next ?? '';
+  }
   /** `type="number"` only — forwarded to the internal native `<input>`'s own `min`/`max`/`step`
    *  and consulted by that same native input's constraint validation (see `updateValidity()`).
    *  Defaults to `undefined` (no lower bound). The `min` attribute is parsed as a number here; the
    *  declared type also admits a string so a subclass bound to a non-numeric native input type can
-   *  narrow the attribute parsing to that type's own literal form (`<lr-time-input>`'s `09:00`)
+   *  narrow the attribute parsing to that type's own literal form (`<lr-native-time-input>`'s `09:00`)
    *  without redeclaring the whole property surface. */
   // numeric-guard-exempt: passed straight through to the native <input min> and its own
   // ValidityState.rangeUnderflow check, both of which already tolerate a non-finite value
@@ -221,13 +306,22 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    *  unset, the platform's spinners render exactly as they do on a bare `<input type="number">`.
    *  `<lr-number-input>` defaults it the other way, since it draws its own stepper pair. */
   @property({ type: Boolean, attribute: 'without-spin-buttons', reflect: true }) withoutSpinButtons = false;
+  /** Shoelace alias for {@link withoutSpinButtons}. */
+  @property({ type: Boolean, attribute: 'no-spin-buttons' }) noSpinButtons = false;
+  /** Internal reactive adapter for Shoelace's public `default-value` attribute alias. The
+   * supported JS property remains `defaultValue`; this accessor is not public API.
+   * @internal
+   * @default '' */
+  @property({ attribute: 'default-value' })
+  get defaultValueAlias(): string {
+    return this.defaultValue;
+  }
+  set defaultValueAlias(next: string) {
+    this.defaultValue = next ?? '';
+  }
 
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
-  @state() private hasLabelSlot = false;
   @state() private touched = false;
-  @state() private hasStartSlot = false;
-  @state() private hasEndSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
 
   @query('input') private inputEl?: HTMLInputElement;
 
@@ -260,6 +354,38 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
   select(): void {
     this.inputEl?.select();
+  }
+
+  /** Native date/time value view. Unsupported input types mirror the native getter and return
+   * `null`; assignment follows the native input's own conversion and remains event-silent. */
+  get valueAsDate(): Date | null {
+    const native = this.inputEl;
+    if (!native) return null;
+    if (native.value !== this.value) native.value = this.value;
+    return native.valueAsDate;
+  }
+
+  set valueAsDate(next: Date | null) {
+    const native = this.inputEl;
+    if (!native) return;
+    native.valueAsDate = next;
+    this.value = native.value;
+  }
+
+  /** Native numeric view (milliseconds for date/time inputs, numeric value for number inputs).
+   * Assignment is silent, matching `HTMLInputElement.valueAsNumber`. */
+  get valueAsNumber(): number {
+    const native = this.inputEl;
+    if (!native) return Number.NaN;
+    if (native.value !== this.value) native.value = this.value;
+    return native.valueAsNumber;
+  }
+
+  set valueAsNumber(next: number) {
+    const native = this.inputEl;
+    if (!native) return;
+    native.valueAsNumber = next;
+    this.value = native.value;
   }
 
   /**
@@ -340,15 +466,22 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   /** Passthrough to the native `<input>`'s own `setSelectionRange()`. No-op if the element hasn't
    *  rendered yet, or throws the same native `InvalidStateError` the native `<input>` itself would
    *  for a `type` that doesn't support selection (mirrors `<lr-textarea>`'s `setSelectionRange()`). */
-  setSelectionRange(start: number | null, end: number | null, direction?: 'forward' | 'backward' | 'none'): void {
-    this.inputEl?.setSelectionRange(start, end, direction);
+  setSelectionRange(
+    selectionStart: number,
+    selectionEnd: number,
+    selectionDirection: 'forward' | 'backward' | 'none' = 'none',
+  ): void {
+    this.inputEl?.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
   }
 
   /** Passthrough to the native `<input>`'s own `setRangeText()`, mirroring `<lr-textarea>`'s
    *  method of the same name/signature. No-op if the element hasn't rendered yet. */
-  setRangeText(replacement: string): void;
-  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
-  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+  setRangeText(
+    replacement: string,
+    start?: number,
+    end?: number,
+    selectMode: 'select' | 'start' | 'end' | 'preserve' = 'preserve',
+  ): void {
     const input = this.inputEl;
     if (!input) return;
     if (start === undefined || end === undefined) {
@@ -430,6 +563,10 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('value')) {
+      if (this.value === '') this.internals.states.add('blank');
+      else this.internals.states.delete('blank');
+    }
     // A constraint that tightens without a value write (`el.maxlength = 3` over an existing value)
     // reaches the native input only on this render, so validity has to be recomputed after it --
     // the same reason `min`/`max`/`step` are listed here.
@@ -444,14 +581,6 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
       changed.has('readonly')
     ) {
       this.updateValidity();
-    }
-  }
-
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      this.hasStartSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'start');
-      this.hasEndSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'end');
     }
   }
 
@@ -507,26 +636,6 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     this.inputEl?.focus();
   };
 
-  private onStartSlotChange = (e: Event): void => {
-    this.hasStartSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onEndSlotChange = (e: Event): void => {
-    this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onHintSlotChange = (e: Event): void => {
-    this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onErrorSlotChange = (e: Event): void => {
-    this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onLabelSlotChange = (e: Event): void => {
-    this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
   /**
    * Extension point for a subclass adding its own controls to the end of the control row, between
    * the built-in clear/password actions and the `end` adornment slot — `<lr-number-input>`'s
@@ -536,10 +645,20 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     return nothing;
   }
 
+  /** @internal Part tokens for the shared control row; subclasses append their mapped wrapper. */
+  protected get inputWrapperParts(): string {
+    return 'base form-control-input input-wrapper';
+  }
+
   override render(): TemplateResult {
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
-    const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const hasHint =
+      this.slotPresence.has('hint') ||
+      this.slotPresence.has('help-text') ||
+      this.hint.length > 0 ||
+      this.helpText.length > 0 ||
+      this.withHint;
+    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
+    const hasLabel = this.slotPresence.has('label') || this.label.length > 0 || this.withLabel;
     const describedBy = [hasError ? 'input-error' : '', hasHint ? 'input-hint' : ''].filter(Boolean).join(' ');
     const isPassword = this.type === 'password';
     const showPasswordToggle = isPassword && this.passwordToggle;
@@ -551,17 +670,22 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     return html`
       <div part="form-control">
         <label part="form-control-label" for="input" ?hidden=${!hasLabel}>
-          ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
+          <span part="label">${this.label}<slot name="label"></slot></span>
         </label>
-        <div part="input-wrapper">
-          <span part="start" ?hidden=${!this.hasStartSlot}>
-            <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+        <div part=${this.inputWrapperParts}>
+          <span
+            part="start"
+            ?hidden=${!this.slotPresence.has('start') && !this.slotPresence.has('prefix')}
+          >
+            <slot name="start"></slot>
+            <slot part="prefix" name="prefix"></slot>
           </span>
           <input
             id="input"
             part="input"
             type=${nativeType}
             placeholder=${this.placeholder}
+            title=${this.title || nothing}
             aria-label=${this.accessibleLabel ||
             (hasLabel ? nothing : this.placeholder || this.localize('inputLabel'))}
             aria-describedby=${describedBy || nothing}
@@ -570,7 +694,9 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             autocomplete=${this.autocomplete || nothing}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.autoCorrect || nothing}
+            autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
+              ? (this.autocorrect ? 'on' : 'off')
+              : nothing}
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
             min=${this.min ?? nothing}
@@ -584,7 +710,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}
             ?autofocus=${this.autofocus}
-            ?data-without-spin-buttons=${this.withoutSpinButtons}
+            ?data-without-spin-buttons=${this.withoutSpinButtons || this.noSpinButtons}
             @input=${this.onInput}
             @change=${this.onChange}
             @focus=${this.onFocus}
@@ -600,7 +726,11 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
                 aria-pressed=${this.passwordVisible ? 'true' : 'false'}
                 @click=${this.onTogglePasswordVisible}
               >
-                ${this.passwordVisible ? eyeOffIcon() : eyeIcon()}
+                <span part="password-toggle-button"
+                  >${this.passwordVisible
+                    ? html`<slot name="hide-password-icon">${eyeOffIcon()}</slot>`
+                    : html`<slot name="show-password-icon">${eyeIcon()}</slot>`}</span
+                >
               </button>`
             : ''}
           ${canClear
@@ -611,19 +741,23 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
                 aria-label=${this.localize('clear')}
                 @click=${this.onClear}
               >
-                ${closeIcon()}
+                <slot name="clear-icon">${closeIcon()}</slot>
               </button>`
             : nothing}
           ${this.renderControls()}
-          <span part="end" ?hidden=${!this.hasEndSlot}>
-            <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+          <span
+            part="end"
+            ?hidden=${!this.slotPresence.has('end') && !this.slotPresence.has('suffix')}
+          >
+            <slot name="end"></slot>
+            <slot part="suffix" name="suffix"></slot>
           </span>
         </div>
         <div id="input-error" part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+          ${this.errorText}<slot name="error"></slot>
         </div>
-        <div id="input-hint" part="hint" ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+        <div id="input-hint" part="hint form-control-help-text" ?hidden=${!hasHint}>
+          ${this.hint || this.helpText}<slot name="hint"></slot><slot name="help-text"></slot>
         </div>
       </div>
     `;

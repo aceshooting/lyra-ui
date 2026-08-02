@@ -63,6 +63,8 @@ export interface LyraToolResultViewEventMap {
  * @csspart fallback-text - The `<pre>` element for the `fallback="text"` kind's preformatted result text (only present in that mode).
  * @csspart fallback-copy - The `<lr-copy-button>` shown when `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
  * @cssprop [--lr-tool-result-view-font=var(--lr-font-mono)] - Font family for the `fallback="text"` preformatted output.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> {
   static override styles = [LyraElement.styles, styles];

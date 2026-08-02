@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/badge/tag.js';` (registers the tag; side-effect import)
 - **Class** `LyraTag`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/badge/tag.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-badge` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -23,13 +25,16 @@ rectangle) and the pill treatment moved behind the new opt-in `pill` boolean. Ex
 its corner radius only if you add `pill`, or set `--lr-badge-radius: var(--lr-radius-pill)` once at
 the app level.
 
-**Properties** (all of them declared by `lr-badge` and inherited unchanged by `lr-tag`, except
-`withRemove`):
+**Properties** (all are declared by `lr-badge` and inherited by `lr-tag`; `lr-tag` adds the
+`variant="text"` write alias plus `withRemove` / `removable`):
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) — the
-  semantic palette
+  semantic palette. Both components accept the upstream `primary` setter/attribute alias and
+  normalize it to the canonical `brand` read value. `lr-tag` additionally accepts `text`, renders
+  the neutral plain treatment, and reads back the canonical `neutral` variant.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — the same visual-density scale
   `<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
-  dimensions
+  dimensions. The setters also accept `small` / `medium` / `large` and normalize reads to
+  `s` / `m` / `l`.
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
   (reflected) — **new in 8.0.0.** The second visual axis: `variant` picks the palette, `appearance`
   decides how much of it lands on the fill, the border and the text. `filled-outlined` (the default)
@@ -44,14 +49,19 @@ the app level.
   infinitely-looping attention animation for a badge that has to be noticed: `pulse` draws an
   expanding ring, `bounce` hops the surface vertically (block-direction, so it needs no RTL
   mirroring). Both stop outright — not merely shorten — under `prefers-reduced-motion: reduce`.
+- `pulse: boolean = false` (reflected) — upstream-compatible shorthand for the pulse attention
+  treatment. Lyra's intentional `variant="neutral"` and `appearance="filled-outlined"` defaults
+  remain unchanged because the two pinned upstreams disagree on both defaults.
 - `withRemove: boolean = false` (attribute `with-remove`, reflected) — **`lr-tag` only, new in
   8.0.0.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
   present on the markup.
+- `removable: boolean = false` (attribute `removable`) — **`lr-tag` only.** Shoelace-compatible
+  alias for `withRemove`; reading or assigning either property reaches the same state.
 
 **Events:** `lr-remove` — cancelable, no detail, bubbles and composes. Emitted by `lr-tag` only (a
 badge emits nothing at all) when the remove button is activated by click or by Enter/Space while
 focused; it is a real native `<button>`, so both come for free. Only rendered, and therefore only
-fired, while `withRemove` is set, and the event's `target` is the tag itself.
+fired, while `withRemove` / `removable` is set, and the event's `target` is the tag itself.
 
 Unlike `<lr-chip>` — a deliberately controlled component that only ever *announces* a remove request
 — a removable `lr-tag` removes **itself** from the DOM on activation. `lr-remove` is the veto point
@@ -63,11 +73,12 @@ stray gap) while its slot is empty, and is seeded from the light-DOM children be
 render so declarative content never flashes hidden for a frame. Mark purely decorative slotted
 content `aria-hidden`.
 
-**CSS parts:** `base` (the badge/tag surface), `start` and `end` (the slot wrappers, hidden entirely
+**CSS parts:** `base` and `badge` are aliases on the same badge/tag surface; `start` and `end` (the slot wrappers, hidden entirely
 while empty), `content` (the wrapper around the default slot — this is the part that truncates with
 an ellipsis, deliberately not `base`, so the tag's oversized remove hit target can overhang the
 compact surface without being clipped), and `remove-button` (`lr-tag` only, rendered only while
-`withRemove`).
+`withRemove` / `removable`). The button also carries Shoelace's `remove-button__base` alias, so
+either part name styles the same native button.
 
 **Themeable custom properties.** Three layers, so a consumer can retune one without restating the
 others. All of them are declared by `lr-badge` and reach `lr-tag` unchanged.
@@ -107,7 +118,8 @@ same `--lr-button-radius` pattern.
 `var(--lr-duration-ambient)` — one cycle of the animation), `--lr-badge-attention-easing` (default
 `var(--lr-easing-emphasized)` — kept a separate token from the duration so the `animation` shorthand
 expands to exactly one timing function), `--lr-badge-pulse-color` (default
-`color-mix(in srgb, currentColor 40%, transparent)` — the expanding ring's color),
+`color-mix(in srgb, currentColor 40%, transparent)` — the expanding ring's color; upstream alias
+`--pulse-color`),
 `--lr-badge-pulse-spread` (default `var(--lr-size-0-25rem)` — how far the ring expands) and
 `--lr-badge-bounce-distance` (default `var(--lr-size-0-1875rem)` — the hop's peak travel).
 

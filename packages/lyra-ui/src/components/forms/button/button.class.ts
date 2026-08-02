@@ -17,11 +17,22 @@ import type {
 } from '../../../internal/variants.js';
 import { styles } from './button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  attachInternalsSafely,
+  getFormOwner,
+  installCustomErrorProperty,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
+import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 
 /** Alias of the library's one semantic-tone vocabulary, kept as an exported name so existing
  *  imports of `ButtonVariant` keep resolving while `internal/variants.ts` holds the only
  *  definition. */
-export type ButtonVariant = LyraVariant;
+export type ButtonVariant = LyraVariant | 'default' | 'primary' | 'text';
 /** The shared appearance vocabulary (`accent`/`filled`/`outlined`/`filled-outlined`/`plain`) plus
  *  this component's two own tiers, `link` and `quiet`. */
 export type ButtonAppearance = LyraAppearance | 'link' | 'quiet';
@@ -42,12 +53,13 @@ export interface LyraButtonEventMap {
   blur: FocusEvent;
   'lr-focus': CustomEvent<undefined>;
   'lr-blur': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<undefined>;
 }
 
 /**
  * `<lr-button>` — a generic action-button primitive. Renders an internal native
  * `<button part="base">`. `type="submit"`/`type="reset"`
- * are handled by this component itself via the host's own `closest('form')` — a shadow-internal
+ * are handled by this component itself via the host's associated form — a shadow-internal
  * native `<button type="submit">` does not participate in an ancestor light-DOM form's submission
  * on its own, since form-submitter semantics don't cross the shadow boundary.
  *
@@ -89,13 +101,28 @@ export interface LyraButtonEventMap {
  * @event blur - Native blur relayed once from the internal button or anchor.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-invalid - The button failed a validity check.
  * @slot - Default slot: the button's label content.
  * @slot start - Leading icon/content, rendered before the label.
+ * @slot prefix - Shoelace alias for `start`, rendered through the same wrapper.
  * @slot end - Trailing icon/content, rendered after the label.
- * @csspart base - The internal native `<button>` (or an `<a>` when `href` resolves to a safe link).
+ * @slot suffix - Shoelace alias for `end`, rendered through the same wrapper.
+ * @attr form - ID of an external form owner. The `form` property still reads as the resolved form.
+ * @attr {string} form-action - Shoelace alias for `formaction`.
+ * @attr {ButtonFormEnctype} form-enctype - Shoelace alias for `formenctype`.
+ * @attr {ButtonFormMethod} form-method - Shoelace alias for `formmethod`.
+ * @attr {boolean} form-no-validate - Shoelace alias for `formnovalidate`.
+ * @attr {string} form-target - Shoelace alias for `formtarget`.
+ * @attr rel - Compatibility input whose rendered value is always derived from `target`; author
+ *   values never weaken the `noopener noreferrer` reverse-tabnabbing guard.
+ * @csspart base - Compatibility name for the internal control; use `button`.
+ * @csspart button - The internal native `<button>` (or an `<a>` for a safe link). It is the same
+ *   node as `base`.
  * @csspart label - The default-slot label wrapper.
  * @csspart start - The `start` slot wrapper.
+ * @csspart prefix - Shoelace alias for `start`; both names are on the same wrapper.
  * @csspart end - The `end` slot wrapper.
+ * @csspart suffix - Shoelace alias for `end`; both names are on the same wrapper.
  * @csspart caret - The decorative dropdown chevron, present only while `withCaret` is `true`.
  * @csspart spinner - The loading spinner, present only while `loading` is `true`.
  * @cssprop [--lr-button-width=100%] - Inline size of the internal button. The host
@@ -187,6 +214,12 @@ export interface LyraButtonEventMap {
  * @cssprop --lr-button-shadow - Box shadow of the internal button. **Undeclared by default**, so
  * `box-shadow` falls back to `none` — byte-identical to before this property existed. Set it (e.g.
  * an elevated/floating action button) without a `::part(base)` rule.
+ * @cssstate disabled - The button is disabled directly, by a fieldset, or by `loading`.
+ * @cssstate icon-button - The default slot contains one icon-like element and no text.
+ * @cssstate link - A safe `href` currently renders the native anchor mode.
+ * @cssstate loading - The button is showing its loading spinner.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraButton extends LyraElement<LyraButtonEventMap> {
   // `sizes` supplies the one form-control ladder (both the `s`/`m`/`l` and the `small`/`medium`/
@@ -204,13 +237,36 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
-    name: { reflect: true, noAccessor: true },
+    name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
   };
+
+  static override get observedAttributes(): string[] {
+    return [
+      ...new Set([
+        ...super.observedAttributes,
+        'form-action',
+        'form-enctype',
+        'form-method',
+        'form-no-validate',
+        'form-target',
+      ]),
+    ];
+  }
 
   private _fieldsetDisabled = false;
   private _disabled = false;
   private _name = '';
+  private _value = '';
+  private _required = false;
+  private _variant: LyraVariant = 'neutral';
   private hasSyncedDescribedByElements = false;
+  private internals: ElementInternals;
+  private validityController: AnchoredValidityController;
+  private reflectingCustomError = false;
+  /** Consumer-supplied validation message reflected through `custom-error`.
+   * @default null */
+  declare customError: string | null;
 
   get disabled(): boolean {
     return this._disabled;
@@ -233,7 +289,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   get name(): string {
     return this._name;
   }
-  set name(next: string) {
+  set name(next: string | null) {
     const old = this._name;
     this._name = next ?? '';
     if (this._name) this.setAttribute('name', this._name);
@@ -246,22 +302,39 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     return this._disabled || this._fieldsetDisabled;
   }
 
+  /** Browser-resolved form owner; assigning an ID, form element, or `null` updates `form`. */
+  @property({ attribute: 'form' })
+  get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
+  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  get labels(): NodeList { return this.internals.labels; }
+  get validity(): ValidityState { return this.internals.validity; }
+  get validationMessage(): string { return this.internals.validationMessage; }
+  get willValidate(): boolean { return this.internals.willValidate; }
+
   constructor() {
     super();
-    // `attachInternals()` is browser-only; a downstream consumer's Vitest + happy-dom (or similar)
-    // test suite has no implementation of it at all, so calling it unconditionally would throw
-    // merely from constructing/importing this component, before any assertion runs. The return
-    // value is unused here (this component only needs form-associated *discoverability*, not
-    // `ElementInternals`' validity/value APIs), so unlike `<lr-checkbox>`'s/`<lr-checkbox-group>`'s
-    // `createInternalsSafely()`/`createNoopInternals()` pair, degrading is just "skip the call" --
-    // there is no `this.internals` field whose later use needs a no-op stand-in.
-    if (typeof this.attachInternals === 'function') {
-      try {
-        this.attachInternals();
-      } catch {
-        // Environment claims support but throws anyway (e.g. a partial polyfill) -- same
-        // fail-open degradation as the `typeof` guard above.
-      }
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    this.internals = attachInternalsSafely(this);
+    this.validityController = new AnchoredValidityController(
+      this,
+      this.internals,
+      () => this[VALIDITY_ANCHOR](),
+    );
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    this.updateValidity();
+    this.syncButtonStates();
+  }
+
+  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    super.attributeChangedCallback(name, oldValue, newValue);
+    if (oldValue === newValue) return;
+    switch (name) {
+      case 'form-action': this.formAction = newValue ?? undefined; break;
+      case 'form-enctype': this.formEnctype = newValue as ButtonFormEnctype | null ?? undefined; break;
+      case 'form-method': this.formMethod = newValue as ButtonFormMethod | null ?? undefined; break;
+      case 'form-no-validate': this.formNoValidate = newValue !== null; break;
+      case 'form-target': this.formTarget = newValue ?? undefined; break;
     }
   }
 
@@ -276,8 +349,18 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   /** Semantic tone, from the library's one `variant` vocabulary — the same five values every other
    *  `variant` in the library takes. Selects which row of the semantic colour grid every fill,
-   *  border and foreground token below resolves against. */
-  @property({ reflect: true }) variant: LyraVariant = 'neutral';
+   *  border and foreground token below resolves against. Shoelace's `default`/`primary` spellings
+   *  normalize to `neutral`/`brand`; its `text` spelling normalizes to neutral `appearance="plain"`.
+   *  Reads always return the canonical Lyra vocabulary.
+   * @default neutral */
+  @property({ reflect: true })
+  get variant(): ButtonVariant { return this._variant; }
+  set variant(next: ButtonVariant) {
+    if (next === 'primary') this._variant = 'brand';
+    else if (next === 'default' || next === 'text') this._variant = 'neutral';
+    else this._variant = next;
+    if (next === 'text') this.appearance = 'plain';
+  }
   /** `'accent'` (the default, matching the upstream default) is the loud tier: the active
    *  `variant`'s solid fill with its guaranteed-legible foreground, for the one primary action in a
    *  view. `'filled'` is the same tone one emphasis step down — a quiet tint, for a secondary
@@ -301,21 +384,54 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  the standard size. */
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Fully rounded ends, for a pill-shaped control. Re-assigns `--lr-button-radius` to
-   *  `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so a consumer's own
+   *  `--lr-radius-pill` rather than declaring a radius on `[part~="base"]`, so a consumer's own
    *  `--lr-button-radius` stays the single corner-radius knob. `appearance="link"` still renders
    *  with zero chrome, pill or not. */
   @property({ type: Boolean, reflect: true }) pill = false;
+  /** Shoelace-compatible circular icon-button treatment. It does not replace `pill`: `circle`
+   *  additionally makes the control square and removes label-oriented inline padding. */
+  @property({ type: Boolean, reflect: true }) circle = false;
+  /** Shoelace-compatible outlined treatment. The canonical `appearance` property remains
+   *  untouched so removing `outline` restores the exact Lyra appearance the author selected. */
+  @property({ type: Boolean, reflect: true }) outline = false;
   /** Renders a decorative trailing chevron (`[part="caret"]`, `aria-hidden`) marking the button as
    *  a dropdown/menu trigger. It carries no accessible name of its own — the button's label already
    *  names the action, and the popup relationship is expressed by a host `aria-haspopup`/
    *  `aria-expanded`, which are forwarded to the internal control. */
   @property({ attribute: 'with-caret', type: Boolean, reflect: true }) withCaret = false;
+  /** Shoelace alias for `withCaret`; both attributes reach the same rendered chevron.
+   * @default false */
+  @property({ type: Boolean })
+  get caret(): boolean { return this.withCaret; }
+  set caret(next: boolean) { this.withCaret = Boolean(next); }
+  /** SSR presence hint for the `start` adornment wrapper. Assigned slot content is still detected
+   *  automatically, so this is optional in client-rendered markup. */
+  @property({ attribute: 'with-start', type: Boolean }) withStart = false;
+  /** SSR presence hint for the `end` adornment wrapper. */
+  @property({ attribute: 'with-end', type: Boolean }) withEnd = false;
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above
    *  for why this component (not the shadow-internal `<button>`) owns that behavior. */
   @property() type: ButtonType = 'button';
   /** The value submitted alongside `name`. Meaningful only together with a `name`, matching a
    *  native submit button. */
-  @property() value = '';
+  /**
+   * @default ''
+   */
+  @property({ reflect: true })
+  get value(): string { return this._value; }
+  set value(next: string) {
+    this._value = next ?? '';
+    this.updateValidity();
+  }
+  /** Whether a non-empty submitter value is required. This adds the Web Awesome form-control
+   *  contract without making an ordinary optional action button contribute persistent form data.
+   * @default false */
+  @property({ type: Boolean, reflect: true })
+  get required(): boolean { return this._required; }
+  set required(next: boolean) {
+    this._required = Boolean(next);
+    this.updateValidity();
+  }
   /** Overrides the form owner's `action` for the submission this button triggers. Unset by
    *  default, leaving the form's own `action` in place. */
   @property({ attribute: 'formaction' }) formAction?: string;
@@ -344,12 +460,17 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  `type` (submit/reset) has no effect while the anchor renders — an anchor has no submit/reset
    *  concept, and native navigation is its own activation. While the button is disabled the anchor
    *  renders with no `href` (see the class doc comment), so a disabled link button cannot navigate. */
-  @property() href?: string;
+  @property({ reflect: true }) href?: string;
   /** Native anchor `target`, used only while `href` resolves to a link. Setting this to `'_blank'`
    *  (or any other target) automatically derives `rel="noopener noreferrer"` on the rendered anchor
    *  — matching `lr-card`'s/`lr-stat`'s identical pattern; `rel` is never independently settable, to
    *  close the reverse-tabnabbing vector. Ignored in `<button>` mode. */
   @property() target?: string;
+  /** Security-derived compatibility surface. Author `rel` input is intentionally ignored: target
+   *  alone decides whether the rendered anchor receives the reverse-tabnabbing guard. */
+  get rel(): string | undefined {
+    return this.target ? 'noopener noreferrer' : undefined;
+  }
   /** Native anchor `download` attribute, used only while `href` resolves to a link. Ignored in
    *  `<button>` mode. */
   @property() download?: string;
@@ -361,10 +482,11 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  current by each slot's `slotchange` — mirrors `<lr-input>`'s identical pattern. */
   @state() private hasStartSlot = false;
   @state() private hasEndSlot = false;
+  @state() private isIconButton = false;
 
   // Matches either root: the native `<button>` (default) or the `<a>` rendered in anchor mode, so
   // `click()`/`focus()`/`blur()` work in both.
-  @query('[part="base"]') private baseEl?: HTMLButtonElement | HTMLAnchorElement;
+  @query('[part~="base"]') private baseEl?: HTMLButtonElement | HTMLAnchorElement;
 
   /** Activates the internal base element. In `<button>` mode this also runs the component's
    *  submit/reset behavior (via the button's own `@click`); in anchor mode it triggers native
@@ -383,14 +505,60 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     this.baseEl?.blur();
   }
 
+  /** @internal */
+  [VALIDITY_ANCHOR](): HTMLElement | null {
+    return this.baseEl ?? null;
+  }
+
+  checkValidity(): boolean {
+    return this.internals.checkValidity();
+  }
+
+  reportValidity(): boolean {
+    return this.internals.reportValidity();
+  }
+
+  /** Sets or clears a consumer-supplied validation error without disturbing `required`. */
+  setCustomValidity(message: string): void {
+    const old = this.validityController.customValidityMessage || null;
+    const next = message ?? '';
+    this.validityController.setCustomValidity(next);
+    if (!this.reflectingCustomError) {
+      this.reflectingCustomError = true;
+      try {
+        if (next) this.setAttribute('custom-error', next);
+        else this.removeAttribute('custom-error');
+      } finally {
+        this.reflectingCustomError = false;
+      }
+    }
+    this.requestUpdate('customError', old);
+  }
+
+  /** Clears consumer custom validity and republishes the current intrinsic constraint. */
+  resetValidity(): void {
+    this.validityController.setCustomValidity('');
+    this.updateValidity();
+  }
+
+  /** Restores the submitter value used by session history/autofill without making it a persistent
+   *  form-data entry; it is still contributed only while this control is the submitter. */
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    reason: 'autocomplete' | 'restore',
+  ): void {
+    void reason;
+    this.value = typeof state === 'string' ? state : '';
+  }
+
   private onClick = (): void => {
     if (this.type === 'submit') {
-      const form = this.closest('form');
+      const form = this.getForm();
       if (!form) return;
       if (this.hasSubmitterOverrides) this.submitAsNamedSubmitter(form);
       else form.requestSubmit();
     } else if (this.type === 'reset') {
-      this.closest('form')?.reset();
+      this.getForm()?.reset();
     }
   };
 
@@ -448,7 +616,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     if (this.formNoValidate) submitter.formNoValidate = true;
     if (this.formTarget) submitter.formTarget = this.formTarget;
 
-    if (this.parentElement) this.insertAdjacentElement('afterend', submitter);
+    if (this.parentElement && this.closest('form') === form) this.insertAdjacentElement('afterend', submitter);
     else form.append(submitter);
     try {
       form.requestSubmit(submitter);
@@ -465,7 +633,14 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    */
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    this.syncButtonStates();
     this.requestUpdate();
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.updateValidity();
+    this.syncButtonStates();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -475,23 +650,69 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     // frame until the first `slotchange` fires. Refreshed thereafter by `onStartSlotChange`/
     // `onEndSlotChange`.
     if (!this.hasUpdated) {
-      this.hasStartSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'start');
-      this.hasEndSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'end');
+      this.syncAdornmentSlots();
+      this.isIconButton = this.hasIconOnlyDefaultContent();
     }
   }
 
-  private onStartSlotChange = (e: Event): void => {
-    this.hasStartSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private syncAdornmentSlots(): void {
+    const children = Array.from(this.children);
+    this.hasStartSlot = children.some((element) => {
+      const slot = element.getAttribute('slot');
+      return slot === 'start' || slot === 'prefix';
+    });
+    this.hasEndSlot = children.some((element) => {
+      const slot = element.getAttribute('slot');
+      return slot === 'end' || slot === 'suffix';
+    });
+  }
+
+  private onStartSlotChange = (): void => {
+    this.syncAdornmentSlots();
   };
 
-  private onEndSlotChange = (e: Event): void => {
-    this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onEndSlotChange = (): void => {
+    this.syncAdornmentSlots();
+  };
+
+  private hasIconOnlyDefaultContent(): boolean {
+    const elements = Array.from(this.children).filter((element) => !element.getAttribute('slot'));
+    if (elements.length !== 1) return false;
+    const directText = Array.from(this.childNodes)
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent ?? '')
+      .join('')
+      .trim();
+    return directText === '' && (elements[0]?.textContent ?? '').trim() === '';
+  }
+
+  private onDefaultSlotChange = (): void => {
+    this.isIconButton = this.hasIconOnlyDefaultContent();
+    this.syncButtonStates();
   };
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     syncAriaControlsElements(this, this.baseEl, this.triggerControls);
     this.syncDescribedByElements();
+    this.syncButtonStates();
+  }
+
+  private updateValidity(): void {
+    if (!this.validityController) return;
+    if (this.required && !this.value) {
+      this.validityController.setValidity({ valueMissing: true }, this.localize('fieldRequired'));
+    } else {
+      this.validityController.setValidity({});
+    }
+  }
+
+  private syncButtonStates(): void {
+    if (!this.internals) return;
+    setCustomState(this.internals, 'disabled', this.effectiveDisabled || this.loading);
+    setCustomState(this.internals, 'icon-button', this.isIconButton);
+    setCustomState(this.internals, 'link', this.baseEl?.localName === 'a');
+    setCustomState(this.internals, 'loading', this.loading);
   }
 
   private syncDescribedByElements(): void {
@@ -507,12 +728,14 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     // Shared inner content, rendered identically in both roots so the extracted variable produces
     // byte-identical DOM to the previous inline template in `<button>` mode.
     const content = html`
-      <span part="start" ?hidden=${!this.hasStartSlot}>
+      <span part="start prefix" ?hidden=${!(this.hasStartSlot || this.withStart)}>
         <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+        <slot name="prefix" @slotchange=${this.onStartSlotChange}></slot>
       </span>
-      <span part="label"><slot></slot></span>
-      <span part="end" ?hidden=${!this.hasEndSlot}>
+      <span part="label"><slot @slotchange=${this.onDefaultSlotChange}></slot></span>
+      <span part="end suffix" ?hidden=${!(this.hasEndSlot || this.withEnd)}>
         <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+        <slot name="suffix" @slotchange=${this.onEndSlotChange}></slot>
       </span>
       ${this.withCaret ? html`<span part="caret" aria-hidden="true">${chevronIcon()}</span>` : nothing}
       ${this.loading ? html`<span part="spinner" aria-hidden="true">${spinnerIcon()}</span>` : ''}
@@ -530,10 +753,11 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
       // `aria-disabled` on a still-navigable `<a href>`. `@click`/submit-reset are deliberately
       // absent: native navigation is the anchor's own activation (mirrors `lr-card`).
       return html`<a
-        part="base"
+        part="base button"
+        ?data-icon-button=${this.isIconButton}
         href=${disabled ? nothing : href}
         target=${this.target || nothing}
-        rel=${this.target ? 'noopener noreferrer' : nothing}
+        rel=${this.rel ?? nothing}
         download=${this.download || nothing}
         aria-label=${this.accessibleLabel || nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
@@ -551,7 +775,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
     return html`
       <button
-        part="base"
+        part="base button"
+        ?data-icon-button=${this.isIconButton}
         type="button"
         aria-label=${this.accessibleLabel || nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}

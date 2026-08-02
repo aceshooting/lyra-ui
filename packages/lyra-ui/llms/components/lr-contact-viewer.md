@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraContactViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -21,7 +23,8 @@ label when `FN` is absent).
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the contacts.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.

@@ -17,6 +17,8 @@ import { styles } from './menu-label.styles.js';
  * @customElement lr-menu-label
  * @slot - The heading text.
  * @csspart base - The heading row.
+ * @status stable
+ * @since 8.0.0
  */
 export class LyraMenuLabel extends LyraElement {
   static override styles = [LyraElement.styles, styles];

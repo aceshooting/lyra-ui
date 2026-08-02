@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/button/button.js';` (registers the tag; side-effect import)
 - **Class** `LyraButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/button/button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -14,8 +16,9 @@
 ## `lr-button`
 
 A generic action-button primitive. Renders an internal native `<button>`; `type="submit"`/
-`type="reset"` are handled by the component itself via the host's own `closest('form')`, since a
-shadow-internal native button doesn't participate in an ancestor form's submission on its own.
+`type="reset"` are handled by the component itself via its browser-resolved form owner (including
+an external owner named by `form`), since a shadow-internal native button doesn't participate in a
+light-DOM form's submission on its own.
 
 Set `href` to a safe link URL and the root renders as a real `<a part="base" href=…>` instead — a
 link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
@@ -34,11 +37,16 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
   `aria-disabled="true"`), so a disabled link button cannot navigate. An unsafe/unparseable value
   falls back to the native `<button>`
 - `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
-  (e.g. `'_blank'`) automatically derives `rel="noopener noreferrer"` on the anchor; `rel` is never
-  independently settable (reverse-tabnabbing). Ignored in `<button>` mode
+  (e.g. `'_blank'`) automatically derives `rel="noopener noreferrer"` on the anchor. The public
+  `rel` getter and compatibility attribute expose that mapped surface, but an author value never
+  controls the rendered anchor: `target` alone derives the safe value (reverse-tabnabbing). Ignored
+  in `<button>` mode
 - `download?: string` — native anchor `download` attribute, used only while `href` resolves to a
   link. Ignored in `<button>` mode
-- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected)
+- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected). Reads
+  stay in Lyra's shared vocabulary; migrated Shoelace inputs normalize `default` → `neutral`,
+  `primary` → `brand`, and `text` → neutral `appearance="plain"`. The Lyra/Web Awesome default is
+  intentionally still `neutral`
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' | 'quiet' | 'link' =
   'accent'` (reflected) — the library's shared fill vocabulary plus this component's own two extra
   tiers. **Breaking in 8.0.0: the default moved from `'filled'` to `'accent'`**, so a bare
@@ -68,12 +76,21 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
   `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so that property stays the
   single corner-radius knob and a consumer override still wins. `appearance="link"` renders with
   zero chrome, pill or not
+- `circle: boolean = false` (reflected) — Shoelace-compatible circular icon-button treatment: a
+  square control with the pill radius and compact inline padding. It is additive to, not a rename
+  of, `pill`
+- `outline: boolean = false` (reflected) — Shoelace-compatible outlined treatment. It does not
+  overwrite `appearance`, so removing `outline` restores the canonical Lyra appearance
 - `withCaret: boolean = false` (attribute `with-caret`, reflected) — renders a decorative trailing
   chevron (`[part="caret"]`, `aria-hidden`) marking the button as a dropdown/menu trigger. It
   carries no accessible name of its own: the button's label already names the action, and the popup
   relationship is expressed by a host `aria-haspopup`/`aria-expanded`, which are forwarded to the
   internal control. Like the label and the two adornment slots it fades to `opacity: 0` while
   `loading`, so the spinner has the button to itself
+- `caret: boolean = false` — Shoelace alias for `withCaret`; either spelling renders the same part
+- `withStart: boolean = false` / `withEnd: boolean = false` (attributes `with-start`/`with-end`) —
+  Web Awesome SSR presence hints that keep the matching adornment wrapper mounted before slot
+  assignment is observable
 - `type: 'button' | 'submit' | 'reset' = 'button'`
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
   clearing `disabled`
@@ -81,6 +98,10 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name forwarded
   reactively to the internal native button or anchor; changing or removing the attribute after
   mount updates the actual focused control
+- `required: boolean = false` (reflected), `validity`, `validationMessage`, and `willValidate` —
+  Web Awesome's form-validity surface. A required button needs a non-empty submitter `value`; this
+  validation never makes the button a persistent form-data entry
+- `customError: string | null` (attribute `custom-error`, reflected) — consumer validation message
 
 **Submitter overrides (`type="submit"` in `<button>` mode).** `name`/`value` plus the five native
 `form*` overrides describe the submission this button triggers, not the button itself:
@@ -99,6 +120,10 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `formTarget?: string` (attribute `formtarget`) — overrides the form owner's `target`. Distinct
   from `target`, which is the anchor target used in link mode
 
+Shoelace's hyphenated spellings — `form-action`, `form-enctype`, `form-method`,
+`form-no-validate`, and `form-target` — delegate to the same five properties. When both spellings
+are used, the most recent attribute change wins.
+
 All five are `undefined`/`false` by default. When any of them — or `name`/`value` — is set, the
 submission runs through a **transient native `<button type="submit">`** inserted directly after the
 host, used as `requestSubmit()`'s submitter and removed again in the same synchronous step (in a
@@ -113,16 +138,29 @@ Each size tier's `min-block-size` floor is exposed as its own token (see below).
 
 **Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal base
 element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
-submit/reset behavior in `<button>` mode.
+submit/reset behavior in `<button>` mode. `getForm()` returns the browser-resolved form owner,
+including an external owner selected by the `form` attribute. `checkValidity()`, `reportValidity()`,
+and `setCustomValidity(message)` delegate to `ElementInternals`; `resetValidity()` clears only the
+consumer error and restores the current `required`/`value` constraint. `formStateRestoreCallback()`
+restores `value` for session history/autofill without changing submitter-only form-data semantics.
 
-**Events:** none (a plain native `click` bubbles and composes through the shadow boundary
-unmodified; disabled while `disabled` or `loading`).
+**Events:** a plain native `click` bubbles and composes through the shadow boundary unmodified
+(disabled while `disabled` or `loading`). The internal button's `focus` and `blur` — which do not
+cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
+events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail). `lr-invalid` (no
+detail) fires when a validity check finds the button invalid.
 
-**Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content).
+**Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content),
+plus Shoelace aliases `prefix` → `start` and `suffix` → `end`.
 
-**CSS parts:** `base` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe
-link), `label`, `start`, `end`, `caret` (the decorative dropdown chevron, present only while
-`with-caret` is set), `spinner` (present only while `loading`).
+**CSS parts:** `base` (compatibility name for the internal control; use `button`),
+`button` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe link; it is
+the same node as `base`), `label`, `start`/`prefix` (the same wrapper), `end`/`suffix` (the same
+wrapper), `caret` (the decorative dropdown chevron, present only while either caret spelling is
+set), `spinner` (present only while `loading`).
+
+**CSS custom states:** `disabled` (including fieldset-disablement and loading), `icon-button`
+(one text-free default-slot element), `link` (safe anchor mode), and `loading`.
 
 **Themeable custom properties.** The colour slots below are re-pointed at the active `variant`'s row
 of the library's shared semantic colour grid, so the component carries no `:host([variant='…'])`
@@ -227,6 +265,8 @@ box no matter what tier or override is in play.
 <p>The message failed. <lr-button appearance="link" variant="brand">Retry</lr-button></p>
 
 <lr-button pill with-caret aria-haspopup="menu" aria-expanded="false">Actions</lr-button>
+<lr-button variant="primary" outline caret><span slot="prefix">★</span>Migrated</lr-button>
+<lr-button circle aria-label="Settings"><svg aria-hidden="true">...</svg></lr-button>
 
 <form action="/save" method="post">
   <lr-input name="title" label="Title" required></lr-input>

@@ -241,6 +241,8 @@ function formatDuration(ms: number): {
  * @cssprop [--lr-tool-result-dialog-error-bg=var(--lr-color-danger-quiet)] - Error status background.
  * @cssprop [--lr-tool-result-dialog-denied-color=var(--lr-color-warning)] - Denied status foreground.
  * @cssprop [--lr-tool-result-dialog-denied-bg=var(--lr-color-warning-quiet)] - Denied status background.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventMap> {
   static override styles = [LyraElement.styles, styles];

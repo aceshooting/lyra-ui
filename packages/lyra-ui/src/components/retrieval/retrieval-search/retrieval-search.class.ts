@@ -77,6 +77,8 @@ export interface LyraRetrievalSearchEventMap {
  *   not `loading`.
  * @csspart empty - The compact `<lr-empty>`, shown only when `empty` is `true` and neither
  *   `loading` nor `errorText` is set.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap> {
   static override styles = [LyraElement.styles, styles];

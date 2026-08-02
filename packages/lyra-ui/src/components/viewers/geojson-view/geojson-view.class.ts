@@ -263,6 +263,8 @@ class LyraGeojsonViewBase extends LyraElement<LyraGeojsonViewEventMap> {}
  * @csspart missing-library - The missing-maplibre-gl callout shown alongside the json-viewer fallback.
  * @csspart error - The error region.
  * @csspart spinner - The loading status region.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

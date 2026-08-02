@@ -14,13 +14,13 @@ it('renders before and after slots with a positioned divider', async () => {
 
   expect(el.shadowRoot!.querySelector('[part="before"] slot[name="before"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="after"] slot[name="after"]')).to.exist;
-  expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lr-comparer-position')).to.equal('35%');
+  expect((el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).style.getPropertyValue('--lr-comparer-position')).to.equal('35%');
 });
 
 it('clamps a NaN/out-of-range position into [0, 100] for rendering, without mutating the raw property', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   await el.updateComplete;
-  const base = () => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = () => el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   el.position = NaN;
   await el.updateComplete;
@@ -39,7 +39,7 @@ it('clamps a NaN/out-of-range position into [0, 100] for rendering, without muta
 it('emits position changes from the native range handle', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   await el.updateComplete;
-  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLInputElement;
+  const handle = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   handle.value = '70';
   const eventPromise = oneEvent(el, 'lr-position-change');
   handle.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
@@ -47,6 +47,52 @@ it('emits position changes from the native range handle', async () => {
 
   expect(event.detail).to.deep.equal({ position: 70 });
   expect(el.position).to.equal(70);
+});
+
+it('bridges the native range change event as a bubbling composed native Event', async () => {
+  const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
+  const input = el.shadowRoot!.querySelector('input[type="range"]') as HTMLInputElement;
+  input.value = '64';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  const changed = oneEvent(el, 'change');
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  const event = await changed;
+
+  expect(event.constructor.name).to.equal('Event');
+  expect(event.bubbles).to.be.true;
+  expect(event.composed).to.be.true;
+  expect(el.position).to.equal(64);
+});
+
+it('renders the handle slot and resolves both upstream sizing properties', async () => {
+  const el = (await fixture(html`<lr-image-comparer
+    style="--divider-width: 7px; --handle-size: 31px"
+  >
+    <span slot="handle" aria-hidden="true">drag</span>
+  </lr-image-comparer>`)) as LyraImageComparer;
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  const handleVisual = el.shadowRoot!.querySelector('.handle-visual') as HTMLElement;
+  const handleSlot = el.shadowRoot!.querySelector('slot[name="handle"]') as HTMLSlotElement;
+
+  expect(handleSlot.assignedElements().map((node) => node.localName)).to.deep.equal(['span']);
+  expect(getComputedStyle(divider).inlineSize).to.equal('7px');
+  expect(getComputedStyle(handleVisual).inlineSize).to.equal('31px');
+  expect(getComputedStyle(handleVisual).blockSize).to.equal('31px');
+});
+
+it('publishes dragging only for the active pointer gesture and clears it on cancellation', async () => {
+  const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
+  const input = el.shadowRoot!.querySelector('input[type="range"]') as HTMLInputElement;
+
+  input.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7 }));
+  expect(el.matches(':state(dragging)')).to.be.true;
+  input.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 7 }));
+  expect(el.matches(':state(dragging)')).to.be.false;
+
+  input.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 8 }));
+  expect(el.matches(':state(dragging)')).to.be.true;
+  el.remove();
+  expect(el.matches(':state(dragging)')).to.be.false;
 });
 
 it('falls back to the localized default label when no aria-label is set', async () => {
@@ -57,8 +103,8 @@ it('falls back to the localized default label when no aria-label is set', async 
     </lr-image-comparer>
   `)) as LyraImageComparer;
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const handle = el.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
   expect(base.getAttribute('aria-label')).to.equal('Image comparison');
   expect(handle.getAttribute('aria-label')).to.equal('Image comparison');
 });
@@ -71,19 +117,19 @@ it('renders a .strings override for the default label', async () => {
     </lr-image-comparer>
   `)) as LyraImageComparer;
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-label')).to.equal('Comparaison des images');
 });
 
 it('switches the native range handle to a vertical writing-mode so drag input maps to the visible vertical divider', async () => {
   const horizontal = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   await horizontal.updateComplete;
-  const horizontalHandle = horizontal.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  const horizontalHandle = horizontal.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
   expect(getComputedStyle(horizontalHandle).writingMode).to.equal('horizontal-tb');
 
   const vertical = (await fixture(html`<lr-image-comparer orientation="vertical"></lr-image-comparer>`)) as LyraImageComparer;
   await vertical.updateComplete;
-  const verticalHandle = vertical.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  const verticalHandle = vertical.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
   expect(getComputedStyle(verticalHandle).writingMode).to.equal('vertical-lr');
   // Pinned to ltr regardless of an ambient dir="rtl" so the handle's top-to-bottom value
   // progression always matches the divider's own always-top-anchored inset-block-start.
@@ -94,11 +140,11 @@ it('switches the native range handle to a vertical writing-mode so drag input ma
 
 it('forwards host focus(), blur(), and click() to the range handle', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
-  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLInputElement;
+  const handle = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   let clicks = 0;
   handle.addEventListener('click', () => clicks++);
   el.focus();
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('handle');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('input');
   el.blur();
   expect(el.shadowRoot!.activeElement).to.equal(null);
   el.click();
@@ -106,7 +152,7 @@ it('forwards host focus(), blur(), and click() to the range handle', async () =>
 });
 
 it('tints the divider on hover and deepens it while the drag handle is pressed', async () => {
-  // [part="handle"] is a 1%-opacity full-bleed range input, so it has nothing of its own to tint:
+  // [part="input"] is a 1%-opacity full-bleed range input, so it has nothing of its own to tint:
   // both interaction states reach the divider through a :has() indirection. That is exactly the
   // shape that silently never matches if the selector drifts, and a stylesheet-text assertion
   // cannot tell a matching selector from a dead one -- so this reads the rendered colour.
@@ -118,7 +164,7 @@ it('tints the divider on hover and deepens it while the drag handle is pressed',
   `)) as LyraImageComparer;
   await el.updateComplete;
   const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
-  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  const handle = el.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
 
   const resting = getComputedStyle(divider).backgroundColor;
   const rect = handle.getBoundingClientRect();
@@ -153,7 +199,7 @@ it('is accessible', async () => {
 
 it('bridges native focus and blur from the range handle as bubbling composed host events', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
-  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLInputElement;
+  const handle = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
 
   const focusEvent = oneEvent(el, 'focus');
   handle.dispatchEvent(new FocusEvent('focus'));

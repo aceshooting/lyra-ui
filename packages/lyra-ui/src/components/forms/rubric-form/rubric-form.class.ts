@@ -15,6 +15,8 @@ import '../combobox/option.class.js';
 import '../checkbox/checkbox.class.js';
 import '../checkbox-group/checkbox-group.class.js';
 import '../textarea/textarea.class.js';
+import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 
 export interface RubricKeyOption {
   value: string;
@@ -42,6 +44,7 @@ const EMPTY_KEYS: RubricKey[] = [];
 const EMPTY_VALUE: RubricValue = {};
 
 export interface LyraRubricFormEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   'lr-input': CustomEvent<{ value: RubricValue }>;
   'lr-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
   'lr-submit': CustomEvent<{ value: RubricValue; itemId: string }>;
@@ -77,6 +80,7 @@ export interface LyraRubricFormEventMap {
  * @event lr-validity-change - `detail: { valid, errors }` — fired only on an actual change.
  * @event lr-submit - `detail: { value, itemId }` — Submit clicked or Ctrl/Cmd+Enter, after validity passes.
  * @event lr-skip - `detail: { itemId }` — Skip activated (`skippable` only); no validation.
+ * @event lr-invalid - The complete rubric form failed a validity check.
  * @csspart base - The outer wrapper around all fields.
  * @csspart field - One key's wrapper (label + control + description + error).
  * @csspart label - A field's label.
@@ -99,12 +103,15 @@ export interface LyraRubricFormEventMap {
  *   through a `reportValidity()`/Submit attempt, which reveals every outstanding error).
  * @cssstate user-invalid - `invalid`, but only after that same interaction — a rubric nobody has
  *   touched yet is invalid without being styled as an error.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
   static override properties = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
     keys: { attribute: false, noAccessor: true },
     value: { attribute: false, noAccessor: true },
@@ -119,6 +126,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   private baseId = nextId('rubric-form');
   private _fieldsetDisabled = false;
   private _name = '';
@@ -139,6 +148,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     super();
     this.internals = this.safeAttachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     this.addEventListener('keydown', this.onFormKeyDown as EventListener);
     this.syncFormState();
   }
@@ -176,7 +187,13 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
 
   get form(): HTMLFormElement | null {
-    return this.internals.form;
+    return getFormOwner(this.internals);
+  }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
   }
   /** Delegates straight to `ElementInternals.labels` -- no logic of its own. */
   get labels(): NodeList {
@@ -567,8 +584,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       max=${max}
       step=${step}
       show-value
-      label=${accessibleLabel}
-      .value=${String(numeric)}
+      aria-label=${accessibleLabel}
+      .value=${numeric}
       ?disabled=${disabled}
       @input=${this.stopChildEvent}
       @change=${this.stopChildEvent}

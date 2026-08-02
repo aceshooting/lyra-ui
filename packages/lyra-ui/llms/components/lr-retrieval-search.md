@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/retrieval/retrieval-search/retrieval-search.js';` (registers the tag; side-effect import)
 - **Class** `LyraRetrievalSearch`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/retrieval-search/retrieval-search.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

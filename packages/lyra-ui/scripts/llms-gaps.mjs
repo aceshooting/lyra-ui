@@ -19,6 +19,7 @@ const SHARED_SURFACE = new Set([
 ]);
 
 const camel = (name) => name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+const escapePattern = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * True when `name` appears in `text` as a genuine standalone token, not merely as a substring of an
@@ -34,8 +35,24 @@ const camel = (name) => name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
  * metacharacters, but a future name might contain one).
  */
 export function mentionsName(text, name) {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = escapePattern(name);
   return new RegExp(`(?<![\\w-])${escaped}(?![\\w-])`).test(text);
+}
+
+/**
+ * True only for the authored whole-surface inheritance declaration. Ordinary prose saying that a
+ * component "inherits from" another one is intentionally insufficient: the exact marker is a
+ * reviewable promise that every public inherited attribute, slot, part, event, and theme property
+ * remains available without duplicating a long base-component table.
+ */
+export function inheritsAllPublicSurface(text, baseTag) {
+  const escaped = escapePattern(baseTag);
+  return new RegExp('^\\*\\*Inherits:\\*\\* all public surface from `' + escaped + '`\\.$', 'm').test(text);
+}
+
+function inheritedSurfaceIsDocumented(item, text, tagByDeclaration) {
+  const baseTag = tagByDeclaration.get(item?.inheritedFrom?.name);
+  return Boolean(baseTag && inheritsAllPublicSurface(text, baseTag));
 }
 
 /** Custom properties a component's own stylesheet reads but the manifest may not declare. */
@@ -66,12 +83,16 @@ export function ownsToken(tag, token, allTags) {
 }
 
 /**
+ * @param {string[]} families authored family documents to inspect
+ * @param {object | null} manifestOverride optional in-memory manifest for generation tests
  * @returns {Array<{family: string, tag: string, lines: number, kind: string, names: string[]}>}
  *   every documentable name the manifest (or the component's stylesheet) knows about that the
  *   component's own section never mentions.
  */
-export function collectGaps(families = FAMILIES.map(([f]) => f)) {
-  const manifest = JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));
+export function collectGaps(families = FAMILIES.map(([f]) => f), manifestOverride = null) {
+  const manifest = manifestOverride ?? JSON.parse(
+    readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'),
+  );
   const tagFacts = readTagFacts(manifest);
   const declFor = new Map();
   for (const mod of manifest.modules ?? []) {
@@ -81,6 +102,9 @@ export function collectGaps(families = FAMILIES.map(([f]) => f)) {
   }
 
   const allTags = [...declFor.keys()];
+  const tagByDeclaration = new Map(
+    [...declFor].map(([tag, { decl }]) => [decl.name, tag]),
+  );
   const gaps = [];
   for (const family of families) {
     const file = path.join(packageDir, 'llms', `${family}.md`);
@@ -113,6 +137,7 @@ export function collectGaps(families = FAMILIES.map(([f]) => f)) {
         miss(
           'attribute',
           (decl.attributes ?? [])
+            .filter((attribute) => !inheritedSurfaceIsDocumented(attribute, section.text, tagByDeclaration))
             .map((a) => a.name)
             .filter(
               (n) =>
@@ -121,10 +146,31 @@ export function collectGaps(families = FAMILIES.map(([f]) => f)) {
                 !mentionsName(section.text, camel(n)),
             ),
         );
-        miss('event', (decl.events ?? []).map((e) => e.name));
-        miss('slot', (decl.slots ?? []).map((s) => s.name).filter(Boolean));
-        miss('csspart', (decl.cssParts ?? []).map((p) => p.name));
-        miss('cssprop (manifest)', (decl.cssProperties ?? []).map((p) => p.name));
+        miss(
+          'event',
+          (decl.events ?? [])
+            .filter((event) => !inheritedSurfaceIsDocumented(event, section.text, tagByDeclaration))
+            .map((event) => event.name),
+        );
+        miss(
+          'slot',
+          (decl.slots ?? [])
+            .filter((slot) => !inheritedSurfaceIsDocumented(slot, section.text, tagByDeclaration))
+            .map((slot) => slot.name)
+            .filter(Boolean),
+        );
+        miss(
+          'csspart',
+          (decl.cssParts ?? [])
+            .filter((part) => !inheritedSurfaceIsDocumented(part, section.text, tagByDeclaration))
+            .map((part) => part.name),
+        );
+        miss(
+          'cssprop (manifest)',
+          (decl.cssProperties ?? [])
+            .filter((property) => !inheritedSurfaceIsDocumented(property, section.text, tagByDeclaration))
+            .map((property) => property.name),
+        );
         // Component-scoped tokens only — the shared --lr-color-*/--lr-space-* layer lives in
         // llms/tokens.md and is deliberately not restated per component.
         //

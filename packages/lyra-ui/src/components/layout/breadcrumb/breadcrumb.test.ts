@@ -1,4 +1,4 @@
-import { fixture, expect, html } from "@open-wc/testing";
+import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./breadcrumb.js";
 import "./breadcrumb-item.js";
 
@@ -33,6 +33,31 @@ it("localizes the nav landmark default accessible name via .strings, proving the
   expect(
     el.shadowRoot!.querySelector("nav")?.getAttribute("aria-label")
   ).to.equal("Fil d’Ariane");
+});
+
+it("accepts the mapped label property while preserving host aria-label priority", async () => {
+  const mapped = await fixture(html`<lr-breadcrumb label="Project trail"></lr-breadcrumb>`);
+  expect(mapped.shadowRoot!.querySelector("nav")?.getAttribute("aria-label")).to.equal("Project trail");
+
+  const overridden = await fixture(html`
+    <lr-breadcrumb label="Project trail" aria-label="Host trail"></lr-breadcrumb>
+  `);
+  expect(overridden.shadowRoot!.querySelector("nav")?.getAttribute("aria-label")).to.equal("Host trail");
+});
+
+it("distributes the breadcrumb-level separator slot to every item", async () => {
+  const el = await fixture(html`<lr-breadcrumb>
+    <span slot="separator">→</span>
+    <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
+    <lr-breadcrumb-item current>Reports</lr-breadcrumb-item>
+  </lr-breadcrumb>`);
+  const items = Array.from(el.querySelectorAll("lr-breadcrumb-item"));
+  await waitUntil(
+    () => items.every((item) => item.querySelector('[slot="separator"]')?.textContent === "→"),
+    "the shared separator must reach each item",
+  );
+  const secondSlot = items[1]!.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="separator"]')!;
+  expect(secondSlot.assignedNodes({ flatten: true }).map((node) => node.textContent).join("" )).to.equal("→");
 });
 
 it("renders separators as explicitly decorative content", async () => {

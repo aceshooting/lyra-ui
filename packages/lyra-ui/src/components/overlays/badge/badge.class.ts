@@ -1,7 +1,13 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement, type LyraEventMap } from '../../../internal/lyra-element.js';
-import type { LyraAppearance, LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
+import {
+  normalizeSize,
+  type LyraAppearance,
+  type LyraSize,
+  type LyraSizeStep,
+  type LyraVariant,
+} from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './badge.styles.js';
 
@@ -33,7 +39,8 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * entirely (no stray gap) while empty. Mark purely decorative content `aria-hidden`.
  * @slot end - Content placed after the label, typically an icon. The wrapper collapses entirely
  * (no stray gap) while empty. Mark purely decorative content `aria-hidden`.
- * @csspart base - The badge surface.
+ * @csspart base - Compatibility name for the badge surface; use `badge`.
+ * @csspart badge - The badge surface. It is the same node as `base`.
  * @csspart start - Wrapper around the `start` slot. Hidden entirely while empty.
  * @csspart content - Wrapper around the default slot; the part that truncates with an ellipsis.
  * @csspart end - Wrapper around the `end` slot. Hidden entirely while empty.
@@ -76,20 +83,45 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * `attention` animation.
  * @cssprop [--lr-badge-pulse-color=color-mix(in srgb, currentColor 40%, transparent)] - Color of
  * the expanding ring drawn by `attention="pulse"`.
+ * @cssprop [--pulse-color=var(--lr-badge-pulse-color)] - Upstream-compatible pulse-ring color.
  * @cssprop [--lr-badge-pulse-spread=var(--lr-size-0-25rem)] - How far the `attention="pulse"` ring
  * expands.
  * @cssprop [--lr-badge-bounce-distance=var(--lr-size-0-1875rem)] - Peak travel of the
  * `attention="bounce"` hop.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraBadge<Events = LyraEventMap> extends LyraElement<Events> {
   static override styles = [LyraElement.styles, variants, styles];
 
-  /** Semantic palette. */
-  @property({ reflect: true }) variant: BadgeVariant = 'neutral';
+  private _variant: BadgeVariant = 'neutral';
+  /** Semantic palette. The Shoelace `primary` write spelling normalizes to Lyra's `brand`. */
+  @property({ reflect: true })
+  get variant(): BadgeVariant {
+    return this._variant;
+  }
+  set variant(value: BadgeVariant | 'primary') {
+    const old = this._variant;
+    const next = value === 'primary' ? 'brand' : value;
+    this._variant = ['neutral', 'brand', 'success', 'warning', 'danger'].includes(next)
+      ? next as BadgeVariant
+      : 'neutral';
+    this.requestUpdate('variant', old);
+  }
 
   /** Visual density, matching `<lr-chip>`'s `2xs`–`xl` size scale. `m` preserves the original
-   *  badge dimensions. */
-  @property({ reflect: true }) size: BadgeSize = 'm';
+   *  badge dimensions. The upstream `small`/`medium`/`large` write spellings normalize to the
+   *  canonical `s`/`m`/`l` reads. */
+  private _size: BadgeSize = 'm';
+  @property({ reflect: true })
+  get size(): BadgeSize {
+    return this._size;
+  }
+  set size(value: LyraSize) {
+    const old = this._size;
+    this._size = normalizeSize(value ?? 'm');
+    this.requestUpdate('size', old);
+  }
 
   /** How much of the `variant` palette is spent on fill, border, and text. The default
    *  (`filled-outlined`: quiet tint, loud border, loud text) reproduces the badge's original
@@ -101,6 +133,10 @@ export class LyraBadge<Events = LyraEventMap> extends LyraElement<Events> {
 
   /** Opt-in attention-seeking animation. Stops entirely under `prefers-reduced-motion: reduce`. */
   @property({ reflect: true }) attention: BadgeAttention = 'none';
+
+  /** Upstream-compatible pulse shorthand. Equivalent to `attention="pulse"` unless the explicit
+   * `attention` property selects another animation. */
+  @property({ type: Boolean, reflect: true }) pulse = false;
 
   // A `[part]` always contains a literal `<slot>` child element regardless of assigned content, so
   // `:empty` never matches -- real emptiness is tracked in JS instead and reflected through the
@@ -130,14 +166,14 @@ export class LyraBadge<Events = LyraEventMap> extends LyraElement<Events> {
     );
   };
 
-  /** Extension point for a subclass rendering its own trailing control inside `[part='base']` --
+  /** Extension point for a subclass rendering its own trailing control inside `[part~='base']` --
    *  see `<lr-tag>`'s remove button. Renders nothing here. */
   protected renderTrailing(): unknown {
     return nothing;
   }
 
   override render(): TemplateResult {
-    return html`<span part="base">
+    return html`<span part="base badge">
       <span part="start" ?hidden=${!this.hasStartSlot}>
         <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
       </span>

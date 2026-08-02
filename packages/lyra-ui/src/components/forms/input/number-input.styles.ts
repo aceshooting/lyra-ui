@@ -9,8 +9,8 @@ import { css } from 'lit';
  * row's height.
  */
 export const styles = css`
-  [part='stepper-down'],
-  [part='stepper-up'] {
+  [part~='stepper-down'],
+  [part~='stepper-up'] {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -28,26 +28,26 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-input-font-size);
   }
-  [part='stepper-down']:hover,
-  [part='stepper-up']:hover {
+  [part~='stepper-down']:hover,
+  [part~='stepper-up']:hover {
     color: var(--lr-color-text);
   }
   /* Pressed. A stepper is the one control here a user holds down and repeats, so the press state
      doing more than the hover is not decoration: it is the only confirmation that the auto-repeat
      is running. Same quiet-to-full text step as the hover, plus a fill mixing the page surface
      toward --lr-color-mix-partner at the stronger active share. */
-  [part='stepper-down']:active,
-  [part='stepper-up']:active {
+  [part~='stepper-down']:active,
+  [part~='stepper-up']:active {
     color: var(--lr-color-text);
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  [part='stepper-down']:focus-visible,
-  [part='stepper-up']:focus-visible {
+  [part~='stepper-down']:focus-visible,
+  [part~='stepper-up']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='stepper-down']:disabled,
-  [part='stepper-up']:disabled {
+  [part~='stepper-down']:disabled,
+  [part~='stepper-up']:disabled {
     cursor: not-allowed;
   }
   /* The shared chevron glyph points inline-end, so each stepper rotates it onto the block axis.
@@ -55,10 +55,10 @@ export const styles = css`
      ring and the hit area, and neither should turn with the glyph. Rotating the wrapping part --
      internal/icons.ts's usual advice -- exists for RTL *mirroring*; both rotations here are
      block-axis, so nothing flips under RTL either way. */
-  [part='stepper-up'] > svg {
+  [part~='stepper-up'] slot > svg {
     transform: rotate(-90deg);
   }
-  [part='stepper-down'] > svg {
+  [part~='stepper-down'] slot > svg {
     transform: rotate(90deg);
   }
 `;

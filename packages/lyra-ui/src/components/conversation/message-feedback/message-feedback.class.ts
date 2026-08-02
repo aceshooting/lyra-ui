@@ -97,6 +97,8 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
  *   pressed thumbs-down button.
  * @cssprop [--lr-message-feedback-down-active-border=var(--lr-color-danger)] - Border color of the
  *   pressed thumbs-down button.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap> {
   static override styles = [LyraElement.styles, styles];

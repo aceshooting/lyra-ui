@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraSpreadsheetViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `xlsx` — see `llms/peers.md`
 - **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -22,8 +24,9 @@ back to a `Sheet!`-prefixed `range`, then the active sheet); `scrollToAnchor()` 
 `<lr-tab-group>`'s active tab first when needed, then scrolls the addressed row/column into view.
 `highlights` paint as a focusable `part="cell-highlight"`.
 
-**Properties:** `src` and `name` are strings. `anchorKinds` is a readonly `['cell-range']` (this
-viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+**Properties:** `src: string = ''` and `name: string = ''`. `anchorKinds: readonly LyraAnchorKind[] =
+['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
+contract).
 
 **Methods:** `search(query)` resolves the match count across every sheet's stringified cell values,
 ordered sheet then row then column, switching tabs as navigation crosses sheets (empty/whitespace

@@ -1,0 +1,9 @@
+<lr-widget new-attribute mode="condensed" @lr-new-event="onChange" placement="start">
+  <span slot="new-slot">Content</span>
+</lr-widget>
+<style>
+  lr-widget::part(new-part) {
+    --lr-new-color: red;
+    color: var(--lr-new-color);
+  }
+</style>

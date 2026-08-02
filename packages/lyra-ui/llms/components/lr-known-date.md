@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/known-date/known-date.js';` (registers the tag; side-effect import)
 - **Class** `LyraKnownDate`, also available unregistered from `@aceshooting/lyra-ui/components/utility/known-date/known-date.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecated part** `label` since `8.0.0`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window.
 - **Optional peers** none
-- **Themeable via** 9 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,14 +21,22 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
 8601 (`YYYY-MM-DD`), or `''` while any field is blank or the combination isn't a real calendar date.
 
 **Properties:**
+
 - `value: string` — canonical `YYYY-MM-DD` or `''`. Assignment goes through a strict-ISO gate:
   a non-zero-padded (`"2007-3-27"`) or calendar-invalid (`"2007-02-30"`) literal sanitizes to `''`
   and clears all three fields. Programmatic assignment never emits `input`/`change`
 - `valueAsDate: Date | null` — the same value as a local-midnight `Date`; settable (assigning
   `null` clears)
+- `parts: DateParts` — the live raw `{ day, month, year }` strings. Assigning a complete valid set
+  synchronizes the canonical `value`; assigning an incomplete or impossible set clears `value`
+- `valueInput: HTMLInputElement` — hidden native `type="date"` mirror kept synchronized with
+  `value`, `min`, `max`, `required`, `disabled`, and `readonly` for integrations that inspect native
+  date constraints
 - `min: string = ''`, `max: string = ''` — inclusive `YYYY-MM-DD` bounds, surfaced as
   `rangeUnderflow`/`rangeOverflow`
 - `readonly: boolean = false` (reflected) — also suspends all validity flags
+- `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected) — field fill and
+  border treatment; `pill: boolean = false` (reflected) rounds every field fully
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — control density on the library's
   shared six-step ladder, scaling each field's height floor, padding, font size and corner radius
   together so a birthdate field lines up with the `lr-input`/`lr-date-input` beside it at the same
@@ -37,32 +47,53 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
 - `locale: string = ''` — BCP-47 override for field order and per-field label sampling only
   (redeclared non-reflecting over the base `locale`, like `lr-date-input`)
 - `autocomplete: string = ''` — the special value `'bday'` expands to
-  `bday-day`/`bday-month`/`bday-year` across the three fields; any other non-empty value is
-  forwarded verbatim to all three
+  `bday-day`/`bday-month`/`bday-year` across the three fields; `'on'` and `'off'` apply to all three,
+  while any other non-empty field-specific token is forwarded only to the year field
+- `withLabel: boolean = false` (`with-label`) and `withHint: boolean = false` (`with-hint`) — SSR
+  slot-presence hints. Normal client rendering detects slotted label/hint content automatically
 - `dayLabel: string = 'Day'` (`day-label`), `monthLabel: string = 'Month'` (`month-label`),
   `yearLabel: string = 'Year'` (`year-label`) — visible **and** accessible per-field labels; each
   routes through `localize()` only while left at its literal default
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — applied to `[part="fieldset"]`,
   which owns the group role, overriding the `<legend>`-derived name
+- The shared form surface adds `defaultValue`, `customError` (`custom-error`), `getForm()`,
+  `checkValidity()`, `reportValidity()`, and `setCustomValidity(message)`.
 
-**Methods:** `focus(options?)` focuses the first field in locale order; `blur()` blurs whichever
-field currently has focus.
+For mapped JavaScript/TypeScript compatibility, assigning `null` to `name` clears it to the
+canonical `''` read value and removes the `name` attribute. The getter remains non-nullable.
 
-**Events:** `input` (every keystroke), `change` (a field blur where the composite value newly
-transitioned), plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
+**Methods:** `focus(options?)` focuses the first empty field in locale order (or the first field when
+all are filled); `blur()` blurs whichever field currently has focus; `resetValidity()` clears a
+consumer-supplied custom error and republishes intrinsic constraints;
+`formStateRestoreCallback(state)` restores a string state and clears for other shapes.
+
+**Events:** native bubbling/composed `InputEvent` `input` (every keystroke) and native
+bubbling/composed `Event` `change` (a field blur where the composite value newly transitioned),
+plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
 leaves all three fields, not per field-to-field Tab; each entry into the control likewise produces
 exactly one public `focus`, with the private trusted focus suppressed). `input`/`change` detail is
 `{ value, day, month, year, field }` — `value` is the canonical ISO date or `''`, `day`/`month`/`year`
 are the live raw typed text, and `field` is `'day' | 'month' | 'year'`, whichever was last edited.
+`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 
 **Slots:** `label`, `hint`, `error` (each rendered alongside its matching property).
 
-**CSS parts:** `form-control` (outer wrapper), `fieldset` (the `<fieldset>` grouping the fields —
+**CSS parts:** `base`, `known-date`, and `form-control` are aliases on the same outer wrapper;
+`fieldset` (the `<fieldset>` grouping the fields —
 carries `aria-label` when `accessibleLabel` is set), `legend` (the `<legend>`; hidden when there is
-no label, and grows a `*` suffix while `required`), `fields` (the flex row), `field` (one field
-block, repeated three times, `data-field="day"|"month"|"year"`), `field-input` (the native
+no label, and grows a `*` suffix while `required`), `form-control-label` (`label` is its deprecated
+compatibility alias), `fields` / `form-control-input` (aliases on the flex row), `field` (one field
+block, repeated three times, `data-field="day"|"month"|"year"`) plus its matching `field-day`,
+`field-month`, or `field-year` token, `field-input` (the native
 `<input type="text" inputmode="numeric">` inside it, same `data-field` marker), `field-label` (the
 small per-field text label), `hint`, `error` (`role="alert"`).
+
+The `label` part alias was deprecated in 8.0.0 in favor of the shared form vocabulary
+`form-control-label`. Both names remain on the same node during the compatibility window; use
+`::part(form-control-label)` in new CSS. The alias will not be removed before 10.0.0.
+
+**CSS states:** `:state(blank)` while the composite value is empty/incomplete;
+`:state(disabled)` for direct or fieldset-cascaded disablement.
 
 **Themeable custom properties:** `--lr-known-date-field-padding-block`,
 `--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size` and
@@ -99,7 +130,8 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
   outer-tree rule.
 
 **Known gotchas:**
-- Field *order* is derived from the locale by formatting a probe date (Jan 2 2026) with
+
+- Field _order_ is derived from the locale by formatting a probe date (Jan 2 2026) with
   `Intl.DateTimeFormat` and reading back the part order — not from `Date.parse()`'s mm/dd/yyyy bias.
   It falls back to `month, day, year` only when that sampling fails.
 - Auto-advance (typing a field's last digit moves to the next) and backspace-into-the-previous-field
@@ -108,12 +140,12 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 - Each `<input>` keeps exactly the digits that were typed — never zero-padded, range-clamped, or
   reverted to a previous value; only the composite `value` is normalized to zero-padded ISO.
 - Non-digit characters are stripped in the `input` handler before they reach field state (the
-  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals *are*
+  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals _are_
   accepted and transliterated to ASCII, not rejected: Arabic-Indic (`٠`–`٩`) and Extended
   Arabic-Indic/Persian (`۰`–`۹`) digits are mapped unconditionally, and the digits of
   `effectiveLocale`'s own numbering system are added on top via `Intl.NumberFormat`, so typing
   `٢٠٢٦` into the year field commits `2026`.
-- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the *physical* key meaning
+- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the _physical_ key meaning
   "next field" flips under an inherited `dir="rtl"`; the locale-derived field order itself does not.
 - A blank composite is `valueMissing` only when **all three** fields are blank; a partially typed
   required date reports `badInput` instead.

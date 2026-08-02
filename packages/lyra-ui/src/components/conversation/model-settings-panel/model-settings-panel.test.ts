@@ -340,10 +340,15 @@ it('recognizes an object-shaped catalog entry (id/label) for inCatalog', async (
 
 // -- String localization ---------------------------------------------------
 
-it('defaults the temperature caption/slider label and model-select placeholder to English', async () => {
+it('defaults the temperature caption/slider accessible name and model-select placeholder to English', async () => {
   const el = (await fixture(html`<lr-model-settings-panel></lr-model-settings-panel>`)) as LyraModelSettingsPanel;
   expect(el.shadowRoot!.querySelector('[part="temperature-label"]')!.textContent).to.equal('Temperature');
-  expect(slider(el).label).to.equal('Temperature');
+  const temperatureSlider = slider(el);
+  await temperatureSlider.updateComplete;
+  expect(temperatureSlider.label).to.equal('');
+  expect(temperatureSlider.shadowRoot!.querySelector('[part~="thumb"]')!.getAttribute('aria-label')).to.equal(
+    'Temperature',
+  );
   expect(modelSelect(el).placeholder).to.equal('Select a model…');
 });
 
@@ -352,7 +357,12 @@ it('honors a strings override for temperature/selectModel', async () => {
     <lr-model-settings-panel .strings=${{ temperature: 'Température', selectModel: 'Choisir un modèle…' }}></lr-model-settings-panel>
   `)) as LyraModelSettingsPanel;
   expect(el.shadowRoot!.querySelector('[part="temperature-label"]')!.textContent).to.equal('Température');
-  expect(slider(el).label).to.equal('Température');
+  const temperatureSlider = slider(el);
+  await temperatureSlider.updateComplete;
+  expect(temperatureSlider.label).to.equal('');
+  expect(temperatureSlider.shadowRoot!.querySelector('[part~="thumb"]')!.getAttribute('aria-label')).to.equal(
+    'Température',
+  );
   expect(modelSelect(el).placeholder).to.equal('Choisir un modèle…');
 });
 

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraEmailViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `dompurify`, `postal-mime` — see `llms/peers.md`
 - **Themeable via** 24 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -25,7 +27,8 @@ downloading, or object-URL'ing them is the host's job (e.g.
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the message.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
 (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
 localized show/hide toggle. `false` (the default) preserves the full body rendering. A host

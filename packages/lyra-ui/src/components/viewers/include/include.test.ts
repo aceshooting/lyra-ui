@@ -2,7 +2,10 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import './include.js';
 import type { LyraInclude } from './include.js';
 import { __setHtmlSanitizerForTesting } from '../html-viewer/dompurify-loader.js';
-import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
+import {
+  __clearIncludeResourceCacheForTesting,
+  MAX_INCLUDE_BYTES,
+} from './include-resource.js';
 
 interface MockResponseOptions {
   ok?: boolean;
@@ -30,7 +33,10 @@ function abortError(): Error {
 }
 
 describe('lr-include', () => {
-  afterEach(() => __setHtmlSanitizerForTesting(undefined));
+  afterEach(() => {
+    __setHtmlSanitizerForTesting(undefined);
+    __clearIncludeResourceCacheForTesting();
+  });
 
   it('is a no-op when src is unset: no fetch, no aria-busy', async () => {
     let called = false;
@@ -41,6 +47,10 @@ describe('lr-include', () => {
       await el.updateComplete;
       await aTimeout(10);
       expect(called).to.equal(false);
+      expect(el.getAttribute('aria-busy')).to.equal('false');
+      el.src = '   ';
+      await aTimeout(10);
+      expect(called, 'whitespace-only src is also empty').to.equal(false);
       expect(el.getAttribute('aria-busy')).to.equal('false');
     } finally { window.fetch = original; }
   });
@@ -182,7 +192,7 @@ describe('lr-include', () => {
 
   it('emits lr-include-error with reason resource-too-large for an oversized response', async () => {
     const original = window.fetch;
-    window.fetch = (() => Promise.resolve(response('<p>Too big</p>', { contentLength: DEFAULT_MAX_RESOURCE_BYTES + 1 }))) as typeof window.fetch;
+    window.fetch = (() => Promise.resolve(response('<p>Too big</p>', { contentLength: MAX_INCLUDE_BYTES + 1 }))) as typeof window.fetch;
     try {
       const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
       const errorPromise = oneEvent(el, 'lr-include-error');
@@ -346,6 +356,232 @@ describe('lr-include', () => {
   it('renders default slotted content unchanged (the component introduces no built-in English copy)', async () => {
     const el = await fixture<LyraInclude>(html`<lr-include>Fallback text</lr-include>`);
     expect(el.textContent).to.equal('Fallback text');
+  });
+
+  it('clones same-page template content without fetching, moving sources, or duplicating ids', async () => {
+    const original = window.fetch;
+    let fetches = 0;
+    window.fetch = (() => {
+      fetches += 1;
+      return Promise.reject(new Error('same-page fragments must not fetch'));
+    }) as typeof window.fetch;
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <template id="include-template">
+          <label for="template-field">Template field</label>
+          <input id="template-field" />
+          <script>window.__includeScriptShouldNotRun = true;<\/script>
+        </template>
+        <lr-include>Fallback one</lr-include>
+        <lr-include>Fallback two</lr-include>
+      </div>
+    `);
+    try {
+      const template = fixtureRoot.querySelector('template')!;
+      const [first, second] = [...fixtureRoot.querySelectorAll<LyraInclude>('lr-include')];
+      const firstLoaded = oneEvent(first, 'lr-load');
+      const secondLoaded = oneEvent(second, 'lr-load');
+      first.src = '#include-template';
+      second.src = '#include-template';
+      await Promise.all([firstLoaded, secondLoaded]);
+
+      expect(fetches).to.equal(0);
+      expect(template.content.querySelectorAll('input').length).to.equal(1);
+      expect(first.querySelectorAll('input').length).to.equal(1);
+      expect(second.querySelectorAll('input').length).to.equal(1);
+      expect(first.querySelectorAll('script').length).to.equal(0);
+      expect(second.querySelectorAll('script').length).to.equal(0);
+      const firstInputId = first.querySelector('input')!.id;
+      const secondInputId = second.querySelector('input')!.id;
+      expect(firstInputId).to.not.equal('template-field');
+      expect(secondInputId).to.not.equal(firstInputId);
+      expect(first.querySelector('label')!.htmlFor).to.equal(firstInputId);
+      expect(second.querySelector('label')!.htmlFor).to.equal(secondInputId);
+      expect(document.querySelectorAll(`#${CSS.escape(firstInputId)}`).length).to.equal(1);
+      expect(document.querySelectorAll(`#${CSS.escape(secondInputId)}`).length).to.equal(1);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('clones a same-page element’s children rather than the source wrapper', async () => {
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <section id="include-element"><p>Element child</p></section>
+        <lr-include></lr-include>
+      </div>
+    `);
+    const source = fixtureRoot.querySelector('#include-element')!;
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const loaded = oneEvent(el, 'lr-load');
+    el.src = '#include-element';
+    await loaded;
+
+    expect(source.querySelectorAll('p').length).to.equal(1);
+    expect(el.querySelectorAll(':scope > p').length).to.equal(1);
+    expect(el.querySelectorAll(':scope > section').length).to.equal(0);
+  });
+
+  it('fetches a remote document without its fragment, sanitizes it, then selects the target', async () => {
+    const original = window.fetch;
+    const requested: string[] = [];
+    window.fetch = ((url: string) => {
+      requested.push(url);
+      return Promise.resolve(
+        response(
+          '<main><section id="first">First</section><template id="chosen"><h2 id="heading">Chosen</h2><script>alert(1)<\/script></template></main>',
+        ),
+      );
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraInclude>(html`<lr-include>Fallback</lr-include>`);
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = '/partials.html#chosen';
+      await loaded;
+
+      expect(requested).to.deep.equal([new URL('/partials.html', document.baseURI).href]);
+      expect(el.textContent!.trim()).to.equal('Chosen');
+      expect(el.querySelectorAll('script').length).to.equal(0);
+      expect(el.querySelectorAll('#first').length).to.equal(0);
+      expect(el.querySelector('h2')!.id).to.not.equal('heading');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('shares only fragmentless remote work while selecting each subscriber’s own fragment', async () => {
+    const original = window.fetch;
+    const requested: string[] = [];
+    window.fetch = ((url: string) => {
+      requested.push(url);
+      return Promise.resolve(
+        response('<section id="alpha"><p>Alpha</p></section><section id="beta"><p>Beta</p></section>'),
+      );
+    }) as typeof window.fetch;
+    try {
+      const first = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      const second = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      const firstLoaded = oneEvent(first, 'lr-load');
+      const secondLoaded = oneEvent(second, 'lr-load');
+      first.src = '/shared-partials.html#alpha';
+      second.src = '/shared-partials.html#beta';
+      await Promise.all([firstLoaded, secondLoaded]);
+
+      expect(requested).to.deep.equal([
+        new URL('/shared-partials.html', document.baseURI).href,
+      ]);
+      expect(first.textContent).to.equal('Alpha');
+      expect(second.textContent).to.equal('Beta');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('keys retained resources by request mode as well as the fragmentless URL', async () => {
+    const original = window.fetch;
+    const modes: Array<RequestMode | undefined> = [];
+    window.fetch = ((_url: string, init?: RequestInit) => {
+      modes.push(init?.mode);
+      return Promise.resolve(response('<p>Mode-specific response</p>'));
+    }) as typeof window.fetch;
+    try {
+      const sameOrigin = await fixture<LyraInclude>(html`
+        <lr-include src="https://example.test/mode-key.html"></lr-include>
+      `);
+      await waitUntil(() => sameOrigin.querySelector('p') !== null);
+      const cors = await fixture<LyraInclude>(html`
+        <lr-include src="https://example.test/mode-key.html" mode="cors"></lr-include>
+      `);
+      await waitUntil(() => cors.querySelector('p') !== null);
+      expect(modes).to.deep.equal(['same-origin', 'cors']);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('reports a missing same-page or remote fragment without replacing prior content', async () => {
+    const samePage = await fixture<LyraInclude>(html`<lr-include>Fallback</lr-include>`);
+    const samePageError = oneEvent(samePage, 'lr-include-error');
+    samePage.src = '#does-not-exist';
+    expect((await samePageError).detail.reason).to.equal('missing-fragment');
+    expect(samePage.textContent).to.equal('Fallback');
+
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response('<p id="available">Available</p>'))) as typeof window.fetch;
+    try {
+      const remote = await fixture<LyraInclude>(html`<lr-include>Prior</lr-include>`);
+      const remoteError = oneEvent(remote, 'lr-include-error');
+      remote.src = '/partials.html#missing';
+      expect((await remoteError).detail.reason).to.equal('missing-fragment');
+      expect(remote.textContent).to.equal('Prior');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('deduplicates sanitized requests and keeps shared work alive for a connected subscriber', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    let signal: AbortSignal | null | undefined;
+    let resolveFetch!: (value: Response) => void;
+    window.fetch = ((_url: string, init?: RequestInit) => {
+      calls += 1;
+      signal = init?.signal;
+      return new Promise<Response>((resolve, reject) => {
+        resolveFetch = resolve;
+        init?.signal?.addEventListener('abort', () => reject(abortError()));
+      });
+    }) as typeof window.fetch;
+    try {
+      const first = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      const second = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      first.src = 'https://example.test/shared-fragment.html';
+      second.src = 'https://example.test/shared-fragment.html';
+      await waitUntil(() => calls === 1);
+      first.remove();
+      expect(signal?.aborted).to.equal(false);
+
+      const loaded = oneEvent(second, 'lr-load');
+      resolveFetch(response('<p>Shared</p>'));
+      await loaded;
+      expect(second.textContent).to.equal('Shared');
+      expect(calls).to.equal(1);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('retains successful sanitized resources, supports cache opt-out, and reloads explicitly', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => Promise.resolve(response(`<p>Call ${++calls}</p>`))) as typeof window.fetch;
+    try {
+      const first = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      const firstLoaded = oneEvent(first, 'lr-load');
+      first.src = 'https://example.test/cached-fragment.html';
+      await firstLoaded;
+
+      const retained = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      const retainedLoaded = oneEvent(retained, 'lr-load');
+      retained.src = 'https://example.test/cached-fragment.html';
+      await retainedLoaded;
+      expect(calls).to.equal(1);
+      expect(retained.textContent).to.equal('Call 1');
+
+      const noStore = await fixture<LyraInclude>(html`<lr-include cache="false"></lr-include>`);
+      expect(noStore.cache).to.equal(false);
+      const noStoreLoaded = oneEvent(noStore, 'lr-load');
+      noStore.src = 'https://example.test/cached-fragment.html';
+      await noStoreLoaded;
+      expect(calls).to.equal(2);
+      expect(noStore.textContent).to.equal('Call 2');
+
+      await retained.reload();
+      expect(calls).to.equal(3);
+      expect(retained.textContent).to.equal('Call 3');
+    } finally {
+      window.fetch = original;
+    }
   });
 
   // No .strings override test: this component renders no built-in visible

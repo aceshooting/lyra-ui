@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.js';` (registers the tag; side-effect import)
 - **Class** `LyraFilterBar`, also available unregistered from `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -89,7 +91,7 @@ const filters: FilterBarFilterDefinition[] = [
       },
       render: (context) => html`
         <lr-checkbox
-          ?checked=${context.value === true}
+          .checked=${context.value === true}
           ?disabled=${context.disabled}
           @lr-change=${context.onValueChange}
           @focusout=${context.onFocusout}

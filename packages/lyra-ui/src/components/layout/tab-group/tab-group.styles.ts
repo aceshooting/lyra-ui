@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     display: block;
   }
-  [part="base"] {
+  [part~="base"] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
@@ -18,11 +18,12 @@ export const styles = css`
     align-items: stretch;
     min-inline-size: 0;
   }
-  [part="tablist"] {
+  [part~="tablist"] {
     display: flex;
     align-items: stretch;
     gap: var(--lr-space-m);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--track-width, var(--lr-border-width-thin)) solid
+      var(--track-color, var(--lr-color-border));
     overflow-x: auto;
     overflow-y: hidden;
     flex: 1 1 auto;
@@ -57,7 +58,7 @@ export const styles = css`
      The whole qualifier sits in :where() so it contributes no specificity, leaving this rule at
      (0,1,0) -- it beats the display above by order alone, and a consumer's own
      ::part(scroll-button) ((0,1,1)) still outranks it without needing !important. */
-  :where([part="nav"]:not(:has([part="tablist"][data-scroll-overflow])))
+  :where([part="nav"]:not(:has([part~="tablist"][data-scroll-overflow])))
     [part~="scroll-button"] {
     display: none;
   }
@@ -103,7 +104,7 @@ export const styles = css`
      data-scroll-overflow from a real scrollWidth/clientWidth measurement; scrolling itself stays
      native, with no scroll listener. Painted unconditionally (as it used to be) it fades the first
      and last tab of a row that fits, for no reason. */
-  [part="tablist"][data-scroll-overflow] {
+  [part~="tablist"][data-scroll-overflow] {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
@@ -120,6 +121,7 @@ export const styles = css`
     );
   }
   [part="tab"] {
+    position: relative;
     appearance: none;
     background: none;
     border: none;
@@ -173,9 +175,17 @@ export const styles = css`
   [part="tab"][aria-selected="true"] {
     color: var(--lr-tab-group-selected-color, var(--lr-color-brand));
     border-block-end-color: var(
-      --lr-tab-group-indicator-color,
-      var(--lr-color-brand)
+      --indicator-color,
+      var(--lr-tab-group-indicator-color, var(--lr-color-brand))
     );
+  }
+  [part="active-tab-indicator"] {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: calc(-1 * var(--lr-border-width-medium));
+    block-size: var(--lr-border-width-medium);
+    background: var(--indicator-color, var(--lr-tab-group-indicator-color, var(--lr-color-brand)));
+    pointer-events: none;
   }
   [part="tab"][aria-disabled="true"] {
     cursor: not-allowed;
@@ -191,6 +201,10 @@ export const styles = css`
   }
   [part="panel"] {
     padding-block-start: var(--lr-space-xs);
+  }
+  [part="body"] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
   }
   /* no-pressed-state: the panel is a container for whatever the consumer slotted into the tab, not
      a target -- pressing it activates nothing, and :active matches the ancestors of whatever was
@@ -216,31 +230,39 @@ export const styles = css`
   /* Placement. The base flex direction moves the strip relative to the panels; start/end are
      logical, so row/row-reverse mirror under RTL with no :dir() rule. A vertical strip trades
      its block-end rule for an inline-end one, in the matching logical direction. */
-  :host([placement='bottom']) [part='base'] {
+  :host([placement='bottom']) [part~='base'] {
     flex-direction: column-reverse;
   }
-  :host([placement='bottom']) [part='tablist'],
+  :host([placement='bottom']) [part~='tablist'],
   :host([placement='bottom']) [part~='scroll-button'] {
     border-block-end: none;
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--track-width, var(--lr-border-width-thin)) solid
+      var(--track-color, var(--lr-color-border));
+  }
+  :host([placement='bottom']) [part='tab'][aria-selected='true'] {
+    border-block-end-color: transparent;
+  }
+  :host([placement='bottom']) [part='active-tab-indicator'] {
+    inset-block-start: calc(-1 * var(--lr-border-width-medium));
+    inset-block-end: auto;
   }
   /* A vertical strip renders no scroll controls at all, so [part='nav'] is a bare wrapper here --
-     it must hand the tablist's own intrinsic width straight through to [part='base']'s row rather
+     it must hand the tablist's own intrinsic width straight through to [part~='base']'s row rather
      than shrinking it. */
   :host([placement='start']) [part='nav'],
   :host([placement='end']) [part='nav'] {
     flex: 0 0 auto;
   }
-  :host([placement='start']) [part='base'],
-  :host([placement='end']) [part='base'] {
+  :host([placement='start']) [part~='base'],
+  :host([placement='end']) [part~='base'] {
     flex-direction: row;
     align-items: start;
   }
-  :host([placement='end']) [part='base'] {
+  :host([placement='end']) [part~='base'] {
     flex-direction: row-reverse;
   }
-  :host([placement='start']) [part='tablist'],
-  :host([placement='end']) [part='tablist'] {
+  :host([placement='start']) [part~='tablist'],
+  :host([placement='end']) [part~='tablist'] {
     flex-direction: column;
     align-items: stretch;
     flex: 0 0 auto;
@@ -249,16 +271,18 @@ export const styles = css`
     overflow-y: auto;
     border-block-end: none;
   }
-  :host([placement='start']) [part='tablist'] {
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+  :host([placement='start']) [part~='tablist'] {
+    border-inline-end: var(--track-width, var(--lr-border-width-thin)) solid
+      var(--track-color, var(--lr-color-border));
   }
-  :host([placement='end']) [part='tablist'] {
-    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+  :host([placement='end']) [part~='tablist'] {
+    border-inline-start: var(--track-width, var(--lr-border-width-thin)) solid
+      var(--track-color, var(--lr-color-border));
   }
   /* The horizontal edge fade measures inline overflow; a vertical strip scrolls in the block
      direction instead, so the mask would dim the wrong ends. */
-  :host([placement='start']) [part='tablist'][data-scroll-overflow],
-  :host([placement='end']) [part='tablist'][data-scroll-overflow] {
+  :host([placement='start']) [part~='tablist'][data-scroll-overflow],
+  :host([placement='end']) [part~='tablist'][data-scroll-overflow] {
     -webkit-mask-image: none;
     mask-image: none;
   }
@@ -266,14 +290,27 @@ export const styles = css`
   :host([placement='start']) [part='tab'][aria-selected='true'],
   :host([placement='end']) [part='tab'][aria-selected='true'] {
     box-shadow: none;
+    border-block-end-color: transparent;
   }
   :host([placement='start']) [part='tab'][aria-selected='true'] {
     border-inline-end: var(--lr-border-width-thick) solid
-      var(--lr-tab-group-indicator-color, var(--lr-color-brand));
+      var(--indicator-color, var(--lr-tab-group-indicator-color, var(--lr-color-brand)));
   }
   :host([placement='end']) [part='tab'][aria-selected='true'] {
     border-inline-start: var(--lr-border-width-thick) solid
-      var(--lr-tab-group-indicator-color, var(--lr-color-brand));
+      var(--indicator-color, var(--lr-tab-group-indicator-color, var(--lr-color-brand)));
+  }
+  :host([placement='start']) [part='active-tab-indicator'] {
+    inset-block: 0;
+    inset-inline: auto calc(-1 * var(--lr-border-width-thick));
+    inline-size: var(--lr-border-width-thick);
+    block-size: auto;
+  }
+  :host([placement='end']) [part='active-tab-indicator'] {
+    inset-block: 0;
+    inset-inline: calc(-1 * var(--lr-border-width-thick)) auto;
+    inline-size: var(--lr-border-width-thick);
+    block-size: auto;
   }
   :host([placement='start']) [part='panel'],
   :host([placement='end']) [part='panel'] {

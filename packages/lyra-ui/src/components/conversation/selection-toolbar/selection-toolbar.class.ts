@@ -48,6 +48,8 @@ const ACTION_KEYS: Record<SelectionAction, string> = {
  * @cssprop --lr-selection-toolbar-block-start - Computed logical block anchor position.
  * @cssprop --lr-selection-toolbar-inline-shift - Computed inline collision-avoidance offset.
  * @cssprop --lr-selection-toolbar-block-shift - Computed block collision-avoidance offset.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -145,7 +147,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     if (buttons.length === 0) return;
     this.activeActionIndex = Math.min(Math.max(0, preferredIndex), buttons.length - 1);
     buttons.forEach((button, index) => {
-      const inner = button.shadowRoot?.querySelector<HTMLElement>('[part="base"]');
+      const inner = button.shadowRoot?.querySelector<HTMLElement>('[part~="base"]');
       if (inner) inner.tabIndex = index === this.activeActionIndex ? 0 : -1;
     });
   }

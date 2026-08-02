@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/switch/switch.js';` (registers the tag; side-effect import)
 - **Class** `LyraSwitch`, also available unregistered from `@aceshooting/lyra-ui/components/forms/switch/switch.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -15,19 +17,28 @@
 
 A boolean toggle-switch form control. `role="switch"` with `aria-checked` read as an on/off state
 rather than checked/unchecked, and no indeterminate state. Structurally the same idea as
-`<lr-checkbox>` (form-associated via `ElementInternals`, click and Space/Enter both toggle).
+`<lr-checkbox>` (form-associated via `ElementInternals`; click and Space toggle). Enter is not a
+special switch key. Logical ArrowLeft/ArrowRight set the switch off/on, mirrored under RTL.
 Ships an opt-in `hint`/`errorText` form-control chrome (props + matching named slots + `hint`/`error`
 CSS parts), mirroring `<lr-select>`'s pattern for those two pieces — left unset, neither renders.
 Deliberately no separate top-of-field `label` prop/slot/part: the default slot already is this
 control's visible, clickable label (same as `<lr-checkbox>`).
 
 **Properties:**
-- `checked: boolean = false` (reflected)
+- `checked: boolean = false` — the live, non-reflecting state
+- `defaultChecked: boolean = false` (WA attribute `checked`, reflected; Shoelace alias
+  `default-checked`) — the current reset default; changing it updates `checked` only while the live
+  state is pristine
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked`
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `hint: string = ''` — hint text below the switch. Unset: no hint chrome renders.
+- `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins when both
+  are supplied
+- `withHint: boolean = false` (attribute `with-hint`) — WA SSR presence hint for slotted supporting
+  text that cannot be inspected until hydration
 - `errorText: string = ''` (attribute `error-text`) — error text below the switch (overridden by
   slotted `error` content). Unset: no error chrome renders.
 - `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
@@ -36,35 +47,44 @@ control's visible, clickable label (same as `<lr-checkbox>`).
   The slotted label keeps the library's standard control-label type size at every tier — restyle it
   through `::part(label)` if you want it to track the control.
 
-**Events:** a user toggle (click, Space/Enter, or the programmatic `click()` activation path) emits
+**Events:** a user state change (click, Space, a logical ArrowLeft/ArrowRight change, or the
+programmatic `click()` activation path) emits
 `input`, then `lr-input`, then `change`, then `lr-change` (both aliases carry
 `detail: { checked: boolean }`) — in that order, matching
 the native checkbox/radio contract. The two native-style events are **new in 8.0.0**: a boolean
 control that emitted only the `lr-`-prefixed alias was invisible to every form library, validation
 helper, and `<form>`-level `change` listener that binds the native names, which is the ordinary way
-a consumer observes a control they didn't write. Both bubble and compose, and neither carries a
-detail — read `event.target.checked`. None of the three fires for a programmatic `.checked`
+a consumer observes a control they didn't write. `input` is an `InputEvent`; `change` is an
+`Event`. Both bubble and compose, and neither carries a detail — read `event.target.checked`.
+None of the four fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events, each followed by its
-prefixed alias `lr-focus`/`lr-blur` (no detail).
+prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires when a validity
+check finds the switch invalid.
 
-**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control;
+`getForm()` returns its owning form (including an external owner selected by `form`).
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("notifications are disabled
 for your plan"): a non-empty message raises `customError` and blocks submission, `''` restores the
 control's own computed validity so a required-and-unchecked switch goes back to `valueMissing`. It
-survives every toggle and a form reset; only another `setCustomValidity('')` clears it.
+survives every toggle and a form reset; `setCustomValidity('')` or `resetValidity()` clears it.
+
+`checked`/`defaultChecked` use the same native dirty-state contract as `lr-checkbox`: live writes
+never reflect, default/attribute changes cannot overwrite a dirty live state, and `form.reset()`
+restores the current default before making the control pristine again.
 
 **Slots:**
 - default — label text, rendered next to the track. Clicking it toggles the switch, the same as
   clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the
   control still has an accessible name.
 - `hint` — custom hint content.
+- `help-text` — Shoelace alias for the same hint surface.
 - `error` — custom error content.
 
-**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `base` (the
-whole interactive control, `role="switch"`), `track` (the pill-shaped background), `thumb` (the
-circular knob that slides across the track), `label` (wrapper around the default slot), `hint` (the
-hint message), `error` (the error message)
+**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `base` /
+`switch` / `wrapper` (the whole interactive `role="switch"` node), `track` / `control` (the
+pill-shaped background), `thumb` (the circular knob), `label` (wrapper around the default slot),
+`hint` / `form-control-help-text` (the hint message), and `error`.
 
 **Themeable custom properties:** `--lr-switch-track-block-size` (default
 `calc(var(--lr-form-control-height) * 0.5)`), `--lr-switch-track-inline-size` (default
@@ -73,6 +93,7 @@ and `--lr-switch-thumb-offset` (default `var(--lr-size-2px)`) — component-loca
 on `:host`, since a fully-rounded pill/thumb needs a radius well past the shared `--lr-radius`
 default. Both track dimensions ride the shared `size` ladder, so at the default `m` tier they
 resolve to exactly the `1.25rem` × `2.25rem` the switch shipped with before it had a `size` at all.
+WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same rendered dimensions.
 
 `--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s resting fill,
 re-pointed at `--lr-color-brand` while `checked`. Hover and press are colour **mixes** away from
@@ -102,9 +123,9 @@ Session-history/autofill restoration uses the same explicit `checked`/`unchecked
 checkbox and does not emit `lr-change`.
 
 **Known gotchas:**
-- `formResetCallback()` restores `checked` to the value captured from the declarative `checked`
-  attribute at first connect (same one-shot-flag capture as `<lr-checkbox>`) — a later `.checked =
-  true` property assignment never redefines what `form.reset()` restores to.
+- `checked` is live and dirty; `defaultChecked`/the `checked` attribute is the current reset default.
+  A later `.checked = true` never redefines what `form.reset()` restores to. Shoelace's
+  `default-checked` attribute is accepted as an alias for that reset default.
 - The rendered `aria-label` is copied from the host's own `aria-label` attribute at render time; with
   neither that nor slotted label text, the control has no accessible name.
 

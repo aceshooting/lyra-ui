@@ -3,6 +3,11 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteDuration, finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import {
+  getAnimation,
+  type ElementAnimation,
+  type ResolvedElementAnimation,
+} from '../../../utilities/animation-registry.js';
 import { styles } from './animation.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
@@ -37,7 +42,7 @@ export interface LyraAnimationEventMap {
   'lr-cancel': CustomEvent<undefined>;
 }
 
-const PRESETS: Partial<Record<LyraAnimationPreset, Keyframe[]>> = {
+const PRESETS: Readonly<Partial<Record<string, Keyframe[]>>> = {
   'fade-in': [{ opacity: 0 }, { opacity: 1 }],
   'fade-out': [{ opacity: 1 }, { opacity: 0 }],
   'zoom-in': [
@@ -100,7 +105,7 @@ function slidePreset(edge: 'start' | 'end', mode: 'in' | 'out', dir: 'ltr' | 'rt
       ];
 }
 
-const DIRECTIONAL_SLIDE_NAMES = new Set<LyraAnimationPreset>(['slide-in-start', 'slide-in-end', 'slide-out-start', 'slide-out-end']);
+const DIRECTIONAL_SLIDE_NAMES = new Set<string>(['slide-in-start', 'slide-in-end', 'slide-out-start', 'slide-out-end']);
 const PLAYBACK_DIRECTIONS = new Set<string>(['normal', 'reverse', 'alternate', 'alternate-reverse']);
 const FILL_MODES = new Set<string>(['none', 'forwards', 'backwards', 'both', 'auto']);
 
@@ -161,6 +166,10 @@ function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'
  * of the raw `duration`/`easing` property values, so an app's global motion
  * retiming reaches this component's animations too.
  *
+ * Named presets resolve through the public animation registry as `animation.<name>`. Per-element
+ * overrides win over page defaults; `rtlKeyframes` follows the live inherited text direction and
+ * a `null` override disables interpolation without skipping `lr-start`/`lr-finish`.
+ *
  * @customElement lr-animation
  * @slot - The element to animate. A second slotted element is accepted without error but ignored.
  * @event lr-start - A new animation was created and playback began or restarted.
@@ -170,11 +179,14 @@ function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'
  * @cssprop [--lr-animation-zoom-scale=0.5] - Starting/ending scale factor for the zoom-in/zoom-out presets.
  * @cssprop [--lr-animation-bounce-height=25%] - Peak lift height of the bounce preset.
  * @cssprop [--lr-animation-shake-distance=4%] - Horizontal travel of the shake preset.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   static override styles = [LyraElement.styles, styles];
 
-  @property() name: LyraAnimationPreset = 'none';
+  /** Built-in preset or consumer-registered `animation.<name>` key. */
+  @property() name: string = 'none';
   @property({ attribute: false }) keyframes: Keyframe[] | undefined = undefined;
   @property({ type: Boolean, reflect: true }) play = false;
   @property({ type: Number }) delay = 0;
@@ -183,7 +195,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   @property() easing = 'linear';
   @property({ type: Number, attribute: 'end-delay' }) endDelay = 0;
   @property() fill: FillMode = 'auto';
-  @property({ type: Number }) iterations = Infinity;
+  @property({ type: Number }) iterations: number = Infinity;
   @property({ type: Number, attribute: 'iteration-start' }) iterationStart = 0;
   @property({ type: Number, attribute: 'playback-rate' }) playbackRate = 1;
   @property({ attribute: 'timing-preset', reflect: true }) timingPreset: LyraAnimationTimingPreset = 'custom';
@@ -204,6 +216,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private hasStarted = false;
   private visibilityObserver?: IntersectionObserver;
   private motionQuery?: MediaQueryList;
+  private lastTextDirection?: 'ltr' | 'rtl';
 
   // `delay`/`duration`/`endDelay`/`iterations`/`iterationStart`/`playbackRate` all ultimately reach
   // `Element.animate()` or a live `Animation`'s own IDL setters -- the Web Animations API's
@@ -291,7 +304,10 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
       'timingPreset',
       'respectReducedMotion',
     ] as const;
-    if (rebuildKeys.some((key) => changed.has(key))) this.createAnimation();
+    const textDirection = this.effectiveDirection;
+    const textDirectionChanged = this.lastTextDirection !== undefined && this.lastTextDirection !== textDirection;
+    this.lastTextDirection = textDirection;
+    if (rebuildKeys.some((key) => changed.has(key)) || textDirectionChanged) this.createAnimation();
     else if (changed.has('play')) this.applyPlayState();
     if (changed.has('playbackRate') && this.animation) this.animation.playbackRate = this.safePlaybackRate;
     if (['playOnVisible', 'playOnVisibleRepeat', 'rootMargin', 'threshold', 'root'].some((key) => changed.has(key))) {
@@ -310,16 +326,29 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     return first instanceof HTMLElement ? first : undefined;
   }
 
-  private resolveKeyframes(): Keyframe[] | undefined {
-    if (this.keyframes) return this.keyframes;
+  private resolveAnimation(): ResolvedElementAnimation | undefined {
+    if (this.keyframes) return { keyframes: this.keyframes, options: {} };
     const { name } = this;
     if (name === 'none') return undefined;
+    let fallback: ElementAnimation | undefined;
     if (DIRECTIONAL_SLIDE_NAMES.has(name)) {
       const mode = name.startsWith('slide-in-') ? 'in' : 'out';
       const edge = name.endsWith('-start') ? 'start' : 'end';
-      return slidePreset(edge, mode, this.effectiveDirection);
+      fallback = {
+        keyframes: slidePreset(edge, mode, 'ltr'),
+        rtlKeyframes: slidePreset(edge, mode, 'rtl'),
+      };
+    } else {
+      const keyframes = PRESETS[name];
+      if (keyframes) fallback = { keyframes };
     }
-    return PRESETS[name];
+    return getAnimation(this, `animation.${name}`, {
+      dir: this.effectiveDirection,
+      fallback,
+      // <lr-animation> already owns the stronger policy that instantly finishes while preserving
+      // lr-start/lr-finish ordering; do not flatten twice inside the registry lookup.
+      respectReducedMotion: false,
+    });
   }
 
   private syncVisibilityObserver = (): void => {
@@ -380,14 +409,16 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private createAnimation = (): void => {
     this.destroyAnimation();
     const target = this.currentTarget();
-    const keyframes = this.resolveKeyframes();
-    if (!target || !keyframes) return;
+    const registered = this.resolveAnimation();
+    if (!target || !registered) return;
+    const disabled = registered.keyframes.length === 0;
+    const keyframes = disabled ? [{}, {}] : registered.keyframes;
     const reduced = this.respectReducedMotion && prefersReducedMotion();
     const { duration, easing } =
       this.timingPreset === 'custom'
         ? { duration: this.safeDuration, easing: this.safeEasing(this.easing) }
         : resolveTimingToken(this, this.timingPreset);
-    const options: KeyframeAnimationOptions = {
+    const baseOptions: KeyframeAnimationOptions = {
       delay: this.safeDelay,
       direction: this.safeDirection,
       duration,
@@ -397,7 +428,24 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
       iterationStart: this.safeIterationStart,
       iterations: reduced ? Math.min(this.safeIterations, 1) : this.safeIterations,
     };
-    this.animation = target.animate(keyframes, options);
+    const options: KeyframeAnimationOptions = { ...baseOptions, ...registered.options };
+    // The component owns reduced-motion arbitration because it must also call finish() below to
+    // preserve the resolved end state and lr-start/lr-finish ordering. Apply that policy after a
+    // registry override's timing so customization can never reintroduce motion. An explicit null
+    // registration uses the same zero-time lifecycle even when the OS preference is unchanged.
+    if (reduced || disabled) {
+      options.delay = 0;
+      options.duration = 0;
+      options.endDelay = 0;
+      options.iterations = 1;
+    }
+    try {
+      this.animation = target.animate(keyframes, options);
+    } catch {
+      // A malformed public registry override must not tear down the component. Keep its selected
+      // keyframes when possible, but fall back to the component's already-sanitized timing.
+      this.animation = target.animate(keyframes, baseOptions);
+    }
     this.animation.playbackRate = this.safePlaybackRate;
     this.animation.addEventListener('cancel', this.onAnimationCancel);
     this.animation.addEventListener('finish', this.onAnimationFinish);
@@ -441,12 +489,14 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     this.emit('lr-cancel');
   };
 
-  get currentTime(): number {
-    return (this.animation?.currentTime as number | null) ?? 0;
+  get currentTime(): CSSNumberish {
+    return this.animation?.currentTime ?? 0;
   }
 
-  set currentTime(value: number) {
-    if (this.animation && Number.isFinite(value)) this.animation.currentTime = value;
+  set currentTime(value: CSSNumberish) {
+    if (!this.animation) return;
+    if (typeof value === 'number' && !Number.isFinite(value)) return;
+    this.animation.currentTime = value;
   }
 
   /** Convenience sugar for `this.play = true`. Named `start()`, not `play()`,

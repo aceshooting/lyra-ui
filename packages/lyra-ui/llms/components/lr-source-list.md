@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/retrieval/source-list/source-list.js';` (registers the tag; side-effect import)
 - **Class** `LyraSourceList`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/source-list/source-list.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-source-card` (same section below)

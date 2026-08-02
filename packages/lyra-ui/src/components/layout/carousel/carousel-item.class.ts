@@ -10,6 +10,9 @@ import { styles } from './carousel-item.styles.js';
  * @customElement lr-carousel-item
  * @slot - Slide content.
  * @csspart base - The slide wrapper.
+ * @cssprop --aspect-ratio - The slide aspect ratio, inherited from an owning carousel by default.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCarouselItem extends LyraElement {
   static override styles = [LyraElement.styles, styles];

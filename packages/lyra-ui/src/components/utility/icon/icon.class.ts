@@ -4,13 +4,13 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
+import { isAbortError } from '../../../internal/resource-loader.js';
+import type { ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
+import { getIconLibrary, subscribeIconLibrary } from './icon-library.js';
 import {
-  isAbortError,
-  isResourceLimitError,
-  readResponseText,
-} from '../../../internal/resource-loader.js';
-import { getIconLibrary, subscribeIconLibrary, type LyraIconLibrary } from './icon-library.js';
-import { loadIconSanitizer } from './dompurify-loader.js';
+  acquireSanitizedIconResource,
+  IconResourceError,
+} from './icon-resource.js';
 import { styles } from './icon.styles.js';
 
 const PATHS: Record<string, string> = {
@@ -27,17 +27,6 @@ const PATHS: Record<string, string> = {
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3',
 };
 
-/** An icon document is a handful of kilobytes; anything near this ceiling is not an icon, and the
- *  cap applies before a decoder or parser ever sees the bytes. */
-const MAX_ICON_BYTES = 1024 * 1024;
-
-/** Elements and attributes an icon legitimately needs, and nothing else. Scripting, event-handler
- *  attributes, and active URL schemes are all outside this profile. */
-const SANITIZE_CONFIG = {
-  USE_PROFILES: { svg: true, svgFilters: true },
-  RETURN_DOM_FRAGMENT: true,
-} as const;
-
 /** Which side of a remote load failed, so the alert stays localized (and re-localizes when the
  *  locale changes) instead of freezing a resolved string into component state. */
 type IconErrorReason = 'load' | 'too-large' | 'sanitizer';
@@ -45,12 +34,36 @@ type IconErrorReason = 'load' | 'too-large' | 'sanitizer';
 type IconFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'loaded'; node: SVGElement }
+  | { kind: 'loaded'; node: SVGSVGElement }
   | { kind: 'empty' }
   | { kind: 'error'; reason: IconErrorReason };
 
 /** Mirroring direction for `flip`. Physical, not direction-relative — see `icon.styles.ts`. */
-export type LyraIconFlip = 'horizontal' | 'vertical' | 'both';
+export type LyraIconFlip = 'x' | 'y' | 'both' | 'horizontal' | 'vertical';
+
+/** Sizing strategy for the icon's layout canvas. */
+export type LyraIconCanvas = 'fixed' | 'auto' | 'square' | 'roomy';
+
+/** Built-in motion treatments. Every treatment stops when reduced motion is requested. */
+export type LyraIconAnimation =
+  | 'beat'
+  | 'fade'
+  | 'beat-fade'
+  | 'bounce'
+  | 'flip'
+  | 'flip-360'
+  | 'shake'
+  | 'spin'
+  | 'spin-pulse'
+  | 'spin-reverse'
+  | 'spin-snap'
+  | 'spin-snap-4'
+  | 'spin-snap-8'
+  | 'buzz'
+  | 'wag'
+  | 'float'
+  | 'swing'
+  | 'jello';
 
 export interface LyraIconEventMap {
   'lr-load': CustomEvent<{ src: string }>;
@@ -61,40 +74,119 @@ export interface LyraIconEventMap {
  * all, or resolves a name through a registered icon library, or fetches one SVG document from
  * `src`. Remote markup is byte-capped, sanitized with DOMPurify, and rendered only if the whole
  * pipeline succeeds; anything else fails closed with a localized alert and no partial markup.
+ * Matching loads share a bounded cache of canonical sanitized SVGs. Each instance deep-clones the
+ * canonical node before its trusted library mutator runs, so cached state is never mutated.
  * @customElement lr-icon
  * @slot - Optional custom SVG/path content when no `name`, `path`, `library`, or `src` resolves.
  * @event lr-load - A remote icon finished loading and is in the DOM. `detail: { src }`.
  * @event lr-error - A remote icon could not be resolved, fetched, or sanitized.
  *   `detail: { src, error }`.
  * @csspart svg - The rendered SVG, whether built-in or fetched.
+ * @csspart use - Every `<use>` element in the rendered SVG.
  * @csspart error - The visually hidden `role="alert"` shown when a remote icon fails.
  * @csspart empty - Marker rendered when a remote icon resolved to an empty but valid document.
- * @cssprop [--lr-icon-size=var(--lr-size-1-25rem)] - Inline and block size of the icon box.
- * @cssprop [--lr-icon-fixed-width=var(--lr-size-1-5rem)] - Inline size of the box while
+ * @cssprop [--lr-icon-size] - Optional inline and block size override for every canvas.
+ * @cssprop [--lr-icon-fixed-width=var(--lr-size-1-5em)] - Inline size of the box while
  *   `fixed-width` is set; the glyph keeps `--lr-icon-size` and centers inside it.
  * @cssprop [--lr-icon-rotate=0deg] - Rotation applied to the box. Written inline from the `rotate`
  *   property, so set that rather than this property.
  * @cssprop [--lr-icon-flip-x=1] - Horizontal scale factor, set to `-1` by `flip`.
  * @cssprop [--lr-icon-flip-y=1] - Vertical scale factor, set to `-1` by `flip`.
+ * @cssprop [--animation-delay=0s] - Delay before an icon animation starts.
+ * @cssprop [--animation-direction=normal] - Playback direction for icon animations.
+ * @cssprop [--animation-duration=var(--lr-duration-icon)] - Duration of one animation cycle.
+ * @cssprop [--animation-iteration-count=infinite] - Number of animation cycles.
+ * @cssprop [--animation-timing=var(--lr-easing-emphasized)] - Animation timing function.
+ * @cssprop [--beat-fade-opacity=0.4] - Lowest opacity during `beat-fade`.
+ * @cssprop [--beat-fade-scale=1.25] - Peak scale during `beat-fade`.
+ * @cssprop [--beat-scale=1.25] - Scale multiplier for `beat` and `spin-pulse`.
+ * @cssprop [--bounce-height=calc(var(--lr-size-0-5em)*-1)] - Peak bounce height.
+ * @cssprop [--bounce-jump-scale-x=0.95] - Horizontal scale at the top of a bounce.
+ * @cssprop [--bounce-jump-scale-y=1.05] - Vertical scale at the top of a bounce.
+ * @cssprop [--bounce-land-scale-x=1.08] - Horizontal scale while landing.
+ * @cssprop [--bounce-land-scale-y=0.92] - Vertical scale while landing.
+ * @cssprop [--bounce-rebound=calc(var(--lr-size-1em)*-0.1)] - Landing rebound distance.
+ * @cssprop [--bounce-start-scale-x=1] - Initial horizontal bounce scale.
+ * @cssprop [--bounce-start-scale-y=1] - Initial vertical bounce scale.
+ * @cssprop [--bounce-anticipation=0] - Downward offset before a bounce.
+ * @cssprop [--fade-opacity=0.4] - Lowest opacity during `fade` and `spin-pulse`.
+ * @cssprop [--flip-angle=180deg] - Rotation angle for flip treatments.
+ * @cssprop [--flip-x=0] - X coordinate of the flip rotation axis.
+ * @cssprop [--flip-y=1] - Y coordinate of the flip rotation axis.
+ * @cssprop [--flip-z=0] - Z coordinate of the flip rotation axis.
+ * @cssprop [--flip-anticipation-scale=0.9] - Wind-up scale before a flip.
+ * @cssprop [--flip-overshoot=0deg] - Extra angle before a flip settles.
+ * @cssprop [--buzz-distance=calc(var(--lr-size-1em)*0.12)] - Horizontal buzz travel.
+ * @cssprop [--wag-angle=12deg] - Peak wag angle.
+ * @cssprop [--swing-angle=15deg] - Peak swing angle.
+ * @cssprop [--jello-scale-x=1.18] - Horizontal jello stretch.
+ * @cssprop [--jello-scale-y=0.82] - Vertical jello stretch.
+ * @cssprop [--float-height=calc(var(--lr-size-0-5em)*-1)] - Float rise height.
+ * @cssprop [--float-drift=0] - Horizontal float drift.
+ * @cssprop [--float-tilt=4deg] - Rotation at the float peak.
+ * @cssprop [--float-squash-x=1.04] - Resting horizontal float scale.
+ * @cssprop [--float-squash-y=0.96] - Resting vertical float scale.
+ * @cssprop [--float-stretch-x=0.96] - Peak horizontal float scale.
+ * @cssprop [--float-stretch-y=1.04] - Peak vertical float scale.
+ * @cssprop [--primary-color=currentColor] - Primary duotone layer color.
+ * @cssprop [--primary-opacity=1] - Primary duotone layer opacity.
+ * @cssprop [--secondary-color=currentColor] - Secondary duotone layer color.
+ * @cssprop [--secondary-opacity=0.4] - Secondary duotone layer opacity.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraIcon extends LyraElement<LyraIconEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
-  /** A built-in glyph name, or the name handed to the resolver of a registered `library`. */
-  @property() name = '';
+  private _name = '';
+  /** A built-in glyph name, or the name handed to the resolver of a registered `library`.
+   * Assigning `undefined`, as permitted by both pinned upstreams, clears the name. */
+  @property({ reflect: true, useDefault: true })
+  get name(): string {
+    return this._name;
+  }
+  set name(value: string | undefined) {
+    const old = this._name;
+    this._name = value ?? '';
+    this.requestUpdate('name', old);
+  }
   /** Raw SVG path data, taking precedence over a built-in `name`. */
   @property() path = '';
   /** Accessible name. Empty (the default) leaves the icon `aria-hidden`. */
   @property() label = '';
-  /** Name of a registered icon library. Empty (the default) means the built-in glyph set; an
+  /** Name of a registered icon library. `default` means the built-in glyph set; an
    *  unregistered name also falls back to it, so registration can happen after first render. */
-  @property({ reflect: true }) library = '';
-  /** URL of a single SVG document to fetch, used when no registered library resolves `name`. */
-  @property() src = '';
-  /** Rotation in degrees, clockwise in both text directions. Left unset there is no rotation and
-   *  no `transform` at all, so an ordinary icon never becomes a containing block. */
-  @property({ type: Number, reflect: true }) rotate?: number;
-  /** Mirrors the icon about the vertical (`horizontal`), horizontal (`vertical`), or both axes. */
+  @property({ reflect: true }) library = 'default';
+  /** Family forwarded to a registered library resolver. Its vocabulary belongs to the library. */
+  @property({ reflect: true, useDefault: true }) family = '';
+  /** Variant forwarded to a registered library resolver. Its vocabulary belongs to the library. */
+  @property({ reflect: true, useDefault: true }) variant = '';
+  private _src = '';
+  /** URL of a single SVG document to fetch, used when no registered library resolves `name`.
+   * Assigning the upstream `undefined` spelling aborts/clears the pending source on update. */
+  @property()
+  get src(): string {
+    return this._src;
+  }
+  set src(value: string | undefined) {
+    const old = this._src;
+    this._src = value ?? '';
+    this.requestUpdate('src', old);
+  }
+  /** Rotation in degrees, clockwise in both text directions. The zero default does not reflect and
+   *  produces no `transform`, so an ordinary icon never becomes a containing block. */
+  @property({ type: Number, reflect: true, useDefault: true }) rotate = 0;
+  /** Mirrors the icon about the vertical (`x`/`horizontal`), horizontal (`y`/`vertical`), or both axes. */
   @property({ reflect: true }) flip?: LyraIconFlip;
+  /** Layout canvas. Unset/`fixed` is 1.25em × 1em; `auto` follows intrinsic width at 1em high;
+   *  `square` is 1.25em × 1.25em; `roomy` is 1.5em × 1.5em. */
+  @property({ reflect: true }) canvas?: LyraIconCanvas;
+  /** Compatibility alias for `canvas="auto"`.
+   * @deprecated Use `canvas="auto"` instead. */
+  @property({ type: Boolean, reflect: true, attribute: 'auto-width' }) autoWidth = false;
+  /** Swaps the primary and secondary opacity hooks used by duotone SVGs. */
+  @property({ type: Boolean, reflect: true, attribute: 'swap-opacity' }) swapOpacity = false;
+  /** Optional built-in motion treatment; all variants honor `prefers-reduced-motion`. */
+  @property({ reflect: true }) animation?: LyraIconAnimation;
   /** Widens the icon box to `--lr-icon-fixed-width` so a column of icons aligns its labels. */
   @property({ type: Boolean, reflect: true, attribute: 'fixed-width' }) fixedWidth = false;
 
@@ -103,6 +195,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   @query('slot') private customSlot?: HTMLSlotElement;
   private customContentObserver?: MutationObserver;
   private stopLibrarySubscription?: () => void;
+  private resourceLease?: ResourceCacheLease<SVGSVGElement | null>;
   /** Bumped by every load start and by disconnect, and re-checked after every `await`, so a
    *  superseded response can never paint over a newer one. */
   private generation = 0;
@@ -116,12 +209,13 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
       queueMicrotask(() => {
         if (this.isConnected) this.syncCustomNodes();
       });
-      if (this.remoteSource().url) this.scheduleAfterUpdate(() => void this.load());
+      if (this.hasRemoteSource()) this.scheduleAfterUpdate(() => void this.load());
     }
   }
 
   override disconnectedCallback(): void {
     this.generation++;
+    this.releaseResourceLease();
     this.stopLibrarySubscription?.();
     this.stopLibrarySubscription = undefined;
     this.customContentObserver?.disconnect();
@@ -142,7 +236,13 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     }
     this.applyRemoteA11y();
     this.syncCustomNodes();
-    if (changed.has('src') || changed.has('library') || changed.has('name')) {
+    if (
+      changed.has('src') ||
+      changed.has('library') ||
+      changed.has('name') ||
+      changed.has('family') ||
+      changed.has('variant')
+    ) {
       this.scheduleAfterUpdate(() => void this.load());
     }
   }
@@ -214,60 +314,59 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     return this.getAttribute('aria-label') ?? this.label;
   }
 
-  /**
-   * The remote document this icon should show, if any. A registered `library` owns resolution for
-   * its own names; otherwise `src` applies. An unregistered library name resolves to nothing here,
-   * which is what lets the built-in glyph render until `registerIconLibrary()` arrives.
-   */
-  private remoteSource(): { url: string; library?: LyraIconLibrary; failed: boolean } {
-    const library = this.library ? getIconLibrary(this.library) : undefined;
-    if (this.name && library) {
-      try {
-        return { url: library.resolver(this.name) || '', library, failed: false };
-      } catch {
-        return { url: '', library, failed: true };
-      }
-    }
-    return { url: this.src, failed: false };
+  private hasRemoteSource(): boolean {
+    return Boolean(
+      this.src || (this.name && this.library && getIconLibrary(this.library)),
+    );
+  }
+
+  private releaseResourceLease(): void {
+    this.resourceLease?.release();
+    this.resourceLease = undefined;
   }
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
-    const source = this.remoteSource();
-    if (source.failed) {
-      await this.fail('load', generation, this.name, new Error('icon library resolver threw'));
-      return;
-    }
-    if (!source.url) {
+    this.releaseResourceLease();
+    const library = this.name && this.library ? getIconLibrary(this.library) : undefined;
+    if (!library && !this.src) {
       // Equal-but-new state objects are not equal to Lit, and every icon in the library reaches
       // this line on its first update — assigning unconditionally would cost every one of them a
       // second render (which also re-clones slotted geometry) for no change at all.
       if (this.fetchState.kind !== 'idle') this.fetchState = { kind: 'idle' };
       return;
     }
-    const url = safeFetchUrl(source.url);
-    if (!url) {
-      await this.fail('load', generation, source.url, new Error('icon URL is not allowed'));
+
+    this.fetchState = { kind: 'loading' };
+    let source = this.src;
+    try {
+      if (library) {
+        source = await library.resolver(this.name, this.family, this.variant);
+        if (!this.isConnected || generation !== this.generation) return;
+        if (typeof source !== 'string') throw new TypeError('icon resolver did not return a URL');
+      }
+    } catch (error) {
+      await this.fail('load', generation, this.name, error);
+      return;
+    }
+    if (!source) {
+      if (this.isConnected && generation === this.generation) this.fetchState = { kind: 'idle' };
       return;
     }
 
-    this.fetchState = { kind: 'loading' };
+    const url = safeFetchUrl(source);
+    if (!url) {
+      await this.fail('load', generation, source, new Error('icon URL is not allowed'));
+      return;
+    }
+
+    let lease: ResourceCacheLease<SVGSVGElement | null> | undefined;
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      lease = acquireSanitizedIconResource(url);
+      this.resourceLease = lease;
+      const canonical = await lease.promise;
       if (!this.isConnected || generation !== this.generation) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-
-      const sanitizer = await loadIconSanitizer();
-      if (!this.isConnected || generation !== this.generation) return;
-      if (!sanitizer) {
-        await this.fail('sanitizer', generation, url, new Error('dompurify is not installed'));
-        return;
-      }
-
-      const raw = await readResponseText(response, MAX_ICON_BYTES);
-      if (!this.isConnected || generation !== this.generation) return;
-      if (raw.trim() === '') {
+      if (!canonical) {
         // A valid response that simply has nothing to draw is not a failure.
         this.fetchState = { kind: 'empty' };
         await this.updateComplete;
@@ -276,17 +375,11 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
         return;
       }
 
-      // Sanitize straight into DOM nodes: serializing the sanitized result and re-parsing it is
-      // the step mutation-XSS exploits, and nothing here needs the intermediate string.
-      const fragment = sanitizer.sanitize(raw, SANITIZE_CONFIG) as DocumentFragment;
-      const node = fragment.firstElementChild;
-      if (!(node instanceof SVGSVGElement)) {
-        await this.fail('load', generation, url, new Error('response is not an SVG document'));
-        return;
-      }
-      // The mutator is trusted consumer code and runs on the already-sanitized, component-owned
-      // node; a throwing mutator fails the load rather than rendering a half-adjusted icon.
-      source.library?.mutator?.(node);
+      // The shared cache owns an immutable canonical sanitized node. Every instance gets a deep
+      // clone before trusted library code may adjust it, so one mutator cannot poison another
+      // library, a direct `src`, or a later cache hit.
+      const node = canonical.cloneNode(true) as SVGSVGElement;
+      library?.mutator?.(node);
 
       this.fetchState = { kind: 'loaded', node };
       await this.updateComplete;
@@ -294,7 +387,11 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
       this.emit('lr-load', { src: url });
     } catch (error) {
       if (isAbortError(error)) return;
-      await this.fail(isResourceLimitError(error) ? 'too-large' : 'load', generation, url, error);
+      const reason = error instanceof IconResourceError ? error.reason : 'load';
+      await this.fail(reason, generation, url, error);
+    } finally {
+      if (this.resourceLease === lease) this.resourceLease = undefined;
+      lease?.release();
     }
   }
 
@@ -328,6 +425,11 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     state.node.setAttribute('aria-hidden', label ? 'false' : 'true');
     if (label) state.node.setAttribute('aria-label', label);
     else state.node.removeAttribute('aria-label');
+    for (const use of state.node.querySelectorAll('use')) {
+      const parts = new Set((use.getAttribute('part') ?? '').split(/\s+/).filter(Boolean));
+      parts.add('use');
+      use.setAttribute('part', [...parts].join(' '));
+    }
   }
 
   private renderBuiltIn(): TemplateResult {

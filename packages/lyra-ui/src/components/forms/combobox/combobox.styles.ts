@@ -33,6 +33,13 @@ export const styles = css`
   :host([pill]) {
     --lr-combobox-radius: var(--lr-radius-pill);
   }
+  :host([appearance='filled']) [part='combobox'] {
+    background: var(--lr-color-surface-raised);
+    border-color: transparent;
+  }
+  :host([appearance='filled-outlined']) [part='combobox'] {
+    background: var(--lr-color-surface-raised);
+  }
   /* What remains per tier is this component's OWN geometry -- the selected-tag chip and the
      decorative expand glyph -- which is not a form-control height/text ladder and so is not part of
      the shared one. Each tier matches both spellings for the same reason sizes.styles.ts does: the
@@ -76,7 +83,7 @@ export const styles = css`
   }
   /* :empty never matches here -- the part always contains a literal slot
      child element regardless of assigned/text content -- so real emptiness
-     is tracked in JS (hasLabelSlot) and reflected via the hidden attribute
+     is tracked by SlotPresenceController and reflected via the hidden attribute
      instead (same fix as [part='hint']/[part='error'] below). Without this,
      the required-asterisk ::after below (which attaches to this box)
      renders a stray ' *' with nothing before it whenever label is unset. */
@@ -132,6 +139,10 @@ export const styles = css`
     align-items: center;
     color: var(--lr-color-text-quiet);
   }
+
+  .control-contents {
+    display: contents;
+  }
   [part='start'][hidden],
   [part='end'][hidden] {
     display: none;
@@ -143,7 +154,7 @@ export const styles = css`
   [part='tag'] {
     display: inline-flex;
     min-inline-size: 0;
-    max-inline-size: 100%;
+    max-inline-size: min(100%, var(--tag-max-size, var(--lr-size-5rem)));
     align-items: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-combobox-tag-padding);
@@ -288,9 +299,9 @@ export const styles = css`
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
     transition:
-      opacity var(--lr-transition-fast),
-      transform var(--lr-transition-fast),
-      visibility var(--lr-transition-fast);
+      opacity var(--hide-duration, var(--lr-transition-fast)),
+      transform var(--hide-duration, var(--lr-transition-fast)),
+      visibility var(--hide-duration, var(--lr-transition-fast));
   }
   [part='option'],
   .group-label,
@@ -304,6 +315,7 @@ export const styles = css`
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
+    transition-duration: var(--show-duration, var(--lr-transition-fast));
   }
   @media (prefers-reduced-motion: reduce) {
     [part='listbox'] {
@@ -415,7 +427,7 @@ export const styles = css`
   }
   /* :empty never matches here -- the part always contains a literal
      slot child element regardless of assigned/text content -- so real
-     emptiness is tracked in JS (hasHintSlot/hasErrorSlot) and reflected via
+     emptiness is tracked by SlotPresenceController and reflected via
      the hidden attribute instead (same fix as lr-stat's icon/caption). */
   [part='hint'][hidden] {
     display: none;

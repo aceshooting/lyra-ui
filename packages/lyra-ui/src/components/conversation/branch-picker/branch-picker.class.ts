@@ -32,6 +32,8 @@ export interface LyraBranchPickerEventMap {
  * @csspart next-button - The next-branch chevron button.
  * @csspart next-glyph - The chevron glyph wrapper inside `next-button`.
  * @csspart position - The visible "2 / 5" text.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
   static override styles = [LyraElement.styles, styles];

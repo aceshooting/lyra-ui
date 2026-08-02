@@ -113,6 +113,54 @@ it('parses GFM tables, code blocks, links, headings, and blockquotes with part a
   expect(el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute('data-fallback')).to.be.false;
 });
 
+it('defaults tabSize to four and reparses leading tabs when tab-size changes', async () => {
+  const el = (await fixture(
+    html`<lr-markdown .content=${'Intro\n\n\tIndented line'}></lr-markdown>`,
+  )) as LyraMarkdown;
+  expect(el.tabSize).to.equal(4);
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="code-block"]').length === 1);
+
+  el.tabSize = 2;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="code-block"]').length === 0);
+  expect(el.shadowRoot!.querySelectorAll('[part="paragraph"]').length).to.equal(2);
+  expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.contain('Indented line');
+});
+
+it('guards a non-finite tab-size attribute and falls back to the documented width of four', async () => {
+  const el = (await fixture(
+    html`<lr-markdown tab-size="Infinity" .content=${'\tIndented line'}></lr-markdown>`,
+  )) as LyraMarkdown;
+  expect(el.tabSize).to.equal(Infinity);
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="code-block"]').length === 1);
+});
+
+it('exposes the shared marked parser and a public renderMarkdown() refresh method', async () => {
+  const first = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+  const second = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+  await waitUntil(() => first.marked !== undefined && second.marked !== undefined);
+  expect(first.marked === second.marked).to.be.true;
+
+  const parser = first.marked!;
+  const originalDefaults = parser.defaults;
+  try {
+    parser.use({
+      hooks: {
+        preprocess(source: string) {
+          return source.replace('CONFIGURED_TOKEN', '**configured parser**');
+        },
+      },
+    });
+    first.content = 'CONFIGURED_TOKEN';
+    expect(first.renderMarkdown()).to.equal(undefined);
+    await first.updateComplete;
+    await waitUntil(() => first.shadowRoot!.querySelectorAll('strong').length === 1);
+    expect(first.shadowRoot!.querySelector('strong')!.textContent).to.equal('configured parser');
+  } finally {
+    parser.defaults = originalDefaults;
+  }
+});
+
 it('does not recognize a GFM table when gfm is disabled', async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   el.gfm = false;
@@ -1299,11 +1347,41 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     const selection = window.getSelection()!;
     selection.removeAllRanges();
     selection.addRange(range);
-    const listener = oneEvent(el, 'lr-text-select');
-    (paragraph as HTMLElement).dispatchEvent(new MouseEvent('pointerup', { bubbles: true, composed: true }));
-    const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
-    expect(event.detail.text).to.equal('brown');
-    selection.removeAllRanges();
+
+    // WebKit intentionally rejects a programmatic Selection range whose endpoints live in a
+    // shadow tree. Feed the component's composed-selection reader the same real Range in that
+    // engine so this event-plumbing test remains deterministic; native drag-selection behavior
+    // belongs to the browser and is not reproducible with synthetic pointer events. Restore the
+    // stub in `finally`, per the repository's stubbed-global contract.
+    const needsSelectionFacade = selection.rangeCount === 0 || selection.isCollapsed;
+    const ownGetSelectionDescriptor = Object.getOwnPropertyDescriptor(window, 'getSelection');
+    if (needsSelectionFacade) {
+      const composedRange = {
+        startContainer: textNode,
+        startOffset: 10,
+        endContainer: textNode,
+        endOffset: 15,
+      } as StaticRange;
+      const facade = {
+        rangeCount: 1,
+        isCollapsed: false,
+        getRangeAt: () => range,
+        getComposedRanges: () => [composedRange],
+      } as unknown as Selection;
+      Object.defineProperty(window, 'getSelection', { configurable: true, value: () => facade });
+    }
+    try {
+      const listener = oneEvent(el, 'lr-text-select');
+      (paragraph as HTMLElement).dispatchEvent(new MouseEvent('pointerup', { bubbles: true, composed: true }));
+      const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
+      expect(event.detail.text).to.equal('brown');
+    } finally {
+      selection.removeAllRanges();
+      if (needsSelectionFacade) {
+        if (ownGetSelectionDescriptor) Object.defineProperty(window, 'getSelection', ownGetSelectionDescriptor);
+        else Reflect.deleteProperty(window, 'getSelection');
+      }
+    }
   });
 });
 

@@ -1,114 +1,244 @@
-// Gates the library's core promise: migrating off Web Awesome or Shoelace is a mechanical tag
-// rename. `migrate-wa.mjs` derives its rename table from README.md, and `test:migrate-wa` proves
-// the *mechanism* works -- but nothing proved the table actually *covers* the upstream vocabulary.
-// It didn't: a row mislabelled `-- (extra)` makes the codemod silently skip a tag that has a
-// perfectly good lyra counterpart, and a consumer only finds out when the component doesn't render.
-//
-// This check measures the table against a frozen upstream inventory
-// (`scripts/fixtures/upstream-tags.json`) and fails on four distinct defects:
-//
-//   1. coverage   -- an upstream tag with no mapping and no documented reason to have none
-//   2. fiction    -- a `wa-*`/`sl-*` name in the README that no upstream version ever shipped
-//   3. dangling   -- a mapping whose `lr-*` target is not a registered tag
-//   4. polarity   -- a documented attribute rename that flips a boolean's sense, so a mechanically
-//                    migrated app keeps compiling while quietly behaving differently
+// Gates the migration relationship between pinned Web Awesome/Shoelace catalogs, the component
+// inventory, README documentation, and registered Lyra targets. The inventory is authoritative:
+// every upstream tag has exactly one exact/rewritten/warning/conceptual/unsupported decision, and
+// only the first two classifications are automatic migration inputs. README mirror rows remain
+// documentation relationships and must agree with that inventory; they are not a rename allowlist.
 //
 // Run: node scripts/check-migration-coverage.mjs
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildMirrorMap } from './migrate-wa.mjs';
+import { buildMigrationContract, buildMirrorMap } from './migrate-wa.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const readJson = (...segments) => JSON.parse(fs.readFileSync(path.join(packageDir, ...segments), 'utf8'));
-
-const fixture = readJson('scripts', 'fixtures', 'upstream-tags.json');
-const manifest = readJson('custom-elements.json');
-const readme = fs.readFileSync(path.join(packageDir, 'README.md'), 'utf8');
-
-const lyraTags = new Set(
-  manifest.modules.flatMap((module) => module.declarations ?? []).filter((d) => d.customElement && d.tagName).map((d) => d.tagName),
-);
-
-const upstream = [
-  ...fixture.webawesome.free.map((tag) => ({ tag, source: 'wa', tier: 'free' })),
-  ...fixture.webawesome.pro.map((tag) => ({ tag, source: 'wa', tier: 'pro' })),
-  ...fixture.shoelace.tags.map((tag) => ({ tag, source: 'sl', tier: 'free' })),
+const CLASSIFICATIONS = [
+  'exact',
+  'rewritten',
+  'warning-required',
+  'conceptual-only',
+  'unsupported',
 ];
-const knownUpstream = new Set(upstream.map((entry) => entry.tag));
-
-const { map: mirrorMap, conflicts } = buildMirrorMap(readme);
-const errors = [];
-
-for (const conflict of conflicts) errors.push(`ambiguous README mirror entry -- ${conflict}`);
-
-// 1. Coverage. An upstream tag is covered when the README-derived table maps it. Anything else
-// must carry an explicit, reasoned entry in the fixture's `noCounterpart` -- silence is the bug
-// this check exists to catch.
-const uncovered = [];
-for (const { tag, source } of upstream) {
-  if (mirrorMap.has(tag)) continue;
-  const reason = fixture.noCounterpart[tag];
-  if (typeof reason === 'string' && reason.trim().length > 0) continue;
-  const sameName = `lr-${tag.slice(3)}`;
-  uncovered.push({ tag, source, hint: lyraTags.has(sameName) ? ` (lyra registers ${sameName})` : '' });
-}
-for (const { tag, hint } of uncovered) {
-  errors.push(`${tag}: no README mirror mapping and no documented reason for having none${hint}`);
-}
-
-// 2. Fiction. Every upstream tag name the README names must be one an upstream release actually
-// shipped, or the migration table sends readers chasing a tag that does not exist. Wildcards
-// (`wa-format-*`) are checked by prefix against the same inventory.
-const namedUpstream = new Set([
-  ...[...readme.matchAll(/`(wa-[a-z0-9-]+\*?)`/g)].map((m) => m[1]),
-  ...[...readme.matchAll(/<(sl-[a-z0-9-]+)>/g)].map((m) => m[1]),
-  ...[...readme.matchAll(/`(sl-[a-z0-9-]+)`/g)].map((m) => m[1]),
-]);
-for (const name of [...namedUpstream].sort()) {
-  if (name.endsWith('*')) {
-    const prefix = name.slice(0, -1);
-    if (![...knownUpstream].some((tag) => tag.startsWith(prefix))) errors.push(`${name}: wildcard matches no upstream tag`);
-    continue;
-  }
-  if (!knownUpstream.has(name)) errors.push(`${name}: named in README but no upstream release ships it`);
-}
-
-// 3. Dangling targets. A mapping to a tag lyra does not register rewrites working markup into a
-// silently inert element.
-for (const [from, to] of mirrorMap) {
-  if (!lyraTags.has(to)) errors.push(`${from} -> ${to}: rename target is not a registered lyra tag`);
-}
-
-// 4. Polarity. A rename that flips a boolean's sense is worse than no rename at all: the migrated
-// markup still parses, so nothing errors, and the component just behaves the other way round.
-// Both an outright negation flip (`light-dismiss` -> `no-light-dismiss`) and a with/hide swap
-// (`with-summary` -> `hide-summary`) are inversions.
 const NEGATING = /^(?:no|not|without|hide|disable)-/;
 const ASSERTING = /^(?:with|show|enable)-/;
-const polarity = (name) => (NEGATING.test(name) ? -1 : ASSERTING.test(name) ? 1 : 0);
-for (const rename of fixture.attributeRenames ?? []) {
-  const from = polarity(rename.from);
-  const to = polarity(rename.to);
-  if (from !== to && (from === -1 || to === -1)) {
-    errors.push(`${rename.component} ${rename.from} -> ${rename.to}: rename inverts the attribute's polarity`);
-  }
+
+function manifestTags(manifest) {
+  return new Set(
+    (manifest.modules ?? [])
+      .flatMap((module) => module.declarations ?? [])
+      .filter((declaration) => declaration.customElement && declaration.tagName)
+      .map((declaration) => declaration.tagName),
+  );
 }
 
-if (errors.length) {
-  console.error(`Migration coverage contract failed with ${errors.length} finding(s):`);
-  for (const error of errors) console.error(`- ${error}`);
-  const covered = upstream.length - uncovered.length;
-  console.error(`\nCoverage: ${covered}/${upstream.length} upstream tags mapped or documented as unmirrored.`);
-  process.exitCode = 1;
-} else {
-  const waTotal = fixture.webawesome.free.length + fixture.webawesome.pro.length;
-  const waMapped = upstream.filter((e) => e.source === 'wa' && mirrorMap.has(e.tag)).length;
-  const slMapped = upstream.filter((e) => e.source === 'sl' && mirrorMap.has(e.tag)).length;
-  console.log(
-    `Migration coverage contract passed: Web Awesome ${waMapped}/${waTotal} ` +
-      `(${fixture.webawesome.version}), Shoelace ${slMapped}/${fixture.shoelace.tags.length} ` +
-      `(${fixture.shoelace.version}) tags rename mechanically.`,
+function polarity(name) {
+  return NEGATING.test(name) ? -1 : ASSERTING.test(name) ? 1 : 0;
+}
+
+function hasInvertedPolarity(fromName, toName) {
+  const from = polarity(fromName);
+  const to = polarity(toName);
+  return from !== to && (from === -1 || to === -1);
+}
+
+function catalog(upstreamTags) {
+  return [
+    ...(upstreamTags.webawesome?.free ?? []).map((tag) => ({
+      tag,
+      ecosystem: 'webawesome',
+      source: 'wa',
+    })),
+    ...(upstreamTags.webawesome?.pro ?? []).map((tag) => ({
+      tag,
+      ecosystem: 'webawesome',
+      source: 'wa',
+    })),
+    ...(upstreamTags.shoelace?.tags ?? []).map((tag) => ({
+      tag,
+      ecosystem: 'shoelace',
+      source: 'sl',
+    })),
+  ];
+}
+
+function namedReadmeUpstream(readme) {
+  return new Set([
+    ...[...readme.matchAll(/`(wa-[a-z0-9-]+\*?)`/g)].map((match) => match[1]),
+    ...[...readme.matchAll(/<(sl-[a-z0-9-]+)>/g)].map((match) => match[1]),
+    ...[...readme.matchAll(/`(sl-[a-z0-9-]+)`/g)].map((match) => match[1]),
+  ]);
+}
+
+/**
+ * Returns every migration-coverage defect without mutating its inputs. This is exported so the
+ * safety assertions can be exercised with synthetic fixtures rather than by rewriting repo files.
+ */
+export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest, readme }) {
+  const errors = [];
+  const expected = catalog(upstreamTags);
+  const knownUpstream = new Set(expected.map((entry) => entry.tag));
+  const lyraTags = manifestTags(lyraManifest);
+  const inventoryMappings = Array.isArray(inventory?.mappings) ? inventory.mappings : [];
+  const mappingByTag = new Map();
+
+  try {
+    buildMigrationContract(inventory);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+
+  if (inventory?.schemaVersion !== 1) errors.push('component inventory must use schema version 1');
+  for (const ecosystem of ['webawesome', 'shoelace']) {
+    const expectedPin = upstreamTags[ecosystem];
+    const stored = inventory?.upstreams?.[ecosystem];
+    if (!stored) {
+      errors.push(`${ecosystem}: component inventory is missing its pinned catalog`);
+      continue;
+    }
+    if (stored.version !== expectedPin.version || stored.commit !== expectedPin.commit) {
+      errors.push(`${ecosystem}: component inventory pin drifted from upstream-tags.json`);
+    }
+    const expectedTags = expected
+      .filter((entry) => entry.ecosystem === ecosystem)
+      .map((entry) => entry.tag)
+      .sort();
+    const storedTags = (stored.components ?? []).map((component) => component.tag).sort();
+    if (JSON.stringify(storedTags) !== JSON.stringify(expectedTags)) {
+      errors.push(`${ecosystem}: inventory catalog does not match every pinned upstream tag`);
+    }
+  }
+
+  for (const mapping of inventoryMappings) {
+    if (mappingByTag.has(mapping.upstreamTag)) {
+      errors.push(`${mapping.upstreamTag}: duplicate inventory mapping`);
+      continue;
+    }
+    mappingByTag.set(mapping.upstreamTag, mapping);
+    if (!knownUpstream.has(mapping.upstreamTag)) {
+      errors.push(`${mapping.upstreamTag}: fictional upstream inventory mapping`);
+    }
+    if (!CLASSIFICATIONS.includes(mapping.classification)) {
+      errors.push(`${mapping.upstreamTag}: invalid migration classification ${String(mapping.classification)}`);
+    }
+    if ((mapping.classification === 'exact' || mapping.classification === 'rewritten') &&
+        !lyraTags.has(mapping.targetTag)) {
+      errors.push(`${mapping.upstreamTag} -> ${mapping.targetTag}: automatic target is not a registered Lyra tag`);
+    }
+    for (const rewrite of mapping.rewrites?.attributes ?? []) {
+      if (hasInvertedPolarity(rewrite.from, rewrite.to)) {
+        errors.push(`${mapping.upstreamTag}: ${rewrite.from} -> ${rewrite.to} inverts attribute polarity`);
+      }
+    }
+  }
+  for (const { tag } of expected) {
+    if (!mappingByTag.has(tag)) errors.push(`${tag}: no inventory migration classification`);
+  }
+  if (mappingByTag.size !== expected.length) {
+    errors.push(`inventory has ${mappingByTag.size} mapping decision(s), expected ${expected.length}`);
+  }
+
+  const { map: readmeRelationships, conflicts } = buildMirrorMap(readme);
+  for (const conflict of conflicts) errors.push(`ambiguous README mirror entry -- ${conflict}`);
+
+  // README names stay pinned to real upstream tags. Wildcard names are accepted only when at least
+  // one pinned component matches the prefix.
+  for (const name of [...namedReadmeUpstream(readme)].sort()) {
+    if (name.endsWith('*')) {
+      const prefix = name.slice(0, -1);
+      if (![...knownUpstream].some((tag) => tag.startsWith(prefix))) {
+        errors.push(`${name}: README wildcard matches no pinned upstream tag`);
+      }
+    } else if (!knownUpstream.has(name)) {
+      errors.push(`${name}: named in README but no pinned upstream release ships it`);
+    }
+  }
+
+  // A README mirror row documents a relationship; it must point at the same candidate recorded in
+  // the inventory and at a currently registered tag. Omitted rows need an explicit unsupported
+  // reason, preserving the old coverage gate without pretending every relationship is automatic.
+  for (const [from, to] of readmeRelationships) {
+    const mapping = mappingByTag.get(from);
+    if (!mapping) {
+      errors.push(`${from}: README relationship has no inventory mapping`);
+      continue;
+    }
+    if (mapping.targetTag !== to) {
+      errors.push(`${from}: README relationship targets ${to}, inventory targets ${mapping.targetTag ?? 'nothing'}`);
+    }
+    if (!lyraTags.has(to)) {
+      errors.push(`${from} -> ${to}: README relationship target is not a registered Lyra tag`);
+    }
+  }
+  for (const { tag } of expected) {
+    if (readmeRelationships.has(tag)) continue;
+    const reason = upstreamTags.noCounterpart?.[tag];
+    const mapping = mappingByTag.get(tag);
+    if (typeof reason !== 'string' || !reason.trim()) {
+      errors.push(`${tag}: no README relationship and no documented unsupported reason`);
+    } else if (mapping?.classification !== 'unsupported') {
+      errors.push(`${tag}: noCounterpart may exempt only an unsupported inventory mapping`);
+    }
+  }
+
+  // Preserve the explicit v7-to-v8 attribute-rename safety fixture. These are local migration
+  // rewrites rather than upstream mappings, so they remain a separate polarity input.
+  for (const rename of upstreamTags.attributeRenames ?? []) {
+    if (hasInvertedPolarity(rename.from, rename.to)) {
+      errors.push(`${rename.component} ${rename.from} -> ${rename.to}: rename inverts attribute polarity`);
+    }
+  }
+
+  const classificationCounts = Object.fromEntries(
+    CLASSIFICATIONS.map((classification) => [
+      classification,
+      inventoryMappings.filter((mapping) => mapping.classification === classification).length,
+    ]),
   );
+  return {
+    errors: [...new Set(errors)].sort(),
+    summary: {
+      webawesome: expected.filter((entry) => entry.ecosystem === 'webawesome').length,
+      shoelace: expected.filter((entry) => entry.ecosystem === 'shoelace').length,
+      relationships: readmeRelationships.size,
+      classifications: classificationCounts,
+      automatic: classificationCounts.exact + classificationCounts.rewritten,
+      manual:
+        classificationCounts['warning-required'] +
+        classificationCounts['conceptual-only'] +
+        classificationCounts.unsupported,
+    },
+  };
+}
+
+export function formatMigrationCoverageSummary(summary, upstreamTags) {
+  return (
+    `Migration coverage contract passed: Web Awesome ${summary.webawesome}/${summary.webawesome} ` +
+    `(${upstreamTags.webawesome.version}) and Shoelace ${summary.shoelace}/${summary.shoelace} ` +
+    `(${upstreamTags.shoelace.version}) tags classified; ${summary.automatic} automatic, ` +
+    `${summary.manual} manual, ${summary.relationships} README relationships.`
+  );
+}
+
+function run() {
+  const readJson = (...segments) =>
+    JSON.parse(fs.readFileSync(path.join(packageDir, ...segments), 'utf8'));
+  const upstreamTags = readJson('scripts', 'fixtures', 'upstream-tags.json');
+  const result = analyzeMigrationCoverage({
+    inventory: readJson('scripts', 'fixtures', 'component-inventory.json'),
+    upstreamTags,
+    lyraManifest: readJson('custom-elements.json'),
+    readme: fs.readFileSync(path.join(packageDir, 'README.md'), 'utf8'),
+  });
+
+  if (result.errors.length) {
+    console.error(`Migration coverage contract failed with ${result.errors.length} finding(s):`);
+    for (const error of result.errors) console.error(`- ${error}`);
+    return 1;
+  }
+  console.log(formatMigrationCoverageSummary(result.summary, upstreamTags));
+  return 0;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exitCode = run();
 }

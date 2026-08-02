@@ -5,7 +5,7 @@ import '../../forms/input/input.js';
 import '../../forms/button/button.js';
 import type { LyraKnownDate } from './known-date.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { styles } from './known-date.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function fields(el: LyraKnownDate): HTMLInputElement[] {
   return Array.from(el.shadowRoot!.querySelectorAll('input[part="field-input"]'));
@@ -25,9 +25,7 @@ function typeInto(input: HTMLInputElement, text: string): void {
 }
 
 it('renders three fields in en-GB locale order (day, month, year) by default when lang is inherited', async () => {
-  const wrapper = await fixture(html`
-    <div lang="en-GB"><lr-known-date></lr-known-date></div>
-  `);
+  const wrapper = await fixture(html` <div lang="en-GB"><lr-known-date></lr-known-date></div> `);
   const el = wrapper.querySelector('lr-known-date') as LyraKnownDate;
   await el.updateComplete;
   expect(fieldOrder(el)).to.deep.equal(['day', 'month', 'year']);
@@ -44,9 +42,7 @@ it('renders month, day, year order for en-US and year, month, day for ja-JP', as
 });
 
 it('lets an explicit locale property override an inherited lang ancestor', async () => {
-  const wrapper = await fixture(html`
-    <div lang="en-GB"><lr-known-date locale="en-US"></lr-known-date></div>
-  `);
+  const wrapper = await fixture(html` <div lang="en-GB"><lr-known-date locale="en-US"></lr-known-date></div> `);
   const el = wrapper.querySelector('lr-known-date') as LyraKnownDate;
   await el.updateComplete;
   expect(fieldOrder(el)).to.deep.equal(['month', 'day', 'year']);
@@ -96,6 +92,146 @@ it('emits one translated input event and suppresses raw private input/change eve
 
   expect(inputs).to.equal(1);
   expect(changes).to.equal(0);
+});
+
+it('uses native InputEvent/Event constructors while retaining the shipped detail payload', async () => {
+  const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
+  await el.updateComplete;
+
+  const inputPromise = oneEvent(el, 'input');
+  typeInto(fieldFor(el, 'day'), '27');
+  const inputEvent = (await inputPromise) as InputEvent & {
+    detail: { day: string };
+  };
+  expect(inputEvent.constructor.name).to.equal('InputEvent');
+  expect(inputEvent.bubbles).to.be.true;
+  expect(inputEvent.composed).to.be.true;
+  expect(inputEvent.cancelable).to.be.false;
+  expect(inputEvent.detail.day).to.equal('27');
+
+  typeInto(fieldFor(el, 'month'), '3');
+  const changePromise = oneEvent(el, 'change');
+  typeInto(fieldFor(el, 'year'), '2007');
+  fieldFor(el, 'year').dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
+  const changeEvent = (await changePromise) as Event & {
+    detail: { value: string };
+  };
+  expect(changeEvent.constructor).to.equal(Event);
+  expect(changeEvent.bubbles).to.be.true;
+  expect(changeEvent.composed).to.be.true;
+  expect(changeEvent.cancelable).to.be.false;
+  expect(changeEvent.detail.value).to.equal('2007-03-27');
+});
+
+describe('mirrored Web Awesome public surface', () => {
+  it('defaults appearance/pill and renders distinct filled and pill treatments', async () => {
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    const day = fieldFor(el, 'day');
+    const outlinedBackground = getComputedStyle(day).backgroundColor;
+    const outlinedRadius = getComputedStyle(day).borderRadius;
+
+    expect(el.appearance).to.equal('outlined');
+    expect(el.pill).to.be.false;
+
+    el.appearance = 'filled';
+    el.pill = true;
+    await el.updateComplete;
+    expect(el.getAttribute('appearance')).to.equal('filled');
+    expect(el.hasAttribute('pill')).to.be.true;
+    expect(getComputedStyle(day).backgroundColor).to.not.equal(outlinedBackground);
+    expect(getComputedStyle(day).borderRadius).to.not.equal(outlinedRadius);
+  });
+
+  it('uses with-label/with-hint as SSR slot-presence signals and supports unsetting them', async () => {
+    const el = (await fixture(html`<lr-known-date with-label with-hint></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector('[part~="legend"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
+    expect(getComputedStyle(legend).display).to.not.equal('none');
+    expect(getComputedStyle(hint).display).to.not.equal('none');
+
+    el.withLabel = false;
+    el.withHint = false;
+    await el.updateComplete;
+    expect(getComputedStyle(legend).display).to.equal('none');
+    expect(getComputedStyle(hint).display).to.equal('none');
+  });
+
+  it('publishes the exact compatibility part aliases', async () => {
+    const el = (await fixture(
+      html`<lr-known-date locale="en-GB" label="Birth date"></lr-known-date>`,
+    )) as LyraKnownDate;
+    await el.updateComplete;
+    const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+    const fieldsRow = el.shadowRoot!.querySelector('[part~="form-control-input"]') as HTMLElement;
+    expect(label.part.contains('label')).to.be.true;
+    expect(fieldsRow.part.contains('fields')).to.be.true;
+    for (const field of ['day', 'month', 'year'] as const) {
+      const block = fieldFor(el, field).parentElement!;
+      expect(block.part.contains('field')).to.be.true;
+      expect(block.part.contains(`field-${field}`)).to.be.true;
+    }
+  });
+
+  it('round-trips the public parts object and keeps the hidden valueInput mirror synchronized', async () => {
+    const el = (await fixture(html`
+      <lr-known-date locale="en-GB" min="2000-01-01" max="2030-12-31" required></lr-known-date>
+    `)) as LyraKnownDate;
+    await el.updateComplete;
+
+    el.parts = { day: '5', month: '3', year: '2026' };
+    await el.updateComplete;
+    expect(el.value).to.equal('2026-03-05');
+    expect(fieldFor(el, 'day').value).to.equal('5');
+    expect(el.valueInput?.constructor.name).to.equal('HTMLInputElement');
+    expect(el.valueInput.type).to.equal('date');
+    expect(el.valueInput.value).to.equal('2026-03-05');
+    expect(el.valueInput.min).to.equal('2000-01-01');
+    expect(el.valueInput.max).to.equal('2030-12-31');
+    expect(el.valueInput.required).to.be.true;
+
+    el.value = '2027-04-06';
+    await el.updateComplete;
+    expect(el.parts).to.deep.equal({ day: '6', month: '4', year: '2027' });
+    expect(el.valueInput.value).to.equal('2027-04-06');
+  });
+
+  it('publishes blank and disabled custom states, including fieldset-cascaded disablement', async () => {
+    const form = (await fixture(html`
+      <form>
+        <fieldset><lr-known-date></lr-known-date></fieldset>
+      </form>
+    `)) as HTMLFormElement;
+    const fieldset = form.querySelector('fieldset')!;
+    const el = form.querySelector('lr-known-date') as LyraKnownDate;
+    await el.updateComplete;
+    expect(el.internals.states.has('blank')).to.be.true;
+    expect(el.internals.states.has('disabled')).to.be.false;
+
+    fieldset.disabled = true;
+    await el.updateComplete;
+    expect(el.internals.states.has('disabled')).to.be.true;
+
+    el.value = '2026-03-05';
+    await el.updateComplete;
+    expect(el.internals.states.has('blank')).to.be.false;
+  });
+
+  it('focuses the first empty field and resetValidity clears only consumer validity', async () => {
+    const el = (await fixture(html`<lr-known-date locale="en-GB" required></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    el.parts = { day: '5', month: '', year: '' };
+    await el.updateComplete;
+    el.focus();
+    expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'month'));
+
+    el.setCustomValidity('Server rejected this date');
+    expect(el.validity.customError).to.be.true;
+    el.resetValidity();
+    expect(el.validity.customError).to.be.false;
+    expect(el.validity.badInput).to.be.true;
+  });
 });
 
 it('leaves value empty and out of FormData while any field is blank', async () => {
@@ -153,7 +289,9 @@ describe('auto-advance and backspace navigation', () => {
   });
 
   it('moves focus to the previous field on Backspace in an already-empty field, without altering its content', async () => {
-    const el = (await fixture(html`<lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(
+      html`<lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>`,
+    )) as LyraKnownDate;
     await el.updateComplete;
 
     const month = fieldFor(el, 'month');
@@ -163,7 +301,14 @@ describe('auto-advance and backspace navigation', () => {
 
     month.focus();
     month.setSelectionRange(0, 0);
-    month.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, composed: true, cancelable: true }));
+    month.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Backspace',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
     await el.updateComplete;
 
     expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'day'));
@@ -176,7 +321,14 @@ describe('auto-advance and backspace navigation', () => {
 
     const day = fieldFor(el, 'day');
     day.focus();
-    day.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, composed: true, cancelable: true }));
+    day.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Backspace',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement).to.equal(day);
   });
@@ -184,26 +336,44 @@ describe('auto-advance and backspace navigation', () => {
 
 describe('arrow-key field-to-field navigation and RTL', () => {
   it('moves to the next field on ArrowRight at the end of the text, and to the previous on ArrowLeft at the start', async () => {
-    const el = (await fixture(html`<lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(
+      html`<lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>`,
+    )) as LyraKnownDate;
     await el.updateComplete;
 
     const day = fieldFor(el, 'day');
     day.focus();
     day.setSelectionRange(2, 2); // caret at the end of "27"
-    day.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true }));
+    day.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'month'));
 
     const month = fieldFor(el, 'month');
     month.setSelectionRange(0, 0); // caret at the start
-    month.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true, cancelable: true }));
+    month.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowLeft',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement).to.equal(day);
   });
 
   it('flips which physical arrow key means "next field" under an inherited RTL ancestor, without changing the field order itself', async () => {
     const wrapper = await fixture(html`
-      <div dir="rtl"><lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date></div>
+      <div dir="rtl">
+        <lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>
+      </div>
     `);
     const el = wrapper.querySelector('lr-known-date') as LyraKnownDate;
     await el.updateComplete;
@@ -217,13 +387,27 @@ describe('arrow-key field-to-field navigation and RTL', () => {
     // Under RTL, ArrowRight-at-end moves toward the *previous* field visually
     // (physically pointing back toward the start of the reading direction) --
     // there is no previous field before "day", so this must be a no-op.
-    day.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true }));
+    day.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement).to.equal(day);
 
     // ArrowLeft-at-start now means "toward the next field" under RTL.
     day.setSelectionRange(0, 0);
-    day.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true, cancelable: true }));
+    day.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowLeft',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'month'));
   });
@@ -277,7 +461,9 @@ describe('disabled', () => {
 
   it('reflects an ancestor fieldset disabled state without mutating the component own disabled property', async () => {
     const form = (await fixture(html`
-      <form><fieldset disabled><lr-known-date name="dob"></lr-known-date></fieldset></form>
+      <form>
+        <fieldset disabled><lr-known-date name="dob"></lr-known-date></fieldset>
+      </form>
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-known-date') as LyraKnownDate;
     await el.updateComplete;
@@ -320,8 +506,11 @@ describe('form participation', () => {
 
   it('round-trips a string state via formStateRestoreCallback', async () => {
     const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
-    (el as unknown as { formStateRestoreCallback(state: string): void }).formStateRestoreCallback('2007-03-27');
+    el.formStateRestoreCallback('2007-03-27');
     expect(el.value).to.equal('2007-03-27');
+
+    el.formStateRestoreCallback(new FormData());
+    expect(el.value).to.equal('');
   });
 });
 
@@ -419,11 +608,7 @@ describe('focus/blur bridging', () => {
 describe('per-field labels', () => {
   it('reaches the rendered per-field label text and is wired through localize()', async () => {
     const el = (await fixture(html`
-      <lr-known-date
-        locale="en-GB"
-        day-label="Jour"
-        .strings=${{ knownDateMonth: 'Mois' }}
-      ></lr-known-date>
+      <lr-known-date locale="en-GB" day-label="Jour" .strings=${{ knownDateMonth: 'Mois' }}></lr-known-date>
     `)) as LyraKnownDate;
     await el.updateComplete;
 
@@ -483,9 +668,7 @@ describe('slot vs. attribute precedence and empty-state hiding', () => {
 
 describe('required-field asterisk', () => {
   it('appears only when both required and a real label are set', async () => {
-    const el = (await fixture(
-      html`<lr-known-date label="Birth date" required></lr-known-date>`,
-    )) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date label="Birth date" required></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
     const after = getComputedStyle(legend, '::after');
@@ -553,9 +736,7 @@ describe('accessibility', () => {
   });
 
   it('is accessible when touched and invalid with a rendered error message', async () => {
-    const el = (await fixture(
-      html`<lr-known-date label="Birth date" required></lr-known-date>`,
-    )) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date label="Birth date" required></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     fieldFor(el, 'day').focus();
     fieldFor(el, 'day').dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
@@ -574,9 +755,7 @@ describe('accessibility', () => {
   });
 
   it('wires aria-describedby, aria-invalid, and aria-required onto every field-input', async () => {
-    const el = (await fixture(
-      html`<lr-known-date hint="DD MM YYYY" required></lr-known-date>`,
-    )) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date hint="DD MM YYYY" required></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     for (const input of fields(el)) {
       expect(input.getAttribute('aria-describedby')).to.include('known-date-hint');
@@ -604,10 +783,18 @@ describe('autocomplete forwarding', () => {
     expect(fieldFor(el, 'year').getAttribute('autocomplete')).to.equal('bday-year');
   });
 
-  it('forwards any other non-empty value verbatim to all three fields', async () => {
+  it('forwards the field-agnostic "off" token to all three fields', async () => {
     const el = (await fixture(html`<lr-known-date autocomplete="off"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     for (const input of fields(el)) expect(input.getAttribute('autocomplete')).to.equal('off');
+  });
+
+  it('forwards a field-specific token only to the year field', async () => {
+    const el = (await fixture(html`<lr-known-date autocomplete="one-time-code"></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    expect(fieldFor(el, 'day').hasAttribute('autocomplete')).to.be.false;
+    expect(fieldFor(el, 'month').hasAttribute('autocomplete')).to.be.false;
+    expect(fieldFor(el, 'year').getAttribute('autocomplete')).to.equal('one-time-code');
   });
 });
 
@@ -676,7 +863,7 @@ describe('per-tier field min-height and exact-height hatch', () => {
     expect(getComputedStyle(el).getPropertyValue('--lr-known-date-field-height').trim()).to.equal('');
   });
 
-  it('wires --lr-known-date-field-min-height per tier (rendered min-block-size), matching lr-input\'s own scale', async () => {
+  it("wires --lr-known-date-field-min-height per tier (rendered min-block-size), matching lr-input's own scale", async () => {
     // xs=1.5rem/24px, s=1.875rem/30px, m=2.5rem/40px, l=3rem/48px, xl=3.5rem/56px -- lr-input's/
     // lr-date-input's own --lr-*-control-min-height scale, not lr-button's (previously xs=20px,
     // s=24px, m=32px, l=40px, xl=48px, an 8px/25% mismatch at the shared default tier).
@@ -700,7 +887,7 @@ describe('per-tier field min-height and exact-height hatch', () => {
     const input = (await fixture(html`<lr-input></lr-input>`)) as HTMLElement & { updateComplete: Promise<unknown> };
     await input.updateComplete;
     const kdBlockSize = getComputedStyle(anyField(kd)).blockSize;
-    const inputWrapper = input.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    const inputWrapper = input.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
     expect(kdBlockSize).to.equal(getComputedStyle(inputWrapper).blockSize);
   });
 
@@ -751,14 +938,16 @@ describe('field-input hover (mouse-user parity with :focus-visible)', () => {
     await el.updateComplete;
     const field = el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;
     const restBorder = getComputedStyle(field).borderColor;
-
-    // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
-    // event, so the rule is asserted directly from the stylesheet instead, matching how other
-    // components in this library prove a :hover rule exists for a given selector.
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='field-input'\]:hover\s*\{[^}]*border-color/);
-    // Sanity: the rest-state border is a real resolved color, not a bare custom property string.
-    expect(restBorder).to.match(/^rgb/);
+    const rect = field.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(field).borderColor).to.not.equal(restBorder);
+    } finally {
+      await resetMouse();
+    }
   });
 });
 
@@ -799,10 +988,11 @@ describe('lifecycle: willUpdate calls super', () => {
   it('calls super.willUpdate() so a future base-class/mixin hook is not silently skipped', async () => {
     let sawCall = false;
     const original = LyraElement.prototype.willUpdate;
-    (LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void }).willUpdate = function (
-      this: LyraElement,
-      changed: PropertyValues,
-    ) {
+    (
+      LyraElement.prototype as unknown as {
+        willUpdate: (changed: PropertyValues) => void;
+      }
+    ).willUpdate = function (this: LyraElement, changed: PropertyValues) {
       sawCall = true;
       return (original as (changed: PropertyValues) => void).call(this, changed);
     };
@@ -832,12 +1022,20 @@ it('focus() activates the first field in locale order and blur() releases it', a
 describe('lr-known-date implicit form submission', () => {
   const enterOn = (el: LyraKnownDate, init: KeyboardEventInit = {}) =>
     fields(el)[0]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+        ...init,
+      }),
     );
 
   it('submits the ancestor form when Enter is pressed in a date field', async () => {
     const form = (await fixture(html`
-      <form><lr-known-date name="bday" value="2007-03-27" label="Birthdate"></lr-known-date></form>
+      <form>
+        <lr-known-date name="bday" value="2007-03-27" label="Birthdate"></lr-known-date>
+      </form>
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-known-date') as LyraKnownDate;
     await el.updateComplete;
@@ -861,7 +1059,10 @@ describe('lr-known-date implicit form submission', () => {
     await el.updateComplete;
     const order: string[] = [];
     el.addEventListener('change', () => order.push('change'));
-    form.addEventListener('submit', (e) => { e.preventDefault(); order.push('submit'); });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      order.push('submit');
+    });
     for (const input of fields(el)) {
       input.value = input.dataset['field'] === 'year' ? '2007' : input.dataset['field'] === 'month' ? '03' : '27';
       input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
@@ -895,12 +1096,17 @@ describe('lr-known-date implicit form submission', () => {
 
   it('never submits while readonly, on a held modifier, during IME composition, or after a veto', async () => {
     const form = (await fixture(html`
-      <form><lr-known-date name="bday" value="2007-03-27" label="Birthdate"></lr-known-date></form>
+      <form>
+        <lr-known-date name="bday" value="2007-03-27" label="Birthdate"></lr-known-date>
+      </form>
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-known-date') as LyraKnownDate;
     await el.updateComplete;
     let submits = 0;
-    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+    });
     enterOn(el, { shiftKey: true });
     enterOn(el, { ctrlKey: true });
     enterOn(el, { altKey: true });

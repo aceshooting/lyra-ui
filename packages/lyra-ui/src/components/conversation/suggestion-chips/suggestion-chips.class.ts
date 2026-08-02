@@ -34,6 +34,8 @@ export interface LyraSuggestionChipsEventMap {
  * @csspart chip-detail - The secondary line (only rendered when `detail` is set).
  * @cssprop [--lr-suggestion-chips-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered chip.
  * @cssprop [--lr-suggestion-chips-hover-border=var(--lr-color-brand)] - Border color of a hovered chip.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap> {
   static override styles = [LyraElement.styles, styles];

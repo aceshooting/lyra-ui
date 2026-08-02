@@ -49,6 +49,8 @@ export interface LyraCommunityCardEventMap {
  * @csspart drill-button - The built-in "Explore community" button.
  * @csspart actions - The wrapper around the `actions` slot and the drill button.
  * @csspart empty - The empty state shown when `community` is `null`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   static override styles = [LyraElement.styles, styles];

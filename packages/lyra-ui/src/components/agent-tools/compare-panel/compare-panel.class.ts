@@ -37,6 +37,8 @@ export interface LyraComparePanelEventMap {
  *   button border color.
  * @cssprop [--lr-compare-panel-selected-color=var(--lr-color-brand)] - Selected vote button text
  *   color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   static override styles = [LyraElement.styles, styles];

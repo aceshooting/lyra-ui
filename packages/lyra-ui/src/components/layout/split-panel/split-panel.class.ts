@@ -14,7 +14,7 @@ const POSITION_EPSILON = 0.000_1;
 export type SplitPanelOrientation = 'horizontal' | 'vertical';
 export type SplitPanelPrimary = 'start' | 'end';
 
-export interface SplitPanelSnapFunctionOptions {
+export interface SnapFunctionParams {
   /** Proposed position in pixels, measured from the primary panel's edge. */
   pos: number;
   /** Split-panel size in pixels along its resize axis. */
@@ -23,9 +23,11 @@ export interface SplitPanelSnapFunctionOptions {
   snapThreshold: number;
 }
 
-export type SplitPanelSnapFunction = (options: SplitPanelSnapFunctionOptions) => number;
-/** Compatibility name used by existing split-panel integrations. */
-export type SnapFunction = SplitPanelSnapFunction;
+export type SnapFunction = (options: SnapFunctionParams) => number;
+/** Lyra-specific aliases for consumers that prefer component-qualified type names. */
+export type SplitPanelSnapFunction = SnapFunction;
+export type SplitPanelSnapFunctionOptions = SnapFunctionParams;
+export type SplitPanelSnapFunctionParams = SnapFunctionParams;
 
 export interface LyraSplitPanelEventMap {
   /** Emitted whenever a pointer or keyboard interaction repositions the divider. */
@@ -71,11 +73,14 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  * @cssprop [--lr-split-panel-divider-hit-area=var(--divider-hit-area)] - Lyra-prefixed hit-area alias.
  * @cssprop [--lr-split-panel-min=var(--min)] - Lyra-prefixed minimum-size alias.
  * @cssprop [--lr-split-panel-max=var(--max)] - Lyra-prefixed maximum-size alias.
+ * @status stable
+ * @since 8.0.0
  */
 export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   private _startPosition = DEFAULT_POSITION;
+  private _orientation: SplitPanelOrientation = 'horizontal';
   private _primary?: SplitPanelPrimary;
   private _snapThreshold = DEFAULT_SNAP_THRESHOLD;
   private availableSize = 0;
@@ -91,7 +96,8 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   @query('.constraint-min') private minProbe?: HTMLElement;
   @query('.constraint-max') private maxProbe?: HTMLElement;
 
-  /** Divider position as a percentage from the primary panel's edge. */
+  /** Divider position as a percentage from the primary panel's edge.
+   * @default 50 */
   @property({ type: Number, reflect: true })
   get position(): number {
     const start = finiteRange(this._startPosition, DEFAULT_POSITION, 0, 100);
@@ -102,9 +108,11 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     const oldPixels = this.positionInPixels;
     const next = finiteRange(value, DEFAULT_POSITION, 0, 100);
     this.pendingPositionInPixels = undefined;
+    const layoutSize = this.measuredLayoutSize();
 
-    if (this.availableSize > 0) {
-      this.applyPrimaryPixels((next / 100) * this.availableSize, false, oldPosition, oldPixels);
+    if (layoutSize > 0) {
+      this.availableSize = layoutSize;
+      this.applyPrimaryPixels((next / 100) * layoutSize, false, oldPosition, oldPixels);
       return;
     }
 
@@ -115,9 +123,9 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
 
   /** Divider position in pixels from the primary panel's edge. */
   @property({ type: Number, attribute: 'position-in-pixels' })
-  get positionInPixels(): number | undefined {
+  get positionInPixels(): number {
     if (this.pendingPositionInPixels != null) return this.pendingPositionInPixels;
-    if (this.availableSize <= 0) return undefined;
+    if (this.availableSize <= 0) return 0;
     return (this.position / 100) * this.availableSize;
   }
   set positionInPixels(value: number | undefined | null) {
@@ -132,8 +140,10 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     }
 
     const fallback = this.positionInPixels ?? (DEFAULT_POSITION / 100) * this.availableSize;
-    const next = finiteRange(value, fallback, 0, this.availableSize > 0 ? this.availableSize : Number.MAX_VALUE);
-    if (this.availableSize > 0) {
+    const layoutSize = this.measuredLayoutSize();
+    const next = finiteRange(value, fallback, 0, layoutSize > 0 ? layoutSize : Number.MAX_VALUE);
+    if (layoutSize > 0) {
+      this.availableSize = layoutSize;
       this.applyPrimaryPixels(next, false, oldPosition, oldPixels);
       return;
     }
@@ -143,11 +153,31 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     this.requestSynchronizedUpdate(oldPosition, oldPixels);
   }
 
-  /** Layout axis. Horizontal places panes at logical start and end. */
-  @property({ reflect: true }) orientation: SplitPanelOrientation = 'horizontal';
+  /** Layout axis. Horizontal places panes at logical start and end.
+   * @default 'horizontal' */
+  @property({ reflect: true })
+  get orientation(): SplitPanelOrientation {
+    return this._orientation;
+  }
+  set orientation(value: SplitPanelOrientation) {
+    const next = value === 'vertical' ? 'vertical' : 'horizontal';
+    if (next === this._orientation) return;
+    const old = this._orientation;
+    const oldVertical = this.vertical;
+    this._orientation = next;
+    this.requestUpdate('orientation', old);
+    this.requestUpdate('vertical', oldVertical);
+  }
 
-  /** Boolean compatibility alias for `orientation="vertical"`. */
-  @property({ type: Boolean, reflect: true }) vertical = false;
+  /** Boolean compatibility alias for `orientation="vertical"`.
+   * @default false */
+  @property({ type: Boolean, reflect: true })
+  get vertical(): boolean {
+    return this.orientation === 'vertical';
+  }
+  set vertical(value: boolean) {
+    this.orientation = value ? 'vertical' : 'horizontal';
+  }
 
   /** Prevents pointer and keyboard repositioning. */
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -160,19 +190,44 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   set primary(value: SplitPanelPrimary | undefined | null) {
     const next = value === 'start' || value === 'end' ? value : undefined;
     if (next === this._primary) return;
+    this.stopDragging();
     const oldPrimary = this._primary;
     const oldPosition = this.position;
     const oldPixels = this.positionInPixels;
+    const layoutSize = this.measuredLayoutSize();
+    const referencePixels =
+      layoutSize > 0 && !oldPrimary ? (oldPosition / 100) * layoutSize : oldPixels;
     this._primary = next;
-    this.preservedPrimaryPixels = this.availableSize > 0 ? this.positionInPixels : undefined;
+    // `position` is public state measured from whichever edge `primary` selects. Switching that
+    // reference must not silently rewrite the assigned number; instead, move the physical divider
+    // so the same percentage/pixel value is now measured from the newly selected edge. This also
+    // makes declarative attributes order-independent (`position="25" primary="end"` and the
+    // reversed spelling both place the divider 25% from the end).
+    if (layoutSize > 0) {
+      this.availableSize = layoutSize;
+      this.applyPrimaryPixels(referencePixels, false, oldPosition, oldPixels);
+    } else {
+      this._startPosition = next === 'end' ? 100 - oldPosition : oldPosition;
+      this.preservedPrimaryPixels = this.pendingPositionInPixels ?? oldPixels;
+    }
     this.requestUpdate('primary', oldPrimary);
-    this.requestSynchronizedUpdate(oldPosition, oldPixels);
   }
 
-  /** Space-separated pixel/percent snap points, `repeat(...)`, or a snap callback. */
-  @property() snap: string | SplitPanelSnapFunction = '';
+  private _snap: string | SnapFunction = '';
+  /** Space-separated pixel/percent snap points, `repeat(...)`, or a snap callback. Assigning the
+   * Web Awesome `undefined` spelling restores the inert empty-string read default. */
+  @property()
+  get snap(): string | SnapFunction {
+    return this._snap;
+  }
+  set snap(value: string | SnapFunction | undefined) {
+    const old = this._snap;
+    this._snap = value ?? '';
+    this.requestUpdate('snap', old);
+  }
 
-  /** Maximum distance in pixels at which string snap points take effect. */
+  /** Maximum distance in pixels at which string snap points take effect.
+   * @default 12 */
   @property({ type: Number, attribute: 'snap-threshold' })
   get snapThreshold(): number {
     return this._snapThreshold;
@@ -184,11 +239,21 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   }
 
   private get effectiveOrientation(): SplitPanelOrientation {
-    return this.vertical || this.orientation === 'vertical' ? 'vertical' : 'horizontal';
+    return this.orientation;
+  }
+
+  private measuredLayoutSize(): number {
+    return this.isConnected ? this.axisSize(this.baseElement) : 0;
   }
 
   override connectedCallback(): void {
+    const authoredOrientation = this.getAttribute('orientation');
     super.connectedCallback();
+    // The canonical string form wins when both APIs appear in initial markup, independent of the
+    // browser's custom-element attribute-upgrade order.
+    if (authoredOrientation !== null) {
+      this.orientation = authoredOrientation === 'vertical' ? 'vertical' : 'horizontal';
+    }
     if (this.hasUpdated) {
       queueMicrotask(() => {
         if (!this.isConnected) return;
@@ -213,7 +278,9 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   }
 
   protected override updated(changed: PropertyValues<this>): void {
+    if (changed.has('disabled') && this.disabled) this.stopDragging();
     if (changed.has('orientation') || changed.has('vertical')) {
+      this.stopDragging();
       this.measureAndSynchronize(false);
     }
   }
@@ -235,8 +302,10 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   private constraintBounds(): { min: number; max: number } {
     const size = this.availableSize;
     const min = finiteRange(this.axisSize(this.minProbe), 0, 0, size);
-    const rawMax = this.axisSize(this.maxProbe);
-    const max = finiteRange(rawMax > 0 ? rawMax : size, size, min, size);
+    // Zero is a valid authored maximum (`--max: 0` collapses the controlled pane), so only a
+    // genuinely absent probe falls back to the full axis size.
+    const rawMax = this.maxProbe ? this.axisSize(this.maxProbe) : size;
+    const max = finiteRange(rawMax, size, min, size);
     return { min, max };
   }
 
@@ -245,16 +314,22 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     useSnap: boolean,
     oldPosition = this.position,
     oldPixels = this.positionInPixels,
+    scheduleUpdate = true,
   ): boolean {
     const size = this.availableSize;
     if (size <= 0) {
       this.pendingPositionInPixels = finiteRange(requestedPixels, 0, 0, Number.MAX_VALUE);
       this.preservedPrimaryPixels = this.pendingPositionInPixels;
-      this.requestSynchronizedUpdate(oldPosition, oldPixels);
+      if (scheduleUpdate) this.requestSynchronizedUpdate(oldPosition, oldPixels);
       return false;
     }
 
-    const proposed = finiteRange(requestedPixels, oldPixels ?? (DEFAULT_POSITION / 100) * size, 0, size);
+    const proposed = finiteRange(
+      requestedPixels,
+      oldPixels ?? (DEFAULT_POSITION / 100) * size,
+      0,
+      size,
+    );
     const snapped = useSnap ? this.applySnap(proposed, size) : proposed;
     const { min, max } = this.constraintBounds();
     const primaryPixels = finiteRange(snapped, proposed, min, max);
@@ -262,8 +337,10 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     this._startPosition = this.primary === 'end' ? 100 - primaryPercent : primaryPercent;
     this.pendingPositionInPixels = undefined;
     this.preservedPrimaryPixels = primaryPixels;
-    this.requestSynchronizedUpdate(oldPosition, oldPixels);
-    return !nearlyEqual(oldPosition, this.position) || !nearlyEqual(oldPixels, this.positionInPixels);
+    if (scheduleUpdate) this.requestSynchronizedUpdate(oldPosition, oldPixels);
+    return (
+      !nearlyEqual(oldPosition, this.position) || !nearlyEqual(oldPixels, this.positionInPixels)
+    );
   }
 
   private measureAndSynchronize(initial: boolean): void {
@@ -277,11 +354,37 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     this.availableSize = nextSize;
 
     if (pending != null) {
-      this.applyPrimaryPixels(pending, false, oldPosition, oldPixels);
+      this.applyPrimaryPixels(pending, false, oldPosition, oldPixels, false);
     } else if (!initial && sizeChanged && this.primary && preserved != null) {
-      this.applyPrimaryPixels(preserved, false, oldPosition, oldPixels);
+      this.applyPrimaryPixels(preserved, false, oldPosition, oldPixels, false);
     } else {
-      this.applyPrimaryPixels((this.position / 100) * nextSize, false, oldPosition, oldPixels);
+      this.applyPrimaryPixels(
+        (this.position / 100) * nextSize,
+        false,
+        oldPosition,
+        oldPixels,
+        false,
+      );
+    }
+    // Measurements run from firstUpdated/updated/ResizeObserver. Scheduling another Lit update
+    // from those lifecycle phases produces a dev-mode warning and an avoidable second render, so
+    // synchronize the three measurement-owned DOM values directly. Property assignments and user
+    // interactions still take the normal reactive update path.
+    this.synchronizeMeasuredDom();
+  }
+
+  private synchronizeMeasuredDom(): void {
+    const startPosition = finiteRange(this._startPosition, DEFAULT_POSITION, 0, 100);
+    this.baseElement?.style.setProperty('--_lr-split-panel-start-position', `${startPosition}%`);
+    if (this.dividerElement) {
+      const bounds = this.ariaBounds;
+      this.dividerElement.setAttribute('aria-valuenow', String(Math.round(this.position)));
+      this.dividerElement.setAttribute('aria-valuemin', String(Math.round(bounds.min)));
+      this.dividerElement.setAttribute('aria-valuemax', String(Math.round(bounds.max)));
+    }
+    const reflectedPosition = String(this.position);
+    if (this.getAttribute('position') !== reflectedPosition) {
+      this.setAttribute('position', reflectedPosition);
     }
   }
 
@@ -292,6 +395,11 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     if (ResizeObserverConstructor) {
       this.resizeObserver = new ResizeObserverConstructor(() => this.measureAndSynchronize(false));
       if (this.baseElement) this.resizeObserver.observe(this.baseElement);
+      // `--min`/`--max` may change through the cascade without changing the host's own box. The
+      // hidden probes turn those CSS values into observable allocation changes so constraints are
+      // re-applied immediately even when no host resize accompanies the theme/style update.
+      if (this.minProbe) this.resizeObserver.observe(this.minProbe);
+      if (this.maxProbe) this.resizeObserver.observe(this.maxProbe);
       return;
     }
     if (view) {
@@ -316,7 +424,12 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     const threshold = finiteRange(this.snapThreshold, DEFAULT_SNAP_THRESHOLD, 0, Number.MAX_VALUE);
     if (typeof this.snap === 'function') {
       try {
-        return finiteRange(this.snap({ pos: position, size, snapThreshold: threshold }), position, 0, size);
+        return finiteRange(
+          this.snap({ pos: position, size, snapThreshold: threshold }),
+          position,
+          0,
+          size,
+        );
       } catch {
         return position;
       }
@@ -331,12 +444,18 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     let nearestDistance = Number.POSITIVE_INFINITY;
     for (const token of tokens.slice(0, MAX_SNAP_TOKENS)) {
       const repeated = token.toLowerCase().startsWith('repeat(');
-      const rawLength = repeated ? token.slice(token.indexOf('(') + 1, token.lastIndexOf(')')) : token;
+      const rawLength = repeated
+        ? token.slice(token.indexOf('(') + 1, token.lastIndexOf(')'))
+        : token;
       const point = this.resolveSnapLength(rawLength, size);
       if (point == null || point < 0) continue;
 
       const candidates = repeated
-        ? [Math.floor(position / point) * point, Math.round(position / point) * point, Math.ceil(position / point) * point]
+        ? [
+            Math.floor(position / point) * point,
+            Math.round(position / point) * point,
+            Math.ceil(position / point) * point,
+          ]
         : [point];
       for (const candidate of candidates) {
         if (!Number.isFinite(candidate) || candidate < 0 || candidate > size) continue;
@@ -364,6 +483,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
       startCoordinate: this.pointerCoordinate(event),
       startPrimaryPixels: primaryPixels,
     };
+    this.dividerElement?.setAttribute('data-dragging', '');
     try {
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     } catch {
@@ -381,7 +501,8 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     const drag = this.drag;
     if (!drag || event.pointerId !== drag.pointerId || this.disabled) return;
     let delta = this.pointerCoordinate(event) - drag.startCoordinate;
-    if (this.effectiveOrientation === 'horizontal' && this.effectiveDirection === 'rtl') delta *= -1;
+    if (this.effectiveOrientation === 'horizontal' && this.effectiveDirection === 'rtl')
+      delta *= -1;
     if (this.primary === 'end') delta *= -1;
     const changed = this.applyPrimaryPixels(drag.startPrimaryPixels + delta, true);
     if (changed) this.emit('lr-reposition');
@@ -400,6 +521,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   private stopDragging(): void {
     const pointerId = this.drag?.pointerId;
     this.drag = undefined;
+    this.dividerElement?.removeAttribute('data-dragging');
     this.dragView?.removeEventListener('pointermove', this.onPointerMove);
     this.dragView?.removeEventListener('pointerup', this.onPointerEnd);
     this.dragView?.removeEventListener('pointercancel', this.onPointerEnd);
@@ -471,7 +593,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
         part="base split-panel"
         data-orientation=${orientation}
         data-primary=${this.primary ?? 'start'}
-        style=${`--lr-split-panel-start-position: ${startPosition}%`}
+        style=${`--_lr-split-panel-start-position: ${startPosition}%`}
       >
         <div part="start panel"><slot name="start"></slot></div>
         <div
@@ -487,7 +609,9 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
           @pointerdown=${this.onPointerDown}
           @lostpointercapture=${this.onLostPointerCapture}
           @keydown=${this.onKeyDown}
-        ><slot name="divider"></slot></div>
+        >
+          <slot name="divider"></slot>
+        </div>
         <div part="end panel"><slot name="end"></slot></div>
         <div class="constraint-box" aria-hidden="true">
           <div class="constraint-min"></div>

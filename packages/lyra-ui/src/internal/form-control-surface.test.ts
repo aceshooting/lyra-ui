@@ -5,6 +5,8 @@ import '../components/forms/switch/switch.js';
 import '../components/forms/combobox/combobox.js';
 import '../components/forms/select/select.js';
 import '../components/conversation/model-select/model-select.js';
+import '../components/conversation/voice-picker/voice-picker.js';
+import '../components/forms/locale-picker/locale-picker.js';
 import '../components/agent-tools/tool-param-form/tool-param-form.js';
 
 interface NativeLikeFormSurface extends HTMLElement {
@@ -107,6 +109,39 @@ for (const tagName of ['lr-checkbox', 'lr-switch'] as const) {
     expect(control.checkValidity()).to.be.false;
     expect(changes).to.equal(0);
   });
+
+  it(`${tagName} separates live checked from the reflected current default`, async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        ${tagName === 'lr-checkbox'
+          ? html`<lr-checkbox name="toggle" checked>Toggle</lr-checkbox>`
+          : html`<lr-switch name="toggle" checked>Toggle</lr-switch>`}
+      </form>
+    `);
+    const control = form.querySelector(tagName) as HTMLElement & {
+      checked: boolean;
+      defaultChecked: boolean;
+      updateComplete: Promise<unknown>;
+    };
+    expect(control.checked).to.be.true;
+    expect(control.defaultChecked).to.be.true;
+
+    control.checked = false;
+    expect(control.hasAttribute('checked'), 'live writes do not rewrite the current default').to.be.true;
+    control.setAttribute('checked', '');
+    expect(control.checked, 'an attribute mutation cannot overwrite dirty live state').to.be.false;
+
+    control.defaultChecked = false;
+    expect(control.hasAttribute('checked')).to.be.false;
+    expect(control.checked, 'default writes still cannot overwrite dirty live state').to.be.false;
+    control.defaultChecked = true;
+    expect(control.checked).to.be.false;
+
+    form.reset();
+    expect(control.checked, 'reset uses the current default').to.be.true;
+    control.defaultChecked = false;
+    expect(control.checked, 'after reset the live state is pristine again').to.be.false;
+  });
 }
 
 it('checkbox restores all checked/indeterminate combinations', async () => {
@@ -157,6 +192,38 @@ for (const tagName of ['lr-select', 'lr-model-select'] as const) {
     expect(control.value).to.equal('restored');
     expect(new FormData(form).get('choice')).to.equal('restored');
     expect(changes).to.equal(0);
+  });
+}
+
+for (const tagName of ['lr-model-select', 'lr-voice-picker', 'lr-locale-picker'] as const) {
+  it(`${tagName} separates its live value from the reflected current default`, async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        ${tagName === 'lr-model-select'
+          ? html`<lr-model-select name="choice" value="initial"></lr-model-select>`
+          : tagName === 'lr-voice-picker'
+            ? html`<lr-voice-picker name="choice" value="initial"></lr-voice-picker>`
+            : html`<lr-locale-picker name="choice" value="initial"></lr-locale-picker>`}
+      </form>
+    `);
+    const control = form.querySelector(tagName) as HTMLElement & {
+      value: string;
+      defaultValue: string;
+    };
+    expect(control.value).to.equal('initial');
+    expect(control.defaultValue).to.equal('initial');
+
+    control.value = 'dirty';
+    expect(control.getAttribute('value')).to.equal('initial');
+    control.setAttribute('value', 'next-default');
+    expect(control.defaultValue).to.equal('next-default');
+    expect(control.value, 'attribute mutation cannot overwrite dirty live state').to.equal('dirty');
+
+    form.reset();
+    expect(control.value).to.equal('next-default');
+    control.defaultValue = 'pristine-update';
+    expect(control.getAttribute('value')).to.equal('pristine-update');
+    expect(control.value, 'after reset the live state is pristine again').to.equal('pristine-update');
   });
 }
 

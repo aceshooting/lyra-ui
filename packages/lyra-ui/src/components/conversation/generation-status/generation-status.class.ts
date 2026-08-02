@@ -182,6 +182,8 @@ export interface LyraGenerationStatusEventMap {
  * @csspart tokens - The token-count segment, e.g. `"340 tokens"`. Only rendered when `token-count` is set.
  * @csspart throughput - The throughput segment, e.g. `"27 tok/s"`. Only rendered when a value is available (host-supplied or derived; see the class doc).
  * @csspart stop-button - The built-in Stop button. Only rendered while `show-stop` is true.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventMap> {
   static override styles = [LyraElement.styles, styles];

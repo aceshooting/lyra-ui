@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/date-picker/date-picker.js';` (registers the tag; side-effect import)
 - **Class** `LyraDatePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 36 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-input` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -14,53 +16,67 @@
 
 ## `lr-date-picker` / `lr-date-input` (+ `calendar-core.ts`)
 
-Mirrors the core `<wa-date-picker>`/`<wa-date-input>` API under `lr-`. **Value is always ISO
-8601**: `YYYY-MM-DD` (single) or `YYYY-MM-DD/YYYY-MM-DD` (range).
+Mirrors the `<wa-date-picker>`/`<wa-date-input>` 3.11 public API under `lr-`. Both
+components are **experimental since 3.8**. Values use ISO 8601: `YYYY-MM-DD` (single) or
+`YYYY-MM-DD/YYYY-MM-DD` (range).
 
 ### `lr-date-picker`
 
 Inline month-grid calendar, not form-associated (used standalone or embedded inside
 `lr-date-input`'s popover).
 
-**Properties:**
-- `value: string = ''`
-- `mode: 'single'|'range' = 'single'` — unknown runtime values fall back to `single`
-- `min: string = ''`
-- `max: string = ''`
+**Properties (27):**
+
+- `dayContent` (JS only): `LyraDatePickerDayContent | undefined`
 - `disabled: boolean = false` (reflected)
+- `disabledDates: string | string[] | Date[] = ''` (attribute `disabled-dates`)
+- `disabledDaysOfWeek: string = ''` (attribute `disabled-days-of-week`)
+- `disableFuture: boolean = false` and `disablePast: boolean = false` (reflected)
+- `firstDayOfWeek: 'auto'|'sun'|'mon'|'tue'|'wed'|'thu'|'fri'|'sat' = 'auto'` (attribute
+  `first-day-of-week`, reflected)
+- `focusedDate: string = ''` (attribute `focused-date`, reflected)
+- `isDateDisabled?: (date: Date) => boolean` (JS only)
+- `locale: string = ''` (reflected; malformed tags fall back to the platform locale)
+- `max: string = ''` and `min: string = ''` (reflected ISO bounds)
+- `maxRange: number = 0` and `minRange: number = 0` (attributes `max-range`/`min-range`, reflected;
+  positive values count both range endpoints)
+- `mode: 'single'|'range' = 'single'` (reflected; unknown values normalize to `single`)
+- `months: 1|2 = 1` (reflected; finite values are truncated and clamped to `1..2`)
+- `pageBy: 'months'|'single' = 'months'` (attribute `page-by`, reflected)
 - `readonly: boolean = false` (reflected)
-- `months: 1|2 = 1` — finite runtime values are truncated and clamped to `1..2`; non-finite
-  values fall back to `1`
-- `locale: string = ''` — malformed locale tags fall back to the platform locale
-- `firstDayOfWeek: string = 'auto'` (attribute `first-day-of-week` — see gotchas)
-- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`; unknown runtime
-  values fall back to `short`)
-- `disablePast: boolean = false` (attribute `disable-past`)
-- `disableFuture: boolean = false` (attribute `disable-future`)
-- `withOutsideDays: boolean = false` (attribute `with-outside-days`)
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — scales calendar cell density
-  proportionally; unlike `lr-input`'s row-height scale (text containers), this scales cell density
-  itself (fewer/more days per visual unit). Month title, weekday labels, and nav buttons stay fixed
-  across tiers.
-- `previousLabel: string = 'Previous month'` (attribute `previous-label` — accessible label for the
-  previous-month nav button; override for a non-English `locale`)
-- `nextLabel: string = 'Next month'` (attribute `next-label` — accessible label for the next-month
-  nav button)
+- `size: LyraDatePickerSize = 'm'` (reflected; the shared `2xs`–`xl` ladder plus
+  `small`/`medium`/`large` aliases)
+- `today: string = ''` (reflected ISO override for deterministic today styling/constraints)
+- `value: string = ''` (reflected)
+- `valueAsDate: Date | null` and `valueAsRange: { from: Date|null; to: Date|null }` (JS-only
+  accessors; setters are silent and normalize reversed ranges)
+- `view: 'days'|'months'|'years'|'decades' = 'days'` (reflected)
+- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`, reflected)
+- `withOutsideDays: boolean = false` and `withWeekNumbers: boolean = false` (reflected)
 
-**Getters:** `selection: { from: Date|null; to: Date|null }`, `valueAsDate: Date | null` (single
-mode only)
+Lyra retains the additive `previousLabel`/`nextLabel` localized accessible-label overrides and
+the `selection` range getter.
 
-**Methods:** `clear()`, `goToToday()`, `goToDate(date: string | Date)` (valid dates are clamped to
-`min`/`max` before navigating/focusing; invalid `Date` objects and strings are ignored)
+**Methods:** `clear()`, `focus(options?)`, `goToToday()`, and
+`goToDate(date: string | Date)`. Valid navigation dates are clamped to `min`/`max`; invalid values
+are ignored.
 
-**Events:** `input` (during interaction — for range mode, fires after the first click of a pair),
-`change` (committed value)
+**Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
+the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
+values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{ view, date }`.
 
-**Slots:** none.
+**Slots:** `header`, `previous-icon`, `next-icon`, and `footer`. A dynamic
+`day-YYYY-MM-DD` slot is also accepted as a Lyra extension and takes precedence over `dayContent`.
 
-**CSS parts:** `base`, `month`, `header`, `title`, `previous`, `next`, `weekdays`, `weekday`,
-`grid`, `week`, `day`, `day-outside`, `day-today`, `day-selected`, `day-range-start`,
-`day-range-end`, `day-range-inner`, `day-placeholder`
+**Custom states:** `disabled`, `range`, and `readonly`.
+
+**CSS parts (35):** `date-picker`, `day`, `day-disabled`, `day-label`, `day-outside`,
+`day-placeholder`, `day-range-end`, `day-range-inner`, `day-range-preview`, `day-range-start`,
+`day-selected`, `day-today`, `day-weekend`, `footer`, `grid`, `header`, `month`, `month-label`,
+`months`, `nav`, `next`, `previous`, `title`, `view-cell`, `view-grid`, `view-item`,
+`view-item-disabled`, `view-item-selected`, `view-item-today`, `view-row`, `weekday`, `weekdays`,
+`weeknumber`, `weeknumbers`, and deprecated `base` (use `date-picker`). Lyra additionally retains
+the existing `week` part.
 
 **Themeable custom properties:** `--lr-cell-size` (default `2.25rem`, controls day-cell/grid-column
 size; auto-scaled per `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` default).
@@ -72,62 +88,72 @@ size; auto-scaled per `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:h
 Text field + calendar popover, **form-associated** via the shared `FormAssociated` mixin (`name`,
 `value`, `disabled`, `required` all inherited).
 
-**Properties (own):**
-- `mode: 'single'|'range' = 'single'`
-- `min: string = ''`
-- `max: string = ''`
-- `readonly: boolean = false` (reflected; preserves the submitted value but bars required and
-  date-bound constraint validation until removed)
-- `open: boolean = false` (reflected)
-- `withClear: boolean = false` (attribute `with-clear`)
-- `label: string = ''`
+**Properties (42):**
+
+- `appearance: 'filled'|'outlined'|'filled-outlined' = 'outlined'` (reflected)
+- `assumeInteractionOn: string[] = ['input']` (JS only)
+- `autocomplete: string = ''`
+- `dayContent?: LyraDatePickerDayContent` (JS only)
+- `defaultValue: string = ''` (reset value; reflected through the `value` content attribute)
+- `disabled: boolean = false`
+- `disabledDates: string | string[] | Date[] = ''` and `disabledDaysOfWeek: string = ''`
+- `disableFuture: boolean = false` and `disablePast: boolean = false` (reflected)
+- `distance: number = 0` (reflected; finite offset from the anchor)
+- `firstDayOfWeek: LyraDateInputFirstDayOfWeek = 'auto'` (reflected)
+- `form: HTMLFormElement | null` (JS-only FACE owner)
 - `hint: string = ''`
-- `placeholder: string = ''`
-- `locale: string = ''` — malformed locale tags fall back to the platform locale
-- `months: 1|2 = 1` — finite runtime values are truncated and clamped to `1..2`; non-finite
-  values fall back to `1`
-- `firstDayOfWeek: string = 'auto'`
-- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` — unknown runtime values fall back to `short`
-- `disablePast: boolean = false` (attribute `disable-past`)
-- `disableFuture: boolean = false` (attribute `disable-future`)
-- `withOutsideDays: boolean = false` (attribute `with-outside-days`)
+- `isDateDisabled?: (date: Date) => boolean` (JS only)
+- `label: string = ''`
+- `max: string = ''` and `min: string = ''` (reflected ISO bounds)
+- `maxRange: number = 0` and `minRange: number = 0` (reflected; positive values include both
+  endpoints)
+- `mode: 'single'|'range' = 'single'` (reflected)
+- `months: 1|2 = 1` (reflected; finite values are truncated and clamped)
+- `name: string = ''` (reflected)
+- `open: boolean = false` (reflected)
+- `pageBy: 'months'|'single' = 'months'` (reflected)
+- `pill: boolean = false` (reflected)
+- `placement: LyraDateInputPlacement = 'bottom-start'` (reflected; all 12 side/alignment
+  placements are accepted)
+- `readonly: boolean = false` and `required: boolean = false` (reflected)
+- `size: LyraDateInputSize = 'm'` (reflected; `2xs`–`xl` and aliases)
+- `today: string = ''` (reflected ISO override)
+- `validationTarget: HTMLElement | undefined` (JS only) — writable native-validity focus anchor.
+  It defaults to the internal input after first render; assign another element to override it, or
+  assign `undefined` to restore the internal input
+- `validators: LyraDateInputValidator[] = []` (JS only) — each entry may be a
+  `(value, input) => void | boolean | string | ValidityStateFlags` function, an object with
+  `validate(value, input)` returning that same result vocabulary, or a Web Awesome-compatible
+  object with `checkValidity(input)`. The mapped object returns
+  `{ isValid, message, invalidKeys }`, where `invalidKeys` names `ValidityState` flags; it may also
+  expose `observedAttributes` and a string or callback `message`. Changing any listed host
+  attribute automatically runs validity again. `isValid: true` passes. Otherwise the listed flags
+  are set (`customError` is used when the list is empty) and the returned message wins over the
+  validator-level fallback.
+- `value: string = ''` (JS property)
+- `valueAsDate: Date | null` and `valueAsRange: { from: Date|null; to: Date|null }` (JS-only
+  accessors; setters are silent and normalize reversed ranges)
+- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (reflected)
+- `withClear: boolean = false`, `withHint: boolean = false`, and `withLabel: boolean = false`
+- `withOutsideDays: boolean = false` and `withWeekNumbers: boolean = false` (reflected)
 
-**Properties (own, continued):**
-- `errorText: string = ''` (attribute `error-text` — static error copy; overridden by slotted
-  `error` content when provided)
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the internal
-  `<input>`'s computed accessible name; wins over `label`/`placeholder`/the localized `date`
-  fallback in that order. Attribute-reflects from a host-level `aria-label` so a plain-markup
-  consumer gets ARIA-name forwarding without setting a JS property.
-- `clearLabel: string = ''` (attribute `clear-label` — accessible label for the clear button;
-  empty uses the localized `clear` message, whose English fallback is `"Clear"`)
-- `openLabel: string = ''` (attribute `open-label` — accessible label for the calendar-toggle
-  button; empty uses the localized `openCalendar` message, whose English fallback is
-  `"Open calendar"`)
-- `dialogLabel: string = 'Choose date'` (attribute `dialog-label` — accessible name for the
-  `role="dialog"` calendar popover)
-- `spellcheck: boolean = true` — forwarded to the internal `<input>`
-- `autocapitalize: string = ''` — forwarded to the internal `<input>`; empty omits the attribute
-- `autoCorrect: string = ''` (attribute `autocorrect`, Safari/WebKit-specific) — forwarded to the
-  internal `<input>`; empty omits the attribute. Named `autoCorrect` in JS/TS (not `autocorrect`)
-  to dodge a `lib.dom.d.ts` collision with `HTMLElement`'s own boolean `autocorrect` IDL member;
-  the wire attribute is still the plain `autocorrect` name
-- `autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
-  `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the internal date input
-- `autocomplete: string = ''`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
-  (`enterkeyhint`) — forwarded to the internal `<input>`.
-- `size: LyraSize = 'm'` (reflected) — visual size on the shared control ladder, matching
-  `lr-input`/`lr-select`/`lr-combobox`/`lr-button`; both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
-  `small`/`medium`/`large` are accepted. Governs the field's padding and font-size;
-  the calendar-toggle and clear buttons keep a constant, accessible touch target at every size.
-  The default `m` tier is unchanged from this component's pre-`size` rendering.
-- `pill: boolean = false` (reflected) — rounds the input row's corners to a full pill, mirroring
-  `lr-input`'s own `pill`. It only re-assigns `--lr-date-input-radius` to `--lr-radius-pill`, so a
-  consumer setting that property directly still wins for a bespoke shape
+Lyra retains additive native-wrapper and form-chrome properties: `placeholder`, `locale`,
+`errorText`, `accessibleLabel` (attribute `aria-label`), `clearLabel`, `openLabel`, `dialogLabel`,
+`spellcheck`, `autocapitalize`, `autoCorrect` (attribute `autocorrect`), `inputMode: string = ''`
+(attribute `inputmode`), `enterKeyHint: string = ''` (attribute `enterkeyhint`), and the reflected
+`customError: string | null` (attribute `custom-error`). `withLabel` and `withHint` are SSR hints:
+they force those slot wrappers into the first render so server output and hydration have the same
+structure even before assigned-slot state is observable. The shared Lyra FACE contract also
+reflects `disabled` and accepts a `form` content-attribute owner ID in addition to the
+element-valued `form` IDL.
 
-**Methods:** `show()`, `hide()`, `clear()`, `focus(options?)`, `blur()`, `select()`,
-`setSelectionRange()`, `setRangeText()` (all of the focus/selection methods forward to the internal
-native date `<input>`).
+**Methods:** `blur()`, `clear()`, `focus(options?)`,
+`formStateRestoreCallback(state)`, `hide()`, `resetValidity()`, `setCustomValidity(message)`, and
+`show()`. The shared form contract additionally exposes `getForm()`, `checkValidity()`, and
+`reportValidity()`; Lyra's native wrapper also exposes `click()`. `show()` and `hide()` return promises that settle after their corresponding transition;
+they do nothing when already settled, and respect cancellation of their request event. `clear()`
+is a no-op while blank, disabled, or readonly; otherwise it emits `lr-clear`, then `input`, then
+`change`. Lyra also retains native-wrapper `select()`, `setSelectionRange()`, and `setRangeText()`.
 
 **Getters:** `input: HTMLInputElement | undefined` — the internal native `<input>`, for direct DOM
 access.
@@ -135,18 +161,30 @@ access.
 **Selection properties:** `selectionStart`, `selectionEnd`, and `selectionDirection` mirror the
 internal native date input.
 
-**Events:** `input`, `change`, `lr-show`, `lr-hide`, `lr-clear`, `blur` (re-dispatched from
-the internal `<input>`'s own `blur`, bubbling and composed unlike the native event), `focus`
-(re-dispatched from the internal `<input>`'s own `focus`, for the same reason as `blur`)
+**Events:** `input` is an `InputEvent`, `change` is an `Event`, and `focus`/`blur` are
+`FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
+bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
+`lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
+settle. `lr-clear` and `lr-invalid` are non-cancelable.
 
-**Slots:** `label`, `error` (overrides `errorText`), `hint`, plus two adornment slots:
-- `start` — content at the inline-start of the input row, before the text field.
-- `end` — content after the text field and the built-in clear action, and before the calendar
-  toggle, so consumer content never sits outboard of the calendar button.
+**Slots (10):** `clear-icon`, dynamic `day-YYYY-MM-DD`, `end`, `expand-icon`, `footer`, `hint`,
+`label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
+overrides `errorText`.
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `start` and `end`
-(the two adornment-slot wrappers, each `hidden` while nothing is slotted into it), `clear-button`,
-`expand-button`, `expand-icon`, `popup`, `date-picker`, `error`, `hint`
+**Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
+exposes its validity states.
+
+**CSS parts (19):** `clear-button`, `date-input`, `date-picker`, `end`, `expand-button`,
+`expand-icon`, `form-control`, `form-control-input`, `form-control-label`, `hint`, `input`,
+`input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, deprecated
+`base` (use `date-input`), and deprecated `label` (use `form-control-label`). Lyra additionally
+retains `error`.
+
+**Form value and validation:** a complete range submits `YYYY-MM-DD/YYYY-MM-DD`. A first range
+endpoint remains visible in `value` but contributes the empty string to `FormData` until the second
+endpoint is selected. `min`/`max`, past/future limits, disabled dates/weekdays, the predicate,
+range length, `required`, and configured validators all feed FACE validity. Reset and state restore
+use the same normalization path as direct property writes.
 
 **Themeable custom properties:** `--lr-date-input-padding-block` (default `--lr-space-xs`) and
 `--lr-date-input-padding-inline` (default `--lr-space-s`) — the `input-wrapper`'s padding;
@@ -156,7 +194,8 @@ default `m` tier) — the `input-wrapper`'s block-size
 floor. All four are declared on `:host` and auto-swapped per `size`
 (`2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` defaults), using the same per-`size` values
 `lr-input` uses. `pill` re-assigns `--lr-date-input-radius` to `--lr-radius-pill`. Plus shared
-tokens.
+tokens. The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's
+enter and exit transitions; both default to `var(--lr-transition-fast)`.
 
 `--lr-date-input-control-height` pins an **exact** `input-wrapper` height (both floors and caps it).
 It is **undeclared by default**, so the row grows to fit its content — see "exact-height hatches"

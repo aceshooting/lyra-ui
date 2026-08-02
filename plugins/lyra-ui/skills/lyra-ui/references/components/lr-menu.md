@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/menu/menu.js';` (registers the tag; side-effect import)
 - **Class** `LyraMenu`, also available unregistered from `@aceshooting/lyra-ui/components/layout/menu/menu.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu-item`, `lr-dropdown-item` (same section below)
@@ -17,9 +19,10 @@
 An anchored dropdown built around a consumer-supplied trigger element (typically an icon button)
 assigned to the `trigger` slot. It is not a first-party invention: the pair mirrors `sl-menu` /
 `sl-menu-item`, and `<lr-dropdown-item>` below is the `wa-dropdown-item`-compatible name for the
-same item element. (Web Awesome's own popup counterpart, `wa-dropdown`, maps to `<lr-dropdown>` in
-the overlays family — reach for that when the popup holds arbitrary content rather than menu-item
-rows.) Either way it is a close, drop-in-shaped replacement for reaching outside this library for a
+same item element. Web Awesome's `wa-dropdown` maps to `<lr-dropdown>` in the overlays family; that
+component keeps the distinct trigger/popup host while containing this same menu interaction engine,
+and accepts direct mapped items or a consumer-supplied `lr-menu`. Either way it is a close,
+drop-in-shaped replacement for reaching outside this library for a
 third-party dropdown to build a gear menu, an avatar menu, or a history row's overflow menu. Uses
 the WAI-ARIA "menu button" pattern —
 `role="menu"`/`role="menuitem"` with real roving DOM focus moving between actual focusable
@@ -75,10 +78,12 @@ close branch precisely so teardown — disconnecting an open menu — can't stea
 **Events:** `lr-show` (no detail — fires only when `open` transitions to `true`, not for markup
 that renders `open` true from the start), `lr-hide` (same first-render guard, opposite
 transition), `lr-menu-select` (`detail: { value }` — a consolidated re-fire of the activated
-`<lr-menu-item>`'s own `lr-menu-item-select`; always followed by the menu closing and focus
-returning to the trigger). A selection made inside a submenu arrives as this same
-`lr-menu-select` on the outermost menu — one consolidated event for the whole tree, never a
-separate nested-selection name — and closes the whole chain behind it. A submenu's own
+`<lr-menu-item>`'s own `lr-menu-item-select`; retained for Lyra compatibility), and `lr-select`
+(`detail: { item }` — the complete activated item; cancelable). Unless `lr-select` is prevented,
+selection closes the menu and returns focus to the trigger. A selection made inside a submenu
+arrives as the same single `lr-select` event — it is never translated or re-emitted by ancestors —
+while the legacy `lr-menu-select` likewise bubbles once to the outermost menu. There is no separate
+nested-selection name. A non-vetoed selection closes the whole chain behind it. A submenu's own
 `lr-show`/`lr-hide` deliberately stop at the row that owns it, so they are never mistaken for this
 menu opening or closing; listen on the nested `<lr-menu>` element itself for those.
 
@@ -139,37 +144,47 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
 - `disabled: boolean = false` (reflected — disables selection and excludes this item from
   `<lr-menu>`'s roving-tabindex navigation entirely)
 - `destructive: boolean = false` (reflected — tints the row with `--lr-color-danger`, for a
-  dangerous action like "Delete")
+  dangerous action like "Delete"; retained as a behavior-identical alias)
+- `variant: LyraVariant | 'default' = 'default'` (reflected) — `danger` is the mapped dangerous
+  treatment; `default` is the WA spelling of Lyra's neutral item treatment
 - `type: 'normal' | 'checkbox' = 'normal'` — `'checkbox'` (mirroring `wa-dropdown-item`'s identical
   `type` option) renders `role="menuitemcheckbox"` in place of `role="menuitem"`, with `aria-checked`
   reflecting `checked` and a checkmark glyph shown once `checked` is `true`. `'normal'` (the default)
   renders and behaves exactly as before this option existed.
 - `checked: boolean = false` (reflected) — whether a `type="checkbox"` item is checked; meaningless
   (ignored) for `type="normal"`
-- `hasSubmenu: boolean` (read-only, new in 8.0.0) — whether an `<lr-menu>` is currently assigned to
-  this item's `submenu` slot, making the row a submenu parent
-- `submenuOpen: boolean` (read-only, new in 8.0.0) — whether that submenu is open right now. It
-  tracks the panel's own state however it changed: the parent menu's keyboard or pointer handling, a
-  dismissal, an ancestor closing, or a direct `panel.open = false`. Transient, like every other
-  open-state in this library — it resets to `false` when the item is disconnected
+- `loading: boolean = false` (reflected) — renders the spinner parts, announces the row as
+  `aria-disabled="true"`, and excludes it from activation/roving focus until loading clears
+- `hasSubmenu: boolean` (read-only, new in 8.0.0) — whether an `<lr-menu>` or direct mapped items are
+  currently assigned to this item's `submenu` slot, making the row a submenu parent
+- `submenuOpen: boolean = false` (new in 8.0.0) — whether that submenu is open right now. Assigning
+  it drives the same panel as `openSubmenu('none')` / `closeSubmenu()` without moving focus, and is
+  a no-op until submenu content is connected. It also tracks the panel's own state however it
+  changed: the parent menu's keyboard or pointer handling, a dismissal, an ancestor closing, or a
+  direct `panel.open = false`. Transient, like every other open-state in this library — it resets
+  to `false` when the item is disconnected
 
-**Methods:** `select(): void` — fires `lr-menu-item-select` (no-op while `disabled`). Called
+**Methods:** `select(): void` — fires `lr-menu-item-select` (no-op while `disabled` or `loading`). Called
 internally by this element's own click handler and by `<lr-menu>`'s Enter/Space keydown handling
 of the roving-focused item; also the cleanest way for a consumer/test to trigger selection
 programmatically instead of clicking the shadow-DOM `[part="base"]` element (see the gotcha below).
 For `type="checkbox"`, also toggles `checked` and fires `lr-menu-item-change` first. On a submenu
 parent it opens the submenu instead and fires neither event — see below.
 
-`openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): void` and `closeSubmenu(): void` (both new
-in 8.0.0) drive the assigned panel. `openSubmenu()` is a no-op without a `submenu` slot or while
-`disabled`; it uses the same focus vocabulary as `<lr-menu>`'s own `show()` — `'first'` for keyboard
-activation, `'none'` for pointer intent, which must not pull focus out from under the keyboard.
+`openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): Promise<void>` and
+`closeSubmenu(): Promise<void>` drive the assigned/generated panel and resolve after its matching
+state and update settle. `openSubmenu()` is a resolved no-op without a `submenu` slot or while
+`disabled`/`loading`; it uses the same focus vocabulary as `<lr-menu>`'s own `show()` — `'first'`
+for keyboard activation, `'none'` for pointer intent, which must not pull focus out from under the
+keyboard.
 Re-opening an already-open submenu still applies the focus target, so the into-submenu arrow key
 moves into a submenu the pointer opened a moment earlier. `closeSubmenu()` closes the panel and,
 through it, everything below it; it leaves focus alone, because the caller that moved focus knows
 where it belongs. The parent `<lr-menu>` owns the interaction policy (arrow keys, pointer intent,
 one-submenu-per-level) and drives it through exactly these two methods, so calling them by hand
 behaves identically.
+`getTextLabel(): string` returns the visible label used by type-ahead and Shoelace-compatible
+integrations, without including nested submenu text.
 
 **Events:** `lr-menu-item-select` (no detail payload — `this.emit('lr-menu-item-select')` is
 called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or
@@ -182,20 +197,21 @@ whose activation opens the panel instead of toggling `checked`),
 `lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
 state changes so the parent menu can repair its roving-tabindex state immediately)
 
-**Slots:** default (the item's label content), `icon` (optional leading icon), `submenu` (new in
-8.0.0 — a nested `<lr-menu>` that opens beside this row, turning it into a submenu parent; anything
-else assigned here renders but gets no submenu semantics)
+**Slots:** default (label), `icon` and Shoelace-compatible `prefix` (leading content), `details`
+(WA secondary text), `suffix` (Shoelace trailing content), and `submenu` (either a nested
+`<lr-menu>` or direct mapped menu items).
 
-**CSS parts:** `base` (the row — `role` lives on the host, not this part), `icon` (wrapper around
-the `icon` slot; not rendered/hidden entirely while the slot is empty), `label` (wrapper around the
-default slot), `checkmark` (the checkmark glyph shown when a `type="checkbox"` item is `checked`;
-not rendered at all for `type="normal"`), `submenu-icon` (wrapper around the chevron shown on a
-submenu parent; not rendered at all without a `submenu` slot, and mirrored under RTL through this
-wrapper rather than by swapping the glyph)
+**CSS parts:** `base`; `icon` and `prefix`; `label`; `details`; `suffix`; `checkmark` and its
+Shoelace-compatible `checked-icon` wrapper; `spinner spinner__base`; `submenu-icon`; and `submenu`.
+The role remains on the host, not `base`; the submenu chevron mirrors under RTL through its wrapper.
 
-**Themeable custom properties:** shared tokens only (`--lr-radius`, `--lr-focus-ring-width`,
-`--lr-focus-ring-color`, `--lr-space-xs`, `--lr-space-s`, `--lr-color-brand-quiet`,
-`--lr-opacity-disabled`, `--lr-color-danger`, `--lr-color-danger-quiet`).
+**Themeable custom properties:** `--submenu-offset` (default `-2px`) is the final signed distance
+between a submenu and its parent row: negative values overlap the parent menu and positive values
+add separation. It updates live, mirrors along with the submenu under RTL, and applies to both the
+Shoelace-style nested-menu shape and Lyra's generated panel for direct mapped items. Shared tokens
+also include `--lr-radius`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-space-xs`,
+`--lr-space-s`, `--lr-color-brand-quiet`, `--lr-opacity-disabled`, `--lr-color-danger`, and
+`--lr-color-danger-quiet`.
 
 **Optional peer deps:** none.
 
@@ -203,13 +219,26 @@ wrapper rather than by swapping the glyph)
 
 Compatibility naming alias for `<lr-menu-item>`, mirroring `wa-dropdown-item`. It is a subclass of
 the same implementation, so `value`, `size` (including the `small`/`medium`/`large` spellings),
-`disabled`, `destructive`, `type`, `checked`, `select()`, `hasSubmenu`/`submenuOpen`,
-`openSubmenu()`/`closeSubmenu()`, checkbox events, and menu roving focus behave identically.
+`disabled`, `loading`, `variant="danger"`/`destructive`, `type`, `checked`, `select()`,
+`getTextLabel()`, `hasSubmenu`/`submenuOpen`, async `openSubmenu()`/`closeSubmenu()`, checkbox events,
+and menu roving focus behave identically.
 
-**Slots:** default label content, optional `icon`, and `submenu` — the same nested-`<lr-menu>` slot
-`<lr-menu-item>` documents above.
+On this mapped tag, `submenuOpen: boolean = false` also reflects to `submenu-open`, and changing the
+attribute drives the same submenu state as assigning the property. `openSubmenu()` defaults to
+focusing the first item; Lyra's optional `'first' | 'last' | 'none'` argument remains available,
+with `'none'` appropriate for pointer or declarative control that must not steal focus.
 
-**CSS parts:** identical to `<lr-menu-item>`'s, including `submenu-icon`.
+**Events:** the focusable host emits the platform's native `focus` and `blur` `FocusEvent`s. They
+are non-bubbling, composed, and non-cancelable, with no prefixed duplicates. The inherited
+`lr-menu-item-select`, `lr-menu-item-change`, and `lr-menu-item-state-change` contracts are described
+under `<lr-menu-item>` above.
+
+**Slots:** default, `icon`, `prefix`, `details`, `suffix`, and `submenu` — including WA's direct-item
+submenu shape and Shoelace's nested-menu shape.
+
+**CSS parts:** identical to `<lr-menu-item>`'s, including all compatibility aliases above.
+
+**Themeable custom properties:** identical to `<lr-menu-item>`'s, including `--submenu-offset`.
 
 ```html
 <lr-menu>
@@ -224,10 +253,10 @@ the same implementation, so `value`, `size` (including the `small`/`medium`/`lar
   <lr-menu-item value="edit">Edit</lr-menu-item>
   <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
   <hr />
-  <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+  <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
 </lr-menu>
 <script type="module">
-  document.querySelector('lr-menu').addEventListener('lr-menu-select', (e) => console.log(e.detail.value));
+  document.querySelector('lr-menu').addEventListener('lr-select', (e) => console.log(e.detail.item.value));
 </script>
 ```
 
@@ -260,10 +289,11 @@ click itself already moved focus somewhere the user chose.
 
 ### Nested submenus (new in 8.0.0)
 
-The markup shape is one slot assignment: put an `<lr-menu>` inside an `<lr-menu-item>` with
-`slot="submenu"`. That nested menu needs no `trigger` slot — the row is its trigger, and the row
-sets itself as the nested menu's `anchor`, which is what switches the placement from below a trigger
-to beside the row. Nesting is unbounded; a three-level chain works the same way.
+Both upstream shapes use the same slot assignment. Shoelace-style markup puts an `<lr-menu>` inside
+an item with `slot="submenu"`; that nested menu needs no trigger because the row becomes its anchor.
+Web Awesome-style markup assigns one or more direct mapped items to `slot="submenu"`; Lyra creates
+the contained submenu panel around them. Both reach the same keyboard/pointer engine, and nesting is
+unbounded.
 
 ```html
 <lr-menu label="Row actions">
@@ -278,16 +308,27 @@ to beside the row. Nesting is unbounded; a three-level chain works the same way.
   </lr-menu-item>
 </lr-menu>
 <script type="module">
-  // One consolidated event for the whole tree, submenu selections included.
+  // One cancelable event for the whole tree, submenu selections included.
   document
     .querySelector('lr-menu')
-    .addEventListener('lr-menu-select', (e) => console.log(e.detail.value));
+    .addEventListener('lr-select', (e) => console.log(e.detail.item.value));
 </script>
+```
+
+The equivalent direct-item branch is:
+
+```html
+<lr-dropdown-item>
+  Share
+  <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+  <lr-dropdown-item slot="submenu" value="link">Copy link</lr-dropdown-item>
+</lr-dropdown-item>
 ```
 
 **Semantics.** A row with a `submenu` slot gains `aria-haspopup="menu"` and an `aria-expanded` that
 renders `"true"` *and* `"false"` — never omitted, since the attribute is part of the role's state.
-The chevron renders in `[part="submenu-icon"]`. Because such a row is a disclosure rather than an
+The open state also reflects as `submenu-open`, and the chevron renders in
+`[part="submenu-icon"]`. Because such a row is a disclosure rather than an
 action, activating it opens the submenu and fires no `lr-menu-item-select`; activating one also
 never toggles `checked` or fires `lr-menu-item-change`, so `type="checkbox"` still renders
 `role="menuitemcheckbox"` (and a checkmark for a `checked` row) but nothing ever moves that state. The submenu's `role="menu"` is named from the row's own label text, and so is the row
@@ -358,11 +399,13 @@ row never opens its submenu, by keyboard or by pointer.
 - A submenu's own `lr-show`/`lr-hide` stop at the `<lr-menu-item>` that owns it and never reach the
   ancestor menu, where a listener would read them as *that* menu opening or closing. Add the
   listener to the nested `<lr-menu>` element itself.
-- There is no nested-selection event. A selection made in a submenu surfaces only as the outermost
-  menu's `lr-menu-select`; listening for a second, deeper name will never fire.
+- There is no nested-selection event. `lr-select` and the retained `lr-menu-select` each originate
+  once at the owning menu and bubble through ancestors; listening for a second, deeper name will
+  never fire. Preventing `lr-select` leaves the full chain open.
 - `submenuOpen` is transient state, not persisted: disconnecting an `<lr-menu-item>` (a drag-and-drop
   reparent, a list re-render) resets it to `false`, so a reconnect never comes back already expanded.
-- The `submenu` slot only confers submenu semantics on an `<lr-menu>`; anything else assigned to it
-  still renders, but the row gets no `aria-haspopup`, no chevron, and no `openSubmenu()` behavior.
+- The `submenu` slot confers submenu semantics on either one nested `<lr-menu>` or direct
+  `lr-menu-item`/`lr-dropdown-item` children. Other content still renders but gets no submenu
+  semantics.
 
 ---

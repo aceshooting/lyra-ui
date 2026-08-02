@@ -6,28 +6,27 @@ export const styles = css`
     inline-size: var(--lr-skeleton-w, 100%);
     block-size: var(--lr-skeleton-h, var(--lr-size-1em));
   }
-  [part='base'] {
+  [part~='indicator'] {
     display: block;
     inline-size: 100%;
     block-size: 100%;
-    background: var(--lr-color-border);
+    background: var(--lr-skeleton-color, var(--color, var(--lr-color-border)));
   }
-  :host([variant='text']) [part='base'],
-  :host([variant='rect']) [part='base'] {
-    border-radius: var(--lr-radius);
+  :host(:where([variant='text'], [variant='rect'])) [part~='indicator'] {
+    border-radius: var(--lr-skeleton-border-radius, var(--border-radius, var(--lr-radius)));
   }
-  :host([variant='circle']) [part='base'] {
+  :host(:where([variant='circle'])) [part~='indicator'] {
     border-radius: 50%;
   }
-  :host([effect='pulse']) [part='base'] {
+  :host(:where([effect='pulse'])) [part~='indicator'] {
     animation: lr-skeleton-pulse var(--lr-transition-ambient) infinite;
   }
-  :host([effect='sheen']) [part='base'] {
+  :host(:where([effect='sheen'])) [part~='indicator'] {
     background-image: linear-gradient(
       90deg,
-      var(--lr-color-border) 0%,
-      var(--lr-color-surface) 50%,
-      var(--lr-color-border) 100%
+      var(--lr-skeleton-color, var(--color, var(--lr-color-border))) 0%,
+      var(--lr-skeleton-sheen-color, var(--sheen-color, var(--lr-color-surface))) 50%,
+      var(--lr-skeleton-color, var(--color, var(--lr-color-border))) 100%
     );
     background-size: 200% 100%;
     animation: lr-skeleton-sheen var(--lr-transition-ambient) infinite;
@@ -36,7 +35,7 @@ export const styles = css`
      left-to-right; play the same keyframes backwards under RTL so it sweeps in the reading
      direction. animation-direction (not a second animation-name) leaves the reduced-motion
      'animation: none !important' below fully in charge of disabling it. */
-  :host([effect='sheen']:dir(rtl)) [part='base'] {
+  :host(:where([effect='sheen']):dir(rtl)) [part~='indicator'] {
     animation-direction: reverse;
   }
   @keyframes lr-skeleton-pulse {
@@ -57,10 +56,10 @@ export const styles = css`
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='base'] {
+    [part~='indicator'] {
       animation: none !important;
     }
-    :host([effect='sheen']) [part='base'] {
+    :host(:where([effect='sheen'])) [part~='indicator'] {
       background-image: none;
     }
   }

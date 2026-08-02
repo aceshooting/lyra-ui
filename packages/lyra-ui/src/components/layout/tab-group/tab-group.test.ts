@@ -1,6 +1,10 @@
 import { fixture, expect, oneEvent, html, aTimeout } from "@open-wc/testing";
 import "./tab-group.js";
+import "./tab.js";
+import "./tab-panel.js";
 import type { LyraTabGroup } from "./tab-group.js";
+import type { LyraTab } from "./tab.js";
+import type { LyraTabPanel } from "./tab-panel.js";
 import { styles } from "./tab-group.styles.js";
 
 const basic = () => html`
@@ -45,7 +49,7 @@ function press(target: HTMLElement, key: string): void {
 it("never scrolls vertically -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   const tablist = el.shadowRoot!.querySelector(
-    '[part="tablist"]'
+    '[part~="tablist"]'
   ) as HTMLElement;
   expect(getComputedStyle(tablist).overflowY).to.equal("hidden");
 });
@@ -55,8 +59,8 @@ it("declares a themeable edge fade, gated on the tablist overflowing", () => {
   expect(css).to.include("-webkit-mask-image: linear-gradient");
   expect(css).to.include("mask-image: linear-gradient");
   expect(css).to.include("var(--lr-scroll-fade-size)");
-  // The gradient must live behind the overflow gate, never on the bare [part='tablist'] rule.
-  expect(css).to.include("[part='tablist'][data-scroll-overflow] {");
+  // The gradient must live behind the overflow gate, never on the bare [part~='tablist'] rule.
+  expect(css).to.include("[part~='tablist'][data-scroll-overflow] {");
 });
 
 it("applies the edge fade once the tablist actually overflows", async () => {
@@ -67,7 +71,7 @@ it("applies the edge fade once the tablist actually overflows", async () => {
       <div slot="settings" label="Settings and preferences">Settings form</div>
     </lr-tab-group>
   `)) as LyraTabGroup;
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   await nextFrames();
   expect(tablist.scrollWidth).to.be.greaterThan(tablist.clientWidth);
   expect(getComputedStyle(tablist).maskImage).to.contain("linear-gradient");
@@ -77,7 +81,7 @@ it("leaves a tablist that fits completely unmasked", async () => {
   // The regression this guards: the fade used to be painted unconditionally, dimming the first
   // and last tab of a row with nothing to scroll to.
   const el = (await fixture(basic())) as LyraTabGroup;
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   await nextFrames();
   expect(tablist.scrollWidth - tablist.clientWidth).to.be.at.most(1);
   expect(getComputedStyle(tablist).maskImage).to.equal("none");
@@ -96,7 +100,7 @@ it("keeps the edge fade opaque when a consumer themes the shadow color transluce
       <div slot="settings" label="Settings and preferences">Settings form</div>
     </lr-tab-group>
   `)) as LyraTabGroup;
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   await nextFrames();
   const mask = getComputedStyle(tablist).maskImage;
   expect(mask).to.contain("linear-gradient");
@@ -211,8 +215,9 @@ it("clicking a tab activates it and fires lr-tab-show with the tab id", async ()
   const listener = oneEvent(el, "lr-tab-show");
   tabButtons(el)[1].click();
   const event = await listener;
-  expect((event as CustomEvent<{ tabId: string }>).detail).to.deep.equal({
+  expect((event as CustomEvent<{ tabId: string; name: string }>).detail).to.deep.equal({
     tabId: "preview",
+    name: "preview",
   });
   expect(el.active).to.equal("preview");
   await el.updateComplete;
@@ -362,8 +367,9 @@ it("emits lr-tab-show on keyboard-driven activation too", async () => {
   const listener = oneEvent(el, "lr-tab-show");
   press(tabButtons(el)[0], "ArrowRight");
   const event = await listener;
-  expect((event as CustomEvent<{ tabId: string }>).detail).to.deep.equal({
+  expect((event as CustomEvent<{ tabId: string; name: string }>).detail).to.deep.equal({
     tabId: "preview",
+    name: "preview",
   });
 });
 
@@ -768,7 +774,7 @@ it("defaults to a horizontal strip and reports it through aria-orientation", asy
   const el = (await fixture(basic())) as LyraTabGroup;
   await el.updateComplete;
   expect(el.placement).to.equal("top");
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   expect(tablist.getAttribute("aria-orientation")).to.equal("horizontal");
 });
 
@@ -780,7 +786,7 @@ it("turns the tablist vertical for a start/end placement", async () => {
     </lr-tab-group>
   `)) as LyraTabGroup;
   await el.updateComplete;
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   expect(tablist.getAttribute("aria-orientation")).to.equal("vertical");
   // Rendered result, not stylesheet text.
   expect(getComputedStyle(tablist).flexDirection).to.equal("column");
@@ -794,7 +800,7 @@ it("navigates a vertical strip with Up/Down, not Left/Right", async () => {
     </lr-tab-group>
   `)) as LyraTabGroup;
   await el.updateComplete;
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   press(tablist, "ArrowRight");
   await el.updateComplete;
   expect(el.active).to.equal("a");
@@ -813,7 +819,7 @@ it("moves focus without selecting under activation=manual, and commits on Enter"
     </lr-tab-group>
   `)) as LyraTabGroup;
   await el.updateComplete;
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   press(tablist, "ArrowRight");
   await el.updateComplete;
 
@@ -835,7 +841,7 @@ it("commits on Space under activation=manual", async () => {
     </lr-tab-group>
   `)) as LyraTabGroup;
   await el.updateComplete;
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   press(tablist, "End");
   await el.updateComplete;
   expect(el.active).to.equal("a");
@@ -847,7 +853,7 @@ it("commits on Space under activation=manual", async () => {
 it("keeps selection and focus together under the default activation=auto", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   await el.updateComplete;
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   press(tablist, "ArrowRight");
   await el.updateComplete;
   expect(el.active).to.equal("preview");
@@ -898,7 +904,7 @@ async function recordScroll(
   el: LyraTabGroup,
   edge: "start" | "end"
 ): Promise<ScrollToOptions[]> {
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   const calls: ScrollToOptions[] = [];
   const original = tablist.scrollBy.bind(tablist);
   tablist.scrollBy = ((options: ScrollToOptions) => {
@@ -924,7 +930,7 @@ it("keeps the scroll controls out of layout while the tablist fits", async () =>
 
 it("shows both scroll controls once the tablist actually overflows", async () => {
   const el = await crowded();
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   expect(tablist.hasAttribute("data-scroll-overflow")).to.equal(true);
   const displays = scrollControls(el).map(
     (button) => getComputedStyle(button).display
@@ -950,7 +956,7 @@ it("without-scroll-controls removes them entirely, leaving native scrolling and 
   `)) as LyraTabGroup;
   await nextFrames();
   expect(scrollControls(el)).to.have.lengthOf(0);
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   expect(tablist.hasAttribute("data-scroll-overflow")).to.equal(true);
   expect(getComputedStyle(tablist).maskImage).to.contain("linear-gradient");
 });
@@ -989,7 +995,7 @@ it("scrolls the tablist toward its inline end, then back, in LTR", async () => {
 
 it("scrolls by a viewport-sized step rather than a fixed pixel amount", async () => {
   const el = await crowded();
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   const calls = await recordScroll(el, "end");
   expect(Math.abs(calls[0]!.left!)).to.be.at.most(tablist.clientWidth);
   expect(Math.abs(calls[0]!.left!)).to.be.at.least(tablist.clientWidth / 2);
@@ -1150,7 +1156,7 @@ it("lets a consumer's own ::part(scroll-button) rule beat the internal hidden st
   `);
   const el = host.querySelector("lr-tab-group") as LyraTabGroup;
   await nextFrames();
-  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
   expect(tablist.hasAttribute("data-scroll-overflow")).to.equal(false);
   expect(getComputedStyle(scrollControl(el, "start")).display).to.equal("flex");
 });
@@ -1158,7 +1164,7 @@ it("lets a consumer's own ::part(scroll-button) rule beat the internal hidden st
 it("lays the start control before the tabs in LTR and after them under RTL", async () => {
   const ltr = await crowded();
   const ltrTablist = ltr.shadowRoot!.querySelector(
-    '[part="tablist"]'
+    '[part~="tablist"]'
   ) as HTMLElement;
   expect(
     scrollControl(ltr, "start").getBoundingClientRect().left
@@ -1175,11 +1181,235 @@ it("lays the start control before the tabs in LTR and after them under RTL", asy
   await nextFrames();
   await rtl.updateComplete;
   const rtlTablist = rtl.shadowRoot!.querySelector(
-    '[part="tablist"]'
+    '[part~="tablist"]'
   ) as HTMLElement;
   // Logical, not physical: "toward the inline start" is the right-hand edge here, so the same
   // control moves to the other side of the strip with no :dir() rule involved in the layout.
   expect(
     scrollControl(rtl, "start").getBoundingClientRect().left
   ).to.be.greaterThan(rtlTablist.getBoundingClientRect().left);
+});
+
+describe("upstream tab surface", () => {
+  it("exposes the mapped defaultSlot as the group's real unnamed slot", async () => {
+    const el = await fixture<LyraTabGroup>(elementModel());
+    await el.updateComplete;
+
+    expect(el.defaultSlot instanceof HTMLSlotElement).to.equal(true);
+    expect(el.defaultSlot.name).to.equal("");
+    expect(el.defaultSlot.hidden).to.equal(true);
+    expect(el.defaultSlot === el.shadowRoot!.querySelector("slot:not([name])")).to.equal(true);
+  });
+
+  it("leaves the established tab content unchanged when closable is unset", async () => {
+    const tab = await fixture<LyraTab>(html`<lr-tab panel="general">General</lr-tab>`);
+
+    expect(tab.closable).to.equal(false);
+    expect(tab.shadowRoot!.querySelectorAll('[part~="close-button"]').length).to.equal(0);
+    const content = tab.shadowRoot!.querySelector('[part~="tab"]') as HTMLSlotElement;
+    expect(content.part.contains("base")).to.equal(true);
+    expect(content.assignedNodes({ flatten: true }).length).to.equal(1);
+  });
+
+  it("reflects closable and exposes both close-button part names on one localized control", async () => {
+    const tab = await fixture<LyraTab>(html`
+      <lr-tab
+        panel="general"
+        closable
+        .strings=${{ close: "Close this tab" }}
+      >General</lr-tab>
+    `);
+
+    expect(tab.closable).to.equal(true);
+    expect(tab.hasAttribute("closable")).to.equal(true);
+    const close = tab.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement;
+    expect(close.part.contains("close-button__base")).to.equal(true);
+    expect(close.getAttribute("title")).to.equal("Close this tab");
+    expect(close.getAttribute("aria-hidden")).to.equal("true");
+    expect(close.hasAttribute("tabindex")).to.equal(false);
+  });
+
+  it("maps the upstream close notification to one bubbling, composed, noncancelable lr-close event", async () => {
+    const host = await fixture<HTMLDivElement>(html`
+      <div><lr-tab panel="general" closable>General</lr-tab></div>
+    `);
+    const tab = host.querySelector("lr-tab") as LyraTab;
+    const close = tab.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement;
+    let rawUpstreamEvents = 0;
+    tab.addEventListener("sl-close", () => rawUpstreamEvents++);
+    const closed = oneEvent(host, "lr-close");
+
+    close.click();
+    const event = await closed;
+
+    expect(event.type).to.equal("lr-close");
+    expect(event.detail).to.equal(null);
+    expect(event.bubbles).to.equal(true);
+    expect(event.composed).to.equal(true);
+    expect(event.cancelable).to.equal(false);
+    expect(rawUpstreamEvents).to.equal(0);
+  });
+
+  it("does not select a different tab when its close control is clicked", async () => {
+    const el = await fixture<LyraTabGroup>(html`
+      <lr-tab-group aria-label="Workspace tabs">
+        <lr-tab panel="general" active>General</lr-tab>
+        <lr-tab panel="advanced" closable>Advanced</lr-tab>
+        <lr-tab-panel name="general" active>General body</lr-tab-panel>
+        <lr-tab-panel name="advanced">Advanced body</lr-tab-panel>
+      </lr-tab-group>
+    `);
+    const advanced = el.querySelectorAll<LyraTab>("lr-tab")[1]!;
+    const closed = oneEvent(el, "lr-close");
+
+    (advanced.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement).click();
+    await closed;
+    await el.updateComplete;
+
+    expect(el.active).to.equal("general");
+    expect(el.querySelectorAll("lr-tab").length).to.equal(2);
+    await expect(el).to.be.accessible();
+  });
+
+  it("advertises Delete only on enabled closable real tab buttons", async () => {
+    const el = await fixture<LyraTabGroup>(html`
+      <lr-tab-group aria-label="Workspace tabs">
+        <lr-tab panel="general" active>General</lr-tab>
+        <lr-tab panel="advanced" closable>Advanced</lr-tab>
+        <lr-tab panel="locked" closable disabled>Locked</lr-tab>
+        <lr-tab-panel name="general" active>General body</lr-tab-panel>
+        <lr-tab-panel name="advanced">Advanced body</lr-tab-panel>
+        <lr-tab-panel name="locked">Locked body</lr-tab-panel>
+      </lr-tab-group>
+    `);
+
+    expect(tabButtons(el).map((button) => button.getAttribute("aria-keyshortcuts"))).to.deep.equal([
+      null,
+      "Delete",
+      null,
+    ]);
+  });
+
+  it("routes Delete on the focused closable tab through the descriptor's lr-close emit path", async () => {
+    const el = await fixture<LyraTabGroup>(html`
+      <lr-tab-group aria-label="Workspace tabs">
+        <lr-tab panel="general" active closable>General</lr-tab>
+        <lr-tab panel="advanced" closable>Advanced</lr-tab>
+        <lr-tab-panel name="general" active>General body</lr-tab-panel>
+        <lr-tab-panel name="advanced">Advanced body</lr-tab-panel>
+      </lr-tab-group>
+    `);
+    const button = tabButtons(el)[0]!;
+    button.focus();
+    const closed = oneEvent(el, "lr-close");
+
+    press(button, "Delete");
+    const event = await closed;
+
+    expect((event.target as Element).localName).to.equal("lr-tab");
+    expect((event.target as Element).getAttribute("panel")).to.equal("general");
+    expect(event.detail).to.equal(null);
+    expect(el.active).to.equal("general");
+    expect(el.shadowRoot!.activeElement?.getAttribute("data-slot")).to.equal("general");
+  });
+
+  it("does not emit a close request from disabled tabs by pointer or Delete", async () => {
+    const el = await fixture<LyraTabGroup>(html`
+      <lr-tab-group aria-label="Workspace tabs">
+        <lr-tab panel="general" active>General</lr-tab>
+        <lr-tab panel="locked" closable disabled>Locked</lr-tab>
+        <lr-tab-panel name="general" active>General body</lr-tab-panel>
+        <lr-tab-panel name="locked">Locked body</lr-tab-panel>
+      </lr-tab-group>
+    `);
+    const locked = el.querySelectorAll<LyraTab>("lr-tab")[1]!;
+    let closeRequests = 0;
+    el.addEventListener("lr-close", () => closeRequests++);
+
+    (locked.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement).click();
+    press(tabButtons(el)[1]!, "Delete");
+    await aTimeout(0);
+
+    expect(closeRequests).to.equal(0);
+    expect(el.active).to.equal("general");
+  });
+
+  it("exposes reflected active hints on tab and panel, and auto-slots a standalone tab into nav", async () => {
+    const tab = await fixture<LyraTab>(html`<lr-tab panel="general">General</lr-tab>`);
+    expect(tab.active).to.be.false;
+    expect(tab.slot).to.equal("nav");
+    tab.active = true;
+    await tab.updateComplete;
+    expect(tab.hasAttribute("active")).to.be.true;
+
+    const panel = await fixture<LyraTabPanel>(
+      html`<lr-tab-panel name="general" active style="--padding: 9px">Body</lr-tab-panel>`
+    );
+    expect(panel.active).to.be.true;
+    const panelBase = panel.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(panelBase).paddingInlineStart).to.equal("9px");
+  });
+
+  it("honors SSR active hints, then keeps tab and panel hints synchronized", async () => {
+    const el = await fixture<LyraTabGroup>(html`<lr-tab-group>
+      <lr-tab panel="general">General</lr-tab>
+      <lr-tab panel="advanced" active>Advanced</lr-tab>
+      <lr-tab-panel name="general">General body</lr-tab-panel>
+      <lr-tab-panel name="advanced" active>Advanced body</lr-tab-panel>
+    </lr-tab-group>`);
+    expect(el.active).to.equal("advanced");
+
+    el.show("general");
+    await el.updateComplete;
+    const tabs = [...el.querySelectorAll<LyraTab>("lr-tab")];
+    const tabPanels = [...el.querySelectorAll<LyraTabPanel>("lr-tab-panel")];
+    expect(tabs.map((tab) => tab.active)).to.deep.equal([true, false]);
+    expect(tabPanels.map((panel) => panel.active)).to.deep.equal([true, false]);
+  });
+
+  it("emits both the upstream name and legacy tabId aliases from one selection event", async () => {
+    const el = await fixture<LyraTabGroup>(elementModel());
+    const hidden = oneEvent(el, "lr-tab-hide");
+    const shown = oneEvent(el, "lr-tab-show");
+    el.show("advanced");
+    expect((await hidden).detail).to.deep.equal({ name: "general", tabId: "general" });
+    expect((await shown).detail).to.deep.equal({ name: "advanced", tabId: "advanced" });
+  });
+
+  it("exposes body/tabs/indicator and all scroll-button compatibility part names", async () => {
+    const el = await crowded();
+    const tabs = el.shadowRoot!.querySelector('[part~="tabs"]') as HTMLElement;
+    expect(tabs.part.contains("tablist")).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="body"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="active-tab-indicator"]')).to.exist;
+    const start = scrollControl(el, "start");
+    expect(start.part.contains("scroll-button__base")).to.be.true;
+    expect(start.part.contains("scroll-button-start")).to.be.true;
+    expect(start.part.contains("scroll-button--start")).to.be.true;
+  });
+
+  it("consumes upstream indicator and track CSS properties", async () => {
+    const el = await fixture<LyraTabGroup>(html`<lr-tab-group
+      style="--indicator-color: rgb(1, 2, 3); --track-color: rgb(4, 5, 6); --track-width: 7px"
+    >
+      <div slot="general" label="General">Body</div>
+    </lr-tab-group>`);
+    const indicator = el.shadowRoot!.querySelector(
+      '[part="active-tab-indicator"]'
+    ) as HTMLElement;
+    const tabs = el.shadowRoot!.querySelector('[part~="tabs"]') as HTMLElement;
+    expect(getComputedStyle(indicator).backgroundColor).to.equal("rgb(1, 2, 3)");
+    expect(getComputedStyle(tabs).borderBlockEndColor).to.equal("rgb(4, 5, 6)");
+    expect(getComputedStyle(tabs).borderBlockEndWidth).to.equal("7px");
+  });
+
+  it("remains accessible with SSR hints and all public wrapper parts", async () => {
+    const el = await fixture<LyraTabGroup>(html`<lr-tab-group aria-label="Settings">
+      <lr-tab panel="general" active>General</lr-tab>
+      <lr-tab panel="advanced">Advanced</lr-tab>
+      <lr-tab-panel name="general" active>General body</lr-tab-panel>
+      <lr-tab-panel name="advanced">Advanced body</lr-tab-panel>
+    </lr-tab-group>`);
+    await expect(el).to.be.accessible();
+  });
 });

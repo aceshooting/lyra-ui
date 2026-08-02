@@ -11,6 +11,7 @@ it('renders button chrome with the radio role and encodes checked state in the p
   expect(base.getAttribute('aria-checked')).to.equal('true');
   // `::part(base)[aria-checked]` never matches, so state has to live in the part name itself.
   expect(base.getAttribute('part')!.split(/\s+/)).to.include('checked');
+  expect(base.getAttribute('part')!.split(/\s+/)).to.include.members(['button', 'button--checked']);
   await expect(el).to.be.accessible();
 });
 
@@ -23,7 +24,7 @@ it('renders aria-checked="false" rather than omitting it when unchecked', async 
 
 it('participates in a radio group alongside a plain radio', async () => {
   const group = await fixture(html`
-    <lr-radio-group name="plan" label="Plan">
+    <lr-radio-group name="plan" label="Plan" orientation="horizontal">
       <lr-radio-button value="free">Free</lr-radio-button>
       <lr-radio-button value="pro">Pro</lr-radio-button>
       <lr-radio value="team">Team</lr-radio>
@@ -67,7 +68,7 @@ it('selects on Space from the keyboard', async () => {
 
 it('moves selection with the arrow keys inside a group', async () => {
   const group = await fixture(html`
-    <lr-radio-group name="plan" label="Plan">
+    <lr-radio-group name="plan" label="Plan" orientation="horizontal">
       <lr-radio-button value="free" checked>Free</lr-radio-button>
       <lr-radio-button value="pro">Pro</lr-radio-button>
     </lr-radio-group>

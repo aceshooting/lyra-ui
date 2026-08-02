@@ -21,6 +21,8 @@ import { styles } from './control-group.styles.js';
  * @slot - Form controls, buttons, or any other action content.
  * @csspart base - The group wrapper (`role="group"`).
  * @cssprop [--lr-control-group-gap=var(--lr-space-xs)] - Gap between grouped controls.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraControlGroup extends LyraElement {
   static override styles = [LyraElement.styles, styles];

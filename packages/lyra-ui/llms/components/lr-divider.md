@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/divider/divider.js';` (registers the tag; side-effect import)
 - **Class** `LyraDivider`, also available unregistered from `@aceshooting/lyra-ui/components/utility/divider/divider.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 1 part, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -16,12 +18,13 @@
 A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host
 `aria-label` is forwarded to that inner semantic owner.
 
-**Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected).
+**Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) and
+`vertical: boolean = false` (reflected Shoelace-compatible shorthand).
 
 **Events:** none. **Slots:** none. **CSS parts:** `base`.
 
-**Themeable custom properties:** shared tokens only — `--lr-color-border` (rule color),
-`--lr-border-width-thin` (thickness).
+**Themeable custom properties:** `--color` (falls back to `--lr-color-border`), `--width` (falls
+back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied on the cross axis).
 
 The host is `display: block` when horizontal and `display: inline-block; block-size: 100%` when
 vertical, so a vertical divider fills its flex/grid row's height with no extra CSS — but it needs a

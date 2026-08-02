@@ -101,6 +101,8 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  * @cssprop [--lr-policy-summary-count-needs-review-color=var(--lr-color-warning)] - Text color of the
  *   `needs-review` count. Restyling a state count otherwise requires overriding the library-wide
  *   status tokens, since `::part(count)[data-state]` is invalid CSS.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraPolicySummary extends LyraElement {
   static override styles = [LyraElement.styles, styles];

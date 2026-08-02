@@ -33,6 +33,8 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = { idle: 'neutral', queued: 
  * @csspart empty - The empty history message.
  * @cssprop [--lr-agent-eval-dashboard-active-border=var(--lr-color-brand)] - Active metric border.
  * @cssprop [--lr-agent-eval-dashboard-active-background=var(--lr-color-brand-quiet)] - Active metric background.
+ * @status stable
+ * @since 6.2.0
  */
 export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEventMap> {
   static override styles = [LyraElement.styles, styles];

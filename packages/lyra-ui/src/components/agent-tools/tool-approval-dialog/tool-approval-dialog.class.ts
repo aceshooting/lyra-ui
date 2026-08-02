@@ -136,7 +136,8 @@ export interface LyraToolApprovalDialogEventMap {
  * @csspart error - The inline "invalid JSON" message, shown only while editing with unparseable content.
  * @csspart footer - The action row wrapping the `footer` slot and the built-in buttons.
  * @csspart deny-button - The built-in Deny `<lr-button>`.
- * @csspart deny-button-base - Forwarded from the internal Deny `<lr-button>`'s own `base` part.
+ * @csspart deny-button-base - Forwarded from the internal Deny `<lr-button>`'s same-node `base`
+ * and `button` wrapper aliases.
  * @csspart deny-button-label - Forwarded from the internal Deny `<lr-button>`'s own `label` part.
  * @csspart deny-button-start - Forwarded from the internal Deny `<lr-button>`'s own `start` part.
  * @csspart deny-button-end - Forwarded from the internal Deny `<lr-button>`'s own `end` part.
@@ -144,7 +145,8 @@ export interface LyraToolApprovalDialogEventMap {
  * part, present only while `pending` is `'deny'`.
  * @csspart edit-button - The built-in Edit/Cancel toggle button (only rendered while `editable`).
  * @csspart approve-button - The built-in Approve `<lr-button>` — `disabled` while an in-progress edit is invalid JSON (or while Deny is pending).
- * @csspart approve-button-base - Forwarded from the internal Approve `<lr-button>`'s own `base` part.
+ * @csspart approve-button-base - Forwarded from the internal Approve `<lr-button>`'s same-node
+ * `base` and `button` wrapper aliases.
  * @csspart approve-button-label - Forwarded from the internal Approve `<lr-button>`'s own `label` part.
  * @csspart approve-button-start - Forwarded from the internal Approve `<lr-button>`'s own `start` part.
  * @csspart approve-button-end - Forwarded from the internal Approve `<lr-button>`'s own `end` part.
@@ -152,6 +154,8 @@ export interface LyraToolApprovalDialogEventMap {
  * `spinner` part, present only while `pending` is `'approve'`.
  * @cssprop [--lr-tool-approval-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
  * @cssprop [--lr-tool-approval-dialog-mono-font=var(--lr-font-mono)] - Font family for the tool name and the raw-JSON args editor.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -441,7 +445,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
             type="button"
             ?loading=${this.pending === 'deny'}
             ?disabled=${this.pending === 'approve'}
-            exportparts="base:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
+            exportparts="base:deny-button-base, button:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
             @click=${this.onDeny}
           >${this.localize('deny')}</lr-button>
           ${this.editable
@@ -460,7 +464,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
             type="button"
             ?loading=${this.pending === 'approve'}
             ?disabled=${hasError || this.pending === 'deny'}
-            exportparts="base:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
+            exportparts="base:approve-button-base, button:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
             @click=${this.onApprove}
           >${this.localize('approve')}</lr-button>
         </div>

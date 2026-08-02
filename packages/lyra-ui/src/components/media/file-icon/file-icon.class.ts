@@ -38,6 +38,8 @@ export type LyraFileIconVariant = 'icon' | 'label';
  * @csspart label - The localized format label in `variant="label"` mode.
  * @csspart size - The formatted `bytes` count, shown alongside `label` in `variant="label"` mode when `bytes` is non-zero.
  * @cssprop [--lr-file-icon-size=var(--lr-size-2rem)] - Inline/block size of the format badge.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraFileIcon extends LyraElement {
   static override styles = [LyraElement.styles, styles];

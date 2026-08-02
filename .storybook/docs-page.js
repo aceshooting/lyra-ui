@@ -11,12 +11,19 @@ import {
 import { createElement, Fragment } from 'react';
 
 import componentImports from 'virtual:lyra-component-imports';
+import customElements from '../packages/lyra-ui/custom-elements.json';
+import {
+  buildComponentMetadataIndex,
+  componentMetadataPresentation,
+} from './component-metadata.js';
+
+const componentMetadataByTag = buildComponentMetadataIndex(customElements);
 
 /**
- * The autodocs page, reproducing Storybook's own default block order with one addition: the
- * component's granular registration import, immediately under the title. Every component is its own
- * side-effect entry point, so "which module registers this tag?" is the first thing a reader needs
- * and the one thing the generated API tables below cannot tell them.
+ * The autodocs page reproduces Storybook's default block order and adds the CEM-derived maturity /
+ * introduction/deprecation contract plus the granular registration import immediately under the
+ * title. Every component is its own side-effect entry point, so "which module registers this tag?"
+ * remains the first integration detail the generated API tables cannot tell a reader.
  *
  * The specifier is derived per page from `.storybook/component-imports.js` (see its header for the
  * source of truth) rather than written into 275 story files.
@@ -28,8 +35,55 @@ import componentImports from 'virtual:lyra-component-imports';
  * import line if that resolution ever changes shape.
  */
 function importSpecifier(resolvedMeta) {
-  const component = resolvedMeta?.preparedMeta?.component ?? resolvedMeta?.csfFile?.meta?.component;
+  const component = componentTag(resolvedMeta);
   return typeof component === 'string' ? componentImports[component] : undefined;
+}
+
+function componentTag(resolvedMeta) {
+  return resolvedMeta?.preparedMeta?.component ?? resolvedMeta?.csfFile?.meta?.component;
+}
+
+function metadataBlock(resolvedMeta) {
+  const metadata = componentMetadataPresentation(
+    componentMetadataByTag.get(componentTag(resolvedMeta)),
+  );
+  if (!metadata) return null;
+  return createElement(
+    'section',
+    { 'aria-label': 'Component maturity and versioning' },
+    createElement(
+      'p',
+      null,
+      createElement('strong', null, 'Status: '),
+      createElement('code', null, metadata.status),
+      ' · ',
+      createElement('strong', null, 'Since: '),
+      createElement('code', null, metadata.since),
+    ),
+    metadata.rationale ? createElement('p', null, metadata.rationale) : null,
+    metadata.graduationCriteria
+      ? createElement('p', null, createElement('strong', null, 'Graduation: '), metadata.graduationCriteria)
+      : null,
+    metadata.deprecations.length
+      ? createElement(
+          Fragment,
+          null,
+          createElement('strong', null, 'Deprecations'),
+          createElement(
+            'ul',
+            null,
+            ...metadata.deprecations.map((entry) => createElement(
+              'li',
+              { key: entry.key },
+              createElement('code', null, entry.subject),
+              ` — deprecated since ${entry.since}; use ${entry.replacementKind} `,
+              createElement('code', null, entry.replacement),
+              `; removal not before ${entry.removalNotBefore}. ${entry.rationale}`,
+            )),
+          ),
+        )
+      : null,
+  );
 }
 
 export function LyraDocsPage() {
@@ -44,6 +98,7 @@ export function LyraDocsPage() {
     null,
     createElement(Title, null),
     createElement(Subtitle, null),
+    metadataBlock(resolvedMeta),
     specifier
       ? createElement(Source, {
           code: `import '${specifier}';`,

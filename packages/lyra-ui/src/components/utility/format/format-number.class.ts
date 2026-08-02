@@ -4,62 +4,75 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { styles } from './format.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import {
+  numberFormatOptions,
+  type FormatCurrencyDisplay,
+  type FormatNumberNotation,
+  type FormatNumberType,
+} from './format-options.js';
 
-/** `Intl.NumberFormat`'s own accepted range for `minimumFractionDigits`/`maximumFractionDigits` —
- *  a non-finite value, or one outside `[0, 100]`, makes its constructor throw a `RangeError`,
- *  which would otherwise crash the whole render from a single bad attribute. Passing both bounds
- *  with `minimum > maximum` throws too, even when each is individually in range. */
-const MAX_FRACTION_DIGITS = 100;
+export type { FormatCurrencyDisplay, FormatNumberNotation, FormatNumberType } from './format-options.js';
 
 /**
  * `<lr-format-number>` — locale-aware `Intl.NumberFormat` output.
  *
  * @customElement lr-format-number
  * @slot - Fallback content when the value is not finite.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraFormatNumber extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   @property({ type: Number }) value = 0;
-  @property() currency = '';
-  @property() notation: 'standard' | 'compact' | 'scientific' | 'engineering' = 'standard';
+  @property() type: FormatNumberType = 'decimal';
+  @property() currency = 'USD';
+  @property({ attribute: 'currency-display' }) currencyDisplay: FormatCurrencyDisplay = 'symbol';
+  /** Web Awesome grouping alias. */
+  @property({ type: Boolean, attribute: 'without-grouping' }) withoutGrouping = false;
+  /** Shoelace grouping alias; equivalent to `withoutGrouping`. */
+  @property({ type: Boolean, attribute: 'no-grouping' }) noGrouping = false;
+  @property() notation: FormatNumberNotation = 'standard';
+  @property({ attribute: 'minimum-integer-digits', type: Number }) minimumIntegerDigits?: number;
   @property({ attribute: 'minimum-fraction-digits', type: Number }) minimumFractionDigits?: number;
   @property({ attribute: 'maximum-fraction-digits', type: Number }) maximumFractionDigits?: number;
+  @property({ attribute: 'minimum-significant-digits', type: Number }) minimumSignificantDigits?: number;
+  @property({ attribute: 'maximum-significant-digits', type: Number }) maximumSignificantDigits?: number;
 
-  /** `minimumFractionDigits`/`maximumFractionDigits`, each normalized to a finite integer clamped
-   *  to `Intl.NumberFormat`'s own accepted `[0, 100]` range, and — when both are set — reordered
-   *  (rather than left to throw) if clamping left `minimum > maximum`. Left `undefined` when the
-   *  source property itself is `undefined`, so an author who sets neither still gets
-   *  `Intl.NumberFormat`'s own notation-driven defaults instead of an arbitrary forced pair. */
-  private get fractionDigits(): { minimumFractionDigits?: number; maximumFractionDigits?: number } {
-    let minimumFractionDigits =
-      this.minimumFractionDigits === undefined
-        ? undefined
-        : finiteInteger(this.minimumFractionDigits, 0, 0, MAX_FRACTION_DIGITS);
-    let maximumFractionDigits =
-      this.maximumFractionDigits === undefined
-        ? undefined
-        : finiteInteger(this.maximumFractionDigits, MAX_FRACTION_DIGITS, 0, MAX_FRACTION_DIGITS);
+  override render(): TemplateResult {
+    const minimumIntegerDigits = this.minimumIntegerDigits === undefined
+      ? undefined
+      : finiteInteger(this.minimumIntegerDigits, 1, 1, 21);
+    let minimumFractionDigits = this.minimumFractionDigits === undefined
+      ? undefined
+      : finiteInteger(this.minimumFractionDigits, 0, 0, 100);
+    let maximumFractionDigits = this.maximumFractionDigits === undefined
+      ? undefined
+      : finiteInteger(this.maximumFractionDigits, 100, 0, 100);
+    let minimumSignificantDigits = this.minimumSignificantDigits === undefined
+      ? undefined
+      : finiteInteger(this.minimumSignificantDigits, 1, 1, 21);
+    let maximumSignificantDigits = this.maximumSignificantDigits === undefined
+      ? undefined
+      : finiteInteger(this.maximumSignificantDigits, 21, 1, 21);
     if (minimumFractionDigits !== undefined && maximumFractionDigits !== undefined && minimumFractionDigits > maximumFractionDigits) {
       [minimumFractionDigits, maximumFractionDigits] = [maximumFractionDigits, minimumFractionDigits];
     }
-    return { minimumFractionDigits, maximumFractionDigits };
-  }
-
-  override render(): TemplateResult {
-    const notation =
-      this.notation === 'compact' ||
-      this.notation === 'scientific' ||
-      this.notation === 'engineering'
-        ? this.notation
-        : 'standard';
-    const options: Intl.NumberFormatOptions = { notation };
-    if (this.currency) {
-      options.style = 'currency';
-      options.currency = this.currency;
+    if (minimumSignificantDigits !== undefined && maximumSignificantDigits !== undefined && minimumSignificantDigits > maximumSignificantDigits) {
+      [minimumSignificantDigits, maximumSignificantDigits] = [maximumSignificantDigits, minimumSignificantDigits];
     }
-    const { minimumFractionDigits, maximumFractionDigits } = this.fractionDigits;
-    if (minimumFractionDigits !== undefined) options.minimumFractionDigits = minimumFractionDigits;
-    if (maximumFractionDigits !== undefined) options.maximumFractionDigits = maximumFractionDigits;
+    const options = numberFormatOptions({
+      type: this.type,
+      notation: this.notation,
+      currency: this.currency,
+      currencyDisplay: this.currencyDisplay,
+      withoutGrouping: this.withoutGrouping,
+      noGrouping: this.noGrouping,
+      minimumIntegerDigits,
+      minimumFractionDigits,
+      maximumFractionDigits,
+      minimumSignificantDigits,
+      maximumSignificantDigits,
+    });
     // Guaranteed finite by the check below; routed through the shared helper anyway so this call
     // can never see a non-finite value even if the guard changes shape.
     let text = '';
@@ -72,11 +85,9 @@ export class LyraFormatNumber extends LyraElement {
         // TypeScript surface. Discard the invalid options without also discarding a valid
         // effective locale; only a malformed locale itself needs the runtime-locale fallback.
         try {
-          text = getNumberFormat(this.effectiveLocale || undefined, {
-            notation: 'standard',
-          }).format(value);
+          text = getNumberFormat(this.effectiveLocale || undefined, { style: 'decimal' }).format(value);
         } catch {
-          text = getNumberFormat(undefined, { notation: 'standard' }).format(value);
+          text = getNumberFormat(undefined, { style: 'decimal' }).format(value);
         }
       }
     }

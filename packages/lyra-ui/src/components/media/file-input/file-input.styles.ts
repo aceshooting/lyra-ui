@@ -5,6 +5,23 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
+    --lr-file-input-font-size: var(--lr-form-control-font-size);
+  }
+  [part='file-input'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='form-control-label'] {
+    display: block;
+    min-inline-size: 0;
+    margin-block-end: var(--lr-space-xs);
+    font-size: var(--lr-file-input-font-size);
+    font-weight: var(--lr-font-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+  [part='form-control-label'][hidden],
+  [part='hint'][hidden] {
+    display: none;
   }
   .dropzone {
     position: relative;
@@ -45,6 +62,17 @@ export const styles = css`
     overflow-wrap: anywhere;
     pointer-events: none;
   }
+  [part='dropzone-icon'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--lr-font-size-xl);
+  }
+  [part='dropzone-text'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
   ::slotted(*) {
     max-inline-size: 100%;
     min-inline-size: 0;
@@ -77,18 +105,18 @@ export const styles = css`
     border-color: var(--lr-file-input-reject-border-color, var(--lr-color-danger));
     background: var(--lr-file-input-reject-bg, color-mix(in srgb, var(--lr-color-danger) 8%, transparent));
   }
-  :host(:not([disabled])) [part='base']:hover {
+  :host(:not(:disabled)) [part='base']:hover {
     border-color: var(--lr-color-brand);
   }
-  :host(:not([disabled])) .dropzone:hover [part='base'] {
+  :host(:not(:disabled)) .dropzone:hover [part='base'] {
     border-color: var(--lr-color-brand);
   }
   /* [part='base'] is the button that opens the file dialog, so the press is a real activation and
      needs its own answer -- the hover border alone repeats what hover already said. Both selector
      shapes are mirrored because the pointer can be over the button itself or over the
      pointer-events: none content stacked on top of it in the same grid cell. */
-  :host(:not([disabled])) [part='base']:active,
-  :host(:not([disabled])) .dropzone:active [part='base'] {
+  :host(:not(:disabled)) [part='base']:active,
+  :host(:not(:disabled)) .dropzone:active [part='base'] {
     border-color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
@@ -96,7 +124,7 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  :host([disabled]) [part='base'] {
+  :host(:disabled) [part='base'] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
@@ -114,5 +142,95 @@ export const styles = css`
   [part='rejection'] ul {
     margin: 0;
     padding-inline-start: var(--lr-space-m);
+  }
+  [part='file-list'] {
+    display: grid;
+    gap: var(--lr-space-xs);
+    margin-block-start: var(--lr-space-xs);
+  }
+  [part='file'] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--lr-space-s);
+    min-inline-size: 0;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface-raised);
+  }
+  [part='file-thumbnail'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--lr-icon-button-size);
+    block-size: var(--lr-icon-button-size);
+    overflow: hidden;
+    border-radius: var(--lr-radius-xs);
+    color: var(--lr-color-text-quiet);
+  }
+  [part='file-image'] {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+  [part='file-icon'] {
+    display: inline-flex;
+    font-size: var(--lr-font-size-xl);
+  }
+  [part='file-details'] {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+  }
+  [part='file-name'] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--lr-color-text);
+    font-size: var(--lr-file-input-font-size);
+  }
+  [part='file-size'] {
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
+  [part='remove-button'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: 0;
+    border: none;
+    border-radius: var(--lr-radius);
+    background: transparent;
+    color: var(--lr-color-text-quiet);
+    cursor: pointer;
+  }
+  [part='remove-button']:hover {
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-text);
+  }
+  [part='remove-button']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  [part='remove-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='remove-button']:disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
+  }
+  [part='hint'] {
+    min-inline-size: 0;
+    margin-block-start: var(--lr-space-xs);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
   }
 `;

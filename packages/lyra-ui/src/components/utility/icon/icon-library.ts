@@ -1,15 +1,19 @@
 /**
  * Registry of consumer-supplied icon sets for `<lr-icon library="…" name="…">`.
  *
- * A library is a pure name-to-URL function plus an optional mutator. The component owns every
+ * A library is a pure name/family/variant-to-URL function plus an optional mutator. The component owns every
  * security-relevant step after that: the resolved URL still goes through the fetch-URL allowlist,
  * the response is still byte-capped, and the markup is still sanitized before it reaches the DOM.
  * A resolver therefore cannot widen what an icon is allowed to render.
  */
 
-/** Maps an icon name to the URL of a single SVG document. Called synchronously, so it must not
- *  return a promise; do any async setup before registering the library. */
-export type LyraIconLibraryResolver = (name: string) => string;
+/** Maps an icon name, family, and variant to the URL of a single SVG document. Async resolvers are
+ *  awaited and generation-guarded, so stale results never start a request or replace a newer icon. */
+export type LyraIconLibraryResolver = (
+  name: string,
+  family: string,
+  variant: string,
+) => string | Promise<string>;
 
 /** Post-processes the sanitized `<svg>` element before it is rendered — recoloring, adding a
  *  `viewBox`, stripping a hardcoded `width`/`height`. It runs on already-sanitized, component-owned

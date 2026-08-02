@@ -87,6 +87,8 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  *   setTimeout(() => card?.classList.remove('is-highlighted'), 2000);
  * });
  * ```
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) {
   static override styles = [LyraElement.styles, styles];

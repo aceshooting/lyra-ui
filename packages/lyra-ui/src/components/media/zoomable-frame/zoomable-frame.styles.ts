@@ -2,61 +2,58 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
+    position: relative;
     display: block;
+    overflow: hidden;
     min-inline-size: 0;
-  }
-  [part='base'] {
-    display: grid;
-    gap: var(--lr-space-s);
-    min-inline-size: 0;
-  }
-  [part='viewport'] {
-    min-block-size: var(--lr-zoomable-frame-min-block-size, var(--lr-size-10rem));
-    overflow: auto;
-    overscroll-behavior: contain;
+    inline-size: 100%;
+    aspect-ratio: 16 / 9;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
-    outline: none;
+    container-type: inline-size;
   }
-  [part='viewport']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
-  /* no-pressed-state: the viewport is a focusable scroll surface (role="group", keyboard zoom/pan),
-     not an activation target -- a pointer press on it commits nothing, so a pressed tint would
-     promise a click that never happens. Its own controls below carry the pressed states. */
-  [part='viewport']:hover {
-    border-color: var(--lr-color-brand);
-  }
-  [part='content'] {
-    display: grid;
-    place-items: center;
-    min-inline-size: 100%;
-    min-block-size: 100%;
-    inline-size: max-content;
-    block-size: max-content;
-    transform: scale(var(--lr-zoomable-frame-zoom, 1));
-    transform-origin: center;
-  }
-  [part='content'] ::slotted(*) {
-    max-inline-size: none;
-  }
-  [part='content'] img {
+
+  [part='iframe'] {
+    position: absolute;
+    inset: 0;
     display: block;
-    max-inline-size: none;
+    inline-size: calc(100% / var(--lr-zoomable-frame-zoom, 1));
+    block-size: calc(100% / var(--lr-zoomable-frame-zoom, 1));
+    border: 0;
+    background: var(--lr-color-surface);
+    transform: scale(var(--lr-zoomable-frame-zoom, 1));
+    /* Iframe pixels are a physical canvas; scaling must stay pinned to its physical top-left
+       corner under both LTR and RTL rather than mirroring the embedded document. */
+    transform-origin: top left;
   }
+
+  :host([without-interaction]) [part='iframe'] {
+    pointer-events: none;
+    user-select: none;
+  }
+
   [part='controls'] {
+    position: absolute;
+    z-index: var(--lr-layer-content);
+    inset-inline-end: var(--lr-space-s);
+    inset-block-end: var(--lr-space-s);
     display: flex;
-    align-items: center;
-    justify-content: center;
     gap: var(--lr-space-xs);
+    padding: var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface-overlay);
+    box-shadow: var(--lr-shadow-s);
   }
-  [part='zoom-out'],
-  [part='zoom-in'],
-  [part='reset'] {
+
+  [part='zoom-in-button'],
+  [part='zoom-out-button'] {
+    display: inline-grid;
+    place-items: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
+    padding: 0;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -64,25 +61,30 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  [part='zoom-out']:hover,
-  [part='zoom-in']:hover,
-  [part='reset']:hover {
+
+  [part='zoom-in-button']:hover,
+  [part='zoom-out-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
-  [part='zoom-out']:active,
-  [part='zoom-in']:active,
-  [part='reset']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+
+  [part='zoom-in-button']:active,
+  [part='zoom-out-button']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='zoom-out']:disabled,
-  [part='zoom-in']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
-  }
-  [part='zoom-out']:focus-visible,
-  [part='zoom-in']:focus-visible,
-  [part='reset']:focus-visible {
+
+  [part='zoom-in-button']:focus-visible,
+  [part='zoom-out-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  [part='zoom-in-button']:disabled,
+  [part='zoom-out-button']:disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
   }
 `;

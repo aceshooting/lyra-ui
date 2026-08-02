@@ -10,6 +10,7 @@ export * from './date-picker/date-picker.js';
 export * from './emoji-picker/emoji-picker.js';
 export * from './icon-button/icon-button.js';
 export * from './input/input.js';
+export * from './input/native-time-input.js';
 export * from './input/number-input.js';
 export * from './input/time-input.js';
 export * from './locale-picker/locale-picker.js';

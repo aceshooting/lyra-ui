@@ -18,7 +18,7 @@ export const styles = css`
     gap: var(--lr-space-s);
     inline-size: 100%;
   }
-  [part='base'] {
+  [part~='base'] {
     position: relative;
     flex: 1 1 auto;
     block-size: var(--lr-slider-row-size);
@@ -27,18 +27,19 @@ export const styles = css`
     position: absolute;
     inset-inline: 0;
     inset-block-start: 50%;
-    block-size: var(--lr-slider-track-thickness);
+    block-size: var(--track-size, var(--track-height, var(--lr-slider-track-thickness)));
     transform: translateY(-50%);
-    border-radius: calc(var(--lr-slider-track-thickness) * 0.5);
-    background: var(--lr-color-border);
+    border-radius: calc(var(--track-size, var(--track-height, var(--lr-slider-track-thickness))) * 0.5);
+    background: var(--track-color-inactive, var(--lr-color-border));
   }
   [part='indicator'] {
     position: absolute;
     inset-block-start: 50%;
-    block-size: var(--lr-slider-track-thickness);
+    block-size: var(--track-size, var(--track-height, var(--lr-slider-track-thickness)));
     transform: translateY(-50%);
-    border-radius: calc(var(--lr-slider-track-thickness) * 0.5);
-    background: var(--lr-color-brand);
+    border-radius: calc(var(--track-size, var(--track-height, var(--lr-slider-track-thickness))) * 0.5);
+    background: var(--track-color-active, var(--lr-color-brand));
+    translate: var(--track-active-offset, 0) 0;
   }
   /* Tick marks for with-markers. Painted in the surface color so they stay
      visible over both the unfilled track and the brand-colored indicator. */
@@ -50,8 +51,8 @@ export const styles = css`
   [part='marker'] {
     position: absolute;
     inset-block-start: 50%;
-    inline-size: calc(var(--lr-slider-track-thickness) * 0.5);
-    block-size: calc(var(--lr-slider-track-thickness) * 1.5);
+    inline-size: var(--marker-width, calc(var(--lr-slider-track-thickness) * 0.5));
+    block-size: var(--marker-height, calc(var(--lr-slider-track-thickness) * 1.5));
     transform: translate(-50%, -50%);
     border-radius: var(--lr-radius-xs);
     background: var(--lr-color-surface);
@@ -59,8 +60,8 @@ export const styles = css`
   [part~='thumb'] {
     position: absolute;
     inset-block-start: 50%;
-    inline-size: var(--lr-slider-thumb-size);
-    block-size: var(--lr-slider-thumb-size);
+    inline-size: var(--thumb-width, var(--thumb-size, var(--lr-slider-thumb-size)));
+    block-size: var(--thumb-height, var(--thumb-size, var(--lr-slider-thumb-size)));
     border-radius: 50%;
     background: var(--lr-color-brand);
     border: var(--lr-border-width-medium) solid var(--lr-color-surface);
@@ -127,13 +128,12 @@ export const styles = css`
   [part~='thumb']:active {
     cursor: grabbing;
   }
-  /* Live value bubble for with-tooltip. Visibility is encoded in the part name
-     (tooltip-visible) rather than an attribute, since ::part(x)[attr] is invalid
-     CSS that silently never matches. */
+  /* Live value bubble for with-tooltip. It is anchored at the handle point and then moved to the
+     requested physical side. The numeric property becomes a length through the 1px design token;
+     Shoelace's length-valued --tooltip-offset remains a direct override. */
   [part~='tooltip'] {
     position: absolute;
-    inset-block-end: 100%;
-    margin-block-end: var(--lr-space-xs);
+    inset-block-start: 50%;
     padding-block: var(--lr-space-2xs);
     padding-inline: var(--lr-space-xs);
     border-radius: var(--lr-radius);
@@ -144,14 +144,86 @@ export const styles = css`
     white-space: nowrap;
     pointer-events: none;
     opacity: 0;
-    transform: translateX(-50%);
     transition: opacity var(--lr-transition-fast);
   }
-  :host(:dir(rtl)) [part~='tooltip'] {
-    transform: translateX(50%);
+  [part~='tooltip'][data-placement='top'] {
+    transform: translate(
+      -50%,
+      calc(-100% - var(--thumb-height, var(--thumb-size, var(--lr-slider-thumb-size))) * 0.5 - var(--tooltip-offset, calc(var(--lr-slider-tooltip-distance, 8) * var(--lr-size-1px))))
+    );
+  }
+  [part~='tooltip'][data-placement='bottom'] {
+    transform: translate(
+      -50%,
+      calc(var(--thumb-height, var(--thumb-size, var(--lr-slider-thumb-size))) * 0.5 + var(--tooltip-offset, calc(var(--lr-slider-tooltip-distance, 8) * var(--lr-size-1px))))
+    );
+  }
+  [part~='tooltip'][data-placement='left'] {
+    transform: translate(
+      calc(-100% - var(--thumb-width, var(--thumb-size, var(--lr-slider-thumb-size))) * 0.5 - var(--tooltip-offset, calc(var(--lr-slider-tooltip-distance, 8) * var(--lr-size-1px)))),
+      -50%
+    );
+  }
+  [part~='tooltip'][data-placement='right'] {
+    transform: translate(
+      calc(var(--thumb-width, var(--thumb-size, var(--lr-slider-thumb-size))) * 0.5 + var(--tooltip-offset, calc(var(--lr-slider-tooltip-distance, 8) * var(--lr-size-1px)))),
+      -50%
+    );
+  }
+  :host(:dir(rtl)) [part~='tooltip'][data-placement='top'],
+  :host(:dir(rtl)) [part~='tooltip'][data-placement='bottom'] {
+    transform: translate(
+      50%,
+      calc(-100% - var(--thumb-height, var(--thumb-size, var(--lr-slider-thumb-size))) * 0.5 - var(--tooltip-offset, calc(var(--lr-slider-tooltip-distance, 8) * var(--lr-size-1px))))
+    );
+  }
+  :host(:dir(rtl)) [part~='tooltip'][data-placement='bottom'] {
+    transform: translate(
+      50%,
+      calc(var(--thumb-height, var(--thumb-size, var(--lr-slider-thumb-size))) * 0.5 + var(--tooltip-offset, calc(var(--lr-slider-tooltip-distance, 8) * var(--lr-size-1px))))
+    );
   }
   [part~='tooltip-visible'] {
     opacity: 1;
+  }
+  [part='tooltip__arrow'] {
+    position: absolute;
+    inline-size: var(--lr-space-xs);
+    block-size: var(--lr-space-xs);
+    background: inherit;
+    transform: rotate(45deg);
+  }
+  [data-placement='top'] [part='tooltip__arrow'] {
+    inset-block-end: calc(var(--lr-space-xs) * -0.5);
+    inset-inline-start: calc(50% - var(--lr-space-xs) * 0.5);
+  }
+  [data-placement='bottom'] [part='tooltip__arrow'] {
+    inset-block-start: calc(var(--lr-space-xs) * -0.5);
+    inset-inline-start: calc(50% - var(--lr-space-xs) * 0.5);
+  }
+  [data-placement='left'] [part='tooltip__arrow'] {
+    inset-inline-end: calc(var(--lr-space-xs) * -0.5);
+    inset-block-start: calc(50% - var(--lr-space-xs) * 0.5);
+  }
+  [data-placement='right'] [part='tooltip__arrow'] {
+    inset-inline-start: calc(var(--lr-space-xs) * -0.5);
+    inset-block-start: calc(50% - var(--lr-space-xs) * 0.5);
+  }
+  [part~='label'],
+  [part='references'] {
+    flex: 1 0 100%;
+  }
+  [part~='label'] {
+    font-weight: var(--lr-font-weight-semibold);
+    color: var(--lr-color-text);
+  }
+  [part='references'] {
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text-quiet);
+  }
+  [part~='label'][hidden],
+  [part='references'][hidden] {
+    display: none;
   }
   [part='value'] {
     flex: 0 0 auto;
@@ -163,14 +235,14 @@ export const styles = css`
     min-inline-size: var(--lr-size-2-5ch);
     text-align: end;
   }
-  [part='hint'] {
+  [part~='hint'] {
     /* Full basis so the hint always occupies its own wrapped line under the
        track row, however wide the track and readout are. */
     flex: 1 0 100%;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  [part='hint'][hidden] {
+  [part~='hint'][hidden] {
     display: none;
   }
   /* Vertical orientation. Declared after every horizontal rule so the shared
@@ -182,7 +254,7 @@ export const styles = css`
     flex-direction: column;
     inline-size: auto;
   }
-  :host([orientation='vertical']) [part='base'] {
+  :host([orientation='vertical']) [part~='base'] {
     flex: 0 0 auto;
     inline-size: var(--lr-slider-row-size);
     block-size: var(--lr-slider-track-length, var(--lr-size-10rem));
@@ -191,14 +263,14 @@ export const styles = css`
     inset-inline: auto;
     inset-inline-start: 50%;
     inset-block: 0;
-    inline-size: var(--lr-slider-track-thickness);
+    inline-size: var(--track-size, var(--track-height, var(--lr-slider-track-thickness)));
     block-size: auto;
     transform: translateX(-50%);
   }
   :host([orientation='vertical']) [part='indicator'] {
     inset-block-start: auto;
     inset-inline-start: 50%;
-    inline-size: var(--lr-slider-track-thickness);
+    inline-size: var(--track-size, var(--track-height, var(--lr-slider-track-thickness)));
     transform: translateX(-50%);
   }
   :host([orientation='vertical']) [part~='thumb'] {
@@ -209,18 +281,15 @@ export const styles = css`
   :host([orientation='vertical']) [part='marker'] {
     inset-block-start: auto;
     inset-inline-start: 50%;
-    inline-size: calc(var(--lr-slider-track-thickness) * 1.5);
-    block-size: calc(var(--lr-slider-track-thickness) * 0.5);
+    inline-size: var(--marker-width, calc(var(--lr-slider-track-thickness) * 1.5));
+    block-size: var(--marker-height, calc(var(--lr-slider-track-thickness) * 0.5));
     transform: translate(-50%, 50%);
   }
   :host([orientation='vertical']) [part~='tooltip'] {
-    inset-block-end: auto;
-    inset-inline-start: 100%;
-    margin-block-end: 0;
-    margin-inline-start: var(--lr-space-xs);
-    transform: translateY(50%);
+    inset-block-start: auto;
+    inset-inline-start: 50%;
   }
-  :host([orientation='vertical']) [part='hint'] {
+  :host([orientation='vertical']) [part~='hint'] {
     flex: 0 0 auto;
   }
   :host([orientation='vertical']:dir(rtl)) [part='track'],

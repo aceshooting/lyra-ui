@@ -54,6 +54,8 @@ const FALLBACK_PALETTE = ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#8250df',
  * filtered-out (hidden) legend row's label/count, independent of the shared quiet-text token.
  * @cssprop [--lr-graph-legend-hidden-swatch-opacity=0.5] - Opacity of a filtered-out row's
  * decorative swatch.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

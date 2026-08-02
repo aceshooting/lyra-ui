@@ -2,8 +2,15 @@
 
 # Optional peer dependencies
 
-All 26 peers are **optional**: nothing here is needed to install or use the library,
-and no component imports one eagerly. Install a peer only when you use a component that needs it.
+All 29 peers are **optional**: nothing here is needed to install or use the library,
+but they have two deliberately different roles.
+
+**Framework declaration peers (3).** React, Svelte, and Vue are compile-time peers
+only when a project imports their matching opt-in declaration entry. Those entry points emit empty
+JavaScript, no component imports these frameworks, and Lyra ships no runtime wrapper.
+
+**Component-loaded peers (26).** No component imports one eagerly. Install a
+peer only when you use a component that needs it.
 
 **How they load.** A component that needs a peer resolves it through a dynamic `import()` on first
 use, rendering an `<lr-skeleton>` placeholder with `aria-busy="true"` on the host while it settles.
@@ -45,5 +52,8 @@ changes the component library version without installing a supported SheetJS rel
 | `pdfjs-dist` | `^6.2.108` | `lr-pdf-viewer` |
 | `postal-mime` | `^2.7.5` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |
+| `react` | `>=19 <20` | type-only `@aceshooting/lyra-ui/custom-elements-jsx` entry (no runtime import) |
 | `shiki` | `^4.3.1` | `lr-code-block`, `lr-code-block-core`, `lr-diff-view`, `lr-document-compare`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts` |
+| `svelte` | `>=5 <6` | type-only `@aceshooting/lyra-ui/svelte` entry (no runtime import) |
+| `vue` | `>=3.5 <4` | type-only `@aceshooting/lyra-ui/vue` entry (no runtime import) |
 | `xlsx` | `>=0.20.3 <0.21.0` | `lr-spreadsheet-viewer` |

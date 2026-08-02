@@ -5,26 +5,45 @@ import type { LyraCheckbox } from './checkbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
+it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+  const el = (await fixture(html`<lr-checkbox required>Accept</lr-checkbox>`)) as LyraCheckbox;
+  const aliases: CustomEvent[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0].target).to.equal(el);
+  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
+  expect(aliases[0].cancelable).to.be.false;
+});
+
 it('defaults to unchecked with role="checkbox" and aria-checked="false"', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(el.checked).to.be.false;
   expect(base.getAttribute('role')).to.equal('checkbox');
   expect(base.getAttribute('aria-checked')).to.equal('false');
 });
 
-it('reflects checked to the attribute and to aria-checked', async () => {
+it('reflects the pinned Web Awesome value property', async () => {
+  const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
+  el.value = 'newsletter';
+  await el.updateComplete;
+  expect(el.getAttribute('value')).to.equal('newsletter');
+});
+
+it('keeps live checked out of the default attribute while updating aria-checked', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
   el.checked = true;
   await el.updateComplete;
-  expect(el.hasAttribute('checked')).to.be.true;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(el.hasAttribute('checked')).to.be.false;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-checked')).to.equal('true');
 });
 
 it('toggles and emits lr-change with detail.checked on click', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   setTimeout(() => base.click());
   let ev = await oneEvent(el, 'lr-change');
@@ -39,7 +58,7 @@ it('toggles and emits lr-change with detail.checked on click', async () => {
 
 it('toggles on Space but not Enter, matching the native checkbox keyboard contract', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   setTimeout(() =>
     base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })),
@@ -56,9 +75,80 @@ it('toggles on Space but not Enter, matching the native checkbox keyboard contra
   expect(el.checked).to.be.true;
 });
 
+it('accepts WA hint and Shoelace help-text spellings on one accessible hint surface', async () => {
+  const wa = (await fixture(html`<lr-checkbox hint="WA hint">Choice</lr-checkbox>`)) as LyraCheckbox;
+  const sl = (await fixture(html`
+    <lr-checkbox help-text="Shoelace hint">Choice</lr-checkbox>
+  `)) as LyraCheckbox & { helpText: string };
+  const slotted = (await fixture(html`
+    <lr-checkbox>
+      Choice
+      <span slot="help-text">Slotted help</span>
+    </lr-checkbox>
+  `)) as LyraCheckbox;
+
+  for (const [el, text] of [[wa, 'WA hint'], [sl, 'Shoelace hint'], [slotted, 'Slotted help']] as const) {
+    await el.updateComplete;
+    const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
+    const control = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+    expect(hint.hidden, text).to.be.false;
+    const distributed = [...hint.querySelectorAll('slot')]
+      .flatMap((slot) => slot.assignedNodes({ flatten: true }))
+      .map((node) => node.textContent ?? '')
+      .join('');
+    expect(`${hint.textContent ?? ''}${distributed}`, text).to.contain(text);
+    if ('ariaDescribedByElements' in control) {
+      expect(control.ariaDescribedByElements, `${text} relationship`).to.include(hint);
+    } else {
+      expect(control.getAttribute('aria-describedby'), `${text} fallback`).to.contain(hint.id);
+    }
+    await expect(el).to.be.accessible();
+  }
+});
+
+it('exports additive WA/Shoelace control and state part aliases', async () => {
+  const checked = (await fixture(html`<lr-checkbox checked>Checked</lr-checkbox>`)) as LyraCheckbox;
+  const control = checked.shadowRoot!.querySelector('[part~="control"]') as HTMLElement;
+  const checkedIcon = checked.shadowRoot!.querySelector('[part~="checked-icon"]') as SVGElement;
+  expect(control.getAttribute('part')!.split(/\s+/)).to.include.members([
+    'box', 'control', 'control--checked',
+  ]);
+  expect(checkedIcon.getAttribute('part')!.split(/\s+/)).to.include.members([
+    'checkmark', 'checked-icon',
+  ]);
+
+  checked.indeterminate = true;
+  await checked.updateComplete;
+  const mixedControl = checked.shadowRoot!.querySelector('[part~="control"]') as HTMLElement;
+  const mixedIcon = checked.shadowRoot!.querySelector('[part~="indeterminate-icon"]') as SVGElement;
+  expect(mixedControl.getAttribute('part')!.split(/\s+/)).to.include('control--indeterminate');
+  expect(mixedIcon.getAttribute('part')!.split(/\s+/)).to.include.members([
+    'checkmark', 'indeterminate-icon',
+  ]);
+});
+
+it('accepts Shoelace default-checked while retaining native dirty checked semantics', async () => {
+  const form = (await fixture(html`
+    <form><lr-checkbox default-checked>Choice</lr-checkbox></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-checkbox') as LyraCheckbox;
+  await el.updateComplete;
+  expect(el.checked).to.be.true;
+  expect(el.defaultChecked).to.be.true;
+
+  el.checked = false;
+  el.setAttribute('default-checked', '');
+  await el.updateComplete;
+  expect(el.checked, 'changing the default must not overwrite dirty live state').to.be.false;
+  form.reset();
+  expect(el.checked, 'reset uses the Shoelace-spelled default').to.be.true;
+});
+
 it('emits exactly one native Event pair and one prefixed alias pair for user toggles', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const observed: Array<{ name: string; event: Event }> = [];
   for (const name of ['input', 'lr-input', 'change', 'lr-change']) {
     el.addEventListener(name, (event) => {
@@ -80,7 +170,7 @@ it('emits exactly one native Event pair and one prefixed alias pair for user tog
 
 it('preventDefault()s the Space keydown so the page does not scroll', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const ev = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
   base.dispatchEvent(ev);
   expect(ev.defaultPrevented).to.be.true;
@@ -88,7 +178,7 @@ it('preventDefault()s the Space keydown so the page does not scroll', async () =
 
 it('ignores click and keydown activation while disabled, and is not focusable', async () => {
   const el = (await fixture(html`<lr-checkbox disabled>Label</lr-checkbox>`)) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('tabindex')).to.equal('-1');
   expect(base.getAttribute('aria-disabled')).to.equal('true');
 
@@ -102,20 +192,20 @@ it('ignores click and keydown activation while disabled, and is not focusable', 
 
 it('is focusable (tabindex 0) when enabled', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('tabindex')).to.equal('0');
 });
 
 it('renders explicit false states for aria-required and aria-disabled', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-required')).to.equal('false');
   expect(base.getAttribute('aria-disabled')).to.equal('false');
 });
 
 it('sets aria-required when required', async () => {
   const el = (await fixture(html`<lr-checkbox required>Label</lr-checkbox>`)) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-required')).to.equal('true');
 });
 
@@ -135,13 +225,13 @@ it('forwards a host aria-label onto the inner role="checkbox" element', async ()
   const el = (await fixture(
     html`<lr-checkbox aria-label="Subscribe to updates"></lr-checkbox>`,
   )) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-label')).to.equal('Subscribe to updates');
 });
 
 it('does not set an empty aria-label on the inner element when the host has none', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.hasAttribute('aria-label')).to.be.false;
 });
 
@@ -155,7 +245,7 @@ describe('aria-describedby forwarding', () => {
     `)) as HTMLElement;
     const checkbox = el.querySelector('lr-checkbox') as LyraCheckbox;
     const description = el.querySelector('#description')!;
-    const base = checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement & {
+    const base = checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement & {
       ariaDescribedByElements?: Element[];
     };
     if ('ariaDescribedByElements' in base) {
@@ -178,7 +268,7 @@ describe('aria-describedby forwarding', () => {
     const checkbox = wrapper.querySelector('lr-checkbox') as LyraCheckbox;
     const first = wrapper.querySelector('#first-description')!;
     const second = wrapper.querySelector('#second-description')!;
-    const base = checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement & {
+    const base = checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement & {
       ariaDescribedByElements?: Element[];
     };
     expect(base.hasAttribute('aria-describedby')).to.be.false;
@@ -212,7 +302,7 @@ describe('aria-describedby forwarding', () => {
 describe('indeterminate', () => {
   it('reflects aria-checked="mixed" regardless of the underlying checked value', async () => {
     const el = (await fixture(html`<lr-checkbox indeterminate>Label</lr-checkbox>`)) as LyraCheckbox;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(base.getAttribute('aria-checked')).to.equal('mixed');
 
     el.checked = true;
@@ -227,7 +317,7 @@ describe('indeterminate', () => {
 
   it('is cleared by a user toggle (click), matching native input semantics', async () => {
     const el = (await fixture(html`<lr-checkbox indeterminate>Label</lr-checkbox>`)) as LyraCheckbox;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
     setTimeout(() => base.click());
     await oneEvent(el, 'lr-change');
@@ -237,7 +327,7 @@ describe('indeterminate', () => {
 
   it('is cleared by a user toggle (keyboard)', async () => {
     const el = (await fixture(html`<lr-checkbox indeterminate>Label</lr-checkbox>`)) as LyraCheckbox;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
     setTimeout(() =>
       base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })),
@@ -348,7 +438,7 @@ it('reflects a click toggle in FormData synchronously, with no await', async () 
     <form><lr-checkbox name="notify" value="yes">Notify me</lr-checkbox></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-checkbox') as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   base.click();
   expect(new FormData(form).get('notify')).to.equal('yes');
@@ -362,7 +452,7 @@ it('reflects a keyboard toggle in FormData synchronously, with no await', async 
     <form><lr-checkbox name="notify" value="yes">Notify me</lr-checkbox></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-checkbox') as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
   expect(new FormData(form).get('notify')).to.equal('yes');
@@ -401,7 +491,7 @@ it('focuses its inner control when direct or form submission validation fails', 
   sentinel.focus();
   expect(el.reportValidity()).to.be.false;
   expect(document.activeElement?.localName).to.equal('lr-checkbox');
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base checkbox');
 
   let submits = 0;
   form.addEventListener('submit', (event) => {
@@ -412,7 +502,7 @@ it('focuses its inner control when direct or form submission validation fails', 
   form.requestSubmit();
   expect(submits).to.equal(0);
   expect(document.activeElement?.localName).to.equal('lr-checkbox');
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base checkbox');
 });
 
 it('does not force focus when the native invalid event is canceled', async () => {
@@ -499,7 +589,7 @@ it('clears touched invalid styling on form.reset()', async () => {
     <form><lr-checkbox name="terms" required>Agree</lr-checkbox></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-checkbox') as LyraCheckbox;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   base.dispatchEvent(new FocusEvent('blur'));
   await el.updateComplete;
@@ -537,7 +627,7 @@ it('temporarily disables through a fieldset without overwriting the author disab
   const el = form.querySelector('lr-checkbox') as LyraCheckbox;
   const explicitlyDisabled = form.querySelector('[name="always-disabled"]') as LyraCheckbox;
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   expect(el.disabled).to.be.false;
   expect(el.effectiveDisabled).to.be.false;
@@ -572,14 +662,14 @@ it('temporarily disables through a fieldset without overwriting the author disab
 describe('validity styling', () => {
   it('does not reflect aria-invalid/data-invalid before the control has been touched', async () => {
     const el = (await fixture(html`<lr-checkbox required>Agree</lr-checkbox>`)) as LyraCheckbox;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(base.getAttribute('aria-invalid')).to.equal('false');
     expect(el.hasAttribute('data-invalid')).to.be.false;
   });
 
   it('reflects aria-invalid and data-invalid once a required, unchecked control is blurred', async () => {
     const el = (await fixture(html`<lr-checkbox required>Agree</lr-checkbox>`)) as LyraCheckbox;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
     base.dispatchEvent(new FocusEvent('blur'));
     expect(el.hasAttribute('data-invalid'), 'data-invalid is synchronous').to.be.true;
@@ -594,7 +684,7 @@ describe('validity styling', () => {
 
   it('never reflects aria-invalid/data-invalid on a non-required, touched control', async () => {
     const el = (await fixture(html`<lr-checkbox>Agree</lr-checkbox>`)) as LyraCheckbox;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     base.dispatchEvent(new FocusEvent('blur'));
     await el.updateComplete;
     expect(base.getAttribute('aria-invalid')).to.equal('false');
@@ -661,7 +751,7 @@ it('forwards focus/blur and relays exactly one native pair plus prefixed aliases
   el.addEventListener('lr-blur', () => aliases.push('lr-blur'));
 
   el.focus();
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base checkbox');
   el.blur();
   expect(el.shadowRoot!.activeElement).to.equal(null);
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
@@ -742,7 +832,7 @@ describe('checked-state cssprop escape hatch', () => {
 
   it('renders byte-identical to --lr-color-brand when --lr-checkbox-checked-bg/-border are unset', async () => {
     const el = (await fixture(html`<lr-checkbox checked>Label</lr-checkbox>`)) as LyraCheckbox;
-    const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
     expect(getComputedStyle(box).backgroundColor).to.equal(
       resolvedInShadow(el, 'background: var(--lr-color-brand)', 'background-color'),
     );
@@ -755,7 +845,7 @@ describe('checked-state cssprop escape hatch', () => {
     const el = (await fixture(
       html`<lr-checkbox checked style="--lr-checkbox-checked-bg: rgb(1, 2, 3); --lr-checkbox-checked-border: rgb(4, 5, 6);"></lr-checkbox>`,
     )) as LyraCheckbox;
-    const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
     expect(getComputedStyle(box).backgroundColor).to.equal('rgb(1, 2, 3)');
     expect(getComputedStyle(box).borderTopColor).to.equal('rgb(4, 5, 6)');
   });
@@ -781,7 +871,7 @@ it('is accessible in an indeterminate, labeled state', async () => {
 it('publishes --lr-checkbox-label-indent and drives the real label offset from it', async () => {
   const el = (await fixture(html`<lr-checkbox value="a">A</lr-checkbox>`)) as LyraCheckbox;
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
 
   // Published, so a consumer aligning their own per-option hint text under the label no longer has
@@ -866,7 +956,7 @@ describe('size', () => {
   async function boxOf(markup: unknown): Promise<DOMRect> {
     const el = (await fixture(markup as never)) as LyraCheckbox;
     await el.updateComplete;
-    const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
     return box.getBoundingClientRect();
   }
 
@@ -901,8 +991,8 @@ describe('size', () => {
     for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
       const el = (await fixture(html`<lr-checkbox size=${size}>Label</lr-checkbox>`)) as LyraCheckbox;
       await el.updateComplete;
-      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-      const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+      const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
       const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
       const gap = Number.parseFloat(getComputedStyle(base).columnGap);
       const boxWidth = box.getBoundingClientRect().width;
@@ -1013,8 +1103,8 @@ describe('lr-checkbox hover and press feedback', () => {
       html`<lr-checkbox style="--lr-transition-fast: 0s">Terms</lr-checkbox>`,
     )) as LyraCheckbox;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
     const restingBorder = getComputedStyle(box).borderTopColor;
     expect(getComputedStyle(box).boxShadow, 'no ring at rest').to.equal('none');
     try {
@@ -1077,10 +1167,10 @@ describe('lr-checkbox setCustomValidity()', () => {
     expect(el.validationMessage).to.equal('Server says no');
   });
 
-  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+  it('resetValidity() restores computed validity rather than forcing the control valid', async () => {
     const el = (await fixture(html`<lr-checkbox required>Agree</lr-checkbox>`)) as LyraCheckbox;
     el.setCustomValidity('Server says no');
-    el.setCustomValidity('');
+    el.resetValidity();
     expect(el.validity.customError, 'custom error cleared').to.be.false;
     expect(
       el.validity.valueMissing,

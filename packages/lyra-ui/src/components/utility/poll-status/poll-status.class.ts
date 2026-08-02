@@ -36,6 +36,8 @@ const TICK_MS = 1000;
  * @cssprop [--lr-poll-status-due-bg=var(--lr-color-success)] - Background of `indicator` while
  *   `data-due` is set, without repainting every other component that reuses the shared success
  *   token.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   static override styles = [LyraElement.styles, styles];

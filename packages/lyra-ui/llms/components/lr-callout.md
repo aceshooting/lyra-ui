@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/callout/callout.js';` (registers the tag; side-effect import)
 - **Class** `LyraCallout`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/callout/callout.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -16,14 +18,23 @@
 An inline status, warning, or error surface. Set `inline` for lightweight reactive form or mutation
 errors without panel chrome.
 
-**Properties:** `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'neutral'` (reflected —
-also picks `[part="base"]`'s role: `alert` for `danger`, `status` otherwise),
-`size: LyraSize = 'm'` (reflected — **new in 8.0.0**; visual density on the library's shared ladder,
-accepting both spellings of every tier (`s`/`small`, `m`/`medium`, `l`/`large`) so markup migrated
-from `wa-callout`/`sl-alert` needs no attribute rewrite. `m` reproduces the panel this component had
-before `size` existed), `heading: string = ''`,
+**Properties:** `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'brand'` (reflected when
+explicit — an unset nested callout inherits its ancestor's semantic colour context without
+materializing a `variant` attribute. Explicitly writing even the same-default `brand` materializes
+the attribute and pins the local brand palette; removing the attribute restores contextual
+inheritance. The property value still picks `[part="base"]`'s role: `alert` for `danger`, `status`
+otherwise),
+`appearance: 'accent'|'filled'|'outlined'|'plain'|'filled-outlined'` (reflected, with no explicit
+default — when set, controls how much of the active variant palette is spent on fill, border, and
+text; leaving it unset preserves the established quiet-fill/loud-edge treatment),
+`size: LyraSize = 'm'` (reflected when explicit — **new in 8.0.0**; visual density on the library's shared ladder,
+accepting both spellings of the aliased tiers (`s`/`small`, `m`/`medium`, `l`/`large`) so markup migrated
+from `wa-callout` needs no attribute rewrite. An unset nested callout inherits its ancestor's size
+context; standalone fallback is `m`. Explicitly writing even the same-default `m` pins the local
+medium mapping, and removing the attribute restores contextual inheritance), `heading: string = ''`,
 `closable: boolean = false` (reflected), `inline: boolean = false` (reflected), `open: boolean = true`
-(reflected — `false` renders nothing at all), and `accessibleLabel: string = ''`
+(reflected as a presence attribute — `open="false"` is accepted in plain markup; `false` removes the
+semantic content and hides the host surface), and `accessibleLabel: string = ''`
 (`accessible-label`; falls back to a plain host `aria-label` attribute when unset).
 
 **Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
@@ -31,26 +42,32 @@ unless a listener calls `preventDefault()`.
 
 **Slots:** default message, `heading` (rendered alongside the `heading` property), `icon`.
 
-**CSS parts:** `base`, `icon` (hidden while the `icon` slot is empty), `content`, `heading`,
+**CSS parts:** `base` (the transparent semantic grid wrapper inside the host-owned surface), `icon`
+(hidden while the `icon` slot is empty), `content`, `heading`,
 `message` (wrapper around the default slot), `close-button` (the close control's hit target, always
 at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-icon` (the
 visible "×" glyph inside it — this is what shrinks under `inline`, so the hit target never does).
 
-**Themeable custom properties:** `--lr-callout-background`, `--lr-callout-color`,
-`--lr-callout-border` — the trio one `:host([variant]:not([variant='neutral']))` rule rewrites to
-`var(--lr-color-fill-quiet)` / `var(--lr-color-fill-loud)` / `var(--lr-color-fill-loud)`, the
-generic slots the shared variants sheet has already re-pointed at the active variant's row of the
-semantic grid; the same quiet-fill/loud-text/loud-border scheme `lr-badge` uses. `inline` drops the
-border, background, and panel padding regardless of what these are set to. `--lr-callout-close-hover-bg`
+The surface chrome lives on the custom-element host, not inside `base`. Ordinary host
+`background`, `border`, `border-radius`, `color`, `padding`, and `margin` declarations therefore
+work directly and take normal author precedence. `inline` removes the host's border, background,
+and padding.
+
+**Themeable custom properties:** `--lr-callout-background`, `--lr-callout-color`, and
+`--lr-callout-border` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
+as their standalone fallback. An explicit `variant` maps all generic slots locally; leaving it
+unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
+same brand fallback when there is no surrounding context. `--lr-callout-close-hover-bg`
 (default `var(--lr-color-brand-quiet)`) — the close button's `:hover` background, deliberately
-decoupled from `--lr-callout-background` (which every non-neutral `variant` also retargets for the
-panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
+decoupled from `--lr-callout-background` (which every explicit `variant`, including `neutral`,
+retargets for the panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
 `variant="brand"` panel, which shares the same default token — without a collateral effect on the
 panel background, and vice versa.
 
 Three more, all new in 8.0.0: `--lr-callout-font-size` (default
-`var(--lr-form-control-font-size)` — the callout's text size; each `size` tier sets it from the
-shared ladder), `--lr-callout-padding` (default `var(--lr-form-control-padding-inline)` — the
+`var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit
+`size` tier maps it from the shared ladder), `--lr-callout-padding` (default
+`var(--lr-form-control-padding-inline, var(--lr-space-m))` — the
 panel's padding on *both* axes; each `size` tier sets it from the ladder's inline-padding knob,
 because a panel's block rhythm is generous like a control's inline padding rather than tight like
 its block padding, which only exists to fit text inside a fixed control height; `inline` removes it
@@ -58,3 +75,7 @@ entirely) and `--lr-callout-gap` (default `var(--lr-space-s)` — the space betw
 content and the close action. It deliberately does *not* vary by `size`: it separates three adjacent
 boxes rather than setting the panel's density, and shrinking it at the small tiers only crowds
 them).
+
+Initial content and initially distributed slots render while `aria-live="off"`. After that first
+render/slot distribution settles, the region arms as `polite` (`assertive` for `danger`) before
+later heading or message updates. Reconnection repeats the same initial-content staging.

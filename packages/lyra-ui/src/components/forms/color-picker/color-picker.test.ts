@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './color-picker.js';
 import type { LyraColorPicker } from './color-picker.js';
-import { styles } from './color-picker.styles.js';
 
 const part = (el: LyraColorPicker, name: string): HTMLElement =>
   el.shadowRoot!.querySelector(`[part~="${name}"]`) as HTMLElement;
@@ -76,6 +76,35 @@ it('shows a required-field asterisk after the label', async () => {
   expect(getComputedStyle(part(el, 'form-control-label'), '::after').content).to.contain('*');
 });
 
+it('keeps a live slotted label idref as the trigger and panel name while host aria-label still wins', async () => {
+  const el = (await fixture(html`
+    <lr-color-picker><span slot="label">Brand colour</span></lr-color-picker>
+  `)) as LyraColorPicker;
+  await el.updateComplete;
+  const label = part(el, 'form-control-label');
+  const trigger = part(el, 'trigger');
+  const panel = part(el, 'panel');
+  expect(label.id.length > 0).to.equal(true);
+  expect(trigger.getAttribute('aria-labelledby')).to.equal(label.id);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(label.id);
+  expect(trigger.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+
+  const slotted = el.querySelector('[slot="label"]') as HTMLElement;
+  slotted.textContent = 'Updated brand colour';
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  expect(slotted.textContent).to.equal('Updated brand colour');
+  expect(trigger.getAttribute('aria-labelledby')).to.equal(label.id);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(label.id);
+
+  el.setAttribute('aria-label', 'Explicit picker name');
+  await el.updateComplete;
+  expect(trigger.getAttribute('aria-label')).to.equal('Explicit picker name');
+  expect(panel.getAttribute('aria-label')).to.equal('Explicit picker name');
+  expect(trigger.hasAttribute('aria-labelledby')).to.equal(false);
+  expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+});
+
 it('shows slotted hint/label/error content on the very first render, not only after a later slotchange', async () => {
   const el = document.createElement('lr-color-picker') as LyraColorPicker;
   el.innerHTML =
@@ -88,23 +117,114 @@ it('shows slotted hint/label/error content on the very first render, not only af
   el.remove();
 });
 
-it('keeps the visible default, host value, validity, reset value, and FormData in sync', async () => {
+it('keeps the black preview separate from the empty public default, validity, reset value, and FormData', async () => {
   const form = (await fixture(html`
     <form><lr-color-picker name="accent" required></lr-color-picker></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-color-picker') as LyraColorPicker;
   await el.updateComplete;
 
-  expect(el.value).to.equal('#000000');
-  expect(new FormData(form).get('accent')).to.equal('#000000');
-  expect(el.checkValidity()).to.be.true;
+  expect((part(el, 'input') as HTMLInputElement).value).to.equal('#000000');
+  expect(el.value).to.equal('');
+  expect(new FormData(form).get('accent')).to.equal('');
+  expect(el.checkValidity()).to.be.false;
 
   el.value = '#ff0000';
   await el.updateComplete;
   form.reset();
   await el.updateComplete;
-  expect(el.value).to.equal('#000000');
-  expect(new FormData(form).get('accent')).to.equal('#000000');
+  expect(el.value).to.equal('');
+  expect(new FormData(form).get('accent')).to.equal('');
+  expect(el.checkValidity()).to.be.false;
+});
+
+it('publishes pristine and user-invalid state on both accessibility owners and clears it again', async () => {
+  const form = (await fixture(html`
+    <form><lr-color-picker label="Accent" name="accent" required></lr-color-picker></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-color-picker') as LyraColorPicker;
+  await el.updateComplete;
+  const trigger = part(el, 'trigger');
+  const input = part(el, 'input');
+
+  expect(trigger.getAttribute('aria-invalid')).to.equal('false');
+  expect(input.getAttribute('aria-invalid')).to.equal('false');
+
+  trigger.focus();
+  trigger.blur();
+  await el.updateComplete;
+  expect(trigger.getAttribute('aria-invalid')).to.equal('true');
+  expect(input.getAttribute('aria-invalid')).to.equal('true');
+
+  el.value = '#ff0000';
+  await el.updateComplete;
+  expect(trigger.getAttribute('aria-invalid')).to.equal('false');
+  expect(input.getAttribute('aria-invalid')).to.equal('false');
+
+  el.setCustomValidity('Rejected colour');
+  await el.updateComplete;
+  expect(trigger.getAttribute('aria-invalid')).to.equal('true');
+  expect(input.getAttribute('aria-invalid')).to.equal('true');
+  el.setCustomValidity('');
+  await el.updateComplete;
+  expect(trigger.getAttribute('aria-invalid')).to.equal('false');
+
+  form.reset();
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+  expect(trigger.getAttribute('aria-invalid')).to.equal('false');
+  expect(input.getAttribute('aria-invalid')).to.equal('false');
+
+  el.errorText = 'Visible error';
+  await el.updateComplete;
+  expect(trigger.getAttribute('aria-invalid')).to.equal('true');
+  expect(input.getAttribute('aria-invalid')).to.equal('true');
+});
+
+it('reportValidity marks an invalid picker for assistive technology', async () => {
+  const el = (await fixture(
+    html`<lr-color-picker label="Accent" required></lr-color-picker>`,
+  )) as LyraColorPicker;
+  await el.updateComplete;
+  expect(part(el, 'trigger').getAttribute('aria-invalid')).to.equal('false');
+  expect(el.reportValidity()).to.equal(false);
+  await el.updateComplete;
+  expect(part(el, 'trigger').getAttribute('aria-invalid')).to.equal('true');
+  expect(part(el, 'input').getAttribute('aria-invalid')).to.equal('true');
+});
+
+it('accepts default-value as the Shoelace reset-default spelling', async () => {
+  const form = (await fixture(html`
+    <form><lr-color-picker name="accent" default-value="#ff0000"></lr-color-picker></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-color-picker') as LyraColorPicker;
+  await el.updateComplete;
+
+  expect(el.defaultValue).to.equal('#ff0000');
+  expect(el.value).to.equal('#ff0000');
+  el.value = '#0000ff';
+  await el.updateComplete;
+  form.reset();
+  await el.updateComplete;
+  expect(el.value).to.equal('#ff0000');
+  expect(new FormData(form).get('accent')).to.equal('#ff0000');
+});
+
+it('reflects with-label and with-hint as SSR slot-presence hints', async () => {
+  const el = (await fixture(html`
+    <lr-color-picker with-label with-hint>
+      <span slot="label">Accent</span>
+      <span slot="hint">Choose a colour</span>
+    </lr-color-picker>
+  `)) as LyraColorPicker;
+  await el.updateComplete;
+
+  expect(el.withLabel).to.equal(true);
+  expect(el.withHint).to.equal(true);
+  expect(el.getAttribute('with-label')).to.equal('');
+  expect(el.getAttribute('with-hint')).to.equal('');
+  expect(part(el, 'form-control-label').hidden).to.equal(false);
+  expect(part(el, 'hint').hidden).to.equal(false);
 });
 
 it('forwards host click/focus/blur and suppresses click when effectively disabled', async () => {
@@ -131,19 +251,56 @@ it('forwards host click/focus/blur and suppresses click when effectively disable
   expect(clicks).to.equal(1);
 });
 
-it('visually marks direct and fieldset-cascaded disabled state', async () => {
+it('keeps direct and fieldset-disabled inline pickers out of programmatic focus', async () => {
+  const direct = (await fixture(
+    html`<lr-color-picker inline disabled label="Direct"></lr-color-picker>`,
+  )) as LyraColorPicker;
+  direct.focus();
+  expect(direct.shadowRoot!.activeElement === null).to.equal(true);
+
   const form = (await fixture(html`
-    <form><fieldset disabled><lr-color-picker></lr-color-picker></fieldset></form>
+    <form><fieldset disabled><lr-color-picker inline label="Inherited"></lr-color-picker></fieldset></form>
+  `)) as HTMLFormElement;
+  const inherited = form.querySelector('lr-color-picker') as LyraColorPicker;
+  await inherited.updateComplete;
+  inherited.focus();
+  expect(inherited.shadowRoot!.activeElement === null).to.equal(true);
+});
+
+it('visually marks direct and fieldset-cascaded disabled state across every pointer surface', async () => {
+  const form = (await fixture(html`
+    <form><fieldset disabled><lr-color-picker opacity swatches="#ff0000"></lr-color-picker></fieldset></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-color-picker') as LyraColorPicker;
   await el.updateComplete;
   expect(getComputedStyle(el).opacity).to.equal(
     getComputedStyle(el).getPropertyValue('--lr-opacity-disabled').trim(),
   );
-  expect(getComputedStyle(part(el, 'trigger')).cursor).to.equal('not-allowed');
+  const pointerParts = [
+    'trigger',
+    'grid',
+    'grid-handle',
+    'hue-slider',
+    'hue-slider-handle',
+    'opacity-slider',
+    'opacity-slider-handle',
+    'input',
+    'format-button',
+    'swatch',
+  ];
+  for (const name of pointerParts) {
+    expect(getComputedStyle(part(el, name)).cursor, `fieldset ${name}`).to.equal('not-allowed');
+  }
+
+  (form.querySelector('fieldset') as HTMLFieldSetElement).disabled = false;
+  el.disabled = true;
+  await el.updateComplete;
+  for (const name of pointerParts) {
+    expect(getComputedStyle(part(el, name)).cursor, `direct ${name}`).to.equal('not-allowed');
+  }
 });
 
-it('defaults to size "m" and scales the trigger across every tier', async () => {
+it('defaults to size "m", scales the visible swatch, and keeps every trigger at the shared hit-area floor', async () => {
   const expected: Record<string, string> = {
     '2xs': '20px',
     xs: '24px',
@@ -160,8 +317,10 @@ it('defaults to size "m" and scales the trigger across every tier', async () => 
     )) as LyraColorPicker;
     await el.updateComplete;
     const trigger = part(el, 'trigger');
-    expect(getComputedStyle(trigger).blockSize, `size=${size}`).to.equal(px);
-    expect(getComputedStyle(trigger).inlineSize, `size=${size}`).to.equal(px);
+    expect(trigger.getBoundingClientRect().width, `target width size=${size}`).to.be.at.least(40);
+    expect(trigger.getBoundingClientRect().height, `target height size=${size}`).to.be.at.least(40);
+    expect(getComputedStyle(trigger, '::before').blockSize, `visible block-size size=${size}`).to.equal(px);
+    expect(getComputedStyle(trigger, '::before').inlineSize, `visible inline-size size=${size}`).to.equal(px);
   }
 });
 
@@ -180,20 +339,33 @@ it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/
     )) as LyraColorPicker;
     await aliasEl.updateComplete;
     await stepEl.updateComplete;
-    expect(getComputedStyle(part(aliasEl, 'trigger')).blockSize, `block-size for ${alias}`).to.equal(
-      getComputedStyle(part(stepEl, 'trigger')).blockSize,
+    expect(getComputedStyle(part(aliasEl, 'trigger'), '::before').blockSize, `block-size for ${alias}`).to.equal(
+      getComputedStyle(part(stepEl, 'trigger'), '::before').blockSize,
     );
-    expect(getComputedStyle(part(aliasEl, 'trigger')).inlineSize, `inline-size for ${alias}`).to.equal(
-      getComputedStyle(part(stepEl, 'trigger')).inlineSize,
+    expect(getComputedStyle(part(aliasEl, 'trigger'), '::before').inlineSize, `inline-size for ${alias}`).to.equal(
+      getComputedStyle(part(stepEl, 'trigger'), '::before').inlineSize,
     );
   }
 });
 
-it('gives every interactive part its own hover and focus-visible treatment', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  for (const name of ['trigger', 'swatch', 'format-button', 'eyedropper-button']) {
-    expect(css, `${name}:hover`).to.contain(`[part~='${name}']:hover`);
-    expect(css, `${name}:focus-visible`).to.contain(`[part~='${name}']:focus-visible`);
+it('lets a consumer hover rule override the trigger part without important', async () => {
+  const frame = (await fixture(html`
+    <div>
+      <style>lr-color-picker::part(trigger):hover { border-color: rgb(1, 2, 3); }</style>
+      <lr-color-picker label="A"></lr-color-picker>
+    </div>
+  `)) as HTMLElement;
+  const el = frame.querySelector('lr-color-picker') as LyraColorPicker;
+  const trigger = part(el, 'trigger');
+  const rect = trigger.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(trigger).borderColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
   }
 });
 
@@ -266,6 +438,13 @@ it('exposes getFormattedValue() for a format other than the active one', async (
   expect(el.value).to.equal('#ff0000');
 });
 
+it('exposes getHexString() for percent-scaled HSV and optional alpha', async () => {
+  const el = (await fixture(html`<lr-color-picker uppercase></lr-color-picker>`)) as LyraColorPicker;
+  expect(el.getHexString(0, 100, 100)).to.equal('#FF0000');
+  expect(el.getHexString(120, 100, 100, 50)).to.equal('#00FF0080');
+  expect(el.getHexString(Number.NaN, Number.POSITIVE_INFINITY, -1)).to.equal('#000000');
+});
+
 it('keeps an unparseable value verbatim instead of silently replacing it', async () => {
   const el = (await fixture(html`<lr-color-picker value="#ff0000"></lr-color-picker>`)) as LyraColorPicker;
   await el.updateComplete;
@@ -288,6 +467,52 @@ it('cycles the format with the format toggle and reports the active format on th
 it('omits the format toggle when without-format-toggle is set', async () => {
   const el = await opened(html`<lr-color-picker label="A" without-format-toggle></lr-color-picker>`);
   expect(count(el, 'format-button')).to.equal(0);
+});
+
+it('also omits the format toggle for Shoelace no-format-toggle', async () => {
+  const el = await opened(html`<lr-color-picker label="A" no-format-toggle></lr-color-picker>`);
+  expect(el.noFormatToggle).to.equal(true);
+  expect(count(el, 'format-button')).to.equal(0);
+});
+
+it('exposes the upstream button subparts and unprefixed sizing hooks', async () => {
+  const globals = window as unknown as { EyeDropper?: unknown };
+  const saved = globals.EyeDropper;
+  try {
+    globals.EyeDropper = class { open(): Promise<{ sRGBHex: string }> { return Promise.resolve({ sRGBHex: '#000000' }); } };
+    const el = await opened(html`
+      <lr-color-picker
+        label="A"
+        swatches="#ff0000"
+        style="
+          --grid-width: 222px;
+          --grid-height: 111px;
+          --grid-handle-size: 18px;
+          --slider-height: 14px;
+          --slider-handle-size: 22px;
+          --swatch-size: 26px;
+        "
+      ></lr-color-picker>
+    `);
+
+    for (const name of [
+      'format-button__base', 'format-button__start', 'format-button__prefix',
+      'format-button__label', 'format-button__end', 'format-button__suffix',
+      'format-button__caret', 'eyedropper-button__base', 'eyedropper-button__start',
+      'eye-dropper-button__prefix', 'eyedropper-button__label', 'eyedropper-button__end',
+      'eye-dropper-button__suffix', 'eyedropper-button__caret', 'eye-dropper-button',
+    ]) expect(count(el, name), name).to.be.greaterThan(0);
+
+    expect(getComputedStyle(part(el, 'grid')).inlineSize).to.equal('222px');
+    expect(getComputedStyle(part(el, 'grid')).blockSize).to.equal('111px');
+    expect(getComputedStyle(part(el, 'grid-handle')).inlineSize).to.equal('18px');
+    expect(getComputedStyle(part(el, 'hue-slider'), '::before').blockSize).to.equal('14px');
+    expect(getComputedStyle(part(el, 'hue-slider-handle')).inlineSize).to.equal('22px');
+    expect(getComputedStyle(part(el, 'swatch')).inlineSize).to.equal('26px');
+  } finally {
+    if (saved === undefined) delete globals.EyeDropper;
+    else globals.EyeDropper = saved;
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -427,21 +652,43 @@ it('gives the hue slider a real slider role over the full 0-360 range', async ()
   expect(part(el, 'hue-slider-handle').getAttribute('aria-valuenow')).to.equal('0');
 });
 
-it('emits input and lr-change per step and a single change on release', async () => {
+it('emits input/lr-input per step and change/lr-change once on release', async () => {
   const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
   const handle = part(el, 'hue-slider-handle');
   let inputs = 0;
   let changes = 0;
-  el.addEventListener('input', () => inputs++);
-  el.addEventListener('change', () => changes++);
-  const lrChange = oneEvent(el, 'lr-change');
+  let lrInputs = 0;
+  let lrChanges = 0;
+  let committedValue = '';
+  const nativeEvents: Event[] = [];
+  el.addEventListener('input', (event) => {
+    inputs++;
+    nativeEvents.push(event);
+  });
+  el.addEventListener('change', (event) => {
+    changes++;
+    nativeEvents.push(event);
+  });
+  el.addEventListener('lr-input', () => lrInputs++);
+  el.addEventListener('lr-change', (event) => {
+    lrChanges++;
+    committedValue = event.detail.value;
+  });
   handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
-  await lrChange;
   handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(lrInputs).to.equal(2);
+  expect(lrChanges).to.equal(0);
   handle.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true, composed: true }));
   await el.updateComplete;
   expect(inputs).to.equal(2);
   expect(changes).to.equal(1);
+  expect(lrChanges).to.equal(1);
+  expect(committedValue).to.equal(el.value);
+  expect(nativeEvents.filter((event) => event.type === 'input').every((event) => event instanceof InputEvent)).to.be
+    .true;
+  expect(nativeEvents.find((event) => event.type === 'change')?.constructor === Event).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
 });
 
 it('tracks a pointer drag across the hue slider and ends cleanly on pointercancel', async () => {
@@ -468,6 +715,89 @@ it('tracks a pointer drag across the hue slider and ends cleanly on pointercance
   expect(part(el, 'hue-slider-handle').getAttribute('aria-valuenow')).to.equal('180');
 });
 
+it('reserves touch gestures for the two-dimensional grid while preserving vertical page pan on tracks', async () => {
+  const el = await opened(html`<lr-color-picker label="A" opacity></lr-color-picker>`);
+  expect(getComputedStyle(part(el, 'grid')).touchAction).to.equal('none');
+  expect(getComputedStyle(part(el, 'hue-slider')).touchAction).to.equal('pan-y');
+  expect(getComputedStyle(part(el, 'opacity-slider')).touchAction).to.equal('pan-y');
+});
+
+it('ignores right-button starts and a second pointer while a drag is active', async () => {
+  const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
+  const slider = part(el, 'hue-slider');
+  const rect = slider.getBoundingClientRect();
+  let inputs = 0;
+  el.addEventListener('input', () => inputs++);
+
+  slider.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    composed: true,
+    pointerId: 41,
+    pointerType: 'mouse',
+    button: 2,
+    clientX: rect.left + rect.width / 2,
+    clientY: rect.top + rect.height / 2,
+  }));
+  await el.updateComplete;
+  expect(el.value).to.equal('#ff0000');
+  expect(inputs).to.equal(0);
+
+  slider.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    composed: true,
+    pointerId: 42,
+    pointerType: 'touch',
+    clientX: rect.left + rect.width / 4,
+    clientY: rect.top + rect.height / 2,
+  }));
+  await el.updateComplete;
+  const firstValue = el.value;
+  slider.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    composed: true,
+    pointerId: 43,
+    pointerType: 'touch',
+    clientX: rect.left + (rect.width * 3) / 4,
+    clientY: rect.top + rect.height / 2,
+  }));
+  await el.updateComplete;
+  expect(el.value).to.equal(firstValue);
+  window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 42 }));
+});
+
+it('cancels an active drag when disabled before pointerup', async () => {
+  const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
+  const slider = part(el, 'hue-slider');
+  const rect = slider.getBoundingClientRect();
+  slider.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    composed: true,
+    pointerId: 44,
+    pointerType: 'touch',
+    clientX: rect.left + rect.width / 4,
+    clientY: rect.top + rect.height / 2,
+  }));
+  await el.updateComplete;
+  const valueAtDisable = el.value;
+  let inputs = 0;
+  let changes = 0;
+  el.addEventListener('input', () => inputs++);
+  el.addEventListener('change', () => changes++);
+
+  el.disabled = true;
+  window.dispatchEvent(new PointerEvent('pointerup', {
+    pointerId: 44,
+    pointerType: 'touch',
+    clientX: rect.left + (rect.width * 3) / 4,
+    clientY: rect.top + rect.height / 2,
+  }));
+  await el.updateComplete;
+
+  expect(el.value).to.equal(valueAtDisable);
+  expect(inputs).to.equal(0);
+  expect(changes).to.equal(0);
+});
+
 it('commits a text entry typed into the panel input', async () => {
   const el = await opened(html`<lr-color-picker label="A"></lr-color-picker>`);
   const input = part(el, 'input') as HTMLInputElement;
@@ -477,6 +807,25 @@ it('commits a text entry typed into the panel input', async () => {
   await el.updateComplete;
   expect(el.value).to.equal('#663399');
   expect((part(el, 'input') as HTMLInputElement).value).to.equal('#663399');
+});
+
+it('canonicalizes modern browser-parseable CSS colors through the browser color pipeline', async () => {
+  const el = await opened(html`<lr-color-picker label="A"></lr-color-picker>`);
+  const input = part(el, 'input') as HTMLInputElement;
+  const samples = [
+    'lab(50% 40 30)',
+    'oklch(60% 0.2 20)',
+    'color(display-p3 1 0 0)',
+    'color-mix(in srgb, red 25%, blue)',
+  ].filter((value) => CSS.supports('color', value));
+  expect(samples.length).to.be.greaterThan(0);
+
+  for (const value of samples) {
+    input.value = value;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.value, value).to.match(/^#[0-9a-f]{6}$/i);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -513,15 +862,43 @@ it('closes on an outside pointerdown but not on one inside the panel', async () 
   await el.updateComplete;
   expect(el.open, 'inside').to.be.true;
 
-  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, pointerId: 22 }));
+  const outside = document.createElement('button');
+  document.body.append(outside);
+  outside.focus();
+  outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, pointerId: 22 }));
   await el.updateComplete;
   expect(el.open, 'outside').to.be.false;
+  expect(document.activeElement === outside, 'outside focus').to.equal(true);
+  outside.remove();
 });
 
 it('keeps every slider pointer target at the WCAG 2.5.8 floor while the ramp stays slim', async () => {
   const el = await opened(html`<lr-color-picker label="A" opacity></lr-color-picker>`);
   for (const name of ['hue-slider', 'opacity-slider']) {
     expect(getComputedStyle(part(el, name)).blockSize, name).to.equal('24px');
+  }
+});
+
+it('gives the full slider target distinct rendered hover and pressed feedback without tinting its ramp', async () => {
+  const el = await opened();
+  const slider = part(el, 'hue-slider');
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  const rect = slider.getBoundingClientRect();
+  const centre: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  const resting = getComputedStyle(slider).outlineWidth;
+  try {
+    await sendMouse({ type: 'move', position: centre });
+    const hovered = getComputedStyle(slider).outlineWidth;
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(slider).outlineWidth;
+    expect(hovered).to.not.equal(resting);
+    expect(pressed).to.not.equal(hovered);
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
   }
 });
 
@@ -539,6 +916,131 @@ it('reflects placement and defaults to bottom-start', async () => {
   el.placement = 'top-end';
   await el.updateComplete;
   expect(el.getAttribute('placement')).to.equal('top-end');
+});
+
+it('supports inline rendering and chooses absolute versus hoisted fixed popup positioning', async () => {
+  const inline = (await fixture(html`
+    <lr-color-picker inline label="Inline colour"></lr-color-picker>
+  `)) as LyraColorPicker;
+  await inline.updateComplete;
+  expect(inline.inline).to.equal(true);
+  expect(count(inline, 'trigger')).to.equal(0);
+  expect(part(inline, 'panel').hidden).to.equal(false);
+  expect(getComputedStyle(part(inline, 'panel')).position).to.equal('static');
+  await expect(inline).to.be.accessible();
+
+  const anchored = await opened();
+  expect(anchored.hoist).to.equal(false);
+  expect(part(anchored, 'panel').style.position).to.equal('absolute');
+
+  const hoisted = await opened(html`<lr-color-picker label="A" hoist></lr-color-picker>`);
+  expect(hoisted.hoist).to.equal(true);
+  expect(part(hoisted, 'panel').style.position).to.equal('fixed');
+});
+
+it('activates positioning and light-dismiss when an open inline panel changes to popup mode', async () => {
+  const outside = document.createElement('button');
+  document.body.append(outside);
+  const el = (await fixture(
+    html`<lr-color-picker inline open label="Inline colour"></lr-color-picker>`,
+  )) as LyraColorPicker;
+  await el.updateComplete;
+  expect(part(el, 'panel').style.position).to.equal('');
+
+  el.inline = false;
+  await el.updateComplete;
+  expect(part(el, 'panel').style.position).to.equal('absolute');
+
+  outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+  outside.remove();
+});
+
+it('emits migrated focus/input and after-show/after-hide aliases exactly once', async () => {
+  const el = (await fixture(
+    html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`,
+  )) as LyraColorPicker;
+  const seen = new Map<string, number>();
+  for (const name of ['lr-focus', 'lr-blur', 'lr-input', 'lr-after-show', 'lr-after-hide']) {
+    el.addEventListener(name, () => seen.set(name, (seen.get(name) ?? 0) + 1));
+  }
+  const nativeFocusEvents: FocusEvent[] = [];
+  for (const name of ['focus', 'blur'] as const) {
+    el.addEventListener(name, (event) => {
+      if (event instanceof FocusEvent) {
+        nativeFocusEvents.push(event);
+        seen.set(name, (seen.get(name) ?? 0) + 1);
+      }
+    });
+  }
+
+  const trigger = part(el, 'trigger') as HTMLButtonElement;
+  trigger.focus();
+  trigger.blur();
+  el.show();
+  await el.updateComplete;
+  press(part(el, 'hue-slider-handle'), 'ArrowRight');
+  await el.updateComplete;
+  el.hide();
+  await el.updateComplete;
+
+  expect(seen.get('lr-focus')).to.equal(seen.get('focus'));
+  expect(seen.get('lr-blur')).to.equal(seen.get('blur'));
+  expect(nativeFocusEvents.length).to.equal((seen.get('focus') ?? 0) + (seen.get('blur') ?? 0));
+  expect(nativeFocusEvents.every((event) => event.target === el)).to.equal(true);
+  expect(nativeFocusEvents.every((event) => event.bubbles && event.composed)).to.equal(true);
+  for (const name of ['lr-input', 'lr-after-show', 'lr-after-hide']) {
+    expect(seen.get(name), name).to.equal(1);
+  }
+});
+
+it('emits the composed focus/blur relays and migrated aliases in inline mode', async () => {
+  const el = (await fixture(
+    html`<lr-color-picker inline label="Inline colour"></lr-color-picker>`,
+  )) as LyraColorPicker;
+  const seen = new Map<string, number>();
+  const nativeFocusEvents: FocusEvent[] = [];
+  for (const name of ['focus', 'blur', 'lr-focus', 'lr-blur']) {
+    el.addEventListener(name, (event) => {
+      if (name.startsWith('lr-') || event instanceof FocusEvent) {
+        if (event instanceof FocusEvent) nativeFocusEvents.push(event);
+        seen.set(name, (seen.get(name) ?? 0) + 1);
+      }
+    });
+  }
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement === part(el, 'grid-handle')).to.equal(true);
+  el.blur();
+  for (const name of ['focus', 'blur', 'lr-focus', 'lr-blur']) {
+    expect(seen.get(name), name).to.equal(1);
+  }
+  expect(nativeFocusEvents.every((event) => event.target === el)).to.equal(true);
+  expect(nativeFocusEvents.every((event) => event.bubbles && event.composed)).to.equal(true);
+});
+
+it('preserves native FocusEvent payload while relaying exactly once from the control boundary', async () => {
+  const el = (await fixture(html`<lr-color-picker label="A"></lr-color-picker>`)) as LyraColorPicker;
+  const trigger = part(el, 'trigger');
+  const relatedTarget = document.createElement('button');
+  const received: FocusEvent[] = [];
+  el.addEventListener('focus', (event) => received.push(event));
+
+  trigger.dispatchEvent(new FocusEvent('focus', {
+    bubbles: true,
+    composed: true,
+    relatedTarget,
+    view: window,
+    detail: 7,
+  }));
+
+  expect(received.length).to.equal(1);
+  expect(received[0] instanceof CustomEvent).to.equal(false);
+  expect(received[0]!.target === el).to.equal(true);
+  expect(received[0]!.relatedTarget === relatedTarget).to.equal(true);
+  expect(received[0]!.view === window).to.equal(true);
+  expect(received[0]!.detail).to.equal(7);
 });
 
 it('closes on Escape and returns focus to the trigger', async () => {
@@ -582,6 +1084,42 @@ it('resets the open panel across a disconnect/reconnect cycle', async () => {
   document.body.append(el);
   await el.updateComplete;
   expect(el.open).to.be.false;
+  el.remove();
+});
+
+it('keeps a synchronous open-panel reparent silent while clearing the disconnected open state', async () => {
+  const el = await opened();
+  const lifecycle: string[] = [];
+  el.addEventListener('lr-hide', () => lifecycle.push('hide'));
+  el.addEventListener('lr-after-hide', () => lifecycle.push('after-hide'));
+
+  el.remove();
+  document.body.append(el);
+  await el.updateComplete;
+
+  expect(el.open).to.equal(false);
+  expect(lifecycle).to.deep.equal([]);
+  el.remove();
+});
+
+it('clears an interrupted keyboard commit when an input listener reparents the picker', async () => {
+  const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
+  let changes = 0;
+  el.addEventListener('change', () => changes++);
+  el.addEventListener('input', () => {
+    el.remove();
+    document.body.append(el);
+  }, { once: true });
+
+  const handle = part(el, 'hue-slider-handle');
+  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  await el.updateComplete;
+  part(el, 'hue-slider-handle').dispatchEvent(
+    new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+
+  expect(changes).to.equal(0);
   el.remove();
 });
 
@@ -640,7 +1178,39 @@ it('stays silent when the eyedropper selection is cancelled', async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
     expect(changes).to.equal(0);
-    expect(el.value).to.equal('#000000');
+    expect(el.value).to.equal('');
+  } finally {
+    if (saved === undefined) delete globals.EyeDropper;
+    else globals.EyeDropper = saved;
+  }
+});
+
+it('aborts and ignores an eyedropper result that resolves after disconnection', async () => {
+  const globals = window as unknown as { EyeDropper?: unknown };
+  const saved = globals.EyeDropper;
+  let resolveSelection!: (value: { sRGBHex: string }) => void;
+  let signal: AbortSignal | undefined;
+  try {
+    globals.EyeDropper = class {
+      open(options?: { signal?: AbortSignal }): Promise<{ sRGBHex: string }> {
+        signal = options?.signal;
+        return new Promise((resolve) => {
+          resolveSelection = resolve;
+        });
+      }
+    };
+    const el = await opened();
+    let changes = 0;
+    el.addEventListener('lr-change', () => changes++);
+    (part(el, 'eyedropper-button') as HTMLButtonElement).click();
+    el.remove();
+    resolveSelection({ sRGBHex: '#00ff00' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+
+    expect(signal?.aborted).to.equal(true);
+    expect(el.value).to.equal('');
+    expect(changes).to.equal(0);
   } finally {
     if (saved === undefined) delete globals.EyeDropper;
     else globals.EyeDropper = saved;

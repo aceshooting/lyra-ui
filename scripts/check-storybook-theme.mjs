@@ -73,7 +73,10 @@ assert.equal(LYRA_STORYBOOK_THEMES.dark.base, 'dark');
 assert.equal(LYRA_STORYBOOK_THEMES.light.base, 'light');
 assert.equal(LYRA_STORYBOOK_THEMES['high-contrast'].base, 'light');
 assert.equal(LYRA_THEME_TOKENS.dark['--lr-theme-color-surface-default'], '#0d1117');
+assert.equal(LYRA_THEME_TOKENS.dark['--lr-theme-color-surface-raised'], '#161b22');
 assert.equal(LYRA_THEME_TOKENS.light['--lr-theme-color-surface-default'], '#ffffff');
+assert.equal(LYRA_THEME_TOKENS.light['--lr-theme-color-surface-raised'], '#f6f8fa');
+assert.equal(LYRA_THEME_TOKENS['high-contrast']['--lr-theme-color-surface-raised'], 'Canvas');
 
 const appliedTokens = {};
 const themedDocument = {
@@ -92,6 +95,7 @@ assert.equal(themedDocument.documentElement.dataset.lyraTheme, 'dark');
 assert.equal(themedDocument.documentElement.style.colorScheme, 'dark');
 assert.equal(themedDocument.body.dataset.lyraTheme, 'dark');
 assert.equal(appliedTokens['--lr-theme-color-surface-default'], '#0d1117');
+assert.equal(appliedTokens['--lr-theme-color-surface-raised'], '#161b22');
 
 const sampleManifest = {
   modules: [{

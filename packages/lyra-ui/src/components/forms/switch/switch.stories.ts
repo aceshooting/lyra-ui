@@ -26,6 +26,19 @@ export const Checked: Story = {
   render: () => html`<lr-switch checked>Enable notifications</lr-switch>`,
 };
 
+export const SupportingTextAliases: Story = {
+  name: 'WA hint and Shoelace help text',
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-m);">
+      <lr-switch hint="Applies to this browser">Desktop notifications</lr-switch>
+      <lr-switch default-checked>
+        Weekly digest
+        <span slot="help-text">Shoelace-compatible supporting-text slot</span>
+      </lr-switch>
+    </div>
+  `,
+};
+
 export const Disabled: Story = {
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.75rem;">

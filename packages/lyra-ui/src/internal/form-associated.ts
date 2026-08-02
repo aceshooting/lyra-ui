@@ -6,28 +6,120 @@ import {
   VALIDITY_ANCHOR,
 } from './anchored-validity.js';
 import { syncValidityStates } from './custom-states.js';
+import { installInvalidEventAlias } from './invalid-event-alias.js';
+import { omittedEmptyStringConverter } from './converters.js';
 
 type Constructor<T> = new (...args: any[]) => T;
+
+/** A write to the public `form` IDL may name an owner by id while reads stay element-valued. */
+export type FormOwnerValue = string | HTMLFormElement | null;
+
+/** Reflects a form-owner ID without changing the element-valued read contract. */
+export function setFormOwner(host: HTMLElement, owner: FormOwnerValue): void {
+  const id = typeof owner === 'string' ? owner : owner?.id ?? '';
+  if (id) host.setAttribute('form', id);
+  else host.removeAttribute('form');
+}
+
+/** Returns the browser-resolved form owner for a form-associated custom element. */
+export function getFormOwner(internals: ElementInternals): HTMLFormElement | null {
+  return internals.form;
+}
+
+/**
+ * Builds the session-history/autofill state for a control whose public value is a string array.
+ * The state is private to one FACE control, so its key only needs to remain self-consistent; using
+ * the current submission name keeps direct callback tests and browser diagnostics intuitive while
+ * the reader below intentionally treats the entries as name-independent.
+ */
+export function createStringArrayFormDataState(name: string, values: readonly string[]): FormData {
+  const state = new FormData();
+  const key = name || 'value';
+  for (const value of values) state.append(key, value);
+  return state;
+}
+
+/**
+ * Reads a string-array FACE state without depending on the control's current `name`. A form owner
+ * can rename a control between persistence and restoration; the browser still restores the state
+ * that belongs to that element. Wrong state shapes fail closed to an empty value.
+ */
+export function readStringArrayFormDataState(
+  state: string | File | FormData | null,
+): string[] {
+  if (!(state instanceof FormData)) return [];
+  const entries = [...state.values()];
+  if (entries.some((entry) => typeof entry !== 'string')) return [];
+  return entries as string[];
+}
+
+interface DirectCustomErrorHost extends LitElement {
+  setCustomValidity(message: string): void;
+}
+
+/**
+ * Installs the reflected `customError` IDL on a direct-FACE control. The shared string-valued mixin
+ * owns the same accessor itself; controls with array/object/number/checked values use this helper
+ * so the public validity contract cannot drift across fourteen hand-written implementations.
+ */
+export function installCustomErrorProperty(
+  host: DirectCustomErrorHost,
+  getCustomValidityMessage: () => string,
+): void {
+  if (Object.prototype.hasOwnProperty.call(host, 'customError')) return;
+  let reflecting = false;
+  Object.defineProperty(host, 'customError', {
+    configurable: true,
+    enumerable: true,
+    get: (): string | null => getCustomValidityMessage() || null,
+    set: (next: string | null): void => {
+      if (reflecting) return;
+      const old = getCustomValidityMessage() || null;
+      const message = next ?? '';
+      reflecting = true;
+      try {
+        if (next == null) {
+          if (host.hasAttribute('custom-error')) host.removeAttribute('custom-error');
+        } else if (host.getAttribute('custom-error') !== message) {
+          host.setAttribute('custom-error', message);
+        }
+      } finally {
+        reflecting = false;
+      }
+      host.setCustomValidity(message);
+      host.requestUpdate('customError', old);
+    },
+  });
+}
 
 /** Public surface a `FormAssociated`-mixed element exposes to consumers and subclasses. */
 export interface FormAssociatedInterface {
   internals: ElementInternals;
-  name: string;
+  get name(): string;
+  set name(next: string | null);
   value: string;
+  defaultValue: string;
+  customError: string | null;
   disabled: boolean;
   required: boolean;
   readonly effectiveDisabled: boolean;
-  readonly form: HTMLFormElement | null;
+  get form(): HTMLFormElement | null;
+  set form(owner: FormOwnerValue);
   readonly labels: NodeList;
   readonly validity: ValidityState;
   readonly validationMessage: string;
   readonly willValidate: boolean;
   setFormValue(next: string): void;
+  getForm(): HTMLFormElement | null;
   checkValidity(): boolean;
   reportValidity(): boolean;
   setCustomValidity(message: string): void;
+  resetValidity(): void;
   formResetCallback(): void;
-  formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    reason: 'autocomplete' | 'restore',
+  ): void;
   /** @internal */
   [SET_ANCHORED_VALIDITY](flags: ValidityStateFlags, message?: string): void;
 }
@@ -128,8 +220,11 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     static formAssociated = true;
 
     static properties = {
-      name: { reflect: true, noAccessor: true },
-      value: { noAccessor: true },
+      name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
+      value: { attribute: false, noAccessor: true },
+      defaultValue: { attribute: 'value', reflect: true, useDefault: true, noAccessor: true },
+      customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
+      form: { noAccessor: true },
       disabled: { type: Boolean, reflect: true, noAccessor: true },
       required: { type: Boolean, reflect: true, noAccessor: true },
     };
@@ -159,6 +254,11 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     // first" would wrongly let a user's first-ever edit become permanent
     // (a required field could never be reset back to blank again).
     private _defaultValue = '';
+    private _valueDirty = false;
+    private settingDefaultValue = false;
+    private reflectingDefaultValue = false;
+    private reflectingCustomError = false;
+    private reflectingFormOwner = false;
 
     private _required = false;
 
@@ -179,6 +279,9 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       // without this, a control whose `value` is never touched is entirely
       // absent from FormData instead of present as "".
       this.internals.setFormValue('');
+      installInvalidEventAlias(this, () => {
+        (this as unknown as { emit(name: string): CustomEvent<undefined> }).emit('lr-invalid');
+      });
       // Interaction signals, listened for on the host itself so subclasses need no wiring:
       // `input`/`change` from an internal native control are composed and reach the host (as are
       // the components' own re-emitted copies), and `focusout` is the blur signal — native `blur`
@@ -198,7 +301,21 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     }
 
     get form(): HTMLFormElement | null {
-      return this.internals.form;
+      return getFormOwner(this.internals);
+    }
+
+    set form(owner: FormOwnerValue) {
+      if (this.reflectingFormOwner) return;
+      this.reflectingFormOwner = true;
+      try {
+        setFormOwner(this, owner);
+      } finally {
+        this.reflectingFormOwner = false;
+      }
+    }
+
+    getForm(): HTMLFormElement | null {
+      return getFormOwner(this.internals);
     }
 
     get labels(): NodeList {
@@ -250,6 +367,13 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       this.syncValidityStates();
     }
 
+    /** Clears consumer-supplied validity and restores the current intrinsic constraints. */
+    resetValidity(): void {
+      this.validityController.setCustomValidity('');
+      this.updateValidity();
+      this.syncValidityStates();
+    }
+
     /**
      * Publishes the six validity custom states. The implementation lives in
      * `internal/custom-states.ts` because only 11 of the library's 28 form-associated controls use
@@ -264,7 +388,7 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       return this._name;
     }
 
-    set name(next: string) {
+    set name(next: string | null) {
       const old = this._name;
       this._name = next ?? '';
       if (this._name) {
@@ -282,9 +406,54 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     set value(next: string) {
       const old = this._value;
       this._value = next ?? '';
+      if (!this.settingDefaultValue) this._valueDirty = true;
       this.internals.setFormValue(this._value);
       this.updateValidity();
       this.requestUpdate('value', old);
+    }
+
+    /** The reflected reset default. Changing it does not overwrite a dirty live value. */
+    get defaultValue(): string {
+      return this._defaultValue;
+    }
+
+    set defaultValue(next: string | null) {
+      if (this.reflectingDefaultValue) return;
+      const old = this._defaultValue;
+      this._defaultValue = next ?? '';
+
+      this.reflectingDefaultValue = true;
+      try {
+        if (next == null) this.removeAttribute('value');
+        else this.setAttribute('value', this._defaultValue);
+      } finally {
+        this.reflectingDefaultValue = false;
+      }
+
+      if (!this._valueDirty) this.restoreLiveValueFromDefault();
+      this.requestUpdate('defaultValue', old);
+    }
+
+    /** Consumer-supplied validity message, reflected through `custom-error`. */
+    get customError(): string | null {
+      return this.validityController.customValidityMessage || null;
+    }
+
+    set customError(next: string | null) {
+      if (this.reflectingCustomError) return;
+      const old = this.customError;
+      const message = next ?? '';
+
+      this.reflectingCustomError = true;
+      try {
+        if (next == null) this.removeAttribute('custom-error');
+        else this.setAttribute('custom-error', message);
+      } finally {
+        this.reflectingCustomError = false;
+      }
+
+      this.setCustomValidity(message);
+      this.requestUpdate('customError', old);
     }
 
     get disabled(): boolean {
@@ -322,16 +491,6 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       return this.disabled || this._fieldsetDisabled;
     }
 
-    override attributeChangedCallback(name: string, old: string | null, value: string | null): void {
-      super.attributeChangedCallback(name, old, value);
-      if (name === 'value') {
-        // Runs after the base class has already applied the attribute to
-        // the `value` property (via the setter above), so `_value` here
-        // reflects the newly-parsed/assigned attribute value.
-        this._defaultValue = this._value;
-      }
-    }
-
     /** Programmatically set the submitted value (alias kept for clarity). */
     setFormValue(next: string): void {
       this.value = next;
@@ -367,17 +526,29 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     formResetCallback(): void {
       // Restore the constructed default value (native `defaultValue`
       // semantics) — previously this unconditionally blanked the field.
-      this.value = this._defaultValue;
+      this._valueDirty = false;
+      this.restoreLiveValueFromDefault();
       // A reset form is pristine again: drop the interaction flag so the `user-*` states stop
       // matching. The custom error deliberately survives (native `setCustomValidity()` semantics).
       this._hasInteracted = false;
       this.syncValidityStates();
     }
 
+    private restoreLiveValueFromDefault(): void {
+      this.settingDefaultValue = true;
+      try {
+        this.value = this._defaultValue;
+      } finally {
+        this.settingDefaultValue = false;
+      }
+      this._valueDirty = false;
+    }
+
     formStateRestoreCallback(
       state: string | File | FormData | null,
-      _mode?: 'restore' | 'autocomplete',
+      reason: 'autocomplete' | 'restore',
     ): void {
+      void reason;
       this.value = typeof state === 'string' ? state : '';
     }
 

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js';` (registers the tag; side-effect import)
 - **Class** `LyraPhoneInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-flags`, `libphonenumber-js` — see `llms/peers.md`
 - **Themeable via** 14 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -57,6 +59,8 @@ interface PhoneNumberAdapter {
 - `name: string = ''`, `disabled: boolean = false`, `required: boolean = false` — native-like
   form-control properties supplied by `FormAssociated`; inherited disabled fieldsets are included
   through `effectiveDisabled`.
+- `defaultValue: string = ''` (attribute `value`) is the reset target, and `customError: string |
+  null` (attribute `custom-error`) carries a consumer-supplied validation message.
 - `adapter?: PhoneNumberAdapter` (attribute: false) — synchronous numbering-plan parser/formatter.
   No metadata implementation is imported by the component itself.
 - `countries: readonly PhoneCountry[] = []` (attribute: false) — explicit selector rows; takes
@@ -122,7 +126,11 @@ telephone input, not the adjacent country selector.
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the native telephone input. Range-text edits reparse the number and synchronize the
 canonical value, form value, and validity.
-`setFormValue(value)`, `checkValidity()`, and `reportValidity()` come from `FormAssociated`.
+`getForm()`, `setFormValue(value)`, `checkValidity()`, and `reportValidity()` come from
+`FormAssociated`. `setCustomValidity(message)` sets or clears `customError` without discarding the
+control's intrinsic phone-number validity. `resetValidity()` clears only that consumer error and
+recomputes the current phone-number constraints; it does not change the editable/canonical value,
+the reset default, or prior interaction state.
 `form.reset()` restores the original declarative `value` and the default country.
 
 **Events:**
@@ -131,6 +139,7 @@ canonical value, form value, and validity.
 - `change` — native telephone-input commit timing and every country change.
 - `focus` / `blur` — bubbling, composed bridges for the internal native input's non-crossing focus
   events.
+- `lr-invalid` — no detail; one bubbling/composed alias when native validity fails.
 
 `input`/`change` detail is
 `{ value: string; inputValue: string; country: string; valid: boolean; status: PhoneNumberStatus }`.

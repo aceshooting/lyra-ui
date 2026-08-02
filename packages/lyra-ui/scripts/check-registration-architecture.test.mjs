@@ -4,8 +4,10 @@ import assert from 'node:assert/strict';
 import {
   dynamicRelativeSpecifiers,
   findTransitiveRegistrationPaths,
+  inventoryRootRegistrationSpecifiers,
   inventoryRootRegistrationSets,
   parseRootRegistrationAllowlist,
+  rootRegistrationSpecifiers,
   runtimeRelativeSpecifiers,
 } from './check-registration-architecture.mjs';
 
@@ -14,18 +16,21 @@ const registrationInventory = {
   components: [
     {
       tag: 'lr-safe',
+      registrationModule: 'src/components/forms/safe/safe.ts',
       rootIncluded: true,
       rootExclusion: null,
       optionalPeers: [],
     },
     {
       tag: 'lr-lazy-peer',
+      registrationModule: 'src/components/media/lazy-peer/lazy-peer.ts',
       rootIncluded: true,
       rootExclusion: null,
       optionalPeers: ['lazy-peer'],
     },
     {
       tag: 'lr-opt-in',
+      registrationModule: 'src/components/charts/opt-in/opt-in.ts',
       rootIncluded: false,
       rootExclusion: 'optional-peer-family',
       optionalPeers: ['eager-peer'],
@@ -41,6 +46,29 @@ assert.deepEqual(
     allTags: ['lr-lazy-peer', 'lr-opt-in', 'lr-safe'],
   },
   'inventory rootIncluded and explicit exclusions are the authoritative partition',
+);
+
+assert.deepEqual(
+  inventoryRootRegistrationSpecifiers(registrationInventory),
+  [
+    './components/media/lazy-peer/lazy-peer.js',
+    './components/forms/safe/safe.js',
+  ],
+  'root registration specifiers preserve tag order while using exact inventory modules',
+);
+
+assert.deepEqual(
+  rootRegistrationSpecifiers(`
+    import './components/media/lazy-peer/lazy-peer.js';
+    import { LyraSafe } from './components/forms/safe/safe.js';
+    import './components/forms/safe/safe.js';
+    import './utilities/setup.js';
+  `),
+  [
+    './components/media/lazy-peer/lazy-peer.js',
+    './components/forms/safe/safe.js',
+  ],
+  'only side-effect component imports form the root registration sequence',
 );
 
 assert.deepEqual(

@@ -50,6 +50,7 @@ function probePixels(probe: HTMLElement, fallback: number, allowZero = false): n
 export type LyraEmojiPickerSize = LyraSizeStep;
 
 export interface LyraEmojiPickerEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
@@ -94,6 +95,7 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  *   composed (unlike the native event, which is neither).
  * @event focus - Re-dispatched from the internal search `<input>`'s own `focus`, for the same
  *   reason as `blur`.
+ * @event lr-invalid - The emoji picker failed a validity check.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
@@ -133,6 +135,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  *   this one hook retints both consistently. Declared as an inline `var()` fallback (never on
  *   `:host`), so setting it on the element or an ancestor recolors only the emoji highlight without
  *   hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   static override styles = [LyraElement.styles, styles];

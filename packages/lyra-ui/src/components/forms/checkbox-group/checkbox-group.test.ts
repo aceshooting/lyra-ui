@@ -9,7 +9,7 @@ it('collects checked children and emits a group change', async () => {
   const el = (await fixture(html`<lr-checkbox-group name="topics"><lr-checkbox value="a">A</lr-checkbox><lr-checkbox value="b">B</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
   const boxes = el.querySelectorAll('lr-checkbox');
   const event = oneEvent(el, 'lr-change');
-  (boxes[0] as HTMLElement).shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  (boxes[0] as HTMLElement).shadowRoot!.querySelector('[part~="base"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const result = await event;
   expect(result.detail.value).to.deep.equal(['a']);
 });
@@ -31,7 +31,7 @@ it('uses its native fieldset/legend as the sole named group landmark', async () 
     </lr-checkbox-group>
   `)) as LyraCheckboxGroup;
   const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
-  const options = el.shadowRoot!.querySelector('[part="options"]') as HTMLElement;
+  const options = el.shadowRoot!.querySelector('[part~="options"]') as HTMLElement;
 
   expect(fieldset.getAttribute('aria-label')).to.equal('Explicit group name');
   expect(fieldset.getAttribute('role'), 'the native fieldset keeps its implicit group role').to.equal(null);
@@ -48,7 +48,7 @@ it('uses the semibold font-weight design token for the label instead of a hardco
 
 it('actually renders the legend with the semibold font-weight token, not just declares it in the stylesheet source', async () => {
   const el = (await fixture(html`<lr-checkbox-group label="Topics"><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
-  const legend = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+  const legend = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
   // Compares against the token's own resolved value rather than a hardcoded '600', same idiom as
   // notebook-viewer.test.ts's identical semibold-token assertion.
   expect(getComputedStyle(legend).fontWeight).to.equal(
@@ -92,7 +92,7 @@ describe('validationMessage localization', () => {
     `)) as LyraCheckboxGroup;
     expect(el.validationMessage).to.equal('Sélectionnez au moins une option.');
 
-    (el.querySelectorAll('lr-checkbox')[0] as HTMLElement).shadowRoot!.querySelector('[part="base"]')!
+    (el.querySelectorAll('lr-checkbox')[0] as HTMLElement).shadowRoot!.querySelector('[part~="base"]')!
       .dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(el.validationMessage).to.equal('');
   });
@@ -138,8 +138,8 @@ it('cascades fieldset-disabled state to children through an internal channel, ne
   expect(b.effectiveDisabled).to.be.true;
 
   await Promise.all([a.updateComplete, b.updateComplete]);
-  const aBase = a.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  const bBase = b.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const aBase = a.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const bBase = b.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(aBase.getAttribute('aria-disabled')).to.equal('false');
   expect(bBase.getAttribute('aria-disabled')).to.equal('true');
 });
@@ -212,7 +212,7 @@ it('reflects its own disabled property synchronously and propagates it to childr
 
 it('reacts to hint/error slot content added after the initial render, not just at first paint', async () => {
   const el = (await fixture(html`<lr-checkbox-group><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
-  const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const hintPart = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
   const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   expect(hintPart.hasAttribute('hidden')).to.be.true;
   expect(errorPart.hasAttribute('hidden')).to.be.true;
@@ -247,7 +247,7 @@ it('warns when `value` is assigned from outside, because the children are the on
   }
   expect(calls.some((args) => String(args[0]).includes('`value`'))).to.be.true;
   // The assignment is discarded by the next sync(), exactly as the warning says.
-  (el.querySelectorAll('lr-checkbox')[1] as HTMLElement).shadowRoot!.querySelector('[part="base"]')!
+  (el.querySelectorAll('lr-checkbox')[1] as HTMLElement).shadowRoot!.querySelector('[part~="base"]')!
     .dispatchEvent(new MouseEvent('click', { bubbles: true }));
   expect(el.value).to.deep.equal(['b']);
 });
@@ -278,7 +278,7 @@ it('does not warn for the normal children-drive-value flow', async () => {
     el = (await fixture(html`<lr-checkbox-group name="topics"><lr-checkbox value="a">A</lr-checkbox><lr-checkbox value="b">B</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
     await el.updateComplete;
     await new Promise((resolve) => setTimeout(resolve, 0));
-    (el.querySelectorAll('lr-checkbox')[0] as HTMLElement).shadowRoot!.querySelector('[part="base"]')!
+    (el.querySelectorAll('lr-checkbox')[0] as HTMLElement).shadowRoot!.querySelector('[part~="base"]')!
       .dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await el.updateComplete;
   } finally {
@@ -309,7 +309,7 @@ it('consumes child native-style events before emitting one group event surface',
     detail: (event as CustomEvent).detail,
   }));
 
-  (el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
+  (el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
 
   expect(events.map(({ type }) => type)).to.deep.equal(['input', 'change', 'lr-change']);
   expect(events.every(({ target }) => target === el)).to.be.true;
@@ -404,8 +404,8 @@ it('does not treat a nested group support slot as outer support content', async 
   `)) as LyraCheckboxGroup;
   await outer.updateComplete;
 
-  expect((outer.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement).hidden).to.be.true;
-  expect((outer.shadowRoot!.querySelector('[part="hint"]') as HTMLElement).hidden).to.be.true;
+  expect((outer.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement).hidden).to.be.true;
+  expect((outer.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement).hidden).to.be.true;
   expect((outer.shadowRoot!.querySelector('[part="error"]') as HTMLElement).hidden).to.be.true;
 });
 
@@ -528,7 +528,7 @@ it('does not consume or translate events emitted by a nested checkbox group', as
   outer.addEventListener('change', (event) => events.push({ type: event.type, target: event.target }));
   outer.addEventListener('lr-change', (event) => events.push({ type: event.type, target: event.target }));
 
-  (inner.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
+  (inner.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
 
   expect(outer.value).to.deep.equal(['outer']);
   expect(events.map(({ type }) => type)).to.deep.equal(['input', 'change', 'lr-change']);
@@ -548,7 +548,7 @@ it('settles its public and form values after child defaults are restored on form
   const [a, b] = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
   a.checked = false;
   b.checked = true;
-  b.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
+  b.shadowRoot!.querySelector('[part~="base"]')!.dispatchEvent(
     new Event('change', { bubbles: true, composed: true }),
   );
 
@@ -562,6 +562,80 @@ it('settles its public and form values after child defaults are restored on form
   expect(group.value).to.deep.equal(['a']);
   expect(new FormData(form).getAll('topics')).to.deep.equal(['a']);
   expect(group.checkValidity()).to.be.true;
+});
+
+describe('form state restoration', () => {
+  it('restores repeated FormData values silently and preserves duplicate-value cardinality', async () => {
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    let form: HTMLFormElement;
+    try {
+      form = (await fixture(html`
+        <form>
+          <lr-checkbox-group name="topics">
+            <lr-checkbox value="same">First duplicate</lr-checkbox>
+            <lr-checkbox value="same">Second duplicate</lr-checkbox>
+            <lr-checkbox value="other" checked>Other</lr-checkbox>
+          </lr-checkbox-group>
+        </form>
+      `)) as HTMLFormElement;
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings).to.have.lengthOf(1);
+    const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+    const boxes = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+    let changes = 0;
+    group.addEventListener('change', () => changes++);
+    group.addEventListener('lr-change', () => changes++);
+    const state = new FormData();
+    state.append('topics', 'same');
+    state.append('topics', 'other');
+
+    group.formStateRestoreCallback(state, 'restore');
+    await group.updateComplete;
+
+    expect(boxes.map((box) => box.checked)).to.deep.equal([true, false, true]);
+    expect(group.value).to.deep.equal(['same', 'other']);
+    expect(new FormData(form).getAll('topics')).to.deep.equal(['same', 'other']);
+    expect(changes, 'browser restoration is not a user edit').to.equal(0);
+  });
+
+  it('defers an early FormData restore until checkbox children are available', async () => {
+    const group = document.createElement('lr-checkbox-group') as LyraCheckboxGroup;
+    group.name = 'topics';
+    const state = new FormData();
+    state.append('topics', 'b');
+    group.formStateRestoreCallback(state, 'restore');
+    group.innerHTML = `
+      <lr-checkbox value="a" checked>A</lr-checkbox>
+      <lr-checkbox value="b">B</lr-checkbox>
+    `;
+    document.body.append(group);
+    try {
+      await group.updateComplete;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await group.updateComplete;
+      const boxes = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+      expect(boxes.map((box) => box.checked)).to.deep.equal([false, true]);
+      expect(group.value).to.deep.equal(['b']);
+    } finally {
+      group.remove();
+    }
+  });
+
+  it('clears to a safe empty selection for malformed non-FormData state', async () => {
+    const group = (await fixture(html`
+      <lr-checkbox-group name="topics">
+        <lr-checkbox value="a" checked>A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+
+    expect(() => group.formStateRestoreCallback('not FormData', 'restore')).not.to.throw();
+    expect(group.value).to.deep.equal([]);
+    expect((group.querySelector('lr-checkbox') as LyraCheckbox).checked).to.be.false;
+  });
 });
 
 // -- Form-association surface and its degraded-DOM fallback ------------------
@@ -661,10 +735,29 @@ describe('size', () => {
   it('grows the rendered group box from size="s" to size="l"', async () => {
     const small = await group('s');
     const large = await group('l');
-    const smallOptions = (small.shadowRoot!.querySelector('[part="options"]') as HTMLElement).getBoundingClientRect();
-    const largeOptions = (large.shadowRoot!.querySelector('[part="options"]') as HTMLElement).getBoundingClientRect();
+    const smallOptions = (small.shadowRoot!.querySelector('[part~="options"]') as HTMLElement).getBoundingClientRect();
+    const largeOptions = (large.shadowRoot!.querySelector('[part~="options"]') as HTMLElement).getBoundingClientRect();
     expect(largeOptions.height).to.be.greaterThan(smallOptions.height);
     expect(large.getBoundingClientRect().height).to.be.greaterThan(small.getBoundingClientRect().height);
+  });
+
+  it('propagates its size to every owned checkbox, including dynamic children', async () => {
+    const el = await group('l');
+    const initial = [...el.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+    expect(initial.map((box) => box.size)).to.deep.equal(['l', 'l', 'l']);
+
+    const added = document.createElement('lr-checkbox') as LyraCheckbox;
+    added.value = 'd';
+    added.textContent = 'Delta';
+    el.append(added);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await added.updateComplete;
+    expect(added.size).to.equal('l');
+
+    el.size = 's';
+    await el.updateComplete;
+    await Promise.all([...el.querySelectorAll('lr-checkbox')].map((box) => box.updateComplete));
+    expect([...el.querySelectorAll('lr-checkbox')].map((box) => box.size)).to.deep.equal(['s', 's', 's', 's']);
   });
 
   it('renders "small"/"large" at the same geometry as "s"/"l"', async () => {
@@ -676,25 +769,74 @@ describe('size', () => {
     expect(large.getBoundingClientRect().height).to.be.closeTo(l.getBoundingClientRect().height, 0.5);
   });
 
-  it('leaves an explicitly-sized option alone', async () => {
+  it('keeps group size authoritative over an option-level size', async () => {
     const el = (await fixture(html`
       <lr-checkbox-group name="pick" label="Pick some" size="l">
         <lr-checkbox value="a" size="s">Alpha</lr-checkbox>
       </lr-checkbox-group>
     `)) as LyraCheckboxGroup;
     await el.updateComplete;
-    const box = el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
-    const standalone = (await fixture(html`<lr-checkbox size="s">Alpha</lr-checkbox>`)) as HTMLElement;
-    const standaloneBox = standalone.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
-    expect(box.getBoundingClientRect().width).to.be.closeTo(
-      standaloneBox.getBoundingClientRect().width,
-      0.5,
-    );
+    expect((el.querySelector('lr-checkbox') as LyraCheckbox).size).to.equal('l');
+  });
+
+  it('restores group size when an owned option is resized later', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="pick" label="Pick" size="l">
+        <lr-checkbox value="a">Alpha</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    const option = el.querySelector('lr-checkbox') as LyraCheckbox;
+    option.size = 's';
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await option.updateComplete;
+    expect(option.size).to.equal('l');
   });
 
   it('is accessible at a non-default tier', async () => {
     const el = await group('l');
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('orientation and mapped aliases', () => {
+  it('defaults vertical, reflects orientation, and exports form-control-input on the options node', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group label="Topics">
+        <lr-checkbox value="a">A</lr-checkbox>
+        <lr-checkbox value="b">B</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup & { orientation: 'horizontal' | 'vertical' };
+    const options = el.shadowRoot!.querySelector('[part~="options"]') as HTMLElement;
+    expect(el.orientation).to.equal('vertical');
+    expect(el.getAttribute('orientation')).to.equal('vertical');
+    expect(options.getAttribute('part')!.split(/\s+/)).to.include.members(['options', 'form-control-input']);
+    expect(getComputedStyle(options).flexDirection).to.equal('column');
+
+    el.orientation = 'horizontal';
+    await el.updateComplete;
+    expect(getComputedStyle(options).flexDirection).to.equal('row');
+    await expect(el).to.be.accessible();
+  });
+
+  it('uses the WA --gap hook for real option spacing', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group label="Topics" style="--gap: 37px">
+        <lr-checkbox value="a">A</lr-checkbox>
+        <lr-checkbox value="b">B</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    const options = el.shadowRoot!.querySelector('[part~="options"]') as HTMLElement;
+    expect(getComputedStyle(options).gap).to.equal('37px');
+  });
+
+  it('honors with-label/with-hint SSR presence hints', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group with-label with-hint>
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    expect((el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement).hidden).to.be.false;
+    expect((el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement).hidden).to.be.false;
   });
 });
 

@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';` (registers the tag; side-effect import)
 - **Class** `LyraCombobox`, also available unregistered from `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -40,6 +42,13 @@ shared `FormAssociated` mixin — see gotchas).
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
 - `open: boolean = false` (reflected)
+- `allowCreate: boolean = false` (attribute `allow-create`) — a nonmatching query renders a
+  localized create row. Activating it emits cancelable `lr-create`; unless vetoed, the component
+  appends a real `<lr-option>` and selects it (also supported in `multiple` mode)
+- `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
+  commits arbitrary text on Enter without creating an option
+- `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected)
+- `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
   clear on **either** axis this control owns: a committed selection, or *visible* filter text. See
   "the clear button covers two axes" below
@@ -47,10 +56,22 @@ shared `FormAssociated` mixin — see gotchas).
   either one enables the same clear button. Not deprecated: Web Awesome names this attribute
   `with-clear` and Shoelace names it `clearable`, so honouring both is what keeps a mechanical tag
   rename from silently dropping the control
+- `withLabel: boolean = false` and `withHint: boolean = false` (attributes `with-label` and
+  `with-hint`) — SSR slot-presence hints
+- `getTag: ((option: LyraOption, index: number) => unknown) | undefined` (attribute: false) —
+  replaces a built-in multiple-selection tag with consumer Lit/DOM/text output; strings render as
+  text, never as HTML
+- `validators: unknown[] = []` (attribute: false)
+- `validationTarget: HTMLElement | undefined` — writable native-validity focus anchor. After the
+  first render it defaults to the internal filter input; assign another element to override it, or
+  assign `undefined` to restore that input. It is `undefined` before the input exists
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
-  `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = true`,
-  `autocapitalize: string = ''`, and `autoCorrect: string = ''` (attribute `autocorrect`) — native
-  editing-assistance attributes forwarded to the internal filter input
+  `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = false`,
+  `autocapitalize: string = ''`, and `autocorrect: boolean = true` (attribute values `on`/`off`) —
+  native editing-assistance properties forwarded to the internal filter input. The lowercase
+  mapped IDLs `inputmode` and `enterkeyhint` delegate to the corresponding camel-case native
+  properties
+- `inputValue: string` — the live filter input text; programmatic writes are event-silent
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
   show before collapsing to `+N`)
 - `emptyText: string = 'No results'` (attribute `empty-text`)
@@ -79,6 +100,7 @@ shared `FormAssociated` mixin — see gotchas).
   size it, and when `source` is the better answer)
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
   `multiple` mode
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `selectedRows: ComboboxSourceRow[]` (read-only getter) — structured rows for the current
   selection, including any opaque `data` payload supplied by an async source. Selected async rows
   remain available after the query changes or a later source result no longer contains them
@@ -87,12 +109,19 @@ shared `FormAssociated` mixin — see gotchas).
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
+`show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
+`lr-after-hide`, respectively. `resetValidity()` clears consumer custom validity and restores the
+current intrinsic constraints. `getForm()` returns the owning form, including an external owner
+selected by the `form` attribute.
 `setCustomValidity(message)` carries a rejection no client-side constraint can express ("that option
 is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
 blocks submission; `''` clears it and restores the control's own computed validity, so a `required`
 combobox with nothing chosen goes back to `valueMissing` rather than to valid. The message survives
-every selection change and a `form.reset()` — like a native control, only another
-`setCustomValidity('')` clears it — and is used verbatim, never localized.
+  every selection change and a `form.reset()` — like a native control, only another
+  `setCustomValidity('')` or `resetValidity()` clears it — and is used verbatim, never localized.
+
+**8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
+alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorrect="off"` in markup.
 
 `ComboboxSourceRow = { value: string; label: string; sub?: string; icon?: unknown; badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
@@ -123,8 +152,12 @@ selection. It is the supported way to read that text; reaching into the shadow r
 carrying different strings. It fires for user input only: picking a row, the clear button,
 `form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
 the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
-`lr-show` and `lr-hide` report listbox visibility transitions.
+`lr-show` and `lr-hide` report the start of listbox visibility transitions; `lr-after-show` and
+`lr-after-hide` fire when the corresponding transition settles. `lr-create` carries
+`detail: { inputValue }` and is the one cancelable event: preventing it suppresses the default
+append/select action so the host can normalize and commit its own option.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
+`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 
 **The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
 committed selection and an in-progress filter query, so the button renders whenever either has
@@ -174,10 +207,13 @@ attribute when provided), plus two adornment slots:
   default slot are ever collected into the option list.
 - `end` — content after the filter input and the built-in clear action, and before the expand icon,
   so consumer content never sits outboard of the dropdown chevron.
+- `clear-icon` and `expand-icon` replace the corresponding built-in glyphs.
 
-**CSS parts:** `form-control`, `form-control-label`, `combobox`, `start` and `end` (the two
+**CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
+`start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
-`tag__remove-button`, `combobox-input`, `clear-button`, `expand-icon`, `listbox`, `option`,
+`tag-label`, `tag__content`, `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
+`clear-button`, `expand-icon`, `listbox`, `option`,
 `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the decorative
 leading visual for an async row), `option-label`, `option-sub` (a row's secondary line, when `sub`
 is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"
@@ -185,7 +221,8 @@ indicator from `maxRender`), `error`, `hint`
 
 **Themeable custom properties:** `--lr-combobox-trigger-padding`,
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
-`--lr-combobox-tag-font-size`, and `--lr-combobox-expand-size` (the decorative icon box; each
+`--lr-combobox-tag-font-size`, `--tag-max-size` (default `var(--lr-size-5rem)`), `--show-duration`,
+`--hide-duration`, and `--lr-combobox-expand-size` (the decorative icon box; each
 standard size supplies an aligned default), plus shared tokens. `--lr-combobox-gap` (default
 `--lr-space-xs`, the gap inside `[part='combobox']`) and `--lr-combobox-radius` (default
 `--lr-radius`, its corner radius) are both retunable without a `::part(combobox)` rule but, unlike
@@ -211,6 +248,9 @@ see "exact-height hatches" under `lr-input` for why `auto` is not a way to opt b
 for a single-row combobox: in `multiple` mode, a tag row long enough to wrap overflows the pinned
 box visibly (nothing is clipped or made unreachable), so leave it unset there.
 
+**CSS custom states:** `blank`, `disabled`, `required`, `optional`, `valid`, `invalid`,
+`user-valid`, and `user-invalid`.
+
 **Optional peer deps:** none.
 
 ### `lr-option`
@@ -218,18 +258,42 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 **Properties:**
 - `value: string = ''`
 - `disabled: boolean = false`
-- `selected: boolean = false` (reflected — set by the parent combobox, but also **read** on initial
-  mount, see below)
+- `defaultSelected: boolean = false` (attribute `selected`; property writes do not reflect) — the
+  declarative and `form.reset()` default. Changing it after mount updates the parent's reset
+  baseline without overwriting a dirty live selection
+- `selected: boolean = false` (property only) — live selectedness. The parent combobox/select
+  updates it as the current value changes; those live writes never rewrite the `selected`
+  attribute or `defaultSelected`
 - `group: string = ''` (section header)
 - `searchText: string = ''` (attribute `search-text` — extra text the filter matches beyond the
   visible label)
 - `sub: string = ''` (optional secondary line rendered under the label, e.g. a status/date summary)
 - `dotColor: string = ''` (attribute `dot-color` — optional CSS color for a small leading status
   dot; invalid values, declaration-breaking input, and `url()` render the dot transparently)
-- `label` is a **read-only getter**: explicit `label` attribute wins, else trimmed `textContent`.
+- `label: string` — settable WA-compatible plain-text label. A non-empty property/attribute wins;
+  otherwise it resolves to `defaultLabel`. Property writes stay property-only (no reflection)
+- `defaultLabel: string` (read-only) — normalized plain text generated from default-slot content;
+  `start`/`end`/`prefix`/`suffix` adornments are excluded
+
+**Method:** `getTextLabel(): string` returns `defaultLabel`, preserving Shoelace's content-derived
+plain-text contract even when a separate WA `label` override is present.
 
 **Events:** `lr-option-change` — bubbles when the option's label or selectable data changes so
 its parent `lr-combobox` or `lr-select` can refresh its normalized option rows.
+
+**Slots:** default (visible label), `start`/`end` (WA adornments), and `prefix`/`suffix` (Shoelace
+aliases). `start` and `prefix` project into one leading wrapper; `end` and `suffix` project into one
+trailing wrapper.
+
+**CSS parts:** `base`, `checked-icon`, `label`, `start`/`prefix` (same node), and `end`/`suffix`
+(same node). **CSS custom property:** `--current-text-color` (default `var(--lr-color-text)`) colors
+the keyboard-current row. **CSS custom states:** `current` (the host is the roving-focus target),
+`selected`, `disabled`, and `hover` (pointer presence, including drag sessions).
+
+The stock `lr-combobox` and `lr-select` intentionally treat each option as light-DOM data and
+render normalized rows in their own shadow roots. Style those rows through the parent's `option`,
+`option-label`, and related parts; the parts above style an option's own anatomy when it is rendered
+by a custom owner.
 
 ```html
 <lr-combobox id="cb" label="Country" placeholder="Search…" with-clear>
@@ -289,12 +353,12 @@ synchronous and fires no `input`/`change`/`lr-change` event.
   visible label/sub/badge combination needs a fuller spoken name. `data` is deliberately opaque and
   is available only through the read-only `selectedRows` getter.
 - Full ARIA 1.2 combobox pattern (`role=combobox`, roving `aria-activedescendant`, real DOM focus
-  kept on the input) is implemented correctly — a genuine strength, safe to build on. Declaratively-
-  selected options (`<lr-option value="b" selected>`) are seeded into the selection (mirroring
-  native `<select><option selected>`) both the first time options are collected **and** for any
-  later batch slotted in afterward (e.g. a lazily-populated list appended post-connect) — only the
-  `form.reset()` default itself is captured exclusively from that very first pass; a later pick, or
-  a later batch of newly-`selected` options, never redefines what a reset restores to.
+  kept on the input) is implemented correctly — a genuine strength, safe to build on.
+  `<lr-option value="b" selected>` sets that option's `defaultSelected`, seeds the live selection,
+  and supplies the `form.reset()` baseline, mirroring native `<select><option selected>`. A
+  later-slotted option or post-mount `defaultSelected` change updates that baseline and updates the
+  live selection only while it is pristine. A user pick or direct `option.selected` write makes the
+  live selection dirty and never rewrites the declarative `selected` attribute/reset default.
 
 **Additional API surface:**
 

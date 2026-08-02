@@ -14,5 +14,8 @@ export * from './lightbox/lightbox.js';
 export * from './map/map.js';
 export * from './media-card/media-card.js';
 export * from './playback/playback.js';
+export * from './pan-zoom/pan-zoom.js';
 export * from './qr-code/qr-code.js';
+export * from './video/video.js';
+export * from './video-playlist/video-playlist.js';
 export * from './zoomable-frame/zoomable-frame.js';

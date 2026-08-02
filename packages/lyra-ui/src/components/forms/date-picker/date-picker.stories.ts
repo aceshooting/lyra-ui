@@ -5,7 +5,14 @@ import type { LyraDatePickerSize } from './date-picker.js';
 const meta: Meta = {
   title: 'DatePicker/Inline',
   component: 'lr-date-picker',
-  tags: ['autodocs'],
+  tags: ['autodocs', 'experimental'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'Experimental date-picker surface, including range constraints, calendar views, custom day content, and week numbers.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -75,4 +82,36 @@ export const Sizes: Story = {
       </div>
     `;
   },
+};
+
+export const ConstraintsAndSlots: Story = {
+  name: 'Disabled dates, range limits, week numbers, and slots',
+  render: () => html`
+    <lr-date-picker
+      mode="range"
+      value="2026-07-10"
+      focused-date="2026-07-10"
+      today="2026-07-15"
+      disabled-dates="2026-07-12 2026-07-19"
+      disabled-days-of-week="sun"
+      min-range="3"
+      max-range="10"
+      with-week-numbers
+      .dayContent=${(date: Date) => date.getDate() === 15 ? html`<strong>${date.getDate()}</strong>` : undefined}
+    >
+      <span slot="previous-icon" aria-hidden="true">‹</span>
+      <span slot="next-icon" aria-hidden="true">›</span>
+      <small slot="footer">Select a period from 3 to 10 days.</small>
+    </lr-date-picker>
+  `,
+};
+
+export const CalendarViews: Story = {
+  render: () => html`
+    <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:1rem;">
+      <lr-date-picker view="months" value="2026-07-15"></lr-date-picker>
+      <lr-date-picker view="years" value="2026-07-15"></lr-date-picker>
+      <lr-date-picker view="decades" value="2026-07-15"></lr-date-picker>
+    </div>
+  `,
 };

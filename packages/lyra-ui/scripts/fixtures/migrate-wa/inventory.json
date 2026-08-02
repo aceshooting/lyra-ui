@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "components": [
+    {
+      "tag": "lr-resize-observer",
+      "registrationModule": "src/components/utility/resize-observer/resize-observer.ts",
+      "surface": {
+        "attributes": [],
+        "properties": [],
+        "slots": [{ "name": "" }],
+        "events": [{ "name": "lr-resize" }],
+        "parts": [],
+        "cssProperties": [],
+        "methods": []
+      }
+    },
+    {
+      "tag": "lr-static",
+      "registrationModule": "src/components/utility/static/static.ts",
+      "surface": {
+        "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
+        "cssProperties": [], "methods": []
+      }
+    },
+    {
+      "tag": "lr-widget",
+      "registrationModule": "src/components/forms/widget/widget.ts",
+      "surface": {
+        "attributes": [
+          { "name": "new-attribute" },
+          { "name": "mode" },
+          { "name": "placement" }
+        ],
+        "properties": [{ "name": "newProperty" }],
+        "slots": [{ "name": "new-slot" }],
+        "events": [{ "name": "lr-new-event" }],
+        "parts": [{ "name": "new-part" }],
+        "cssProperties": [{ "name": "--lr-new-color" }],
+        "methods": [{ "name": "newMethod" }]
+      }
+    },
+    {
+      "tag": "lr-table",
+      "registrationModule": "src/components/data/table/table.ts",
+      "surface": {
+        "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
+        "cssProperties": [], "methods": []
+      }
+    },
+    {
+      "tag": "lr-include",
+      "registrationModule": "src/components/viewers/include/include.ts",
+      "surface": {
+        "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
+        "cssProperties": [], "methods": []
+      }
+    }
+  ],
+  "localMigrations": [],
+  "upstreams": {
+    "shoelace": {
+      "components": [
+        {
+          "tag": "sl-resize-observer",
+          "surface": {
+            "attributes": [],
+            "properties": [],
+            "slots": [{ "name": "" }],
+            "events": [{ "name": "sl-resize" }],
+            "parts": [],
+            "cssProperties": [],
+            "methods": []
+          }
+        },
+        {
+          "tag": "sl-static",
+          "surface": {
+            "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
+            "cssProperties": [], "methods": []
+          }
+        }
+      ]
+    },
+    "webawesome": {
+      "components": [
+        {
+          "tag": "wa-widget",
+          "surface": {
+            "attributes": [{ "name": "old-attribute" }, { "name": "mode" }],
+            "properties": [{ "name": "oldProperty" }],
+            "slots": [{ "name": "old-slot" }],
+            "events": [{ "name": "wa-old-event" }],
+            "parts": [{ "name": "old-part" }],
+            "cssProperties": [{ "name": "--wa-old-color" }],
+            "methods": [{ "name": "oldMethod" }]
+          }
+        },
+        {
+          "tag": "wa-data-grid",
+          "surface": {
+            "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
+            "cssProperties": [], "methods": []
+          }
+        },
+        {
+          "tag": "wa-include",
+          "surface": {
+            "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
+            "cssProperties": [], "methods": []
+          }
+        },
+        {
+          "tag": "wa-deferred",
+          "surface": {
+            "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
+            "cssProperties": [], "methods": []
+          }
+        }
+      ]
+    }
+  },
+  "mappings": [
+    {
+      "upstream": "shoelace",
+      "upstreamTag": "sl-resize-observer",
+      "targetTag": "lr-resize-observer",
+      "classification": "rewritten",
+      "rationale": "The prefixed event change is explicit and deterministic.",
+      "rewrites": {
+        "attributes": [],
+        "properties": [],
+        "events": [{ "from": "sl-resize", "to": "lr-resize" }],
+        "slots": [],
+        "parts": [],
+        "cssProperties": [],
+        "methods": [],
+        "defaults": []
+      },
+      "drift": []
+    },
+    {
+      "upstream": "shoelace",
+      "upstreamTag": "sl-static",
+      "targetTag": "lr-static",
+      "classification": "exact",
+      "rationale": null,
+      "rewrites": {
+        "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
+        "cssProperties": [], "methods": [], "defaults": []
+      },
+      "drift": []
+    },
+    {
+      "upstream": "webawesome",
+      "upstreamTag": "wa-widget",
+      "targetTag": "lr-widget",
+      "classification": "rewritten",
+      "rationale": "Every reviewed difference has an explicit deterministic rewrite.",
+      "rewrites": {
+        "attributes": [{ "from": "old-attribute", "to": "new-attribute" }],
+        "properties": [{ "from": "oldProperty", "to": "newProperty" }],
+        "events": [{ "from": "wa-old-event", "to": "lr-new-event" }],
+        "slots": [{ "from": "old-slot", "to": "new-slot" }],
+        "parts": [{ "from": "old-part", "to": "new-part" }],
+        "cssProperties": [{ "from": "--wa-old-color", "to": "--lr-new-color" }],
+        "methods": [{ "from": "oldMethod", "to": "newMethod" }],
+        "defaults": [
+          {
+            "memberKind": "attribute",
+            "member": "placement",
+            "action": "insert-if-absent",
+            "value": "start"
+          },
+          {
+            "memberKind": "attribute",
+            "member": "mode",
+            "action": "replace-value",
+            "from": "compact",
+            "to": "condensed"
+          }
+        ]
+      },
+      "drift": [
+        { "code": "missing-attribute", "section": "attributes", "member": "old-attribute" },
+        { "code": "missing-property", "section": "properties", "member": "oldProperty" },
+        { "code": "missing-event", "section": "events", "member": "wa-old-event" },
+        { "code": "missing-slot", "section": "slots", "member": "old-slot" },
+        { "code": "missing-part", "section": "parts", "member": "old-part" },
+        { "code": "missing-css-property", "section": "cssProperties", "member": "--wa-old-color" },
+        { "code": "missing-method", "section": "methods", "member": "oldMethod" },
+        { "code": "default-mismatch", "section": "attributes", "member": "mode" },
+        { "code": "default-mismatch", "section": "attributes", "member": "placement" }
+      ]
+    },
+    {
+      "upstream": "webawesome",
+      "upstreamTag": "wa-data-grid",
+      "targetTag": "lr-table",
+      "classification": "conceptual-only",
+      "rationale": "A data grid is not a semantic table.",
+      "rewrites": {
+        "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
+        "cssProperties": [], "methods": [], "defaults": []
+      },
+      "drift": []
+    },
+    {
+      "upstream": "webawesome",
+      "upstreamTag": "wa-include",
+      "targetTag": "lr-include",
+      "classification": "warning-required",
+      "rationale": "Security defaults require manual review.",
+      "rewrites": {
+        "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
+        "cssProperties": [], "methods": [], "defaults": []
+      },
+      "drift": []
+    },
+    {
+      "upstream": "webawesome",
+      "upstreamTag": "wa-deferred",
+      "targetTag": null,
+      "classification": "unsupported",
+      "rationale": "No target has shipped.",
+      "rewrites": {
+        "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
+        "cssProperties": [], "methods": [], "defaults": []
+      },
+      "drift": []
+    }
+  ]
+}

@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/random-content/random-content.js';` (registers the tag; side-effect import)
 - **Class** `LyraRandomContent`, also available unregistered from `@aceshooting/lyra-ui/components/utility/random-content/random-content.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,6 +21,7 @@ candidates. Selection is applied by setting `hidden` + `aria-hidden` directly on
 children; nothing is moved or cloned.
 
 **Properties:**
+
 - `items: number = 1` — how many children are shown **simultaneously**; a count, not the pool.
   Normalized to a finite integer clamped to `[1, poolSize]`
 - `mode: 'unique' | 'random' | 'sequence' = 'unique'` — `'random'` re-rolls freely (repeats
@@ -31,7 +34,7 @@ children; nothing is moved or cloned.
   toggles this state; a programmatic assignment remains silent.
 - `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — clamped to a 1000 ms floor
 
-**Methods:** `randomize(): HTMLElement[]` — re-selects using the current `mode`, applies
+**Methods:** `randomize(): Element[]` — re-selects using the current `mode`, applies
 `hidden`/`aria-hidden`, emits `lr-content-change`, and returns the elements now shown. Does **not**
 reset or restart the autoplay timer.
 
@@ -47,12 +50,15 @@ on (a self-rotating region announcing on every tick would be spam). A host `aria
 forwarded onto it. `pause-button` — the localized autoplay pause/resume action, rendered only while
 `autoplay` is enabled and exposed as a toggle with `aria-pressed`.
 
-**Themeable custom properties:** `--lr-random-content-animation-duration` (default `300ms`),
-`--lr-random-content-animation-easing` (default `ease`),
-`--lr-random-content-animation-translate` (default `--lr-size-0-5em` — travel distance for the four
-directional `fade-*` effects).
+**Themeable custom properties:** Web Awesome aliases `--animation-duration` (default `300ms`),
+`--animation-easing` (default `ease`), and `--animation-translate` (default
+`--lr-size-0-5em` — travel distance for the four directional `fade-*` effects) feed the mapped
+`--lr-animation-duration`, `--lr-animation-easing`, and `--lr-animation-translate` names. Existing
+`--lr-random-content-animation-duration`, `--lr-random-content-animation-easing`, and
+`--lr-random-content-animation-translate` names remain fallbacks.
 
 **Known gotchas:**
+
 - There is no next/previous/shuffle action; the only built-in control is the autoplay pause/resume
   button. Selection changes via autoplay or `randomize()`.
 - Autoplay is suppressed entirely under `prefers-reduced-motion: reduce`, and whenever the eligible

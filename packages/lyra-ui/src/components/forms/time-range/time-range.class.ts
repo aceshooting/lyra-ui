@@ -16,6 +16,7 @@ import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './time-range.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { getFormOwner, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
 
 export type TimeRangeHandle = 'start' | 'end';
 
@@ -184,6 +185,8 @@ export interface LyraTimeRangeEventMap {
  * @cssprop [--lr-time-range-preset-radius=var(--lr-radius)] - Preset button corner radius.
  * @cssprop --lr-time-range-preset-padding - Preset button padding, scaled by `size`.
  * @cssprop --lr-time-range-preset-font-size - Preset button font size, scaled by `size`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   static formAssociated = true;
@@ -317,7 +320,13 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   }
 
   get form(): HTMLFormElement | null {
-    return this.internals.form;
+    return getFormOwner(this.internals);
+  }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
   }
   get labels(): NodeList {
     return this.internals.labels;

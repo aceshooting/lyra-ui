@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/popup/popup.js';` (registers the tag; side-effect import)
 - **Class** `LyraPopup`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/popup/popup.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,41 +27,37 @@ its own. Reach for `lr-popup` when you need a floating surface the library does 
 anchored inline editor, a custom autocomplete list); if you find yourself adding light dismiss and
 focus return on top of it, use `lr-popover` instead.
 
-**Anchoring**, in precedence order: the `virtualAnchor` property (an arbitrary rect — a canvas hit, a
-chart datum, a selection range), then `for` (an element id resolved in *this element's own root*, so
-it works inside a shadow tree where a plain idref could not cross the boundary), then the first
-element assigned to the `anchor` slot.
+**Anchoring**, in precedence order: legacy `virtualAnchor` (an arbitrary rect — a canvas hit, chart
+datum, or selection range), mapped `anchor` (an `Element`, same-root id string, or Floating UI
+virtual element), `for` (a same-root id), then the first element assigned to the `anchor` slot.
 
 **Properties:**
 - `active: boolean = false` (reflected) — whether the popup renders and positions. Nothing else
   changes when it flips.
-- `for: string = ''` (reflected) and `virtualAnchor` (property only, no attribute) — the two
-  non-slot anchors, in the precedence order above
-- `placement: Placement = 'bottom-start'` (reflected) — the full Floating UI vocabulary, mirrored
+- `anchor: Element | string | VirtualAnchor | null = null`, `for: string = ''` (reflected), and
+  `virtualAnchor` (property only) — the non-slot anchors, in the precedence order above
+- `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
   under RTL
-- `strategy: 'absolute' | 'fixed' = 'fixed'` (reflected) — the CSS positioning scheme. `fixed`
+- `strategy: 'absolute' | 'fixed' = 'absolute'` (reflected) — the CSS positioning scheme. `fixed`
   escapes every ancestor transform/filter/containment context; `absolute` positions against the
-  nearest positioned ancestor, so the popup scrolls away with the content it belongs to. **This
-  default deliberately diverges from the upstream primitive's `absolute`**, so that a bare
-  `<lr-popup>` lands where the shared positioner already puts every other anchored surface in this
-  library; set `strategy="absolute"` for the upstream default exactly.
-- `distance: number = 4` — offset from the anchor along the placement axis, in px
+  nearest positioned ancestor, so the popup scrolls with its containing content
+- `distance: number = 0` — offset from the anchor along the placement axis, in px
 - `skidding: number = 0` — offset along the anchor's edge, in px
-- `flip: boolean = true` (reflected, `true`-defaulting converter — use `.flip = false`, not
-  `?flip=`), with `flipFallbackPlacements: string = ''` (attribute `flip-fallback-placements` — a
+- `flip: boolean = false` (reflected), with `flipFallbackPlacements: string = ''` (attribute
+  `flip-fallback-placements` — a
   space-delimited placement list `flip` tries in order instead of just the opposite side;
   unrecognized entries are dropped rather than forwarded), `flipFallbackStrategy: 'best-fit' |
-  'initial-placement' = 'best-fit'` (attribute `flip-fallback-strategy` — what `flip` settles on
+  'initial' | 'initial-placement' = 'best-fit'` (attribute `flip-fallback-strategy` — what `flip` settles on
   when no candidate fits: the least-overflowing one, or `placement` as written),
   `flipBoundary: PlaceBoundary | null = null` (property only — element(s) to measure overflow
   against instead of the popup's clipping ancestors) and `flipPadding: number = 0` (attribute
   `flip-padding`)
-- `shift: boolean = true` (same `true`-defaulting converter), with
+- `boundary: 'viewport' | 'scroll' = 'viewport'` (reflected) — shared overflow boundary for flip,
+  shift, and auto-size; each middleware-specific boundary below overrides it independently
+- `shift: boolean = false` (reflected), with
   `shiftBoundary: PlaceBoundary | null = null` (property only) and
-  `shiftPadding: number | null = null` (attribute `shift-padding`). Left `null`, `shiftPadding`
-  **inherits `padding`** rather than falling to `0` — the second deliberate divergence from
-  upstream, for the same reason; set `shift-padding="0"` for the upstream default exactly.
-- `padding: number = 8` — viewport padding kept clear by `shift` and by the available-size
+  `shiftPadding: number = 0` (attribute `shift-padding`)
+- `padding: number = 0` — boundary padding kept clear by `shift` and by the available-size
   measurement
 - `autoSize: 'horizontal' | 'vertical' | 'both' | null = null` (attribute `auto-size`), with
   `autoSizeBoundary: PlaceBoundary | null = null` (property only) and
@@ -75,8 +73,17 @@ element assigned to the `anchor` slot.
   once. Purely geometric: this element owns no hover policy of its own, the component built on top
   reads the hover.
 - `arrow: boolean = false` (reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
-  (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
+  (attribute `arrow-placement`) and `arrowPadding: number = 10` (attribute `arrow-padding`) — the
   shared arrow trio described at the top of this family
+
+The aligned v8 defaults above are source-contract exact. To preserve the previous Lyra-shaped
+geometry explicitly, use `placement="bottom-start" strategy="fixed" distance="4" flip shift`;
+origin-aware migration rewrites emit those tokens instead of relying on changed defaults.
+
+`popup: HTMLElement` is the positioned, shadow-owned popup node. Its setter exists for the writable
+WA/SL public TypeScript contract, but assignments are intentionally ignored: replacing that node
+would disconnect positioning, animation, and the documented CSS parts. Read it to animate or style
+the live internal node.
 
 **Methods:** `reposition()` — recompute now. Rarely needed, since the popup already tracks scroll,
 resize and layout change; useful after moving a virtual anchor imperatively.
@@ -91,12 +98,13 @@ while `hover-bridge` is set). `popup` carries the **resolved side** as a second 
 `::part(popup)[data-side]` would silently never match. `arrow` carries its own resolved side the
 same way (`arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right`).
 
-**Themeable custom properties:** `--lr-popup-arrow-size` (half-width of the arrow square, default
-`var(--lr-size-0-375rem)`); otherwise shared tokens — `--lr-overlay-stack-index` /
-`--lr-layer-popover` (stacking), `--lr-color-surface-raised`, `--lr-color-border`.
+**Themeable custom properties:** mapped `--arrow-size`, `--arrow-color`, `--popup-border-width`,
+`--show-duration`, and `--hide-duration`; retained `--lr-popup-arrow-size` is the arrow-size
+fallback. Read-only `--auto-size-available-width` / `--auto-size-available-height` mirror the
+positioner's available dimensions. Shared tokens cover stacking, raised surface, and border.
 
 The popup also receives `--lr-positioner-available-inline-size` / `--lr-positioner-available-block-size`
-from the shared positioner and caps itself to them, so it never overflows the viewport.
+from the shared positioner and caps its dimensions to the measured available space.
 
 ```html
 <lr-popup active arrow placement="top" distance="8">

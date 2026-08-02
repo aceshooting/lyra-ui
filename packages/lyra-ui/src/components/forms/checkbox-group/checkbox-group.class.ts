@@ -1,4 +1,4 @@
-import { html, nothing, type ReactiveController, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type ReactiveController, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
@@ -8,6 +8,15 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox-group.styles.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.class.js';
+import {
+  createStringArrayFormDataState,
+  getFormOwner,
+  installCustomErrorProperty,
+  readStringArrayFormDataState,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -70,10 +79,13 @@ function warnDuplicateValue(group: LyraCheckboxGroup, value: string): void {
 }
 
 export interface LyraCheckboxGroupEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   input: CustomEvent<{ value: string[] }>;
   change: CustomEvent<{ value: string[] }>;
   'lr-change': CustomEvent<{ value: string[] }>;
 }
+
+export type CheckboxGroupOrientation = 'horizontal' | 'vertical';
 
 /**
  * `<lr-checkbox-group>` — a form-associated group of `<lr-checkbox>` elements.
@@ -86,6 +98,7 @@ export interface LyraCheckboxGroupEventMap {
  * @event input - User selection changed.
  * @event change - User selection changed.
  * @event lr-change - User selection changed; detail is `{ value: string[] }`.
+ * @event lr-invalid - The aggregate checkbox group failed a validity check.
  * @cssstate required - Matches while `required` is set. Style with
  * `lr-checkbox-group:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
@@ -101,22 +114,28 @@ export interface LyraCheckboxGroupEventMap {
  * @csspart form-control - Group wrapper.
  * @csspart form-control-label - Label.
  * @csspart options - Checkbox collection.
+ * @csspart form-control-input - WA name for the same checkbox collection.
  * @csspart hint - Supporting text.
  * @csspart error - Validation message.
  * @cssprop [--lr-checkbox-group-row-gap=calc(var(--lr-form-control-height) * 0.1)] - Vertical gap
  * between the group's label, options and messages, scaled by `size`.
  * @cssprop [--lr-checkbox-group-option-gap=calc(var(--lr-form-control-height) * 0.2)] - Gap between
  * adjacent options, scaled by `size`.
+ * @cssprop [--gap=var(--lr-checkbox-group-option-gap)] - WA-compatible option gap.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     size: { reflect: true },
+    orientation: { reflect: true },
     value: { attribute: false, noAccessor: true },
   };
 
@@ -124,15 +143,20 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
    * Size of the group's own chrome, on the library's shared ladder. Accepts both spellings of every
    * tier — `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating
    * either way is a tag rename. Scales the group's label type size and the gaps around and between
-   * its options off the same `--lr-form-control-*` values the controls themselves use. It does not
-   * resize the `<lr-checkbox>` children: each carries its own `size`, so a group can hold options at
-   * mixed sizes and an explicitly-sized option is never silently overridden by its container. Set
-   * the same `size` on the children to scale the whole group.
+   * its options off the same `--lr-form-control-*` values the controls themselves use, and
+   * propagates the selected tier to every owned checkbox so the aggregate control stays coherent.
    */
   size: LyraSize = 'm';
 
+  /** Option flow and the matching WA public attribute. */
+  orientation: CheckboxGroupOrientation = 'vertical';
+
   @property() label = '';
   @property() hint = '';
+  /** SSR slot-presence hint for label content unavailable before hydration. */
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+  /** SSR slot-presence hint for hint content unavailable before hydration. */
+  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private touched = false;
@@ -149,6 +173,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   private labelId = nextId('checkbox-group-label');
   private hintId = nextId('checkbox-group-hint');
   private errorId = nextId('checkbox-group-error');
@@ -168,6 +194,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private _writingValue = false;
   private _warnedValueAssigned = false;
   private _warnedDuplicateValues = new Set<string>();
+  private pendingRestoreValues?: string[];
   private childObserver?: MutationObserver;
   private childControllers = new Map<LyraCheckbox, ReactiveController>();
 
@@ -232,6 +259,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     super();
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
   }
 
   private checkboxGroupOwner(element: Element): Element | null {
@@ -270,6 +299,10 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.boxes.forEach((box) => box.setGroupDisabled?.(effective));
   }
 
+  private propagateSize(): void {
+    this.boxes.forEach((box) => { box.size = this.size; });
+  }
+
   private readValue(): string[] {
     return this.boxes.filter((box) => box.checked).map((box) => box.value ?? 'on');
   }
@@ -304,7 +337,10 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     }
     const data = new FormData();
     if (this.name) next.forEach((value) => data.append(this.name, value));
-    this.internals.setFormValue(this.name ? data : null);
+    this.internals.setFormValue(
+      this.name ? data : null,
+      createStringArrayFormDataState(this.name, next),
+    );
     if (this.required && next.length === 0) this.validityController.setValidity({ valueMissing: true }, this.localize('checkboxGroupRequired'));
     else this.validityController.setValidity({});
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
@@ -365,6 +401,11 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       this.onSlotChange();
       return;
     }
+    if (records.some(
+      (record) => record.attributeName === 'size' && this.isOwnedCheckbox(record.target),
+    )) {
+      this.propagateSize();
+    }
     if (records.some((record) => this.isOwnedCheckbox(record.target))) this.sync();
   };
 
@@ -377,9 +418,27 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.hasHintSlot = this.hasDirectSupportSlot('hint');
     this.hasErrorSlot = this.hasDirectSupportSlot('error');
     this.reconcileChildControllers();
-    this.sync();
+    if (!this.applyPendingRestore()) this.sync();
     this.propagateDisabled();
+    this.propagateSize();
   };
+
+  /** Applies a restore only once real option children exist; FACE callbacks may run before them. */
+  private applyPendingRestore(): boolean {
+    if (this.pendingRestoreValues === undefined || this.boxes.length === 0) return false;
+    const remaining = [...this.pendingRestoreValues];
+    this.pendingRestoreValues = undefined;
+    for (const box of this.boxes) {
+      const value = box.value ?? 'on';
+      const index = remaining.indexOf(value);
+      box.checked = index >= 0;
+      if (index >= 0) remaining.splice(index, 1);
+    }
+    this.touched = false;
+    this.hasInteracted = false;
+    this.sync();
+    return true;
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -394,7 +453,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       attributes: true,
       childList: true,
       subtree: true,
-      attributeFilter: ['checked', 'value', 'disabled', 'slot'],
+      attributeFilter: ['checked', 'value', 'disabled', 'size', 'slot'],
     });
   }
 
@@ -416,9 +475,17 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.addEventListener('blur', () => { this.touched = true; this.hasInteracted = true; this.sync(); }, true);
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('size')) this.propagateSize();
+  }
+
   /** @internal */
-  [VALIDITY_ANCHOR](): HTMLElement | null { return this.renderRoot?.querySelector('[part="options"]') ?? null; }
-  get form(): HTMLFormElement | null { return this.internals.form; }
+  [VALIDITY_ANCHOR](): HTMLElement | null { return this.renderRoot?.querySelector('[part~="options"]') ?? null; }
+  get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
+  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  get labels(): NodeList { return this.internals.labels; }
   get validity(): ValidityState { return this.internals.validity; }
   get validationMessage(): string { return this.internals.validationMessage; }
   get willValidate(): boolean { return this.internals.willValidate; }
@@ -454,7 +521,14 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     // `aria-invalid` is rendered from `internals.validity`, which the call above just moved.
     this.requestUpdate();
   }
-  formResetCallback(): void { this.boxes.forEach((box) => { box.checked = box.hasAttribute('checked'); }); this.touched = false; this.hasInteracted = false; this.sync(); }
+  formResetCallback(): void { this.boxes.forEach((box) => box.resetFromGroup()); this.touched = false; this.hasInteracted = false; this.sync(); }
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    _mode?: 'restore' | 'autocomplete',
+  ): void {
+    this.pendingRestoreValues = readStringArrayFormDataState(state);
+    this.applyPendingRestore();
+  }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     this.propagateDisabled();
@@ -462,7 +536,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   override render(): TemplateResult {
-    const described = [this.hasHintSlot || this.hint ? this.hintId : '', this.hasErrorSlot || this.errorText ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
+    const hasLabel = this.hasLabelSlot || Boolean(this.label) || this.withLabel;
+    const hasHint = this.hasHintSlot || Boolean(this.hint) || this.withHint;
+    const described = [hasHint ? this.hintId : '', this.hasErrorSlot || this.errorText ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
     return html`<fieldset
       part="form-control"
       ?disabled=${this.effectiveDisabled}
@@ -470,11 +546,11 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       aria-describedby=${described}
       aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
     >
-      <legend part="form-control-label" id=${this.labelId} ?hidden=${!this.label && !this.hasLabelSlot}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</legend>
-      <div part="options">
+      <legend part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</legend>
+      <div part="options form-control-input">
         <slot @slotchange=${this.onSlotChange}></slot>
       </div>
-      <div part="hint" id=${this.hintId} ?hidden=${!this.hint && !this.hasHintSlot}><slot name="hint" @slotchange=${this.onSlotChange}>${this.hint}</slot></div>
+      <div part="hint" id=${this.hintId} ?hidden=${!hasHint}><slot name="hint" @slotchange=${this.onSlotChange}>${this.hint}</slot></div>
       <div part="error" id=${this.errorId} ?hidden=${!this.errorText && !this.hasErrorSlot}><slot name="error" @slotchange=${this.onSlotChange}>${this.errorText}</slot></div>
     </fieldset>`;
   }

@@ -34,8 +34,19 @@ export const styles = css`
        the property pins an exact height. */
   }
 
-  [part='form-control'] {
+  [part~='form-control'] {
     min-inline-size: 0;
+  }
+
+  :host([appearance='filled']) [part='field-input'] {
+    border-color: transparent;
+    background: var(--lr-color-surface-raised);
+  }
+  :host([appearance='filled-outlined']) [part='field-input'] {
+    background: var(--lr-color-surface-raised);
+  }
+  :host([pill]) [part='field-input'] {
+    border-radius: var(--lr-radius-pill);
   }
 
   [part='fieldset'] {
@@ -68,13 +79,13 @@ export const styles = css`
     color: var(--lr-color-danger);
   }
 
-  [part='fields'] {
+  [part~='fields'] {
     display: flex;
     flex-wrap: wrap;
     gap: var(--lr-known-date-field-gap);
   }
 
-  [part='field'] {
+  [part~='field'] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-2xs);
@@ -103,13 +114,13 @@ export const styles = css`
     font-size: var(--lr-known-date-field-font-size);
     text-align: center;
   }
-  [part='field'][data-field='day'] [part='field-input'] {
+  [part~='field'][data-field='day'] [part='field-input'] {
     inline-size: var(--lr-known-date-day-field-width);
   }
-  [part='field'][data-field='month'] [part='field-input'] {
+  [part~='field'][data-field='month'] [part='field-input'] {
     inline-size: var(--lr-known-date-month-field-width);
   }
-  [part='field'][data-field='year'] [part='field-input'] {
+  [part~='field'][data-field='year'] [part='field-input'] {
     inline-size: var(--lr-known-date-year-field-width);
   }
   /* Mouse-hover parity with the keyboard :focus-visible ring below -- same border-retint

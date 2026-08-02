@@ -1,27 +1,7 @@
-import { LyraToast, type ToastCreateOptions, type ToastPlacement } from './toast.js';
+import { type ToastCreateOptions, type ToastPlacement } from './toast.js';
 import type { LyraToastItem } from './toast-item.js';
+import { getToastRegion } from './toast-region.js';
 import './toast.js';
-
-const DEFAULT_PLACEMENT: ToastPlacement = 'top-end';
-
-const regions = new Map<ToastPlacement, LyraToast>();
-
-/**
- * Get (or lazily mount) the singleton toast region for a given placement.
- * Each placement gets its own region element so that a `toast()` call
- * targeting one placement never relocates toasts already showing at another
- * -- `placement` is a per-call option, not a global, retroactive one.
- */
-function getRegion(placement: ToastPlacement = DEFAULT_PLACEMENT): LyraToast {
-  let region = regions.get(placement);
-  if (!region || !region.isConnected) {
-    region = document.createElement('lr-toast') as LyraToast;
-    region.placement = placement;
-    document.body.appendChild(region);
-    regions.set(placement, region);
-  }
-  return region;
-}
 
 export interface ToastOptions extends ToastCreateOptions {
   message: string;
@@ -55,7 +35,7 @@ export function toast(input: ToastOptions | string): ToastHandle {
     size: opts.size,
     withIcon: opts.withIcon,
   };
-  const item = getRegion(opts.placement)
+  const item = getToastRegion(opts.placement)
     .create(opts.message, createOptions)
     .then((el) => {
       if (opts.action) {

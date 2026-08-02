@@ -62,6 +62,8 @@ interface SourceRow {
  *   checked or mixed selection control.
  * @cssprop [--lr-source-picker-mixed-bg=color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))] -
  *   Background of a partially-selected entry's `[part="checkbox"]`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/document-preview/document-preview.js';` (registers the tag; side-effect import)
 - **Class** `LyraDocumentPreview`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/document-preview/document-preview.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -68,7 +70,7 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   `lr-json-viewer`'s identically-named prop. Invalid CSS `max-height` values, declaration breaks,
   and `url()` are ignored, leaving the stylesheet token in control.
 - `zoomable: boolean = false` (reflected) — wraps the rendered image (image format only) in an
-  internal `<lr-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
+  internal `<lr-pan-zoom>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
   inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome
   viewport; an inspection surface opts in.
 - `highlights: LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
@@ -76,7 +78,8 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
-- `anchorKinds` is a readonly `['region']` (this viewer's supported `LyraAnchor.kind` values for the
+- `anchorKinds: readonly LyraAnchor['kind'][] = ['region']` (this viewer's supported
+  `LyraAnchor.kind` values for the
   shared anchor-target contract).
 
 **Methods:** `scrollToAnchor(target)` — scrolls a `region` highlight (by id, or a `LyraAnchor`
@@ -108,7 +111,7 @@ every rendered region highlight, image format only), `region-highlight` (one reg
 geometry with a minimum hit area independent of the visual rectangle), `highlight-actions`
 (non-overlapping actions used when multiple minimum hit areas would overlap),
 `region-highlight-action` (one action in that list), `frame-viewport`/`frame-content`/`frame-controls`/
-`frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lr-zoomable-frame>`
+`frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lr-pan-zoom>`
 while `zoomable`; image format only)
 
 **Themeable custom properties:** `--lr-document-preview-max-height` (default `none`) — the

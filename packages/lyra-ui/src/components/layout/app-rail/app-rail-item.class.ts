@@ -26,6 +26,8 @@ import { styles } from "./app-rail-item.styles.js";
  *   only the current item without hijacking the library-wide `--lr-color-brand-quiet` token.
  * @cssprop [--lr-app-rail-item-current-color=var(--lr-color-brand)] - Text/icon color of the
  *   `active`/`aria-current="page"` item.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAppRailItem extends LyraElement {
   static override styles = [LyraElement.styles, styles];

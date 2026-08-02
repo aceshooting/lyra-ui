@@ -216,6 +216,8 @@ export interface LyraNotebookViewerEventMap {
  *   before it scrolls internally. Also settable via the `max-height` property.
  * @cssprop [--lr-notebook-viewer-active-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `[part="cell"]` currently targeted by an anchor or the active search match.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   static override styles = [LyraElement.styles, styles, srOnly];

@@ -24,7 +24,8 @@ a compact call summary is useful, with or without a detail surface behind it.
 
 **Events:** `lr-tool-call-chip-select` (`detail: { name: string; callId: string }`) — fired on
 click or Enter/Space activation of the pill. The deprecated `lr-tool-chip-select` alias is fired
-alongside it for one minor compatibility cycle.
+alongside it throughout its documented compatibility window (deprecated since 4.0.0; removal is
+not permitted before 9.0.0).
 
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
 shown in a floating tooltip on hover/focus; nothing renders at all, no hover affordance, when this
@@ -750,7 +751,9 @@ rendered before the built-in Deny/Edit/Approve buttons.
 `deny-button-spinner`, `approve-button-base`, `approve-button-label`, `approve-button-start`,
 `approve-button-end`, `approve-button-spinner` (`deny-button`/`approve-button` are each an
 `<lr-button>` host; these five per-button parts are re-exported from its own `lr-button` parts via
-`exportparts`; `edit-button` stays a plain `<button>`, unaffected by this).
+`exportparts`. Each `*-button-base` route accepts the button's same-node `base` and `button`
+wrapper aliases, so either name survives the nested shadow boundary; `edit-button` stays a plain
+`<button>`, unaffected by this).
 
 **Themeable custom properties:** `--lr-tool-approval-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token `<lr-dialog>` and
@@ -860,6 +863,11 @@ and makes the form invalid instead of being silently accepted.
   `required`.
 - `name: string = ''` — submission key for optional native `<form>` participation
 - `disabled: boolean = false` (reflected)
+- `customError: string | null = null` (attribute `custom-error`) — reflected consumer validation
+  message
+- `form: HTMLFormElement | null = null` — browser-resolved owner (and an assignable external owner);
+  readonly `labels: NodeList`, `validity: ValidityState`, `validationMessage: string`,
+  `willValidate: boolean`, and `effectiveDisabled: boolean` expose the native FACE state
 
 **Getters:**
 - `effectiveValue: Record<string, unknown>` — `value` with every property missing from it filled in
@@ -873,6 +881,7 @@ and makes the form invalid instead of being silently accepted.
   when the current effective value is safe to submit.
 
 **Methods:**
+- `getForm(): HTMLFormElement | null` — returns the browser-resolved owning form.
 - `checkValidity(): boolean` — synchronously re-snapshots even an in-place-mutated value/schema,
   updates `ElementInternals`, and returns validity without revealing inline errors.
 - `reportValidity(): boolean` — performs the same resynchronization, reveals all current field/root
@@ -901,6 +910,8 @@ and no-detail `focus`/`blur` events for generated native text/number inputs. The
 `<lr-select>`/`<lr-checkbox>` controls already bubble their own focus/blur bridges through the host.
 Their implementation events (`input`, `change`, `lr-change`, select show/hide, and option mutation)
 are contained at the form boundary; consumers receive the single form-level `lr-input` contract.
+`lr-invalid` (no detail) is the bubbling/composed alias emitted when the complete parameter form
+fails a native validity check.
 
 **Slots:** none.
 
@@ -1235,8 +1246,8 @@ codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boo
 (reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: LyraHighlight[] = []` (attribute:
-false), and `activeHighlightId: string | null = null` (attribute: false). `anchorKinds` is a readonly
-`['line-range']` — a scrollback buffer addresses positions by line number, so `line-range` is the
+false), and `activeHighlightId: string | null = null` (attribute: false). `anchorKinds:
+LyraAnchor['kind'][] = ['line-range']` is readonly — a scrollback buffer addresses positions by line number, so `line-range` is the
 only kind `scrollToAnchor()` resolves; `page`/`text-quote`/`region` belong to the paginated document
 viewers, not here. `<lr-terminal>` is not registered in the document-renderer registry, so this field
 is a plain readonly property rather than the `DocumentAnchorTarget` mixin's `override readonly` one.
@@ -1576,8 +1587,9 @@ details/json-viewer wrapper, only rendered when `args` is defined), `footer`, `d
 `deny-button-base`, `deny-button-label`, `deny-button-start`, `deny-button-end`,
 `deny-button-spinner`, `approve-button-base`, `approve-button-label`, `approve-button-start`,
 `approve-button-end`, `approve-button-spinner` (re-exported from each button's own
-`lr-button` parts via `exportparts`), `status` (the decided-state text, always present in the DOM
-as a focus landing spot).
+`lr-button` parts via `exportparts`; each `*-button-base` route accepts the same-node `base` and
+`button` wrapper aliases), `status` (the decided-state text, always present in the DOM as a focus
+landing spot).
 
 **Themeable custom properties:** the `compact` presentation is deliberately chrome-less by default
 and re-chromed entirely through five properties, all scoped to `[part="base"]` while `compact`:

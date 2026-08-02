@@ -99,6 +99,8 @@ export interface LyraSpanWaterfallEventMap {
  * @cssprop [--lr-span-waterfall-running-color=var(--lr-color-brand)] - Running stripe foreground.
  * @cssprop [--lr-span-waterfall-running-stripe-color=var(--lr-color-brand-quiet)] - Running stripe background.
  * @cssprop [--lr-span-waterfall-pending-border-color=var(--lr-color-border-strong)] - Pending bar border.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   static override styles = [LyraElement.styles, styles];

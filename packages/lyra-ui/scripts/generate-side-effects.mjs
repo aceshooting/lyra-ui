@@ -1,11 +1,18 @@
 // Regenerates package.json#sideEffects from the same required-entries derivation
 // scripts/check-side-effects.mjs verifies against, so the array is a generated artifact instead
 // of 500+ hand-maintained lines. Run after any component add/move/remove, then commit the diff.
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
+
+// Public entries whose documented behavior happens at import time. Keep this list deliberately
+// small: ordinary exported functions and classes are tree-shakeable and do not belong here.
+export const CURATED_PUBLIC_SIDE_EFFECT_ENTRIES = Object.freeze([
+  { source: 'src/autoloader-cdn.ts', exportPath: './autoloader-cdn.js' },
+  { source: 'src/ssr-loader.ts', exportPath: './ssr-loader.js' },
+]);
 
 function walk(directory) {
   const files = [];
@@ -22,7 +29,9 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
   const componentsRoot = join(sourceRoot, 'components');
   const translationsRoot = join(sourceRoot, 'translations');
   const inventoryPath = join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
+  const packageJsonPath = join(packageDir, 'package.json');
   const inventory = JSON.parse(readFileSync(inventoryPath, 'utf8'));
+  const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
   if (inventory.schemaVersion !== 1 || !Array.isArray(inventory.components)) {
     throw new Error('component-inventory.json uses an unsupported schema; expected schemaVersion 1 with components[]');
   }
@@ -35,6 +44,26 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
   }
 
   const required = new Set(['./src/lyra.ts', './dist/lyra.js']);
+
+  for (const entry of CURATED_PUBLIC_SIDE_EFFECT_ENTRIES) {
+    const sourcePath = join(packageDir, entry.source);
+    if (!existsSync(sourcePath)) {
+      throw new Error(`curated public side-effect source is missing: ${entry.source}`);
+    }
+    const distTarget = `./dist/${entry.source.slice('src/'.length).replace(/\.ts$/, '.js')}`;
+    const declarationTarget = distTarget.replace(/\.js$/, '.d.ts');
+    const packageExport = pkg.exports?.[entry.exportPath];
+    const actualDefault =
+      typeof packageExport === 'string' ? packageExport : packageExport?.default;
+    const actualTypes = typeof packageExport === 'object' ? packageExport?.types : undefined;
+    if (actualDefault !== distTarget || actualTypes !== declarationTarget) {
+      throw new Error(
+        `${entry.exportPath} must export types ${declarationTarget} and default ${distTarget}`,
+      );
+    }
+    required.add(`./${entry.source}`);
+    required.add(distTarget);
+  }
 
   for (const registrationModule of registrationModules) {
     const sourceEntry = `./${registrationModule.replaceAll('\\', '/')}`;

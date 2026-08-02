@@ -207,7 +207,7 @@ it('emits lr-tool-call-chip-select with { name, callId } on click', async () => 
   expect(ev.composed).to.be.true;
 });
 
-it('also emits the deprecated lr-tool-chip-select alias for one minor cycle', async () => {
+it('also emits the deprecated lr-tool-chip-select alias during its compatibility window', async () => {
   const el = (await fixture(
     html`<lr-tool-call-chip name="web_search" call-id="call-42"></lr-tool-call-chip>`,
   )) as LyraToolCallChip;

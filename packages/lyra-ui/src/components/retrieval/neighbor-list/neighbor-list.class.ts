@@ -46,6 +46,8 @@ export interface LyraNeighborListEventMap {
  * @csspart node-meta - Secondary node text (type/degree), when present.
  * @csspart expand-button - The per-row expand-in-graph icon button, only rendered when `expandable`.
  * @csspart empty - The empty-state message, shown when `rows` is empty.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   static override styles = [LyraElement.styles, styles];

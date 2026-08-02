@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
@@ -10,6 +10,7 @@ import { tag } from '../../../internal/prefix.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { styles } from './tab-group.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import type { LyraTab } from './tab.class.js';
 
 /**
  * One tab, derived from a direct light-DOM child's `slot`/`label`/`disabled`
@@ -24,6 +25,7 @@ interface TabDef {
   /** `element` when the tab came from an `<lr-tab>`, whose content the button projects instead of
    *  rendering `label` as text. `attribute` is the panel-attribute shape. */
   source: 'attribute' | 'element';
+  element?: LyraTab;
 }
 
 /** Which edge the tab strip sits on. `start`/`end` are logical, so they mirror under RTL. */
@@ -47,8 +49,8 @@ const SYNTHETIC_PANEL_PREFIX = 'lr-tab-';
 const SCROLL_STEP_RATIO = 0.8;
 
 export interface LyraTabGroupEventMap {
-  'lr-tab-show': CustomEvent<{ tabId: string }>;
-  'lr-tab-hide': CustomEvent<{ tabId: string }>;
+  'lr-tab-show': CustomEvent<{ tabId: string; name: string }>;
+  'lr-tab-hide': CustomEvent<{ tabId: string; name: string }>;
 }
 /**
  * `<lr-tab-group>` — a tab strip whose panels are direct light-DOM children,
@@ -77,13 +79,18 @@ export interface LyraTabGroupEventMap {
  * (swapped under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection
  * together; with `activation="manual"` they move focus only and Enter/Space commits, which the APG
  * requires whenever revealing a panel is expensive. Home/End jump to the first/last enabled tab,
- * and a roving `tabindex` follows the focused tab.
+ * and a roving `tabindex` follows the focused tab. An enabled closable `<lr-tab>` adds
+ * `aria-keyshortcuts="Delete"` to that same real tab button; Delete routes the close request through
+ * the descriptor so `lr-close` still targets `<lr-tab>`. The visual close affordance stays
+ * non-focusable and accessibility-hidden, avoiding a nested interactive control.
  *
  * **Two child models are accepted.** `<lr-tab panel="x">` plus `<lr-tab-panel name="x">` mirrors
  * `wa-tab-group`/`sl-tab-group`, so that markup renames mechanically; the group assigns the `slot`
  * attributes itself. The attribute model described above is this library's own original shape and
  * remains fully supported. A group containing any `<lr-tab>` child is read purely as the element
  * model, so the two never interleave ambiguously.
+ * `defaultSlot` exposes the real unnamed shadow slot expected by mapped integrations. Lyra keeps
+ * it hidden because every accepted child is assigned to a deterministic named projection slot.
  *
  * **Overflow.** A horizontal tab row that does not fit stays natively scrollable and gains two
  * scroll controls flanking the tablist inside `[part="nav"]`, mirroring both upstreams. They are
@@ -104,19 +111,31 @@ export interface LyraTabGroupEventMap {
  *
  * @customElement lr-tab-group
  * @slot - Either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with `slot="<id>" label="<text>"` (and optionally `disabled`); one becomes each tab's panel.
+ * @slot nav - Upstream-compatible slot used by `<lr-tab>` descriptors.
  * @slot <id>-icon - Optional sibling direct child supplying a tab's leading icon content, in the attribute model only; excluded from the tab button's accessible name.
- * @event lr-tab-show - `detail: { tabId }`, fired when a tab becomes active via click or keyboard.
- * @event lr-tab-hide - `detail: { tabId }`, fired for the outgoing tab immediately before `lr-tab-show`.
- * @csspart base - The root wrapper around the tablist and panels.
+ * @event lr-tab-show - `detail: { name, tabId }`, fired when a tab becomes active via click or keyboard.
+ * @event lr-tab-hide - `detail: { name, tabId }`, fired for the outgoing tab immediately before `lr-tab-show`.
+ * @csspart base - Compatibility name for the root wrapper; use `tab-group`.
+ * @csspart tab-group - The root wrapper around the tablist and panels. It is the same node as
+ *   `base`.
  * @csspart nav - The row wrapping the tablist together with the two overflow scroll controls; mirrors the upstream part of the same name.
+ * @csspart tabs - Upstream name on the same scroll container as `tablist`.
+ * @csspart body - Wrapper around all tab panels.
  * @csspart tablist - The `role="tablist"` row of tab buttons.
  * @csspart scroll-button - Shared part on both overflow scroll controls.
+ * @csspart scroll-button__base - Export-compatible base name on both scroll controls.
  * @csspart scroll-button-start - The control that scrolls the tabs toward their inline start ("previous" — the right-hand control under RTL).
  * @csspart scroll-button-end - The control that scrolls the tabs toward their inline end ("next" — the left-hand control under RTL).
+ * @csspart scroll-button--start - Upstream modifier alias on `scroll-button-start`.
+ * @csspart scroll-button--end - Upstream modifier alias on `scroll-button-end`.
  * @csspart scroll-button-glyph - The chevron wrapper inside a scroll control. This is the element that mirrors under RTL; the icon itself never rotates.
  * @csspart tab - A single tab button.
  * @csspart tab-icon - The optional leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling.
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
+ * @csspart active-tab-indicator - Indicator inside the active tab.
+ * @cssprop --indicator-color - Upstream alias for the active indicator color.
+ * @cssprop --track-color - Upstream track color.
+ * @cssprop --track-width - Upstream track width.
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of the fade at each horizontal scroll edge. The
  *   fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.
  * @cssprop [--lr-tab-group-selected-color=var(--lr-color-brand)] - Text color of the selected tab.
@@ -126,6 +145,8 @@ export interface LyraTabGroupEventMap {
  *   underline, themeable independently of its text color.
  * @cssprop [--lr-tab-group-hover-color=var(--lr-color-text)] - Text color of a hovered, non-disabled tab.
  *   Independent of the selected-state props above.
+ * @status stable
+ * @since 8.0.0
  */
 export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -157,6 +178,15 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   @property({ type: Boolean, attribute: 'no-scroll-controls', reflect: true })
   noScrollControls = false;
 
+  /** Shoelace compatibility flag. Lyra's controls remain present at both edges whenever the row
+   * overflows, so enabling this preserves that fixed behavior explicitly. */
+  @property({ type: Boolean, attribute: 'fixed-scroll-controls', reflect: true })
+  fixedScrollControls = false;
+
+  /** The group's real unnamed slot. It is kept hidden because Lyra assigns each tab and panel to
+   * its own deterministic named slot, but remains exposed for mapped slot observation. */
+  @query('slot:not([name])') defaultSlot!: HTMLSlotElement;
+
   @state() private tabs: TabDef[] = [];
   /** Where keyboard focus currently sits under `activation="manual"`, which is allowed to differ
    *  from `active`. Under `auto` the two are always the same, so this simply follows selection. */
@@ -172,7 +202,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     super();
     // Gates the [part="tablist"] edge fade on the strip genuinely overflowing -- see
     // --lr-scroll-fade-size and tabs.styles.ts.
-    observeScrollOverflow(this, () => this.renderRoot.querySelector('[part="tablist"]'));
+    observeScrollOverflow(this, () => this.renderRoot.querySelector('[part~="tablist"]'));
   }
 
   override connectedCallback(): void {
@@ -202,7 +232,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['slot', 'label', 'disabled'],
+      attributeFilter: ['slot', 'label', 'disabled', 'closable'],
     });
   }
 
@@ -280,7 +310,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
         disabled: child.hasAttribute('disabled'),
         hasIcon: false,
         source: 'element',
+        element: child as LyraTab,
       });
+      if (!this.active && child.hasAttribute('active')) this.active = slotName;
     }
     return next;
   }
@@ -300,6 +332,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('active') || changed.has('tabs')) this.syncElementActiveState();
     if (!this.rehomeTabFocus) return;
     this.rehomeTabFocus = false;
     this.renderRoot
@@ -315,8 +348,25 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     const previous = this.active;
     this.active = tab.slotName;
     this.focusedTab = tab.slotName;
-    if (previous) this.emit('lr-tab-hide', { tabId: previous });
-    this.emit('lr-tab-show', { tabId: tab.slotName });
+    if (previous) this.emit('lr-tab-hide', { tabId: previous, name: previous });
+    this.emit('lr-tab-show', { tabId: tab.slotName, name: tab.slotName });
+  }
+
+  /** Show the panel named by an `<lr-tab panel>` or attribute-model slot. */
+  show(panel: string): void {
+    const tab = this.tabs.find((candidate) => candidate.slotName === panel);
+    if (tab) this.selectTab(tab);
+  }
+
+  /** Mirrors selection onto public `active` hints for SSR-compatible tab/panel children. */
+  private syncElementActiveState(): void {
+    for (const child of Array.from(this.children)) {
+      if (child.localName === tag('tab')) {
+        child.toggleAttribute('active', child.getAttribute('panel') === this.active);
+      } else if (child.localName === tag('tab-panel')) {
+        child.toggleAttribute('active', child.getAttribute('name') === this.active);
+      }
+    }
   }
 
   /** Moves the roving focus without selecting -- the `activation="manual"` path. */
@@ -354,6 +404,14 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     const navigable = this.tabs.filter((t) => !t.disabled);
     if (navigable.length === 0) return;
     const currentIndex = navigable.findIndex((t) => t.slotName === this.rovingTab);
+
+    if (e.key === 'Delete') {
+      const focused = navigable.find((tab) => tab.slotName === this.rovingTab);
+      if (!focused?.element?.closable) return;
+      e.preventDefault();
+      focused.element.requestCloseFromOwner();
+      return;
+    }
 
     // A vertical strip navigates with Up/Down per the APG; a horizontal one with Left/Right, which
     // swap under RTL the same way lr-split/lr-tree handle physical directions. Up/Down are never
@@ -442,7 +500,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    * preference asks not to animate.
    */
   private scrollTabs(edge: 'start' | 'end'): void {
-    const tablist = this.renderRoot.querySelector('[part="tablist"]');
+    const tablist = this.renderRoot.querySelector('[part~="tablist"]');
     if (!(tablist instanceof HTMLElement)) return;
     const step = Math.max(1, tablist.clientWidth * SCROLL_STEP_RATIO);
     const towardEnd = edge === 'end' ? 1 : -1;
@@ -459,8 +517,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  overflow measurement. */
   private renderScrollControl(edge: 'start' | 'end'): TemplateResult | typeof nothing {
     if (this.isVertical || this.scrollControlsSuppressed) return nothing;
-    const part =
-      edge === 'start' ? 'scroll-button scroll-button-start' : 'scroll-button scroll-button-end';
+    const part = edge === 'start'
+      ? 'scroll-button scroll-button__base scroll-button-start scroll-button--start'
+      : 'scroll-button scroll-button__base scroll-button-end scroll-button--end';
     return html`<button
       type="button"
       part=${part}
@@ -482,6 +541,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   private renderTab(tab: TabDef): TemplateResult {
     const selected = tab.slotName === this.active;
+    const closable = !tab.disabled && Boolean(tab.element?.closable);
     return html`<button
       type="button"
       part="tab"
@@ -491,13 +551,16 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       aria-selected=${selected ? 'true' : 'false'}
       aria-disabled=${tab.disabled ? 'true' : 'false'}
       aria-controls=${this.panelId(tab.slotName)}
+      aria-keyshortcuts=${closable ? 'Delete' : nothing}
       tabindex=${tab.slotName === this.rovingTab ? '0' : '-1'}
       @click=${() => this.selectTab(tab)}
     >${tab.source === 'element'
       ? html`<slot name=${this.tabSlotName(tab.slotName)}></slot>`
       : html`${tab.hasIcon
           ? html`<span part="tab-icon" aria-hidden="true"><slot name=${this.iconSlotName(tab.slotName)}></slot></span>`
-          : nothing}${tab.label}`}</button>`;
+          : nothing}${tab.label}`}${selected
+      ? html`<span part="active-tab-indicator" aria-hidden="true"></span>`
+      : nothing}</button>`;
   }
 
   private renderPanel(tab: TabDef): TemplateResult {
@@ -524,11 +587,12 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // DOM node (and any focus on it) attached to that same tab across
     // additions/removals anywhere in the list.
     return html`
-      <div part="base">
+      <slot hidden></slot>
+      <div part="base tab-group">
         <div part="nav">
           ${this.renderScrollControl('start')}
           <div
-            part="tablist"
+            part="tablist tabs"
             role="tablist"
             aria-label=${this.accessibleLabel || nothing}
             aria-orientation=${this.isVertical ? 'vertical' : 'horizontal'}
@@ -538,7 +602,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
           </div>
           ${this.renderScrollControl('end')}
         </div>
-        ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderPanel(tab))}
+        <div part="body">
+          ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderPanel(tab))}
+        </div>
       </div>
     `;
   }

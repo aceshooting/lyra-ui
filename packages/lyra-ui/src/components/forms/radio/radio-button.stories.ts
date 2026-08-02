@@ -8,7 +8,7 @@ export default meta;
 
 export const Default: StoryObj = {
   render: () => html`
-    <lr-radio-group name="view" label="View">
+    <lr-radio-group name="view" label="View" orientation="horizontal">
       <lr-radio-button value="day" checked>Day</lr-radio-button>
       <lr-radio-button value="week">Week</lr-radio-button>
       <lr-radio-button value="month">Month</lr-radio-button>
@@ -18,7 +18,7 @@ export const Default: StoryObj = {
 
 export const Disabled: StoryObj = {
   render: () => html`
-    <lr-radio-group name="tier" label="Tier">
+    <lr-radio-group name="tier" label="Tier" orientation="horizontal">
       <lr-radio-button value="free" checked>Free</lr-radio-button>
       <lr-radio-button value="pro" disabled>Pro</lr-radio-button>
     </lr-radio-group>
@@ -29,7 +29,7 @@ export const RightToLeft: StoryObj = {
   name: 'RTL',
   render: () => html`
     <div dir="rtl">
-      <lr-radio-group name="view-rtl" label="عرض">
+      <lr-radio-group name="view-rtl" label="عرض" orientation="horizontal">
         <lr-radio-button value="day" checked>يوم</lr-radio-button>
         <lr-radio-button value="week">أسبوع</lr-radio-button>
       </lr-radio-group>
@@ -50,9 +50,9 @@ export const Sizes: StoryObj = {
   render: () => html`
     <div style="display: grid; gap: var(--lr-space-m); justify-items: start;">
       ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
-        (size) => html`<lr-radio-group name="view-${size}" label="Size ${size}" size=${size}>
-          <lr-radio-button value="day" size=${size} checked>Day</lr-radio-button>
-          <lr-radio-button value="week" size=${size}>Week</lr-radio-button>
+        (size) => html`<lr-radio-group name="view-${size}" label="Size ${size}" size=${size} orientation="horizontal">
+          <lr-radio-button value="day" checked>Day</lr-radio-button>
+          <lr-radio-button value="week">Week</lr-radio-button>
         </lr-radio-group>`,
       )}
     </div>
@@ -70,12 +70,12 @@ export const Pill: StoryObj = {
   },
   render: () => html`
     <div style="display: grid; gap: var(--lr-space-m); justify-items: start;">
-      <lr-radio-group name="pill-off" label="Default corners">
+      <lr-radio-group name="pill-off" label="Default corners" orientation="horizontal">
         <lr-radio-button value="day" checked>Day</lr-radio-button>
         <lr-radio-button value="week">Week</lr-radio-button>
         <lr-radio-button value="month">Month</lr-radio-button>
       </lr-radio-group>
-      <lr-radio-group name="pill-on" label="Pill">
+      <lr-radio-group name="pill-on" label="Pill" orientation="horizontal">
         <lr-radio-button value="day" pill checked>Day</lr-radio-button>
         <lr-radio-button value="week" pill>Week</lr-radio-button>
         <lr-radio-button value="month" pill>Month</lr-radio-button>

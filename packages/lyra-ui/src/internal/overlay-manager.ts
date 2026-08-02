@@ -31,6 +31,8 @@ export interface OverlayActivationOptions {
   onBackdrop?: () => void;
   /** Optional component-specific initial target, such as an intentionally safe default action. */
   preferredInitialFocus?: () => HTMLElement | null;
+  /** One-shot veto immediately before the manager's first automatic focus movement. */
+  beforeInitialFocus?: () => boolean;
   /** Override the focus-return target captured when the overlay activates. */
   restoreFocusTo?: HTMLElement | null;
   /** Defaults to true. Nonmodal popups share ordering without inerting the page. */
@@ -80,6 +82,7 @@ interface OverlayEntry {
   registered: boolean;
   manuallySuspended: boolean;
   rendered: boolean;
+  initialFocusDecision?: boolean;
   wasTopmostOnSuspend: boolean;
   suspendGeneration: number;
   stackOrder: number;
@@ -281,6 +284,11 @@ function focusEntry(entry: OverlayEntry, preserveCurrent = true): void {
   if (!panel) return;
   const active = deepActiveElement(entry.state.document);
   if (preserveCurrent && composedContains(panel, active)) return;
+
+  if (entry.initialFocusDecision === undefined) {
+    entry.initialFocusDecision = entry.options.beforeInitialFocus?.() !== false;
+  }
+  if (!entry.initialFocusDecision) return;
 
   if (focusAutofocusTarget(panel)) return;
   const preferred = entry.options.preferredInitialFocus?.() ?? null;
@@ -669,6 +677,7 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
   entry.registered = false;
   entry.manuallySuspended = false;
   entry.rendered = true;
+  entry.initialFocusDecision = undefined;
   entry.wasTopmostOnSuspend = false;
   entry.suspendGeneration = 0;
   entry.state = stateFor(doc);

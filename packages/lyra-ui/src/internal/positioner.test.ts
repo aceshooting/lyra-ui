@@ -233,3 +233,73 @@ describe('virtualAnchorFromRect', () => {
     expect(anchor.contextElement).to.equal(undefined);
   });
 });
+
+describe('shared overflow boundary', () => {
+  async function boundaryFixture(): Promise<{
+    box: HTMLElement;
+    anchor: HTMLElement;
+    popup: HTMLElement;
+  }> {
+    const box = await fixture<HTMLElement>(html`
+      <div
+        style="position: fixed; inset-block-start: 100px; inset-inline-start: 100px;
+          inline-size: 240px; block-size: 140px; overflow: hidden;"
+      >
+        <button
+          id="boundary-anchor"
+          style="position: absolute; inset-block-end: 8px; inset-inline-start: 60px;
+            inline-size: 80px; block-size: 24px;"
+        >
+          Anchor
+        </button>
+        <div id="boundary-popup" style="inline-size: 100px; block-size: 70px;">Popup</div>
+      </div>
+    `);
+    return {
+      box,
+      anchor: box.querySelector('#boundary-anchor') as HTMLElement,
+      popup: box.querySelector('#boundary-popup') as HTMLElement,
+    };
+  }
+
+  it('uses an empty shared boundary as viewport-only clipping', async () => {
+    const { anchor, popup } = await boundaryFixture();
+    const stop = place(anchor, popup, { placement: 'bottom', boundary: [] });
+    await waitFor(
+      () => popup.style.top,
+      (top) => top !== '',
+    );
+    expect(popup.getBoundingClientRect().top).to.be.at.least(anchor.getBoundingClientRect().bottom);
+    stop();
+  });
+
+  it('uses an element shared boundary for flip, shift, and available-size measurement', async () => {
+    const { box, anchor, popup } = await boundaryFixture();
+    const stop = place(anchor, popup, { placement: 'bottom', boundary: box });
+    await waitFor(
+      () => popup.style.top,
+      (top) => top !== '',
+    );
+    expect(popup.getBoundingClientRect().bottom).to.be.at.most(anchor.getBoundingClientRect().top + 1);
+    expect(parseFloat(popup.style.getPropertyValue('--lr-positioner-available-inline-size'))).to.be.at.most(
+      box.getBoundingClientRect().width,
+    );
+    stop();
+  });
+
+  it('lets a per-middleware boundary override the shared boundary', async () => {
+    const { box, anchor, popup } = await boundaryFixture();
+    const stop = place(anchor, popup, {
+      placement: 'bottom',
+      boundary: box,
+      flipBoundary: [],
+      shift: false,
+    });
+    await waitFor(
+      () => popup.style.top,
+      (top) => top !== '',
+    );
+    expect(popup.getBoundingClientRect().top).to.be.at.least(anchor.getBoundingClientRect().bottom);
+    stop();
+  });
+});

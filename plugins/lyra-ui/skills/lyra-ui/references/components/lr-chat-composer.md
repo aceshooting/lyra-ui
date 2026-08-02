@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/conversation/chat-composer/chat-composer.js';` (registers the tag; side-effect import)
 - **Class** `LyraChatComposer`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/chat-composer/chat-composer.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -19,8 +21,11 @@ control, not a labeled form field; wrap it in your own layout for that context. 
 via the shared `FormAssociated` mixin (same shape as
 `<lr-date-input>`) — `name: string = ''`, `value: string = ''`, `disabled: boolean = false`
 (reflected), `required: boolean = false` (reflected) are all inherited, along with
-`checkValidity()`/`reportValidity()`, so it participates in native `<form>` submission/validation/
-reset like any other text control.
+`defaultValue: string = ''`, `customError: string | null = null` (`custom-error`), readonly
+`effectiveDisabled: boolean`, `form: HTMLFormElement | null = null`, readonly `labels: NodeList`,
+`validity: ValidityState`, `validationMessage: string`, and `willValidate: boolean`, plus
+`getForm()`, `checkValidity()`/`reportValidity()`, and `setCustomValidity()`, so it participates in
+native `<form>` submission/validation/reset like any other text control.
 
 The inner textarea mirrors `required` through native `required`/`aria-required`. Its
 `aria-invalid` remains false until the textarea has been blurred, then follows the host's
@@ -58,11 +63,15 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
 - `wrap: 'hard' | 'soft' | 'off' = 'soft'`, `autocomplete: string = ''`, `inputMode: string = ''`
   (attribute `inputmode`), and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to
   the native textarea
-- `selectionStart`, `selectionEnd`, and `selectionDirection` — native selection getters/setters
+- `input: HTMLTextAreaElement | null` — readonly reference to the rendered native textarea
+- `selectionStart: number | null`, `selectionEnd: number | null`, and `selectionDirection:
+  'forward' | 'backward' | 'none' | null` — native selection getters/setters
 
 **Methods (own):** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and
-`setRangeText()` forward to the textarea; `setRangeText()` synchronizes reactive/form value and
-auto-sizing. `checkValidity()`/`reportValidity()` remain inherited.
+`setRangeText()` forward to the textarea; `click()` focuses it when the composer is not effectively
+disabled. `setRangeText()` synchronizes reactive/form value and auto-sizing.
+`checkValidity()`/`reportValidity()` remain inherited; `resetValidity()` clears consumer custom
+validity and recomputes the current intrinsic constraints.
 
 **Events:**
 - `lr-input` (`detail: { value }`) — fired on every user-driven edit of the textarea, not a
@@ -76,6 +85,7 @@ auto-sizing. `checkValidity()`/`reportValidity()` remain inherited.
   composed unlike the native event
 - `focus` (no detail) — re-dispatched from the internal `<textarea>`'s own `focus`, for the same
   reason as `blur`
+- `lr-invalid` (no detail) — one bubbling/composed alias when native validity fails
 
 **Slots:** `leading` (content before the textarea, e.g. an attach-file trigger button), `chips` (an
 attachment tray rendered above the input row), `trailing` (overrides the built-in send/stop button

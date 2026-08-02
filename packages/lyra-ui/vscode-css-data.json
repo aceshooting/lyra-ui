@@ -2,17 +2,759 @@
   "version": 1.1,
   "properties": [
     {
+      "name": "--accent-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-color-brand)`) — Accent used by focus and active states."
+      }
+    },
+    {
+      "name": "--accent-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast-item>`** — Mapped alias for `--lr-toast-accent-width`."
+      }
+    },
+    {
+      "name": "--animation-delay",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0s`) — Delay before an icon animation starts."
+      }
+    },
+    {
+      "name": "--animation-direction",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `normal`) — Playback direction for icon animations."
+      }
+    },
+    {
+      "name": "--animation-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `var(--lr-duration-icon)`) — Duration of one animation cycle.\n\n**`<lr-random-content>`** (default: `300ms`) — Web Awesome duration alias."
+      }
+    },
+    {
+      "name": "--animation-easing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-random-content>`** (default: `ease`) — Web Awesome easing alias."
+      }
+    },
+    {
+      "name": "--animation-iteration-count",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `infinite`) — Number of animation cycles."
+      }
+    },
+    {
+      "name": "--animation-timing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `var(--lr-easing-emphasized)`) — Animation timing function."
+      }
+    },
+    {
+      "name": "--animation-translate",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-random-content>`** (default: `var(--lr-size-0-5em)`) — Web Awesome travel-distance alias."
+      }
+    },
+    {
+      "name": "--arrow-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-popup>`** (default: `var(--lr-color-surface-raised)`) — Arrow fill."
+      }
+    },
+    {
+      "name": "--arrow-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dropdown>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Arrow half-width inherited from the popover surface.\n\n**`<lr-popover>`, `<lr-tooltip>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square.\n\n**`<lr-popup>`** (default: `var(--lr-popup-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square. `--lr-popup-arrow-size` remains a compatibility alias."
+      }
+    },
+    {
+      "name": "--aside-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** — Web Awesome alias for `--lr-page-aside-width`."
+      }
+    },
+    {
+      "name": "--aspect-ratio",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `16/9`) — Aspect ratio inherited by each slide.\n\n**`<lr-carousel-item>`** — The slide aspect ratio, inherited from an owning carousel by default."
+      }
+    },
+    {
+      "name": "--auto-size-available-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-popup>`** — Read-only available block size."
+      }
+    },
+    {
+      "name": "--auto-size-available-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-popup>`** — Read-only available inline size."
+      }
+    },
+    {
+      "name": "--backdrop-filter",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-dialog-backdrop-filter,none)`) — Mapped backdrop-filter alias."
+      }
+    },
+    {
+      "name": "--background-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-color-surface)`) — Grid background."
+      }
+    },
+    {
+      "name": "--banner-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** — Web Awesome alias for `--lr-page-banner-height`."
+      }
+    },
+    {
+      "name": "--beat-fade-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0.4`) — Lowest opacity during `beat-fade`."
+      }
+    },
+    {
+      "name": "--beat-fade-scale",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1.25`) — Peak scale during `beat-fade`."
+      }
+    },
+    {
+      "name": "--beat-scale",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1.25`) — Scale multiplier for `beat` and `spin-pulse`."
+      }
+    },
+    {
+      "name": "--body-spacing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`** — Shoelace body padding override.\n\n**`<lr-drawer>`** — Shoelace body padding."
+      }
+    },
+    {
+      "name": "--border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-card>`** (default: `var(--lr-color-border)`) — Shoelace-compatible border color.\n\n**`<lr-data-grid>`** (default: `var(--lr-color-border)`) — Grid and cell border color."
+      }
+    },
+    {
+      "name": "--border-color-1",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-1)`) — First dataset border color."
+      }
+    },
+    {
+      "name": "--border-color-2",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-2)`) — Second dataset border color."
+      }
+    },
+    {
+      "name": "--border-color-3",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-3)`) — Third dataset border color."
+      }
+    },
+    {
+      "name": "--border-color-4",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-4)`) — Fourth dataset border color."
+      }
+    },
+    {
+      "name": "--border-color-5",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-5)`) — Fifth dataset border color."
+      }
+    },
+    {
+      "name": "--border-color-6",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-6)`) — Sixth dataset border color."
+      }
+    },
+    {
+      "name": "--border-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-radius)`) — Dataset element corner radius.\n\n**`<lr-card>`, `<lr-skeleton>`** (default: `var(--lr-radius)`) — Shoelace-compatible corner radius.\n\n**`<lr-data-grid>`** (default: `var(--lr-radius)`) — Outer and control corner radius."
+      }
+    },
+    {
+      "name": "--border-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-border-width-thin)`) — Dataset element border width.\n\n**`<lr-card>`** (default: `var(--lr-border-width-thin)`) — Shoelace-compatible border width.\n\n**`<lr-data-grid>`** (default: `var(--lr-border-width-thin)`) — Grid and cell border width."
+      }
+    },
+    {
+      "name": "--bounce-anticipation",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0`) — Downward offset before a bounce."
+      }
+    },
+    {
+      "name": "--bounce-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `calc(var(--lr-size-0-5em)*-1)`) — Peak bounce height."
+      }
+    },
+    {
+      "name": "--bounce-jump-scale-x",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0.95`) — Horizontal scale at the top of a bounce."
+      }
+    },
+    {
+      "name": "--bounce-jump-scale-y",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1.05`) — Vertical scale at the top of a bounce."
+      }
+    },
+    {
+      "name": "--bounce-land-scale-x",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1.08`) — Horizontal scale while landing."
+      }
+    },
+    {
+      "name": "--bounce-land-scale-y",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0.92`) — Vertical scale while landing."
+      }
+    },
+    {
+      "name": "--bounce-rebound",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `calc(var(--lr-size-1em)*-0.1)`) — Landing rebound distance."
+      }
+    },
+    {
+      "name": "--bounce-start-scale-x",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1`) — Initial horizontal bounce scale."
+      }
+    },
+    {
+      "name": "--bounce-start-scale-y",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1`) — Initial vertical bounce scale."
+      }
+    },
+    {
+      "name": "--buzz-distance",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `calc(var(--lr-size-1em)*0.12)`) — Horizontal buzz travel."
+      }
+    },
+    {
+      "name": "--cell-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-space-m)`) — Header, cell, and footer padding."
+      }
+    },
+    {
+      "name": "--checked-icon-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox>`** (default: `currentColor`) — WA-compatible color of the checked or indeterminate glyph.\n\n**`<lr-radio>`, `<lr-radio-button>`** (default: `var(--lr-radio-checked-dot-color)`) — WA-compatible selected-glyph color alias."
+      }
+    },
+    {
+      "name": "--checked-icon-scale",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox>`** (default: `1`) — WA-compatible scale of the checked or indeterminate glyph.\n\n**`<lr-radio>`, `<lr-radio-button>`** (default: `1`) — WA-compatible selected-glyph scale alias."
+      }
+    },
+    {
+      "name": "--color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-divider>`** (default: `var(--lr-color-border)`) — Separator color.\n\n**`<lr-skeleton>`** (default: `var(--lr-skeleton-color)`) — Upstream-compatible placeholder color."
+      }
+    },
+    {
+      "name": "--column-item-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `2.25em`) — Picker row height."
+      }
+    },
+    {
+      "name": "--column-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `3em`) — Picker column width."
+      }
+    },
+    {
+      "name": "--control-box-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-animated-image>`** — Upstream-compatible alias for `--lr-animated-image-control-box-size`."
+      }
+    },
+    {
+      "name": "--controls-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-video>`** (default: `var(--lr-color-overlay-strong)`) — Controls, captions, and title overlay background."
+      }
+    },
+    {
+      "name": "--controls-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-video>`** (default: `var(--lr-color-text)`) — Custom-control foreground color."
+      }
+    },
+    {
+      "name": "--current-text-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-option>`** (default: `var(--lr-color-text)`) — Text color while the option is `current`."
+      }
+    },
+    {
+      "name": "--divider-hit-area",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split-panel>`** (default: `12px`) — Requested divider hit area; Lyra's minimum hit-area token remains the floor."
+      }
+    },
+    {
+      "name": "--divider-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-comparer>`** (default: `var(--lr-size-1px)`) — Width of the dividing line.\n\n**`<lr-split-panel>`** (default: `4px`) — Visible divider thickness."
+      }
+    },
+    {
       "name": "--easing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** — Upstream alias for `--lr-accordion-item-easing`."
+        "value": "**`<lr-accordion-item>`** — Compatibility alias for `--lr-accordion-item-easing`."
+      }
+    },
+    {
+      "name": "--error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-copy-button>`** (default: `var(--lr-color-danger)`) — Error-state icon color."
+      }
+    },
+    {
+      "name": "--fade-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0.4`) — Lowest opacity during `fade` and `spin-pulse`."
+      }
+    },
+    {
+      "name": "--fill-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-sparkline>`** (default: `var(--lr-color-brand-quiet)`) — Area fill color. A `trend` supplies a semantic token default, while an authored value always wins."
+      }
+    },
+    {
+      "name": "--fill-color-1",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-1)`) — First dataset fill color."
+      }
+    },
+    {
+      "name": "--fill-color-2",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-2)`) — Second dataset fill color."
+      }
+    },
+    {
+      "name": "--fill-color-3",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-3)`) — Third dataset fill color."
+      }
+    },
+    {
+      "name": "--fill-color-4",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-4)`) — Fourth dataset fill color."
+      }
+    },
+    {
+      "name": "--fill-color-5",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-5)`) — Fifth dataset fill color."
+      }
+    },
+    {
+      "name": "--fill-color-6",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-chart-6)`) — Sixth dataset fill color."
+      }
+    },
+    {
+      "name": "--flip-angle",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `180deg`) — Rotation angle for flip treatments."
+      }
+    },
+    {
+      "name": "--flip-anticipation-scale",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0.9`) — Wind-up scale before a flip."
+      }
+    },
+    {
+      "name": "--flip-overshoot",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0deg`) — Extra angle before a flip settles."
+      }
+    },
+    {
+      "name": "--flip-x",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0`) — X coordinate of the flip rotation axis."
+      }
+    },
+    {
+      "name": "--flip-y",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1`) — Y coordinate of the flip rotation axis."
+      }
+    },
+    {
+      "name": "--flip-z",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0`) — Z coordinate of the flip rotation axis."
+      }
+    },
+    {
+      "name": "--float-drift",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0`) — Horizontal float drift."
+      }
+    },
+    {
+      "name": "--float-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `calc(var(--lr-size-0-5em)*-1)`) — Float rise height."
+      }
+    },
+    {
+      "name": "--float-squash-x",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1.04`) — Resting horizontal float scale."
+      }
+    },
+    {
+      "name": "--float-squash-y",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0.96`) — Resting vertical float scale."
+      }
+    },
+    {
+      "name": "--float-stretch-x",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0.96`) — Peak horizontal float scale."
+      }
+    },
+    {
+      "name": "--float-stretch-y",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1.04`) — Peak vertical float scale."
+      }
+    },
+    {
+      "name": "--float-tilt",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `4deg`) — Rotation at the float peak."
+      }
+    },
+    {
+      "name": "--focus-ring",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)`) — Focus ring."
+      }
+    },
+    {
+      "name": "--footer-spacing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`** — Shoelace footer padding override.\n\n**`<lr-drawer>`** — Shoelace footer padding."
+      }
+    },
+    {
+      "name": "--gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox-group>`** (default: `var(--lr-checkbox-group-option-gap)`) — WA-compatible option gap.\n\n**`<lr-toast>`** — Mapped alias for `--lr-toast-gap`."
+      }
+    },
+    {
+      "name": "--grid-border-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-border-width-thin)`) — Axis and grid line width."
+      }
+    },
+    {
+      "name": "--grid-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-chart-grid-color)`) — Grid line color."
+      }
+    },
+    {
+      "name": "--grid-handle-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — Upstream alias for `--lr-color-picker-grid-handle-size`."
+      }
+    },
+    {
+      "name": "--grid-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — Upstream alias for `--lr-color-picker-grid-block-size`."
+      }
+    },
+    {
+      "name": "--grid-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — Upstream alias for `--lr-color-picker-grid-inline-size`."
+      }
+    },
+    {
+      "name": "--handle-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-comparer>`** (default: `var(--lr-icon-button-size)`) — Inline and block size of the visible compare handle."
+      }
+    },
+    {
+      "name": "--header-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-color-surface-raised)`) — Header background."
+      }
+    },
+    {
+      "name": "--header-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** — Web Awesome alias for `--lr-page-header-height`."
+      }
+    },
+    {
+      "name": "--header-row-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-size-3-5rem)`) — Header-row minimum height."
+      }
+    },
+    {
+      "name": "--header-spacing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`** — Mapped header padding override.\n\n**`<lr-drawer>`** — Shoelace header padding."
+      }
+    },
+    {
+      "name": "--header-text-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-color-text)`) — Header foreground."
+      }
+    },
+    {
+      "name": "--height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-progress-track-height)`) — Shoelace-compatible track height.\n\n**`<lr-switch>`** (default: `var(--lr-switch-track-block-size)`) — WA/Shoelace alias for the track's block size."
+      }
+    },
+    {
+      "name": "--hide-delay",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tooltip>`** (default: `0ms`) — Interaction hide delay when `hide-delay` is not explicit."
       }
     },
     {
       "name": "--hide-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** — Upstream alias for `--lr-accordion-item-hide-duration`."
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-hide-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup exit-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Collapse-icon transition duration.\n\n**`<lr-dialog>`** — Mapped closing animation duration.\n\n**`<lr-drawer>`** — Closing slide duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-transition-fast)`) — Closing transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Deactivation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker closing duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-hide-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Collapse motion duration."
+      }
+    },
+    {
+      "name": "--icon-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-animated-image>`** — Upstream-compatible alias for `--lr-animated-image-icon-size`."
+      }
+    },
+    {
+      "name": "--indent-guide-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree>`** (default: `var(--lr-color-border)`) — Indentation guide color."
+      }
+    },
+    {
+      "name": "--indent-guide-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree>`** (default: `0`) — Block-axis inset for indentation guides."
+      }
+    },
+    {
+      "name": "--indent-guide-style",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree>`** (default: `solid`) — Indentation guide border style."
+      }
+    },
+    {
+      "name": "--indent-guide-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree>`** (default: `0`) — Indentation guide width."
+      }
+    },
+    {
+      "name": "--indent-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-size-1-25rem)`) — Tree-level indentation.\n\n**`<lr-tree>`** (default: `var(--lr-space-l)`) — Indentation step for nested items."
+      }
+    },
+    {
+      "name": "--indicator-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`, `<lr-progress-ring>`, `<lr-spinner>`** (default: `var(--lr-progress-indicator-color)`) — Upstream-compatible indicator color.\n\n**`<lr-tab-group>`** — Upstream alias for the active indicator color."
+      }
+    },
+    {
+      "name": "--indicator-transition-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-progress-ring-indicator-transition-duration)`) — Upstream-compatible transition duration."
+      }
+    },
+    {
+      "name": "--indicator-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-progress-ring-indicator-width)`) — Upstream-compatible indicator width."
+      }
+    },
+    {
+      "name": "--jello-scale-x",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1.18`) — Horizontal jello stretch."
+      }
+    },
+    {
+      "name": "--jello-scale-y",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0.82`) — Vertical jello stretch."
+      }
+    },
+    {
+      "name": "--label-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-progress-label-color)`) — Shoelace-compatible label color."
+      }
+    },
+    {
+      "name": "--line-border-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-border-width-medium)`) — Line dataset stroke width."
+      }
+    },
+    {
+      "name": "--line-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-sparkline>`** (default: `var(--lr-color-brand)`) — Trend line color. A `trend` supplies a semantic token default, while an authored value always wins."
+      }
+    },
+    {
+      "name": "--line-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-sparkline>`** (default: `var(--lr-border-width-medium)`) — Trend line width."
       }
     },
     {
@@ -142,6 +884,20 @@
       }
     },
     {
+      "name": "--lr-animation-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-random-content>`** (default: `300ms`) — Mapped duration of the entrance animation."
+      }
+    },
+    {
+      "name": "--lr-animation-easing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-random-content>`** (default: `ease`) — Mapped easing function for the entrance animation."
+      }
+    },
+    {
       "name": "--lr-animation-shake-distance",
       "description": {
         "kind": "markdown",
@@ -153,6 +909,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-animation>`** (default: `100%`) — Travel distance for the slide-in/slide-out/slide-in-up/slide-in-down presets."
+      }
+    },
+    {
+      "name": "--lr-animation-translate",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-random-content>`** (default: `var(--lr-size-0-5em)`) — Mapped travel distance for directional animations."
       }
     },
     {
@@ -950,14 +1713,14 @@
       "name": "--lr-callout-background",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-callout>`** (default: `var(--lr-color-surface)`) — The callout surface's background. Each non-neutral `variant` sets it to that variant's quiet fill from the shared semantic grid."
+        "value": "**`<lr-callout>`** (default: `var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))`) — The host surface's background: an inherited semantic quiet fill, with brand as the standalone fallback."
       }
     },
     {
       "name": "--lr-callout-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-callout>`** (default: `var(--lr-color-border)`) — The callout surface's border color. Each non-neutral `variant` sets it to that variant's loud fill."
+        "value": "**`<lr-callout>`** (default: `var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))`) — The host surface's border color."
       }
     },
     {
@@ -971,14 +1734,14 @@
       "name": "--lr-callout-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-callout>`** (default: `var(--lr-color-text)`) — The callout's text color. Each non-neutral `variant` sets it to that variant's loud fill."
+        "value": "**`<lr-callout>`** (default: `var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))`) — The host surface's text color."
       }
     },
     {
       "name": "--lr-callout-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-callout>`** (default: `var(--lr-form-control-font-size)`) — The callout's text size. Each `size` tier sets it from the library's shared size ladder."
+        "value": "**`<lr-callout>`** (default: `var(--lr-form-control-font-size,var(--lr-font-size-m))`) — The callout's text size. Each `size` tier sets it from the library's shared size ladder."
       }
     },
     {
@@ -992,28 +1755,28 @@
       "name": "--lr-callout-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-callout>`** (default: `var(--lr-form-control-padding-inline)`) — Padding of the panel, on both axes. Each `size` tier sets it from the shared ladder's inline-padding knob: a panel's block rhythm is generous like a control's inline padding, not tight like its block padding (which exists to fit text inside a fixed control height). `inline` removes it entirely."
+        "value": "**`<lr-callout>`** (default: `var(--lr-form-control-padding-inline,var(--lr-space-m))`) — Padding of the panel, on both axes. Each `size` tier sets it from the shared ladder's inline-padding knob: a panel's block rhythm is generous like a control's inline padding, not tight like its block padding (which exists to fit text inside a fixed control height). `inline` removes it entirely."
       }
     },
     {
       "name": "--lr-carousel-indicator-current-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand-quiet)`) — Background of the current slide's indicator dot (`[aria-current=\"true\"]`). Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the current indicator without hijacking the library-wide `--lr-color-brand-quiet` token."
+        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand-quiet)`) — Active dot fill."
       }
     },
     {
       "name": "--lr-carousel-indicator-current-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand)`) — Border color of the current slide's indicator dot."
+        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand)`) — Active dot border."
       }
     },
     {
       "name": "--lr-carousel-slide-basis",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-carousel>`** (default: `100%`) — Flex basis of every slide in the snap track. The default gives one slide per view; a smaller value (e.g. `50%`) shows several at once while the snap positions still land on each slide's inline start."
+        "value": "**`<lr-carousel>`** — Compatibility override for the computed per-page basis."
       }
     },
     {
@@ -1538,7 +2301,7 @@
       "name": "--lr-color-picker-swatch-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-color-picker>`** (default: `var(--lr-form-control-height,var(--lr-size-2-5rem))`) — The trigger's inline and block size. Reads the shared form-control height ladder, so retuning `--lr-theme-form-control-height-*` keeps the trigger square with the fields beside it."
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-form-control-height,var(--lr-size-2-5rem))`) — The centered visible swatch's inline and block size. The interactive trigger stays at least `--lr-icon-button-size`; larger swatch tiers expand it. The value reads the shared form-control height ladder, so the visible swatch follows neighbouring field density."
       }
     },
     {
@@ -2014,14 +2777,14 @@
       "name": "--lr-details-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder."
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-font-size)`) — Details compatibility alias for the item's text size.\n\n**`<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder."
       }
     },
     {
       "name": "--lr-details-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row."
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-padding-inline)`) — Details compatibility alias for the item's spacing.\n\n**`<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row."
       }
     },
     {
@@ -2526,6 +3289,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-file-input>`** (default: `var(--lr-space-s)`) — `[part=\"base\"]` padding while `compact`."
+      }
+    },
+    {
+      "name": "--lr-file-input-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-form-control-font-size)`) — Dropzone text size."
       }
     },
     {
@@ -3106,7 +3876,7 @@
       "name": "--lr-icon-fixed-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-icon>`** (default: `var(--lr-size-1-5rem)`) — Inline size of the box while `fixed-width` is set; the glyph keeps `--lr-icon-size` and centers inside it."
+        "value": "**`<lr-icon>`** (default: `var(--lr-size-1-5em)`) — Inline size of the box while `fixed-width` is set; the glyph keeps `--lr-icon-size` and centers inside it."
       }
     },
     {
@@ -3134,7 +3904,7 @@
       "name": "--lr-icon-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-icon>`** (default: `var(--lr-size-1-25rem)`) — Inline and block size of the icon box."
+        "value": "**`<lr-icon>`** — Optional inline and block size override for every canvas."
       }
     },
     {
@@ -3246,63 +4016,63 @@
       "name": "--lr-input-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-color-border)`) — Border color of the control row, swapped per `appearance` in the same way as `--lr-input-fill`."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-color-border)`) — Border color of the control row, swapped per `appearance` in the same way as `--lr-input-fill`."
       }
     },
     {
       "name": "--lr-input-control-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Exact outer control height. Unset by default, which leaves `--lr-input-control-min-height` as a floor only; set it to a length to both floor and cap the control row (e.g. to pixel-match `<lr-select>`/`<lr-combobox>` in the same toolbar). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** — Exact outer control height. Unset by default, which leaves `--lr-input-control-min-height` as a floor only; set it to a length to both floor and cap the control row (e.g. to pixel-match `<lr-select>`/`<lr-combobox>` in the same toolbar). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element."
       }
     },
     {
       "name": "--lr-input-control-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-form-control-height)`) — Outer control height floor, taken from the active `size` tier of the shared form-control ladder (`internal/sizes.styles.ts`), so an input is exactly as tall as an `<lr-button>`/`<lr-select>` of the same tier."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-form-control-height)`) — Outer control height floor, taken from the active `size` tier of the shared form-control ladder (`internal/sizes.styles.ts`), so an input is exactly as tall as an `<lr-button>`/`<lr-select>` of the same tier."
       }
     },
     {
       "name": "--lr-input-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-color-surface)`) — Background of the control row. Swapped per `appearance`; the documented default is `appearance=\"filled-outlined\"`'s value."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `transparent`) — Background of the control row. Swapped per `appearance`; the documented default is `appearance=\"outlined\"`'s value."
       }
     },
     {
       "name": "--lr-input-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-form-control-font-size)`) — Font size of the native input, from the active `size` tier."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-form-control-font-size)`) — Font size of the native input, from the active `size` tier."
       }
     },
     {
       "name": "--lr-input-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-space-xs)`) — Gap between the start/end adornments and the native input in the control row. Unlike the size knobs above it does not vary by `size` tier. Override it to retune without a `::part(input-wrapper)` rule."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-space-xs)`) — Gap between the start/end adornments and the native input in the control row. Unlike the size knobs above it does not vary by `size` tier. Override it to retune without a `::part(input-wrapper)` rule."
       }
     },
     {
       "name": "--lr-input-padding-block",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-form-control-padding-block)`) — Block padding of the native input, from the active `size` tier of the shared ladder."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-form-control-padding-block)`) — Block padding of the native input, from the active `size` tier of the shared ladder."
       }
     },
     {
       "name": "--lr-input-padding-inline",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-form-control-padding-inline)`) — Inline padding of the control row, from the active `size` tier."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-form-control-padding-inline)`) — Inline padding of the control row, from the active `size` tier."
       }
     },
     {
       "name": "--lr-input-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the control row, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius). `pill` swaps it to `--lr-radius-pill`."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the control row, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius). `pill` swaps it to `--lr-radius-pill`."
       }
     },
     {
@@ -3810,17 +4580,80 @@
       }
     },
     {
+      "name": "--lr-otp-input-segment-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `var(--lr-color-border)`) — Border color of each segment."
+      }
+    },
+    {
+      "name": "--lr-otp-input-segment-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `transparent`) — Background fill of each segment."
+      }
+    },
+    {
+      "name": "--lr-otp-input-segment-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `var(--lr-form-control-radius,var(--lr-radius))`) — Corner radius of each segment."
+      }
+    },
+    {
+      "name": "--lr-otp-input-segment-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `var(--lr-theme-otp-input-segment-size,2.5em)`) — Internal role token supplying the standalone segment size when `--segment-size` is unset."
+      }
+    },
+    {
       "name": "--lr-overlay-arrow-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-size-0-375rem)`) — Half-width of the arrow square."
+        "value": "**`<lr-dropdown>`** — Retained Lyra arrow-size fallback.\n\n**`<lr-popover>`** — Retained Lyra fallback for `--arrow-size`."
       }
     },
     {
       "name": "--lr-overlay-max-inline-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`, `<lr-popover>`** — Maximum inline size of the popup (default `--lr-size-20rem`)."
+        "value": "**`<lr-dropdown>`** — Maximum inline size of the popup.\n\n**`<lr-popover>`** — Retained Lyra fallback for `--max-width`."
+      }
+    },
+    {
+      "name": "--lr-page-aside-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `auto`) — Desktop aside column width."
+      }
+    },
+    {
+      "name": "--lr-page-banner-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `0px`) — Minimum banner height and sticky offset."
+      }
+    },
+    {
+      "name": "--lr-page-header-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `0px`) — Minimum header height and sticky offset."
+      }
+    },
+    {
+      "name": "--lr-page-main-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `1fr`) — Desktop main column width."
+      }
+    },
+    {
+      "name": "--lr-page-menu-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `auto`) — Desktop menu column width."
       }
     },
     {
@@ -3835,6 +4668,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-page-rail>`** (default: `var(--lr-size-24rem)`) — Block size of the virtualized rail."
+      }
+    },
+    {
+      "name": "--lr-page-subheader-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `0px`) — Minimum subheader height and sticky offset."
       }
     },
     {
@@ -3884,6 +4724,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-pagination>`** (default: `var(--lr-color-danger)`) — Border color of `[part=\"page-input\"]` while the typed page is out of range (`aria-invalid=\"true\"`)."
+      }
+    },
+    {
+      "name": "--lr-pan-zoom-min-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pan-zoom>`** — Minimum viewport block size. The former `--lr-zoomable-frame-min-block-size` name remains a temporary fallback for migrated consumers."
+      }
+    },
+    {
+      "name": "--lr-pan-zoom-zoom",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pan-zoom>`** (default: `1`) — Read-only scale written from `zoom`; set the property instead."
       }
     },
     {
@@ -4016,7 +4870,7 @@
       "name": "--lr-popup-arrow-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-popup>`** (default: `var(--lr-size-0-375rem)`) — Half-width of the arrow square."
+        "value": "**`<lr-popup>`** — Retained Lyra fallback for `--arrow-size`."
       }
     },
     {
@@ -4027,10 +4881,38 @@
       }
     },
     {
-      "name": "--lr-progress-height",
+      "name": "--lr-progress-indicator-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-progress-bar>`** (default: `var(--lr-size-0-5rem)`) — Block size of the progress track."
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-color-brand)`) — Indicator color."
+      }
+    },
+    {
+      "name": "--lr-progress-label-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-color-text)`) — Label color."
+      }
+    },
+    {
+      "name": "--lr-progress-ring-indicator-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-color-brand)`) — Indicator stroke color."
+      }
+    },
+    {
+      "name": "--lr-progress-ring-indicator-transition-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-transition-base)`) — Determinate indicator transition."
+      }
+    },
+    {
+      "name": "--lr-progress-ring-indicator-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-progress-ring-track-width)`) — Indicator stroke width."
       }
     },
     {
@@ -4038,6 +4920,34 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-progress-ring>`** (default: `var(--lr-size-2-5rem)`) — Outer diameter of the ring."
+      }
+    },
+    {
+      "name": "--lr-progress-ring-track-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-color-brand-quiet)`) — Track stroke color."
+      }
+    },
+    {
+      "name": "--lr-progress-ring-track-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-size-4px)`) — Track stroke width."
+      }
+    },
+    {
+      "name": "--lr-progress-track-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-color-brand-quiet)`) — Track color."
+      }
+    },
+    {
+      "name": "--lr-progress-track-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-progress-height,var(--lr-size-1rem))`) — Block size of the progress track."
       }
     },
     {
@@ -4573,10 +5483,31 @@
       }
     },
     {
+      "name": "--lr-skeleton-border-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-skeleton>`** (default: `var(--lr-radius)`) — Text/rectangle corner radius."
+      }
+    },
+    {
+      "name": "--lr-skeleton-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-skeleton>`** (default: `var(--lr-color-border)`) — Placeholder color."
+      }
+    },
+    {
       "name": "--lr-skeleton-h",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-skeleton>`** (default: `var(--lr-size-1em)`) — Block size of the placeholder."
+      }
+    },
+    {
+      "name": "--lr-skeleton-sheen-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-skeleton>`** (default: `var(--lr-color-surface)`) — Sheen highlight color."
       }
     },
     {
@@ -4598,6 +5529,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-slider>`** (default: `calc(var(--lr-form-control-height) * 0.4)`) — Diameter of each draggable handle, derived from the `size` tier's shared control height. The transparent drag area around it never drops below 1.75rem/28px, whatever this is set to."
+      }
+    },
+    {
+      "name": "--lr-slider-tooltip-distance",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `8`) — Numeric CSS-pixel distance written by the `tooltipDistance` property for the internal tooltip-placement calculation."
       }
     },
     {
@@ -4713,17 +5651,10 @@
       }
     },
     {
-      "name": "--lr-sparkline-area-opacity",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-sparkline>`** (default: `0.15`) — Fill opacity of the area under the line (type=\"area\")."
-      }
-    },
-    {
       "name": "--lr-sparkline-stroke-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-sparkline>`** (default: `1.5`) — Stroke width of the line/area path."
+        "value": "**`<lr-sparkline>`** (default: `var(--lr-border-width-medium)`) — Compatibility alias used as the fallback for `--line-width`."
       }
     },
     {
@@ -4759,6 +5690,34 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-split>`** (default: `var(--lr-color-overlay)`) — The `'floating'` drawer scrim's color, applied to `[part=\"backdrop\"]`."
+      }
+    },
+    {
+      "name": "--lr-split-panel-divider-hit-area",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split-panel>`** (default: `var(--divider-hit-area)`) — Lyra-prefixed hit-area alias."
+      }
+    },
+    {
+      "name": "--lr-split-panel-divider-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split-panel>`** (default: `var(--divider-width)`) — Lyra-prefixed divider-width alias."
+      }
+    },
+    {
+      "name": "--lr-split-panel-max",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split-panel>`** (default: `var(--max)`) — Lyra-prefixed maximum-size alias."
+      }
+    },
+    {
+      "name": "--lr-split-panel-min",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split-panel>`** (default: `var(--min)`) — Lyra-prefixed minimum-size alias."
       }
     },
     {
@@ -5374,7 +6333,7 @@
       "name": "--lr-textarea-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-textarea>`** (default: `var(--lr-color-surface)`) — Background of the field. Swapped per `appearance`; the documented default is `appearance=\"filled-outlined\"`'s value."
+        "value": "**`<lr-textarea>`** (default: `transparent`) — Background of the field. Swapped per `appearance`; the documented default is `appearance=\"outlined\"`'s value."
       }
     },
     {
@@ -5983,7 +6942,7 @@
       "name": "--lr-tooltip-arrow-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tooltip>`** (default: `var(--lr-size-0-375rem)`) — Half-width of the arrow square."
+        "value": "**`<lr-tooltip>`** — Retained Lyra fallback for `--arrow-size`."
       }
     },
     {
@@ -6004,7 +6963,7 @@
       "name": "--lr-tooltip-max-inline-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tooltip>`** — Maximum inline size of the tooltip (default `--lr-size-20rem`)."
+        "value": "**`<lr-tooltip>`** — Retained Lyra fallback for `--max-width`."
       }
     },
     {
@@ -6200,7 +7159,7 @@
       "name": "--lr-tree-depth",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-item>`** (default: `0`) — Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`."
+        "value": "**`<lr-tree-item>`** (default: `0`) — Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--indent-size` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`."
       }
     },
     {
@@ -6449,31 +7408,444 @@
       }
     },
     {
-      "name": "--lr-zoomable-frame-min-block-size",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-zoomable-frame>`** — Minimum viewport block size."
-      }
-    },
-    {
       "name": "--lr-zoomable-frame-zoom",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-zoomable-frame>`** (default: `1`) — The scale factor applied to `[part=\"content\"]`. Written by the component itself on every render from the current `zoom`, so it is a read-out rather than a consumer knob; set the `zoom` property instead."
+        "value": "**`<lr-zoomable-frame>`** (default: `1`) — Read-only resolved iframe scale written from `zoom`."
+      }
+    },
+    {
+      "name": "--main-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** — Web Awesome alias for `--lr-page-main-width`."
+      }
+    },
+    {
+      "name": "--marker-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** — Marker block size."
+      }
+    },
+    {
+      "name": "--marker-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** — Marker inline size."
+      }
+    },
+    {
+      "name": "--mask-char",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `'•'`) — Mapped alias for `--lr-otp-input-mask-char`."
+      }
+    },
+    {
+      "name": "--max",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split-panel>`** (default: `100%`) — Maximum size of the primary pane, or the start pane when `primary` is unset."
+      }
+    },
+    {
+      "name": "--max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-size-30rem)`) — Scroll viewport maximum height; `none` renders all."
+      }
+    },
+    {
+      "name": "--max-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dropdown>`** (default: `var(--lr-overlay-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size inherited from the popover surface.\n\n**`<lr-popover>`** (default: `var(--lr-overlay-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size of the popup.\n\n**`<lr-tooltip>`** (default: `var(--lr-tooltip-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size of the tooltip."
+      }
+    },
+    {
+      "name": "--menu-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** — Web Awesome alias for `--lr-page-menu-width`."
+      }
+    },
+    {
+      "name": "--min",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split-panel>`** (default: `0`) — Minimum size of the primary pane, or the start pane when `primary` is unset."
+      }
+    },
+    {
+      "name": "--padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-card>`** (default: `var(--spacing,var(--lr-space-m))`) — Shoelace-compatible section padding.\n\n**`<lr-tab-panel>`** (default: `0`) — Inner panel padding.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-padding`."
+      }
+    },
+    {
+      "name": "--point-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-space-2xs)`) — Line/scatter point radius."
+      }
+    },
+    {
+      "name": "--popup-border-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-popup>`** (default: `var(--lr-border-width-thin)`) — Popup/arrow border width."
+      }
+    },
+    {
+      "name": "--poster-play-button-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-video>`** (default: `var(--lr-color-surface-overlay)`) — Poster play-button background."
+      }
+    },
+    {
+      "name": "--primary-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `currentColor`) — Primary duotone layer color."
+      }
+    },
+    {
+      "name": "--primary-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `1`) — Primary duotone layer opacity."
+      }
+    },
+    {
+      "name": "--pulse-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-badge-pulse-color)`) — Upstream-compatible pulse-ring color."
+      }
+    },
+    {
+      "name": "--row-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-size-3-5rem)`) — Estimated and minimum row height."
+      }
+    },
+    {
+      "name": "--row-hover-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** — Hovered-row background."
+      }
+    },
+    {
+      "name": "--scroll-hint",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** — Logical padding that reveals the nearest adjacent slides."
+      }
+    },
+    {
+      "name": "--secondary-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `currentColor`) — Secondary duotone layer color."
+      }
+    },
+    {
+      "name": "--secondary-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `0.4`) — Secondary duotone layer opacity."
+      }
+    },
+    {
+      "name": "--segment-border-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `var(--lr-form-control-radius,var(--lr-radius))`) — Corner radius of a segment."
+      }
+    },
+    {
+      "name": "--segment-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `var(--lr-space-xs)`) — Gap between segments; ignored by `contained`."
+      }
+    },
+    {
+      "name": "--segment-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `2.5em`) — Exact inline and block size of each non-shrinking segment at the default size tier."
+      }
+    },
+    {
+      "name": "--selected-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-color-brand-quiet)`) — Selected-row background."
+      }
+    },
+    {
+      "name": "--shadow-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-scroller>`** (default: `var(--lr-color-surface)`) — Base color of each edge shadow."
+      }
+    },
+    {
+      "name": "--shadow-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-scroller>`** (default: `var(--lr-size-2rem)`) — Inline/block extent of each edge shadow."
+      }
+    },
+    {
+      "name": "--sheen-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-skeleton>`** (default: `var(--lr-skeleton-sheen-color)`) — Upstream-compatible sheen color."
+      }
+    },
+    {
+      "name": "--show-delay",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tooltip>`** (default: `150ms`) — Interaction show delay when `show-delay` is not explicit."
       }
     },
     {
       "name": "--show-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** — Upstream alias for `--lr-accordion-item-show-duration`."
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-show-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup enter-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Expand-icon transition duration.\n\n**`<lr-dialog>`** — Mapped opening animation duration.\n\n**`<lr-drawer>`** — Opening slide duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-transition-fast)`) — Opening transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Activation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker opening duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-show-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Expansion motion duration."
+      }
+    },
+    {
+      "name": "--size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-avatar>`** (default: `var(--lr-avatar-size)`) — Upstream-compatible avatar diameter.\n\n**`<lr-drawer>`** — Mapped drawer size for the active axis.\n\n**`<lr-progress-ring>`** (default: `var(--lr-progress-ring-size)`) — Upstream-compatible outer diameter."
+      }
+    },
+    {
+      "name": "--slide-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `var(--lr-space-m)`) — Gap between slides."
+      }
+    },
+    {
+      "name": "--slider-handle-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — Upstream alias for `--lr-color-picker-slider-handle-size`."
+      }
+    },
+    {
+      "name": "--slider-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — Upstream alias for `--lr-color-picker-slider-block-size`."
       }
     },
     {
       "name": "--spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** — Upstream (`wa-details`) alias for `--lr-accordion-item-spacing`; set on either name."
+        "value": "**`<lr-accordion-item>`** — Compatibility alias for `--lr-accordion-item-spacing`; set on either name.\n\n**`<lr-card>`** (default: `var(--lr-space-m)`) — Space around and between card sections.\n\n**`<lr-details>`** — Upstream-compatible spacing override for the summary and content.\n\n**`<lr-dialog>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Mapped shared region spacing.\n\n**`<lr-divider>`** (default: `0`) — Space on both block sides (inline sides when vertical).\n\n**`<lr-drawer>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Web Awesome shared region spacing."
+      }
+    },
+    {
+      "name": "--speed",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-spinner>`** (default: `var(--lr-spinner-duration)`) — Upstream-compatible rotation duration."
+      }
+    },
+    {
+      "name": "--stripe-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-color-surface-raised)`) — Alternating-row background."
+      }
+    },
+    {
+      "name": "--subheader-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** — Web Awesome alias for `--lr-page-subheader-height`."
+      }
+    },
+    {
+      "name": "--submenu-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `-2px`) — Final signed distance between a submenu and its parent row. Negative values overlap the parent menu; positive values add separation. Mirrors under RTL."
+      }
+    },
+    {
+      "name": "--success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-copy-button>`** (default: `var(--lr-color-success)`) — Success-state icon color."
+      }
+    },
+    {
+      "name": "--swatch-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — Shoelace alias for `--lr-color-picker-palette-swatch-size`."
+      }
+    },
+    {
+      "name": "--swing-angle",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `15deg`) — Peak swing angle."
+      }
+    },
+    {
+      "name": "--symbol-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rating>`** (default: `var(--lr-rating-empty-color,var(--lr-color-border))`) — Compatibility alias for the inactive symbol color. `--lr-rating-empty-color` wins when both are set."
+      }
+    },
+    {
+      "name": "--symbol-color-active",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rating>`** (default: `var(--lr-rating-fill,var(--lr-color-warning))`) — Compatibility alias for the active symbol color. `--lr-rating-fill` wins when both are set."
+      }
+    },
+    {
+      "name": "--symbol-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rating>`** — Shoelace-compatible symbol size. It feeds the current `size` step when `--lr-rating-size` is unset; the Lyra-prefixed property wins when both are set."
+      }
+    },
+    {
+      "name": "--symbol-spacing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rating>`** (default: `var(--lr-space-xs)`) — Compatibility spacing around symbols."
+      }
+    },
+    {
+      "name": "--tag-max-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-combobox>`** (default: `var(--lr-size-5rem)`) — Maximum inline size of a built-in selected tag.\n\n**`<lr-select>`** (default: `var(--lr-size-12rem)`) — Maximum inline size of one selected-value tag."
+      }
+    },
+    {
+      "name": "--text-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-color-text)`) — Grid foreground."
+      }
+    },
+    {
+      "name": "--thumb-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** — Upstream thumb block size."
+      }
+    },
+    {
+      "name": "--thumb-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** — Shoelace alias setting both thumb dimensions.\n\n**`<lr-switch>`** (default: `calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2))`) — WA/Shoelace thumb diameter alias."
+      }
+    },
+    {
+      "name": "--thumb-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** — Upstream thumb inline size."
+      }
+    },
+    {
+      "name": "--tooltip-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** — Shoelace tooltip distance alias."
+      }
+    },
+    {
+      "name": "--track-active-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** — Additional indicator offset."
+      }
+    },
+    {
+      "name": "--track-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`, `<lr-progress-ring>`, `<lr-spinner>`** (default: `var(--lr-progress-track-color)`) — Upstream-compatible track color.\n\n**`<lr-tab-group>`** — Upstream track color."
+      }
+    },
+    {
+      "name": "--track-color-active",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** — Filled indicator color."
+      }
+    },
+    {
+      "name": "--track-color-inactive",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** — Resting track color."
+      }
+    },
+    {
+      "name": "--track-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-progress-track-height)`) — Web Awesome-compatible track height.\n\n**`<lr-slider>`** — Shoelace alias for track thickness."
+      }
+    },
+    {
+      "name": "--track-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** — Web Awesome alias for track thickness."
+      }
+    },
+    {
+      "name": "--track-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-ring>`, `<lr-spinner>`** (default: `var(--lr-progress-ring-track-width)`) — Upstream-compatible track width.\n\n**`<lr-tab-group>`** — Upstream track width."
+      }
+    },
+    {
+      "name": "--transition-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-duration-fast)`) — Interaction transition duration."
+      }
+    },
+    {
+      "name": "--wag-angle",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `12deg`) — Peak wag angle."
+      }
+    },
+    {
+      "name": "--width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-dialog-width,auto)`) — Mapped panel width alias.\n\n**`<lr-divider>`** (default: `var(--lr-border-width-thin)`) — Separator thickness.\n\n**`<lr-switch>`** (default: `var(--lr-switch-track-inline-size)`) — WA/Shoelace alias for the track's inline size.\n\n**`<lr-toast>`** — Mapped alias for `--lr-toast-width`."
       }
     }
   ]

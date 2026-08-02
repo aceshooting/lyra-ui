@@ -90,6 +90,8 @@ export interface LyraPromptInputEventMap {
  * @csspart leading - The composer's leading attachment control.
  * @csspart chips - The attachment-chip tray.
  * @csspart footer - The footer slot.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   static override styles = [LyraElement.styles, styles];

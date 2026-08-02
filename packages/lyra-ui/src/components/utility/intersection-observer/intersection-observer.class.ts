@@ -6,6 +6,7 @@ import { disconnectObserver, slottedElementTargets } from '../../../internal/slo
 
 export interface LyraIntersectionObserverEventMap {
   'lr-intersection': CustomEvent<{ entries: IntersectionObserverEntry[] }>;
+  'lr-intersect': CustomEvent<{ entry: IntersectionObserverEntry }>;
 }
 
 /**
@@ -15,16 +16,23 @@ export interface LyraIntersectionObserverEventMap {
  *
  * @customElement lr-intersection-observer
  * @slot - Elements to observe.
- * @event lr-intersection - Intersection state changed.
+ * @event lr-intersect - Emitted once per native entry with `detail: { entry }`.
+ * @event lr-intersection - Compatibility batch event emitted once per callback with
+ * `detail: { entries }`.
  * @csspart base - The non-layout wrapper around the observed slot.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserverEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ attribute: 'root-margin' }) rootMargin = '0px';
-  @property({ attribute: false }) threshold: number | number[] = 0;
-  @property({ attribute: false }) root: Element | null = null;
+  @property() threshold: number | number[] | string = '0';
+  /** Element root or mapped element-ID string. */
+  @property() root: Element | string | null = null;
+  @property({ attribute: 'intersect-class' }) intersectClass = '';
+  @property({ type: Boolean, reflect: true }) once = false;
 
   private observer?: IntersectionObserver;
 
@@ -56,7 +64,14 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     // microtask fires, and a plain queueMicrotask has no way to notice that
     // and would still spin up a new, now-unreachable IntersectionObserver that
     // disconnectedCallback has already run and won't run again to clean up.
-    if (changed.has('disabled') || changed.has('rootMargin') || changed.has('threshold') || changed.has('root')) this.scheduleAfterUpdate(this.observeTargets);
+    if (
+      changed.has('disabled') ||
+      changed.has('rootMargin') ||
+      changed.has('threshold') ||
+      changed.has('root') ||
+      changed.has('intersectClass') ||
+      changed.has('once')
+    ) this.scheduleAfterUpdate(this.observeTargets);
   }
 
   private onSlotChange = (): void => this.observeTargets();
@@ -66,13 +81,36 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     if (this.disabled || typeof IntersectionObserver === 'undefined') return;
     const targets = slottedElementTargets(this.renderRoot);
     if (targets.length === 0) return;
-    const callback: IntersectionObserverCallback = (entries) =>
-      this.emit('lr-intersection', { entries: [...entries] });
-    const values = (Array.isArray(this.threshold) ? this.threshold : [this.threshold])
+    const callback: IntersectionObserverCallback = (entries) => {
+      const batch = [...entries];
+      for (const entry of batch) {
+        for (const token of this.intersectClass.trim().split(/\s+/).filter(Boolean)) {
+          entry.target.classList.toggle(token, entry.isIntersecting);
+        }
+        this.emit('lr-intersect', { entry });
+        if (this.once && entry.isIntersecting) this.observer?.unobserve(entry.target);
+      }
+      this.emit('lr-intersection', { entries: batch });
+    };
+    const thresholdSource = typeof this.threshold === 'string'
+      ? this.threshold.trim().split(/\s+/).filter(Boolean).map(Number)
+      : Array.isArray(this.threshold)
+        ? this.threshold
+        : [this.threshold];
+    const values = thresholdSource
       .filter((value) => Number.isFinite(value) && value >= 0 && value <= 1);
-    const threshold = values.length > 0 ? (Array.isArray(this.threshold) ? values : values[0]!) : 0;
+    const threshold = values.length > 0
+      ? typeof this.threshold === 'number'
+        ? values[0]!
+        : values
+      : 0;
+    const root = typeof this.root === 'string'
+      ? this.ownerDocument.getElementById(this.root.trim().replace(/^#/, ''))
+      : this.root instanceof Element
+        ? this.root
+        : null;
     const options: IntersectionObserverInit = {
-      root: this.root instanceof Element ? this.root : null,
+      root,
       rootMargin: this.rootMargin,
       threshold,
     };

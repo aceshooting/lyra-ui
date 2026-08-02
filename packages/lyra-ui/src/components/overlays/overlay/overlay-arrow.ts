@@ -39,6 +39,8 @@ export interface OverlayArrowOptions {
   rtl: boolean;
   /** The component-scoped custom property holding half the arrow's width. */
   sizeProperty: string;
+  /** Optional legacy component-scoped property retained behind the mapped public property. */
+  fallbackSizeProperty?: string;
 }
 
 /**
@@ -61,7 +63,9 @@ export function applyOverlayArrow(
   style.right = '';
   style.bottom = '';
 
-  const half = `var(${options.sizeProperty}, var(--lr-size-0-375rem))`;
+  const half = options.fallbackSizeProperty
+    ? `var(${options.sizeProperty}, var(${options.fallbackSizeProperty}, var(--lr-size-0-375rem)))`
+    : `var(${options.sizeProperty}, var(--lr-size-0-375rem))`;
   const padding = `${options.arrowPadding}px`;
   const onInlineEdge = side === 'top' || side === 'bottom';
 

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import './skeleton.js';
 
 const meta: Meta = {
   title: 'Skeleton',
@@ -42,6 +43,17 @@ export const RetimedMotion: Story = {
       width="12rem"
       height="2rem"
       style="--lr-transition-ambient: 3s linear"
+    ></lr-skeleton>
+  `,
+};
+
+export const UpstreamThemeHooks: Story = {
+  render: () => html`
+    <lr-skeleton
+      effect="sheen"
+      width="12rem"
+      height="2rem"
+      style="--color:var(--lr-color-brand-quiet);--sheen-color:var(--lr-color-surface);--border-radius:var(--lr-radius-pill)"
     ></lr-skeleton>
   `,
 };

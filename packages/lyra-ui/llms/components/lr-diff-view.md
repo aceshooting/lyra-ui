@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/diff-view/diff-view.js';` (registers the tag; side-effect import)
 - **Class** `LyraDiffView`, also available unregistered from `@aceshooting/lyra-ui/components/utility/diff-view/diff-view.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
 - **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -20,6 +22,7 @@ string the consumer already unified-diffed; it has no two-string-compare entry p
 First-party invention (no Web Awesome equivalent).
 
 **Properties:**
+
 - `oldText: string = ''` (attribute: false) — the "before" text. Default `''` renders an
   all-additions diff of `newText`.
 - `newText: string = ''` (attribute: false) — the "after" text. Default `''` renders an
@@ -80,6 +83,7 @@ same line-diff function this component's own `render()`/copy handler call, expos
 consumer can compute or unit-test the same alignment without instantiating the element at all.
 
 **Known gotchas:**
+
 - line splitting normalizes LF, CRLF, and lone CR endings before alignment and syntax-token indexing,
   so files that differ only by line-ending convention do not appear wholly changed.
 - alignment uses Hirschberg longest-common-subsequence matching: O(n·m) time with linear working

@@ -83,6 +83,8 @@ export interface LyraAvatarGroupEventMap {
  * @cssprop [--lr-avatar-group-badge-font-size=var(--lr-font-size-sm)] - Font size of the "+N"
  * badge label. `size` steps it across the same six-step ladder as `<lr-avatar>`'s own
  * `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   static override styles = [LyraElement.styles, styles];

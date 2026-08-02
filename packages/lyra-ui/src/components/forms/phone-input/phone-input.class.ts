@@ -130,6 +130,7 @@ export interface LyraPhoneInputEventDetail {
 }
 
 export interface LyraPhoneInputEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   input: CustomEvent<LyraPhoneInputEventDetail>;
   change: CustomEvent<LyraPhoneInputEventDetail>;
   focus: CustomEvent<undefined>;
@@ -221,6 +222,7 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * @event change - Fired when the native input commits or the country changes.
  * @event focus - Fired when the internal telephone input receives focus.
  * @event blur - Fired when the internal telephone input loses focus.
+ * @event lr-invalid - The phone input failed a validity check.
  * @csspart form-control - The outer form-control wrapper.
  * @csspart form-control-label - The visible label.
  * @csspart input-wrapper - The country selector and telephone input wrapper.
@@ -253,6 +255,8 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
  *   never declared by the component itself, it can be set from an ancestor or an outer-tree rule
  *   as well as inline on the element.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   static override styles = [LyraElement.styles, sizes, styles];

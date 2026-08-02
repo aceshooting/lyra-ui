@@ -46,6 +46,8 @@ export interface LyraEnvListEventMap {
  * @cssprop [--lr-env-list-reveal-active-border=var(--lr-color-brand)] - Border color of a pressed
  *   (revealed) reveal toggle. Restyling the pressed state otherwise requires overriding the
  *   library-wide brand tokens, since `::part(reveal-button)[aria-pressed]` is invalid CSS.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A tab strip whose panels are direct light-DOM children, each carrying `slot="<id>"` and `label="<text>"`. A child with no `label` never produces a tab; a `disabled` child renders its tab but skips it in keyboard nav and blocks activation.',
+          'An APG tab strip supporting both Lyra\'s direct-child `slot`/`label` model and the upstream `<lr-tab panel>` + `<lr-tab-panel name>` model. The group synchronizes each child\'s reflected `active` SSR hint, emits `{ name, tabId }`, exposes `show(name)`, and retains logical placement and scroll-control aliases.',
       },
     },
   },
@@ -73,9 +73,9 @@ export const AutoHiddenPanel: Story = {
 export const ChangeEvent: Story = {
   render: () => html`
     <div>
-      <lr-tab-group @lr-tab-show=${(e: CustomEvent<{ tabId: string }>) => {
+      <lr-tab-group @lr-tab-show=${(e: CustomEvent<{ tabId: string; name: string }>) => {
         const out = document.getElementById('tabs-change-log');
-        if (out) out.textContent = `Active tab: ${e.detail.tabId}`;
+        if (out) out.textContent = `Active tab: ${e.detail.name} (${e.detail.tabId})`;
       }}>
         <div slot="input" label="Input" style="padding: 0.75rem 0;">Raw input goes here.</div>
         <div slot="preview" label="Preview" style="padding: 0.75rem 0;">Rendered preview goes here.</div>
@@ -185,19 +185,84 @@ export const ElementModel: StoryObj = {
     docs: {
       description: {
         story:
-          'The `<lr-tab>` + `<lr-tab-panel>` shape mirrors `wa-tab-group`/`sl-tab-group`, so that markup renames mechanically. The group assigns the `slot` attributes itself, and each tab\'s content is projected into the real `role="tab"` button — so a tab can carry an icon or badge while its accessible name stays exactly that content\'s text.',
+          'The `<lr-tab>` + `<lr-tab-panel>` shape mirrors `wa-tab-group`/`sl-tab-group`, so that markup renames mechanically. The group assigns the `slot` attributes itself, exposes its real unnamed slot as `defaultSlot`, and projects each tab\'s content into the real `role="tab"` button — so a tab can carry an icon or badge while its accessible name stays exactly that content\'s text.',
       },
     },
   },
   render: () => html`
     <lr-tab-group>
-      <lr-tab panel="general">General</lr-tab>
+      <lr-tab panel="general" active>General</lr-tab>
       <lr-tab panel="advanced">Advanced</lr-tab>
       <lr-tab panel="danger" disabled>Danger zone</lr-tab>
-      <lr-tab-panel name="general" style="padding: 0.75rem 0;">General settings go here.</lr-tab-panel>
+      <lr-tab-panel name="general" active style="padding: 0.75rem 0;">General settings go here.</lr-tab-panel>
       <lr-tab-panel name="advanced" style="padding: 0.75rem 0;">Advanced settings go here.</lr-tab-panel>
       <lr-tab-panel name="danger" style="padding: 0.75rem 0;">Danger zone.</lr-tab-panel>
     </lr-tab-group>
+  `,
+};
+
+export const ClosableElementTabs: StoryObj = {
+  name: 'Closable lr-tab request',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`closable` adds the mapped close affordance without adding a second focus stop inside the real tab button. Click the glyph or focus the tab and press Delete (`aria-keyshortcuts="Delete"`); both emit the Lyra-convention `lr-close` notification. This example handles the request by removing the matching tab and panel.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-tab-group
+      aria-label="Open documents"
+      @lr-close=${(event: CustomEvent<undefined>) => {
+        const tab = event.target;
+        const group = event.currentTarget;
+        if (!(tab instanceof HTMLElement) || !(group instanceof HTMLElement)) return;
+        const panelName = tab.getAttribute('panel');
+        tab.remove();
+        for (const child of Array.from(group.children)) {
+          if (child.localName === 'lr-tab-panel' && child.getAttribute('name') === panelName) {
+            child.remove();
+            break;
+          }
+        }
+      }}
+    >
+      <lr-tab panel="overview">Overview</lr-tab>
+      <lr-tab panel="notes" active closable>Notes</lr-tab>
+      <lr-tab-panel name="overview">Overview content.</lr-tab-panel>
+      <lr-tab-panel name="notes" active>Notes content.</lr-tab-panel>
+    </lr-tab-group>
+  `,
+};
+
+export const ProgrammaticShow: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`show(name)` activates a matching enabled panel through the same hide/show event pair as pointer or keyboard input. Child `active` attributes stay synchronized for serialization and SSR handoff.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <lr-tab-group id="programmatic-tabs">
+        <lr-tab panel="overview" active>Overview</lr-tab>
+        <lr-tab panel="activity">Activity</lr-tab>
+        <lr-tab-panel name="overview" active>Overview content.</lr-tab-panel>
+        <lr-tab-panel name="activity">Activity content.</lr-tab-panel>
+      </lr-tab-group>
+      <button
+        type="button"
+        @click=${() => {
+          const group = document.getElementById('programmatic-tabs') as HTMLElement & {
+            show(name: string): void;
+          };
+          group.show('activity');
+        }}
+      >Show activity</button>
+    </div>
   `,
 };
 

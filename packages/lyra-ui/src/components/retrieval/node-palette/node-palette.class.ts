@@ -56,6 +56,8 @@ export interface LyraNodePaletteEventMap {
  * @csspart item-description - An item's description text.
  * @csspart empty - The no-results message.
  * @csspart live-region - The result-count announcement.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

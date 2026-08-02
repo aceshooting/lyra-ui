@@ -1,6 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import type { LyraPopover } from './popover.class.js';
 import type { LyraTooltip } from './tooltip.class.js';
+import type { LyraDropdown } from './dropdown.class.js';
+import { setAnimation } from '../../../utilities/animation-registry.js';
 import './popover.js';
 import './tooltip.js';
 import './dropdown.js';
@@ -14,7 +16,7 @@ it('opens a popover from its slotted trigger and wires dialog semantics', async 
   const trigger = el.querySelector('button') as HTMLButtonElement;
   trigger.click();
   await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   expect((el as HTMLElement).hasAttribute('open')).to.be.true;
   expect(trigger.getAttribute('aria-haspopup')).to.equal('dialog');
   expect(trigger.getAttribute('aria-expanded')).to.equal('true');
@@ -28,7 +30,7 @@ it('uses menu semantics for dropdowns', async () => {
   expect(trigger.getAttribute('aria-haspopup')).to.equal('menu');
   trigger.click();
   await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="popup"]')?.getAttribute('role')).to.equal('menu');
+  expect(el.shadowRoot!.querySelector('[part~="popup"]')?.getAttribute('role')).to.equal('menu');
 });
 
 it('targets the public popover host from a native trigger aria-controls relationship', async () => {
@@ -49,7 +51,7 @@ it("resolves a popover host onto lr-button's focused internal control", async ()
   `);
   const trigger = el.querySelector('lr-button')!;
   await trigger.updateComplete;
-  const focusedControl = trigger.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement & {
+  const focusedControl = trigger.shadowRoot!.querySelector('[part~="base"]') as HTMLButtonElement & {
     ariaControlsElements?: Element[];
   };
 
@@ -105,7 +107,7 @@ it('does not let a closed popup/dropdown occupy a layout box in its host', async
   const el = await fixture(
     html`<lr-dropdown><button slot="trigger">Actions</button><div style="width:400px;height:400px;">Item</div></lr-dropdown>`,
   );
-  // Regression: [part='popup'] must be position:fixed even while closed -- if it were
+  // Regression: [part~='popup'] must be position:fixed even while closed -- if it were
   // position:static (the default), its content-sized box would inflate the host's own
   // inline-block box, spilling an invisible-but-hit-testable area over unrelated page content.
   const hostRect = (el as HTMLElement).getBoundingClientRect();
@@ -144,7 +146,7 @@ it("resolves a tooltip popup onto lr-button's focused internal control", async (
   trigger.focus();
   await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
   await trigger.updateComplete;
-  const focusedControl = trigger.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement & {
+  const focusedControl = trigger.shadowRoot!.querySelector('[part~="base"]') as HTMLButtonElement & {
     ariaDescribedByElements?: Element[];
   };
   const description = el.querySelector('[data-lyra-tooltip-description]')!;
@@ -212,7 +214,7 @@ it('promotes actionable tooltip content to a focus-persistent dialog surface', a
     `)) as LyraTooltip;
     const trigger = el.querySelector('[slot="trigger"]') as HTMLButtonElement;
     const action = el.querySelector('button:not([slot])') as HTMLButtonElement;
-    const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     trigger.focus();
     await el.updateComplete;
     expect(popup.getAttribute('role')).to.equal('dialog');
@@ -239,7 +241,7 @@ it('positions a tooltip that is open on first render against its slotted trigger
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
   const trigger = el.querySelector('button') as HTMLButtonElement;
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   const triggerRect = trigger.getBoundingClientRect();
   const popupRect = popup.getBoundingClientRect();
 
@@ -249,13 +251,13 @@ it('positions a tooltip that is open on first render against its slotted trigger
 
 it('names a dropdown popup "Menu", not "Popover", since it inherits LyraPopover with popupRole=menu', async () => {
   const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><button role="menuitem">Item</button></lr-dropdown>`);
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   expect(popup.getAttribute('aria-label')).to.equal('Menu');
 });
 
 it('keeps a plain popover (popupRole=dialog) named "Popover"', async () => {
   const el = await fixture(html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`);
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   expect(popup.getAttribute('aria-label')).to.equal('Popover');
 });
 
@@ -266,7 +268,7 @@ it('honors a .strings override for the popover key, provably reaching the render
       <p>Details</p></lr-popover
     >`,
   );
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   expect(popup.getAttribute('aria-label')).to.equal('Détails supplémentaires');
 });
 
@@ -470,7 +472,7 @@ it('keeps interactive tooltip content open across pointer transitions and closes
     `)) as LyraTooltip;
     const trigger = el.querySelector('[slot="trigger"]') as HTMLButtonElement;
     const action = el.querySelector('#action') as HTMLButtonElement;
-    const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     await el.updateComplete;
 
     trigger.dispatchEvent(new MouseEvent('mouseenter'));
@@ -552,7 +554,7 @@ it('contains long tooltip content within a 320px allocation', async () => {
   `)) as HTMLElement;
   const el = wrapper.querySelector('lr-tooltip') as LyraTooltip;
   await new Promise((resolve) => requestAnimationFrame(resolve));
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   expect(popup.getBoundingClientRect().width).to.be.at.most(320);
   expect(popup.scrollWidth).to.be.at.most(popup.clientWidth);
 });
@@ -562,7 +564,7 @@ it('lets a consumer retheme the popover popup width via --lr-overlay-max-inline-
     html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
   )) as LyraPopover;
   await el.updateComplete;
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
   expect(getComputedStyle(popup).maxInlineSize).to.include(`${20 * remPx}px`);
 
@@ -579,7 +581,7 @@ it('does not poison popover/tooltip positioning with NaN when distance is invali
   // autoUpdate schedules an async computePosition; wait a frame for it to land.
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await new Promise((r) => requestAnimationFrame(() => r(null)));
-  const popoverPopup = popover.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popoverPopup = popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   expect(popoverPopup.style.left).to.not.include('NaN');
   expect(popoverPopup.style.top).to.not.include('NaN');
 
@@ -591,7 +593,7 @@ it('does not poison popover/tooltip positioning with NaN when distance is invali
   await tooltip.updateComplete;
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await new Promise((r) => requestAnimationFrame(() => r(null)));
-  const tooltipPopup = tooltip.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const tooltipPopup = tooltip.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   expect(tooltipPopup.style.left).to.not.include('NaN');
   expect(tooltipPopup.style.top).to.not.include('NaN');
 });
@@ -610,7 +612,7 @@ it('falls back to the default 150ms delay when delay is NaN, instead of opening 
 it('lets a consumer retheme the tooltip via --lr-tooltip-max-inline-size/-background/-color', async () => {
   const el = (await fixture(html`<lr-tooltip show-delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`)) as LyraTooltip;
   await el.updateComplete;
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
   expect(getComputedStyle(popup).maxInlineSize).to.equal(`${20 * remPx}px`);
 
@@ -628,13 +630,15 @@ it('lets a consumer retheme the tooltip via --lr-tooltip-max-inline-size/-backgr
 
 it('opens a popover anchored to an arbitrary rect via showAt(), with no slotted trigger', async () => {
   const el = (await fixture(html`<lr-popover><p>Node details</p></lr-popover>`)) as LyraPopover;
+  const afterShow = oneEvent(el, 'lr-after-show');
   el.showAt({ x: 120, y: 80 });
+  await afterShow;
   await el.updateComplete;
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await new Promise((r) => requestAnimationFrame(() => r(null)));
 
   expect(el.open).to.be.true;
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   expect(popup.hasAttribute('data-hidden')).to.be.false;
   expect(popup.style.left).to.not.be.empty;
   expect(popup.style.top).to.not.be.empty;
@@ -647,7 +651,7 @@ it('re-anchors an already-open showAt() popover when called again with fresh coo
   await el.updateComplete;
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await new Promise((r) => requestAnimationFrame(() => r(null)));
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   const firstTop = popup.style.top;
   const internals = el as unknown as { cleanup?: () => void };
   const firstCleanup = internals.cleanup!;
@@ -730,13 +734,15 @@ it('keeps slotted-trigger Escape focus return when showAt() is never used', asyn
 
 it('opens a tooltip anchored to an arbitrary rect via showAt(), with no slotted trigger', async () => {
   const el = (await fixture(html`<lr-tooltip>Node info</lr-tooltip>`)) as LyraTooltip;
+  const afterShow = oneEvent(el, 'lr-after-show');
   el.showAt({ x: 200, y: 150 });
+  await afterShow;
   await el.updateComplete;
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await new Promise((r) => requestAnimationFrame(() => r(null)));
 
   expect(el.open).to.be.true;
-  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   expect(popup.hasAttribute('data-hidden')).to.be.false;
   expect(popup.style.left).to.not.be.empty;
   expect(popup.style.top).to.not.be.empty;
@@ -977,7 +983,7 @@ describe('overlay semantic and lifecycle regressions', () => {
     await new Promise<void>((resolve) => queueMicrotask(resolve));
     await el.updateComplete;
 
-    const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     expect(popup.getAttribute('role')).to.equal('dialog');
 
     const trigger = el.querySelector('[slot="trigger"]') as HTMLButtonElement;
@@ -1017,14 +1023,14 @@ describe('overlay semantic and lifecycle regressions', () => {
     trigger.focus();
     await el.updateComplete;
     expect(el.open).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part="popup"]')?.getAttribute('role')).to.equal('tooltip');
+    expect(el.shadowRoot!.querySelector('[part~="popup"]')?.getAttribute('role')).to.equal('tooltip');
 
     const content = el.querySelector(tagName) as HTMLElement & { attachAction(): HTMLButtonElement };
     const action = content.attachAction();
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('[part="popup"]')?.getAttribute('role')).to.equal('dialog');
+    expect(el.shadowRoot!.querySelector('[part~="popup"]')?.getAttribute('role')).to.equal('dialog');
     action.focus();
     await el.updateComplete;
     expect(el.open, 'late actionable content must remain reachable by keyboard focus').to.be.true;
@@ -1110,7 +1116,7 @@ describe('overlay semantic and lifecycle regressions', () => {
     await el.updateComplete;
 
     expect(trigger.getAttribute('aria-haspopup')).to.equal('menu');
-    expect(el.shadowRoot!.querySelector('[part="popup"]')?.getAttribute('role')).to.equal('menu');
+    expect(el.shadowRoot!.querySelector('[part~="popup"]')?.getAttribute('role')).to.equal('menu');
   });
 
   it('treats non-finite showAt coordinates as a no-op', async () => {
@@ -1502,16 +1508,20 @@ describe('unified show/hide lifecycle', () => {
 });
 
 describe('anchored-overlay arrows and external anchoring', () => {
-  it('renders no arrow by default (regression)', async () => {
+  it('uses the mapped popover arrow default and supports without-arrow', async () => {
     const popover = (await fixture(
       html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
     )) as LyraPopover;
     await popover.updateComplete;
-    expect(popover.arrow).to.be.false;
+    expect(popover.arrow).to.be.true;
     expect(popover.arrowPlacement).to.equal('anchor');
     expect(popover.arrowPadding).to.equal(0);
     expect(popover.skidding).to.equal(0);
     expect(popover.for).to.equal('');
+    expect(popover.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
+
+    popover.withoutArrow = true;
+    await popover.updateComplete;
     expect(popover.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(0);
   });
 
@@ -1540,7 +1550,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
     )) as LyraPopover;
     await popover.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const popup = popover.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const popup = popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     const arrow = popover.shadowRoot!.querySelector('[part~="arrow"]') as HTMLElement;
     const popupBox = popup.getBoundingClientRect();
     const arrowBox = arrow.getBoundingClientRect();
@@ -1555,7 +1565,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
     )) as LyraPopover;
     await popover.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const popup = popover.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const popup = popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     const arrow = popover.shadowRoot!.querySelector('[part~="arrow"]') as HTMLElement;
     expect(arrow.getBoundingClientRect().left - popup.getBoundingClientRect().left).to.be.closeTo(20, 1.5);
   });
@@ -1568,7 +1578,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
     )) as LyraPopover;
     await popover.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const popup = popover.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const popup = popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     const before = popup.getBoundingClientRect().left;
 
     popover.skidding = 24;
@@ -1592,7 +1602,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
     const popover = frame.querySelector('lr-popover') as LyraPopover;
     await popover.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const popup = popover.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const popup = popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     const far = frame.querySelector('#far') as HTMLElement;
     expect(popup.getBoundingClientRect().left).to.be.closeTo(far.getBoundingClientRect().left, 2);
   });
@@ -1611,7 +1621,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
     const tooltip = frame.querySelector('lr-tooltip') as LyraTooltip;
     await tooltip.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const popup = tooltip.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const popup = tooltip.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     const anchor = frame.querySelector('#tip-anchor') as HTMLElement;
     expect(tooltip.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
     expect(popup.getBoundingClientRect().left).to.be.closeTo(anchor.getBoundingClientRect().left, 2);
@@ -1760,5 +1770,212 @@ describe('lr-tooltip trigger and delays', () => {
     trigger.dispatchEvent(new FocusEvent('blur'));
     await el.updateComplete;
     expect(el.open).to.be.false;
+  });
+});
+
+describe('mapped popover and tooltip compatibility', () => {
+  it('publishes the mapped popover open custom state', async function () {
+    try {
+      document.createElement('div').matches(':state(open)');
+    } catch {
+      this.skip();
+    }
+    const el = (await fixture(
+      html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    expect(el.matches(':state(open)')).to.equal(false);
+    await el.show();
+    expect(el.matches(':state(open)')).to.equal(true);
+    await el.hide();
+    expect(el.matches(':state(open)')).to.equal(false);
+  });
+
+  it('uses mapped defaults while dropdown keeps its action-menu defaults', async () => {
+    const popover = (await fixture(
+      html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    const tooltip = (await fixture(
+      html`<lr-tooltip><button slot="trigger">Help</button>Helpful context</lr-tooltip>`,
+    )) as LyraTooltip;
+    const dropdown = (await fixture(
+      html`<lr-dropdown><button slot="trigger">Menu</button><span>Item</span></lr-dropdown>`,
+    )) as LyraDropdown;
+
+    expect(popover.placement).to.equal('top');
+    expect(popover.distance).to.equal(8);
+    expect(popover.arrow).to.equal(true);
+    expect(tooltip.placement).to.equal('top');
+    expect(tooltip.distance).to.equal(8);
+    expect(tooltip.arrow).to.equal(true);
+    expect(dropdown.placement).to.equal('bottom-start');
+    expect(dropdown.distance).to.equal(0);
+    expect(dropdown.arrow).to.equal(false);
+  });
+
+  it('supports the Shoelace default-trigger plus content slot shape', async () => {
+    const el = (await fixture(html`
+      <lr-tooltip show-delay="0">
+        <button id="default-trigger">Help</button>
+        <span slot="content">Default-trigger help</span>
+      </lr-tooltip>
+    `)) as LyraTooltip;
+    const trigger = el.querySelector('#default-trigger') as HTMLButtonElement;
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    await el.updateComplete;
+
+    const triggerSlot = el.shadowRoot!.querySelector('[part="trigger"] slot:not([name])') as HTMLSlotElement;
+    const contentSlot = el.shadowRoot!.querySelector('[part="body"] slot[name="content"]') as HTMLSlotElement;
+    expect(triggerSlot.assignedElements()).to.deep.equal([trigger]);
+    expect(contentSlot.assignedElements()[0]?.textContent).to.equal('Default-trigger help');
+    expect(el.open).to.equal(true);
+    expect(trigger.getAttribute('aria-describedby')).to.not.equal(null);
+  });
+
+  it('retains the Web Awesome named-trigger plus default-content shape', async () => {
+    const el = (await fixture(html`
+      <lr-tooltip open manual>
+        <button slot="trigger">Help</button>
+        <span id="named-content">Named-trigger help</span>
+      </lr-tooltip>
+    `)) as LyraTooltip;
+    await el.updateComplete;
+    const contentSlot = el.shadowRoot!.querySelector('[part="body"] slot:not([name])') as HTMLSlotElement;
+    expect(contentSlot.assignedElements()[0]?.id).to.equal('named-content');
+    expect(el.shadowRoot!.querySelector('[part="trigger"] slot[name="trigger"]')).to.exist;
+  });
+
+  it('accepts content as an attribute fallback in default-trigger mode', async () => {
+    const el = (await fixture(html`
+      <lr-tooltip open manual content="Attribute help"><button>Help</button></lr-tooltip>
+    `)) as LyraTooltip;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="body"]')?.textContent?.trim()).to.equal('Attribute help');
+  });
+
+  it('supports disabled, without-arrow, hoist, and their unset regressions', async () => {
+    const el = (await fixture(html`
+      <lr-tooltip disabled without-arrow hoist show-delay="0" content="Help"><button>Help</button></lr-tooltip>
+    `)) as LyraTooltip;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part~="arrow"]')).to.equal(null);
+
+    el.disabled = false;
+    el.withoutArrow = false;
+    el.hoist = false;
+    await el.updateComplete;
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part~="arrow"]')).to.exist;
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part~="popup"]')!).position).to.equal('absolute');
+  });
+
+  it('positions against explicit anchor properties ahead of id aliases and triggers', async () => {
+    const frame = await fixture<HTMLElement>(html`
+      <div>
+        <button id="near" style="position: fixed; inset-block-start: 20px; inset-inline-start: 20px;">Near</button>
+        <button id="far" style="position: fixed; inset-block-start: 240px; inset-inline-start: 260px;">Far</button>
+        <lr-popover open for="near" placement="bottom-start">
+          <button slot="trigger">Open</button><p>Details</p>
+        </lr-popover>
+      </div>
+    `);
+    const popover = frame.querySelector('lr-popover') as LyraPopover;
+    const far = frame.querySelector('#far') as HTMLElement;
+    popover.anchor = far;
+    await popover.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(
+      (popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement).getBoundingClientRect().left,
+    ).to.be.closeTo(far.getBoundingClientRect().left, 2);
+  });
+
+  it('publishes additive mapped parts without removing the stable popup/base/tooltip seams', async () => {
+    const popover = (await fixture(
+      html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    const tooltip = (await fixture(
+      html`<lr-tooltip open manual content="Help"><button>Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    const popoverParts = popover.shadowRoot!.querySelector('[part~="popup"]')!.getAttribute('part')!.split(/\s+/);
+    const tooltipParts = tooltip.shadowRoot!.querySelector('[part~="popup"]')!.getAttribute('part')!.split(/\s+/);
+    expect(popoverParts).to.include.members(['popup', 'dialog', 'popup__popup']);
+    expect(popover.shadowRoot!.querySelector('[part~="body"]')).to.exist;
+    expect(popover.shadowRoot!.querySelector('[part~="popup__arrow"]')).to.exist;
+    expect(tooltipParts).to.include.members(['popup', 'base', 'tooltip', 'base__popup']);
+    expect(tooltip.shadowRoot!.querySelector('[part~="body"]')).to.exist;
+    expect(tooltip.shadowRoot!.querySelector('[part~="base__arrow"]')).to.exist;
+  });
+
+  it('returns promises that settle after the matching tooltip after-event', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip manual content="Help"><button>Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    const order: string[] = [];
+    el.addEventListener('lr-after-show', () => order.push('after-show'));
+    el.addEventListener('lr-after-hide', () => order.push('after-hide'));
+    const shown = el.show().then(() => order.push('show-promise'));
+    await shown;
+    const hidden = el.hide().then(() => order.push('hide-promise'));
+    await hidden;
+    expect(order).to.deep.equal(['after-show', 'show-promise', 'after-hide', 'hide-promise']);
+  });
+});
+
+describe('public animation registry integration', () => {
+  it('resolves the popover, tooltip, and dropdown namespaces and preserves lifecycle promises when motion is disabled', async () => {
+    const cases = [
+      {
+        namespace: 'popover',
+        element: (await fixture(
+          html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+        )) as LyraPopover,
+      },
+      {
+        namespace: 'tooltip',
+        element: (await fixture(
+          html`<lr-tooltip manual content="Help"><button>Help</button></lr-tooltip>`,
+        )) as LyraTooltip,
+      },
+      {
+        namespace: 'dropdown',
+        element: (await fixture(
+          html`<lr-dropdown><button slot="trigger">Actions</button><button role="menuitem">Item</button></lr-dropdown>`,
+        )) as LyraDropdown,
+      },
+    ];
+
+    for (const { namespace, element } of cases) {
+      const showName = `${namespace}.show`;
+      const hideName = `${namespace}.hide`;
+      const releaseShow = setAnimation(element, showName, {
+        keyframes: [{ opacity: 0.2 }, { opacity: 0.8 }],
+        options: { duration: 10_000 },
+      });
+      const releaseHide = setAnimation(element, hideName, null);
+      const order: string[] = [];
+      element.addEventListener('lr-after-show', () => order.push('after-show'));
+      element.addEventListener('lr-after-hide', () => order.push('after-hide'));
+      try {
+        const shown = element.show().then(() => order.push('show-promise'));
+        await element.updateComplete;
+        const popup = element.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+        const nativeAnimation = popup.getAnimations().find((animation) => animation.id === showName);
+        expect(nativeAnimation?.id).to.equal(showName);
+        expect(String(nativeAnimation?.effect?.getKeyframes()[0]?.opacity)).to.equal('0.2');
+        nativeAnimation?.finish();
+        await shown;
+
+        await element.hide().then(() => order.push('hide-promise'));
+        expect(order).to.deep.equal(['after-show', 'show-promise', 'after-hide', 'hide-promise']);
+        expect(popup.getAnimations().some((animation) => animation.id === hideName)).to.equal(false);
+      } finally {
+        releaseHide();
+        releaseShow();
+      }
+    }
   });
 });

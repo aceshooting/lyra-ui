@@ -80,6 +80,8 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * @cssprop [--lr-spreadsheet-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a
  *   highlighted cell. The active highlight sets it inline to
  *   `var(--lr-color-warning, var(--lr-color-brand))`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

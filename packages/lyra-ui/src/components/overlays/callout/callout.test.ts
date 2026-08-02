@@ -1,24 +1,116 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './callout.js';
 import type { LyraCallout } from './callout.js';
-import { styles } from './callout.styles.js';
+
+async function settleLiveRegion(el: LyraCallout): Promise<void> {
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await el.updateComplete;
+}
 
 it('renders status content and a localized close action', async () => {
   const el = (await fixture(html`<lr-callout closable>Something happened</lr-callout>`)) as LyraCallout;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
+  expect(el.variant).to.equal('brand');
+  expect(el.hasAttribute('variant')).to.equal(false);
+  expect(el.getAttribute('open')).to.equal('');
   expect(button.getAttribute('aria-label')).to.equal('Close');
   expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('role')).to.equal('status');
   await expect(el).to.be.accessible();
 });
 
-it('does not announce static content on mount but activates its live policy for later content changes', async () => {
-  const el = (await fixture(html`<lr-callout>Historical status</lr-callout>`)) as LyraCallout;
+it('exposes the reflected appearance vocabulary without changing the unset treatment', async () => {
+  const el = (await fixture(html`
+    <lr-callout
+      style="
+        --lr-color-brand-fill-quiet: rgb(10, 20, 30);
+        --lr-color-brand-fill-loud: rgb(40, 50, 60);
+        --lr-color-brand-on-loud: rgb(240, 241, 242);
+      "
+    >Message</lr-callout>
+  `)) as LyraCallout;
+  const rendered = () => getComputedStyle(el);
+
+  expect(el.appearance).to.equal(undefined);
+  expect(el.hasAttribute('appearance')).to.equal(false);
+  expect(rendered().backgroundColor).to.equal('rgb(10, 20, 30)');
+  expect(rendered().borderColor).to.equal('rgb(40, 50, 60)');
+
+  const expectations = [
+    ['filled', 'rgb(10, 20, 30)', 'rgba(0, 0, 0, 0)', 'rgb(40, 50, 60)'],
+    ['outlined', 'rgba(0, 0, 0, 0)', 'rgb(40, 50, 60)', 'rgb(40, 50, 60)'],
+    ['accent', 'rgb(40, 50, 60)', 'rgb(40, 50, 60)', 'rgb(240, 241, 242)'],
+    ['plain', 'rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)', 'rgb(40, 50, 60)'],
+    ['filled-outlined', 'rgb(10, 20, 30)', 'rgb(40, 50, 60)', 'rgb(40, 50, 60)'],
+  ] as const;
+
+  for (const [appearance, background, border, color] of expectations) {
+    el.appearance = appearance;
+    await el.updateComplete;
+    expect(el.getAttribute('appearance')).to.equal(appearance);
+    expect(rendered().backgroundColor, `${appearance} background`).to.equal(background);
+    expect(rendered().borderColor, `${appearance} border`).to.equal(border);
+    expect(rendered().color, `${appearance} text`).to.equal(color);
+  }
+});
+
+it('renders initial content with live announcements off, then arms the region before the first later mutation', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.textContent = 'Historical status';
+  document.body.append(el);
+  const firstUpdate = el.updateComplete;
+  await firstUpdate;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.getAttribute('aria-live')).to.equal('off');
+  await settleLiveRegion(el);
+  expect(base.getAttribute('aria-live')).to.equal('polite');
+
   el.firstChild!.textContent = 'Fresh status';
-  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  expect(base.getAttribute('aria-live')).to.equal('polite');
+  el.remove();
+});
+
+it('keeps danger assertive and ordinary variants polite after the initial paint', async () => {
+  const el = (await fixture(html`<lr-callout variant="danger">Historical status</lr-callout>`)) as LyraCallout;
+  await settleLiveRegion(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-live')).to.equal('assertive');
+  el.variant = 'success';
   await el.updateComplete;
   expect(base.getAttribute('aria-live')).to.equal('polite');
+});
+
+it('treats reconnected content as an initial render instead of announcing it as a live update', async () => {
+  const el = (await fixture(html`<lr-callout>Historical status</lr-callout>`)) as LyraCallout;
+  await settleLiveRegion(el);
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-live')).to.equal('polite');
+
+  el.remove();
+  document.body.append(el);
+  const reconnectedInitialUpdate = el.updateComplete;
+  await reconnectedInitialUpdate;
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-live')).to.equal('off');
+  await settleLiveRegion(el);
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-live')).to.equal('polite');
+  el.remove();
+});
+
+it('distributes an initial slotted heading while announcements are still off', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.innerHTML = '<span slot="heading">Initial heading</span>Initial message';
+  document.body.append(el);
+  await el.updateComplete;
+  await Promise.resolve();
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+  expect(heading.hidden).to.equal(false);
+  expect(base.getAttribute('aria-live')).to.equal('off');
+
+  await settleLiveRegion(el);
+  expect(base.getAttribute('aria-live')).to.equal('polite');
+  el.remove();
 });
 
 it('renders closed when open="false" is set as a plain HTML attribute', async () => {
@@ -27,7 +119,9 @@ it('renders closed when open="false" is set as a plain HTML attribute', async ()
   // `true`-aware converter parses the literal attribute form correctly.
   const el = (await fixture(html`<lr-callout open="false">Message</lr-callout>`)) as LyraCallout;
   expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.equal(false);
   expect(el.shadowRoot!.querySelectorAll('[part="base"]').length).to.equal(0);
+  expect(getComputedStyle(el).display).to.equal('none');
 });
 
 it('allows close to be vetoed and otherwise hides', async () => {
@@ -41,6 +135,13 @@ it('allows close to be vetoed and otherwise hides', async () => {
   const next = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
   next.click();
   expect(el.open).to.be.false;
+  await el.updateComplete;
+  expect(el.hasAttribute('open')).to.equal(false);
+  expect(getComputedStyle(el).display).to.equal('none');
+  el.open = true;
+  await el.updateComplete;
+  expect(el.getAttribute('open')).to.equal('');
+  expect(getComputedStyle(el).display).to.equal('block');
 });
 
 it('forwards a host-level aria-label to the base region when accessible-label is unset', async () => {
@@ -73,13 +174,40 @@ it('gives the close button the shared minimum hit area in both the default and i
   expect(getComputedStyle(inlineIcon).blockSize).to.equal('24px');
 });
 
+it('puts ordinary panel chrome on the host while the semantic base remains a transparent layout wrapper', async () => {
+  const el = (await fixture(html`
+    <lr-callout style="
+      background: rgb(10, 20, 30);
+      border: 3px solid rgb(40, 50, 60);
+      border-radius: 11px;
+      color: rgb(70, 80, 90);
+      padding: 13px;
+      margin: 7px;
+    ">Message</lr-callout>
+  `)) as LyraCallout;
+  const host = getComputedStyle(el);
+  const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+  expect(host.backgroundColor).to.equal('rgb(10, 20, 30)');
+  expect(host.borderTopWidth).to.equal('3px');
+  expect(host.borderTopColor).to.equal('rgb(40, 50, 60)');
+  expect(host.borderRadius).to.equal('11px');
+  expect(host.color).to.equal('rgb(70, 80, 90)');
+  expect(host.paddingBlockStart).to.equal('13px');
+  expect(host.marginBlockStart).to.equal('7px');
+  expect(base.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(base.borderTopWidth).to.equal('0px');
+  expect(base.paddingBlockStart).to.equal('0px');
+  expect(base.color).to.equal(host.color);
+});
+
 it('supports a lightweight inline status/error treatment', async () => {
   const el = (await fixture(html`<lr-callout inline variant="danger"><span slot="icon">!</span>Try again</lr-callout>`)) as LyraCallout;
   expect(el.inline).to.be.true;
   expect(el.hasAttribute('inline')).to.be.true;
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(':host([inline]) [part=\'base\']');
-  expect(css).to.include('background: transparent;');
+  const rendered = getComputedStyle(el);
+  expect(rendered.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(rendered.borderTopWidth).to.equal('0px');
+  expect(rendered.paddingBlockStart).to.equal('0px');
   await expect(el).to.be.accessible();
 });
 
@@ -89,19 +217,17 @@ it('actually renders the inline variant with a transparent panel background', as
   // specificity rule elsewhere, or the selector losing to [part='base']'s own background
   // declaration, would break this while the cssText check above kept passing).
   const nonInline = (await fixture(html`<lr-callout variant="danger">Try again</lr-callout>`)) as LyraCallout;
-  const nonInlineBase = nonInline.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(getComputedStyle(nonInlineBase).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  expect(getComputedStyle(nonInline).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 
   const inlineEl = (await fixture(html`<lr-callout inline variant="danger">Try again</lr-callout>`)) as LyraCallout;
-  const inlineBase = inlineEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(getComputedStyle(inlineBase).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(getComputedStyle(inlineEl).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
 });
 
 // -- size --------------------------------------------------------------------
 
 describe('size', () => {
   const panel = (el: LyraCallout): CSSStyleDeclaration =>
-    getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    getComputedStyle(el);
 
   const render = async (size?: string): Promise<LyraCallout> =>
     (await fixture(
@@ -114,7 +240,7 @@ describe('size', () => {
     const unset = await render();
     const explicit = await render('m');
     expect(unset.size).to.equal('m');
-    expect(unset.getAttribute('size')).to.equal('m');
+    expect(unset.hasAttribute('size')).to.equal(false);
     expect(panel(unset).paddingBlockStart).to.equal(panel(explicit).paddingBlockStart);
     expect(panel(unset).fontSize).to.equal(panel(explicit).fontSize);
   });
@@ -157,23 +283,105 @@ describe('size', () => {
   });
 });
 
-it('gives close-button a hover state', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='close-button'\]:hover/);
+it('inherits contextual variant and size only while their attributes are unset', async () => {
+  const outer = (await fixture(html`
+    <lr-callout
+      variant="danger"
+      size="xl"
+      style="
+        --lr-theme-color-danger-fill-quiet: rgb(10, 20, 30);
+        --lr-theme-color-danger-fill-loud: rgb(40, 50, 60);
+        --lr-theme-color-brand-fill-quiet: rgb(70, 80, 90);
+        --lr-theme-color-brand-fill-loud: rgb(100, 110, 120);
+        --lr-theme-color-success-fill-quiet: rgb(130, 140, 150);
+        --lr-theme-color-success-fill-loud: rgb(160, 170, 180);
+        --lr-theme-font-size-xl: 30px;
+        --lr-theme-font-size-m: 18px;
+        --lr-theme-font-size-sm: 14px;
+        --lr-theme-space-l: 20px;
+        --lr-theme-space-m: 12px;
+        --lr-theme-space-s: 8px;
+      "
+    ><lr-callout id="inner">Nested</lr-callout></lr-callout>
+  `)) as LyraCallout;
+  const inner = outer.querySelector('#inner') as LyraCallout;
+  await inner.updateComplete;
+  const rendered = () => getComputedStyle(inner);
+
+  expect(inner.variant).to.equal('brand');
+  expect(inner.size).to.equal('m');
+  expect(inner.hasAttribute('variant')).to.equal(false);
+  expect(inner.hasAttribute('size')).to.equal(false);
+  expect(rendered().backgroundColor).to.equal('rgb(10, 20, 30)');
+  expect(rendered().borderColor).to.equal('rgb(40, 50, 60)');
+  expect(rendered().fontSize).to.equal('30px');
+  expect(rendered().paddingBlockStart).to.equal('20px');
+
+  inner.variant = 'brand';
+  inner.size = 'm';
+  await inner.updateComplete;
+  expect(inner.getAttribute('variant')).to.equal('brand');
+  expect(inner.getAttribute('size')).to.equal('m');
+  expect(rendered().backgroundColor).to.equal('rgb(70, 80, 90)');
+  expect(rendered().borderColor).to.equal('rgb(100, 110, 120)');
+  expect(rendered().fontSize).to.equal('18px');
+  expect(rendered().paddingBlockStart).to.equal('12px');
+
+  inner.removeAttribute('variant');
+  inner.removeAttribute('size');
+  await inner.updateComplete;
+  expect(rendered().backgroundColor).to.equal('rgb(10, 20, 30)');
+  expect(rendered().fontSize).to.equal('30px');
+
+  outer.variant = 'success';
+  outer.size = 's';
+  await outer.updateComplete;
+  expect(rendered().backgroundColor).to.equal('rgb(130, 140, 150)');
+  expect(rendered().borderColor).to.equal('rgb(160, 170, 180)');
+  expect(rendered().fontSize).to.equal('14px');
+  expect(rendered().paddingBlockStart).to.equal('8px');
+});
+
+it('maps explicit neutral to its semantic quiet/loud palette', async () => {
+  const el = (await fixture(html`
+    <lr-callout
+      variant="neutral"
+      style="--lr-color-neutral-fill-quiet: rgb(11, 22, 33); --lr-color-neutral-fill-loud: rgb(44, 55, 66)"
+    >Neutral</lr-callout>
+  `)) as LyraCallout;
+  const rendered = getComputedStyle(el);
+  expect(rendered.backgroundColor).to.equal('rgb(11, 22, 33)');
+  expect(rendered.borderColor).to.equal('rgb(44, 55, 66)');
+  expect(rendered.color).to.equal('rgb(44, 55, 66)');
+});
+
+it('gives close-button a rendered hover state', async () => {
+  const el = (await fixture(html`<lr-callout closable>Message</lr-callout>`)) as LyraCallout;
+  const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
+  const rect = button.getBoundingClientRect();
+  const resting = getComputedStyle(button).backgroundColor;
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(button).backgroundColor).to.not.equal(resting);
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('decouples the close-button hover fill from --lr-callout-background so a brand-variant panel is not the sole override hook', async () => {
   const el = (await fixture(
     html`<lr-callout variant="brand" closable>Message</lr-callout>`,
   )) as LyraCallout;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
 
   // Overriding the hover-fill token alone must not move the panel background.
-  const panelBefore = getComputedStyle(base).backgroundColor;
+  const panelBefore = getComputedStyle(el).backgroundColor;
   el.style.setProperty('--lr-callout-close-hover-bg', 'rgb(1, 2, 3)');
   await el.updateComplete;
-  expect(getComputedStyle(base).backgroundColor).to.equal(panelBefore);
+  expect(getComputedStyle(el).backgroundColor).to.equal(panelBefore);
 
   // The dedicated token is reachable at all -- proof it is not just a bare literal.
   expect(getComputedStyle(button).getPropertyValue('--lr-callout-close-hover-bg').trim()).to.equal(

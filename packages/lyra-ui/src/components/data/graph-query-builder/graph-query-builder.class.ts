@@ -14,6 +14,8 @@ import '../../forms/combobox/option.class.js';
 import '../../forms/input/input.class.js';
 import '../../overlays/chip/chip.class.js';
 import '../../overlays/chip/chip-group.class.js';
+import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 
 /** Traversal direction relative to the matched node(s): `'out'` (outgoing edges), `'in'`
  *  (incoming edges), or `'both'`. */
@@ -114,6 +116,7 @@ function normalizeGraphQuery(value: unknown): GraphQuery {
 }
 
 export interface LyraGraphQueryBuilderEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   'lr-input': CustomEvent<{ value: GraphQuery }>;
   'lr-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
   'lr-query-run': CustomEvent<{ query: GraphQuery }>;
@@ -176,6 +179,7 @@ export interface LyraGraphQueryBuilderEventMap {
  * replaced with it by the time this fires). `detail: { id, query }`.
  * @event lr-query-delete - A saved query's delete button was activated. `detail: { id }` — the
  * host is responsible for removing the matching entry from `savedQueries`.
+ * @event lr-invalid - The complete query builder failed a validity check.
  * @csspart base - The outer wrapper around every section.
  * @csspart label - Visible label for the complete form control.
  * @csspart hint - Supporting text for the complete form control.
@@ -217,12 +221,15 @@ export interface LyraGraphQueryBuilderEventMap {
  * invalid but deliberately does not match this, so a consumer's `:state(user-invalid)` styling
  * cannot paint the form red before the user has typed anything. A form reset makes it pristine
  * again.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEventMap> {
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
   static override properties = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
     value: { attribute: false, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -259,6 +266,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   private _fieldsetDisabled = false;
   private _name = '';
   private _value: GraphQuery = EMPTY_VALUE;
@@ -274,6 +283,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     super();
     this.internals = this.safeAttachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     this.syncFormState();
   }
 
@@ -309,7 +320,13 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   }
 
   get form(): HTMLFormElement | null {
-    return this.internals.form;
+    return getFormOwner(this.internals);
+  }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
   }
   get labels(): NodeList {
     return this.internals.labels;

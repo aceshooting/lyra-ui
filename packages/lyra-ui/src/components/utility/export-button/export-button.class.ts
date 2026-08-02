@@ -48,6 +48,8 @@ export interface LyraExportButtonEventMap {
  * @csspart menu-item - A single format option inside the menu.
  * @csspart format-label - A format option's primary label.
  * @csspart format-description - A custom format option's optional secondary text.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   static override styles = [LyraElement.styles, styles];

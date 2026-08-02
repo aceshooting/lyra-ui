@@ -1,0 +1,9 @@
+<wa-widget old-attribute mode="compact" @wa-old-event="onChange">
+  <span slot="old-slot">Content</span>
+</wa-widget>
+<style>
+  wa-widget::part(old-part) {
+    --wa-old-color: red;
+    color: var(--wa-old-color);
+  }
+</style>

@@ -3,10 +3,10 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lr-toast-accent-width: var(--lr-size-4px);
-    --lr-toast-show-duration: var(--lr-transition-base, 180ms ease-out);
-    --lr-toast-hide-duration: var(--lr-transition-base, 180ms ease-out);
-    --lr-toast-padding: var(--lr-space-m);
+    --lr-toast-accent-width: var(--accent-width, var(--lr-size-4px));
+    --lr-toast-show-duration: var(--show-duration, var(--lr-transition-base, 180ms ease-out));
+    --lr-toast-hide-duration: var(--hide-duration, var(--lr-transition-base, 180ms ease-out));
+    --lr-toast-padding: var(--padding, var(--lr-space-m));
     --lr-toast-font-size: var(--lr-font-size-m);
     --lr-toast-accent-color: var(--lr-color-border);
   }
@@ -21,27 +21,30 @@ export const styles = css`
     --lr-toast-accent-color: var(--lr-color-fill-loud);
   }
   :host([size='2xs']) {
-    --lr-toast-padding: var(--lr-space-2xs);
+    --lr-toast-padding: var(--padding, var(--lr-space-2xs));
     --lr-toast-font-size: var(--lr-font-size-2xs);
   }
   :host([size='xs']) {
-    --lr-toast-padding: var(--lr-space-xs);
+    --lr-toast-padding: var(--padding, var(--lr-space-xs));
     --lr-toast-font-size: var(--lr-font-size-xs);
   }
-  :host([size='s']) {
-    --lr-toast-padding: var(--lr-space-s);
+  :host([size='s']),
+  :host([size='small']) {
+    --lr-toast-padding: var(--padding, var(--lr-space-s));
     --lr-toast-font-size: var(--lr-font-size-md-sm);
   }
-  :host([size='m']) {
-    --lr-toast-padding: var(--lr-space-m);
+  :host([size='m']),
+  :host([size='medium']) {
+    --lr-toast-padding: var(--padding, var(--lr-space-m));
     --lr-toast-font-size: var(--lr-font-size-m);
   }
-  :host([size='l']) {
-    --lr-toast-padding: var(--lr-space-l);
+  :host([size='l']),
+  :host([size='large']) {
+    --lr-toast-padding: var(--padding, var(--lr-space-l));
     --lr-toast-font-size: var(--lr-font-size-lg);
   }
   :host([size='xl']) {
-    --lr-toast-padding: calc(var(--lr-space-l) * 1.5);
+    --lr-toast-padding: var(--padding, calc(var(--lr-space-l) * 1.5));
     --lr-toast-font-size: var(--lr-font-size-xl);
   }
 
@@ -138,6 +141,9 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='close-button'] {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
     flex: 0 0 auto;
     margin-inline-start: auto;
     background: none;
@@ -150,6 +156,57 @@ export const styles = css`
     border-radius: var(--lr-radius);
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
+  }
+  [part='progress-ring'] {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    inline-size: var(--lr-size-24px);
+    block-size: var(--lr-size-24px);
+    pointer-events: none;
+  }
+  [part='progress-ring__base'] {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+    fill: none;
+    transform: rotate(-90deg);
+  }
+  [part='progress-ring__track'],
+  [part='progress-ring__indicator'] {
+    fill: none;
+    stroke-width: var(--lr-border-width-medium);
+  }
+  [part='progress-ring__track'] {
+    stroke: var(--lr-color-border);
+  }
+  [part='progress-ring__indicator'] {
+    stroke: var(--lr-toast-accent-color);
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+  :host([data-visible]) [part='progress-ring__indicator'] {
+    animation-name: lr-toast-progress;
+  }
+  /* no-pressed-state: :hover and :focus-within only mirror the timer's paused state on its
+     decorative progress indicator; the close button owns the actual press treatment below. */
+  :host(:hover) [part='progress-ring__indicator'],
+  :host(:focus-within) [part='progress-ring__indicator'] {
+    animation-play-state: paused;
+  }
+  [part='progress-ring__label'],
+  [part='close-icon'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  [part='close-icon__svg'] {
+    display: block;
   }
   [part='close-button']:hover:not([aria-disabled='true']) {
     color: var(--lr-color-text);
@@ -171,5 +228,18 @@ export const styles = css`
   [part='close-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  @keyframes lr-toast-progress {
+    to {
+      stroke-dashoffset: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [part='progress-ring__indicator'] {
+      animation: none;
+      stroke-dashoffset: 1;
+    }
   }
 `;

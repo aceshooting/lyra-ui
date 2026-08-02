@@ -17,7 +17,7 @@ export const styles = css`
     /* Light/background modules, including the quiet zone -- same pattern. */
     --lr-qr-code-background: var(--lr-color-surface);
   }
-  [part='base'] {
+  [part~='base'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;

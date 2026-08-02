@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.js';` (registers the tag; side-effect import)
 - **Class** `LyraEmojiPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
 - **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -25,7 +27,8 @@ Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `lr-sele
 `lr-color-picker` (props + matching named slots + `form-control`/`form-control-label`/`hint`/
 `error` CSS parts) — left unset, none of that chrome renders.
 
-**Properties:** the shared form properties `name`, `value`, `disabled`, and `required`, plus
+**Properties:** the shared form properties `name`, `value`, `defaultValue`, `customError`
+(`custom-error`), `disabled`, and `required`, plus
 `groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, labelKey?,
 emojis: EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches
 `name` and every `shortcodes` entry, case-insensitively. `labelKey` is an optional `LyraMessageKey`
@@ -45,10 +48,16 @@ supporting text rendered below the search/grid; unset renders no hint chrome. `e
 `error` content when provided); unset renders no error chrome. `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` —
 visual size; scales the emoji grid item box and its glyph proportionally, floored at 24px (WCAG 2.5.8).
 
+**Methods:** `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
+`resetValidity()` provide the shared form-validation surface. `resetValidity()` clears only
+consumer-supplied custom validity and recomputes current intrinsic constraints; it does not change
+`value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
+
 **Events:** a pick emits native-style composed `input`, then `change` (both with no detail), then
 `lr-change` with `detail: { emoji }` (click, or Enter/Space on the active grid cell; also sets
 `value`). The internal search input's `focus` and `blur` are re-dispatched as bubbling, composed
-host events. Programmatic `value` changes are silent.
+host events. `lr-invalid` (no detail) is emitted once when native validity fails. Programmatic
+`value` changes are silent.
 
 **Keyboard:** the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji is
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction

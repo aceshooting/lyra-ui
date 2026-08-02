@@ -67,6 +67,39 @@ export function parseRootRegistrationAllowlist(source) {
   };
 }
 
+export function inventoryRootRegistrationSpecifiers(inventory) {
+  inventoryRootRegistrationSets(inventory);
+  const entries = inventory.components
+    .filter((component) => component.rootIncluded)
+    .sort((left, right) => left.tag.localeCompare(right.tag));
+  const seen = new Set();
+  return entries.map((component) => {
+    assert.match(
+      component.registrationModule ?? '',
+      /^src\/components\/[a-z0-9/-]+\.ts$/,
+      `${component.tag}: invalid inventory registrationModule`,
+    );
+    assert.ok(
+      !seen.has(component.registrationModule),
+      `${component.tag}: duplicate inventory registrationModule ${component.registrationModule}`,
+    );
+    seen.add(component.registrationModule);
+    return `./${component.registrationModule.slice('src/'.length).replace(/\.ts$/, '.js')}`;
+  });
+}
+
+export function rootRegistrationSpecifiers(source) {
+  const program = parseProgram(source);
+  return program.body
+    .filter(
+      (statement) =>
+        statement.type === 'ImportDeclaration' &&
+        statement.specifiers.length === 0 &&
+        literalValue(statement.source)?.startsWith('./components/'),
+    )
+    .map((statement) => literalValue(statement.source));
+}
+
 async function findFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
@@ -846,19 +879,17 @@ async function checkRegistrationArchitecture() {
     inventorySets.optionalTags,
     'ROOT_BARREL_OPTIONAL_PEER_TAGS must match inventory optional-peer exclusions',
   );
-  const importedRootTags = [
-    ...rootBarrel.matchAll(/^import '\.\/components\/(?:[^/\n]+\/)*([^']+)\.js';$/gm),
-  ]
-    .map((match) => match[1])
-    .filter((moduleName) => !moduleName.endsWith('-register'))
-    .map((moduleName) => `lr-${moduleName}`);
-  if (rootBarrel.includes("export { LyraFlag } from './components/media/flag/flag.js';")) {
-    importedRootTags.push('lr-flag');
-  }
+  const rootSpecifiers = rootRegistrationSpecifiers(rootBarrel);
+  const componentSpecifiers = rootSpecifiers.filter((specifier) => !specifier.endsWith('-register.js'));
   assert.deepEqual(
-    [...new Set(importedRootTags)].sort(),
-    inventorySets.rootTags,
-    'root barrel imports must match inventory rootIncluded entries',
+    rootSpecifiers,
+    [...new Set(rootSpecifiers)],
+    'root barrel side-effect imports must not contain duplicates',
+  );
+  assert.deepEqual(
+    componentSpecifiers,
+    inventoryRootRegistrationSpecifiers(inventory),
+    'root barrel imports must match the exact, tag-sorted inventory registration modules',
   );
 
   const manifest = JSON.parse(readFileSync(join(sourceRoot, '..', 'custom-elements.json'), 'utf8'));

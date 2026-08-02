@@ -111,6 +111,8 @@ export interface LyraStreamStatusEventMap {
  *   `var(--lr-color-warning)` for `stalled`.
  * @cssprop [--lr-stream-status-dot-opacity=0.35] - `indicator` dot opacity. Swapped by the
  *   reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   static override styles = [LyraElement.styles, styles];

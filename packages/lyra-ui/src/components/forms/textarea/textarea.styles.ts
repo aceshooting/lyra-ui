@@ -12,9 +12,8 @@ export const styles = css`
     --lr-textarea-padding: var(--lr-form-control-padding-inline);
     --lr-textarea-font-size: var(--lr-form-control-font-size);
     --lr-textarea-radius: var(--lr-form-control-radius);
-    /* Fill/border pair swapped per appearance below; declared here too so a host whose appearance
-       attribute has not reflected yet still paints the committed filled-outlined treatment. */
-    --lr-textarea-fill: var(--lr-color-surface);
+    /* Fill/border pair swapped per appearance below; the mapped default is outlined. */
+    --lr-textarea-fill: transparent;
     --lr-textarea-border-color: var(--lr-color-border);
   }
   /* Retunes the shared radius knob rather than declaring border-radius on [part='textarea'], so
@@ -32,6 +31,10 @@ export const styles = css`
     --lr-textarea-border-color: var(--lr-color-border);
   }
   :host([appearance='filled']) {
+    --lr-textarea-fill: var(--lr-color-surface-raised);
+    --lr-textarea-border-color: transparent;
+  }
+  :host([filled]) {
     --lr-textarea-fill: var(--lr-color-surface-raised);
     --lr-textarea-border-color: transparent;
   }
@@ -64,7 +67,7 @@ export const styles = css`
   /* A plain block box around the native control: the native resize grip writes its own inline
      width/height onto the <textarea> itself, so the wrapper deliberately imposes no size of its
      own and lets the field drive it. */
-  [part='textarea-wrapper'] {
+  [part~='textarea-wrapper'] {
     display: block;
     min-inline-size: 0;
   }
@@ -107,12 +110,12 @@ export const styles = css`
   [part='textarea']::placeholder {
     color: var(--lr-color-text-quiet);
   }
-  [part='hint'] {
+  [part~='hint'] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  [part='hint'][hidden] {
+  [part~='hint'][hidden] {
     display: none;
   }
   [part='error'] {
@@ -150,7 +153,7 @@ export const styles = css`
   }
   [part='form-control'],
   [part='form-control-label'],
-  [part='hint'],
+  [part~='hint'],
   [part='error'],
   [part='footer'] {
     min-inline-size: 0;

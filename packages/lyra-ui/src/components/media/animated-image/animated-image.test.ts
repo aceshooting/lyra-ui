@@ -94,6 +94,24 @@ describe('default render / freeze-frame state', () => {
   });
 });
 
+it('reflects play and accepts the upstream control sizing hooks', async () => {
+  const el = (await fixture(html`
+    <lr-animated-image
+      play
+      alt="Pixel"
+      style="--control-box-size: 52px; --icon-size: 19px"
+    ></lr-animated-image>
+  `)) as LyraAnimatedImage;
+  expect(el.play).to.be.true;
+  expect(el.hasAttribute('play')).to.be.true;
+
+  await loaded(el);
+  const control = el.shadowRoot!.querySelector<HTMLElement>('[part="control-box"]')!;
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="play-button"]')!;
+  expect(getComputedStyle(control).inlineSize).to.equal('52px');
+  expect(getComputedStyle(button).fontSize).to.equal('19px');
+});
+
 it('reconciles playing against a reduced-motion preference that changed while detached', async () => {
   const motion = stubReducedMotion(false);
   try {

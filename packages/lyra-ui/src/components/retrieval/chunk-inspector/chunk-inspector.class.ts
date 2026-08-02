@@ -91,6 +91,8 @@ type Tier = 'high' | 'medium' | 'low';
  *   chunk's `[part="score"]` line. **Contrast-sensitive:** the quiet token it replaces only reaches
  *   ~4.24:1 against the current background, so override this together with
  *   `--lr-chunk-inspector-current-bg`, never alone.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> {
   static override styles = [LyraElement.styles, styles];

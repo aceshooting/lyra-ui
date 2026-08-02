@@ -50,6 +50,8 @@ export interface LyraHighlightLayerEventMap {
  * @cssprop --lr-highlight-layer-neutral-background - Neutral highlight background.
  * @cssprop --lr-highlight-layer-neutral-outline - Neutral highlight outline.
  * @cssprop --lr-highlight-layer-flash-background - Flash-state background.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> {
   static override styles = [LyraElement.styles, styles];

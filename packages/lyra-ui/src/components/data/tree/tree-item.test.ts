@@ -152,7 +152,7 @@ describe('tree-item declarative child model', () => {
   it('is accessible as a declarative branch inside a tree', async () => {
     const wrapper = await fixture(html`
       <div role="tree" aria-label="Docs">
-        <lr-tree-item label="Parent" expanded>
+        <lr-tree-item label="Parent" expanded style="--show-duration: 0ms">
           <lr-tree-item label="Child"></lr-tree-item>
         </lr-tree-item>
       </div>

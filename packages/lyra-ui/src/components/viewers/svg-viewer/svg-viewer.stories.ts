@@ -13,6 +13,18 @@ const src = `data:image/svg+xml,${encodeURIComponent(source)}`;
 export const Default: Story = { render: () => html`<lr-svg-viewer src=${src} name="Example illustration"></lr-svg-viewer>` };
 export const Empty: Story = { render: () => html`<lr-svg-viewer></lr-svg-viewer>` };
 
+export const Zoomable: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The opt-in `zoomable` property wraps the sanitized SVG in `<lr-pan-zoom>` and forwards its controls through the `frame-*` parts.',
+      },
+    },
+  },
+  render: () => html`<lr-svg-viewer src=${src} name="Zoomable illustration" zoomable></lr-svg-viewer>`,
+};
+
 /** Baseline narrow-allocation coverage with long metadata and multiple region actions. */
 export const Narrow320: Story = {
   render: () => html`

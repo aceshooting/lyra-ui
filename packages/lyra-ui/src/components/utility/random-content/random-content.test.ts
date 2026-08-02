@@ -1,7 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './random-content.js';
 import type { LyraRandomContent } from './random-content.js';
-import { styles } from './random-content.styles.js';
 
 // A stand-in for a wrapper component that re-projects its own light-DOM
 // children through a nested `<slot>` (e.g. a card wrapper rendering its own
@@ -41,6 +40,15 @@ function stubRandomSequence(values: number[]): () => void {
     Math.random = original;
   };
 }
+
+it('reflects the pinned Web Awesome mode property', async () => {
+  const el = (await fixture(html`
+    <lr-random-content><div>Alpha</div><div>Beta</div></lr-random-content>
+  `)) as LyraRandomContent;
+  el.mode = 'sequence';
+  await el.updateComplete;
+  expect(el.getAttribute('mode')).to.equal('sequence');
+});
 
 it('renders exactly one child by default and marks the rest hidden', async () => {
   const el = (await fixture(html`
@@ -453,12 +461,42 @@ it('disables autoplay ticking entirely under prefers-reduced-motion', async () =
   }
 });
 
-it('explicitly guards the entrance animation under prefers-reduced-motion for ::slotted content', () => {
+it('explicitly stops the rendered ::slotted entrance animation under prefers-reduced-motion', async () => {
   // The shared reduced-motion rule in tokens.styles.ts only reaches the
-  // shadow tree, not ::slotted() content -- this proves the explicit guard
-  // exists rather than relying on that (non-reaching) global rule.
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include("@media (prefers-reduced-motion: reduce) { ::slotted(*) { animation: none !important; } }");
+  // shadow tree, not ::slotted() content, so activate this component's media rule and assert the
+  // rendered result rather than merely matching stylesheet text.
+  const el = (await fixture(html`
+    <lr-random-content animation="fade"><div>One</div><div>Two</div></lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+  const shown = shownChild(el);
+  expect(getComputedStyle(shown).animationName).to.equal('lr-random-content-fade-in');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    expect(getComputedStyle(shown).animationName).to.equal('none');
+    return;
+  }
+  const reducedRule = el.shadowRoot!.adoptedStyleSheets
+    .flatMap((sheet) => [...sheet.cssRules])
+    .find(
+      (rule): rule is CSSMediaRule =>
+        rule instanceof CSSMediaRule &&
+        rule.conditionText === '(prefers-reduced-motion: reduce)' &&
+        [...rule.cssRules].some(
+          (nested) =>
+            nested instanceof CSSStyleRule &&
+            nested.selectorText.includes('::slotted') &&
+            nested.style.getPropertyPriority('animation') === 'important',
+        ),
+    );
+  expect(reducedRule).to.exist;
+  const originalCondition = reducedRule!.media.mediaText;
+  try {
+    reducedRule!.media.mediaText = 'all';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(getComputedStyle(shown).animationName).to.equal('none');
+  } finally {
+    reducedRule!.media.mediaText = originalCondition;
+  }
 });
 
 it('reflects the animation attribute and gates the matching keyframe', async () => {
@@ -470,17 +508,69 @@ it('reflects the animation attribute and gates the matching keyframe', async () 
   `)) as LyraRandomContent;
   await el.updateComplete;
   expect(el.getAttribute('animation')).to.equal('fade-up');
-
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include("[animation='fade-up']");
-  expect(css).to.include('lr-random-content-fade-in-up');
+  expect(getComputedStyle(shownChild(el)).animationName).to.equal('lr-random-content-fade-in-up');
 });
 
-it('exposes the documented animation custom properties with WA-matching defaults', () => {
-  const css = styles.cssText;
-  expect(css).to.include('var(--lr-random-content-animation-duration, 300ms)');
-  expect(css).to.include('var(--lr-random-content-animation-easing, ease)');
-  expect(css).to.include('var(--lr-random-content-animation-translate, var(--lr-size-0-5em))');
+it('supports mapped short animation CSS aliases while retaining the existing long names', async () => {
+  const upstream = (await fixture(html`
+    <lr-random-content
+      animation="fade-up"
+      style="--animation-duration: 3s; --animation-easing: steps(2); --animation-translate: 12px"
+    ><div>One</div><div>Two</div></lr-random-content>
+  `)) as LyraRandomContent;
+  const upstreamStyle = getComputedStyle(shownChild(upstream));
+  expect(upstreamStyle.animationDuration).to.equal('3s');
+  expect(upstreamStyle.animationTimingFunction).to.equal('steps(2)');
+
+  const short = (await fixture(html`
+    <lr-random-content
+      animation="fade-up"
+      style="--lr-animation-duration: 2s; --lr-animation-easing: linear; --lr-animation-translate: 10px"
+    ><div>One</div><div>Two</div></lr-random-content>
+  `)) as LyraRandomContent;
+  const shortStyle = getComputedStyle(shownChild(short));
+  expect(shortStyle.animationDuration).to.equal('2s');
+  expect(shortStyle.animationTimingFunction).to.equal('linear');
+  expect(shortStyle.getPropertyValue('--lr-animation-translate').trim()).to.equal('10px');
+
+  const legacy = (await fixture(html`
+    <lr-random-content
+      animation="fade"
+      style="--lr-random-content-animation-duration: 4s; --lr-random-content-animation-easing: ease-in"
+    ><div>One</div><div>Two</div></lr-random-content>
+  `)) as LyraRandomContent;
+  const legacyStyle = getComputedStyle(shownChild(legacy));
+  expect(legacyStyle.animationDuration).to.equal('4s');
+  expect(legacyStyle.animationTimingFunction).to.equal('ease-in');
+});
+
+it('exposes randomize as a prototype method, not an instance callback field', async () => {
+  const el = (await fixture(html`
+    <lr-random-content><div>One</div><div>Two</div></lr-random-content>
+  `)) as LyraRandomContent;
+  const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'randomize');
+  expect(descriptor?.value).to.equal(el.randomize);
+  expect(el.randomize()).to.have.length(1);
+});
+
+it('treats invalid runtime animation as none and invalid mode as unique', async () => {
+  const el = (await fixture(html`
+    <lr-random-content animation="invalid" mode="invalid">
+      <div id="a">One</div><div id="b">Two</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  expect(getComputedStyle(shownChild(el)).animationName).to.equal('none');
+
+  const previous = shownIds(el)[0]!;
+  const samePick = previous === 'a' ? 0 : 0.99;
+  const differentPick = previous === 'a' ? 0.99 : 0;
+  const restore = stubRandomSequence([samePick, differentPick]);
+  try {
+    el.randomize();
+    expect(shownIds(el)).to.deep.equal([previous === 'a' ? 'b' : 'a']);
+  } finally {
+    restore();
+  }
 });
 
 it('forwards a host aria-label to the internal role="status" element, and omits it when absent', async () => {

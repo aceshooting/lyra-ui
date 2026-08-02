@@ -22,6 +22,29 @@ export const Default: Story = {
   `,
 };
 
+/** `selectedOptions` accepts exact live option occurrences and updates the value without events. */
+export const WritableSelectedOptions: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; max-width: 20rem;">
+      <lr-select label="Fruit" multiple>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-select>
+      <button
+        type="button"
+        style="justify-self: start;"
+        @click=${(event: Event) => {
+          const root = (event.currentTarget as HTMLElement).parentElement!;
+          const select = root.querySelector('lr-select') as LyraSelect;
+          const options = [...select.querySelectorAll('lr-option')] as LyraOption[];
+          select.selectedOptions = [options[1]!, options[2]!];
+        }}
+      >Select Banana and Cherry by option reference</button>
+    </div>
+  `,
+};
+
 /** `focus()` and `blur()` target the internal combobox trigger and surface host events. */
 export const ProgrammaticFocus: Story = {
   render: () => html`
@@ -44,7 +67,10 @@ export const ProgrammaticFocus: Story = {
   `,
 };
 
-/** `<lr-option selected>` seeds the initial value, mirroring `<option selected>`. */
+/**
+ * `<lr-option selected>` sets `defaultSelected` and seeds the initial value. Live selection stays
+ * property-only, while form reset returns to this attribute-backed default.
+ */
 export const PreSelectedValue: Story = {
   render: () => html`
     <lr-select label="Fruit" style="max-width: 20rem">
@@ -187,10 +213,9 @@ export const RequiredWithValidation: Story = {
 };
 
 /**
- * `multiple` turns the value into a `string[]` and renders one chip per selection. Picking a
- * selected row toggles it back off; Backspace on the trigger drops the last one. The chips are
- * deliberately non-interactive — the trigger is a real `<button>`, so a nested remove button
- * would be invalid (and unreachable) interactive-content nesting.
+ * `multiple` turns the value into a `string[]` and renders one removable chip per selection.
+ * Remove buttons are legal focusable siblings overlaid on the trigger, never nested inside it;
+ * picking a selected row or pressing Backspace on the trigger remain equivalent alternatives.
  */
 export const Multiple: Story = {
   render: () => html`
@@ -237,6 +262,25 @@ export const WithClear: Story = {
   render: () => html`
     <lr-select label="Fruit" with-clear style="max-width: 20rem">
       <lr-option value="a" selected>Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+    </lr-select>
+  `,
+};
+
+/** Mapped defaults and Shoelace aliases, including a fixed-position (`hoist`) popup. */
+export const MigrationAliases: Story = {
+  render: () => html`
+    <lr-select
+      label="Fruit"
+      default-value="b"
+      filled
+      hoist
+      help-text="Uses default-value, filled, hoist, prefix and suffix aliases"
+      style="max-width: 22rem"
+    >
+      <span slot="prefix" aria-hidden="true">●</span>
+      <span slot="suffix">optional</span>
+      <lr-option value="a">Apple</lr-option>
       <lr-option value="b">Banana</lr-option>
     </lr-select>
   `,

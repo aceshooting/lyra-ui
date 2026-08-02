@@ -285,7 +285,7 @@ describe('accessible name override', () => {
     await el.updateComplete;
     const dialog = el.shadowRoot!.querySelector('lr-dialog')!;
     await (dialog as unknown as { updateComplete: Promise<unknown> }).updateComplete;
-    const panel = dialog.shadowRoot!.querySelector('[part="panel"]')!;
+    const panel = dialog.shadowRoot!.querySelector('[part~="panel"]')!;
     expect(panel.getAttribute('aria-label')).to.equal('Custom label');
   });
 });

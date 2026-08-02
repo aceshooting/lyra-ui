@@ -6,6 +6,17 @@ const meta: Meta = { title: 'Form/Radio', component: 'lr-radio-group', tags: ['a
 export default meta;
 export const Group: StoryObj = { render: () => html`<lr-radio-group label="Format" name="format"><lr-radio value="json">JSON</lr-radio><lr-radio value="csv">CSV</lr-radio></lr-radio-group>` };
 
+export const ButtonAppearance: StoryObj = {
+  name: 'WA button appearance on lr-radio',
+  render: () => html`
+    <lr-radio-group label="Plan" name="plan" orientation="horizontal">
+      <lr-radio appearance="button" value="free" checked>Free</lr-radio>
+      <lr-radio appearance="button" value="pro">Pro</lr-radio>
+      <lr-radio appearance="button" value="team">Team</lr-radio>
+    </lr-radio-group>
+  `,
+};
+
 export const EventOwnership: StoryObj = {
   name: 'Standalone and group event ownership',
   render: () => html`
@@ -73,9 +84,9 @@ export const Sizes: StoryObj = {
   },
   render: () => html`
     <div style="display: grid; gap: var(--lr-space-m); justify-items: start;">
-      <lr-radio-group size="s" name="fmt-s" label="Size s"><lr-radio value="json" size="s">JSON</lr-radio><lr-radio value="csv" size="s">CSV</lr-radio></lr-radio-group>
-      <lr-radio-group size="m" name="fmt-m" label="Size m"><lr-radio value="json" size="m">JSON</lr-radio><lr-radio value="csv" size="m">CSV</lr-radio></lr-radio-group>
-      <lr-radio-group size="l" name="fmt-l" label="Size l"><lr-radio value="json" size="l">JSON</lr-radio><lr-radio value="csv" size="l">CSV</lr-radio></lr-radio-group>
+      <lr-radio-group size="s" name="fmt-s" label="Size s"><lr-radio value="json">JSON</lr-radio><lr-radio value="csv">CSV</lr-radio></lr-radio-group>
+      <lr-radio-group size="m" name="fmt-m" label="Size m"><lr-radio value="json">JSON</lr-radio><lr-radio value="csv">CSV</lr-radio></lr-radio-group>
+      <lr-radio-group size="l" name="fmt-l" label="Size l"><lr-radio value="json">JSON</lr-radio><lr-radio value="csv">CSV</lr-radio></lr-radio-group>
     </div>
   `,
 };

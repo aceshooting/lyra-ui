@@ -6,6 +6,8 @@ import { LyraChart, lockChartType } from './chart.class.js';
  * `x`/`y`, optional bubble `r` (radius), and an optional per-point `label`.
  *
  * @customElement lr-bubble-chart
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraBubbleChart extends LyraChart {
   declare type: 'bubble';

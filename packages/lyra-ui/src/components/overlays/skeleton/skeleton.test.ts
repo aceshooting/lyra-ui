@@ -1,12 +1,13 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './skeleton.js';
 import type { LyraSkeleton } from './skeleton.js';
-import { styles } from './skeleton.styles.js';
 
 it('defaults to a text variant with a status role', async () => {
   const el = (await fixture(html`<lr-skeleton></lr-skeleton>`)) as LyraSkeleton;
   expect(el.variant).to.equal('text');
+  expect(el.effect).to.equal('none');
   expect(el.getAttribute('role')).to.equal('status');
+  expect(el.shadowRoot!.querySelector('[part~="indicator"]')).to.exist;
 });
 
 it('applies explicit width/height as inline custom properties on the host', async () => {
@@ -45,19 +46,19 @@ it('clears the width/height custom properties when width/height are unset', asyn
 it('reflects variant onto the host attribute and gives each variant a distinct border-radius', async () => {
   const text = (await fixture(html`<lr-skeleton variant="text"></lr-skeleton>`)) as LyraSkeleton;
   expect(text.getAttribute('variant')).to.equal('text');
-  const textRadius = getComputedStyle(text.shadowRoot!.querySelector('[part="base"]')!).borderRadius;
+  const textRadius = getComputedStyle(text.shadowRoot!.querySelector('[part~="base"]')!).borderRadius;
 
   const circle = (await fixture(
     html`<lr-skeleton variant="circle"></lr-skeleton>`,
   )) as LyraSkeleton;
   expect(circle.getAttribute('variant')).to.equal('circle');
-  const circleRadius = getComputedStyle(circle.shadowRoot!.querySelector('[part="base"]')!).borderRadius;
+  const circleRadius = getComputedStyle(circle.shadowRoot!.querySelector('[part~="base"]')!).borderRadius;
   expect(circleRadius).to.equal('50%');
   expect(circleRadius).to.not.equal(textRadius);
 
   const rect = (await fixture(html`<lr-skeleton variant="rect"></lr-skeleton>`)) as LyraSkeleton;
   expect(rect.getAttribute('variant')).to.equal('rect');
-  const rectRadius = getComputedStyle(rect.shadowRoot!.querySelector('[part="base"]')!).borderRadius;
+  const rectRadius = getComputedStyle(rect.shadowRoot!.querySelector('[part~="base"]')!).borderRadius;
   expect(rectRadius).to.equal(textRadius);
   expect(rectRadius).to.not.equal(circleRadius);
 });
@@ -68,21 +69,81 @@ it('reflects effect onto the host attribute', async () => {
 
   const sheen = (await fixture(html`<lr-skeleton effect="sheen"></lr-skeleton>`)) as LyraSkeleton;
   expect(sheen.getAttribute('effect')).to.equal('sheen');
+
+  const none = (await fixture(html`<lr-skeleton effect="none"></lr-skeleton>`)) as LyraSkeleton;
+  expect(none.getAttribute('effect')).to.equal('none');
+  expect(getComputedStyle(none.shadowRoot!.querySelector('[part~="indicator"]')!).animationName).to.equal('none');
 });
 
-it('gives pulse and sheen distinct keyframe animations, disabled under reduced motion', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(
-    "[part='base'] { animation: lr-skeleton-pulse var(--lr-transition-ambient) infinite; }",
-  );
-  expect(css).to.include('background-image: linear-gradient(');
-  expect(css).to.include(
-    'animation: lr-skeleton-sheen var(--lr-transition-ambient) infinite;',
-  );
-  expect(css).to.include(
-    "@media (prefers-reduced-motion: reduce) { [part='base'] { animation: none !important; } " +
-      ":host([effect='sheen']) [part='base'] { background-image: none; } }",
-  );
+it('gives pulse and sheen distinct rendered animations, disabled under reduced motion', async () => {
+  const pulse = (await fixture(html`<lr-skeleton effect="pulse"></lr-skeleton>`)) as LyraSkeleton;
+  const pulseIndicator = pulse.shadowRoot!.querySelector<HTMLElement>('[part~="indicator"]')!;
+  expect(getComputedStyle(pulseIndicator).animationName).to.equal('lr-skeleton-pulse');
+
+  const sheen = (await fixture(html`<lr-skeleton effect="sheen"></lr-skeleton>`)) as LyraSkeleton;
+  const sheenIndicator = sheen.shadowRoot!.querySelector<HTMLElement>('[part~="indicator"]')!;
+  expect(getComputedStyle(sheenIndicator).animationName).to.equal('lr-skeleton-sheen');
+  expect(getComputedStyle(sheenIndicator).backgroundImage).to.not.equal('none');
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    expect(getComputedStyle(sheenIndicator).animationName).to.equal('none');
+    return;
+  }
+  const reducedRule = sheen.shadowRoot!.adoptedStyleSheets
+    .flatMap((sheet) => [...sheet.cssRules])
+    .find(
+      (rule): rule is CSSMediaRule =>
+        rule instanceof CSSMediaRule &&
+        rule.conditionText === '(prefers-reduced-motion: reduce)' &&
+        [...rule.cssRules].some(
+          (nested) =>
+            nested instanceof CSSStyleRule &&
+            nested.selectorText.includes('indicator') &&
+            nested.style.getPropertyPriority('animation') === 'important',
+        ),
+    );
+  expect(reducedRule).to.exist;
+  const originalCondition = reducedRule!.media.mediaText;
+  try {
+    reducedRule!.media.mediaText = 'all';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(getComputedStyle(sheenIndicator).animationName).to.equal('none');
+    expect(getComputedStyle(sheenIndicator).backgroundImage).to.equal('none');
+  } finally {
+    reducedRule!.media.mediaText = originalCondition;
+  }
+});
+
+it('applies mapped color, sheen, and border-radius custom-property aliases', async () => {
+  const el = (await fixture(html`
+    <lr-skeleton
+      effect="sheen"
+      style="
+        --lr-skeleton-color: rgb(1, 2, 3);
+        --lr-skeleton-sheen-color: rgb(4, 5, 6);
+        --lr-skeleton-border-radius: 9px;
+      "
+    ></lr-skeleton>
+  `)) as LyraSkeleton;
+  const indicator = el.shadowRoot!.querySelector<HTMLElement>('[part~="indicator"]')!;
+  const computed = getComputedStyle(indicator);
+  expect(computed.borderRadius).to.equal('9px');
+  expect(computed.backgroundImage).to.include('rgb(1, 2, 3)');
+  expect(computed.backgroundImage).to.include('rgb(4, 5, 6)');
+});
+
+it('accepts the unprefixed upstream skeleton hooks', async () => {
+  const el = (await fixture(html`
+    <lr-skeleton
+      effect="sheen"
+      style="--color: rgb(1, 2, 3); --sheen-color: rgb(4, 5, 6); --border-radius: 9px"
+    ></lr-skeleton>
+  `)) as LyraSkeleton;
+  const indicator = el.shadowRoot!.querySelector<HTMLElement>('[part~="indicator"]')!;
+  const computed = getComputedStyle(indicator);
+  expect(computed.borderRadius).to.equal('9px');
+  expect(computed.backgroundImage).to.include('rgb(1, 2, 3)');
+  expect(computed.backgroundImage).to.include('rgb(4, 5, 6)');
 });
 
 it('allows the shared ambient-motion token to retime the animation', async () => {
@@ -92,7 +153,7 @@ it('allows the shared ambient-motion token to retime the animation', async () =>
       style="--lr-transition-ambient: 3s linear"
     ></lr-skeleton>`,
   )) as LyraSkeleton;
-  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  const base = el.shadowRoot!.querySelector('[part~="base"]')!;
 
   expect(getComputedStyle(base).animationDuration).to.equal('3s');
   expect(getComputedStyle(base).animationTimingFunction).to.equal('linear');
@@ -100,7 +161,7 @@ it('allows the shared ambient-motion token to retime the animation', async () =>
 
 it('reverses the sheen sweep under dir="rtl" so it travels in the reading direction', async () => {
   const ltr = (await fixture(html`<lr-skeleton effect="sheen"></lr-skeleton>`)) as LyraSkeleton;
-  const ltrBase = ltr.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const ltrBase = ltr.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(getComputedStyle(ltrBase).animationDirection).to.equal('normal');
 
   // background-position percentages are physical, so the RTL variant plays the same keyframes
@@ -108,7 +169,7 @@ it('reverses the sheen sweep under dir="rtl" so it travels in the reading direct
   const rtl = (await fixture(
     html`<lr-skeleton effect="sheen" dir="rtl"></lr-skeleton>`,
   )) as LyraSkeleton;
-  const rtlBase = rtl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const rtlBase = rtl.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(getComputedStyle(rtlBase).animationDirection).to.equal('reverse');
 });
 
@@ -164,7 +225,7 @@ it('is accessible', async () => {
 
 it('renders a visible, nonzero box -- [part=base] uses display:block, not inline', async () => {
   const el = (await fixture(html`<lr-skeleton width="120px" height="40px"></lr-skeleton>`)) as LyraSkeleton;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(getComputedStyle(base).display).to.equal('block');
   const rect = base.getBoundingClientRect();
   expect(rect.width).to.be.greaterThan(0);

@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/breadcrumb/breadcrumb-item.js';` (registers the tag; side-effect import)
 - **Class** `LyraBreadcrumbItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/breadcrumb/breadcrumb-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-breadcrumb` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -16,19 +18,25 @@
 
 Responsive navigation trail primitives.
 
-**`lr-breadcrumb` properties:** `accessibleLabel: string = ''` (attribute `aria-label`) — overrides
-the localized `"Breadcrumb"` name on the shadow-root `<nav>` landmark, which never inherits a host
-attribute on its own.
+**`lr-breadcrumb` properties:** `label: string = ''` names the trail, falling back to the localized
+`"Breadcrumb"`; `accessibleLabel: string = ''` maps the host `aria-label`, which has highest
+priority because the shadow-root `<nav>` landmark never inherits a host attribute on its own.
 
 **`lr-breadcrumb-item` properties:** `href: string = ''` (URL-sanitized; an unsafe scheme renders the
-non-link form) and `current: boolean = false` (reflected — renders a `<span aria-current="page">`
-instead of an `<a>`, even when `href` is set). Each item sets `role="listitem"` on itself.
+non-link form; assigning `undefined` clears it and reads back as the canonical `''`),
+`target?: string`, and `current: boolean = false` (reflected — renders a
+`<span aria-current="page">` instead of an `<a>`, even when `href` is set). A target derives
+`rel="noopener noreferrer"`; there is intentionally no independently settable `rel`. Each item
+sets `role="listitem"` on itself. A non-current item without `href` renders a native button.
 
-**Slots:** breadcrumb's default slot takes `lr-breadcrumb-item` children; an item's default slot is
-its label.
+**Slots:** breadcrumb's default slot takes `lr-breadcrumb-item` children and its `separator` slot is
+copied to every item without an item-level override. An item's default slot is its label;
+`start`/`prefix` and `end`/`suffix` are the two upstream adornment vocabularies, and `separator`
+overrides the `/` fallback.
 
-**CSS parts:** breadcrumb `base` (the `<nav>`) and `list` (the `role="list"` flex row wrapping the
-slotted items); item `base` (the `<a>` or `<span>`).
+**CSS parts:** breadcrumb `base` and `breadcrumb` are aliases on the same `<nav>`; `list` is the
+`role="list"` flex row wrapping the slotted items; item `base` (the `<a>` or `<span>`), `label`,
+`separator`, and the alias pairs `start`/`prefix` and `end`/`suffix`.
 
 **Themeable custom properties:** `--lr-breadcrumb-current-color` (default
 `var(--lr-color-text-quiet)`) — text color of the current-page item (`current`/`aria-current="page"`).

@@ -46,6 +46,8 @@ const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
  * @csspart explanation - Caller-supplied assessment explanation.
  * @csspart evidence - Resolved evidence citations for one claim.
  * @csspart empty - The empty state.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   static override styles = [LyraElement.styles, styles];

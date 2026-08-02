@@ -223,6 +223,8 @@ export interface LyraVirtualListEventMap {
  * @cssprop [--lr-virtual-list-hover-outline-color=var(--lr-color-border-strong)] - Outline color of
  *   the mouse-hover preview on `[part="base"]` (a subtler, always-focusable-target preview of its
  *   own `:focus-visible` ring). Set to `transparent` to opt out of the hover treatment entirely.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   static override styles = [LyraElement.styles, styles];

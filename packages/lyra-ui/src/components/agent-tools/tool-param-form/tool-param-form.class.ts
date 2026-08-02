@@ -14,6 +14,8 @@ import '../../forms/select/select.class.js';
 import '../../forms/combobox/option.class.js';
 import '../../forms/checkbox/checkbox.class.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
+import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 
 /** The four leaf property types this flat-schema renderer understands. */
 export type ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean';
@@ -93,6 +95,7 @@ function createNoopInternals(): ElementInternals {
 }
 
 export interface LyraToolParamFormEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   'lr-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
   'lr-input': CustomEvent<{ value: Record<string, unknown> }>;
   blur: CustomEvent<undefined>;
@@ -166,6 +169,7 @@ export interface LyraToolParamFormEventMap {
  * @event focus - Re-dispatched when a generated native text/number input receives focus. Composed
  * controls (`<lr-select>`/`<lr-checkbox>`) already expose their own bubbling, composed bridge.
  * @event blur - Re-dispatched when a generated native text/number input loses focus.
+ * @event lr-invalid - The complete parameter form failed a validity check.
  * @csspart base - The outer wrapper around all fields.
  * @csspart field - One property's wrapper (label + control + description + error).
  * @csspart label - A field's label.
@@ -190,12 +194,15 @@ export interface LyraToolParamFormEventMap {
  * invalid but deliberately does not match this, so a consumer's `:state(user-invalid)` styling
  * cannot paint the form red before the user has typed anything. A form reset makes it pristine
  * again.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
   static override properties = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
     schema: { attribute: false, noAccessor: true },
     value: { attribute: false, noAccessor: true },
@@ -218,6 +225,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   private baseId = nextId('tool-param-form');
   private _fieldsetDisabled = false;
   private _name = '';
@@ -243,11 +252,20 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     super();
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     this.syncFormState();
   }
 
   get form(): HTMLFormElement | null {
-    return this.internals.form;
+    return getFormOwner(this.internals);
+  }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  /** Returns the browser-resolved owning form, including an external owner selected by `form`. */
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
   }
   get labels(): NodeList {
     return this.internals.labels;

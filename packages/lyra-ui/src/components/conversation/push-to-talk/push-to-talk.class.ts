@@ -96,6 +96,8 @@ export interface LyraPushToTalkEventMap {
  * @cssprop [--lr-push-to-talk-recording-color=var(--lr-color-danger)] - Border and text color of
  *   `[part="trigger"]` while `state` is `recording`. Recolors only the recording treatment, leaving
  *   every other danger-toned surface on the page untouched.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   static override styles = [LyraElement.styles, styles];

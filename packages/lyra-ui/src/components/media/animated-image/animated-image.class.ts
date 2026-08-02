@@ -37,8 +37,8 @@ export interface LyraAnimatedImageEventMap {
  * even while visually covered by the frozen canvas; only opacity and
  * `aria-hidden` swap between them, driven by the effective `playing` state.
  *
- * **`play` vs. `playing`.** `play` is the caller's intent (settable,
- * reflects nothing on its own). `playing` is the read-only, reflected effect
+ * **`play` vs. `playing`.** `play` is the caller's intent (settable and
+ * reflected). `playing` is the read-only, reflected effect
  * after reduced-motion arbitration: `play && !(respectReducedMotion &&
  * <OS prefers-reduced-motion: reduce>)`. A page can set `.play = true` while
  * reduced motion still keeps the visual frozen -- `lr-play`/`lr-pause`
@@ -76,7 +76,11 @@ export interface LyraAnimatedImageEventMap {
  * @csspart play-button - The `<button type="button">` inside `control-box` that toggles `play`.
  * @cssprop --lr-animated-image-control-box-size - The size of `control-box`. Defaults to `var(--lr-icon-button-size)`.
  * @cssprop --lr-animated-image-icon-size - The size of the play/pause icons. Defaults to `calc(var(--lr-icon-button-size) * 0.35)`.
+ * @cssprop --control-box-size - Upstream-compatible alias for `--lr-animated-image-control-box-size`.
+ * @cssprop --icon-size - Upstream-compatible alias for `--lr-animated-image-icon-size`.
  * @cssprop --lr-animated-image-max-height - Caps the rendered media's block-size. Defaults to `var(--lr-size-20rem)`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -91,7 +95,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
   /** Requests animated playback. Distinct from the read-only `playing`
    *  effect -- see the class doc's "`play` vs. `playing`" section. */
-  @property({ type: Boolean }) play = false;
+  @property({ type: Boolean, reflect: true }) play = false;
 
   /** When `true` (default) and the platform reports
    *  `prefers-reduced-motion: reduce`, playback stays frozen and

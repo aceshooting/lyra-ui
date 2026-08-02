@@ -545,6 +545,111 @@ it('restores the declared default selection on form.reset()', async () => {
   expect(el.value).to.equal('b');
 });
 
+it('keeps only the first declared default selected when a single combobox resets', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-combobox name="fruit">
+        <lr-option value="a" selected>Apple</lr-option>
+        <lr-option value="b" selected>Banana</lr-option>
+      </lr-combobox>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-combobox') as LyraCombobox;
+  const options = [...el.querySelectorAll('lr-option')];
+  await el.updateComplete;
+
+  el.value = 'b';
+  form.reset();
+
+  expect(el.value).to.equal('a');
+  expect(options.map((option) => option.selected)).to.deep.equal([true, false]);
+});
+
+it('applies post-mount defaultSelected changes to a pristine live selection', async () => {
+  const el = (await fixture(html`
+    <lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox>
+  `)) as LyraCombobox;
+  const option = el.querySelector('lr-option')!;
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+
+  option.defaultSelected = true;
+  await option.updateComplete;
+  await el.updateComplete;
+  expect(el.value).to.equal('a');
+  expect(option.selected).to.equal(true);
+
+  option.defaultSelected = false;
+  await option.updateComplete;
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+  expect(option.selected).to.equal(false);
+});
+
+it('preserves an initial property-only selected write until reset reapplies a later default', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-combobox name="fruit" multiple>
+        <lr-option value="a" .selected=${true}>Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-combobox>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-combobox') as LyraCombobox;
+  const [, banana] = [...el.querySelectorAll('lr-option')];
+  await el.updateComplete;
+  expect(el.value).to.deep.equal(['a']);
+
+  banana!.defaultSelected = true;
+  await banana!.updateComplete;
+  await el.updateComplete;
+  expect(el.value, 'the later reset default must not overwrite dirty live selectedness').to.deep.equal(['a']);
+
+  form.reset();
+  expect(el.value).to.deep.equal(['b']);
+});
+
+it('keeps a late-slotted default selection pristine for subsequent default changes', async () => {
+  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+  await el.updateComplete;
+
+  const option = document.createElement('lr-option');
+  option.value = 'd';
+  option.textContent = 'Date';
+  option.defaultSelected = true;
+  el.append(option);
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(el.value).to.equal('d');
+
+  option.defaultSelected = false;
+  await option.updateComplete;
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+  expect(option.selected).to.equal(false);
+});
+
+it('retains a defaultSelected refresh when the parent detaches during option notification', async () => {
+  const form = (await fixture(html`
+    <form><lr-combobox name="fruit"><lr-option value="a">Apple</lr-option></lr-combobox></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-combobox') as LyraCombobox;
+  const option = el.querySelector('lr-option')!;
+  await el.updateComplete;
+
+  option.addEventListener('lr-option-change', () => el.remove(), { once: true });
+  option.defaultSelected = true;
+  await option.updateComplete;
+  await Promise.resolve();
+  form.append(el);
+  await el.updateComplete;
+
+  expect(el.value).to.equal('a');
+  el.value = '';
+  form.reset();
+  expect(el.value).to.equal('a');
+});
+
 it('does not let a user pick become the reset default when no option is declared selected', async () => {
   // Regression test: previously the *first* pick on an initially-unselected
   // combobox silently became the permanent reset default, so a later
@@ -2019,7 +2124,7 @@ describe('size', () => {
         </div>
       `);
       const heights = SELECTORS.map(([tag, part]) => {
-        const box = root.querySelector(tag)!.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+        const box = root.querySelector(tag)!.shadowRoot!.querySelector(`[part~="${part}"]`) as HTMLElement;
         return box.getBoundingClientRect().height;
       });
       const labelled = SELECTORS.map(([tag], i) => `${tag}=${heights[i]}`).join(', ');
@@ -2110,7 +2215,7 @@ describe('size', () => {
         ></lr-segmented>
       </div>
     `);
-    const input = root.querySelector('lr-input')!.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    const input = root.querySelector('lr-input')!.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
     const select = root.querySelector('lr-select')!.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
     const combobox = root.querySelector('lr-combobox')!.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
     const segmented = root.querySelector('lr-segmented')!.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -2437,7 +2542,7 @@ describe('exact-height escape hatch', () => {
       </div>
     `);
     const parts = [
-      root.querySelector('lr-input')!.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement,
+      root.querySelector('lr-input')!.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement,
       root.querySelector('lr-select')!.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement,
       root.querySelector('lr-combobox')!.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement,
     ];
@@ -3036,7 +3141,7 @@ describe('ElementInternals fallback', () => {
   });
 });
 
-it('tracks slotted label, hint and error content through slotchange', async () => {
+it('preserves rendered label, hint and error behavior through shared slot changes', async () => {
   const el = (await fixture(html`
     <lr-combobox>
       <span slot="label">Fruit</span>
@@ -3046,17 +3151,19 @@ it('tracks slotted label, hint and error content through slotchange', async () =
     </lr-combobox>
   `)) as LyraCombobox;
   await el.updateComplete;
-  const flags = el as unknown as { hasLabelSlot: boolean; hasHintSlot: boolean; hasErrorSlot: boolean };
-  expect(flags.hasLabelSlot).to.be.true;
-  expect(flags.hasHintSlot).to.be.true;
-  expect(flags.hasErrorSlot).to.be.true;
+  const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+  const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(label.hidden).to.be.false;
+  expect(hint.hidden).to.be.false;
+  expect(error.hidden).to.be.false;
 
   for (const slot of ['label', 'hint', 'error']) el.querySelector(`[slot="${slot}"]`)!.remove();
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await el.updateComplete;
-  expect(flags.hasLabelSlot).to.be.false;
-  expect(flags.hasHintSlot).to.be.false;
-  expect(flags.hasErrorSlot).to.be.false;
+  expect(label.hidden).to.be.true;
+  expect(hint.hidden).to.be.true;
+  expect(error.hidden).to.be.true;
 });
 
 it('ArrowDown and ArrowUp open a closed list before moving within it', async () => {
@@ -3422,5 +3529,188 @@ describe('lr-combobox implicit form submission', () => {
 
     enterOn(el);
     expect(submits, 'a bare Enter still submits').to.equal(1);
+  });
+});
+
+describe('reviewed Web Awesome Pro combobox surface', () => {
+  const typeQuery = async (el: LyraCombobox, value: string): Promise<HTMLInputElement> => {
+    const input = el.shadowRoot!.querySelector('[part~="combobox-input"]') as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    return input;
+  };
+
+  it('exposes the reviewed defaults and public validation/editing members', async () => {
+    const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+    await el.updateComplete;
+
+    expect(el.allowCreate).to.be.false;
+    expect(el.allowCustomValue).to.be.false;
+    expect(el.appearance).to.equal('outlined');
+    expect(el.inputValue).to.equal('');
+    expect(el.placement).to.equal('bottom');
+    expect(el.spellcheck).to.be.false;
+    expect(el.withHint).to.be.false;
+    expect(el.withLabel).to.be.false;
+    expect(el.validators).to.deep.equal([]);
+    expect(el.validationTarget).to.equal(
+      el.shadowRoot!.querySelector('[part~="combobox-input"]'),
+    );
+    expect(el.resetValidity).to.be.a('function');
+    expect(el.show).to.be.a('function');
+    expect(el.hide).to.be.a('function');
+  });
+
+  it('keeps the mapped autocorrect IDL boolean and forwards the on/off HTML vocabulary', async () => {
+    const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+    el.inputmode = 'search';
+    el.enterkeyhint = 'done';
+    el.autocorrect = false;
+    el.inputValue = 'draft';
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector('[part~="combobox-input"]') as HTMLInputElement;
+    expect(el.inputMode).to.equal('search');
+    expect(el.enterKeyHint).to.equal('done');
+    expect(el.autocorrect).to.equal(false);
+    expect(input.getAttribute('inputmode')).to.equal('search');
+    expect(input.getAttribute('enterkeyhint')).to.equal('done');
+    expect(input.getAttribute('autocorrect')).to.equal('off');
+    expect(input.value).to.equal('draft');
+
+    el.setAttribute('autocorrect', 'on');
+    await el.updateComplete;
+    expect(el.autocorrect).to.equal(true);
+    expect(input.getAttribute('autocorrect')).to.equal('on');
+
+    el.removeAttribute('autocorrect');
+    await el.updateComplete;
+    expect(el.autocorrect).to.equal(true);
+    expect(input.hasAttribute('autocorrect')).to.equal(false);
+  });
+
+  it('renders a localized create row and lets lr-create veto the default append/select behavior', async () => {
+    const el = (await fixture(html`
+      <lr-combobox
+        allow-create
+        .strings=${{ comboboxCreate: 'Ajouter {value}' }}
+      >
+        <lr-option value="existing">Existing</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await typeQuery(el, 'New tag');
+
+    const create = el.shadowRoot!.querySelector('[data-create]') as HTMLElement;
+    expect(create).to.exist;
+    expect(create.textContent).to.contain('Ajouter New tag');
+
+    let detail: { inputValue: string } | undefined;
+    el.addEventListener(
+      'lr-create',
+      (event) => {
+        detail = event.detail;
+        event.preventDefault();
+      },
+      { once: true },
+    );
+    create.click();
+    await el.updateComplete;
+
+    expect(detail).to.deep.equal({ inputValue: 'New tag' });
+    expect(el.value).to.equal('');
+    expect([...el.querySelectorAll('lr-option')].some((option) => option.getAttribute('value') === 'New tag')).to.be.false;
+  });
+
+  it('appends and selects a created lr-option by default in single and multiple modes', async () => {
+    for (const multiple of [false, true]) {
+      const el = (await fixture(html`
+        <lr-combobox allow-create ?multiple=${multiple}>
+          <lr-option value="existing" ?selected=${multiple}>Existing</lr-option>
+        </lr-combobox>
+      `)) as LyraCombobox;
+      await typeQuery(el, 'New tag');
+      (el.shadowRoot!.querySelector('[data-create]') as HTMLElement).click();
+      await el.updateComplete;
+
+      const created = [...el.querySelectorAll('lr-option')].find(
+        (option) => option.getAttribute('value') === 'New tag',
+      );
+      expect(created).to.exist;
+      expect(created!.textContent).to.equal('New tag');
+      expect(multiple ? el.value : [el.value]).to.deep.equal(
+        multiple ? ['existing', 'New tag'] : ['New tag'],
+      );
+    }
+  });
+
+  it('commits an arbitrary single-select value on Enter without creating an option', async () => {
+    const el = (await fixture(html`
+      <lr-combobox allow-custom-value>
+        <lr-option value="red">Red</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    const input = await typeQuery(el, 'Cerulean');
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+    await el.updateComplete;
+
+    expect(el.value).to.equal('Cerulean');
+    expect(el.querySelectorAll('lr-option')).to.have.length(1);
+  });
+
+  it('supports custom tags and every reviewed named slot/part alias', async () => {
+    const el = (await fixture(html`
+      <lr-combobox multiple with-clear with-label with-hint>
+        <span slot="label">Label</span>
+        <span slot="hint">Hint</span>
+        <span slot="start">Start</span>
+        <span slot="end">End</span>
+        <span slot="clear-icon">Clear</span>
+        <span slot="expand-icon">Expand</span>
+        <lr-option value="a" selected>Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    el.getTag = (option, index) => html`<span class="custom-tag">${index}:${option.label}</span>`;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('.custom-tag')!.textContent).to.equal('0:Apple');
+    expect(el.shadowRoot!.querySelector('slot[name="clear-icon"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('slot[name="expand-icon"]')).to.exist;
+    el.getTag = undefined;
+    await el.updateComplete;
+    for (const part of [
+      'form-control-input',
+      'label',
+      'tag__content',
+      'tag__remove-button__base',
+    ]) {
+      expect(el.shadowRoot!.querySelector(`[part~="${part}"]`), part).to.exist;
+    }
+  });
+
+  it('emits show/hide lifecycle events in before/after order from the public methods', async () => {
+    const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+    el.style.setProperty('--show-duration', '0ms');
+    el.style.setProperty('--hide-duration', '0ms');
+    const order: string[] = [];
+    for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+      el.addEventListener(name, () => order.push(name));
+    }
+
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    await afterShow;
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    await afterHide;
+
+    expect(order).to.deep.equal(['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
   });
 });

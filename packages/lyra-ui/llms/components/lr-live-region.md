@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/live-region/live-region.js';` (registers the tag; side-effect import)
 - **Class** `LyraLiveRegion`, also available unregistered from `@aceshooting/lyra-ui/components/utility/live-region/live-region.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -26,13 +28,13 @@ streaming state).
 Streaming UIs (token-by-token chat responses, progress ticks, etc.) naturally produce far more
 candidate announcements than a screen-reader user can usefully absorb — reading every incremental
 chunk aloud is spam, not information. `Announcer` collapses a burst of `announce()` calls arriving
-within `throttleMs` of the *first* call in that burst down to a single trailing-edge flush of the
+within `throttleMs` of the _first_ call in that burst down to a single trailing-edge flush of the
 latest text: superseded intermediate text is dropped outright, never queued or concatenated.
 
 - `new Announcer(options: AnnouncerOptions)` where
   `AnnouncerOptions = { throttleMs?: number /* = 500 */; onFlush: (text: string) => void }`.
 - `announce(text: string, options?: AnnounceOptions)` where `AnnounceOptions = { force?: boolean }` —
-  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the *first*
+  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the _first_
   call of a burst schedules the flush timer, so the deadline stays anchored to that first call
   rather than being pushed back by every subsequent call. `{ force: true }` bypasses any
   in-progress window and flushes immediately, so a terminal message (e.g. "response complete") is
@@ -51,6 +53,7 @@ every call verbatim, by composing an internal `Announcer`. A consumer typically 
 keeps a reference to call `announce()` from application code or a parent component.
 
 **Properties:**
+
 - `mode: 'polite' | 'assertive' = 'polite'` (reflected) — `'polite'` renders `role="status"` +
   `aria-live="polite"` (waits for the user to be idle); `'assertive'` renders `role="alert"` +
   `aria-live="assertive"` (interrupts)
@@ -87,8 +90,9 @@ window and flushes immediately.
 A parent Lit component would instead hold the reference via `@query('lr-live-region')`.
 
 **Known gotchas:**
+
 - Re-announcing text identical to what was last written is special-cased: screen readers announce a
-  live region only on text-content *change*, so the component clears `textContent` first and
+  live region only on text-content _change_, so the component clears `textContent` first and
   re-sets it on the next animation frame (not the same tick, which can coalesce into nothing ever
   appearing to change) to give assistive tech a real empty-to-populated transition to observe. The
   frame is scheduled and canceled through the region's own document window, including after the

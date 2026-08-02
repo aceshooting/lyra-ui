@@ -166,6 +166,8 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * @csspart permission-badge - The permission `<lr-badge>`, omitted when `permission` is unset.
  * @csspart actions-menu - A row's `<lr-menu>`.
  * @csspart actions-trigger - The kebab `<button>` opening a row's action menu.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   static override styles = [LyraElement.styles, styles];

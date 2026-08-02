@@ -217,7 +217,7 @@ it('ignores a backdrop belonging to an overlay underneath the topmost overlay', 
   topAdapter.activate(top);
   await top.updateComplete;
 
-  (bottom.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+  (bottom.shadowRoot!.querySelector('[part~="backdrop"]') as HTMLElement).click();
   await bottom.updateComplete;
   await top.updateComplete;
 

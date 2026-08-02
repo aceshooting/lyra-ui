@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.js';` (registers the tag; side-effect import)
 - **Class** `LyraLocalePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,6 +38,10 @@ list, no filter/free-text mode.
   `checkValidity()`/`required` are governed by the real `value`, which stays `''` until a real
   commit — mirrors a native `<select>` showing its first option's text without that being a
   committed selection.
+- `defaultValue: string = ''` (attribute `value`, reflected) — the current reset default. Live
+  `value` writes are non-reflecting and dirty; later default/attribute changes cannot overwrite
+  them until `form.reset()` restores the current default.
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message.
 - `required: boolean = false`, `disabled: boolean = false`, `name: string = ''` — standard
   form-associated properties.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
@@ -48,14 +54,15 @@ list, no filter/free-text mode.
 explicit pick; if not `defaultPrevented`, the component applies the pick itself via
 `setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
 active locale untouched, so a host can persist the choice first and apply it later. `blur`/`focus`
-re-dispatched from the internal trigger as bubbling, composed events.
+re-dispatched from the internal trigger as bubbling, composed events. `lr-invalid` is the single
+bubbling/composed alias of a failed native validity check.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` — all forward to the internal trigger
 button, same convention as `lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
 a consumer-supplied error ("that locale is not enabled for your account"): a non-empty message
 raises `customError` and blocks submission, `''` restores the picker's own computed validity so a
 required picker with nothing committed goes back to `valueMissing`. It survives every
-`value`/`required` change and a form reset.
+`value`/`required` change and a form reset. `getForm()` returns the browser-resolved owning form.
 
 **Slots:** `label`, `hint`, `error`.
 

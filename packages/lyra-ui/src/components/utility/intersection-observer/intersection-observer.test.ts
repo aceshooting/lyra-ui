@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './intersection-observer.js';
 import type { LyraIntersectionObserver } from './intersection-observer.class.js';
 
@@ -15,6 +15,66 @@ describe('<lr-intersection-observer>', () => {
     await el.updateComplete;
     expect(el.rootMargin).to.equal('16px');
     expect(el.threshold).to.deep.equal([0, 0.5, 1]);
+  });
+
+  it('supports mapped string root/threshold, intersect-class, once, and event aliases', async () => {
+    const OriginalIntersectionObserver = window.IntersectionObserver;
+    let latest: {
+      callback: IntersectionObserverCallback;
+      options?: IntersectionObserverInit;
+      observed: Element[];
+      unobserved: Element[];
+    } | undefined;
+    class FakeIntersectionObserver {
+      readonly root: Element | Document | null;
+      readonly rootMargin: string;
+      readonly thresholds: readonly number[];
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        latest = { callback, options, observed: [], unobserved: [] };
+        this.root = options?.root ?? null;
+        this.rootMargin = options?.rootMargin ?? '0px';
+        const threshold = options?.threshold ?? 0;
+        this.thresholds = Array.isArray(threshold) ? threshold : [threshold];
+      }
+      observe(target: Element): void { latest!.observed.push(target); }
+      unobserve(target: Element): void { latest!.unobserved.push(target); }
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] { return []; }
+    }
+    window.IntersectionObserver = FakeIntersectionObserver as unknown as typeof IntersectionObserver;
+
+    try {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div>
+          <div id="viewport"></div>
+          <lr-intersection-observer
+            root="viewport"
+            threshold="0 0.5 1"
+            intersect-class="visible"
+            once
+          ><div id="target">Observed</div></lr-intersection-observer>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-intersection-observer') as LyraIntersectionObserver;
+      await el.updateComplete;
+      await aTimeout(0);
+      const target = el.querySelector('#target')!;
+      expect(latest?.options?.root).to.equal(wrapper.querySelector('#viewport'));
+      expect(latest?.options?.threshold).to.deep.equal([0, 0.5, 1]);
+      expect(latest?.observed).to.deep.equal([target]);
+
+      const batchEvent = oneEvent(el, 'lr-intersection');
+      const itemEvent = oneEvent(el, 'lr-intersect');
+      const entry = { target, isIntersecting: true } as IntersectionObserverEntry;
+      latest!.callback([entry], {} as IntersectionObserver);
+      const [batch, item] = await Promise.all([batchEvent, itemEvent]);
+      expect(batch.detail.entries).to.deep.equal([entry]);
+      expect(item.detail.entry).to.equal(entry);
+      expect(target.classList.contains('visible')).to.be.true;
+      expect(latest?.unobserved).to.deep.equal([target]);
+    } finally {
+      window.IntersectionObserver = OriginalIntersectionObserver;
+    }
   });
 
   it('normalizes invalid rootMargin and threshold options instead of rejecting an update', async () => {

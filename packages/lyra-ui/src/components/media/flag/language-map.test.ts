@@ -57,4 +57,13 @@ describe('localeNativeName', () => {
     expect(LANGUAGE_TO_COUNTRY.fr).to.equal('fr');
     expect(localeNativeName('pt-BR')).to.contain('Brasil');
   });
+
+  it('maps Persian and Hebrew base/regional tags to Iran and Israel with native endonyms', () => {
+    expect(languageToCountry('fa')).to.equal('ir');
+    expect(languageToCountry('fa-IR')).to.equal('ir');
+    expect(languageToCountry('he')).to.equal('il');
+    expect(languageToCountry('he-IL')).to.equal('il');
+    expect(localeNativeName('fa')).to.equal(new Intl.DisplayNames(['fa'], { type: 'language' }).of('fa'));
+    expect(localeNativeName('he')).to.equal(new Intl.DisplayNames(['he'], { type: 'language' }).of('he'));
+  });
 });

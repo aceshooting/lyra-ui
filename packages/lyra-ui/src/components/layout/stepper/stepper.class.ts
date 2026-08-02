@@ -114,6 +114,8 @@ function checkmarkGlyph() {
  *   numbered index chip (`step-index`).
  * @cssprop [--lr-stepper-current-index-color=var(--lr-color-on-brand)] - Text color of the `current`
  *   step's numbered index chip.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   static override styles = [LyraElement.styles, styles];

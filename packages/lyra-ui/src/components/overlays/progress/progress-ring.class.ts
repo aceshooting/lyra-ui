@@ -13,18 +13,35 @@ const DEFAULT_MAX = 100;
  * @customElement lr-progress-ring
  * @slot - Optional center label whose text names the progressbar unless an explicit accessible
  * label overrides it; live text mutations stay synchronized.
- * @csspart base - The progress wrapper.
+ * @csspart base - Compatibility name for the progress wrapper; use `progress-ring`.
+ * @csspart progress-ring - The progress wrapper. It is the same node as `base`.
  * @csspart track - The SVG track.
  * @csspart indicator - The SVG indicator.
  * @csspart label - The center label.
  * @cssprop [--lr-progress-ring-size=var(--lr-size-2-5rem)] - Outer diameter of the ring.
+ * @cssprop [--lr-progress-ring-track-width=var(--lr-size-4px)] - Track stroke width.
+ * @cssprop [--lr-progress-ring-track-color=var(--lr-color-brand-quiet)] - Track stroke color.
+ * @cssprop [--lr-progress-ring-indicator-width=var(--lr-progress-ring-track-width)] - Indicator stroke width.
+ * @cssprop [--lr-progress-ring-indicator-color=var(--lr-color-brand)] - Indicator stroke color.
+ * @cssprop [--lr-progress-ring-indicator-transition-duration=var(--lr-transition-base)] - Determinate indicator transition.
  * @cssprop [--lr-progress-duration=var(--lr-transition-ambient)] - Indeterminate rotation timing.
+ * @cssprop [--size=var(--lr-progress-ring-size)] - Upstream-compatible outer diameter.
+ * @cssprop [--track-width=var(--lr-progress-ring-track-width)] - Upstream-compatible track width.
+ * @cssprop [--track-color=var(--lr-progress-ring-track-color)] - Upstream-compatible track color.
+ * @cssprop [--indicator-width=var(--lr-progress-ring-indicator-width)] - Upstream-compatible indicator width.
+ * @cssprop [--indicator-color=var(--lr-progress-ring-indicator-color)] - Upstream-compatible indicator color.
+ * @cssprop [--indicator-transition-duration=var(--lr-progress-ring-indicator-transition-duration)] - Upstream-compatible transition duration.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraProgressRing extends LyraElement {
   static override styles = [LyraElement.styles, ringStyles];
-  @property({ type: Number }) value = 0;
+  @property({ type: Number, reflect: true }) value = 0;
   @property({ type: Number }) max = 100;
   @property({ type: Boolean, reflect: true }) indeterminate = false;
+  /** Mapped accessible-label property. */
+  @property() label = '';
+  /** Lyra compatibility alias for `label`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   private labelObserver?: MutationObserver;
 
@@ -85,10 +102,11 @@ export class LyraProgressRing extends LyraElement {
     const offset = circumference * (1 - this.percent / 100);
     const label =
       this.getAttribute('aria-label') ||
+      this.label ||
       this.accessibleLabel ||
       this.visibleLabelText ||
       this.localize('progress');
-    return html`<div part="base" role="progressbar" aria-label=${label}
+    return html`<div part="base progress-ring" role="progressbar" aria-label=${label}
       aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
       aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
       <svg viewBox="0 0 100 100" aria-hidden="true">

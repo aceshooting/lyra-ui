@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/radio/radio-button.js';` (registers the tag; side-effect import)
 - **Class** `LyraRadioButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio-button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,23 +28,27 @@ automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-typ
 `lr-radio-button` siblings, so a group's `slot="label"`/`slot="hint"` children never shift the ends,
 and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
 
-**Properties and methods:** identical to `lr-radio` — `checked`, `disabled`, `name`, `required`,
-`value`, `size`, `pill`; `click()`, `focus()`, `blur()`, `setCustomValidity()`. `size` is where this
+**Properties and methods:** the same functional surface as `lr-radio` — `checked`, `defaultChecked`,
+`customError`, `disabled`, `name`, `required`, `value`, `size`, `pill`; `click()`, `focus()`, `blur()`,
+`setCustomValidity()`. The inherited `appearance` remains `'default' | 'button'`; this tag already
+renders button chrome in either state, so the property adds no second visual mode. `size` is where this
 chrome differs most visibly: the shared ladder drives the button's height (floored at `1.5rem`),
 inline padding and font size, so a `size="small"` radio button sits at the same height as a
 `size="small"` `lr-button` beside it. `pill` is the one inherited property that does *more* here
 than on a plain `lr-radio` — see the radius note below.
 
-**Events:** identical to `lr-radio` — `input` and `change` on selection; `lr-change`
-(`detail: { checked, value }`) only for a *standalone* button, since an owning `lr-radio-group`
-emits its own aggregate `lr-change` instead; and `focus` / `blur`, re-emitted because the internal
-control's own do not cross the shadow boundary.
+**Events:** identical to `lr-radio` — a standalone selection emits `input`, `lr-input`, `change`,
+then `lr-change` (both aliases carry `{ checked, value }`); an owning `lr-radio-group` emits the
+aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
+not cross the shadow boundary, each followed by its prefixed alias `lr-focus` / `lr-blur`
+(no detail). `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
+its own alias.
 
 **Slots:** default (label text), `prefix` (leading content, typically an icon), `suffix`.
 
-**CSS parts:** `base`, `prefix`, `label`, `suffix`. `base` carries `checked` and `disabled` as
-additional part tokens (`::part(base checked)`), because an attribute selector after `::part()`
-never matches.
+**CSS parts:** `base` / `button` / `control`, `prefix`, `label`, `suffix`. The interactive node
+carries `checked` and `button--checked` when selected, plus `disabled` when disabled, because an
+attribute selector after `::part()` never matches.
 
 **Themeable custom properties:** `--lr-radio-radius` is the one inherited knob this element really
 uses. `lr-radio` points it at `--lr-radius-pill` for its circular indicator; this subclass re-points
@@ -58,11 +64,13 @@ Because this is a subclass, the manifest also lists `lr-radio`'s own `circle` an
 its `--lr-radio-circle-size`, `--lr-radio-dot-size`, `--lr-radio-label-indent`,
 `--lr-radio-checked-border-color` and `--lr-radio-checked-dot-color` custom properties. **This
 element renders none of those** — it draws a button, not a circle and dot — so styling them here has
-no effect. They are inherited declarations, not surface. `--lr-radio-radius` is the exception, and
+no effect. The same is true of the inherited `checked-icon` and `control--checked` parts and the
+`--checked-icon-color` / `--checked-icon-scale` aliases. They are inherited declarations, not
+rendered button surface. `--lr-radio-radius` is the exception, and
 the only one of the set worth setting on this tag.
 
 ```html
-<lr-radio-group name="view" label="View">
+<lr-radio-group name="view" label="View" orientation="horizontal">
   <lr-radio-button value="day" checked>Day</lr-radio-button>
   <lr-radio-button value="week">Week</lr-radio-button>
 </lr-radio-group>

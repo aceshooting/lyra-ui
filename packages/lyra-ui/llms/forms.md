@@ -1,3 +1,23 @@
+## Setter-only `null` clearing in 8.0.0
+
+Several mapped string IDLs accept `null` on assignment without widening their read type. This is a
+JavaScript/TypeScript compatibility surface: after the write, every getter below still returns its
+canonical string. Name attributes are removed; live-value writes follow each control's existing
+live/default-value reflection contract. HTML authors remove an attribute instead of writing the
+literal text `"null"`.
+
+- `.name = null` clears to `''` on `lr-button`, `lr-checkbox`, `lr-color-picker`, `lr-combobox`,
+  `lr-date-input`, `lr-input`, `lr-number-input`, `lr-otp-input`, `lr-radio`, `lr-radio-group`,
+  `lr-select`, `lr-switch`, `lr-textarea`, and `lr-time-input`.
+- `.value = null` clears to `''` on `lr-color-picker`, `lr-input`, `lr-number-input`, `lr-otp-input`,
+  and `lr-radio-group`.
+- `.value = null` restores the native checkbox default `'on'` on `lr-checkbox` and `lr-switch`
+  while removing the `value` attribute. An explicit non-null `.value = 'on'` instead reflects
+  `value="on"`, preserving the distinction between an absent native default and an authored value.
+
+These are setter-only input types, not nullable states: code that reads any member above continues
+to receive a `string`.
+
 ## `lr-combobox` / `lr-option`
 
 Filterable single/multi-select combining a text input with a listbox. Mirrors the core
@@ -26,6 +46,13 @@ shared `FormAssociated` mixin — see gotchas).
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
 - `open: boolean = false` (reflected)
+- `allowCreate: boolean = false` (attribute `allow-create`) — a nonmatching query renders a
+  localized create row. Activating it emits cancelable `lr-create`; unless vetoed, the component
+  appends a real `<lr-option>` and selects it (also supported in `multiple` mode)
+- `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
+  commits arbitrary text on Enter without creating an option
+- `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected)
+- `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
   clear on **either** axis this control owns: a committed selection, or *visible* filter text. See
   "the clear button covers two axes" below
@@ -33,10 +60,22 @@ shared `FormAssociated` mixin — see gotchas).
   either one enables the same clear button. Not deprecated: Web Awesome names this attribute
   `with-clear` and Shoelace names it `clearable`, so honouring both is what keeps a mechanical tag
   rename from silently dropping the control
+- `withLabel: boolean = false` and `withHint: boolean = false` (attributes `with-label` and
+  `with-hint`) — SSR slot-presence hints
+- `getTag: ((option: LyraOption, index: number) => unknown) | undefined` (attribute: false) —
+  replaces a built-in multiple-selection tag with consumer Lit/DOM/text output; strings render as
+  text, never as HTML
+- `validators: unknown[] = []` (attribute: false)
+- `validationTarget: HTMLElement | undefined` — writable native-validity focus anchor. After the
+  first render it defaults to the internal filter input; assign another element to override it, or
+  assign `undefined` to restore that input. It is `undefined` before the input exists
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
-  `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = true`,
-  `autocapitalize: string = ''`, and `autoCorrect: string = ''` (attribute `autocorrect`) — native
-  editing-assistance attributes forwarded to the internal filter input
+  `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = false`,
+  `autocapitalize: string = ''`, and `autocorrect: boolean = true` (attribute values `on`/`off`) —
+  native editing-assistance properties forwarded to the internal filter input. The lowercase
+  mapped IDLs `inputmode` and `enterkeyhint` delegate to the corresponding camel-case native
+  properties
+- `inputValue: string` — the live filter input text; programmatic writes are event-silent
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
   show before collapsing to `+N`)
 - `emptyText: string = 'No results'` (attribute `empty-text`)
@@ -65,6 +104,7 @@ shared `FormAssociated` mixin — see gotchas).
   size it, and when `source` is the better answer)
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
   `multiple` mode
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `selectedRows: ComboboxSourceRow[]` (read-only getter) — structured rows for the current
   selection, including any opaque `data` payload supplied by an async source. Selected async rows
   remain available after the query changes or a later source result no longer contains them
@@ -73,12 +113,19 @@ shared `FormAssociated` mixin — see gotchas).
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
+`show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
+`lr-after-hide`, respectively. `resetValidity()` clears consumer custom validity and restores the
+current intrinsic constraints. `getForm()` returns the owning form, including an external owner
+selected by the `form` attribute.
 `setCustomValidity(message)` carries a rejection no client-side constraint can express ("that option
 is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
 blocks submission; `''` clears it and restores the control's own computed validity, so a `required`
 combobox with nothing chosen goes back to `valueMissing` rather than to valid. The message survives
-every selection change and a `form.reset()` — like a native control, only another
-`setCustomValidity('')` clears it — and is used verbatim, never localized.
+  every selection change and a `form.reset()` — like a native control, only another
+  `setCustomValidity('')` or `resetValidity()` clears it — and is used verbatim, never localized.
+
+**8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
+alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorrect="off"` in markup.
 
 `ComboboxSourceRow = { value: string; label: string; sub?: string; icon?: unknown; badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
@@ -109,8 +156,12 @@ selection. It is the supported way to read that text; reaching into the shadow r
 carrying different strings. It fires for user input only: picking a row, the clear button,
 `form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
 the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
-`lr-show` and `lr-hide` report listbox visibility transitions.
+`lr-show` and `lr-hide` report the start of listbox visibility transitions; `lr-after-show` and
+`lr-after-hide` fire when the corresponding transition settles. `lr-create` carries
+`detail: { inputValue }` and is the one cancelable event: preventing it suppresses the default
+append/select action so the host can normalize and commit its own option.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
+`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 
 **The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
 committed selection and an in-progress filter query, so the button renders whenever either has
@@ -160,10 +211,13 @@ attribute when provided), plus two adornment slots:
   default slot are ever collected into the option list.
 - `end` — content after the filter input and the built-in clear action, and before the expand icon,
   so consumer content never sits outboard of the dropdown chevron.
+- `clear-icon` and `expand-icon` replace the corresponding built-in glyphs.
 
-**CSS parts:** `form-control`, `form-control-label`, `combobox`, `start` and `end` (the two
+**CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
+`start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
-`tag__remove-button`, `combobox-input`, `clear-button`, `expand-icon`, `listbox`, `option`,
+`tag-label`, `tag__content`, `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
+`clear-button`, `expand-icon`, `listbox`, `option`,
 `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the decorative
 leading visual for an async row), `option-label`, `option-sub` (a row's secondary line, when `sub`
 is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"
@@ -171,7 +225,8 @@ indicator from `maxRender`), `error`, `hint`
 
 **Themeable custom properties:** `--lr-combobox-trigger-padding`,
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
-`--lr-combobox-tag-font-size`, and `--lr-combobox-expand-size` (the decorative icon box; each
+`--lr-combobox-tag-font-size`, `--tag-max-size` (default `var(--lr-size-5rem)`), `--show-duration`,
+`--hide-duration`, and `--lr-combobox-expand-size` (the decorative icon box; each
 standard size supplies an aligned default), plus shared tokens. `--lr-combobox-gap` (default
 `--lr-space-xs`, the gap inside `[part='combobox']`) and `--lr-combobox-radius` (default
 `--lr-radius`, its corner radius) are both retunable without a `::part(combobox)` rule but, unlike
@@ -197,6 +252,9 @@ see "exact-height hatches" under `lr-input` for why `auto` is not a way to opt b
 for a single-row combobox: in `multiple` mode, a tag row long enough to wrap overflows the pinned
 box visibly (nothing is clipped or made unreachable), so leave it unset there.
 
+**CSS custom states:** `blank`, `disabled`, `required`, `optional`, `valid`, `invalid`,
+`user-valid`, and `user-invalid`.
+
 **Optional peer deps:** none.
 
 ### `lr-option`
@@ -204,18 +262,42 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 **Properties:**
 - `value: string = ''`
 - `disabled: boolean = false`
-- `selected: boolean = false` (reflected — set by the parent combobox, but also **read** on initial
-  mount, see below)
+- `defaultSelected: boolean = false` (attribute `selected`; property writes do not reflect) — the
+  declarative and `form.reset()` default. Changing it after mount updates the parent's reset
+  baseline without overwriting a dirty live selection
+- `selected: boolean = false` (property only) — live selectedness. The parent combobox/select
+  updates it as the current value changes; those live writes never rewrite the `selected`
+  attribute or `defaultSelected`
 - `group: string = ''` (section header)
 - `searchText: string = ''` (attribute `search-text` — extra text the filter matches beyond the
   visible label)
 - `sub: string = ''` (optional secondary line rendered under the label, e.g. a status/date summary)
 - `dotColor: string = ''` (attribute `dot-color` — optional CSS color for a small leading status
   dot; invalid values, declaration-breaking input, and `url()` render the dot transparently)
-- `label` is a **read-only getter**: explicit `label` attribute wins, else trimmed `textContent`.
+- `label: string` — settable WA-compatible plain-text label. A non-empty property/attribute wins;
+  otherwise it resolves to `defaultLabel`. Property writes stay property-only (no reflection)
+- `defaultLabel: string` (read-only) — normalized plain text generated from default-slot content;
+  `start`/`end`/`prefix`/`suffix` adornments are excluded
+
+**Method:** `getTextLabel(): string` returns `defaultLabel`, preserving Shoelace's content-derived
+plain-text contract even when a separate WA `label` override is present.
 
 **Events:** `lr-option-change` — bubbles when the option's label or selectable data changes so
 its parent `lr-combobox` or `lr-select` can refresh its normalized option rows.
+
+**Slots:** default (visible label), `start`/`end` (WA adornments), and `prefix`/`suffix` (Shoelace
+aliases). `start` and `prefix` project into one leading wrapper; `end` and `suffix` project into one
+trailing wrapper.
+
+**CSS parts:** `base`, `checked-icon`, `label`, `start`/`prefix` (same node), and `end`/`suffix`
+(same node). **CSS custom property:** `--current-text-color` (default `var(--lr-color-text)`) colors
+the keyboard-current row. **CSS custom states:** `current` (the host is the roving-focus target),
+`selected`, `disabled`, and `hover` (pointer presence, including drag sessions).
+
+The stock `lr-combobox` and `lr-select` intentionally treat each option as light-DOM data and
+render normalized rows in their own shadow roots. Style those rows through the parent's `option`,
+`option-label`, and related parts; the parts above style an option's own anatomy when it is rendered
+by a custom owner.
 
 ```html
 <lr-combobox id="cb" label="Country" placeholder="Search…" with-clear>
@@ -275,12 +357,12 @@ synchronous and fires no `input`/`change`/`lr-change` event.
   visible label/sub/badge combination needs a fuller spoken name. `data` is deliberately opaque and
   is available only through the read-only `selectedRows` getter.
 - Full ARIA 1.2 combobox pattern (`role=combobox`, roving `aria-activedescendant`, real DOM focus
-  kept on the input) is implemented correctly — a genuine strength, safe to build on. Declaratively-
-  selected options (`<lr-option value="b" selected>`) are seeded into the selection (mirroring
-  native `<select><option selected>`) both the first time options are collected **and** for any
-  later batch slotted in afterward (e.g. a lazily-populated list appended post-connect) — only the
-  `form.reset()` default itself is captured exclusively from that very first pass; a later pick, or
-  a later batch of newly-`selected` options, never redefines what a reset restores to.
+  kept on the input) is implemented correctly — a genuine strength, safe to build on.
+  `<lr-option value="b" selected>` sets that option's `defaultSelected`, seeds the live selection,
+  and supplies the `form.reset()` baseline, mirroring native `<select><option selected>`. A
+  later-slotted option or post-mount `defaultSelected` change updates that baseline and updates the
+  live selection only while it is pristine. A user pick or direct `option.selected` write makes the
+  live selection dirty and never rewrites the declarative `selected` attribute/reset default.
 
 **Additional API surface:**
 
@@ -305,13 +387,11 @@ There is no typing-to-filter and no `filter`/`source`/`empty-text`/`max-render` 
 `multiple`, `max-options-visible`, `with-clear`, `getTag`, `placement`, `appearance`, and `pill`.
 
 **Multi-select (`multiple`, new in 8.0.0, default `false`).** Setting it re-shapes `value` from a
-`string` into a `string[]` and renders one chip per selection inside the trigger — a `[part="tags"]`
-row holding one `[part="tag"]` each. Because the trigger is a real `<button>`, the chips are
-deliberately non-interactive: a nested remove button would be invalid interactive-content nesting
-and unreachable by keyboard or assistive tech anyway, since the outer button intercepts every
-click/Enter/Space first. Removal has three affordances instead — pick a selected row again to
-toggle it off, press Backspace or Delete on the focused trigger to drop the most recent selection,
-or use the `with-clear` button to drop all of them at once. Turning `multiple` back off collapses
+`string` into a `string[]` and renders one chip per selection. The `[part="tags"]` row is a sibling
+overlaid on the real trigger, so every built-in tag remove button is valid independently-focusable
+interactive content rather than a button nested inside another button. Picking a selected row,
+Backspace/Delete on the focused trigger, and the `with-clear` action remain equivalent removal
+paths. Turning `multiple` back off collapses
 the selection to its first entry, so the single-mode string and the submitted entry can never
 disagree with what the trigger shows.
 
@@ -357,14 +437,17 @@ exactly like the multi-option case, until the trigger is actually activated.
   `plain` drops both; `accent` paints the loud brand fill with on-brand text (the placeholder,
   expand icon, adornments and chips all ride that on-brand color rather than the quiet-text
   tokens). Every value keeps the same box, border width and radius, and each restates its own
-  `:hover` feedback. Note the default differs from `<lr-input>`/`<lr-textarea>`, which default to
-  `filled-outlined`
+  `:hover` feedback. `lr-input` and `lr-textarea` use the same mapped `outlined` default.
 - `pill: boolean = false` (reflected) — fully-rounded trigger corners. It only re-assigns
   `--lr-select-radius` to `--lr-radius-pill`, so a consumer's own `--lr-select-radius` (inline or
   from an outer-tree rule) still wins over it
-- `placement: Placement = 'bottom-start'` (reflected) — preferred listbox placement, from the
+- `placement: Placement = 'bottom'` (reflected) — preferred listbox placement, from the
   Floating UI vocabulary (`'top'`, `'bottom-end'`, …). `flip`/`shift` may still move the popup to
   keep it in view, and the `left`/`right` component is swapped under RTL
+- `hoist: boolean = false` (reflected) — switches Floating UI from its mapped absolute strategy to
+  fixed positioning, escaping clipping containers
+- `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
+- `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
   above. Flipping it re-shapes `value` and the submitted form entry, so it is normally set once
   declaratively
@@ -378,28 +461,44 @@ exactly like the multi-option case, until the trigger is actually activated.
   the chips — so pressing it clears the selection without opening the listbox
 - `clearable: boolean = false` — Shoelace's spelling of `withClear`; either one renders the same
   button. Present so a mechanical `sl-select` → `lr-select` rename keeps the clear control
+- `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins if both
+  are present. `withLabel`/`withHint` (`with-label`/`with-hint`) are SSR slot-presence hints
 - `getTag?: LyraSelectTagRenderer` (attribute: false) — `(option: LyraOption, index: number) =>
   unknown`, exported under that name from the component's own module, renders one
   selected option's chip in `multiple` mode. Whatever it returns replaces the whole built-in
   `[part="tag"]` element, so re-declare `part="tag"` on your own root node to keep the default
   styling hooks. A returned **string renders as text, never as markup** (it lands in an ordinary
-  Lit child position), and the same non-interactive-content constraint applies to whatever you
-  return. Overflow past `max-options-visible` still collapses into the built-in "+N" chip
+  Lit child position). A custom tag replaces the built-in remove control too, so it owns any custom
+  removal affordance. Overflow past `max-options-visible` still collapses into the built-in "+N" chip
 - `autoCommitSingleOption: boolean = false` (attribute `auto-commit-single-option`) — opts in to the
   single-option auto-commit behavior described above
 - `value: string | string[]` — a getter/setter: a plain `string` in single mode (empty when nothing
   is selected), a `string[]` in `multiple` mode
+- `defaultValue: string | string[]` (attribute `default-value` accepts the single string form) —
+  reset selection; changing it updates the live value only while the control is pristine
+- `selectedOptions: LyraOption[]` — a writable, fresh snapshot of the live selected occurrences.
+  Assigning live child options commits their exact occurrences through the same event-silent path
+  as `value`; foreign/detached options are ignored, and single mode keeps only the first. Mutating
+  an array returned by the getter never mutates the control
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
+`show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once
+the matching transition settles. `getForm()` returns the browser-resolved form owner, including an
+external owner selected by `form`.
 `setCustomValidity(message)` carries a rejection no client-side constraint can express ("that option
 is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
 blocks submission; `''` clears it and restores the control's own computed validity, so a `required`
 select with nothing chosen goes back to `valueMissing` rather than to valid. The message survives
 every selection change and a `form.reset()` — like a native control, only another
-`setCustomValidity('')` clears it — and is used verbatim, never localized.
+`setCustomValidity('')` or `resetValidity()` clears it — and is used verbatim, never localized.
+`resetValidity()` changes only that consumer error layer: it restores the current intrinsic
+required/selection validity without changing the selection/default or clearing prior interaction
+state.
 
-**Events:** each real selection change emits, in order, native-style `input`, `lr-input`, native-style
-`change`, then `lr-change`. The native events carry no detail; read `event.target.value`. Both
+**Events:** each real selection change emits, in order, a native `InputEvent` named `input`,
+`lr-input`, a native `Event` named `change`, then `lr-change`. The native events carry no detail;
+read `event.target.value`. Both
 prefixed aliases carry `detail: { value: string | string[] }` — the new committed selection, a string
 in single mode and a `string[]` in `multiple` mode. The complete sequence is silent for a
 programmatic `value` write, `form.reset()`, or session-state restoration. Plus
@@ -408,11 +507,13 @@ programmatic `value` write, `form.reset()`, or session-state restoration. Plus
 announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
 trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
-its unprefixed counterpart.
+its unprefixed counterpart. `lr-after-show` and `lr-after-hide` fire after the corresponding
+listbox transition has settled; an interrupted transition drops its stale after-event.
+`lr-invalid` (no detail) fires when a validity check finds the control invalid.
 
-**Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
-attribute when provided), `start` (non-interactive adornment before the selected-value label), and
-`end` (non-interactive adornment after the label and before the expand icon). The adornments live
+**Slots:** default (`<lr-option>` children), `label`, `hint`, `help-text` (alias), `error` (overrides
+the `errorText` attribute when provided), `start`/`prefix` (aliases before the selected-value label),
+`end`/`suffix` (aliases after the label), plus `clear-icon` and `expand-icon`. The adornments live
 inside the native trigger `<button>`, so never place links, buttons, inputs, or other interactive
 content in either slot.
 
@@ -420,9 +521,10 @@ When hint/error content is present, the trigger's `aria-describedby` references 
 IDs for both messages (error first, then hint), so the visible supporting text is part of the
 control's accessible description.
 
-**CSS parts:** `form-control`, `form-control-label`, `trigger`, `start`, `end`, `tags` (the
-`multiple`-mode chip row inside the trigger), `tag` (one selected-value chip), `tag-label` (a chip's
-ellipsis-safe label), `tag-overflow` (the "+N" chip standing in for the selections past
+**CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
+`trigger`, `display-input`, `start`, `prefix`, `end`, `suffix`, `tags` (the legal sibling
+`multiple`-mode chip row), `tag`/`tag__base` (one selected-value chip), `tag-label`/`tag__content`,
+`tag__remove-button`/`tag__remove-button__base`, and `tag-overflow` (the "+N" chip standing in for the selections past
 `max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
 chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
 is encoded in the part name instead), `clear-button` (the `with-clear` button, present only while
@@ -431,7 +533,8 @@ there is a selection to clear), `listbox`,
 the previous one's — a presentational `<div>`, not a `role="group"`; options with an empty `group`
 get no heading),
 `option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
-`option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
+`option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
+`hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
 `--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
@@ -445,6 +548,8 @@ radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` re-
 (default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
 `var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius they are declared once on
 `:host` and do **not** vary by `size` tier.
+Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
+`--hide-duration` cap one tag and independently retime the two popup directions.
 
 `--lr-select-trigger-min-height` is live at **every** tier, the default `m` included, where it is
 `2.5rem` — byte-identical to `lr-input`'s and `lr-combobox`'s own `m` floor, so the three controls
@@ -512,10 +617,11 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 - No typing-to-filter, but a printable keypress still jumps to (while open) or directly selects
   (while closed) the next non-disabled option whose label starts with what's been typed, matching a
   native `<select>`'s own type-ahead; the buffer resets ~500ms after the last keystroke.
-- Declaratively-selected options (`<lr-option value="b" selected>`) seed the initial selection
-  (mirroring native `<select><option selected>`) both the first time options are collected and for
-  any later-slotted batch — only that very first pass' declared selection becomes the
-  `form.reset()` default, the same rule `lr-combobox` follows.
+- `<lr-option value="b" selected>` sets that option's `defaultSelected`, seeds the live selection,
+  and supplies the `form.reset()` baseline, mirroring native `<select><option selected>`. Later
+  `defaultSelected`/attribute changes update that reset baseline without clobbering a dirty live
+  selection; user picks and direct `option.selected` writes remain live-only and never rewrite the
+  attribute/default.
 - `aria-required` on the trigger reflects `required` immediately; `aria-invalid` only reflects once
   the trigger has been blurred (touched) at least once, mirroring `lr-combobox`'s own input.
   Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup.
@@ -532,53 +638,67 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 
 ## `lr-date-picker` / `lr-date-input` (+ `calendar-core.ts`)
 
-Mirrors the core `<wa-date-picker>`/`<wa-date-input>` API under `lr-`. **Value is always ISO
-8601**: `YYYY-MM-DD` (single) or `YYYY-MM-DD/YYYY-MM-DD` (range).
+Mirrors the `<wa-date-picker>`/`<wa-date-input>` 3.11 public API under `lr-`. Both
+components are **experimental since 3.8**. Values use ISO 8601: `YYYY-MM-DD` (single) or
+`YYYY-MM-DD/YYYY-MM-DD` (range).
 
 ### `lr-date-picker`
 
 Inline month-grid calendar, not form-associated (used standalone or embedded inside
 `lr-date-input`'s popover).
 
-**Properties:**
-- `value: string = ''`
-- `mode: 'single'|'range' = 'single'` — unknown runtime values fall back to `single`
-- `min: string = ''`
-- `max: string = ''`
+**Properties (27):**
+
+- `dayContent` (JS only): `LyraDatePickerDayContent | undefined`
 - `disabled: boolean = false` (reflected)
+- `disabledDates: string | string[] | Date[] = ''` (attribute `disabled-dates`)
+- `disabledDaysOfWeek: string = ''` (attribute `disabled-days-of-week`)
+- `disableFuture: boolean = false` and `disablePast: boolean = false` (reflected)
+- `firstDayOfWeek: 'auto'|'sun'|'mon'|'tue'|'wed'|'thu'|'fri'|'sat' = 'auto'` (attribute
+  `first-day-of-week`, reflected)
+- `focusedDate: string = ''` (attribute `focused-date`, reflected)
+- `isDateDisabled?: (date: Date) => boolean` (JS only)
+- `locale: string = ''` (reflected; malformed tags fall back to the platform locale)
+- `max: string = ''` and `min: string = ''` (reflected ISO bounds)
+- `maxRange: number = 0` and `minRange: number = 0` (attributes `max-range`/`min-range`, reflected;
+  positive values count both range endpoints)
+- `mode: 'single'|'range' = 'single'` (reflected; unknown values normalize to `single`)
+- `months: 1|2 = 1` (reflected; finite values are truncated and clamped to `1..2`)
+- `pageBy: 'months'|'single' = 'months'` (attribute `page-by`, reflected)
 - `readonly: boolean = false` (reflected)
-- `months: 1|2 = 1` — finite runtime values are truncated and clamped to `1..2`; non-finite
-  values fall back to `1`
-- `locale: string = ''` — malformed locale tags fall back to the platform locale
-- `firstDayOfWeek: string = 'auto'` (attribute `first-day-of-week` — see gotchas)
-- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`; unknown runtime
-  values fall back to `short`)
-- `disablePast: boolean = false` (attribute `disable-past`)
-- `disableFuture: boolean = false` (attribute `disable-future`)
-- `withOutsideDays: boolean = false` (attribute `with-outside-days`)
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — scales calendar cell density
-  proportionally; unlike `lr-input`'s row-height scale (text containers), this scales cell density
-  itself (fewer/more days per visual unit). Month title, weekday labels, and nav buttons stay fixed
-  across tiers.
-- `previousLabel: string = 'Previous month'` (attribute `previous-label` — accessible label for the
-  previous-month nav button; override for a non-English `locale`)
-- `nextLabel: string = 'Next month'` (attribute `next-label` — accessible label for the next-month
-  nav button)
+- `size: LyraDatePickerSize = 'm'` (reflected; the shared `2xs`–`xl` ladder plus
+  `small`/`medium`/`large` aliases)
+- `today: string = ''` (reflected ISO override for deterministic today styling/constraints)
+- `value: string = ''` (reflected)
+- `valueAsDate: Date | null` and `valueAsRange: { from: Date|null; to: Date|null }` (JS-only
+  accessors; setters are silent and normalize reversed ranges)
+- `view: 'days'|'months'|'years'|'decades' = 'days'` (reflected)
+- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`, reflected)
+- `withOutsideDays: boolean = false` and `withWeekNumbers: boolean = false` (reflected)
 
-**Getters:** `selection: { from: Date|null; to: Date|null }`, `valueAsDate: Date | null` (single
-mode only)
+Lyra retains the additive `previousLabel`/`nextLabel` localized accessible-label overrides and
+the `selection` range getter.
 
-**Methods:** `clear()`, `goToToday()`, `goToDate(date: string | Date)` (valid dates are clamped to
-`min`/`max` before navigating/focusing; invalid `Date` objects and strings are ignored)
+**Methods:** `clear()`, `focus(options?)`, `goToToday()`, and
+`goToDate(date: string | Date)`. Valid navigation dates are clamped to `min`/`max`; invalid values
+are ignored.
 
-**Events:** `input` (during interaction — for range mode, fires after the first click of a pair),
-`change` (committed value)
+**Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
+the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
+values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{ view, date }`.
 
-**Slots:** none.
+**Slots:** `header`, `previous-icon`, `next-icon`, and `footer`. A dynamic
+`day-YYYY-MM-DD` slot is also accepted as a Lyra extension and takes precedence over `dayContent`.
 
-**CSS parts:** `base`, `month`, `header`, `title`, `previous`, `next`, `weekdays`, `weekday`,
-`grid`, `week`, `day`, `day-outside`, `day-today`, `day-selected`, `day-range-start`,
-`day-range-end`, `day-range-inner`, `day-placeholder`
+**Custom states:** `disabled`, `range`, and `readonly`.
+
+**CSS parts (35):** `date-picker`, `day`, `day-disabled`, `day-label`, `day-outside`,
+`day-placeholder`, `day-range-end`, `day-range-inner`, `day-range-preview`, `day-range-start`,
+`day-selected`, `day-today`, `day-weekend`, `footer`, `grid`, `header`, `month`, `month-label`,
+`months`, `nav`, `next`, `previous`, `title`, `view-cell`, `view-grid`, `view-item`,
+`view-item-disabled`, `view-item-selected`, `view-item-today`, `view-row`, `weekday`, `weekdays`,
+`weeknumber`, `weeknumbers`, and deprecated `base` (use `date-picker`). Lyra additionally retains
+the existing `week` part.
 
 **Themeable custom properties:** `--lr-cell-size` (default `2.25rem`, controls day-cell/grid-column
 size; auto-scaled per `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` default).
@@ -590,62 +710,72 @@ size; auto-scaled per `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:h
 Text field + calendar popover, **form-associated** via the shared `FormAssociated` mixin (`name`,
 `value`, `disabled`, `required` all inherited).
 
-**Properties (own):**
-- `mode: 'single'|'range' = 'single'`
-- `min: string = ''`
-- `max: string = ''`
-- `readonly: boolean = false` (reflected; preserves the submitted value but bars required and
-  date-bound constraint validation until removed)
-- `open: boolean = false` (reflected)
-- `withClear: boolean = false` (attribute `with-clear`)
-- `label: string = ''`
+**Properties (42):**
+
+- `appearance: 'filled'|'outlined'|'filled-outlined' = 'outlined'` (reflected)
+- `assumeInteractionOn: string[] = ['input']` (JS only)
+- `autocomplete: string = ''`
+- `dayContent?: LyraDatePickerDayContent` (JS only)
+- `defaultValue: string = ''` (reset value; reflected through the `value` content attribute)
+- `disabled: boolean = false`
+- `disabledDates: string | string[] | Date[] = ''` and `disabledDaysOfWeek: string = ''`
+- `disableFuture: boolean = false` and `disablePast: boolean = false` (reflected)
+- `distance: number = 0` (reflected; finite offset from the anchor)
+- `firstDayOfWeek: LyraDateInputFirstDayOfWeek = 'auto'` (reflected)
+- `form: HTMLFormElement | null` (JS-only FACE owner)
 - `hint: string = ''`
-- `placeholder: string = ''`
-- `locale: string = ''` — malformed locale tags fall back to the platform locale
-- `months: 1|2 = 1` — finite runtime values are truncated and clamped to `1..2`; non-finite
-  values fall back to `1`
-- `firstDayOfWeek: string = 'auto'`
-- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` — unknown runtime values fall back to `short`
-- `disablePast: boolean = false` (attribute `disable-past`)
-- `disableFuture: boolean = false` (attribute `disable-future`)
-- `withOutsideDays: boolean = false` (attribute `with-outside-days`)
+- `isDateDisabled?: (date: Date) => boolean` (JS only)
+- `label: string = ''`
+- `max: string = ''` and `min: string = ''` (reflected ISO bounds)
+- `maxRange: number = 0` and `minRange: number = 0` (reflected; positive values include both
+  endpoints)
+- `mode: 'single'|'range' = 'single'` (reflected)
+- `months: 1|2 = 1` (reflected; finite values are truncated and clamped)
+- `name: string = ''` (reflected)
+- `open: boolean = false` (reflected)
+- `pageBy: 'months'|'single' = 'months'` (reflected)
+- `pill: boolean = false` (reflected)
+- `placement: LyraDateInputPlacement = 'bottom-start'` (reflected; all 12 side/alignment
+  placements are accepted)
+- `readonly: boolean = false` and `required: boolean = false` (reflected)
+- `size: LyraDateInputSize = 'm'` (reflected; `2xs`–`xl` and aliases)
+- `today: string = ''` (reflected ISO override)
+- `validationTarget: HTMLElement | undefined` (JS only) — writable native-validity focus anchor.
+  It defaults to the internal input after first render; assign another element to override it, or
+  assign `undefined` to restore the internal input
+- `validators: LyraDateInputValidator[] = []` (JS only) — each entry may be a
+  `(value, input) => void | boolean | string | ValidityStateFlags` function, an object with
+  `validate(value, input)` returning that same result vocabulary, or a Web Awesome-compatible
+  object with `checkValidity(input)`. The mapped object returns
+  `{ isValid, message, invalidKeys }`, where `invalidKeys` names `ValidityState` flags; it may also
+  expose `observedAttributes` and a string or callback `message`. Changing any listed host
+  attribute automatically runs validity again. `isValid: true` passes. Otherwise the listed flags
+  are set (`customError` is used when the list is empty) and the returned message wins over the
+  validator-level fallback.
+- `value: string = ''` (JS property)
+- `valueAsDate: Date | null` and `valueAsRange: { from: Date|null; to: Date|null }` (JS-only
+  accessors; setters are silent and normalize reversed ranges)
+- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (reflected)
+- `withClear: boolean = false`, `withHint: boolean = false`, and `withLabel: boolean = false`
+- `withOutsideDays: boolean = false` and `withWeekNumbers: boolean = false` (reflected)
 
-**Properties (own, continued):**
-- `errorText: string = ''` (attribute `error-text` — static error copy; overridden by slotted
-  `error` content when provided)
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the internal
-  `<input>`'s computed accessible name; wins over `label`/`placeholder`/the localized `date`
-  fallback in that order. Attribute-reflects from a host-level `aria-label` so a plain-markup
-  consumer gets ARIA-name forwarding without setting a JS property.
-- `clearLabel: string = ''` (attribute `clear-label` — accessible label for the clear button;
-  empty uses the localized `clear` message, whose English fallback is `"Clear"`)
-- `openLabel: string = ''` (attribute `open-label` — accessible label for the calendar-toggle
-  button; empty uses the localized `openCalendar` message, whose English fallback is
-  `"Open calendar"`)
-- `dialogLabel: string = 'Choose date'` (attribute `dialog-label` — accessible name for the
-  `role="dialog"` calendar popover)
-- `spellcheck: boolean = true` — forwarded to the internal `<input>`
-- `autocapitalize: string = ''` — forwarded to the internal `<input>`; empty omits the attribute
-- `autoCorrect: string = ''` (attribute `autocorrect`, Safari/WebKit-specific) — forwarded to the
-  internal `<input>`; empty omits the attribute. Named `autoCorrect` in JS/TS (not `autocorrect`)
-  to dodge a `lib.dom.d.ts` collision with `HTMLElement`'s own boolean `autocorrect` IDL member;
-  the wire attribute is still the plain `autocorrect` name
-- `autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
-  `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the internal date input
-- `autocomplete: string = ''`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
-  (`enterkeyhint`) — forwarded to the internal `<input>`.
-- `size: LyraSize = 'm'` (reflected) — visual size on the shared control ladder, matching
-  `lr-input`/`lr-select`/`lr-combobox`/`lr-button`; both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
-  `small`/`medium`/`large` are accepted. Governs the field's padding and font-size;
-  the calendar-toggle and clear buttons keep a constant, accessible touch target at every size.
-  The default `m` tier is unchanged from this component's pre-`size` rendering.
-- `pill: boolean = false` (reflected) — rounds the input row's corners to a full pill, mirroring
-  `lr-input`'s own `pill`. It only re-assigns `--lr-date-input-radius` to `--lr-radius-pill`, so a
-  consumer setting that property directly still wins for a bespoke shape
+Lyra retains additive native-wrapper and form-chrome properties: `placeholder`, `locale`,
+`errorText`, `accessibleLabel` (attribute `aria-label`), `clearLabel`, `openLabel`, `dialogLabel`,
+`spellcheck`, `autocapitalize`, `autoCorrect` (attribute `autocorrect`), `inputMode: string = ''`
+(attribute `inputmode`), `enterKeyHint: string = ''` (attribute `enterkeyhint`), and the reflected
+`customError: string | null` (attribute `custom-error`). `withLabel` and `withHint` are SSR hints:
+they force those slot wrappers into the first render so server output and hydration have the same
+structure even before assigned-slot state is observable. The shared Lyra FACE contract also
+reflects `disabled` and accepts a `form` content-attribute owner ID in addition to the
+element-valued `form` IDL.
 
-**Methods:** `show()`, `hide()`, `clear()`, `focus(options?)`, `blur()`, `select()`,
-`setSelectionRange()`, `setRangeText()` (all of the focus/selection methods forward to the internal
-native date `<input>`).
+**Methods:** `blur()`, `clear()`, `focus(options?)`,
+`formStateRestoreCallback(state)`, `hide()`, `resetValidity()`, `setCustomValidity(message)`, and
+`show()`. The shared form contract additionally exposes `getForm()`, `checkValidity()`, and
+`reportValidity()`; Lyra's native wrapper also exposes `click()`. `show()` and `hide()` return promises that settle after their corresponding transition;
+they do nothing when already settled, and respect cancellation of their request event. `clear()`
+is a no-op while blank, disabled, or readonly; otherwise it emits `lr-clear`, then `input`, then
+`change`. Lyra also retains native-wrapper `select()`, `setSelectionRange()`, and `setRangeText()`.
 
 **Getters:** `input: HTMLInputElement | undefined` — the internal native `<input>`, for direct DOM
 access.
@@ -653,18 +783,30 @@ access.
 **Selection properties:** `selectionStart`, `selectionEnd`, and `selectionDirection` mirror the
 internal native date input.
 
-**Events:** `input`, `change`, `lr-show`, `lr-hide`, `lr-clear`, `blur` (re-dispatched from
-the internal `<input>`'s own `blur`, bubbling and composed unlike the native event), `focus`
-(re-dispatched from the internal `<input>`'s own `focus`, for the same reason as `blur`)
+**Events:** `input` is an `InputEvent`, `change` is an `Event`, and `focus`/`blur` are
+`FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
+bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
+`lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
+settle. `lr-clear` and `lr-invalid` are non-cancelable.
 
-**Slots:** `label`, `error` (overrides `errorText`), `hint`, plus two adornment slots:
-- `start` — content at the inline-start of the input row, before the text field.
-- `end` — content after the text field and the built-in clear action, and before the calendar
-  toggle, so consumer content never sits outboard of the calendar button.
+**Slots (10):** `clear-icon`, dynamic `day-YYYY-MM-DD`, `end`, `expand-icon`, `footer`, `hint`,
+`label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
+overrides `errorText`.
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `start` and `end`
-(the two adornment-slot wrappers, each `hidden` while nothing is slotted into it), `clear-button`,
-`expand-button`, `expand-icon`, `popup`, `date-picker`, `error`, `hint`
+**Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
+exposes its validity states.
+
+**CSS parts (19):** `clear-button`, `date-input`, `date-picker`, `end`, `expand-button`,
+`expand-icon`, `form-control`, `form-control-input`, `form-control-label`, `hint`, `input`,
+`input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, deprecated
+`base` (use `date-input`), and deprecated `label` (use `form-control-label`). Lyra additionally
+retains `error`.
+
+**Form value and validation:** a complete range submits `YYYY-MM-DD/YYYY-MM-DD`. A first range
+endpoint remains visible in `value` but contributes the empty string to `FormData` until the second
+endpoint is selected. `min`/`max`, past/future limits, disabled dates/weekdays, the predicate,
+range length, `required`, and configured validators all feed FACE validity. Reset and state restore
+use the same normalization path as direct property writes.
 
 **Themeable custom properties:** `--lr-date-input-padding-block` (default `--lr-space-xs`) and
 `--lr-date-input-padding-inline` (default `--lr-space-s`) — the `input-wrapper`'s padding;
@@ -674,7 +816,8 @@ default `m` tier) — the `input-wrapper`'s block-size
 floor. All four are declared on `:host` and auto-swapped per `size`
 (`2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` defaults), using the same per-`size` values
 `lr-input` uses. `pill` re-assigns `--lr-date-input-radius` to `--lr-radius-pill`. Plus shared
-tokens.
+tokens. The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's
+enter and exit transitions; both default to `var(--lr-transition-fast)`.
 
 `--lr-date-input-control-height` pins an **exact** `input-wrapper` height (both floors and caps it).
 It is **undeclared by default**, so the row grows to fit its content — see "exact-height hatches"
@@ -770,7 +913,7 @@ and `dateTimeFormat(locale, options)`.
 
 ---
 
-## lr-textarea
+## `lr-textarea`
 
 A multiline plain-text input primitive, form-associated (participates in native `<form>`
 submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValidity()`/
@@ -794,21 +937,28 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | Property | Attribute | Type | Default | Description |
 | --- | --- | --- | --- | --- |
 | `value` | `value` | `string` | `''` | The current text value. |
-| `rows` | `rows` | `number` | `3` | Visible text rows. |
+| `defaultValue` | `value` / `default-value` | `string` | `''` | Reset value. The Shoelace attribute alias and the native-style `value` content attribute share the same reset engine. |
+| `rows` | `rows` | `number` | `4` | Visible text rows (mapped default). |
 | `resize` | `resize` | `'none' \| 'vertical' \| 'horizontal' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`. |
 | `size` | `size` | `LyraSize` | `'m'` | Visual size on the shared control ladder — the same scale as `lr-input`/`lr-select`/`lr-button`, and both spellings of every tier are accepted (`2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`). Governs the field's padding, font size and corner radius. Reflected. |
-| `appearance` | `appearance` | `'accent' \| 'filled' \| 'outlined' \| 'filled-outlined' \| 'plain'` | `'filled-outlined'` | Visual treatment of the field, with the same meanings as `lr-input`'s `appearance`: `filled-outlined` draws both fill and border, `outlined` drops the fill, `filled` drops the border, `plain` drops both, `accent` tints both with the brand color. Each value does nothing but swap `--lr-textarea-fill`/`--lr-textarea-border-color`. Reflected. |
+| `appearance` | `appearance` | `'accent' \| 'filled' \| 'outlined' \| 'filled-outlined' \| 'plain'` | `'outlined'` | Visual treatment of the field. The mapped default draws a border without a fill; the other values share `lr-input`'s vocabulary. Reflected. |
+| `filled` | `filled` | `boolean` | `false` | Shoelace alias for the filled treatment. |
 | `pill` | `pill` | `boolean` | `false` | Fully rounded field corners, matching `lr-input`'s/`lr-select`'s own `pill` — both upstreams ship it on their textarea, so a mechanical tag rename must not drop it. It only re-assigns `--lr-textarea-radius` to `--lr-radius-pill`, so that property stays the single corner-radius knob and a consumer override still wins. Most useful on a one- or two-row field: a tall multi-line surface with fully rounded ends wastes its first and last line's inline space, which is why it is opt-in rather than tied to `size`. Reflected. |
 | `withCount` | `with-count` | `boolean` | `false` | Renders a character count below the field, inside `[part="footer"]`. With `maxlength` set it counts *down* the remaining characters instead of up from zero. Reflected. |
 | `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
 | `readonly` | `readonly` | `boolean` | `false` | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected. |
 | `label` | `label` | `string` | `''` | Visible label text. Unset: no label chrome renders. |
 | `hint` | `hint` | `string` | `''` | Hint text below the field. |
+| `helpText` | `help-text` | `string` | `''` | Shoelace alias for `hint`; `hint` wins when both are set. |
+| `withLabel` / `withHint` | `with-label` / `with-hint` | `boolean` | `false` | SSR slot-presence hints; neither is required for hydrated client-side slot detection. |
 | `errorText` | `error-text` | `string` | `''` | Error text below the field (overridden by slotted `error` content). |
+| `customError` | `custom-error` | `string \| null` | `null` | Reflected consumer-supplied validation message. A non-empty value blocks submission until `setCustomValidity('')` clears it. |
 | `accessibleLabel` | `aria-label` | `string \| null` | `null` | Accessible-name override forwarded to the internal `<textarea>`; wins over `label`, `placeholder`, and the localized default. |
 | `spellcheck` | `spellcheck` | `boolean` | `true` | Forwarded to the native `<textarea>`. |
+| `autofocus` | `autofocus` | `boolean` | `false` | Forwarded to the native `<textarea>`. |
+| `title` | `title` | `string` | `''` | Forwarded to the native `<textarea>`. |
 | `autocapitalize` | `autocapitalize` | `string` | `''` | Forwarded to the native `<textarea>`; empty omits the attribute. |
-| `autoCorrect` | `autocorrect` | `string` | `''` | Forwarded to the native `<textarea>` (Safari/WebKit-specific); empty omits the attribute. |
+| `autocorrect` | `autocorrect` | read: `boolean`; write: `boolean \| string` | `true` | Forwarded to the native `<textarea>` (Safari/WebKit-specific). Reads are always boolean. Boolean writes preserve Web Awesome's IDL; Shoelace-compatible string writes normalize `off`/`false` to `false` and every other string to `true`. The HTML attribute uses canonical `on`/`off`. When the host attribute is absent and the state remains at its `true` default, the internal attribute is omitted so the browser keeps its default behavior. |
 | `wrap` | `wrap` | `'hard' \| 'soft' \| 'off'` | `'soft'` | Native line-wrapping/submission behavior. |
 | `autocomplete` | `autocomplete` | `string` | `''` | Forwarded to the native `<textarea>`; empty omits the attribute. |
 | `inputMode` | `inputmode` | `string` | `''` | Virtual-keyboard input hint forwarded to the native `<textarea>`. |
@@ -818,6 +968,15 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | `name` | `name` | `string` | `''` | Form field name. |
 | `disabled` | `disabled` | `boolean` | `false` | Disables the control. |
 | `required` | `required` | `boolean` | `false` | Participates in native constraint validation. |
+
+The lowercase native IDLs `inputmode: string` and `enterkeyhint: string` delegate to
+`inputMode`/`enterKeyHint`; `autocorrect` is one public state with a boolean read type and a wider
+cross-upstream write vocabulary.
+
+**8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
+alias. Prefer boolean `autocorrect` writes in new code. A migrated Shoelace string write remains
+valid (`'off'` and `'false'` read back as `false`; other strings read back as `true`), while markup
+uses `autocorrect="on"` / `autocorrect="off"`.
 
 ### Constraint validation
 
@@ -852,7 +1011,7 @@ the shadow boundary.
 - `selectionStart: number | null`, `selectionEnd: number | null`, and
   `selectionDirection: 'forward'|'backward'|'none'|null` — readable and writable passthroughs to
   the native selection state.
-- The shared form-associated getters `form`, `labels`, `validity`, `validationMessage`,
+- The shared form-associated getters `form`, `getForm()`, `labels`, `validity`, `validationMessage`,
   `willValidate`, and `effectiveDisabled` are also available.
 
 ### Methods
@@ -865,6 +1024,8 @@ the shadow boundary.
 | `setRangeText(replacement, start?, end?, selectMode?)` | Apply a native range edit, then synchronize the component `value`, form value, validity, and auto-grown size without emitting a user event. |
 | `scrollPosition(position?)` | Read or write the internal textarea's scroll offsets. Called with no argument it returns the current `{ top, left }`; called with a partial `{ top?, left? }` it writes only the axes present and returns `undefined`. Returns `undefined` either way before the internal textarea has rendered, and a non-finite offset leaves that axis alone. This is the one piece of scroll state no other public member reaches — use it to restore a draft, or to pin a long value to its end. |
 | `setFormValue(value)` | Set the reactive and submitted value synchronously. |
+| `setCustomValidity(message)` | Set a consumer-supplied validation message. A non-empty message raises `customError`, becomes `validationMessage`, and blocks submission; `''` clears it and restores intrinsic required/length validity. |
+| `resetValidity()` | Clear only consumer-supplied custom validity and recompute current intrinsic constraints. It does not change `value`/`defaultValue`, clear prior interaction state, or force an intrinsically invalid field valid. |
 | `checkValidity()` / `reportValidity()` | Run native constraint validation through `ElementInternals`. |
 
 ### Events
@@ -879,6 +1040,7 @@ the shadow boundary.
 | `focus` | none | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`. |
 | `lr-blur` | none | Prefixed compatibility alias, fired immediately after `blur`. |
 | `lr-focus` | none | Prefixed compatibility alias, fired immediately after `focus`. |
+| `lr-invalid` | none | Fired when a validity check finds the control invalid. |
 
 Programmatic property assignments, selection changes, `setRangeText()`, form reset, and form-state
 restoration are silent. User edits update `value`, submitted form data, and required validity before
@@ -891,6 +1053,7 @@ original declarative `value`, matching native `defaultValue` behavior.
 | --- | --- |
 | `label` | Custom label content. |
 | `hint` | Custom hint content. |
+| `help-text` | Shoelace alias for `hint`. |
 | `error` | Custom error content. |
 
 ### CSS Parts
@@ -899,11 +1062,12 @@ original declarative `value`, matching native `defaultValue` behavior.
 | --- | --- |
 | `form-control` | The outer wrapper around label, textarea, error and hint. |
 | `form-control-label` | The `<label>` element. |
-| `textarea-wrapper` | A plain block box around the native `<textarea>`. It deliberately imposes no size of its own — the native resize grip writes inline `width`/`height` onto the `<textarea>` itself, so the field drives the box. Use it to place chrome alongside the field; the padding/border/fill live on `textarea`. |
+| `label` | The visible label-content wrapper. |
+| `base` / `form-control-input` / `textarea-adjuster` / `textarea-wrapper` | Compatibility names on the plain block wrapper around the native `<textarea>`. It deliberately imposes no size of its own — the native resize grip writes inline `width`/`height` onto the `<textarea>` itself, so the field drives the box. |
 | `textarea` | The native `<textarea>` element. |
 | `footer` | The row below the field carrying the character count. Always in the DOM but `hidden` without `with-count`. |
 | `count` | The character count text, rendered only with `with-count`. |
-| `hint` | The hint message. |
+| `hint` / `form-control-help-text` | Compatibility names on the hint message. |
 | `error` | The error message. |
 
 The visible `[part="count"]` is `aria-hidden`; a separate polite live region beside it republishes
@@ -925,9 +1089,9 @@ dropped rather than rendered as `NaN`, and the count counts up from zero instead
   font size and corner radius. All three read the active `size` tier of the shared control ladder,
   so they follow the tier with no per-tier rule of their own; the two tightest tiers take a smaller
   radius. `pill` re-assigns `--lr-textarea-radius` to `--lr-radius-pill`.
-- `--lr-textarea-fill` (default `var(--lr-color-surface)`) and `--lr-textarea-border-color` (default
+- `--lr-textarea-fill` (default `transparent`) and `--lr-textarea-border-color` (default
   `var(--lr-color-border)`) — the field's background and border color, both swapped per
-  `appearance` rather than per `size`. The documented defaults are `appearance="filled-outlined"`'s
+  `appearance` rather than per `size`. The documented defaults are `appearance="outlined"`'s
   values, and both are also declared bare on `:host` so an element whose `appearance` attribute
   hasn't reflected yet still paints the committed default. Set either directly to retune the
   surface without a `::part(textarea)` rule.
@@ -941,8 +1105,9 @@ dropped rather than rendered as `NaN`, and the count counts up from zero instead
 ## `lr-button`
 
 A generic action-button primitive. Renders an internal native `<button>`; `type="submit"`/
-`type="reset"` are handled by the component itself via the host's own `closest('form')`, since a
-shadow-internal native button doesn't participate in an ancestor form's submission on its own.
+`type="reset"` are handled by the component itself via its browser-resolved form owner (including
+an external owner named by `form`), since a shadow-internal native button doesn't participate in a
+light-DOM form's submission on its own.
 
 Set `href` to a safe link URL and the root renders as a real `<a part="base" href=…>` instead — a
 link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
@@ -961,11 +1126,16 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
   `aria-disabled="true"`), so a disabled link button cannot navigate. An unsafe/unparseable value
   falls back to the native `<button>`
 - `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
-  (e.g. `'_blank'`) automatically derives `rel="noopener noreferrer"` on the anchor; `rel` is never
-  independently settable (reverse-tabnabbing). Ignored in `<button>` mode
+  (e.g. `'_blank'`) automatically derives `rel="noopener noreferrer"` on the anchor. The public
+  `rel` getter and compatibility attribute expose that mapped surface, but an author value never
+  controls the rendered anchor: `target` alone derives the safe value (reverse-tabnabbing). Ignored
+  in `<button>` mode
 - `download?: string` — native anchor `download` attribute, used only while `href` resolves to a
   link. Ignored in `<button>` mode
-- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected)
+- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected). Reads
+  stay in Lyra's shared vocabulary; migrated Shoelace inputs normalize `default` → `neutral`,
+  `primary` → `brand`, and `text` → neutral `appearance="plain"`. The Lyra/Web Awesome default is
+  intentionally still `neutral`
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' | 'quiet' | 'link' =
   'accent'` (reflected) — the library's shared fill vocabulary plus this component's own two extra
   tiers. **Breaking in 8.0.0: the default moved from `'filled'` to `'accent'`**, so a bare
@@ -995,12 +1165,21 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
   `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so that property stays the
   single corner-radius knob and a consumer override still wins. `appearance="link"` renders with
   zero chrome, pill or not
+- `circle: boolean = false` (reflected) — Shoelace-compatible circular icon-button treatment: a
+  square control with the pill radius and compact inline padding. It is additive to, not a rename
+  of, `pill`
+- `outline: boolean = false` (reflected) — Shoelace-compatible outlined treatment. It does not
+  overwrite `appearance`, so removing `outline` restores the canonical Lyra appearance
 - `withCaret: boolean = false` (attribute `with-caret`, reflected) — renders a decorative trailing
   chevron (`[part="caret"]`, `aria-hidden`) marking the button as a dropdown/menu trigger. It
   carries no accessible name of its own: the button's label already names the action, and the popup
   relationship is expressed by a host `aria-haspopup`/`aria-expanded`, which are forwarded to the
   internal control. Like the label and the two adornment slots it fades to `opacity: 0` while
   `loading`, so the spinner has the button to itself
+- `caret: boolean = false` — Shoelace alias for `withCaret`; either spelling renders the same part
+- `withStart: boolean = false` / `withEnd: boolean = false` (attributes `with-start`/`with-end`) —
+  Web Awesome SSR presence hints that keep the matching adornment wrapper mounted before slot
+  assignment is observable
 - `type: 'button' | 'submit' | 'reset' = 'button'`
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
   clearing `disabled`
@@ -1008,6 +1187,10 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name forwarded
   reactively to the internal native button or anchor; changing or removing the attribute after
   mount updates the actual focused control
+- `required: boolean = false` (reflected), `validity`, `validationMessage`, and `willValidate` —
+  Web Awesome's form-validity surface. A required button needs a non-empty submitter `value`; this
+  validation never makes the button a persistent form-data entry
+- `customError: string | null` (attribute `custom-error`, reflected) — consumer validation message
 
 **Submitter overrides (`type="submit"` in `<button>` mode).** `name`/`value` plus the five native
 `form*` overrides describe the submission this button triggers, not the button itself:
@@ -1026,6 +1209,10 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `formTarget?: string` (attribute `formtarget`) — overrides the form owner's `target`. Distinct
   from `target`, which is the anchor target used in link mode
 
+Shoelace's hyphenated spellings — `form-action`, `form-enctype`, `form-method`,
+`form-no-validate`, and `form-target` — delegate to the same five properties. When both spellings
+are used, the most recent attribute change wins.
+
 All five are `undefined`/`false` by default. When any of them — or `name`/`value` — is set, the
 submission runs through a **transient native `<button type="submit">`** inserted directly after the
 host, used as `requestSubmit()`'s submitter and removed again in the same synchronous step (in a
@@ -1040,18 +1227,29 @@ Each size tier's `min-block-size` floor is exposed as its own token (see below).
 
 **Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal base
 element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
-submit/reset behavior in `<button>` mode.
+submit/reset behavior in `<button>` mode. `getForm()` returns the browser-resolved form owner,
+including an external owner selected by the `form` attribute. `checkValidity()`, `reportValidity()`,
+and `setCustomValidity(message)` delegate to `ElementInternals`; `resetValidity()` clears only the
+consumer error and restores the current `required`/`value` constraint. `formStateRestoreCallback()`
+restores `value` for session history/autofill without changing submitter-only form-data semantics.
 
 **Events:** a plain native `click` bubbles and composes through the shadow boundary unmodified
 (disabled while `disabled` or `loading`). The internal button's `focus` and `blur` — which do not
 cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
-events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail).
+events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail). `lr-invalid` (no
+detail) fires when a validity check finds the button invalid.
 
-**Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content).
+**Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content),
+plus Shoelace aliases `prefix` → `start` and `suffix` → `end`.
 
-**CSS parts:** `base` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe
-link), `label`, `start`, `end`, `caret` (the decorative dropdown chevron, present only while
-`with-caret` is set), `spinner` (present only while `loading`).
+**CSS parts:** `base` (compatibility name for the internal control; use `button`),
+`button` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe link; it is
+the same node as `base`), `label`, `start`/`prefix` (the same wrapper), `end`/`suffix` (the same
+wrapper), `caret` (the decorative dropdown chevron, present only while either caret spelling is
+set), `spinner` (present only while `loading`).
+
+**CSS custom states:** `disabled` (including fieldset-disablement and loading), `icon-button`
+(one text-free default-slot element), `link` (safe anchor mode), and `loading`.
 
 **Themeable custom properties.** The colour slots below are re-pointed at the active `variant`'s row
 of the library's shared semantic colour grid, so the component carries no `:host([variant='…'])`
@@ -1156,6 +1354,8 @@ box no matter what tier or override is in play.
 <p>The message failed. <lr-button appearance="link" variant="brand">Retry</lr-button></p>
 
 <lr-button pill with-caret aria-haspopup="menu" aria-expanded="false">Actions</lr-button>
+<lr-button variant="primary" outline caret><span slot="prefix">★</span>Migrated</lr-button>
+<lr-button circle aria-label="Settings"><svg aria-hidden="true">...</svg></lr-button>
 
 <form action="/save" method="post">
   <lr-input name="title" label="Title" required></lr-input>
@@ -1197,11 +1397,19 @@ inside. Its `type="submit"`/`"reset"` behavior is forwarded to the ancestor form
 
 **Properties:**
 - `icon: string = ''` — an `lr-icon` glyph name (see `llms/components/lr-icon.md`)
+- `name: string = ''` — Shoelace alias for `icon`; reads and writes stay synchronized. Assigning
+  the upstream `undefined` spelling clears both names to the canonical `''` read value
+- `library?: string` / `src?: string` — forwarded to the nested `lr-icon`, preserving Shoelace
+  icon-library and remote-SVG markup. Remote SVG loading inherits `lr-icon`'s URL, byte-ceiling,
+  sanitization, and stale-generation guards
 - `accessibleLabel: string = ''` (attribute: `aria-label`) — the typed override for the button's
   accessible name; wins over `label`
 - `label: string = ''` — accessible name when `accessibleLabel` is unset
 - `disabled: boolean = false` (reflected)
 - `type: 'button' | 'submit' | 'reset' = 'button'`
+- `href?: string`, `target?: string`, `download?: string` — a safe `href` renders a native anchor;
+  `target` derives `rel="noopener noreferrer"`, and `download` selects the stricter downloadable-URL
+  allowlist. A disabled link keeps the anchor but removes `href`
 
 With neither `accessibleLabel` nor `label` set, the name falls back to the localized
 `iconButtonLabel` string rather than being empty — override it per instance with `.strings` or
@@ -1217,9 +1425,12 @@ browsers intentionally clear each serialized internal IDREF attribute after its 
 list is assigned. Browsers without those APIs retain the forwarded string attributes as
 best-effort fallbacks.
 
-**Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
-the native button, activating it — including this component's own `type="submit"`/`type="reset"`
-handling, since the click goes through the same `<button>` the pointer/keyboard path does.
+**Methods:** `focus(options?)`, `blur()` — forward to the native interactive root. `click()` also
+forwards to it, activating a safe anchor or — in button mode — this component's own
+`type="submit"`/`type="reset"` handling, since the click goes through the same `<button>` the
+pointer/keyboard path does.
+`getForm()` returns the browser-resolved form owner, including an external owner selected by the
+`form` attribute.
 
 **Events:** a plain native `click` crosses the shadow boundary unmodified. The internal button's
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
@@ -1245,8 +1456,8 @@ node. This is narrowly scoped to that whitelist: a complete `<svg>`, `<img>`, or
 (e.g. `<lr-flag>`) is never touched by it and keeps rendering as an untouched sibling at its own
 natural aspect ratio.
 
-**CSS parts:** `button`, `fallback` (only present in the DOM while at least one top-level slotted
-element needs the bare-geometry fallback above)
+**CSS parts:** `base`/`button` (the same native button or anchor), `fallback` (only present in the
+DOM while at least one top-level slotted element needs the bare-geometry fallback above)
 
 **Themeable custom properties:** `--lr-icon-button-size` (default `2.5rem`) is the **minimum**
 tappable inline and block size of the native button — a floor, not a fixed size. Content larger
@@ -1283,6 +1494,16 @@ without a `::part(button)` rule. All nine are undeclared by default and read as 
 fallbacks, so setting only the resting value carries through hover and press, and setting none of
 them leaves rendering unchanged.
 
+```html
+<lr-icon-button name="search" library="default" label="Search"></lr-icon-button>
+<lr-icon-button
+  name="chevron-right"
+  label="Open documentation"
+  href="https://example.com/docs"
+  target="_blank"
+></lr-icon-button>
+```
+
 ## `lr-input`
 
 A single-line plain-text input primitive, the `lr-*` equivalent of a plain `wa-input`,
@@ -1294,20 +1515,24 @@ Pressing Enter submits the ancestor `<form>` — the implicit submission a nativ
 see "Enter-to-submit" below for the exact rules and for which controls deliberately opt out.
 
 **Properties:**
-- `type: LyraInputType = 'text'` — `'text' | 'password' | 'email' | 'number' | 'time' | 'search'`
+- `type: LyraInputType = 'text'` — `'text' | 'password' | 'email' | 'number' | 'time' | 'search' |
+  'date' | 'datetime-local' | 'tel' | 'url'`
 - `size: LyraSize = 'm'` (reflected — see "Shared form vocabulary" below)
-- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
-  (reflected) — the shared field-surface vocabulary. `filled-outlined` (the default) draws both a
-  surface fill and a border; `outlined` drops the fill, `filled` drops the border, `plain` drops
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
+  (reflected) — the shared field-surface vocabulary. `outlined` (the mapped default) draws a border
+  without a fill; `filled-outlined` draws both, `filled` drops the border, `plain` drops
   both, and `accent` tints both with the brand color. Each value does nothing but swap
   `--lr-input-fill`/`--lr-input-border-color`, so either can be retuned without a
   `::part(input-wrapper)` rule
+- `filled: boolean = false` (reflected) — Shoelace alias for the filled treatment
 - `pill: boolean = false` (reflected) — rounds the control row to a full pill by swapping
   `--lr-input-radius` to `--lr-radius-pill`
 - `autofocus: boolean = false` — forwarded to the internal native `<input>` rather than left on the
   host, so the browser's own autofocus algorithm targets the real text control (the custom-element
   host is not focusable). Left unset, the native attribute is omitted entirely
 - `value: string = ''` (from `FormAssociated`)
+- `defaultValue: string = ''` — reset value, backed by the standard `value` content attribute;
+  `default-value` is accepted as a Shoelace attribute alias
 - `placeholder: string = ''`
 - `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
   `search` input has a value; clearing preserves input focus
@@ -1317,14 +1542,27 @@ see "Enter-to-submit" below for the exact rules and for which controls deliberat
 - `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `label: string = ''`
 - `hint: string = ''`
+- `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins when both
+  are set. `withLabel`/`withHint` (`with-label`/`with-hint`) provide optional SSR slot-presence hints
 - `errorText: string = ''` (attribute `error-text`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `autocomplete: string = ''`
+- `title: string = ''` — forwarded to the native input
 - `spellcheck: boolean = true` — forwarded to the native input, including `spellcheck="false"`
-- `autocapitalize: string = ''` / `autoCorrect: string = ''` (attribute `autocorrect`)
+- `autocapitalize: string = ''` / `autocorrect` (read: `boolean = true`; write:
+  `boolean | 'off' | 'on'`; attribute values `on`/`off`)
 - `inputMode: string = ''` (attribute `inputmode`) / `enterKeyHint: string = ''` (attribute
-  `enterkeyhint`) — these four are forwarded verbatim to the native input; an empty string omits
-  the attribute entirely
+  `enterkeyhint`) — `autocapitalize`, `inputMode`, and `enterKeyHint` are forwarded verbatim to the
+  native input and an empty string omits them; `autocorrect` is normalized to canonical `on`/`off`
+- Lowercase native IDLs `inputmode: string` and `enterkeyhint: string` delegate to the camel-case
+  native properties; `autocorrect` reads as boolean while accepting both Web Awesome's boolean
+  writes and Shoelace's `'off'`/`'on'` writes
+
+**8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
+alias. Prefer boolean `autocorrect` writes in new code; migrated Shoelace `'off'`/`'on'` property
+writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
+`autocorrect="off"`.
+
 - `min?: number | string` / `max?: number | string` (attributes `min`/`max`) /
   `step?: number | 'any'` (attribute `step`, accepts the native `'any'` value alongside a number)
   — forwarded verbatim to the native
@@ -1353,6 +1591,8 @@ see "Enter-to-submit" below for the exact rules and for which controls deliberat
   **Breaking in 8.0.0:** `type="number"` used to hide them unconditionally; left unset, the
   platform's spinners now render exactly as they do on a bare `<input type="number">`.
   `<lr-number-input>` defaults this the other way (`true`), so its rendering is unchanged
+- `noSpinButtons: boolean = false` (attribute `no-spin-buttons`) — Shoelace alias for
+  `withoutSpinButtons`; either suppresses native number spinners
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
 **Getters/methods:** `input: HTMLInputElement | null` (the internal native `<input>`, for direct DOM
@@ -1364,8 +1604,17 @@ matching the native `<input>`'s own contract), `setSelectionRange(start, end, di
 (no-op before render, otherwise throws the same native `InvalidStateError` a native `<input>` would
 for an unsupported `type`), and `setRangeText(replacement, start?, end?, selectMode?)` (no-op
 before render; syncs `value` afterward without emitting a user event).
+The shared form surface also exposes `getForm()`, which returns the browser-resolved owner including
+an external form selected by the `form` attribute. `resetValidity()` clears only consumer-supplied
+custom validity and recomputes the current native/required constraints; it leaves
+`value`/`defaultValue` and prior interaction state unchanged, so an intrinsically invalid input
+stays invalid.
 
 Three more native passthroughs:
+
+- `valueAsDate: Date | null` / `valueAsNumber: number` — native getters/setters for date/time and
+  numeric input types. Assignment synchronizes `value`, form value, and validity without emitting a
+  user edit event; unsupported types retain the native `null`/`NaN` behavior.
 
 - `showPicker(): void` — opens the browser's own picker for the current `type` (the time picker, and
   whatever chooser the platform offers for the other types), delegating to the internal native
@@ -1391,14 +1640,18 @@ fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on 
 `change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
 own `blur`/`focus`) each followed by its prefixed alias `lr-blur`/`lr-focus` (no detail), and
 `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/`change`/`lr-change`
-sequence).
+sequence). `lr-invalid` (no detail) fires when a validity check finds the input invalid.
 
-**Slots:** `label`, `hint`, `error`, `start` (adornment before the input), `end` (adornment after the
-input and built-in actions).
+**Slots:** `label`, `hint`/`help-text`, `error`, `start`/`prefix` (aliases before the input),
+`end`/`suffix` (aliases after the input and built-in actions), `clear-icon`,
+`show-password-icon`, and `hide-password-icon`.
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `password-toggle`
+**CSS parts:** `form-control`, `form-control-label`, `label`, `base`/`form-control-input`/
+`input-wrapper` (compatibility names on the row wrapping the native input and actions), `input`,
+`password-toggle`, `password-toggle-button`
 (present only when `type="password"` **and** `password-toggle` is set), `start`, `end`,
-`clear-button` (non-empty clearable `text`/`search` inputs only), `hint`, `error`.
+`clear-button` (non-empty clearable `text`/`search` inputs only),
+`hint`/`form-control-help-text` (compatibility names on the same hint node), and `error`.
 
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
 `--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
@@ -1416,14 +1669,14 @@ the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall 
 lozenge. `pill` re-assigns it to `--lr-radius-pill`. `lr-number-input`/`lr-time-input` inherit both
 unchanged.
 
-`--lr-input-fill` (default `var(--lr-color-surface)`) is the control row's background and
+`--lr-input-fill` (default `transparent`) is the control row's background and
 `--lr-input-border-color` (default `var(--lr-color-border)`) its border color. Both are swapped by
-`appearance` rather than by `size`, and the documented defaults are `appearance="filled-outlined"`'s
+`appearance` rather than by `size`, and the documented defaults are `appearance="outlined"`'s
 values (they are also declared bare on `:host`, so an element whose `appearance` attribute hasn't
 reflected yet still paints the committed default). Setting either directly retunes the surface
 without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
 
-### Shared form vocabulary — `size`, `appearance`, `pill`, `setCustomValidity()`
+### Shared form vocabulary — `size`, `appearance`, `pill`, and custom validity
 
 Four things every form control in this family now spells the same way. They are documented here
 because `lr-input` is where a reader meets all four at once; each component's own list restates only
@@ -1443,14 +1696,15 @@ what is specific to it.
   (both) and `plain` (neither). It used to double as a *container* treatment on other components;
   that meaning moved to `frame` (`card`/`plain`) in 8.0.0, so `appearance` means one thing
   library-wide. `lr-button` adds two tiers of its own on top (`quiet` and `link`). Text fields
-  default to `filled-outlined`, `lr-select` to `outlined`, `lr-button` to `accent`.
+  (`lr-input`, `lr-textarea`, and `lr-select`) default to `outlined`; `lr-button` defaults to `accent`.
 - **`pill` rounds the control's ends.** Available on `lr-input`, `lr-number-input`, `lr-time-input`,
   `lr-textarea`, `lr-select`, `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input`,
   `lr-button` and `lr-radio-button`. In every case it does exactly one thing — re-assign that
   component's own `--lr-*-radius` knob to `--lr-radius-pill` — rather than declaring a radius on a
   part, so the knob stays the single corner-radius override point and a consumer's own value still
   wins over it.
-- **`setCustomValidity(message)` is on every form-associated *value* control here** — every one
+- **`setCustomValidity(message)` and `resetValidity()` are on every form-associated *value* control
+  here** — every one
   that submits something, whether it drives `ElementInternals` through the shared mixin or by hand.
   (`lr-button` and `lr-icon-button` are form-associated so an ancestor `<fieldset disabled>` and
   `form.elements` reach them, but they carry no value or validity, so they have no such method.) It
@@ -1460,9 +1714,11 @@ what is specific to it.
   `:invalid`/`:state(invalid)`.
   `''` clears it and republishes the control's *own* computed validity rather than forcing it valid:
   a required-and-empty field goes back to `valueMissing`. The message survives every intrinsic
-  recomputation and a `form.reset()`, exactly like a native control — only another
-  `setCustomValidity('')` clears it — and is used verbatim, never localized, because it is
-  caller-supplied content.
+  recomputation and a `form.reset()`, exactly like a native control; `setCustomValidity('')` or
+  `resetValidity()` clears it. `resetValidity()` affects only that consumer layer and recomputes the
+  current intrinsic constraints: it does not change `value`/`defaultValue`, make the control
+  pristine again, or force an intrinsically invalid value valid. The message is used verbatim,
+  never localized, because it is caller-supplied content.
 
 ### Enter-to-submit
 
@@ -1577,20 +1833,22 @@ these four needs the property form to be reset.
 ## `lr-number-input`
 
 A numeric field with the complete `lr-input` form, validation and native-editing contract, plus its
-own increment/decrement stepper pair. A subclass whose constructor and `connectedCallback()` both
-set `type = 'number'`; apart from the two properties below, everything is `lr-input`'s surface,
-unchanged.
+own increment/decrement stepper pair. Its constructor and `connectedCallback()` both force
+`type = 'number'`; all inherited `lr-input` form and editing APIs remain available.
+
+**Inherits:** all public surface from `lr-input`.
 
 **Properties:** `size` (`2xs`…`xl`), `appearance`, `pill`, `autofocus`, `placeholder`, `readonly`,
 `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
 `autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), `enterKeyHint` (`enterkeyhint`), and
 `min`/`max`/`step` (the native numeric constraint validation), all inherited from `lr-input` with
-identical meaning and identical defaults. `clearable` (and its `with-clear` spelling),
+identical meaning. This component changes the mapped defaults to `appearance='outlined'`,
+`inputMode='numeric'`, and `step=1`. `clearable` (and its `with-clear` spelling),
 `passwordVisible` (`password-visible`), and `minlength`/`maxlength`/`pattern` are inherited but
 inert — see gotchas.
 
-Two properties are this component's own:
+Stepper switches:
 
 - `steppers: boolean = true` (attribute `steppers`, reflected) — renders the increment/decrement
   pair inside the control row. It **defaults to `true`**, so it needs a custom converter to switch
@@ -1603,6 +1861,9 @@ Two properties are this component's own:
   It is `true`-defaulting too, so `without-spin-buttons="false"` / `.withoutSpinButtons=${false}`
   brings the native pair back. The two properties are independent: `steppers="false"
   without-spin-buttons="false"` returns the field to a plain native `<input type="number">`.
+- `withoutSteppers: boolean = false` (attribute `without-steppers`, not reflected) — the positive
+  upstream spelling for hiding the custom pair. It does not invert `steppers`: either
+  `without-steppers` or `steppers="false"` hides the same controls, and both unset leaves them on.
 
 Each stepper drives the inherited `stepUp()`/`stepDown()`, so `min`/`max` clamping and decimal
 handling stay the platform's. Unlike those silent methods, a stepper **click** is a user edit and
@@ -1620,12 +1881,17 @@ field for no new capability. Each carries a localized accessible name and the sh
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
 input) each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail), and `lr-clear`
-(inherited, never fired here).
+(inherited, never fired here). The inherited `lr-invalid` (no detail) fires when a validity check
+finds the input invalid. The internal native `beforeinput` is cancelable, bubbles, and composes;
+calling `preventDefault()` on the host vetoes the edit before `value` changes.
 
-**Slots:** `label`, `hint`, `error`, `start`, `end`.
+**Slots:** `label`, `hint`, `error`, `start`, `end`, `decrement-icon`, and `increment-icon`.
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `stepper-down` and
-`stepper-up` (the two stepper buttons, rendered only while `steppers` is set; they sit side by side
+**CSS parts:** `form-control`, `form-control-label`, `base` (compatibility name for the
+control row; use `number-input`), `number-input` (the numeric control row; it is the same node as
+`base` and the inherited `input-wrapper` part), `input-wrapper`, `input`, shared `stepper`, mapped
+`stepper-decrement` / `stepper-increment`, and compatibility `stepper-down` / `stepper-up` (the two
+stepper buttons, rendered only while both switches permit them; they sit side by side
 between the built-in clear/password actions and the `end` adornment, and each one rotates the shared
 chevron glyph — `[part="stepper-up"] > svg` a quarter turn one way, `[part="stepper-down"] > svg` the
 other — so a consumer replacing the button chrome keeps the same up/down orientation), `start`, `end`,
@@ -1668,65 +1934,101 @@ minimum box from `--lr-icon-button-size`.
 
 ## `lr-time-input`
 
-A migration-friendly time alias of `lr-input` — the same subclassing shape as `lr-number-input`,
-with the constructor and `connectedCallback()` setting `type = 'time'`. Its only own API is a
-re-typed `min`/`max` pair (below); every other property, event, slot and part is `lr-input`'s.
+A locale-aware segmented field and column picker mirroring `wa-time-input`. Its wire and submitted
+value is always timezone-free, 24-hour ASCII: `HH:mm`, or `HH:mm:ss` when seconds are visible.
+Locale changes segment order, separators, digits, and day-period labels — never the wire value.
+An incomplete draft remains visible for editing but submits `''` and raises `badInput`.
 
-**Properties:** `size` (`2xs`…`xl`), `appearance`, `pill`, `autofocus`, `placeholder`, `readonly`,
-`label`, `hint`, `errorText`
-(`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
-`autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), and `enterKeyHint` (`enterkeyhint`) — all
-inherited from `lr-input` with identical meaning and identical defaults (`appearance` is
-`'filled-outlined'`, `pill` and `autofocus` are `false`).
-`clearable` (and its `with-clear` spelling), `passwordVisible` (`password-visible`),
-`withoutSpinButtons` (`without-spin-buttons`), and `minlength`/`maxlength`/`pattern` are
-inherited but inert, exactly as on `lr-number-input` — the platform ignores all three length/pattern
-constraints on `type="time"` as well, and there are no spin buttons on a time field to suppress.
-Unlike `lr-number-input`, this component does **not** flip `without-spin-buttons`' default: it stays
-`false`, and there are no `steppers` here.
+**Properties:**
 
-`step` is forwarded verbatim to the native time input, where it means seconds (`step="1"` reveals
-the seconds field, `'any'` disables step validation).
+- `value: string` (also accepts a `Date` or `null` when assigned) — strict `HH:mm`, optional
+  `:ss`/`.sss`; `Date` reads local clock fields without timezone conversion. Invalid strings and
+  `null` normalize to `''`. `valueAsNumber` is milliseconds since midnight (`NaN` while blank),
+  and `valueAsDate` applies the clock fields to today's local date (`null` while blank).
+- `defaultValue`, `name`, `form`, `disabled`, `required`, `customError`, `getForm()`,
+  `checkValidity()`, `reportValidity()`, `setCustomValidity()`, and `resetValidity()` use the shared form-control
+  contract. Reset restores the current declarative `value` default; `readonly` remains focusable
+  and submits but cannot be edited. `resetValidity()` clears only consumer custom validity and
+  restores the current intrinsic time constraints; it leaves the value/default and interaction
+  state unchanged.
+- `min = ''`, `max = ''` accept the same canonical time syntax. `min <= max` is an ordinary
+  closed range; `min > max` is an overnight range (for example `22:00` through `06:00`).
+- `step: number | 'any' = 60` is seconds. A numeric value below 60 reveals seconds; a whole-minute
+  multiple also becomes the minute picker column's stride. `'any'` disables step mismatch.
+- `hourFormat: 'auto' | '12' | '24' = 'auto'` (`hour-format`) overrides the locale's hour cycle.
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`,
+  `size` (shared `2xs`…`xl` ladder and `small`/`medium`/`large` aliases), and `pill = false`.
+- `label = ''`, `hint = ''`, `errorText = ''` (`error-text`), `withLabel = false`
+  (`with-label`), and `withHint = false` (`with-hint`) provide complete form chrome. A host
+  `aria-label` wins for the internal editing surface's accessible name.
+- `open = false`, `placement = 'bottom-start'`, and `distance = 0` control the picker.
+  `show()` / `hide()` return `Promise<void>` and settle after the matching `lr-after-*` event.
+- `withClear = false` (`with-clear`) adds a localized clear action. `withNow = false`
+  (`with-now`) adds a localized Now footer unless the `footer` slot replaces it.
+- `autocomplete = ''` is forwarded to a visually hidden, nameless native time input used only as
+  the browser autofill seam; the FACE host remains the sole submitted control.
 
-`min?: string | number` / `max?: string | number` (attributes `min`/`max`, both defaulting to
-`undefined` — no bound) are re-declared here with a converter that forwards the attribute verbatim
-instead of `lr-input`'s numeric parsing, so they take the native `<input type="time">` literal form:
-`min="09:00"`, or `min="09:00:30"` alongside a seconds-precision `step`. Attribute and property are
-interchangeable (`el.min = '09:00'` needs no cast), removing the attribute clears the bound, and the
-native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow` through
-`checkValidity()`.
+**Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the active segment; `show()` and
+`hide()` control the picker, while its form methods are described above.
 
-**Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
-(`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed) each followed by its
-prefixed alias `lr-focus`/`lr-blur` (no detail), and `lr-clear` (inherited, never fired here).
+**Keyboard:** only one segment is in the tab order. Digits fill the active segment and advance when
+no further digit can be accepted; Left/Right moves in locale order and reverses under RTL;
+Up/Down steps, Home/End selects the segment edge, and Backspace/Delete clears the segment.
+Pasting a canonical time replaces the full value as one edit. Alt+ArrowDown opens the picker.
+`readonly` keeps navigation and popup browsing but blocks commits; `disabled` removes the tab stop,
+popup, validation, and form submission.
 
-**Slots:** `label`, `hint`, `error`, `start`, `end`.
+**Events:** native `input` on user edits and native `change` on a complete commit; compatibility
+aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once
+with `lr-focus` / `lr-blur` aliases. `lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
+precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion settlement.
+`lr-invalid` follows a failed validity check.
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `start`, `end`,
-`hint`, `error`, plus the inherited, never-rendered `clear-button` and `password-toggle`.
+**Slots:** `label`, `hint`, `error`, `start`, `end`, `clear-icon`, `expand-icon`, and `footer`.
 
-**Themeable custom properties:** inherited from `lr-input`, identical in meaning —
-`--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
-`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
-`--lr-input-fill`, and `--lr-input-border-color` (all
-but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` tier;
-`--lr-input-control-height` stays undeclared until you pin an exact
-row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
-and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder).
+**CSS parts:** `form-control`, `form-control-input`, `form-control-label label` (same node),
+`base time-input input-wrapper` (same node), `input`, `segment`, `segment-literal`, `start`, `end`,
+`clear-button`, `expand-button`, `expand-icon`, `popup`, `columns`, `column`, `column-item`,
+`column-item-selected`, `now-button`, `hint`, and `error`.
 
-`showPicker()` (inherited) is the supported way to open the browser's own time picker
-programmatically; it is a no-op without user activation, while `disabled`, while `readonly`, and in
-engines that don't implement it, rather than throwing.
+**Custom states:** `blank`, `disabled`, and `open`, plus the shared validity states.
 
-`stepUp(steps = 1)` / `stepDown(steps = 1)` (inherited) do work here — a native time input has an
-allowed value step, so they move the value by `steps` × `step` **seconds** with the platform's own
-`min`/`max` clamping. Like on `lr-input` they are **silent**: `value`, the submitted form value and
-validity all update, but no `input`/`change` is emitted. `step="any"`, `disabled` and `readonly`
-each make them no-ops.
+**Themeable custom properties:** upstream-compatible `--column-item-height`, `--column-width`,
+`--show-duration`, and `--hide-duration`, each with a Lyra design-token fallback.
 
-**Known gotchas:** the same two as `lr-number-input` — the inert clear/password surface, and `type`
-only being re-forced on connect. The native `type="time"` UI (spinners, AM/PM, picker) is the
-browser's own and is not restyled by Lyra.
+```html
+<lr-time-input label="Start time" value="09:30" with-clear with-now></lr-time-input>
+<lr-time-input label="Precise time" step="15" value="09:30:15"></lr-time-input>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/input/time-input.js';
+</script>
+```
+
+## `lr-native-time-input`
+
+The Lyra 7 browser-native time field preserved under an explicit tag. It extends `lr-input`,
+forces its internal native input to `type="time"` on construction and reconnect, and retypes
+`min`/`max` so time-shaped attributes such as `09:00:30` are forwarded verbatim instead of parsed
+as numbers. Use it when the browser/OS picker is preferred; new `wa-time-input` migrations should
+use the segmented `lr-time-input` above.
+
+**Inherits:** all public surface from `lr-input`.
+
+All `lr-input` properties, form methods, events, label/hint/error/start/end slots, parts, and theme
+properties apply. `step` is native seconds; `showPicker()`, `stepUp()`, and `stepDown()` keep their
+native-wrapper behavior. The control row carries `base input-wrapper time-input` part tokens on one
+node. Its native picker UI and AM/PM presentation are browser-owned and intentionally unstyled.
+
+**Events:** native-style `input` and `change`; bubbling, composed `focus` and `blur` bridges; the
+`lr-input` / `lr-change` aliases with `{ value }`; `lr-focus` / `lr-blur` aliases with no detail;
+`lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails.
+
+```html
+<lr-native-time-input label="Start time" min="09:00" max="17:00" value="09:30"></lr-native-time-input>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
+</script>
+```
 
 ---
 
@@ -1776,6 +2078,8 @@ interface PhoneNumberAdapter {
 - `name: string = ''`, `disabled: boolean = false`, `required: boolean = false` — native-like
   form-control properties supplied by `FormAssociated`; inherited disabled fieldsets are included
   through `effectiveDisabled`.
+- `defaultValue: string = ''` (attribute `value`) is the reset target, and `customError: string |
+  null` (attribute `custom-error`) carries a consumer-supplied validation message.
 - `adapter?: PhoneNumberAdapter` (attribute: false) — synchronous numbering-plan parser/formatter.
   No metadata implementation is imported by the component itself.
 - `countries: readonly PhoneCountry[] = []` (attribute: false) — explicit selector rows; takes
@@ -1841,7 +2145,11 @@ telephone input, not the adjacent country selector.
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the native telephone input. Range-text edits reparse the number and synchronize the
 canonical value, form value, and validity.
-`setFormValue(value)`, `checkValidity()`, and `reportValidity()` come from `FormAssociated`.
+`getForm()`, `setFormValue(value)`, `checkValidity()`, and `reportValidity()` come from
+`FormAssociated`. `setCustomValidity(message)` sets or clears `customError` without discarding the
+control's intrinsic phone-number validity. `resetValidity()` clears only that consumer error and
+recomputes the current phone-number constraints; it does not change the editable/canonical value,
+the reset default, or prior interaction state.
 `form.reset()` restores the original declarative `value` and the default country.
 
 **Events:**
@@ -1850,6 +2158,7 @@ canonical value, form value, and validity.
 - `change` — native telephone-input commit timing and every country change.
 - `focus` / `blur` — bubbling, composed bridges for the internal native input's non-crossing focus
   events.
+- `lr-invalid` — no detail; one bubbling/composed alias when native validity fails.
 
 `input`/`change` detail is
 `{ value: string; inputValue: string; country: string; valid: boolean; status: PhoneNumberStatus }`.
@@ -1979,7 +2288,7 @@ its prefixed alias `lr-focus` / `lr-blur` (no detail).
 **Methods:** `focus(options?)` and `click()` forward to `[part="handle-start"]`. `blur()` releases
 whichever handle actually owns focus, falling back to the start handle when neither does. Without
 these overrides the host's own `focus()`/`blur()`/`click()` are no-ops, because the real controls
-live in the shadow root.
+live in the shadow root. `getForm()` returns the browser-resolved owning form.
 
 `setCustomValidity(message)` is this control's **only** validation channel: every reachable range is
 intrinsically legal, so there is no constraint for it to compute. A non-empty message raises
@@ -2203,7 +2512,10 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 `ElementInternals`, click and Space toggle) but with checkbox semantics.
 
 **Properties:**
-- `checked: boolean = false` (reflected)
+- `checked: boolean = false` — the live, non-reflecting state
+- `defaultChecked: boolean = false` (WA attribute `checked`, reflected; Shoelace alias
+  `default-checked`) — the current reset default; changing it updates `checked` only while the live
+  state is pristine
 - `indeterminate: boolean = false` (reflected) — visual-only mixed state; does not affect `checked`,
   and is cleared back to `false` by any user interaction (click or keyboard), matching native
   `<input type="checkbox">`
@@ -2212,6 +2524,10 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked` (a native checkbox
   submits nothing at all, not even an empty string, while unchecked)
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
+- `hint: string = ''` — WA supporting text below the control
+- `helpText: string = ''` (attribute `help-text`) — Shoelace alias for the same supporting-text
+  surface; `hint` wins when both properties are set
 - `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
   `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the box and its checkmark off
   the same values `lr-input`/`lr-select`/`lr-button` read, so controls of one `size` line up in a
@@ -2222,17 +2538,20 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 alias, bubbling/composed `change`, then the compatibility `lr-change` alias (both aliases carry
 `detail: { checked: boolean }`). Programmatic `.checked` assignments are
 silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events, each followed
-by its prefixed alias `lr-focus`/`lr-blur` (no detail).
+by its prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires when a
+validity check finds the checkbox invalid.
 
-**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control;
+`getForm()` returns its owning form (including an external owner selected by `form`).
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("those terms have been
 superseded"): a non-empty message raises `customError` and blocks submission, `''` restores the
 control's own computed validity so a required-and-unchecked box goes back to `valueMissing`. It
-survives every toggle and a form reset; only another `setCustomValidity('')` clears it.
+survives every toggle and a form reset; `setCustomValidity('')` or `resetValidity()` clears it.
 
 **Slots:** default — label text, rendered next to the box. Clicking it toggles the checkbox, the
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
-host so the control still has an accessible name.
+host so the control still has an accessible name. `hint` is the WA supporting-text slot;
+`help-text` is the Shoelace spelling for the same described-by surface.
 
 Host `aria-describedby` targets in the host's own root are resolved onto the internal
 `role="checkbox"` through `ariaDescribedByElements`, so an externally-owned description remains
@@ -2241,9 +2560,12 @@ leaves the internal role's serialized attribute empty; browsers without the refl
 API keep the string fallback. The relationship tracks host attribute changes and clears when
 unset.
 
-**CSS parts:** `base` (the whole interactive control, `role="checkbox"`), `box` (the small square
-showing the checkmark/indeterminate dash), `checkmark` (the checkmark or indeterminate-dash glyph),
-`label` (wrapper around the default slot)
+**CSS parts:** `base` (compatibility name for the interactive control; use `checkbox`),
+`checkbox` (the whole interactive control, `role="checkbox"`; it is the same node as `base`),
+`box` / `control` (the small square showing the checkmark/indeterminate dash; while active it also
+carries Shoelace's `control--checked` or `control--indeterminate` state token), `checkmark` plus
+`checked-icon` or `indeterminate-icon` on the visible glyph, `label` (wrapper around the default
+slot), and `hint` / `form-control-help-text` on the supporting-text wrapper.
 
 **Themeable custom properties:** `--lr-checkbox-box-size` and `--lr-checkbox-label-indent` (both
 below), plus shared tokens — `--lr-space-s`, `--lr-icon-button-size`,
@@ -2288,6 +2610,9 @@ substitute the one you actually use:
 checked/indeterminate fill without hijacking the shared `--lr-color-brand` token everything else
 reads.
 
+WA's `--checked-icon-color` and `--checked-icon-scale` aliases directly control the visible
+checkmark/dash color and scale.
+
 **Optional peer deps:** none.
 
 ```html
@@ -2310,10 +2635,10 @@ empty string. Restoration updates state, form data, and validity synchronously w
 `lr-change`.
 
 **Known gotchas:**
-- `formResetCallback()` restores `checked` to whatever the declarative `checked` attribute parsed to
-  at first connect — captured once via a one-shot flag (not from `attributeChangedCallback` alone,
-  since `checked` reflects and that would wrongly re-capture on every later user toggle). A later
-  `el.checked = true` assignment never redefines the reset default.
+- `checked` follows native dirty-state rules. A later `el.checked = true` assignment changes only
+  the live state and never rewrites the attribute. Changing `defaultChecked` or the `checked`
+  attribute updates the reset target but cannot overwrite a dirty live state; `form.reset()` uses
+  that current default and makes the control pristine again.
 - `indeterminate` is visual-only and silently clears on any user click/keypress — a consumer relying
   on it staying `true` after a user interacts with the box will be surprised.
 - The rendered `aria-label` is copied from the host's own `aria-label` attribute at render time; if
@@ -2325,19 +2650,28 @@ empty string. Restoration updates state, form data, and validity synchronously w
 
 A boolean toggle-switch form control. `role="switch"` with `aria-checked` read as an on/off state
 rather than checked/unchecked, and no indeterminate state. Structurally the same idea as
-`<lr-checkbox>` (form-associated via `ElementInternals`, click and Space/Enter both toggle).
+`<lr-checkbox>` (form-associated via `ElementInternals`; click and Space toggle). Enter is not a
+special switch key. Logical ArrowLeft/ArrowRight set the switch off/on, mirrored under RTL.
 Ships an opt-in `hint`/`errorText` form-control chrome (props + matching named slots + `hint`/`error`
 CSS parts), mirroring `<lr-select>`'s pattern for those two pieces — left unset, neither renders.
 Deliberately no separate top-of-field `label` prop/slot/part: the default slot already is this
 control's visible, clickable label (same as `<lr-checkbox>`).
 
 **Properties:**
-- `checked: boolean = false` (reflected)
+- `checked: boolean = false` — the live, non-reflecting state
+- `defaultChecked: boolean = false` (WA attribute `checked`, reflected; Shoelace alias
+  `default-checked`) — the current reset default; changing it updates `checked` only while the live
+  state is pristine
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked`
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `hint: string = ''` — hint text below the switch. Unset: no hint chrome renders.
+- `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins when both
+  are supplied
+- `withHint: boolean = false` (attribute `with-hint`) — WA SSR presence hint for slotted supporting
+  text that cannot be inspected until hydration
 - `errorText: string = ''` (attribute `error-text`) — error text below the switch (overridden by
   slotted `error` content). Unset: no error chrome renders.
 - `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
@@ -2346,35 +2680,44 @@ control's visible, clickable label (same as `<lr-checkbox>`).
   The slotted label keeps the library's standard control-label type size at every tier — restyle it
   through `::part(label)` if you want it to track the control.
 
-**Events:** a user toggle (click, Space/Enter, or the programmatic `click()` activation path) emits
+**Events:** a user state change (click, Space, a logical ArrowLeft/ArrowRight change, or the
+programmatic `click()` activation path) emits
 `input`, then `lr-input`, then `change`, then `lr-change` (both aliases carry
 `detail: { checked: boolean }`) — in that order, matching
 the native checkbox/radio contract. The two native-style events are **new in 8.0.0**: a boolean
 control that emitted only the `lr-`-prefixed alias was invisible to every form library, validation
 helper, and `<form>`-level `change` listener that binds the native names, which is the ordinary way
-a consumer observes a control they didn't write. Both bubble and compose, and neither carries a
-detail — read `event.target.checked`. None of the four fires for a programmatic `.checked`
+a consumer observes a control they didn't write. `input` is an `InputEvent`; `change` is an
+`Event`. Both bubble and compose, and neither carries a detail — read `event.target.checked`.
+None of the four fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events, each followed by its
-prefixed alias `lr-focus`/`lr-blur` (no detail).
+prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires when a validity
+check finds the switch invalid.
 
-**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control;
+`getForm()` returns its owning form (including an external owner selected by `form`).
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("notifications are disabled
 for your plan"): a non-empty message raises `customError` and blocks submission, `''` restores the
 control's own computed validity so a required-and-unchecked switch goes back to `valueMissing`. It
-survives every toggle and a form reset; only another `setCustomValidity('')` clears it.
+survives every toggle and a form reset; `setCustomValidity('')` or `resetValidity()` clears it.
+
+`checked`/`defaultChecked` use the same native dirty-state contract as `lr-checkbox`: live writes
+never reflect, default/attribute changes cannot overwrite a dirty live state, and `form.reset()`
+restores the current default before making the control pristine again.
 
 **Slots:**
 - default — label text, rendered next to the track. Clicking it toggles the switch, the same as
   clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the
   control still has an accessible name.
 - `hint` — custom hint content.
+- `help-text` — Shoelace alias for the same hint surface.
 - `error` — custom error content.
 
-**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `base` (the
-whole interactive control, `role="switch"`), `track` (the pill-shaped background), `thumb` (the
-circular knob that slides across the track), `label` (wrapper around the default slot), `hint` (the
-hint message), `error` (the error message)
+**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `base` /
+`switch` / `wrapper` (the whole interactive `role="switch"` node), `track` / `control` (the
+pill-shaped background), `thumb` (the circular knob), `label` (wrapper around the default slot),
+`hint` / `form-control-help-text` (the hint message), and `error`.
 
 **Themeable custom properties:** `--lr-switch-track-block-size` (default
 `calc(var(--lr-form-control-height) * 0.5)`), `--lr-switch-track-inline-size` (default
@@ -2383,6 +2726,7 @@ and `--lr-switch-thumb-offset` (default `var(--lr-size-2px)`) — component-loca
 on `:host`, since a fully-rounded pill/thumb needs a radius well past the shared `--lr-radius`
 default. Both track dimensions ride the shared `size` ladder, so at the default `m` tier they
 resolve to exactly the `1.25rem` × `2.25rem` the switch shipped with before it had a `size` at all.
+WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same rendered dimensions.
 
 `--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s resting fill,
 re-pointed at `--lr-color-brand` while `checked`. Hover and press are colour **mixes** away from
@@ -2412,9 +2756,9 @@ Session-history/autofill restoration uses the same explicit `checked`/`unchecked
 checkbox and does not emit `lr-change`.
 
 **Known gotchas:**
-- `formResetCallback()` restores `checked` to the value captured from the declarative `checked`
-  attribute at first connect (same one-shot-flag capture as `<lr-checkbox>`) — a later `.checked =
-  true` property assignment never redefines what `form.reset()` restores to.
+- `checked` is live and dirty; `defaultChecked`/the `checked` attribute is the current reset default.
+  A later `.checked = true` never redefines what `form.reset()` restores to. Shoelace's
+  `default-checked` attribute is accepted as an alias for that reset default.
 - The rendered `aria-label` is copied from the host's own `aria-label` attribute at render time; with
   neither that nor slotted label text, the control has no accessible name.
 
@@ -2422,40 +2766,37 @@ checkbox and does not emit `lr-change`.
 
 ## `lr-slider`
 
-A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** via the shared
-`FormAssociated` mixin (`name`, `value`, `disabled`, `required` all inherited). Mirrors native `<input
-type="range">` semantics: `value` is the string form-submitted via the mixin, `valueAsNumber` is the
-ergonomic numeric accessor (matching native `<input type=range>`'s IDL attribute of the same name) kept
-in sync with it in both directions. Clicking anywhere on `[part="base"]` (not just the thumb) jumps the
+A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** directly through
+`ElementInternals`, because its public `value` is a number rather than the string assumed by the
+shared form mixin. `value`, `defaultValue`, and `valueAsNumber` are numeric; `valueAsString` is the
+explicit compatibility round-trip for code that still wants a serialized value. Clicking anywhere
+on `[part~="base"]` (not just the thumb) jumps the
 thumb to that point and continues the same gesture as a drag, matching native `<input type=range>`
 click-to-seek — the thumb is also `.focus()`ed on that click, so keyboard interaction can continue
 seamlessly right after. Mirrors the core `<wa-slider>` API under the `lr-` prefix.
 
 **Two-handle `range` mode.** `range` turns the control into a selection between `minValue` and
-`maxValue`. Each handle is a separately focusable `role="slider"` with its own localized accessible
-name, and each reports the *reachable* sub-range through `aria-valuemin`/`aria-valuemax` — bounded
-by its sibling rather than by the full domain, because the handles may meet but never cross. When
-they meet, both report the same number, the indicator has zero length, and each handle can still
-travel away from the meeting point in its own direction. A track click moves whichever handle is
-nearer the clicked position. `[part="base"]` then carries `role="group"`, named from
+`maxValue`, defaulting to `0`/`50`. Each handle is a separately focusable `role="slider"` with its
+own localized accessible name and the full domain as its reachable range. When the active handle
+crosses its sibling, it pushes that sibling to the same value instead of stopping, so the active
+thumb remains under the pointer/key. A track click moves whichever handle is nearer the clicked
+position. `[part~="base"]` then carries `role="group"`, named from
 `label`/`aria-label`, so the pair is announced as one control.
 
-A range slider **does not submit a value**: two numbers cannot be expressed through the
-single-string `FormAssociated` contract, so while `range` is set the control removes itself from its
-form's `FormData` entirely (matching `<lr-time-range>`) rather than submitting a value it isn't
-showing. Read `minValue`/`maxValue`, or the event detail. Turning `range` back off restores normal
-single-value submission.
+A named range slider submits **two same-name entries**, lower then upper. For example,
+`<lr-slider range name="window">` contributes `window=0&window=50` by default. Read both with
+`formData.getAll('window')`; `get()` returns only the first entry. Turning `range` off restores the
+single numeric string entry.
 
 **Properties:**
 - `min: number = 0`
 - `max: number = 100`
 - `step: number = 1` — a zero or negative value is kept as an explicit "unstepped" mode
 - `range: boolean = false` (reflected) — two-handle mode; see above
-- `minValue: number` (attribute `min-value`) — the lower handle's value in `range` mode. Unset, it
-  resolves to `min`, so an untouched range slider selects its whole domain whatever `min`/`max`
-  happen to be. Assigning past `maxValue` stops at `maxValue`
-- `maxValue: number` (attribute `max-value`) — the upper handle's value. Unset, it resolves to
-  `max`; assigning below `minValue` stops at `minValue`. Only the `min-value`/`max-value`
+- `minValue: number = 0` (attribute `min-value`) — the lower handle's value in `range` mode.
+  Assigning past `maxValue` pushes `maxValue` to the same number
+- `maxValue: number = 50` (attribute `max-value`) — the upper handle's value. Assigning below
+  `minValue` pushes `minValue` to the same number. Only the `min-value`/`max-value`
   *attributes* are captured as the `form.reset()` defaults, so a later property assignment never
   redefines what a reset restores to
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which axis carries the
@@ -2471,41 +2812,41 @@ single-value submission.
   indicator, the tick marks and the handles off the same values `lr-input`/`lr-select`/`lr-button`
   read, so controls of one `size` line up in a row. The handle's transparent drag area keeps its own
   1.75rem/28px floor at every tier, so a small slider is still a conformant pointer target
-- `withMarkers: boolean = false` (attribute `with-markers`, reflected) — draws a tick mark at every
+- `withMarkers: boolean = false` (attribute `with-markers`) — draws a tick mark at every
   `step` position along the track. Purely decorative (`aria-hidden`). Nothing is drawn for an
   unstepped grid (`step` ≤ 0) or for one implying more than 100 intervals — ten million ticks would
   be visually indistinguishable and would hang the page, so the grid is dropped rather than
   half-drawn
-- `withTooltip: boolean = false` (attribute `with-tooltip`, reflected) — shows a live value bubble
+- `withTooltip: boolean = false` (attribute `with-tooltip`) — shows a live value bubble
   above each handle while that handle is focused or being dragged. Its text is `valueFormatter`'s
   result when one is supplied, otherwise the locale-formatted number
-- `hint: string = ''` — plain-text description of what the slider controls, rendered below the track
-  and wired to every handle through `aria-describedby`. Use the `hint` slot for rich content.
-  Deliberately the only visible-chrome property here: there is no visible label or error surface (a
-  labeled-field consumer wraps this element in their own layout), but a slider's units frequently
-  need a written explanation with nowhere else to live
-- `label: string = ''` — accessible name set as `aria-label` on the `role="slider"` thumb (or on the
-  `role="group"` wrapping both range handles, since each handle then owns its own start/end name); a
-  plain `aria-label` attribute on the host itself wins over it, and with neither set the localized
-  generic `sliderLabel` message applies so the focusable thumb is never nameless.
+- `label: string = ''`, `hint: string = ''` — visible form context above/below the track, with rich
+  `label`/`hint` slots. A host `aria-label` still wins for the interactive accessible name.
+- `helpText: string = ''` (`help-text`) and the `help-text` slot are Shoelace aliases for `hint`.
+- `withLabel: boolean = false` / `withHint: boolean = false` (`with-label`/`with-hint`) are SSR
+  presence hints; hydrated instances also discover populated slots automatically.
+- `indicatorOffset?: number` (`indicator-offset`) — single-slider fill origin. The indicator spans
+  between this number and `value`, whichever is lower.
+- `autofocus: boolean = false` — focuses the first/lower thumb after the first client render.
+- `tooltipPlacement: 'top' | 'right' | 'bottom' | 'left' = 'top'` and
+  `tooltipDistance: number = 8` control physical tooltip layout in either orientation and RTL.
+- `tooltip: 'top' | 'bottom' | 'none' = 'none'` and `tooltipFormatter?: (value) => string` are
+  Shoelace-compatible aliases layered over the richer Lyra/Web Awesome tooltip surface.
 - `valueFormatter?: SliderValueFormatter` (attribute: false) —
   `(value: number, handle: 'value' | 'min' | 'max') => string | null | undefined`. Maps the finite,
   clamped `aria-valuenow` number to optional human-readable `aria-valuetext`, and supplies the
   `with-tooltip` bubble's text. The second argument identifies which handle is being formatted
   (`'value'` on a single-handle slider). A nullish result omits `aria-valuetext`. Leaving the
   property unset preserves the numeric `aria-valuetext`.
-- `showValue: boolean = true` (attribute `show-value`) — whether to render the current numeric value as
-  visible text next to the track. In `range` mode the readout is both handle values joined by an en
-  dash. Not reflected, and `true`-defaulting: toggle it off via the `.showValue=${false}` property
-  binding or a plain `show-value="false"` content attribute — `?show-value=${false}` and a removed
-  attribute both leave it `true`.
-- Inherited from `FormAssociated`: `name: string = ''`, `value: string` (form-submitted string form),
-  `disabled: boolean = false` (reflected), `required: boolean = false` (reflected).
-
-**Accessor:** `valueAsNumber: number` — get/set. Reading always returns a finite, clamped, step-snapped
-number, even if `value` is momentarily `""` (e.g. right after `form.reset()`, before the mount-time
-default reseeds it), by falling back to the midpoint of `[min, max]`. Writing clamps/snaps the input and
-stringifies the result back into `value`.
+- `showValue: boolean = false` (attribute `show-value`) — opt-in numeric readout next to the track;
+  a range readout joins both values with an en dash. The explicit HTML spelling
+  `show-value="false"` stays false.
+- `value: number = 0`, `defaultValue: number = 0` (attribute `value`), `valueAsNumber: number`, and
+  `valueAsString: string` are synchronized, finite, clamped, and step-snapped.
+- `isRange: boolean` is the read-only normalized range-mode state.
+- `name: string | null = null`, `disabled = false`, `required = false`, reflected `customError`,
+  plus read-only `form`, `labels`, `validity`, `validationMessage`, and `willValidate` make up the
+  native form surface.
 
 **Events:** native-style `input` (no detail), then `lr-input`, fire continuously during an active
 drag or keyboard step, including OS key-repeat while a key is held. Native-style `change` (no
@@ -2514,24 +2855,27 @@ for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press fires both
 native `<input type=range>` timing.
 The focused handle's native `focus` and `blur` are re-dispatched from the host as bubbling,
 composed events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail).
+`lr-invalid` (no detail) fires when a validity check finds the slider invalid.
 **Breaking in 8.0.0:** both details widened from `{ value: number }` to
 `{ value: number; minValue: number; maxValue: number; handle: 'value' | 'min' | 'max' }`. `value` is
 the value of the handle that moved and `handle` says which one that was (`'value'` on a
 single-handle slider); `minValue`/`maxValue` always carry both range-handle positions. Existing
 `e.detail.value` readers keep working unchanged.
 
-**Methods:** `focus(options?)` and `click()` forward to the internal `[part="thumb"]` control (the
-lower handle in `range` mode). `blur()` releases whichever range handle actually owns focus,
-falling back to the lower handle when neither does. Without these overrides the host's own
-`focus()`/`blur()`/`click()` would be no-ops, because the `role="slider"` controls live in the
-shadow root.
+**Methods:** `focus(options?)` and `click()` forward to the first/lower thumb; `blur()` releases the
+thumb that actually owns focus. `stepUp(steps = 1)` / `stepDown(steps = 1)` silently move the
+focused handle (first/lower when none is focused). `getForm()`, `checkValidity()`,
+`reportValidity()`, `setCustomValidity(message)`, and `resetValidity()` mirror native form-control
+methods.
 
-**Slots:** `hint` — rich hint content, replacing the plain-text `hint` property. The hint region is
-hidden and contributes no `aria-describedby` while neither the property nor the slot has content.
+**Slots:** `label`, `hint`, Shoelace alias `help-text`, and `reference`. Empty chrome stays hidden
+and contributes no accessible relationship.
 
-**CSS parts:** `base` (row wrapping the track and optional value readout; carries `role="group"` in
-`range` mode), `track` (the full-length background line), `indicator` (the filled portion of the
-track: from `min` up to the current value, or between the two handles in `range` mode),
+**CSS parts:** `base slider form-control form-control-input input control` are tokens on the
+interactive row (`role="group"` in range mode). `label form-control-label` share the visible label
+node; `references` wraps the endpoint/unit slot; `hint form-control-help-text` share the hint node.
+`track` is the full-length line; `indicator` is the filled portion from `min` up to the current
+value, or between the two handles in `range` mode.
 `markers` (the tick container, present only with `with-markers`) and `marker` (one `step`-grid
 tick), `thumb` (a draggable handle, `role="slider"` — present on every handle including both range
 ones), `thumb-min` and `thumb-max` (the lower and upper range handles; each carries `thumb` as
@@ -2539,8 +2883,13 @@ well, so `::part(thumb)` styles both while `::part(thumb-min)` reaches only one)
 live value bubble per handle, present only with `with-tooltip`), `tooltip-visible` (added *to the
 `tooltip` element's part list* while that handle is focused or dragged — visibility is encoded in
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
-`::part(tooltip-visible)`), `value` (numeric readout, shown when `show-value` is true), `hint` (the
-hint region).
+`::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
+`tooltip__arrow`. `value` is the opt-in numeric readout.
+
+**CSS custom states:** `disabled`, `dragging`, `focused`, `required`, `optional`, `valid`,
+`invalid`, `user-valid`, and `user-invalid`. A slider always has a finite numeric value, so
+`required` is still useful as a styling hook but does not by itself make the control invalid;
+`setCustomValidity()` controls the invalid states.
 
 **Breaking in 8.0.0:** the `fill` part was **renamed to `indicator`**, matching `wa-slider`. A
 `::part(fill)` rule silently matches nothing now — rename it.
@@ -2562,9 +2911,15 @@ them all without a per-tier rule, and the values in brackets are what they resol
 `--lr-slider-track-length` (default `var(--lr-size-10rem)`) is the
 track's length in `orientation="vertical"`; a horizontal track fills its container instead, so the
 token is inert there. It is declared as an inline `var()` fallback and never on `:host`, so a
-consumer value set on any ancestor is never shadowed. Everything else is shared tokens —
+consumer value set on any ancestor is never shadowed. `--lr-slider-tooltip-distance` carries the
+finite, unit-resolved tooltip offset computed from `tooltipDistance`; set `tooltipDistance` rather
+than overriding this runtime value. Everything else is shared tokens —
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text-quiet`, `--lr-shadow`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
+
+Mapped aliases are also live: `--thumb-size`, `--thumb-width`, `--thumb-height`, `--track-height`,
+`--track-size`, `--track-color-active`, `--track-color-inactive`, `--track-active-offset`,
+`--tooltip-offset`, `--marker-width`, and `--marker-height`.
 
 **Optional peer deps:** none.
 
@@ -2584,9 +2939,10 @@ consumer value set on any ancestor is never shadowed. Everything else is shared 
   @lr-change=${(e) => commitTemperature(e.detail.value)}
 ></lr-slider>
 
-<!-- Two handles, vertical. Range mode submits nothing: read minValue/maxValue. -->
+<!-- Two handles, vertical. A name submits two `price` entries. -->
 <lr-slider
   range
+  name="price"
   orientation="vertical"
   min="0"
   max="1000"
@@ -2598,11 +2954,10 @@ consumer value set on any ancestor is never shadowed. Everything else is shared 
 ></lr-slider>
 ```
 
-An unset `value` is eagerly defaulted — on connect, and again after `form.reset()` — to the midpoint of
-`[min, max]` snapped to `step`, the same "range sanitization algorithm" default a native range input
-applies. A slider therefore always represents *some* number, so `required` only has a narrow window to
-block submission before that default lands, matching how `required` isn't a meaningful constraint on a
-native range input either.
+An unset `value` starts at numeric `0`, clamped into the configured domain and step grid. A reset
+restores the numeric `defaultValue` sourced from the `value` content attribute, or the same zero
+default when the attribute was absent. A slider therefore always represents a number; `required`
+is present for upstream form-surface parity but adds no missing-value constraint.
 
 **Known gotchas:**
 - `valueAsNumber` always returns a real, clamped number — never `NaN` or `""` — even reading it in the
@@ -2620,9 +2975,8 @@ native range input either.
   ends without a pointerup (`pointercancel`, lost pointer capture, the element being removed
   mid-drag) tears down cleanly and commits nothing.
 - **`::part(fill)` no longer matches** — the part is `indicator` as of 8.0.0.
-- **A `range` slider contributes no form entry.** `new FormData(form)` simply has no key for it, and
-  `value`/`valueAsNumber` keep tracking the single-handle value that isn't being shown. Read
-  `minValue`/`maxValue`.
+- A named `range` slider contributes two same-name entries. Use `FormData#getAll()`, not `get()`,
+  when both values are required.
 - `min-value`/`max-value` are clamped against the domain, snapped to `step`, and re-sanitized once
   every declarative attribute has landed, so narrowing `min`/`max` after mount can silently move
   both handles. Only the attributes seed the `form.reset()` defaults.
@@ -2644,17 +2998,21 @@ native range input either.
 
 A form-associated single-choice control. Use it alone or inside `lr-radio-group`.
 
-**Properties:** `checked`, `disabled`, `required`, `name`, and `value` (all reflected where
-applicable). A selected radio submits its value through `ElementInternals`.
+**Properties:** live, non-reflecting `checked`; reflected `defaultChecked` (attribute `checked`);
+reflected `customError: string | null` (attribute `custom-error`); `disabled`, `required`, `name`,
+and `value`. A selected standalone radio submits its value through `ElementInternals`.
 An empty `name` is canonicalized to an omitted attribute rather than reappearing as `name=""`.
 `effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
-`blur()`, and `click()` forward to the internal radio control.
+`blur()`, and `click()` forward to the internal radio control; `getForm()` returns the standalone
+radio's owning form and the aggregate group's owning form while the radio is group-owned.
 
 - `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
   `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the indicator off the same
   values `lr-input`/`lr-select`/`lr-button` read, so controls of one `size` line up in a row. The
   slotted label keeps the standard control-label type size at every tier — restyle it through
   `::part(label)` to make it track the control.
+- `appearance: 'default' | 'button' = 'default'` (reflected) — WA's button presentation on the
+  same `<lr-radio>` tag; it retains radio semantics, group ownership, value, and events
 - `pill: boolean = false` (reflected) — rounds the control's own chrome into a pill instead of the
   shared control radius. A plain `<lr-radio>`'s indicator is a circle at every setting, so this is
   visible on `<lr-radio-button>`, which inherits this class and renders rectangular chrome; it is
@@ -2663,10 +3021,13 @@ An empty `name` is canonicalized to an omitted attribute rather than reappearing
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("that plan is no longer
 available"): a non-empty message raises `customError` and blocks submission, `''` restores the
 control's own computed validity so a required-and-unselected radio goes back to `valueMissing`. It
-survives every selection, every group-driven `required` change, and a form reset. It lives on the
-radio rather than on `<lr-radio-group>` because the group is not itself form-associated — it
-designates one member as the group's validity owner, and that radio is what participates in the
-owning form.
+survives every selection, every group-driven `required` change, and a form reset. A standalone
+radio owns the error itself; an owned radio delegates it to the form-associated aggregate group.
+`resetValidity()` clears the error through that same standalone-or-group owner.
+
+`checked` follows native dirty-state semantics: changing `defaultChecked`/the `checked` attribute
+updates the current reset default without overwriting a dirty live selection, and `form.reset()`
+restores the current default.
 
 **Events:** a standalone selection emits, in order, native-style composed `input`, `lr-input`,
 native-style composed `change`, then `lr-change`; both aliases carry `{ checked, value }`. An owned
@@ -2674,10 +3035,13 @@ radio emits none of those child value events; its group emits the sole aggregate
 below, so capture and bubble listeners cannot observe two differently shaped event sets. The
 internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events,
 each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
+`lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
 
 **Slots:** default label content.
 
-**CSS parts:** `base`, `circle`, `dot`, `label`.
+**CSS parts:** default appearance: `base`, `circle` / `control` (with Shoelace's
+`control--checked` state token), `dot` / `checked-icon`, and `label`. Button appearance: `base`,
+`button`, `control`, `button--checked` while selected, and `label`.
 
 **Themeable custom properties:**
 
@@ -2704,6 +3068,8 @@ each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
 while `checked` — a component-scoped indirection (the same pattern `lr-checkbox`'s own
 `--lr-checkbox-checked-bg`/`-border` pair uses) so a consumer can retint just this control's checked
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
+WA's `--checked-icon-color` and `--checked-icon-scale` aliases feed the selected indicator's color
+and scale.
 
 ```html
 <lr-radio name="format" value="json">JSON</lr-radio>
@@ -2724,8 +3090,10 @@ automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-typ
 `lr-radio-button` siblings, so a group's `slot="label"`/`slot="hint"` children never shift the ends,
 and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
 
-**Properties and methods:** identical to `lr-radio` — `checked`, `disabled`, `name`, `required`,
-`value`, `size`, `pill`; `click()`, `focus()`, `blur()`, `setCustomValidity()`. `size` is where this
+**Properties and methods:** the same functional surface as `lr-radio` — `checked`, `defaultChecked`,
+`customError`, `disabled`, `name`, `required`, `value`, `size`, `pill`; `click()`, `focus()`, `blur()`,
+`setCustomValidity()`. The inherited `appearance` remains `'default' | 'button'`; this tag already
+renders button chrome in either state, so the property adds no second visual mode. `size` is where this
 chrome differs most visibly: the shared ladder drives the button's height (floored at `1.5rem`),
 inline padding and font size, so a `size="small"` radio button sits at the same height as a
 `size="small"` `lr-button` beside it. `pill` is the one inherited property that does *more* here
@@ -2735,13 +3103,14 @@ than on a plain `lr-radio` — see the radius note below.
 then `lr-change` (both aliases carry `{ checked, value }`); an owning `lr-radio-group` emits the
 aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
 not cross the shadow boundary, each followed by its prefixed alias `lr-focus` / `lr-blur`
-(no detail).
+(no detail). `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
+its own alias.
 
 **Slots:** default (label text), `prefix` (leading content, typically an icon), `suffix`.
 
-**CSS parts:** `base`, `prefix`, `label`, `suffix`. `base` carries `checked` and `disabled` as
-additional part tokens (`::part(base checked)`), because an attribute selector after `::part()`
-never matches.
+**CSS parts:** `base` / `button` / `control`, `prefix`, `label`, `suffix`. The interactive node
+carries `checked` and `button--checked` when selected, plus `disabled` when disabled, because an
+attribute selector after `::part()` never matches.
 
 **Themeable custom properties:** `--lr-radio-radius` is the one inherited knob this element really
 uses. `lr-radio` points it at `--lr-radius-pill` for its circular indicator; this subclass re-points
@@ -2757,11 +3126,13 @@ Because this is a subclass, the manifest also lists `lr-radio`'s own `circle` an
 its `--lr-radio-circle-size`, `--lr-radio-dot-size`, `--lr-radio-label-indent`,
 `--lr-radio-checked-border-color` and `--lr-radio-checked-dot-color` custom properties. **This
 element renders none of those** — it draws a button, not a circle and dot — so styling them here has
-no effect. They are inherited declarations, not surface. `--lr-radio-radius` is the exception, and
+no effect. The same is true of the inherited `checked-icon` and `control--checked` parts and the
+`--checked-icon-color` / `--checked-icon-scale` aliases. They are inherited declarations, not
+rendered button surface. `--lr-radio-radius` is the exception, and
 the only one of the set worth setting on this tag.
 
 ```html
-<lr-radio-group name="view" label="View">
+<lr-radio-group name="view" label="View" orientation="horizontal">
   <lr-radio-button value="day" checked>Day</lr-radio-button>
   <lr-radio-button value="week">Week</lr-radio-button>
 </lr-radio-group>
@@ -2775,113 +3146,215 @@ A form-associated one-time-code field: several character segments that together 
 Mirrors `wa-otp-input`.
 
 The segments are **presentational**. A single real `<input>` sits transparently across them and owns
-focus, selection and the value — which is what makes paste, SMS autofill (`autocomplete` defaults to
-`one-time-code`), IME composition and mobile keyboards work without reimplementing any of it, and
-keeps the control to one tab stop rather than one per character.
+focus, selection and the value. It remains the native integration point for SMS autofill
+(`autocomplete` defaults to `one-time-code`), IME composition and mobile keyboards, and keeps the
+control to one tab stop rather than one per character. Fixed-cell keyboard and paste handlers map
+those native editing intents into the visual cells without exposing one input per character.
 
-Every entry path — typing, paste, autofill, a `value` assignment, a narrowing `type` change — funnels
-through one sanitizer, so none of them can produce a value another could not. Characters the current
-`type` rejects are dropped silently: pasting `"ABC-123"` into a numeric field yields `123`.
+Every live-value path — typing, paste, autofill, a `value` assignment, pristine default propagation,
+form reset, browser state restoration, or a narrowing `type` change — funnels through one sanitizer,
+so none of them can produce a value another could not. Characters the current `type` rejects are
+dropped silently: pasting or assigning `"ABC-123"` to a numeric field yields `123`. Programmatic,
+reset, and restoration paths remain event-silent and preserve native dirty/default-value semantics.
 
-**Properties:** `label`, `hint`, `errorText` (`error-text`); `length: number = 6` (reflected);
-`format: string = ''` (reflected) — `#` marks a segment and any other character becomes a literal
-separator (`format="###-###"`), overriding `length`; `type: 'numeric' | 'alpha' | 'alphanumeric' =
-'numeric'` (reflected, also drives `inputmode`); `case: 'preserve' | 'upper' | 'lower' = 'preserve'`
-(reflected); `mask: boolean = false` and `withMask: boolean = false` (`with-mask`) — display-only,
-`value` and the screen-reader text are unaffected; `readonly: boolean = false`;
-`autocomplete: string = 'one-time-code'`; plus the shared form-associated surface (`name`, `value`,
-`disabled`, `required`, `form`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`,
-`reportValidity()`).
+**Properties:** `label`, `hint`, `errorText` (`error-text`);
+`appearance: 'outlined' | 'filled' | 'filled-outlined' | 'contained' = 'outlined'` (reflected);
+`autofocus: boolean = false`; `autosubmit: boolean = false` (reflected);
+`size: LyraSize = 'm'` (reflected after an explicit property/attribute write, accepting
+`2xs`/`xs`/`s`/`m`/`l`/`xl` and the shared aliases). While unset, its generic font/radius/height
+slots inherit a containing control's size context; standalone font and radius rendering falls back
+to `m`. Explicitly writing even the same-default `m` pins the `m` mapping, and removing the
+attribute restores contextual inheritance;
+`length: number = 6` (reflected); `format: string = ''` — `#` marks a segment and any
+other character becomes a literal separator (`format="###-###"`), overriding `length`;
+`type: 'numeric' | 'alpha' | 'alphanumeric' = 'numeric'` (reflected, also drives `inputmode`);
+`case: 'preserve' | 'upper' | 'lower' = 'preserve'` (reflected); `mask: boolean = false` masks entered
+characters, while `withMask: boolean = false` (`with-mask`) independently paints the mask glyph in
+empty segments. With only `with-mask`, entered characters remain visible; with both properties,
+filled and empty segments paint the glyph. Both are display-only, so `value` and screen-reader text
+are unaffected. `readonly: boolean = false`; `autocomplete: string = 'one-time-code'`; plus the shared
+form-associated surface (`name`, `value`, `defaultValue`, `customError` (`custom-error`), `disabled`,
+`required`, `form`, `validity`, `validationMessage`, `willValidate`, `getForm()`, `checkValidity()`,
+`reportValidity()`, and `setCustomValidity()`).
 
-**Methods:** `focus()`, `blur()`, `click()`, `select()`.
+**Methods:** `focus()`, `blur()`, `click()`, `select()`, `clear()`, `resetValidity()`, and
+`formStateRestoreCallback(state, reason)`. `clear()` empties a nonempty code, emits `lr-clear`, and
+returns focus to the real input. `resetValidity()` clears only a consumer-supplied custom error and
+recomputes the intrinsic required/completeness constraints. The browser restoration callback
+sanitizes string state and restores unsupported state shapes as the empty value. `select()` selects
+the real compact-string value; typing replaces its selected occupied cells at the first selected
+cell, while Backspace/Delete clears them in one edit.
 
-**Read-only:** `segmentCount: number` — how many segments are actually rendered, i.e. `format`'s `#`
-count when `format` is set, else `length`, clamped to 1–32. This is the number `value` is truncated
-to and the field is validated against, so read it rather than re-deriving it from `length`.
+**Read-only:** `input: HTMLInputElement | null` exposes the real native input and
+`validationTarget: HTMLInputElement | null` exposes the same element as the native validation-UI
+anchor. Both are `null` before the component connects and renders. `effectiveLength: number` and
+its retained `segmentCount` alias report how many segments are actually rendered: a valid
+`format`'s `#` count, else `length`, clamped to 1–32. A nonempty format containing no `#` is treated
+as unset, so `length` supplies the segments and no literal-only row renders. Literal runs are
+coalesced into one separator cell, and an adversarially long format is still bounded to 32
+segments. This is the number `value` is truncated to and the field is validated against, so read it
+instead of re-deriving it from `length`.
 
 **Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`, and
-`lr-complete` — `detail: { value }`, once every segment is filled. The real input's native `focus`
-and `blur` are re-dispatched from the host as bubbling, composed events,
-since the native ones do not cross the shadow boundary; each is followed by its prefixed alias
-`lr-focus` / `lr-blur` (no detail).
+`lr-clear` (no detail) when a nonempty field is cleared by the user or `clear()`. Fixed-cell edits
+emit `input` immediately and one `change` when the field settles on blur or Enter. Intermediate IME
+composition events stay on the real input without sanitizing or committing; the final
+non-composing input commits and relays once. `lr-complete` (`detail: { value }`) fires only on an
+incomplete-to-complete transition, so replacing a filled cell does not complete again. It always
+bubbles, composes, and is cancelable. With `autosubmit`, the component calls `requestSubmit()` on
+its owning form after the event unless a listener calls `preventDefault()`. The real input's native
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
+do not cross the shadow boundary; each is followed by its prefixed alias `lr-focus` / `lr-blur` (no
+detail). `lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.
+Programmatic value/default/reset/state-restoration writes do not emit `input`, `change`, or
+`lr-complete`.
 
-**Slots:** `label`, `hint`, `error` (each replaces the matching attribute for rich content).
+**Keyboard and paste:** Left/Right move through visually adjacent fixed cells, with the index delta
+mirrored in RTL. Backspace clears the current cell and moves back; Delete clears it in place.
+Neither operation shifts later characters. Typing replaces the active cell and advances. A
+nonempty native selection maps its compact-string offsets back to occupied visual cells: typing
+replaces the selection at its first cell, while either deletion key clears every selected cell.
+Enter flushes a pending `change` and requests exactly one submission from the owning form. Pasting
+fills accepted characters from the first cell in one input operation. The public and submitted
+`value` concatenates occupied cells; a middle hole is a visual editing state and is not encoded in
+that string.
 
-**CSS parts:** `base`, `label`, `field`, `control` (the real, transparent input), `segment`,
-`separator`, `hint`, `error`. `segment` carries `active`, `masked`, `placeholder-mask` and `invalid`
-as additional part tokens.
+**Slots:** `label` and `hint` provide rich content when their matching attributes are empty; a
+nonempty `label`/`hint` attribute wins when both sources are supplied. The `error` slot replaces
+`errorText` when both are supplied. Sources are never concatenated.
 
-**Themeable custom properties:** `--lr-otp-input-mask-char` (the mask glyph — must be a *quoted*
-string, it is used as CSS `content`); otherwise shared tokens.
+**CSS parts:** `base` / `form-control` (aliases on the outer wrapper), `label` /
+`form-control-label` (aliases on the label), `field` / `segments` (aliases on the segment wrapper),
+`control` (the real, transparent input), `segment`, `separator` / `segment-literal` (aliases on
+separators), `hint`, and `error`. A populated required label paints the shared required asterisk.
+`segment` carries `active`, `masked`, `placeholder-mask`, and `invalid` as additional part tokens.
+
+**Themeable custom properties:** `--mask-char` (mapped mask-glyph alias, defaulting to the retained
+`--lr-otp-input-mask-char`; the value must be a *quoted* CSS string), `--segment-border-radius`
+(default `var(--lr-form-control-radius, var(--lr-radius))`), `--segment-gap` (default
+`var(--lr-space-xs)`, ignored by `contained`), and `--segment-size` (default `2.5em` at standalone
+`size="m"`), which is the exact inline and block size of each non-shrinking cell. The segment row,
+rather than each cell, carries the shared minimum target floor and becomes horizontally scrollable
+when the allocated inline size is too small; label, hint, and error copy wrap within that allocation.
+The internal role token `--lr-otp-input-segment-size` supplies that `2.5em` default and can be
+retuned through `--lr-theme-otp-input-segment-size` when the `--segment-size` override is absent.
+
+The retained per-cell hooks are `--lr-otp-input-segment-fill` (default `transparent`),
+`--lr-otp-input-segment-border-color` (default `var(--lr-color-border)`), and
+`--lr-otp-input-segment-radius` (defaulting through `--segment-border-radius` to the shared
+form-control radius). `filled` uses the raised-surface fill with a transparent cell border;
+`filled-outlined` adds the shared border; `outlined` keeps the transparent fill and shared border.
+`contained` makes individual cells transparent, borderless, square segments inside the single
+raised, bordered row whose radius remains controlled by `--segment-border-radius`.
+
+**CSS custom states:** `--blank`, `--filled`, `disabled`, and `readonly`, plus the shared
+form-associated validity states.
 
 **Validation:** a partially-entered code reports `tooShort` with the localized `otpInputIncomplete`
-message; `required` and empty reports `valueMissing`. Validation text only renders once the user has
-engaged with the field.
+message; `required` and empty reports `valueMissing`. Intrinsic invalid segment styling and the
+internal input's intrinsic `aria-invalid` state wait until the user types, blurs, or reports
+validity. Explicit `errorText` or `error`-slot chrome renders immediately, is referenced by
+`aria-describedby`, and makes the internal input `aria-invalid="true"` immediately, matching the
+other Lyra form controls. `readonly` suspends intrinsic required/completeness validity while the
+control cannot be edited and restores the current intrinsic result when editing is enabled again.
 
 ```html
 <lr-otp-input label="Verification code" required error-text="Enter the code we sent you."></lr-otp-input>
 <lr-otp-input label="License key" type="alphanumeric" case="upper" format="####-####-####"></lr-otp-input>
+<form>
+  <lr-otp-input name="code" label="PIN" length="4" appearance="contained" autosubmit></lr-otp-input>
+</form>
 ```
 
 ---
 
 ## `lr-radio-group`
 
-A labeled, keyboard-navigable group of `lr-radio` controls. Arrow keys, Home, and End move
-focus; arrow navigation selects the next enabled radio.
+A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and the orientation's arrow
+axis move focus and select the next enabled radio: Up/Down when vertical, Left/Right when
+horizontal. Horizontal direction mirrors under RTL, and disabled options are skipped.
 
-**Properties:** `label`, `hint`, `errorText` (`error-text`), `name`, `required`, `disabled`,
-`aria-label` (through `accessibleLabel`), and `size: LyraSize = 'm'` (reflected) — the size of the
+**Properties:** `label`, `hint`, `helpText` (`help-text`, Shoelace alias), `errorText`
+(`error-text`), `name` (empty by default, with the empty attribute omitted), live `value`, reflected
+`defaultValue` (attribute `value`; Shoelace's `default-value` is also accepted), `customError`
+(`custom-error`), `required`, `disabled`, `orientation: 'vertical' | 'horizontal' = 'vertical'`,
+`withLabel`/`withHint` (`with-label`/`with-hint` SSR presence hints), `aria-label` (through
+`accessibleLabel`), and `size: LyraSize = 'm'` (reflected) — the size of the
 group's **own** chrome, on the shared ladder and accepting both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
 `small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
-options off the same values the controls themselves use. It deliberately does **not** resize the
-`<lr-radio>`/`<lr-radio-button>` children: each carries its own `size`, so a group can hold options
-at mixed sizes and an explicitly-sized option is never silently overridden by its container. Set the
-same `size` on the children to scale the whole group.
+options off the same values the controls themselves use, and propagates the selected tier to every
+owned `<lr-radio>`/`<lr-radio-button>` child (including children added later). Group size is the
+authoritative aggregate setting.
+
+The group is the sole aggregate form-associated owner. A non-empty selected value contributes one
+`name=value` entry; owned radios suppress their own entries and validity while a standalone radio
+continues to participate independently. `form`, `getForm()`, `labels`, native validity, external
+form ownership, fieldset disablement, reset, and session restoration all live on the group.
+`value` is non-reflecting live state; `defaultValue`/the `value` attribute is the current reset
+default and cannot overwrite a dirty selection. Reset restores that current default, and session
+restore selects the stored value silently even when it arrives before the radio children.
 
 **Events:** per owned selection — including keyboard activation — the group emits, in order,
-native-style composed `input`, `lr-input`, native-style composed `change`, then exactly one
-group-owned `lr-change`. The two native-style events carry no detail (read `event.target.value`);
+a bubbling/composed `InputEvent` named `input`, `lr-input`, a bubbling/composed `Event` named
+`change`, then exactly one group-owned `lr-change`. The two native events carry no detail (read
+`event.target.value`);
 both prefixed aliases carry `{ value, radio }`. The selected child does not emit its standalone
 value events. Ownership is resolved synchronously, so immediate removal restores standalone
 behavior and immediate reparenting routes the event to the new group without waiting for a
-mutation-observer turn.
+mutation-observer turn. `lr-invalid` (no detail) is group-owned and fires when the group's validity
+check fails; a consumer listening above the group does not receive a second prefixed alias from the
+child validity owner.
 
-**Slots:** default radios, `label`, `hint`, `error`.
+**Slots:** default radios, `label`, `hint`, `help-text` (Shoelace hint alias), `error`.
 
-**CSS parts:** `base`, `label`, `hint`, `error`.
+**CSS parts:** `base`, `form-control`, `label` / `form-control-label`, `radios` /
+`form-control-input` / `button-group` / `button-group__base`, `hint` /
+`form-control-help-text`, and `error`.
 
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
 options and its messages, scaled by `size` through the shared control ladder.
+
+**Methods:** `setCustomValidity(message = '')` sets or clears a group-level consumer error. A
+non-empty message raises `customError` and blocks submission; `setCustomValidity('')` and
+`resetValidity()` restore the group's computed validity, including `valueMissing` when a required
+group has no selected radio.
 
 ## `lr-checkbox-group`
 
 A form-associated collection of `<lr-checkbox>` children. Its `value` is a `string[]`; each
 selected value is submitted under `name` and `required` requires at least one selection.
 
-**Properties:** `label`, `hint`, `errorText`, `value`, `name`, `required`, `disabled`,
+**Properties:** `label`, `hint`, `errorText`, `value`, `customError` (`custom-error`), `name`,
+`required`, `disabled`, `orientation: 'vertical' | 'horizontal' = 'vertical'`,
+`withLabel`/`withHint` (`with-label`/`with-hint` SSR presence hints),
 `accessibleLabel` (`aria-label`), and `size: LyraSize = 'm'` (reflected) — the size of the group's
 **own** chrome, on the shared ladder and accepting both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
 `small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
-options, and deliberately does **not** resize the `<lr-checkbox>` children: each carries its own
-`size`, so a group can hold options at mixed sizes and an explicitly-sized option is never silently
-overridden by its container. Set the same `size` on the children to scale the whole group.
+options, and propagates the group tier to every owned `<lr-checkbox>`, including children added
+later. Group size is the authoritative aggregate setting.
 **Slots:** default checkboxes, `label`, `hint`, `error`.
 **Events:** a user toggle emits exactly one group-owned `input`, then `change`, then `lr-change`;
 all three carry `{ value: string[] }`. The owned child's corresponding events are consumed at the
 group boundary, so an ancestor does not receive a second, differently shaped sequence.
 Programmatic child/property synchronization is silent.
-**Methods:** `setCustomValidity(message)` sets or clears a consumer-supplied error ("that
+`lr-invalid` (no detail) is the group's one bubbling/composed native-validity alias.
+**Methods:** `getForm()` returns the group's owning form, including an external owner selected by
+`form`. `setCustomValidity(message)` sets or clears a consumer-supplied error ("that
 combination of topics is not available"): a non-empty message raises `customError` and blocks
 submission, `''` restores the group's own computed validity so a required group with nothing checked
 goes back to `valueMissing`. It survives every child toggle, slot change and form reset.
-**CSS parts:** `form-control`, `form-control-label`, `options`, `hint`, `error`.
+Session restore uses a `FormData` state containing the repeated selected strings; it is independent
+of the control's current `name`, preserves duplicate-value cardinality, waits for early-arriving
+option children, and falls back to an empty selection for malformed state. Restoration is silent.
+**CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
+`error`.
 **Themeable custom properties:** `--lr-checkbox-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.1)`), the vertical gap between the group's label, options
 and messages, and `--lr-checkbox-group-option-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`), the gap between adjacent options — both scaled by
-`size` through the shared control ladder.
+`size` through the shared control ladder. WA's `--gap` alias is the value used by the rendered
+option layout and defaults to `--lr-checkbox-group-option-gap`.
 
 **`value` is a read-out of child state, not an input.** The children are the single source of
 truth. An internal sync recomputes `value` from them and reassigns it on every child toggle,
@@ -2907,7 +3380,9 @@ property (once per group instance).
 An editable form-associated token list. Enter, comma, or blur commits a token; Backspace removes
 the last token. `value` is a `string[]` and repeated values are submitted under `name`.
 
-**Properties:** `value`, `label`, `hint`, `errorText` (`error-text`), `placeholder`, `name`,
+**Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
+as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
+(`error-text`), `placeholder`, `name`,
 `required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the internal text
 input), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCorrect: string = ''`
 (attribute `autocorrect`) — all three native text-entry hints are forwarded to both the draft input
@@ -2927,16 +3402,24 @@ rounds the token row's corners to a full pill by re-assigning `--lr-token-input-
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
 unchanged), and `lr-token-edit`
 (`detail: { value, previousValue, index }` — an existing token was edited in place and committed).
+`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
 token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),
 `token-editor` (the inline text field that replaces a token's text while it is open for editing —
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
 glyph), `input`, `hint`, `error`. `focus()`, `blur()`, and `click()` forward to the internal text
-input. `setCustomValidity(message)` carries a rejection no client-side constraint can express
+input. `getForm()` returns the browser-resolved owning form. `setCustomValidity(message)` carries a
+rejection no client-side constraint can express
 ("that tag is reserved"): a non-empty message raises `customError` and blocks submission, `''`
 restores the control's own computed validity so a `required` control with no tokens goes back to
 `valueMissing`. It survives every token add, removal and edit, and a `form.reset()`.
+
+`defaultValue` is the current reset target. A live `value` write marks the token list dirty, so a
+later default/attribute mutation does not overwrite it; `form.reset()` restores the latest default
+and makes the value pristine again. Session restoration uses repeated entries in a `FormData`
+state, is independent of the current `name`, accepts early delivery, rejects malformed/file state
+to an empty list, and emits no user events.
 
 **`editable` — editing a token in place.** Off by default, in which case the token row renders
 exactly as it does without the feature and stays non-focusable. Turn it on and each token becomes a
@@ -3006,6 +3489,11 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 - `autocapitalize: string = 'off'`, `autoCorrect: string = 'off'` (attribute `autocorrect`)
 - `accessibleLabel: string = ''` (attribute `aria-label`) — wins over `label`/the localized
   `codeEditorLabel` fallback on the internal textarea
+- The shared form surface adds `value`, `defaultValue`, `customError` (`custom-error`), `name`,
+  `disabled`, `required`, `form`, `getForm()`, `checkValidity()`, `reportValidity()`, and
+  `setCustomValidity()` / `resetValidity()`. The latter clears only consumer custom validity and
+  restores current intrinsic constraints; it does not change the value/default or prior
+  interaction state.
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange(start, end, direction?)`,
 `setRangeText(replacement, start?, end?, selectMode?)` (writes the result back into `value` without
@@ -3013,7 +3501,8 @@ emitting an event), plus the `selectionStart`/`selectionEnd` getters (both `0` b
 
 **Events:** `input` and `change` — Lyra-emitted, bubbling/composed, each with `detail: { value }`
 (so they carry a detail a native `input`/`change` would not); also `focus`/`blur`, re-dispatched
-bubbling and composed from the internal textarea.
+bubbling and composed from the internal textarea, and `lr-invalid` (no detail) once when native
+validity fails.
 
 **Slots:** `label`, `hint`, `error`.
 
@@ -3060,8 +3549,10 @@ picker built from the pieces above. Two consequences for existing code:
 - **`::part(input)` now names the panel's text field, not the swatch.** The swatch is
   `::part(trigger)`. A stylesheet that targeted `input` to size or tint the visible control has to
   move to `trigger`.
-- The visible control is a `<button>` (`[part="trigger"]`), so `focus()`/`blur()`/`click()` target
-  it, and there is no native colour input in the shadow tree to reach for.
+- In popup mode the visible control is a `<button>` (`[part="trigger"]`): `focus()` targets it and
+  `click()` activates it, toggling the popup. There is no native colour input in the shadow tree to
+  reach for. Inline mode has no trigger; `focus()` targets the grid handle and `click()` activates
+  the editable value field. In either mode `blur()` blurs whichever internal control is active.
 
 `value` is always serialized in the active `format` (`hex` by default), so reading it back after any
 interaction gives a canonical string in exactly one syntax; switching `format`, `opacity` or
@@ -3069,13 +3560,23 @@ interaction gives a canonical string in exactly one syntax; switching `format`, 
 permissive than output: hex (3/4/6/8 digit), `rgb()`/`rgba()`, `hsl()`/`hsla()`, `hsv()`/`hsva()`,
 CSS colour names, and any other colour syntax the browser itself parses are all accepted. A value
 that is not a colour at all is **kept verbatim** rather than silently replaced, so a consumer's own
-sentinel survives a round trip. An element with neither a `value` attribute nor a value defaults to
-`#000000`, and `form.reset()` returns to the declarative `value` attribute (or to `#000000`).
+sentinel survives a round trip. The public `value` and `defaultValue` both default to the empty
+string, matching the mirrored form contract; the uncommitted preview and editable field still begin
+at black (`#000000`). A bare `required` picker is therefore value-missing, and `form.reset()` returns
+to the declarative value or to empty when none was supplied.
 
 Colour is never the only channel carrying state: the trigger's `aria-describedby` points at a
 visually-hidden span spelling the current value out in text, the panel shows it in an editable
 field, and the selected palette swatch is marked with `aria-pressed` plus a check mark rather than
 a tint alone.
+
+Validation is projected onto both editing owners with an explicit stateful `aria-invalid`. A
+required empty picker starts pristine, so the popup trigger and panel value input both expose
+`aria-invalid="false"` even though `checkValidity()` is false. Once focus leaves the control, the
+resulting `user-invalid` state changes both to `"true"`; `reportValidity()` reveals the same state
+without requiring a blur. A valid value or `form.reset()` clears the projection back to `"false"`,
+while visible error content makes it `"true"`. Inline mode omits the trigger, but its value input
+follows the same pristine/user-invalid contract.
 
 **Not the same control as `lr-swatch-picker`.** This one is freeform: `swatches` is a shortcut row
 *beside* a saturation grid, a hue ramp and a text field, and the committed value can be any colour
@@ -3084,9 +3585,12 @@ the browser parses. `<lr-swatch-picker>` offers exactly its `options` and nothin
 designer-chosen colours; reach for this when it must not.
 
 **Properties:** the shared
-form properties `name`, `value`, `disabled`, and `required`, plus `label`, `hint`, `errorText`
+form properties `name`, `value`, `defaultValue` (`value`; Shoelace markup may use the
+`default-value` compatibility attribute), `customError` (`custom-error`), `disabled`, and
+`required`, plus `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), and `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'`
-(reflected — same scale as `lr-input`'s `size`, for compact swatch rendering at every density tier),
+(reflected — the same visual-density scale as `lr-input`, applied to the centered visible swatch;
+the interactive target independently retains the `--lr-icon-button-size` floor),
 and:
 
 - `format: 'hex' | 'rgb' | 'hsl' | 'hsv' = 'hex'` — the syntax `value` is **written** in. Parsing is
@@ -3105,40 +3609,75 @@ and:
   the raw colour string is announced. The palette container renders only while the normalized list
   is non-empty
 - `withoutFormatToggle: boolean = false` (attribute `without-format-toggle`) — removes the button
-  that cycles between formats
+  that cycles between formats. `noFormatToggle` (`no-format-toggle`) is the Shoelace spelling and
+  reaches the same behavior; either one wins
+- `inline: boolean = false` (reflected) — renders the full panel in normal flow and omits the popup
+  trigger. In this mode `focus()` targets the grid handle and `click()` targets the value field.
+  The panel stays visible regardless of `open`; `show()`/`hide()` still update that lifecycle state
+  and its events so switching back to popup mode has a deterministic result
+- `hoist: boolean = false` (reflected) — uses fixed popup positioning to escape clipping
+  ancestors; the default absolute strategy stays in the component's local scrolling context
+- `withLabel: boolean = false` (`with-label`, reflected) and `withHint: boolean = false`
+  (`with-hint`, reflected) — SSR hints that the corresponding slots are populated, so their chrome
+  is present before client-side slot observation
 - `placement: Placement = 'bottom-start'` (reflected) — preferred panel placement, from the Floating
   UI vocabulary. The resolved side still flips/shifts to stay in the viewport, and the
   `left`/`right` component is swapped under RTL
-- `open: boolean = false` (reflected) — whether the panel is showing. Assigning `true` while the
-  control is effectively disabled is ignored, and a `disabled` that flips on while the panel is
-  already open closes it
+- `open: boolean = false` (reflected) — whether the popup panel is open. Assigning `true` while the
+  control is effectively disabled is ignored, and a `disabled` that flips on while the popup is
+  already open closes it. Inline rendering remains visible at either value
 
-**Methods:** `show()` opens the panel (a no-op while effectively disabled), `hide()` closes it and
-returns focus to the trigger, and `click()`/`focus(options?)`/`blur()` forward to the trigger.
+**Methods:** `show()` opens the popup (a no-op while effectively disabled), and `hide()` closes it
+and returns focus to the trigger. In popup mode `click()` activates the trigger and therefore
+toggles the popup, while `focus(options?)` targets that trigger. Inline mode has no trigger:
+`click()` activates the editable value field and `focus(options?)` targets the grid handle.
+`blur()` blurs the active internal control in either mode; `click()` and `focus()` are inert while
+effectively disabled. In inline mode `show()`/`hide()` update `open` and lifecycle events without
+hiding the in-flow panel.
 `getFormattedValue(format?)` returns the current colour in any of the eight output formats —
 `'hex' | 'hexa' | 'rgb' | 'rgba' | 'hsl' | 'hsla' | 'hsv' | 'hsva'`, defaulting to `'hex'` —
 independently of `format`/`opacity`, honouring `uppercase`. Use it to read, say, an `rgba()` string
 out of a picker configured to store hex, without touching `value`.
+`getHexString(hue, saturation, brightness, alpha = 100)` converts percent-scaled HSV(A) channels
+to six-digit hex, or eight-digit hex when alpha is below 100, honoring `uppercase`.
+The shared form methods are
+`getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
+`resetValidity()`. `resetValidity()` clears only consumer-supplied custom validity and recomputes
+the current intrinsic constraints; it leaves `value`/`defaultValue` and prior interaction state
+unchanged.
 
-**Slots:** `label`, `hint`, `error`. **Events:**
-composed `input` (fired for every colour change during an interaction) and `change` (fired once an
-interaction commits: pointer release, key release, swatch click, text entry, eyedropper result),
-`lr-change` with `{ value }` (the newly serialized value), `lr-show` and `lr-hide` (the panel opened
+**Slots:** `label`, `hint`, `error`. Slotted label text replaces the `label` property's visible text
+and names both the trigger and dialog; a host `aria-label` remains the strongest naming override.
+
+**Events:** each serialized value-changing edit emits a bubbling/composed native `InputEvent` named
+`input`, followed by the no-detail `lr-input` compatibility alias. A completed interaction emits
+one bubbling/composed native `Event` named `change`, followed by `lr-change` with
+`detail: { value }`. The commit pair occurs on pointer release, key release, swatch click, an
+accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
+emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair. Also
+emitted are `lr-show` / `lr-after-show` and `lr-hide` / `lr-after-hide` (the panel opened
 or closed — never emitted for a declaratively-open picker's first render, nor for a close caused by
-disconnection), and `focus`/`blur` (re-dispatched from
-the trigger's own `focus`/`blur`, bubbling and composed unlike the native events). A change that
+disconnection; because this panel has no opening animation, each `lr-after-*` immediately follows
+its matching lifecycle event in the completed update), and `focus`/`blur` plus their migrated
+`lr-focus`/`lr-blur` aliases (exactly one bubbling/composed native `FocusEvent` relay when focus
+enters or leaves the internal controls in either popup or inline mode), and `lr-invalid`
+(no detail) once when native validity fails. A change that
 doesn't move the serialized value emits nothing, so dragging within a single rounded colour is
 silent.
 
 **Keyboard.** The grid handle, hue handle and opacity handle are each a real `role="slider"` with a
 localized name and `aria-valuetext`. Arrow keys step by 1 (percent or degree), Shift+Arrow by 10,
 and Home/End jump to that axis' extremes; ArrowLeft/ArrowRight swap meaning under RTL, ArrowUp/Down
-never do. One discrete press pairs a keydown (`input`) with a keyup (`change`); OS key repeat
-re-fires `input` but still commits once. The panel is Escape-dismissible and returns focus to the
-trigger; a pointerdown outside the element closes it too.
+never do. One discrete press pairs a keydown (`input`/`lr-input`) with a keyup
+(`change`/`lr-change`); OS key repeat re-fires the edit pair but still commits once. The panel is
+Escape-dismissible and returns focus to the trigger; a pointerdown outside the element closes it
+too.
 
-**CSS parts:** `form-control`, `form-control-label` (the label; `label` is an alias kept for
-back-compat), `trigger-container` (the row wrapping the trigger), `trigger` (the swatch button that
+**CSS parts:** `base` (compatibility name for the field wrapper; use `color-picker`),
+`color-picker` (the field wrapper; it is the same node as `base` and `form-control`),
+`form-control` (the field wrapper; it is the same node as `base` and `color-picker`),
+`form-control-label` (the label; `label` is an alias kept for back-compat), `trigger-container`
+(the row wrapping the trigger), `trigger` (the swatch button that
 opens the panel), `panel` (the positioned `role="dialog"` surface), `grid` (the
 saturation/brightness square) and `grid-handle` (its draggable, keyboard-operable handle),
 `slider` and `slider-handle` (carried by **both** ramps), `hue-slider` / `hue-slider-handle` and
@@ -3146,15 +3685,28 @@ saturation/brightness square) and `grid-handle` (its draggable, keyboard-operabl
 token, so `::part(slider)` styles both ramps while `::part(hue-slider)` reaches only one; the
 opacity pair renders only with `opacity` set), `preview` (the current-colour dot beside the ramps),
 `input` (the text field holding the serialized value), `format-button` (the format-cycling button,
-absent with `without-format-toggle`), `eyedropper-button` (rendered only where the browser exposes
-the EyeDropper API), `swatches` (the palette container, rendered only when the normalized `swatches`
+absent with either format-toggle suppression property), plus `format-button__base`,
+`format-button__start`/`format-button__prefix`, `format-button__label`,
+`format-button__end`/`format-button__suffix`, and `format-button__caret`;
+`eyedropper-button` / `eye-dropper-button` (rendered only where the browser exposes the EyeDropper
+API), with the corresponding `eyedropper-button__base|start|label|end|caret` and Shoelace
+`eye-dropper-button__base|prefix|label|suffix|caret` aliases; `swatches` (the palette container, rendered only when the normalized `swatches`
 list is non-empty), `swatch` (one palette entry), `swatch-selected` (a token **added to** the
 swatch matching the current value — state after `::part()` never matches, so write
 `::part(swatch-selected)`), `hint`, `error`.
 
-**Themeable custom properties:** `--lr-color-picker-swatch-size` — the trigger's inline and block size,
-auto-swapped per `size` tier (default `'m'` reads `2.5rem`, `'2xs'` reads `1.25rem`, etc.), matching
-the size ladder `lr-input` uses. The panel's geometry has its own set, all declared on `:host`:
+The eyedropper aliases are also addressable individually as `eyedropper-button__base`,
+`eyedropper-button__start`, `eyedropper-button__label`, `eyedropper-button__end`,
+`eyedropper-button__caret`, `eye-dropper-button__base`, `eye-dropper-button__prefix`,
+`eye-dropper-button__label`, `eye-dropper-button__suffix`, and `eye-dropper-button__caret`.
+
+**Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
+not the button's minimum target. It is auto-swapped per `size` tier (default `'m'` reads `2.5rem`,
+`'2xs'` reads `1.25rem`, etc.), matching the visual-density ladder `lr-input` uses. The trigger's
+inline and block sizes are each
+`max(var(--lr-color-picker-swatch-size), var(--lr-icon-button-size))`: compact tiers center a smaller
+swatch inside the shared hit-area floor, while a larger swatch expands the target with it. The
+panel's geometry has its own set, all declared on `:host`:
 
 - `--lr-color-picker-grid-inline-size` (default `var(--lr-size-15rem)`) and
   `--lr-color-picker-grid-block-size` (default `var(--lr-size-8rem)`) — the saturation/brightness
@@ -3174,6 +3726,11 @@ the size ladder `lr-input` uses. The panel's geometry has its own set, all decla
   hue wheel. Both text directions read the same list; only the gradient's direction differs.
   Override it to theme a wide-gamut or perceptually-uniform ramp.
 
+The upstream aliases `--grid-width`, `--grid-height`, `--grid-handle-size`, `--slider-height`, and
+`--slider-handle-size` feed the corresponding Lyra geometry properties above; Shoelace's
+`--swatch-size` feeds `--lr-color-picker-palette-swatch-size`. An explicit `--lr-*` value takes
+precedence over its alias.
+
 Three more are **state, not configuration** — the component rewrites each inline on every render, so
 setting them from a stylesheet has no lasting effect: `--lr-color-picker-swatch-color` (the live
 colour painted on the trigger, preview, slider handles and palette swatches),
@@ -3183,7 +3740,8 @@ the current colour and text direction). Read them if you need the resolved colou
 
 **Additional API surface:**
 
-- `click()` — Activates the internal trigger button, opening or closing the panel.
+- `click()` — In popup mode activates the trigger, opening or closing the panel; in inline mode
+  activates the editable value field instead. It is a no-op while effectively disabled.
 - `--lr-color-picker-gap` — Gap between field chrome and panel rows. Default: `var(--lr-space-xs)`.
 - `--lr-color-picker-radius` — Trigger, grid, field and panel corner radius. Default: `var(--lr-radius)`.
 - `--lr-color-picker-hover-border-color` — Hover border color, shared by the trigger, handles, text
@@ -3242,7 +3800,8 @@ Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `lr-sele
 `lr-color-picker` (props + matching named slots + `form-control`/`form-control-label`/`hint`/
 `error` CSS parts) — left unset, none of that chrome renders.
 
-**Properties:** the shared form properties `name`, `value`, `disabled`, and `required`, plus
+**Properties:** the shared form properties `name`, `value`, `defaultValue`, `customError`
+(`custom-error`), `disabled`, and `required`, plus
 `groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, labelKey?,
 emojis: EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches
 `name` and every `shortcodes` entry, case-insensitively. `labelKey` is an optional `LyraMessageKey`
@@ -3262,10 +3821,16 @@ supporting text rendered below the search/grid; unset renders no hint chrome. `e
 `error` content when provided); unset renders no error chrome. `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` —
 visual size; scales the emoji grid item box and its glyph proportionally, floored at 24px (WCAG 2.5.8).
 
+**Methods:** `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
+`resetValidity()` provide the shared form-validation surface. `resetValidity()` clears only
+consumer-supplied custom validity and recomputes current intrinsic constraints; it does not change
+`value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
+
 **Events:** a pick emits native-style composed `input`, then `change` (both with no detail), then
 `lr-change` with `detail: { emoji }` (click, or Enter/Space on the active grid cell; also sets
 `value`). The internal search input's `focus` and `blur` are re-dispatched as bubbling, composed
-host events. Programmatic `value` changes are silent.
+host events. `lr-invalid` (no detail) is emitted once when native validity fails. Programmatic
+`value` changes are silent.
 
 **Keyboard:** the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji is
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
@@ -3353,15 +3918,18 @@ checkbox-group category route, and `placeholder?` customizes comment input), `va
 {}` (attribute: false), `itemId: string = ''`
 (attribute `item-id`, reflected), `hasNext: boolean = false` (attribute `has-next`), `skippable:
 boolean = false`, and the shared form properties `name` and `disabled`. `errors: Record<string,
-string>` is the current per-key validation-message state.
+string>` is the current per-key validation-message state. `customError: string | null` reflects
+through `custom-error` for a consumer-owned whole-form rejection.
 
 **Slots:** `actions` — extra host controls rendered in the footer beside Submit/Skip.
 
 **Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (`detail: { valid, errors }`,
 fired only on an actual change), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
-(`detail: { itemId }`, `skippable` only).
+(`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed
+alias emitted when the complete rubric fails a native validity check.
 
-**Methods:** `setCustomValidity(message)` sets or clears a form-level error no per-key rule can
+**Methods:** `getForm()` returns the owning form. `setCustomValidity(message)` sets or clears a
+form-level error no per-key rule can
 express ("this item was already annotated by someone else"): a non-empty message raises
 `customError` and blocks submission, `''` restores the rubric's own computed validity — unanswered
 required keys, and any key with an unsupported `type`, still hold it invalid. It is independent of
@@ -3404,6 +3972,10 @@ list, no filter/free-text mode.
   `checkValidity()`/`required` are governed by the real `value`, which stays `''` until a real
   commit — mirrors a native `<select>` showing its first option's text without that being a
   committed selection.
+- `defaultValue: string = ''` (attribute `value`, reflected) — the current reset default. Live
+  `value` writes are non-reflecting and dirty; later default/attribute changes cannot overwrite
+  them until `form.reset()` restores the current default.
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message.
 - `required: boolean = false`, `disabled: boolean = false`, `name: string = ''` — standard
   form-associated properties.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
@@ -3416,14 +3988,15 @@ list, no filter/free-text mode.
 explicit pick; if not `defaultPrevented`, the component applies the pick itself via
 `setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
 active locale untouched, so a host can persist the choice first and apply it later. `blur`/`focus`
-re-dispatched from the internal trigger as bubbling, composed events.
+re-dispatched from the internal trigger as bubbling, composed events. `lr-invalid` is the single
+bubbling/composed alias of a failed native validity check.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` — all forward to the internal trigger
 button, same convention as `lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
 a consumer-supplied error ("that locale is not enabled for your account"): a non-empty message
 raises `customError` and blocks submission, `''` restores the picker's own computed validity so a
 required picker with nothing committed goes back to `valueMissing`. It survives every
-`value`/`required` change and a form reset.
+`value`/`required` change and a form reset. `getForm()` returns the browser-resolved owning form.
 
 **Slots:** `label`, `hint`, `error`.
 

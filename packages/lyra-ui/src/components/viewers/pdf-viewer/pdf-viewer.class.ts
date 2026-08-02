@@ -260,6 +260,8 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  *   toolbar buttons. Defaults to the surface fill rather than the toolbar's own tint so the hover
  *   state is actually visible against it.
  *   Also settable via the `max-height` property.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

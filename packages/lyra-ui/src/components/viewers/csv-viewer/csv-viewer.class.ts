@@ -84,6 +84,8 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  *   cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`.
  * @cssprop [--lr-csv-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

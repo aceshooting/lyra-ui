@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.js';` (registers the tag; side-effect import)
 - **Class** `LyraGraphQueryBuilder`, also available unregistered from `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 27 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -16,8 +18,9 @@
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.
 
-**Properties:** `value`, `label`, `labels`, `name`, `disabled`, `effectiveDisabled`, `nodeTypeOptions`,
-`relationshipTypeOptions`, `hopLimit`, `savedQueries`, `errors`, `form`, `validity`,
+**Properties:** `value`, `customError` (`custom-error`), `label`, `labels`, `name`, `disabled`,
+`effectiveDisabled`, `nodeTypeOptions`,
+`relationshipTypeOptions`, `hopLimit`, `savedQueries`, `errors`, `form`, `getForm`, `validity`,
 `validationMessage`, `willValidate`, `checkValidity`, `reportValidity`, `setCustomValidity`,
 `formDisabledCallback`, `formResetCallback`, `formStateRestoreCallback`.
 
@@ -32,7 +35,8 @@ field edit) and `form.reset()`, exactly like a native control, where only anothe
 localized, and it is whole-control state: it does not land in `errors`, which is keyed by the
 csspart of the field a message belongs to.
 
-**Events:** `lr-input`, `lr-validity-change`,
+**Events:** `lr-input`, `lr-validity-change`, `lr-invalid` (no detail; one bubbling/composed alias
+when the complete builder fails a native validity check),
 `lr-query-run`, `lr-query-save`, `lr-query-load`, `lr-query-delete`. **Slots:** `actions`. **CSS
 parts:** `base`, `label`, `hint`, `error` (the three form-control chrome parts every
 form-associated control in this library exposes — see `lr-select`), `path-fields`, `start-input`,

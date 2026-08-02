@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/overlay/popover.js';` (registers the tag; side-effect import)
 - **Class** `LyraPopover`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/overlay/popover.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,9 +20,9 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
 **Properties:**
 - `open: boolean = false` (reflected) — assigning it runs the same `lr-show`/`lr-hide` lifecycle as
   `show()`/`hide()`, so the property, the reflected attribute and the two methods can never disagree
-- `placement: Placement = 'bottom-start'` (reflected) — the full Floating UI vocabulary, mirrored
+- `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
   under RTL
-- `distance: number = 4` — anchor-offset distance in px (Floating UI's main-axis `offset()`). May
+- `distance: number = 8` — anchor-offset distance in px (Floating UI's main-axis `offset()`). May
   legitimately be negative to overlap the trigger; a non-finite value falls back to the default.
 - `skidding: number = 0` — offset *along* the anchor's edge, in px (Floating UI's cross-axis
   offset). New in 8.0.0.
@@ -28,7 +30,14 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   trigger, resolved in this element's own root so it works inside a shadow tree where a plain idref
   could not cross the boundary. The trigger keeps owning the click and the ARIA relationship, so a
   popover can be anchored to an element it does not contain. A `showAt()` virtual anchor still wins.
-- `arrow: boolean = false` (reflected) — render an arrow pointing at the anchor. New in 8.0.0.
+  Assigning `null` is the mapped setter-only clearing spelling: it removes the attribute and the
+  getter continues to return `''`
+- `anchor: Element | null = null` (property only) — direct anchor, taking priority over `for` and
+  the slotted trigger; a `showAt()` virtual anchor still wins
+- `arrow: boolean = true` (reflected) — render an arrow pointing at the anchor; the true-default
+  converter accepts `arrow="false"`
+- `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — positive mapped spelling
+  for suppressing the default arrow
 - `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) —
   `anchor` tracks the anchor's centre; `start`/`end` pin the arrow `arrow-padding` from one logical
   end of the edge (the two ends are the inline ones on a top/bottom placement, so they swap under
@@ -40,6 +49,9 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   localized "Popover" (or "Menu" when `popupRole` is `menu`)
 - `popupRole: 'dialog'|'menu' = 'dialog'` (attribute `popup-role`)
 
+To preserve the previous Lyra-shaped defaults explicitly, use
+`placement="bottom-start" distance="4" without-arrow`; origin-aware migration emits those tokens.
+
 The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`.
 `aria-controls` targets the public `lr-popover` host (which receives a stable generated `id` when
 the consumer did not supply one), rather than the shadow-private popup, so the relationship
@@ -47,8 +59,9 @@ resolves from a native light-DOM trigger. `lr-button` and `lr-icon-button` addit
 that host onto their focused shadow-internal controls through `ariaControlsElements`; supporting
 browsers intentionally serialize the internal control's `aria-controls` content attribute as an
 empty string after that assignment.
-**Methods:** `show(): void` opens the popover programmatically — identical to `el.open = true`,
-including the veto point. No-op when already open.
+**Methods:** `show(): Promise<void>` opens the popover programmatically — identical to
+`el.open = true`, including the veto point — and resolves after `lr-after-show`. A no-op or vetoed
+transition returns an already-resolved promise.
 `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?:
 HTMLElement })` opens the popover anchored to an arbitrary rectangle instead of the slotted
 `trigger` — for a graph node, a canvas pixel, a chart datum, or any other non-DOM location
@@ -61,7 +74,8 @@ the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt(
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
 `showAt()` behaves exactly as before. Non-finite coordinates or dimensions are a no-op and leave
 the current open/anchor state unchanged.
-`hide(options?: { focusTrigger?: boolean })` programmatically closes the popover; pass
+`hide(options?: { focusTrigger?: boolean }): Promise<void>` programmatically closes the popover and
+resolves after `lr-after-hide`; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
 dismiss, and a bare `el.open = false` all return focus to the slotted trigger, or to a virtual
 anchor's explicit `returnFocusTo`; a virtual anchor with no return target closes without moving
@@ -79,23 +93,25 @@ value; in 7.x these events fired after the fact and were purely informational. T
 timing `wa-show`/`wa-hide` always had, so the `wa-*` → `lr-*` migration table's "mechanical rename"
 promise now holds for these names too — which also means 7.x Lyra code that read `el.open` in the
 handler was relying on the *opposite* polarity and must be re-read. `lr-after-show`/`lr-after-hide`
-are new in 8.0.0 and resolve by awaiting the popup's `Element.getAnimations()`. Under
-`prefers-reduced-motion: reduce` the popup's transition is dropped outright (`transition: none`), so
-there is nothing left to await and both events fire immediately — they are never skipped.
+are new in 8.0.0 and settle after the public `popover.show` / `popover.hide` registry animation.
+Per-element overrides win over page defaults; keyframes-only overrides retain the popup's
+`--show-duration` / `--hide-duration` and shared easing. Reduced motion flattens timing to zero, and
+a `null` registration skips interpolation, but neither path skips the after-event or its
+method-promise settlement.
 
 **Slots:** `trigger` (the interactive element that toggles the popover), default (popover content).
 
-**CSS parts:** `trigger`, `popup`, `content`, and `arrow` (rendered only when `arrow` is set). The
-arrow's part attribute also carries the **resolved side** as a second token — `arrow-top`,
+**CSS parts:** `trigger`; `popup dialog popup__popup`; `content body`; and
+`arrow popup__arrow` (rendered unless suppressed). Names grouped together are aliases on the same
+node. The arrow's part attribute also carries the **resolved side** as a second token — `arrow-top`,
 `arrow-bottom`, `arrow-left`, `arrow-right` — so `::part(arrow arrow-top)` styles one side.
 `::part(arrow)[data-side]` and `::part(arrow) .inner` are invalid selectors that silently never
 match; the state is in the part name.
 
-**Themeable custom properties:** `--lr-overlay-max-inline-size` (default `--lr-size-20rem` —
-maximum inline size of the popup) and `--lr-overlay-arrow-size` (default `--lr-size-0-375rem` —
-*half* the arrow square's width; the rendered arrow is twice this in both axes). Setting `arrow`
-also switches `[part="popup"]` to `overflow: visible` so the arrow isn't clipped, moving the scroll
-container onto `[part="content"]`.
+**Themeable custom properties:** mapped `--max-width`, `--arrow-size`, `--show-duration`, and
+`--hide-duration`, with retained `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size`
+fallbacks. Arrow size is half the square's width. Rendering the arrow switches `[part~="popup"]` to
+`overflow: visible` so it is not clipped, moving the scroll container onto `[part~="content"]`.
 
 ```html
 <lr-popover arrow arrow-placement="center" placement="bottom" distance="8" skidding="12">

@@ -165,6 +165,8 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  * @cssprop [--lr-tool-timeline-denied-bg=var(--lr-color-danger-quiet)] - Denied badge background.
  * @cssprop [--lr-tool-timeline-denied-color=var(--lr-color-danger)] - Denied badge foreground.
  * @cssprop [--lr-tool-timeline-error-color=var(--lr-color-danger)] - Expanded error text.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   static override styles = [LyraElement.styles, styles];

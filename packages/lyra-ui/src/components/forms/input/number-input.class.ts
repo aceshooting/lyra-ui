@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -6,10 +6,16 @@ import {
   presenceTrueDefaultBooleanConverter,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
-import { LyraInput } from './input.class.js';
+import { LyraInput, type LyraInputEventMap } from './input.class.js';
 import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
 import { styles as inputStyles } from './input.styles.js';
 import { styles as numberInputStyles } from './number-input.styles.js';
+import type { LyraAppearance } from '../../../internal/variants.js';
+
+/** Number-input events, including the native cancelable edit veto exposed by its mapped API. */
+export interface LyraNumberInputEventMap extends LyraInputEventMap {
+  beforeinput: InputEvent;
+}
 
 /**
  * `<lr-number-input>` — a numeric field with the complete `lr-input` form, validation, and native
@@ -31,15 +37,43 @@ import { styles as numberInputStyles } from './number-input.styles.js';
  * add two stops per field for no new capability. A click returns focus to the field.
  *
  * @customElement lr-number-input
- * @csspart stepper-up - The increment button, rendered while `steppers` is set.
- * @csspart stepper-down - The decrement button, rendered while `steppers` is set.
+ * @event beforeinput - The internal native input's cancelable `InputEvent`, which bubbles and
+ *   composes through the host. Calling `preventDefault()` on the host vetoes the edit.
+ * @slot decrement-icon - Replaces the decrement stepper's built-in chevron.
+ * @slot increment-icon - Replaces the increment stepper's built-in chevron.
+ * @csspart base - Compatibility name for the control row; use `number-input`.
+ * @csspart number-input - The numeric control row. It is the same node as `base` and the inherited
+ *   `input-wrapper` part.
+ * @csspart stepper - Shared part on both stepper buttons.
+ * @csspart stepper-increment - The increment button.
+ * @csspart stepper-decrement - The decrement button.
+ * @csspart stepper-up - Lyra compatibility name on `stepper-increment`.
+ * @csspart stepper-down - Lyra compatibility name on `stepper-decrement`.
+ * @cssstate blank - The live value is empty.
+ * @cssstate focused - Focus is within the numeric input.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraNumberInput extends LyraInput {
   static override styles = [LyraElement.styles, inputStyles, numberInputStyles];
 
+  protected override get inputWrapperParts(): string {
+    return `${super.inputWrapperParts} number-input`;
+  }
+
   /** Renders the increment/decrement pair inside the control row. Set `steppers="false"` for a
    *  bare numeric field. */
   @property({ converter: trueDefaultBooleanConverter, reflect: true }) steppers = true;
+  /** Positive upstream spelling for hiding the stepper pair. The established `steppers` switch
+   * remains supported; either `without-steppers` or `steppers="false"` hides the same controls. */
+  @property({ type: Boolean, attribute: 'without-steppers' }) withoutSteppers = false;
+
+  /** Numeric inputs use the outlined field treatment by default. */
+  @property({ reflect: true }) override appearance: LyraAppearance = 'outlined';
+  /** Requests a numeric virtual keyboard unless the consumer chooses `decimal`. */
+  @property({ attribute: 'inputmode' }) override inputMode = 'numeric';
+  /** Native step-grid default. */
+  @property() override step: number | 'any' | undefined = 1;
   /** Defaults to `true` here (unlike `<lr-input>`) so the component's own steppers are not shown
    *  alongside the browser's built-in spin buttons. `without-spin-buttons="false"` brings the
    *  native pair back. */
@@ -49,12 +83,33 @@ export class LyraNumberInput extends LyraInput {
   constructor() {
     super();
     this.type = 'number';
+    this.addEventListener('focusin', this.onFocusWithin);
+    this.addEventListener('focusout', this.onBlurWithin);
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.type = 'number';
+    this.syncMappedStates();
   }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('value')) this.syncMappedStates();
+  }
+
+  private syncMappedStates(): void {
+    if (this.value === '') this.internals.states.add('blank');
+    else this.internals.states.delete('blank');
+  }
+
+  private onFocusWithin = (): void => {
+    this.internals.states.add('focused');
+  };
+
+  private onBlurWithin = (): void => {
+    this.internals.states.delete('focused');
+  };
 
   private stepFromButton(direction: 'up' | 'down'): void {
     if (this.effectiveDisabled || this.readonly) return;
@@ -81,28 +136,28 @@ export class LyraNumberInput extends LyraInput {
   };
 
   protected override renderControls(): TemplateResult | typeof nothing {
-    if (!this.steppers) return nothing;
+    if (!this.steppers || this.withoutSteppers) return nothing;
     const inert = this.effectiveDisabled || this.readonly;
     return html`
       <button
-        part="stepper-down"
+        part="stepper stepper-decrement stepper-down"
         type="button"
         tabindex="-1"
         ?disabled=${inert}
         aria-label=${this.localize('numberInputDecrease')}
         @click=${this.onStepDown}
       >
-        ${chevronIcon()}
+        <slot name="decrement-icon">${chevronIcon()}</slot>
       </button>
       <button
-        part="stepper-up"
+        part="stepper stepper-increment stepper-up"
         type="button"
         tabindex="-1"
         ?disabled=${inert}
         aria-label=${this.localize('numberInputIncrease')}
         @click=${this.onStepUp}
       >
-        ${chevronIcon()}
+        <slot name="increment-icon">${chevronIcon()}</slot>
       </button>
     `;
   }

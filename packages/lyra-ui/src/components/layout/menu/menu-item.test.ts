@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './menu-item.js';
+import './dropdown-item.js';
 import type { LyraMenuItem } from './menu-item.js';
 import './menu.js';
 import type { MenuFocusTarget } from './menu.js';
@@ -33,6 +34,53 @@ it('reflects disabled/destructive to attributes', async () => {
   expect(el.hasAttribute('disabled')).to.be.true;
   expect(el.hasAttribute('destructive')).to.be.true;
   expect(el.getAttribute('aria-disabled')).to.equal('true');
+});
+
+it('normalizes variant="danger" with the legacy destructive treatment', async () => {
+  const modern = (await fixture(html`<lr-menu-item variant="danger">Delete</lr-menu-item>`)) as LyraMenuItem;
+  const legacy = (await fixture(html`<lr-menu-item destructive>Delete</lr-menu-item>`)) as LyraMenuItem;
+  const modernBase = modern.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const legacyBase = legacy.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  expect(modern.variant).to.equal('danger');
+  expect(getComputedStyle(modernBase).color).to.equal(getComputedStyle(legacyBase).color);
+});
+
+it('renders WA details and Shoelace prefix/suffix compatibility slots through named parts', async () => {
+  const el = (await fixture(html`
+    <lr-menu-item>
+      <span slot="prefix">P</span>
+      Rename
+      <span slot="details">⌘R</span>
+      <span slot="suffix">S</span>
+    </lr-menu-item>
+  `)) as LyraMenuItem;
+  expect(el.shadowRoot!.querySelector('[part~="icon"] slot[name="prefix"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part~="details"] slot[name="details"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part~="suffix"] slot[name="suffix"]')).to.exist;
+});
+
+it('treats loading as interaction-disabled and renders the spinner parts', async () => {
+  const el = (await fixture(html`<lr-menu-item loading>Saving</lr-menu-item>`)) as LyraMenuItem;
+  let selected = false;
+  el.addEventListener('lr-menu-item-select', () => {
+    selected = true;
+  });
+  el.select();
+  expect(el.getAttribute('aria-disabled')).to.equal('true');
+  expect(el.shadowRoot!.querySelector('[part~="spinner"]')).to.exist;
+  expect(selected).to.equal(false);
+});
+
+it('keeps loading opt-in and exposes the visible text through getTextLabel()', async () => {
+  const el = (await fixture(html`
+    <lr-menu-item><span slot="prefix">P</span>Rename</lr-menu-item>
+  `)) as LyraMenuItem;
+  expect(el.loading).to.equal(false);
+  expect(el.hasAttribute('loading')).to.equal(false);
+  expect(el.getAttribute('aria-disabled')).to.equal('false');
+  expect(el.shadowRoot!.querySelector('[part~="spinner"]')).to.equal(null);
+  expect(el.getTextLabel()).to.equal('Rename');
 });
 
 it('renders aria-disabled="false" when enabled', async () => {
@@ -305,6 +353,17 @@ describe('submenu parent', () => {
   const panelOf = (item: LyraMenuItem): HTMLElement & { open: boolean } =>
     item.querySelector('#panel') as HTMLElement & { open: boolean };
 
+  const popupOf = (item: LyraMenuItem): HTMLElement =>
+    panelOf(item).shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+
+  const waitForPlacedPopup = async (popup: HTMLElement): Promise<HTMLElement> => {
+    for (let frame = 0; frame < 120 && popup.style.left === ''; frame += 1) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+    expect(popup.style.left).to.not.equal('');
+    return popup;
+  };
+
   it('reports hasSubmenu and renders BOTH aria-expanded states, never omitting the attribute', async () => {
     const item = await parentOf();
     expect(item.hasSubmenu).to.equal(true);
@@ -324,6 +383,125 @@ describe('submenu parent', () => {
     expect(item.submenuOpen).to.equal(false);
     expect(item.getAttribute('aria-expanded')).to.equal('false');
     expect(panelOf(item).open).to.equal(false);
+  });
+
+  it('returns promises from submenu methods and settles them after the reflected state', async () => {
+    const item = await parentOf();
+    const opening = item.openSubmenu('none');
+    expect(opening).to.be.instanceOf(Promise);
+    await opening;
+    expect(item.submenuOpen).to.equal(true);
+    expect(item.getAttribute('submenu-open')).to.equal('');
+
+    const closing = item.closeSubmenu();
+    expect(closing).to.be.instanceOf(Promise);
+    await closing;
+    expect(item.submenuOpen).to.equal(false);
+    expect(item.hasAttribute('submenu-open')).to.equal(false);
+  });
+
+  it('renders the mapped --submenu-offset default and responds live to an override', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        role="menu"
+        aria-label="Actions"
+        style="position: fixed; inset-block-start: 8rem; inset-inline-start: 15rem; inline-size: 8rem;"
+      >
+        <lr-menu-item value="share" id="share">
+          Share
+          <lr-menu slot="submenu" id="panel">
+            <lr-menu-item value="email">Email</lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    await item.updateComplete;
+    await item.openSubmenu('none');
+    const popup = await waitForPlacedPopup(popupOf(item));
+    const renderedOffset = (): number =>
+      popup.getBoundingClientRect().left - item.getBoundingClientRect().right;
+
+    expect(renderedOffset()).to.be.closeTo(-2, 1);
+
+    item.style.setProperty('--submenu-offset', '12px');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(renderedOffset()).to.be.closeTo(12, 1);
+  });
+
+  it('mirrors --submenu-offset under RTL so negative values still overlap', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        dir="rtl"
+        role="menu"
+        aria-label="Actions"
+        style="position: fixed; inset-block-start: 8rem; inset-inline-start: 15rem; inline-size: 8rem;"
+      >
+        <lr-menu-item value="share" id="share">
+          Share
+          <lr-menu slot="submenu" id="panel">
+            <lr-menu-item value="email">Email</lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    await item.updateComplete;
+    await item.openSubmenu('none');
+    const popup = await waitForPlacedPopup(popupOf(item));
+    const renderedOffset = (): number =>
+      item.getBoundingClientRect().left - popup.getBoundingClientRect().right;
+
+    expect(renderedOffset()).to.be.closeTo(-2, 1);
+
+    item.style.setProperty('--submenu-offset', '12px');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(renderedOffset()).to.be.closeTo(12, 1);
+  });
+
+  it('accepts direct dropdown items in the submenu slot as well as a nested lr-menu', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item id="share">
+          Share
+          <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+          <lr-dropdown-item slot="submenu" value="copy">Copy link</lr-dropdown-item>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    await item.updateComplete;
+    expect(item.hasSubmenu).to.equal(true);
+    await item.openSubmenu('first');
+    expect(item.submenuOpen).to.equal(true);
+    expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal('email');
+    expect(item.shadowRoot!.querySelector('[part~="submenu"]')?.localName).to.equal('lr-menu');
+  });
+
+  it('applies --submenu-offset to the generated direct-item submenu too', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        role="menu"
+        aria-label="Actions"
+        style="position: fixed; inset-block-start: 8rem; inset-inline-start: 15rem; inline-size: 8rem;"
+      >
+        <lr-menu-item id="share">
+          Share
+          <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    await item.updateComplete;
+    await item.openSubmenu('none');
+    const panel = item.shadowRoot!.querySelector('[data-generated-submenu]') as HTMLElement;
+    const popup = await waitForPlacedPopup(
+      panel.shadowRoot!.querySelector('[part="popup"]') as HTMLElement,
+    );
+
+    expect(
+      popup.getBoundingClientRect().left - item.getBoundingClientRect().right,
+    ).to.be.closeTo(-2, 1);
   });
 
   it('leaves a plain item with no submenu ARIA at all', async () => {

@@ -5,48 +5,47 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/slider/slider.js';` (registers the tag; side-effect import)
 - **Class** `LyraSlider`, also available unregistered from `@aceshooting/lyra-ui/components/forms/slider/slider.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-slider`
 
-A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** via the shared
-`FormAssociated` mixin (`name`, `value`, `disabled`, `required` all inherited). Mirrors native `<input
-type="range">` semantics: `value` is the string form-submitted via the mixin, `valueAsNumber` is the
-ergonomic numeric accessor (matching native `<input type=range>`'s IDL attribute of the same name) kept
-in sync with it in both directions. Clicking anywhere on `[part="base"]` (not just the thumb) jumps the
+A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** directly through
+`ElementInternals`, because its public `value` is a number rather than the string assumed by the
+shared form mixin. `value`, `defaultValue`, and `valueAsNumber` are numeric; `valueAsString` is the
+explicit compatibility round-trip for code that still wants a serialized value. Clicking anywhere
+on `[part~="base"]` (not just the thumb) jumps the
 thumb to that point and continues the same gesture as a drag, matching native `<input type=range>`
 click-to-seek — the thumb is also `.focus()`ed on that click, so keyboard interaction can continue
 seamlessly right after. Mirrors the core `<wa-slider>` API under the `lr-` prefix.
 
 **Two-handle `range` mode.** `range` turns the control into a selection between `minValue` and
-`maxValue`. Each handle is a separately focusable `role="slider"` with its own localized accessible
-name, and each reports the *reachable* sub-range through `aria-valuemin`/`aria-valuemax` — bounded
-by its sibling rather than by the full domain, because the handles may meet but never cross. When
-they meet, both report the same number, the indicator has zero length, and each handle can still
-travel away from the meeting point in its own direction. A track click moves whichever handle is
-nearer the clicked position. `[part="base"]` then carries `role="group"`, named from
+`maxValue`, defaulting to `0`/`50`. Each handle is a separately focusable `role="slider"` with its
+own localized accessible name and the full domain as its reachable range. When the active handle
+crosses its sibling, it pushes that sibling to the same value instead of stopping, so the active
+thumb remains under the pointer/key. A track click moves whichever handle is nearer the clicked
+position. `[part~="base"]` then carries `role="group"`, named from
 `label`/`aria-label`, so the pair is announced as one control.
 
-A range slider **does not submit a value**: two numbers cannot be expressed through the
-single-string `FormAssociated` contract, so while `range` is set the control removes itself from its
-form's `FormData` entirely (matching `<lr-time-range>`) rather than submitting a value it isn't
-showing. Read `minValue`/`maxValue`, or the event detail. Turning `range` back off restores normal
-single-value submission.
+A named range slider submits **two same-name entries**, lower then upper. For example,
+`<lr-slider range name="window">` contributes `window=0&window=50` by default. Read both with
+`formData.getAll('window')`; `get()` returns only the first entry. Turning `range` off restores the
+single numeric string entry.
 
 **Properties:**
 - `min: number = 0`
 - `max: number = 100`
 - `step: number = 1` — a zero or negative value is kept as an explicit "unstepped" mode
 - `range: boolean = false` (reflected) — two-handle mode; see above
-- `minValue: number` (attribute `min-value`) — the lower handle's value in `range` mode. Unset, it
-  resolves to `min`, so an untouched range slider selects its whole domain whatever `min`/`max`
-  happen to be. Assigning past `maxValue` stops at `maxValue`
-- `maxValue: number` (attribute `max-value`) — the upper handle's value. Unset, it resolves to
-  `max`; assigning below `minValue` stops at `minValue`. Only the `min-value`/`max-value`
+- `minValue: number = 0` (attribute `min-value`) — the lower handle's value in `range` mode.
+  Assigning past `maxValue` pushes `maxValue` to the same number
+- `maxValue: number = 50` (attribute `max-value`) — the upper handle's value. Assigning below
+  `minValue` pushes `minValue` to the same number. Only the `min-value`/`max-value`
   *attributes* are captured as the `form.reset()` defaults, so a later property assignment never
   redefines what a reset restores to
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which axis carries the
@@ -62,41 +61,41 @@ single-value submission.
   indicator, the tick marks and the handles off the same values `lr-input`/`lr-select`/`lr-button`
   read, so controls of one `size` line up in a row. The handle's transparent drag area keeps its own
   1.75rem/28px floor at every tier, so a small slider is still a conformant pointer target
-- `withMarkers: boolean = false` (attribute `with-markers`, reflected) — draws a tick mark at every
+- `withMarkers: boolean = false` (attribute `with-markers`) — draws a tick mark at every
   `step` position along the track. Purely decorative (`aria-hidden`). Nothing is drawn for an
   unstepped grid (`step` ≤ 0) or for one implying more than 100 intervals — ten million ticks would
   be visually indistinguishable and would hang the page, so the grid is dropped rather than
   half-drawn
-- `withTooltip: boolean = false` (attribute `with-tooltip`, reflected) — shows a live value bubble
+- `withTooltip: boolean = false` (attribute `with-tooltip`) — shows a live value bubble
   above each handle while that handle is focused or being dragged. Its text is `valueFormatter`'s
   result when one is supplied, otherwise the locale-formatted number
-- `hint: string = ''` — plain-text description of what the slider controls, rendered below the track
-  and wired to every handle through `aria-describedby`. Use the `hint` slot for rich content.
-  Deliberately the only visible-chrome property here: there is no visible label or error surface (a
-  labeled-field consumer wraps this element in their own layout), but a slider's units frequently
-  need a written explanation with nowhere else to live
-- `label: string = ''` — accessible name set as `aria-label` on the `role="slider"` thumb (or on the
-  `role="group"` wrapping both range handles, since each handle then owns its own start/end name); a
-  plain `aria-label` attribute on the host itself wins over it, and with neither set the localized
-  generic `sliderLabel` message applies so the focusable thumb is never nameless.
+- `label: string = ''`, `hint: string = ''` — visible form context above/below the track, with rich
+  `label`/`hint` slots. A host `aria-label` still wins for the interactive accessible name.
+- `helpText: string = ''` (`help-text`) and the `help-text` slot are Shoelace aliases for `hint`.
+- `withLabel: boolean = false` / `withHint: boolean = false` (`with-label`/`with-hint`) are SSR
+  presence hints; hydrated instances also discover populated slots automatically.
+- `indicatorOffset?: number` (`indicator-offset`) — single-slider fill origin. The indicator spans
+  between this number and `value`, whichever is lower.
+- `autofocus: boolean = false` — focuses the first/lower thumb after the first client render.
+- `tooltipPlacement: 'top' | 'right' | 'bottom' | 'left' = 'top'` and
+  `tooltipDistance: number = 8` control physical tooltip layout in either orientation and RTL.
+- `tooltip: 'top' | 'bottom' | 'none' = 'none'` and `tooltipFormatter?: (value) => string` are
+  Shoelace-compatible aliases layered over the richer Lyra/Web Awesome tooltip surface.
 - `valueFormatter?: SliderValueFormatter` (attribute: false) —
   `(value: number, handle: 'value' | 'min' | 'max') => string | null | undefined`. Maps the finite,
   clamped `aria-valuenow` number to optional human-readable `aria-valuetext`, and supplies the
   `with-tooltip` bubble's text. The second argument identifies which handle is being formatted
   (`'value'` on a single-handle slider). A nullish result omits `aria-valuetext`. Leaving the
   property unset preserves the numeric `aria-valuetext`.
-- `showValue: boolean = true` (attribute `show-value`) — whether to render the current numeric value as
-  visible text next to the track. In `range` mode the readout is both handle values joined by an en
-  dash. Not reflected, and `true`-defaulting: toggle it off via the `.showValue=${false}` property
-  binding or a plain `show-value="false"` content attribute — `?show-value=${false}` and a removed
-  attribute both leave it `true`.
-- Inherited from `FormAssociated`: `name: string = ''`, `value: string` (form-submitted string form),
-  `disabled: boolean = false` (reflected), `required: boolean = false` (reflected).
-
-**Accessor:** `valueAsNumber: number` — get/set. Reading always returns a finite, clamped, step-snapped
-number, even if `value` is momentarily `""` (e.g. right after `form.reset()`, before the mount-time
-default reseeds it), by falling back to the midpoint of `[min, max]`. Writing clamps/snaps the input and
-stringifies the result back into `value`.
+- `showValue: boolean = false` (attribute `show-value`) — opt-in numeric readout next to the track;
+  a range readout joins both values with an en dash. The explicit HTML spelling
+  `show-value="false"` stays false.
+- `value: number = 0`, `defaultValue: number = 0` (attribute `value`), `valueAsNumber: number`, and
+  `valueAsString: string` are synchronized, finite, clamped, and step-snapped.
+- `isRange: boolean` is the read-only normalized range-mode state.
+- `name: string | null = null`, `disabled = false`, `required = false`, reflected `customError`,
+  plus read-only `form`, `labels`, `validity`, `validationMessage`, and `willValidate` make up the
+  native form surface.
 
 **Events:** native-style `input` (no detail), then `lr-input`, fire continuously during an active
 drag or keyboard step, including OS key-repeat while a key is held. Native-style `change` (no
@@ -105,24 +104,27 @@ for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press fires both
 native `<input type=range>` timing.
 The focused handle's native `focus` and `blur` are re-dispatched from the host as bubbling,
 composed events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail).
+`lr-invalid` (no detail) fires when a validity check finds the slider invalid.
 **Breaking in 8.0.0:** both details widened from `{ value: number }` to
 `{ value: number; minValue: number; maxValue: number; handle: 'value' | 'min' | 'max' }`. `value` is
 the value of the handle that moved and `handle` says which one that was (`'value'` on a
 single-handle slider); `minValue`/`maxValue` always carry both range-handle positions. Existing
 `e.detail.value` readers keep working unchanged.
 
-**Methods:** `focus(options?)` and `click()` forward to the internal `[part="thumb"]` control (the
-lower handle in `range` mode). `blur()` releases whichever range handle actually owns focus,
-falling back to the lower handle when neither does. Without these overrides the host's own
-`focus()`/`blur()`/`click()` would be no-ops, because the `role="slider"` controls live in the
-shadow root.
+**Methods:** `focus(options?)` and `click()` forward to the first/lower thumb; `blur()` releases the
+thumb that actually owns focus. `stepUp(steps = 1)` / `stepDown(steps = 1)` silently move the
+focused handle (first/lower when none is focused). `getForm()`, `checkValidity()`,
+`reportValidity()`, `setCustomValidity(message)`, and `resetValidity()` mirror native form-control
+methods.
 
-**Slots:** `hint` — rich hint content, replacing the plain-text `hint` property. The hint region is
-hidden and contributes no `aria-describedby` while neither the property nor the slot has content.
+**Slots:** `label`, `hint`, Shoelace alias `help-text`, and `reference`. Empty chrome stays hidden
+and contributes no accessible relationship.
 
-**CSS parts:** `base` (row wrapping the track and optional value readout; carries `role="group"` in
-`range` mode), `track` (the full-length background line), `indicator` (the filled portion of the
-track: from `min` up to the current value, or between the two handles in `range` mode),
+**CSS parts:** `base slider form-control form-control-input input control` are tokens on the
+interactive row (`role="group"` in range mode). `label form-control-label` share the visible label
+node; `references` wraps the endpoint/unit slot; `hint form-control-help-text` share the hint node.
+`track` is the full-length line; `indicator` is the filled portion from `min` up to the current
+value, or between the two handles in `range` mode.
 `markers` (the tick container, present only with `with-markers`) and `marker` (one `step`-grid
 tick), `thumb` (a draggable handle, `role="slider"` — present on every handle including both range
 ones), `thumb-min` and `thumb-max` (the lower and upper range handles; each carries `thumb` as
@@ -130,8 +132,13 @@ well, so `::part(thumb)` styles both while `::part(thumb-min)` reaches only one)
 live value bubble per handle, present only with `with-tooltip`), `tooltip-visible` (added *to the
 `tooltip` element's part list* while that handle is focused or dragged — visibility is encoded in
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
-`::part(tooltip-visible)`), `value` (numeric readout, shown when `show-value` is true), `hint` (the
-hint region).
+`::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
+`tooltip__arrow`. `value` is the opt-in numeric readout.
+
+**CSS custom states:** `disabled`, `dragging`, `focused`, `required`, `optional`, `valid`,
+`invalid`, `user-valid`, and `user-invalid`. A slider always has a finite numeric value, so
+`required` is still useful as a styling hook but does not by itself make the control invalid;
+`setCustomValidity()` controls the invalid states.
 
 **Breaking in 8.0.0:** the `fill` part was **renamed to `indicator`**, matching `wa-slider`. A
 `::part(fill)` rule silently matches nothing now — rename it.
@@ -153,9 +160,15 @@ them all without a per-tier rule, and the values in brackets are what they resol
 `--lr-slider-track-length` (default `var(--lr-size-10rem)`) is the
 track's length in `orientation="vertical"`; a horizontal track fills its container instead, so the
 token is inert there. It is declared as an inline `var()` fallback and never on `:host`, so a
-consumer value set on any ancestor is never shadowed. Everything else is shared tokens —
+consumer value set on any ancestor is never shadowed. `--lr-slider-tooltip-distance` carries the
+finite, unit-resolved tooltip offset computed from `tooltipDistance`; set `tooltipDistance` rather
+than overriding this runtime value. Everything else is shared tokens —
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text-quiet`, `--lr-shadow`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
+
+Mapped aliases are also live: `--thumb-size`, `--thumb-width`, `--thumb-height`, `--track-height`,
+`--track-size`, `--track-color-active`, `--track-color-inactive`, `--track-active-offset`,
+`--tooltip-offset`, `--marker-width`, and `--marker-height`.
 
 **Optional peer deps:** none.
 
@@ -175,9 +188,10 @@ consumer value set on any ancestor is never shadowed. Everything else is shared 
   @lr-change=${(e) => commitTemperature(e.detail.value)}
 ></lr-slider>
 
-<!-- Two handles, vertical. Range mode submits nothing: read minValue/maxValue. -->
+<!-- Two handles, vertical. A name submits two `price` entries. -->
 <lr-slider
   range
+  name="price"
   orientation="vertical"
   min="0"
   max="1000"
@@ -189,11 +203,10 @@ consumer value set on any ancestor is never shadowed. Everything else is shared 
 ></lr-slider>
 ```
 
-An unset `value` is eagerly defaulted — on connect, and again after `form.reset()` — to the midpoint of
-`[min, max]` snapped to `step`, the same "range sanitization algorithm" default a native range input
-applies. A slider therefore always represents *some* number, so `required` only has a narrow window to
-block submission before that default lands, matching how `required` isn't a meaningful constraint on a
-native range input either.
+An unset `value` starts at numeric `0`, clamped into the configured domain and step grid. A reset
+restores the numeric `defaultValue` sourced from the `value` content attribute, or the same zero
+default when the attribute was absent. A slider therefore always represents a number; `required`
+is present for upstream form-surface parity but adds no missing-value constraint.
 
 **Known gotchas:**
 - `valueAsNumber` always returns a real, clamped number — never `NaN` or `""` — even reading it in the
@@ -211,9 +224,8 @@ native range input either.
   ends without a pointerup (`pointercancel`, lost pointer capture, the element being removed
   mid-drag) tears down cleanly and commits nothing.
 - **`::part(fill)` no longer matches** — the part is `indicator` as of 8.0.0.
-- **A `range` slider contributes no form entry.** `new FormData(form)` simply has no key for it, and
-  `value`/`valueAsNumber` keep tracking the single-handle value that isn't being shown. Read
-  `minValue`/`maxValue`.
+- A named `range` slider contributes two same-name entries. Use `FormData#getAll()`, not `get()`,
+  when both values are required.
 - `min-value`/`max-value` are clamped against the domain, snapped to `step`, and re-sanitized once
   every declarative attribute has landed, so narrowing `min`/`max` after mount can silently move
   both handles. Only the attributes seed the `form.reset()` defaults.

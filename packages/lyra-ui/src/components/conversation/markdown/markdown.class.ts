@@ -54,6 +54,45 @@ export type MarkdownHeadingItem = SharedMarkdownHeadingItem;
  *  `<lr-markdown-core>` deliberately owns a separate one rather than sharing this instance. */
 const katexState = createMarkdownKatexState();
 
+/** One configurable parser per resolved `marked` module namespace. Keeping this cache at module
+ *  scope makes the public `marked` property genuinely shared across `<lr-markdown>` instances,
+ *  while the weak key lets an alternate loader/test module be collected normally. */
+const sharedMarkedInstances = new WeakMap<object, OptionalPeerApi>();
+
+function sharedMarkedInstance(marked: OptionalPeerApi | undefined): OptionalPeerApi | undefined {
+  if (
+    !marked ||
+    (typeof marked !== 'object' && typeof marked !== 'function') ||
+    typeof marked.Marked !== 'function'
+  ) {
+    return undefined;
+  }
+  const key = marked as object;
+  let instance = sharedMarkedInstances.get(key);
+  if (!instance) {
+    instance = new marked.Marked();
+    sharedMarkedInstances.set(key, instance);
+  }
+  return instance;
+}
+
+/** Converts tabs only in a line's indentation to spaces at real tab stops. Markdown treats four
+ *  leading spaces as an indented code block, so a simple fixed `tab.repeat(width)` replacement is
+ *  wrong after existing spaces; the next stop depends on the current indentation column. */
+function normalizeLeadingTabs(content: string, tabSize: number): string {
+  const width = finiteInteger(tabSize, 4, 1, 32);
+  return content.replace(/^[\t ]+/gm, (indentation) => {
+    let column = 0;
+    let normalized = '';
+    for (const character of indentation) {
+      const spaces = character === '\t' ? width - (column % width) : 1;
+      normalized += ' '.repeat(spaces);
+      column += spaces;
+    }
+    return normalized;
+  });
+}
+
 /** @internal Test-only seam: forces `math` rendering to behave as if `katex` resolved to `katex`
  *  (or, with `null`, as if the optional peer failed to load). Pass `undefined` to restore the real
  *  `getKatex()`-driven behavior. Declared here rather than re-exported from `markdown-shared.ts` so
@@ -177,12 +216,20 @@ class LyraMarkdownBase extends LyraElement<LyraMarkdownEventMap> {}
  *   inherited because `lr-code-block` is a sibling element, not an ancestor. A markdown code
  *   block wraps (`white-space: pre-wrap`) while `lr-code-block` does not, so the same value can
  *   render differently on a wrapped line, where tab stops restart.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The Markdown source to render. */
   @property() content = '';
+
+  /** Tab-stop width used when converting tabs in leading indentation to spaces before parsing.
+   *  Defaults to `4`; non-finite values fall back to that default and finite values are truncated
+   *  and clamped to `[1, 32]` before use. This does not change tabs inside ordinary text or the
+   *  separate `--lr-code-block-tab-size` used to display rendered code. */
+  @property({ type: Number, attribute: 'tab-size' }) tabSize = 4;
 
   /** Sanitize marked's HTML output with DOMPurify before rendering. See the
    *  class doc for what happens when this is `true` (the default) but the
@@ -292,6 +339,14 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   @state() private renderedHtml: string | null = null;
 
   private deps?: MarkdownDeps;
+
+  /** The configurable `marked.Marked` parser shared by every `<lr-markdown>` instance on this
+   *  page. It is `undefined` only while the optional `marked` peer is unresolved or unavailable.
+   *  Configuration installed with `marked.use()` is copied into each fresh internal parse; call
+   *  `renderMarkdown()` to refresh existing content after changing that configuration. */
+  get marked(): OptionalPeerApi | undefined {
+    return sharedMarkedInstance(this.deps?.marked);
+  }
 
   /** Document-ordered heading outline computed on every parse (see `getHeadingTree()`), regardless
    *  of `headingAnchors`. */
@@ -434,10 +489,10 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
     }
   }
 
-  /** Runs the shared parse/sanitize/fallback pipeline (see `renderMarkdownDocument()`) and applies
-   *  its outcome to this instance's own state -- every `@state` assignment and every emitted event
-   *  stays here so the shared half remains a pure function of its inputs. */
-  private renderMarkdown(): void {
+  /** Renders the current `content` through the shared parse/sanitize/fallback pipeline and applies
+   *  the result immediately. This is the public refresh point after configuring `marked` with
+   *  `marked.use()`. It returns `void` and safely no-ops while the optional parser is unresolved. */
+  renderMarkdown(): void {
     const deps = this.deps;
     if (!deps) return;
     const outcome = renderMarkdownDocument({
@@ -563,7 +618,8 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   ): { html: string; hadMathFallback: boolean } {
     return parseMarkdownDocument({
       marked,
-      content: this.content,
+      content: normalizeLeadingTabs(this.content, this.tabSize),
+      markedConfiguration: sharedMarkedInstance(marked)?.defaults,
       gfm: this.gfm,
       // Falsy (`null` or `''`) means the consumer explicitly opted out of
       // target="..."/rel="..." on rendered links -- see the linkTarget doc.

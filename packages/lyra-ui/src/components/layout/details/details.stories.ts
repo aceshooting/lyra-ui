@@ -6,6 +6,43 @@ const meta: Meta = { title: 'Disclosure/Details', component: 'lr-details', tags:
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-details summary="More information">Additional details.</lr-details>` };
 
+export const GroupedWithCustomIcons: StoryObj = {
+  name: 'Named group, appearance, and custom icons',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Disclosures with the same non-empty `name` in one document or shadow root are mutually exclusive. `icon-placement` is logical, and the two icon slots select closed/open artwork without replacing the summary control. The icon wrapper exports both `icon` and the Shoelace-compatible `summary-icon` part.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-xs); max-inline-size:28rem;">
+      <lr-details
+        name="project-settings"
+        appearance="filled"
+        icon-placement="start"
+        summary="Generation settings"
+        open
+      >
+        <span slot="expand-icon">＋</span>
+        <span slot="collapse-icon">−</span>
+        Configure the generation model and limits.
+      </lr-details>
+      <lr-details
+        name="project-settings"
+        appearance="filled"
+        icon-placement="start"
+        summary="Publishing settings"
+      >
+        <span slot="expand-icon">＋</span>
+        <span slot="collapse-icon">−</span>
+        Configure destinations and review policy.
+      </lr-details>
+    </div>
+  `,
+};
+
 export const Sizes: StoryObj = {
   parameters: {
     docs: {
@@ -32,7 +69,7 @@ export const Lifecycle: StoryObj = {
     docs: {
       description: {
         story:
-          'Opening emits `lr-show` (cancelable), then `lr-toggle`, then `lr-after-show`; closing mirrors it. Because the native `<details>` toggle is intercepted, a vetoed `lr-show` cannot leave the panel visually expanded.',
+          'Opening emits `lr-show` (cancelable), then `lr-toggle`, then `lr-after-show`; closing mirrors it. The `animating` CSS state exists until that settled boundary. `await details.show()` and `await details.hide()` settle after the matching `lr-after-*` event. Because the native `<details>` toggle is intercepted, a vetoed `lr-show` cannot leave the panel visually expanded.',
       },
     },
   },

@@ -13,22 +13,36 @@ const DEFAULT_MAX = 100;
  * `<lr-progress-bar>` — a determinate or indeterminate progress indicator.
  *
  * @customElement lr-progress-bar
- * @slot label - Optional label content. While `show-value` makes it visible, its text names the
- * progressbar unless an explicit accessible label overrides it; live text mutations stay synced.
- * @csspart base - The progress wrapper.
+ * @slot - Label content, visible independently of `show-value`.
+ * @slot label - Compatibility alias for the default label slot.
+ * @csspart base - Compatibility name for the progress wrapper; use `progress-bar`.
+ * @csspart progress-bar - The progress wrapper. It is the same node as `base`.
  * @csspart track - The track.
  * @csspart indicator - The filled progress indicator.
  * @csspart label - The label row.
- * @cssprop [--lr-progress-height=var(--lr-size-0-5rem)] - Block size of the progress track.
+ * @cssprop [--lr-progress-track-height=var(--lr-progress-height,var(--lr-size-1rem))] - Block size of the progress track.
+ * @cssprop [--lr-progress-track-color=var(--lr-color-brand-quiet)] - Track color.
+ * @cssprop [--lr-progress-indicator-color=var(--lr-color-brand)] - Indicator color.
+ * @cssprop [--lr-progress-label-color=var(--lr-color-text)] - Label color.
  * @cssprop [--lr-progress-duration=var(--lr-transition-ambient)] - Indeterminate sweep timing.
+ * @cssprop [--height=var(--lr-progress-track-height)] - Shoelace-compatible track height.
+ * @cssprop [--track-height=var(--lr-progress-track-height)] - Web Awesome-compatible track height.
+ * @cssprop [--track-color=var(--lr-progress-track-color)] - Upstream-compatible track color.
+ * @cssprop [--indicator-color=var(--lr-progress-indicator-color)] - Upstream-compatible indicator color.
+ * @cssprop [--label-color=var(--lr-progress-label-color)] - Shoelace-compatible label color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraProgressBar extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  @property({ type: Number }) value = 0;
+  @property({ type: Number, reflect: true }) value = 0;
   @property({ type: Number }) max = 100;
   @property({ type: Boolean, reflect: true }) indeterminate = false;
   @property({ reflect: true }) variant: ProgressVariant = 'brand';
   @property({ type: Boolean, attribute: 'show-value' }) showValue = false;
+  /** Mapped accessible-label property. */
+  @property() label = '';
+  /** Lyra compatibility alias for `label`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   private labelObserver?: MutationObserver;
 
@@ -44,15 +58,13 @@ export class LyraProgressBar extends LyraElement {
   }
 
   private get visibleLabelText(): string {
-    const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="label"]');
-    return (
-      slot
-        ?.assignedNodes({ flatten: true })
-        .map((node) => node.textContent ?? '')
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim() ?? ''
-    );
+    const slots = this.renderRoot.querySelectorAll<HTMLSlotElement>('slot');
+    return [...slots]
+      .flatMap((slot) => slot.assignedNodes({ flatten: true }))
+      .map((node) => node.textContent ?? '')
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   /** `max`, normalized to a finite number and guarded against `<= 0` — which would otherwise
@@ -81,13 +93,15 @@ export class LyraProgressBar extends LyraElement {
   override render(): TemplateResult {
     const label =
       this.getAttribute('aria-label') ||
+      this.label ||
       this.accessibleLabel ||
-      (this.showValue ? this.visibleLabelText : '') ||
+      this.visibleLabelText ||
       this.localize('progress');
-    return html`<div part="base" role="progressbar" aria-label=${label}
+    const hasVisibleLabel = Boolean(this.visibleLabelText) || this.showValue;
+    return html`<div part="base progress-bar" role="progressbar" aria-label=${label}
       aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
       aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
-      <div part="label" ?hidden=${!this.showValue}><slot name="label" @slotchange=${() => this.requestUpdate()}></slot>${this.showValue && !this.indeterminate ? html`<span>${this.formattedPercent}</span>` : nothing}</div>
+      <div part="label" ?hidden=${!hasVisibleLabel}><slot @slotchange=${() => this.requestUpdate()}></slot><slot name="label" @slotchange=${() => this.requestUpdate()}></slot>${this.showValue && !this.indeterminate ? html`<span>${this.formattedPercent}</span>` : nothing}</div>
       <div part="track"><div part="indicator" style="inline-size:${this.indeterminate ? '40%' : `${this.percent}%`}"></div></div>
     </div>`;
   }

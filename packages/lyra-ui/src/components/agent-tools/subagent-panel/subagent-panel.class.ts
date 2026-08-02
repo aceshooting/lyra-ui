@@ -76,6 +76,8 @@ interface OrderedRuns {
  * @cssprop [--lr-subagent-panel-selected-border=var(--lr-color-brand)] - Selected run border.
  * @cssprop [--lr-subagent-panel-progress-track=var(--lr-color-border)] - Progress track.
  * @cssprop [--lr-subagent-panel-progress-fill=var(--lr-color-brand)] - Progress fill.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   static override styles = [LyraElement.styles, styles];

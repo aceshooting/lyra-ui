@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const EVENT_NAME_RE = /^(?:lr-[a-z0-9]+(?:-[a-z0-9]+)*|input|change|focus|blur)$/;
+const EVENT_NAME_RE = /^(?:lr-[a-z0-9]+(?:-[a-z0-9]+)*|beforeinput|input|change|focus|blur|ended|error|load|loadedmetadata|pause|play|request|timeupdate|volumechange)$/;
 
 const sorted = (values) => [...values].sort((a, b) => a.localeCompare(b));
 const setDifference = (left, right) => sorted(left).filter((value) => !right.has(value));

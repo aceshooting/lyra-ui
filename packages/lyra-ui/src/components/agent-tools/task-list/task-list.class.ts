@@ -151,6 +151,8 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * @cssprop [--lr-task-list-running-color=var(--lr-color-brand)] - Running status icon color.
  * @cssprop [--lr-task-list-success-color=var(--lr-color-success)] - Success status icon color.
  * @cssprop [--lr-task-list-error-color=var(--lr-color-danger)] - Error status icon color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   static override styles = [LyraElement.styles, styles];

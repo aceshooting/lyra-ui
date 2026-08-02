@@ -37,7 +37,7 @@ export const styles = css`
     /* --- Surface: what the 'appearance' axis chooses from that palette. ----------------------
        Kept separate from the public --lr-badge-background/-border/-color trio so those three stay
        *undeclared* and therefore still inherit from a consumer's ancestor rule; they are consumed
-       as the first arm of the var() fallbacks on [part='base'] below. The values here are the
+       as the first arm of the var() fallbacks on [part~='base'] below. The values here are the
        'filled-outlined' default, restated per appearance further down. */
     --lr-badge-fill: var(--lr-badge-tint);
     --lr-badge-stroke: var(--lr-badge-edge);
@@ -48,7 +48,10 @@ export const styles = css`
        the 'animation' shorthand below expands to exactly one timing function. */
     --lr-badge-attention-duration: var(--lr-duration-ambient, 1.8s);
     --lr-badge-attention-easing: var(--lr-easing-emphasized, ease-in-out);
-    --lr-badge-pulse-color: color-mix(in srgb, currentColor 40%, transparent);
+    --lr-badge-pulse-color: var(
+      --pulse-color,
+      color-mix(in srgb, currentColor 40%, transparent)
+    );
     --lr-badge-pulse-spread: var(--lr-size-0-25rem);
     --lr-badge-bounce-distance: var(--lr-size-0-1875rem);
   }
@@ -57,7 +60,7 @@ export const styles = css`
     --lr-badge-radius: var(--lr-radius-pill);
   }
 
-  [part='base'] {
+  [part~='base'] {
     display: inline-flex;
     align-items: center;
     gap: var(--lr-badge-gap);
@@ -91,7 +94,7 @@ export const styles = css`
     display: block;
   }
 
-  /* The label truncates, not the whole surface: keeping overflow off [part='base'] lets the
+  /* The label truncates, not the whole surface: keeping overflow off [part~='base'] lets the
      removable tag's oversized hit target overhang the compact pill without being clipped. */
   [part='content'] {
     flex: 0 1 auto;
@@ -155,12 +158,14 @@ export const styles = css`
     --lr-badge-padding-inline: var(--lr-space-xs);
     --lr-badge-min-height: var(--lr-size-1rem);
   }
-  :host([size='s']) {
+  :host([size='s']),
+  :host([size='small']) {
     --lr-badge-font-size: var(--lr-font-size-xs);
     --lr-badge-padding-inline: var(--lr-size-0-375rem);
     --lr-badge-min-height: var(--lr-size-1-1rem);
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --lr-badge-font-size: var(--lr-font-size-m);
     --lr-badge-padding-inline: var(--lr-space-m);
     --lr-badge-min-height: var(--lr-size-1-5rem);
@@ -172,11 +177,12 @@ export const styles = css`
   }
 
   /* --- attention ---------------------------------------------------------------------------- */
-  :host([attention='pulse']) [part='base'] {
+  :host([pulse]) [part~='base'],
+  :host([attention='pulse']) [part~='base'] {
     animation: lr-badge-pulse var(--lr-badge-attention-duration) var(--lr-badge-attention-easing)
       infinite;
   }
-  :host([attention='bounce']) [part='base'] {
+  :host([attention='bounce']) [part~='base'] {
     animation: lr-badge-bounce var(--lr-badge-attention-duration) var(--lr-badge-attention-easing)
       infinite;
   }
@@ -211,7 +217,7 @@ export const styles = css`
      merely shortening. The shared token layer already clamps every animation's duration and
      iteration count under this query; naming animation itself keeps the badge provably still. */
   @media (prefers-reduced-motion: reduce) {
-    [part='base'] {
+    [part~='base'] {
       animation: none !important;
     }
   }

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/conversation/message-feedback/message-feedback.js';` (registers the tag; side-effect import)
 - **Class** `LyraMessageFeedback`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/message-feedback/message-feedback.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -25,7 +27,7 @@ free-text comment field, `detailFor: 'down' | 'both' = 'down'` (attribute `detai
 rating opens the detail panel, and `disabled: boolean = false` (reflected) for a read-only display.
 
 **Methods:** `focus()` focuses the thumb matching the current `value` (the up thumb when `null`);
-`blur()` blurs both thumbs.
+`blur()` blurs both thumbs; `click()` activates that same thumb when enabled.
 
 **Events:** `lr-change` — `detail: { value: 'up' | 'down' | null }`, fired when a thumb's rating
 changes or clears. `lr-submit` — `detail: { value: 'up' | 'down'; reasonIds: string[]; comment:

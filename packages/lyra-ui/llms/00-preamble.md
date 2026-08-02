@@ -14,10 +14,10 @@ Read it end to end only if you genuinely need everything. Otherwise:
 |---|---|
 | use one component | `llms/components/<tag>.md` (path derived from the tag; self-contained) |
 | find the right component | `llms/index.md` (every tag, its import path, one-line purpose) |
-| get library-wide behavior right | `llms/shared.md` (imports, events, forms, theming, i18n, TS, frameworks, SSR, AI types) |
+| get library-wide behavior right | `llms/shared.md` (status, imports/autoloading, events, forms, theming/styles, i18n/RTL, TS/frameworks, SSR, utilities, AI types) |
 | theme it | `llms/tokens.md` |
 | know what to `npm install` | `llms/peers.md` |
-| port `wa-*`/`sl-*` markup | `llms/migration.md` |
+| port `wa-*`/`sl-*` markup | `llms/migration.md` (per-tag classification, safe rewrites, and warnings) |
 
 Import paths always carry the source family segment —
 `@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js`, never `components/<tag>/`. Each entry

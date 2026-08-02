@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Standalone test for scripts/llms-gaps.mjs's `mentionsName` -- plain `node:assert`, not wired into
+// Standalone tests for scripts/llms-gaps.mjs -- plain `node:assert`, not wired into
 // the wtr suite (this checker reads markdown text, it does not render components). Run directly:
 // `node scripts/llms-gaps.test.mjs`.
 //
@@ -13,7 +13,7 @@
 // `click-to-start`/`click-to-stop`. Both cases are reproduced below as regression fixtures.
 
 import assert from 'node:assert/strict';
-import { mentionsName, ownsToken } from './llms-gaps.mjs';
+import { collectGaps, inheritsAllPublicSurface, mentionsName, ownsToken } from './llms-gaps.mjs';
 
 // Quiet by default (it runs inside the `pnpm lint` contract-policy chain); `--verbose` prints the
 // per-case lines.
@@ -109,9 +109,67 @@ test('a component-scoped token belongs to the longest matching tag, not every ta
   assert.equal(ownsToken('lr-tab', '--lr-color-brand', tags), false);
 });
 
+test('an exact inheritance declaration documents a base component surface without copying every name', () => {
+  const text = '**Inherits:** all public surface from `lr-input`.\n\nNative-time differences follow.';
+  assert.equal(inheritsAllPublicSurface(text, 'lr-input'), true);
+});
+
+test('ordinary inheritance prose is not mistaken for the explicit whole-surface contract', () => {
+  const text = 'This component inherits useful behavior from `lr-input`.';
+  assert.equal(inheritsAllPublicSurface(text, 'lr-input'), false);
+});
+
+test('an inheritance declaration only covers the exact named base tag', () => {
+  const text = '**Inherits:** all public surface from `lr-input`.';
+  assert.equal(inheritsAllPublicSurface(text, 'lr-select'), false);
+});
+
+test('gap collection honors the exact Native Time inheritance declaration for inherited entries', () => {
+  const manifest = {
+    modules: [
+      {
+        path: 'src/components/forms/input/input.class.ts',
+        declarations: [
+          { kind: 'class', name: 'LyraInput', customElement: true, tagName: 'lr-input' },
+        ],
+      },
+      {
+        path: 'src/components/forms/input/native-time-input.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraNativeTimeInput',
+            customElement: true,
+            tagName: 'lr-native-time-input',
+            attributes: [
+              {
+                name: 'inherited-only-fixture',
+                inheritedFrom: { name: 'LyraInput', module: 'src/components/forms/input/input.class.ts' },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  assert.equal(
+    collectGaps(['forms'], manifest).some(({ tag, names }) =>
+      tag === 'lr-native-time-input' && names.includes('inherited-only-fixture')),
+    false,
+  );
+
+  manifest.modules[1].declarations[0].attributes[0].inheritedFrom.name = 'DifferentBase';
+  assert.equal(
+    collectGaps(['forms'], manifest).some(({ tag, names }) =>
+      tag === 'lr-native-time-input' && names.includes('inherited-only-fixture')),
+    true,
+    'an unresolvable or different base is not hidden by the lr-input declaration',
+  );
+});
+
 if (failures > 0) {
-  console.error(`${failures} llms-gaps mentionsName test(s) failed.`);
+  console.error(`${failures} llms-gaps test(s) failed.`);
   process.exitCode = 1;
 } else {
-  console.log(`llms-gaps mentionsName self-test passed (${passes} cases).`);
+  console.log(`llms-gaps self-test passed (${passes} cases).`);
 }

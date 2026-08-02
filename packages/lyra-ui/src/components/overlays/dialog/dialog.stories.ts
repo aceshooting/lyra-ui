@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A general-purpose modal. Chrome stays minimal -- slot a heading (drives the accessible name automatically) and body content into the default slot, and action buttons into `footer`.',
+          'A general-purpose modal. `label` renders as a visible title and the close button is present by default; slot body content into the default slot and actions into `footer`.',
       },
     },
   },
@@ -30,8 +30,7 @@ export const Default: Story = {
   render: () => html`
     <div>
       <button @click=${openDialog}>Open dialog</button>
-      <lr-dialog>
-        <h2 style="margin: 0 0 0.5rem;">Project settings</h2>
+      <lr-dialog label="Project settings">
         <p style="margin: 0;">Body content -- a form, a summary, anything a consumer slots in.</p>
         <div slot="footer">
           <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('cancel')}>
@@ -48,8 +47,7 @@ export const Default: Story = {
 
 export const OpenInitially: Story = {
   render: (_args, context) => html`
-    <lr-dialog .open=${context.viewMode !== 'docs'}>
-      <h2 style="margin: 0 0 0.5rem;">Rendered already open</h2>
+    <lr-dialog .open=${context.viewMode !== 'docs'} label="Rendered already open">
       <p style="margin: 0;">Backdrop, centered panel, and dialog semantics -- no trigger needed for this story.</p>
       <div slot="footer">
         <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('ok')}>
@@ -61,14 +59,14 @@ export const OpenInitially: Story = {
 };
 
 export const LabelPropNoHeading: Story = {
+  name: 'Visible mapped label',
   render: () => html`
     <div>
       <button @click=${openDialog}>Open dialog</button>
       <lr-dialog label="Delete this item?">
         <p style="margin: 0;">
-          No visible heading is slotted here -- the <code>label</code> prop instead renders an
-          invisible element (the <code>label</code> csspart) that <code>aria-labelledby</code>
-          points at, so the dialog still has an accessible name.
+          The <code>label</code> property visibly renders in the mapped title row and names the
+          dialog. Use <code>accessible-label</code> for an accessible-only override.
         </p>
         <div slot="footer">
           <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('cancel')}>
@@ -105,8 +103,7 @@ export const NestedDialogs: Story = {
   render: () => html`
     <div>
       <button @click=${openDialog}>Open settings</button>
-      <lr-dialog>
-        <h2 style="margin: 0 0 0.5rem;">Settings</h2>
+      <lr-dialog label="Settings">
         <p style="margin: 0;">
           Escape and Tab only ever act on the topmost open dialog -- confirming discard below
           leaves this settings dialog untouched underneath it until the confirm is answered.
@@ -190,14 +187,39 @@ export const WithoutHeader: Story = {
   parameters: {
     docs: {
       description: {
-        story: '`without-header` drops the header row entirely for a dialog that owns its own chrome.',
+        story:
+          '`no-header` (and the Web Awesome/legacy `without-header` alias) drops the header row entirely. Pair custom chrome with `accessible-label`, a host `aria-label`, or a direct heading.',
       },
     },
   },
   render: (_args, context) => html`
-    <lr-dialog .open=${context.viewMode !== 'docs'} heading="Never rendered" closable without-header label="Custom chrome">
+    <lr-dialog
+      .open=${context.viewMode !== 'docs'}
+      heading="Never rendered"
+      no-header
+      accessible-label="Custom chrome"
+    >
       <p style="margin: 0;">No header row is rendered even though heading and closable are both set.</p>
     </lr-dialog>
+  `,
+};
+
+export const InitialFocusVeto: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`lr-initial-focus` fires once immediately before automatic focus movement. Cancel it when application state has already placed focus deliberately; the trap and eventual focus return remain active.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <button @click=${openDialog}>Open without moving focus</button>
+      <lr-dialog label="Focus stays outside" @lr-initial-focus=${(event: Event) => event.preventDefault()}>
+        <button type="button">First dialog action</button>
+      </lr-dialog>
+    </div>
   `,
 };
 

@@ -47,6 +47,8 @@ export interface LyraKnowledgeBaseAdminEventMap {
  * @cssprop [--lr-knowledge-base-admin-tab-selected-color=var(--lr-color-text)] - Text color of the
  *   selected `[part="tab"]`. `::part(tab)[aria-selected='true']` is invalid CSS, so this pair is
  *   the only way to restyle the active tab without re-pointing the shared brand/text tokens.
+ * @status stable
+ * @since 6.2.0
  */
 export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEventMap> {
   static override styles = [LyraElement.styles, styles];

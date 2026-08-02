@@ -108,6 +108,8 @@ const timelineItemVariantConverter = {
  * @cssprop [--lr-timeline-item-rail-visibility=visible] - Internal plumbing, not a retheming knob:
  *   `[part="rail"]`'s `visibility`, set to `hidden` by `<lr-timeline>`'s
  *   `::slotted(:last-child)` rule so the final item has no trailing rail.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTimelineItem extends LyraElement {
   static override styles = [LyraElement.styles, styles];

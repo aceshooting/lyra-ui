@@ -203,6 +203,8 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
  * @cssprop [--lr-tour-progress-dot-current-bg=var(--lr-color-brand)] - Background of
  *   `progress-dot` for the current step, without repainting every other component that reuses the
  *   shared brand token.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTour extends LyraElement<LyraTourEventMap> {
   static override styles = [LyraElement.styles, styles];

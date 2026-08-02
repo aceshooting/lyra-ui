@@ -106,6 +106,8 @@ export interface LyraChipEventMap {
  * selected, independently themeable from its resting background.
  * @cssprop [--lr-chip-pressed-border=var(--lr-chip-accent)] - Border color while a toggleable chip
  * is selected, independently themeable from the label/icon color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraChip extends LyraElement<LyraChipEventMap> {
   static override styles = [LyraElement.styles, variants, styles];

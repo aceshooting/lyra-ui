@@ -80,6 +80,8 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * @cssprop [--lr-dataset-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a
  *   highlighted cell. The active highlight sets it inline to
  *   `var(--lr-color-warning, var(--lr-color-brand))`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

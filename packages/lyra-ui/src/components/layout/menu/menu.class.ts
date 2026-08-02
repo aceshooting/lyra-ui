@@ -5,6 +5,7 @@ import { LyraElement } from "../../../internal/lyra-element.js";
 import { place } from "../../../internal/positioner.js";
 import { rtlAwarePlacement } from "../../../internal/rtl.js";
 import { nextId } from "../../../internal/a11y.js";
+import type { LyraSize } from "../../../internal/variants.js";
 import {
   collectFocusableElements,
   composedContains,
@@ -12,13 +13,19 @@ import {
 } from "../../../internal/overlay-manager.js";
 import { styles } from "./menu.styles.js";
 import { LyraMenuItem } from "./menu-item.class.js";
-import type { MenuFocusTarget } from "./menu-shared.js";
+import type { ContainedMenuOwner, MenuFocusTarget } from "./menu-shared.js";
 import "./menu-item.class.js";
 
 export type { MenuFocusTarget } from "./menu-shared.js";
 
 export interface MenuSelectDetail {
   value: string;
+}
+
+/** WA-compatible selection detail. The complete item keeps `value`, checkbox state, and any
+ * consumer metadata available without translating the activation into a lossy string. */
+export interface MenuItemSelectDetail {
+  item: LyraMenuItem;
 }
 
 /** Where a submenu prefers to sit: beside its parent row, on the inline-end side. Resolved
@@ -39,6 +46,7 @@ export interface LyraMenuEventMap {
   "lr-show": CustomEvent<undefined>;
   "lr-hide": CustomEvent<undefined>;
   "lr-menu-select": CustomEvent<MenuSelectDetail>;
+  "lr-select": CustomEvent<MenuItemSelectDetail>;
 }
 /**
  * `<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened
@@ -168,12 +176,17 @@ export interface LyraMenuEventMap {
  * @event lr-menu-select - A `<lr-menu-item>` was activated. `detail: {
  * value }` — the consolidated re-fire of that item's own
  * `lr-menu-item-select` (see `<lr-menu-item>`'s doc for why listening
- * here, rather than on every item, is the recommended approach). Always
- * followed by the menu closing and focus returning to the trigger. A
+ * here, rather than on every item, is the recommended approach). It is
+ * followed by closing and focus return unless the matching cancelable
+ * `lr-select` event is prevented or a containing dropdown has
+ * `stay-open-on-select`. A
  * selection inside a submenu surfaces through this same event on the
  * outermost menu, closing the whole chain behind it; a submenu's own
  * `lr-show`/`lr-hide` deliberately stop at the row that owns it, so they are
  * never mistaken for this menu opening or closing.
+ * @event lr-select - WA-compatible selection event carrying `detail: { item }`. Cancelable;
+ *   preventing it keeps the current menu/submenu chain open. Emitted once by the menu that owns
+ *   the activated item and allowed to bubble through ancestors without translation/re-emission.
  * @csspart trigger - The wrapper around the `trigger` slot (the positioning anchor).
  * @csspart popup - The positioned floating panel.
  * @csspart header - The wrapper around the `header` slot, above the list and
@@ -181,6 +194,8 @@ export interface LyraMenuEventMap {
  * @csspart list - The `role="menu"` container wrapping the default slot.
  * @csspart footer - The wrapper around the `footer` slot, below the list and
  * outside `role="menu"`. `display: none` while the slot is unfilled.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -232,6 +247,18 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    * trigger this component cannot slot (a canvas hit region, a table cell).
    */
   @property({ attribute: false }) anchor: HTMLElement | null = null;
+
+  /** @internal Supplies only the menu interaction engine inside another component's popup. */
+  @property({ type: Boolean, attribute: false }) dropdownContained = false;
+
+  /** @internal Owner of a contained engine's open/focus-return lifecycle. */
+  dropdownOwner: ContainedMenuOwner | null = null;
+
+  /** @internal Mirrors the mapped dropdown's default-close policy. */
+  @property({ type: Boolean, attribute: false }) dropdownStayOpenOnSelect = false;
+
+  /** @internal Density propagated by the mapped dropdown to its directly owned items. */
+  @property({ attribute: false }) dropdownSize: LyraSize | undefined;
 
   // Plain instance fields, not @state() -- render()'s template never reads
   // either (items render via the plain default <slot>; there is no
@@ -308,7 +335,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has("open")) {
+    if (changed.has("open") || changed.has("dropdownContained")) {
+      const openChanged = changed.has("open");
       this.cleanup?.();
       this.cleanup = undefined;
       // All open-driven side effects (positioning, the click-outside
@@ -318,8 +346,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       // paths, or a consumer/test setting `el.open` directly, which bypasses
       // both. Mirrors lr-select's identical updated()-centralized approach.
       if (this.open) {
-        document.addEventListener("pointerdown", this.onDocPointer);
-        if (!this._isFirstUpdate) this.emit("lr-show");
+        if (!this.dropdownContained) {
+          document.addEventListener("pointerdown", this.onDocPointer);
+          if (openChanged && !this._isFirstUpdate) this.emit("lr-show");
+        } else {
+          document.removeEventListener("pointerdown", this.onDocPointer);
+        }
         // Both reposition() and focusRoving() no-op gracefully if triggerEl/
         // items aren't populated yet -- for markup that renders `open` true
         // from the start, the trigger/default slots' *own* slotchange events
@@ -327,7 +359,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         // Lit's synchronous first update. onTriggerSlotChange/
         // onItemsSlotChange below re-run these same two calls once that
         // catches up, so this always resolves correctly either way.
-        this.reposition();
+        if (!this.dropdownContained) this.reposition();
         this.focusRoving(this.pendingFocus);
       } else {
         document.removeEventListener("pointerdown", this.onDocPointer);
@@ -344,10 +376,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         // outside-click listener and, on reopen, come back already expanded.
         this.clearSubmenuTimers();
         this.closeSubmenus();
-        if (!this._isFirstUpdate) this.emit("lr-hide");
+        if (!this.dropdownContained && openChanged && !this._isFirstUpdate) this.emit("lr-hide");
       }
-      this.syncTriggerA11y();
-    } else if (this.open && (changed.has("placement") || changed.has("anchor"))) {
+      if (!this.dropdownContained) this.syncTriggerA11y();
+    } else if (!this.dropdownContained && this.open && (changed.has("placement") || changed.has("anchor"))) {
       // A placement change while already open must move the popup immediately --
       // otherwise the Floating UI subscription established at open time keeps
       // running with the stale placement baked into its computePosition options,
@@ -355,6 +387,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       // tears down and re-subscribes, so re-invoking it here is safe.
       this.reposition();
     }
+    if (changed.has("dropdownSize")) this.applyDropdownSize();
   }
 
   private reposition(): void {
@@ -412,6 +445,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    */
   show(focus: MenuFocusTarget = "first"): void {
     this.pendingFocus = focus;
+    if (this.dropdownContained && this.dropdownOwner) {
+      if (this.dropdownOwner.open) this.focusRoving(focus);
+      else void this.dropdownOwner.show();
+      return;
+    }
     if (this.open) {
       this.focusRoving(focus);
       return;
@@ -433,6 +471,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    * in `updated()` so a bare `el.open = false` gets it too.
    */
   hide(options?: { focusTrigger?: boolean }): void {
+    if (this.dropdownContained && this.dropdownOwner) {
+      void this.dropdownOwner.hide(options);
+      return;
+    }
     if (!this.open) return;
     this.open = false;
     if (options?.focusTrigger) (this.triggerEl ?? this.anchor)?.focus();
@@ -516,6 +558,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.items = (e.target as HTMLSlotElement)
       .assignedElements({ flatten: true })
       .filter((el): el is LyraMenuItem => el instanceof LyraMenuItem);
+    this.applyDropdownSize();
     if (typeof MutationObserver !== "undefined") {
       this.itemStateObserver = new MutationObserver(() =>
         this.onItemStateChange()
@@ -550,10 +593,15 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   private isNavigable(item: LyraMenuItem): boolean {
     return (
-      !item.disabled &&
+      !item.interactionDisabled &&
       !item.hidden &&
       item.getAttribute("aria-hidden") !== "true"
     );
+  }
+
+  private applyDropdownSize(): void {
+    if (!this.dropdownSize) return;
+    for (const item of this.items) item.size = this.dropdownSize;
   }
 
   /** Rehomes roving focus immediately when an active item becomes disabled or hidden. */
@@ -590,8 +638,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // without stopping it here it would keep bubbling straight through this component under its
     // own, undocumented name, right behind the consolidated lr-menu-select below.
     e.stopPropagation();
+    const selectEvent = this.emit<MenuItemSelectDetail>("lr-select", { item }, { cancelable: true });
     this.emit<MenuSelectDetail>("lr-menu-select", { value: item.value });
-    this.hide({ focusTrigger: true });
+    if (!selectEvent.defaultPrevented && !this.dropdownStayOpenOnSelect) {
+      this.hide({ focusTrigger: true });
+    }
   };
 
   /** Flips exactly one non-disabled item's `tabIndex` to `0` (the roving
@@ -853,20 +904,22 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }, SUBMENU_CLOSE_DELAY);
   }
 
-  /** A submenu re-fires its own selections as `lr-menu-select` from its own host, and that event
-   *  keeps bubbling out through this menu to the consumer -- one consolidated event for the whole
-   *  tree, never a second nested-only name. All this menu adds is closing behind it. */
+  /** A submenu's single `lr-select` keeps bubbling through every ancestor. Closure waits one
+   * microtask so a consumer later on that same dispatch path can veto it. */
   private onNestedSelect = (e: Event): void => {
     if (e.target === this) return;
-    this.hide();
-    // The focus return is deferred, not passed to hide(): the submenu that fired this returns
-    // focus to its own anchoring row the moment this dispatch unwinds, and that row lives inside
-    // the popup now closing. Restoring afterwards is what leaves focus on the trigger rather than
-    // on a row that is about to disappear.
-    this.scheduleAfterUpdate(
-      () => this.triggerEl?.focus(),
-      "menu-focus-return"
-    );
+    const event = e as CustomEvent<MenuItemSelectDetail>;
+    if (this.dropdownStayOpenOnSelect) event.preventDefault();
+    queueMicrotask(() => {
+      if (event.defaultPrevented) return;
+      this.hide();
+      // The child first returns focus to its anchoring row. Restoring after that leaves focus on
+      // the root trigger instead of on a row inside a popup that is about to disappear.
+      this.scheduleAfterUpdate(
+        () => this.triggerEl?.focus(),
+        "menu-focus-return"
+      );
+    });
   };
 
   private popupPart(
@@ -996,6 +1049,23 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   }
 
   override render(): TemplateResult {
+    if (this.dropdownContained) {
+      // The outer dropdown already owns the positioned popup and its role="menu". This shadow
+      // slot contributes no accessibility node of its own, so assigned menuitem hosts flatten
+      // directly beneath that one role while still using this class's interaction engine.
+      return html`
+        <slot
+          @slotchange=${this.onItemsSlotChange}
+          @keydown=${this.onListKeyDown}
+          @focusin=${this.onListFocusIn}
+          @pointerover=${this.onPopupPointerOver}
+          @pointerleave=${this.onPopupPointerLeave}
+          @lr-menu-item-select=${this.onItemSelect}
+          @lr-menu-item-state-change=${this.onItemStateChange}
+          @lr-select=${this.onNestedSelect}
+        ></slot>
+      `;
+    }
     return html`
       <div
         part="trigger"
@@ -1022,7 +1092,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
           @focusin=${this.onListFocusIn}
           @lr-menu-item-select=${this.onItemSelect}
           @lr-menu-item-state-change=${this.onItemStateChange}
-          @lr-menu-select=${this.onNestedSelect}
+          @lr-select=${this.onNestedSelect}
         >
           <slot @slotchange=${this.onItemsSlotChange}></slot>
         </div>

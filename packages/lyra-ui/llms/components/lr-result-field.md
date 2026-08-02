@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/agent-tools/result-card/result-field.js';` (registers the tag; side-effect import)
 - **Class** `LyraResultField`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/result-card/result-field.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 3 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-result-card` (same section below)

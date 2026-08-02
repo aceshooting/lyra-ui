@@ -19,6 +19,14 @@ while content is still arriving.
 
 **Properties:**
 - `content: string = ''` — the Markdown source to render
+- `tabSize: number = 4` (attribute `tab-size`) — tab-stop width used to expand tabs in leading
+  indentation before parsing. Values are finite-integer guarded and clamped to `[1, 32]` at use;
+  invalid values fall back to `4`. This is separate from `--lr-code-block-tab-size`, which controls
+  how tabs already inside rendered code are displayed.
+- `marked: Marked-compatible parser | undefined` (readonly, no attribute) — the configurable
+  `marked.Marked` parser shared by every `<lr-markdown>` instance on the page. It is `undefined`
+  while the optional peer is still resolving or unavailable; configuration installed with
+  `marked.use()` is copied into each parse.
 - `sanitize: boolean = true` — sanitize `marked`'s HTML output with DOMPurify before rendering
 - `escapeHtml: boolean = false` (attribute `escape-html`) — when `true`, overrides `marked`'s `html`
   renderer hook to emit the HTML-escaped source text instead of passing raw/sanitized markup through
@@ -69,11 +77,15 @@ while content is still arriving.
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
   lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
-- `anchorKinds: readonly ('fragment' | 'text-quote')[]` (readonly) — the anchor kinds this
+- `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']` — the anchor kinds this
   component resolves for the shared anchor-target contract.
 
-**Methods:** `getHeadingTree()` returns the document-ordered heading outline (`{ level, text, slug
-}[]`) computed on every parse, regardless of `headingAnchors`.
+**Methods:**
+- `renderMarkdown(): void` — immediately reruns the current content through the parse, sanitize,
+  and fallback pipeline. Use it to refresh existing content after changing `marked` configuration;
+  it safely no-ops while the optional parser is unresolved.
+- `getHeadingTree()` — returns the document-ordered heading outline (`{ level, text, slug }[]`)
+  computed on every parse, regardless of `headingAnchors`.
 
 **Events:**
 - `lr-link-click` (`detail: { href: string; internal: true }`) — fired, with the click prevented,
@@ -113,7 +125,9 @@ is loaded and caught independently — a consumer who installs only `marked` and
 `sanitize="false"` (so `dompurify` is never needed) is a valid, supported combination. Also `shiki`,
 the same optional peer `<lr-code-block>` uses, for `highlightCode`'s fenced-block syntax
 highlighting — independent of the `marked`/`dompurify` pair, and its absence never blocks rendering
-(fenced blocks simply stay unhighlighted).
+(fenced blocks simply stay unhighlighted). The readonly `marked` property becomes available only
+after that lazy load resolves and exposes the same configurable parser to every `<lr-markdown>`
+instance; call `renderMarkdown()` after `marked.use(...)` to refresh content that is already shown.
 
 ```html
 <lr-markdown
@@ -157,10 +171,11 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
 - `target` is not in DOMPurify's default attribute allowlist (unlike `part`/`rel`/`class`, which
   already are), so sanitization is called with `ADD_ATTR: ['target']` — without that, every rendered
   link's `target` would be silently stripped by sanitization even though the anchor itself survives.
-- a fresh `marked.Marked()` instance (with a fresh renderer) is built on every single parse rather
-  than cached, specifically so the renderer's `link()` override always closes over the *current*
-  `linkTarget` — `marked`'s `.use()` otherwise persists whatever renderer it was given for the
-  instance's lifetime, which would go stale if `linkTarget` changed after a cached instance's first use.
+- a fresh internal `marked.Marked()` instance (with a fresh renderer) is built on every parse so
+  the renderer's `link()` override always closes over the *current* `linkTarget`. The public
+  `marked` parser is still shared: its current configured defaults are copied into that fresh
+  instance on each pass, avoiding a stale closure while preserving `marked.use(...)` hooks and
+  extensions.
 - `internal-link-prefix` matching compares against the raw `href` *attribute*, not the resolved
   `.href` IDL property (always an absolute URL in the browser) — a prefix like `/docs/` matches a
   relative markdown link but would never match against the resolved property.
@@ -210,7 +225,8 @@ either.
 `highlight-code`), `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — required,
 unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced block stays
 unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading-anchors`),
-`math: boolean = false`, `anchorKinds: readonly ('fragment' | 'text-quote')[]` (readonly).
+`math: boolean = false`, `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment',
+'text-quote']`.
 
 **Methods:** `getHeadingTree()` — same contract as `<lr-markdown>`'s own.
 
@@ -521,8 +537,11 @@ control, not a labeled form field; wrap it in your own layout for that context. 
 via the shared `FormAssociated` mixin (same shape as
 `<lr-date-input>`) — `name: string = ''`, `value: string = ''`, `disabled: boolean = false`
 (reflected), `required: boolean = false` (reflected) are all inherited, along with
-`checkValidity()`/`reportValidity()`, so it participates in native `<form>` submission/validation/
-reset like any other text control.
+`defaultValue: string = ''`, `customError: string | null = null` (`custom-error`), readonly
+`effectiveDisabled: boolean`, `form: HTMLFormElement | null = null`, readonly `labels: NodeList`,
+`validity: ValidityState`, `validationMessage: string`, and `willValidate: boolean`, plus
+`getForm()`, `checkValidity()`/`reportValidity()`, and `setCustomValidity()`, so it participates in
+native `<form>` submission/validation/reset like any other text control.
 
 The inner textarea mirrors `required` through native `required`/`aria-required`. Its
 `aria-invalid` remains false until the textarea has been blurred, then follows the host's
@@ -560,11 +579,15 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
 - `wrap: 'hard' | 'soft' | 'off' = 'soft'`, `autocomplete: string = ''`, `inputMode: string = ''`
   (attribute `inputmode`), and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to
   the native textarea
-- `selectionStart`, `selectionEnd`, and `selectionDirection` — native selection getters/setters
+- `input: HTMLTextAreaElement | null` — readonly reference to the rendered native textarea
+- `selectionStart: number | null`, `selectionEnd: number | null`, and `selectionDirection:
+  'forward' | 'backward' | 'none' | null` — native selection getters/setters
 
 **Methods (own):** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and
-`setRangeText()` forward to the textarea; `setRangeText()` synchronizes reactive/form value and
-auto-sizing. `checkValidity()`/`reportValidity()` remain inherited.
+`setRangeText()` forward to the textarea; `click()` focuses it when the composer is not effectively
+disabled. `setRangeText()` synchronizes reactive/form value and auto-sizing.
+`checkValidity()`/`reportValidity()` remain inherited; `resetValidity()` clears consumer custom
+validity and recomputes the current intrinsic constraints.
 
 **Events:**
 - `lr-input` (`detail: { value }`) — fired on every user-driven edit of the textarea, not a
@@ -578,6 +601,7 @@ auto-sizing. `checkValidity()`/`reportValidity()` remain inherited.
   composed unlike the native event
 - `focus` (no detail) — re-dispatched from the internal `<textarea>`'s own `focus`, for the same
   reason as `blur`
+- `lr-invalid` (no detail) — one bubbling/composed alias when native validity fails
 
 **Slots:** `leading` (content before the textarea, e.g. an attach-file trigger button), `chips` (an
 attachment tray rendered above the input row), `trailing` (overrides the built-in send/stop button
@@ -812,6 +836,9 @@ First-party invention (no Web Awesome equivalent).
   (Safari/WebKit-specific); empty omits the attribute. Named `autoCorrect` to avoid
   `HTMLElement.autocorrect`'s incompatible DOM typing.
 
+**Methods:** `click()` activates the selectable row like its internal button; while an inline rename
+is active, it forwards to the title input instead and does not re-select the conversation.
+
 **Events:** `lr-select` (no detail payload — identify the row via the platform `id` attribute on the
 event's `target`/`currentTarget`, the same convention `<lr-attachment-chip>` uses; fires on a click on
 `[part="option"]` outside the rename button/`actions` slot, or Enter/Space while it's focused, only
@@ -974,8 +1001,6 @@ emitting `lr-change`.
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`), and
   `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the free-text input;
   they have no effect in closed-dropdown mode
-- `autocomplete: string = 'off'`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
-  (`enterkeyhint`) — forwarded to the free-text mode's native `<input>`.
 - `name: string = ''` (reflected)
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
@@ -991,6 +1016,14 @@ emitting `lr-change`.
 - `value: string` — getter/setter (hand-rolled, not the `FormAssociated` mixin); the current model id,
   `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously. A named,
   untouched model-select contributes `''` to `FormData` instead of omitting its key.
+- `defaultValue: string = ''` (attribute `value`, reflected) — the current reset default. The live
+  `value` is non-reflecting and dirty, so changing the default/attribute cannot overwrite it until
+  `form.reset()` restores the current default.
+- `customError: string | null = null` (attribute `custom-error`) — reflected consumer validation
+  message.
+- `form: HTMLFormElement | null = null` — browser-resolved owner (and an assignable external owner);
+  readonly `labels: NodeList`, `validity: ValidityState`, `validationMessage: string`,
+  `willValidate: boolean`, and `effectiveDisabled: boolean` expose the native FACE state.
 
 **Methods:** `click()` (override) — forwards to whichever internal control the active mode renders,
 since `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
@@ -1003,7 +1036,10 @@ combobox `<input>`: unlike a genuine pointer click, `HTMLElement.click()` never 
 behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` handler on the input
 itself.
 
-`checkValidity()` / `reportValidity()` behave as on any form-associated control.
+`focus(options?)` and `blur()` forward to the active semantic control in either rendering mode.
+
+`getForm()` returns the browser-resolved owning form. `checkValidity()` / `reportValidity()` behave
+as on any form-associated control.
 `setCustomValidity(message: string)` is the standard channel for a server-side rejection ("that
 model was retired by the provider") that no client-side constraint can express: a non-empty
 `message` raises `customError` and becomes `validationMessage`, so the control fails
@@ -1044,6 +1080,7 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
   shadow-internal original.
 - `lr-blur` and `lr-focus` (no detail) — prefixed compatibility aliases, each fired immediately
   after its unprefixed counterpart.
+- `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
 
 **Slots:** `hint` (custom hint content), `error` (custom error content).
 
@@ -1345,7 +1382,7 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its lines).
-- `anchorKinds: LyraAnchor['kind'][]` — readonly `['line-range']`, for the shared anchor-target
+- `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract.
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — a map of language id to an
   already-imported shiki grammar module (e.g. `{ bash: bashGrammar }` from a module-scope
@@ -1503,7 +1540,7 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   code. Only `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its lines).
-- `anchorKinds: LyraAnchor['kind'][]` — readonly `['line-range']`, for the shared anchor-target
+- `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract, identical to `<lr-code-block>`.
 - `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
@@ -1757,7 +1794,7 @@ free-text comment field, `detailFor: 'down' | 'both' = 'down'` (attribute `detai
 rating opens the detail panel, and `disabled: boolean = false` (reflected) for a read-only display.
 
 **Methods:** `focus()` focuses the thumb matching the current `value` (the up thumb when `null`);
-`blur()` blurs both thumbs.
+`blur()` blurs both thumbs; `click()` activates that same thumb when enabled.
 
 **Events:** `lr-change` — `detail: { value: 'up' | 'down' | null }`, fired when a thumb's rating
 changes or clears. `lr-submit` — `detail: { value: 'up' | 'down'; reasonIds: string[]; comment:
@@ -2245,27 +2282,45 @@ created via `document.createElement()` with every prop assigned as a plain JS pr
 internal state (an open `<details>`, focus, scroll position) survives a streamed `tree` update.
 Built-in `row`/`col`/`text` structural nodes render through ordinary nested templates instead. Not a
 form runtime (no input/select/form types in the default registry), no expression language or
-data-binding, no remote widget/schema fetching, and it never renders arbitrary HTML or navigates (no
-`href` props are allowlisted anywhere).
+implicit state mutation, no remote widget/schema fetching, and it never renders arbitrary HTML or
+navigates (no `href` props are allowlisted anywhere). Controlled state binding is deliberately
+narrow: a versioned document may bind an allowlisted primitive prop to a JSON Pointer, and the host
+must apply every requested change itself.
 
-**Exported types:** `WidgetNode { type: string; id?: string; props?: Record<string, unknown>;
-children?: (WidgetNode | string)[]; slot?: string; actionId?: string; payload?: unknown }` — `id` is
-a stable reconciliation key (falling back to a structural path), `slot` is honored only when the
-parent type allowlists it, `actionId` arms the type's declared action trigger, and `payload` is
-echoed back in `lr-widget-action`.
+**Exported types:**
+- `WidgetNode { type: string; id?: string; props?: Record<string, unknown>; children?: (WidgetNode |
+  string)[]; slot?: string; actionId?: string; payload?: unknown }` — `id` is a stable
+  reconciliation key (falling back to a structural path), `slot` is honored only when the parent
+  type allowlists it, `actionId` arms the type's declared action trigger, and `payload` is echoed
+  back in `lr-widget-action`.
+- `WidgetBinding { $bind: string; fallback?: string | number | boolean | null }` — an explicit JSON
+  Pointer lookup used as an allowlisted prop value. `fallback` is used only when the pointer cannot
+  resolve.
+- `LyraWidgetDocument { version: '1'; root: WidgetNode; state?: unknown }` — versioned root plus its
+  optional controlled binding state.
 
-**Properties:** `tree: WidgetNode | null = null` (property only) — the declarative widget tree to
-render; `null` renders an empty base. `registry?: WidgetTypeRegistry` (attribute: false) — a
-per-instance override of the module-level default registry.
+**Properties:**
+- `tree: WidgetNode | null = null` (property only) — the unversioned declarative widget tree;
+  `null` renders an empty base.
+- `document: LyraWidgetDocument | null = null` (property only) — versioned document form; when set,
+  its `root` takes precedence over `tree`. A version other than `'1'` fails closed with
+  `lr-render-error`.
+- `state?: unknown` (property only) — controlled binding-state override; when unset,
+  `document.state` is used.
+- `registry?: WidgetTypeRegistry` (property only) — per-instance override of the module-level
+  default registry.
 
 **Registry module (`widget-renderer/registry.js`):** `registerWidgetType(type, def)` registers (or
 overwrites) a type in the default registry; `def: WidgetTypeDefinition { tag?: string; props?:
 Record<string, 'string' | 'number' | 'boolean'>; forcedProps?: Record<string, unknown>; slots?:
-string[]; action?: { event: string } }` — `tag` is resolved prefix-aware, `props` is a prop allowlist
-(a prop absent here, or whose runtime type doesn't match, is silently skipped — never assigned),
+string[]; action?: { event: string }; bindings?: Record<string, { event: string }> }` — `tag` is
+resolved prefix-aware, `props` is a prop allowlist (a prop absent here, or whose runtime type doesn't
+match, is silently skipped — never assigned),
 `forcedProps` always apply and are never overridable by `WidgetNode.props`, `slots` allowlists child
 `slot` names (a disallowed one renders unslotted rather than being dropped), and `action.event` is
 the native/custom DOM event that arms `lr-widget-action` when a node also sets `actionId`.
+`bindings?: Record<string, { event: string }>` maps an allowlisted prop to the control event that
+requests its controlled update.
 `getDefaultWidgetTypeRegistry()` returns the module-level registry `registerWidgetType()` writes to.
 
 **Default registry** (populated by the side-effect entry's `registerDefaultWidgetTypes()`): `text`
@@ -2281,7 +2336,9 @@ forced `{ sanitize: true }`), `image` → `lr-media-card` (`src`, `alt`, `filena
 **Events:** `lr-widget-action` — `detail: { actionId, payload }`, the single bubbling action
 channel. `lr-render-error` — `detail: { error }`, the root value was structurally unusable
 (non-object, or the depth/size caps made it empty). `lr-widget-state-change` — `detail: { path,
-value, nodeId, prop }`, emitted when a state-bound mapped control requests a controlled update.
+value, nodeId, prop }`, emitted when a state-bound mapped control requests a controlled update. The
+renderer never mutates `state` or `document.state`; assign a new `state` value to complete the
+controlled update.
 
 **CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
 structural nodes only — a mapped lyra component exposes its own parts instead).
@@ -2291,12 +2348,47 @@ instance. Reconciliation is keyed by `id ?? structural path`, so a streamed re-s
 place and user state (an open `<details>`, focus, scroll) survives.
 
 ```ts
+import '@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.js';
+import '@aceshooting/lyra-ui/components/forms/input/input.js';
+import { registerWidgetType } from '@aceshooting/lyra-ui/components/conversation/widget-renderer/registry.js';
+import { tag } from '@aceshooting/lyra-ui/utilities/prefix.js';
+
 registerWidgetType('sparkline', { tag: tag('sparkline'), props: { data: 'string' } });
 ```
 ```html
 <lr-widget-renderer .tree=${msg.widget}
   @lr-widget-action=${(e) => sendToAgent(e.detail.actionId, e.detail.payload)}
 ></lr-widget-renderer>
+```
+
+For a controlled binding, use a per-instance registry and apply the event's requested value back to
+`state` (this one-field example binds `/name`):
+
+```html
+<lr-widget-renderer id="bound-widget"></lr-widget-renderer>
+```
+
+```js
+const renderer = document.querySelector('#bound-widget');
+renderer.registry = new Map([
+  ['bound-input', {
+    tag: tag('input'),
+    props: { label: 'string', value: 'string' },
+    bindings: { value: { event: 'lr-input' } },
+  }],
+]);
+renderer.document = {
+  version: '1',
+  state: { name: 'Ada' },
+  root: {
+    type: 'bound-input',
+    id: 'name',
+    props: { label: 'Name', value: { $bind: '/name', fallback: '' } },
+  },
+};
+renderer.addEventListener('lr-widget-state-change', (event) => {
+  renderer.state = { name: event.detail.value };
+});
 ```
 
 **Optional peer deps:** none new — the default-registry entry directly imports the eight mapped
@@ -2333,9 +2425,15 @@ string = ''`, `autoCorrect: string = ''` (attribute `autocorrect`), `autocomplet
 `enterkeyhint`), and `open: boolean = false` (reflected) — all mirror `lr-model-select`'s
 identically-named properties.
 
-**Form association:** hand-rolled via `attachInternals()`, mirroring `lr-model-select`: `value`
-getter/setter (the current voice id, `''` when nothing is selected), `name` (reflected), `disabled`
-(reflected), `required` (reflected — enforced via `internals.setValidity()`), plus
+**Form association:** hand-rolled via `attachInternals()`, mirroring `lr-model-select`: live,
+non-reflecting `value: string = ''` (the current voice id), reflected
+`defaultValue: string = ''` (attribute `value`, the current reset default), reflected
+`customError: string | null = null` (`custom-error`), `name`, `disabled`
+(reflected), and `required` (reflected — enforced via `internals.setValidity()`). Their exact
+signatures are `name: string = ''`, `disabled: boolean = false`, and `required: boolean = false`.
+It also exposes `form: HTMLFormElement | null = null`, readonly `labels: NodeList`, `validity:
+ValidityState`, `validationMessage: string`, `willValidate: boolean`, and `effectiveDisabled:
+boolean`, plus
 `checkValidity()`/`reportValidity()` and `setCustomValidity(message: string)`. The last is the
 standard channel for a server-side rejection ("that voice is not enabled for your account") no
 client-side constraint can express: a non-empty `message` raises `customError` and becomes
@@ -2343,6 +2441,7 @@ client-side constraint can express: a non-empty `message` raises `customError` a
 `:state(invalid)`; `''` clears only that consumer layer, leaving a `required` picker with no value
 still `valueMissing`. The custom error survives every intrinsic recomputation in between and a
 `form.reset()`, matching a native control, and the message is used verbatim, never localized.
+`getForm()` returns the browser-resolved owning form.
 
 **Methods:** `click()` (override) — same forwarding contract as `lr-model-select`'s own `click()`
 override (see that section for the full rationale): closed-dropdown mode forwards a real `.click()`
@@ -2351,11 +2450,13 @@ to the trigger `<button>`, whose own `@click` handler opens it; free-text mode i
 `focus` the way a real click's `mousedown` default action does, and this mode's open behavior is
 wired to the input's native `focus` event, not a `click` handler on the input itself. Mirrors
 `<lr-button>`'s identical host `click()` forwarding.
+`focus(options?)` and `blur()` forward to whichever internal control the active mode renders.
 
 **Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` and re-dispatched
-`focus`/`blur` (picker-family contract, same as `lr-model-select`).
+`focus`/`blur` (picker-family contract, same as `lr-model-select`), and one bubbling/composed
+`lr-invalid` alias when native validity fails.
 
 **Slots:** `hint`, `error`.
 

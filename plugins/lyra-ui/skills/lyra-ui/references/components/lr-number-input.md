@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/input/number-input.js';` (registers the tag; side-effect import)
 - **Class** `LyraNumberInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/input/number-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -14,20 +16,22 @@
 ## `lr-number-input`
 
 A numeric field with the complete `lr-input` form, validation and native-editing contract, plus its
-own increment/decrement stepper pair. A subclass whose constructor and `connectedCallback()` both
-set `type = 'number'`; apart from the two properties below, everything is `lr-input`'s surface,
-unchanged.
+own increment/decrement stepper pair. Its constructor and `connectedCallback()` both force
+`type = 'number'`; all inherited `lr-input` form and editing APIs remain available.
+
+**Inherits:** all public surface from `lr-input`.
 
 **Properties:** `size` (`2xs`…`xl`), `appearance`, `pill`, `autofocus`, `placeholder`, `readonly`,
 `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
 `autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), `enterKeyHint` (`enterkeyhint`), and
 `min`/`max`/`step` (the native numeric constraint validation), all inherited from `lr-input` with
-identical meaning and identical defaults. `clearable` (and its `with-clear` spelling),
+identical meaning. This component changes the mapped defaults to `appearance='outlined'`,
+`inputMode='numeric'`, and `step=1`. `clearable` (and its `with-clear` spelling),
 `passwordVisible` (`password-visible`), and `minlength`/`maxlength`/`pattern` are inherited but
 inert — see gotchas.
 
-Two properties are this component's own:
+Stepper switches:
 
 - `steppers: boolean = true` (attribute `steppers`, reflected) — renders the increment/decrement
   pair inside the control row. It **defaults to `true`**, so it needs a custom converter to switch
@@ -40,6 +44,9 @@ Two properties are this component's own:
   It is `true`-defaulting too, so `without-spin-buttons="false"` / `.withoutSpinButtons=${false}`
   brings the native pair back. The two properties are independent: `steppers="false"
   without-spin-buttons="false"` returns the field to a plain native `<input type="number">`.
+- `withoutSteppers: boolean = false` (attribute `without-steppers`, not reflected) — the positive
+  upstream spelling for hiding the custom pair. It does not invert `steppers`: either
+  `without-steppers` or `steppers="false"` hides the same controls, and both unset leaves them on.
 
 Each stepper drives the inherited `stepUp()`/`stepDown()`, so `min`/`max` clamping and decimal
 handling stay the platform's. Unlike those silent methods, a stepper **click** is a user edit and
@@ -56,12 +63,18 @@ field for no new capability. Each carries a localized accessible name and the sh
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
-input), and `lr-clear` (inherited, never fired here).
+input) each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail), and `lr-clear`
+(inherited, never fired here). The inherited `lr-invalid` (no detail) fires when a validity check
+finds the input invalid. The internal native `beforeinput` is cancelable, bubbles, and composes;
+calling `preventDefault()` on the host vetoes the edit before `value` changes.
 
-**Slots:** `label`, `hint`, `error`, `start`, `end`.
+**Slots:** `label`, `hint`, `error`, `start`, `end`, `decrement-icon`, and `increment-icon`.
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `stepper-down` and
-`stepper-up` (the two stepper buttons, rendered only while `steppers` is set; they sit side by side
+**CSS parts:** `form-control`, `form-control-label`, `base` (compatibility name for the
+control row; use `number-input`), `number-input` (the numeric control row; it is the same node as
+`base` and the inherited `input-wrapper` part), `input-wrapper`, `input`, shared `stepper`, mapped
+`stepper-decrement` / `stepper-increment`, and compatibility `stepper-down` / `stepper-up` (the two
+stepper buttons, rendered only while both switches permit them; they sit side by side
 between the built-in clear/password actions and the `end` adornment, and each one rotates the shared
 chevron glyph — `[part="stepper-up"] > svg` a quarter turn one way, `[part="stepper-down"] > svg` the
 other — so a consumer replacing the button chrome keeps the same up/down orientation), `start`, `end`,

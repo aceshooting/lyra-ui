@@ -4,6 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
+import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { loadQrCodeCached, type QrCodeApi } from './qr-code-loader.js';
 import { styles } from './qr-code.styles.js';
@@ -21,6 +22,8 @@ const MAX_SIZE = 2048;
 const DEFAULT_RADIUS = 0;
 const MIN_RADIUS = 0;
 const MAX_RADIUS = 0.5;
+const DEFAULT_IMAGE_COVERAGE = 0.5;
+const DEFAULT_IMAGE_PADDING = 0;
 const DEFAULT_ERROR_CORRECTION: LyraQrCodeErrorCorrection = 'H';
 const ERROR_CORRECTION_LEVELS: ReadonlySet<string> = new Set(['L', 'M', 'Q', 'H']);
 /**
@@ -47,7 +50,7 @@ interface QrModules {
 type QrCodeState =
   | { kind: 'empty' }
   | { kind: 'loading' }
-  | { kind: 'ready'; modules: QrModules }
+  | { kind: 'ready'; modules: QrModules; image?: HTMLImageElement }
   | { kind: 'error'; message: string };
 
 function normalizeErrorCorrection(value: string): LyraQrCodeErrorCorrection {
@@ -67,7 +70,7 @@ function warnInvalidColor(value: string): void {
   if (warnedInvalidColors.has(value)) return;
   warnedInvalidColors.add(value);
   console.warn(
-    `<lr-qr-code> could not parse "${value}" (set via --lr-qr-code-fill/-background) as a CSS ` +
+    `<lr-qr-code> could not parse "${value}" as a CSS ` +
       'color; falling back to the default.',
   );
 }
@@ -126,8 +129,8 @@ function resolveQrColor(value: string, fallbackHex: string): string {
  * theme should pin `--lr-qr-code-fill: #000` / `--lr-qr-code-background:
  * #fff` explicitly at the point of use.
  *
- * Deliberately out of scope for this component, not oversights: logo/image
- * embedding; a finder-pattern-corner accent color; auto-shrinking to fit a
+ * Deliberately out of scope for this component, not oversights: a finder-pattern-corner accent
+ * color; auto-shrinking to fit a
  * narrow container (this component's `size` is a direct request for a
  * specific rendered pixel density, like `<img width height>` -- the consumer
  * picks a size that fits their layout, this component never second-guesses
@@ -141,13 +144,17 @@ function resolveQrColor(value: string, fallbackHex: string): string {
  * grid.
  *
  * @customElement lr-qr-code
- * @csspart base - The outer wrapper, sized to `size`×`size` CSS px in every state.
+ * @csspart base - Compatibility name for the outer wrapper; use `qr-code`.
+ * @csspart qr-code - The outer wrapper, sized to `size`×`size` CSS px in every state. It is the
+ *   same node as `base`.
  * @csspart canvas - The rendered QR code canvas.
  * @csspart empty - Shown when `value` is empty.
  * @csspart loading - Shown while the optional `qrcode` peer is loading, the first time it's needed.
  * @csspart error - Shown when the peer is missing, or `value` failed to encode.
  * @cssprop [--lr-qr-code-fill=var(--lr-color-text)] - Dark/foreground module color.
  * @cssprop [--lr-qr-code-background=var(--lr-color-surface)] - Light/background module color, including the quiet zone.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraQrCode extends LyraElement {
   static override styles = [LyraElement.styles, styles];
@@ -159,6 +166,26 @@ export class LyraQrCode extends LyraElement {
    *  -- see the class doc
    *  comment for the full precedence order. Caller-supplied data, not routed through `localize()`. */
   @property() label = '';
+
+  /** Mapped foreground module color. A non-empty value takes precedence over
+   *  `--lr-qr-code-fill`. */
+  @property() fill = '';
+
+  /** Mapped canvas background color. A non-empty value takes precedence over
+   *  `--lr-qr-code-background`. */
+  @property() background = '';
+
+  /** Safe media URL for an optional centered logo/image. */
+  @property() image: string | null = null;
+
+  /** Optional CSS color painted behind the centered image and its padding. */
+  @property({ attribute: 'image-background' }) imageBackground: string | null = null;
+
+  /** Fraction of the QR canvas side available to the embedded image, clamped to `[0, 1]`. */
+  @property({ type: Number, attribute: 'image-coverage' }) imageCoverage: number | null = null;
+
+  /** CSS-pixel padding inside the embedded image's coverage box, clamped to fit. */
+  @property({ type: Number, attribute: 'image-padding' }) imagePadding: number | null = null;
 
   private _size = DEFAULT_SIZE;
 
@@ -247,10 +274,16 @@ export class LyraQrCode extends LyraElement {
     // the post-await `isConnected` guard and left the visible state at `loading`. Reconnects do
     // not inherently re-run updated(), so explicitly restart that discarded work. A still-pending
     // old attempt is harmless: the new generation token supersedes it.
-    if (this.hasUpdated && this.value && this.loadState.kind === 'loading') void this.generate();
+    if (
+      this.hasUpdated &&
+      this.value &&
+      (this.loadState.kind === 'loading' ||
+        (this.image && this.loadState.kind === 'ready' && !this.loadState.image))
+    ) void this.generate();
   }
 
   override disconnectedCallback(): void {
+    this.generation++;
     super.disconnectedCallback();
     this.dprQuery?.removeEventListener('change', this.onDprChange);
     this.intersectionObserver?.disconnect();
@@ -273,7 +306,7 @@ export class LyraQrCode extends LyraElement {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('value') || changed.has('errorCorrection') || !this.hasUpdated) {
+    if (changed.has('value') || changed.has('errorCorrection') || changed.has('image') || !this.hasUpdated) {
       this.scheduleAfterUpdate(() => {
         void this.generate();
       });
@@ -281,7 +314,14 @@ export class LyraQrCode extends LyraElement {
     }
     if (
       this.loadState.kind === 'ready' &&
-      (changed.has('size') || changed.has('radius') || changed.has('loadState'))
+      (changed.has('size') ||
+        changed.has('radius') ||
+        changed.has('fill') ||
+        changed.has('background') ||
+        changed.has('imageBackground') ||
+        changed.has('imageCoverage') ||
+        changed.has('imagePadding') ||
+        changed.has('loadState'))
     ) {
       this.draw();
     }
@@ -290,7 +330,7 @@ export class LyraQrCode extends LyraElement {
   /** Re-encodes `value` via the optional `qrcode` peer's `create()` and caches the resulting
    *  module matrix. Redraw-only geometry changes (`size`/`radius`) and theme/DPR refreshes never
    *  call this -- see the class doc comment and `updated()`'s dispatch. */
-  private async generate(): Promise<void> {
+  async generate(): Promise<void> {
     const generation = ++this.generation;
     if (!this.value) {
       this.loadState = { kind: 'empty' };
@@ -304,13 +344,32 @@ export class LyraQrCode extends LyraElement {
       return;
     }
     try {
-      const result = api.create(this.value, { errorCorrectionLevel: this.errorCorrection }) as { modules: QrModules };
+      const imageSource = safeMediaSrc(this.image);
+      const result = api.create(this.value, {
+        errorCorrectionLevel: imageSource ? 'H' : this.errorCorrection,
+      }) as { modules: QrModules };
       if (generation !== this.generation) return;
       this.loadState = { kind: 'ready', modules: result.modules };
+      if (imageSource) {
+        const image = await this.loadEmbeddedImage(imageSource);
+        if (generation !== this.generation || !this.isConnected || !image) return;
+        this.loadState = { kind: 'ready', modules: result.modules, image };
+      }
     } catch {
       if (generation !== this.generation) return;
       this.loadState = { kind: 'error', message: this.localize('qrCodeGenerationFailed') };
     }
+  }
+
+  private async loadEmbeddedImage(src: string): Promise<HTMLImageElement | undefined> {
+    const image = new Image();
+    image.decoding = 'async';
+    const loaded = await new Promise<boolean>((resolve) => {
+      image.addEventListener('load', () => resolve(true), { once: true });
+      image.addEventListener('error', () => resolve(false), { once: true });
+      image.src = src;
+    });
+    return loaded && image.naturalWidth > 0 && image.naturalHeight > 0 ? image : undefined;
   }
 
   /** Redraws canvas content after an upstream token, theme, or DPR change, reusing the already-
@@ -322,12 +381,18 @@ export class LyraQrCode extends LyraElement {
   }
 
   private fillColor(): string {
-    const raw = getComputedStyle(this).getPropertyValue('--lr-qr-code-fill').trim() || FALLBACK_FILL;
+    const raw =
+      this.fill.trim() ||
+      getComputedStyle(this).getPropertyValue('--lr-qr-code-fill').trim() ||
+      FALLBACK_FILL;
     return resolveQrColor(raw, FALLBACK_FILL);
   }
 
   private backgroundColor(): string {
-    const raw = getComputedStyle(this).getPropertyValue('--lr-qr-code-background').trim() || FALLBACK_BACKGROUND;
+    const raw =
+      this.background.trim() ||
+      getComputedStyle(this).getPropertyValue('--lr-qr-code-background').trim() ||
+      FALLBACK_BACKGROUND;
     return resolveQrColor(raw, FALLBACK_BACKGROUND);
   }
 
@@ -381,6 +446,39 @@ export class LyraQrCode extends LyraElement {
         }
       }
     }
+    if (this.loadState.image) this.drawEmbeddedImage(ctx, this.loadState.image, size);
+  }
+
+  private drawEmbeddedImage(
+    ctx: CanvasRenderingContext2D,
+    image: HTMLImageElement,
+    size: number,
+  ): void {
+    const coverage = finiteRange(
+      this.imageCoverage ?? DEFAULT_IMAGE_COVERAGE,
+      DEFAULT_IMAGE_COVERAGE,
+      0,
+      1,
+    );
+    const boxSize = size * coverage;
+    if (boxSize <= 0) return;
+    const padding = finiteRange(
+      this.imagePadding ?? DEFAULT_IMAGE_PADDING,
+      DEFAULT_IMAGE_PADDING,
+      0,
+      boxSize / 2,
+    );
+    const contentSize = boxSize - padding * 2;
+    const boxStart = (size - boxSize) / 2;
+    if (this.imageBackground?.trim()) {
+      ctx.fillStyle = resolveQrColor(this.imageBackground.trim(), this.backgroundColor());
+      ctx.fillRect(boxStart, boxStart, boxSize, boxSize);
+    }
+    if (contentSize <= 0) return;
+    const scale = Math.min(contentSize / image.naturalWidth, contentSize / image.naturalHeight);
+    const width = image.naturalWidth * scale;
+    const height = image.naturalHeight * scale;
+    ctx.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
   }
 
   private accessibleName(): string {
@@ -401,7 +499,7 @@ export class LyraQrCode extends LyraElement {
   }
 
   override render(): TemplateResult {
-    return html`<div part="base" style=${styleMap({ inlineSize: `${this.size}px`, blockSize: `${this.size}px` })}>
+    return html`<div part="base qr-code" style=${styleMap({ inlineSize: `${this.size}px`, blockSize: `${this.size}px` })}>
       ${this.renderBody()}
     </div>`;
   }

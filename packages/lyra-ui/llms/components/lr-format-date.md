@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/format/format-date.js';` (registers the tag; side-effect import)
 - **Class** `LyraFormatDate`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/format-date.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** nothing component-specific — inherits only the shared surface
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -17,18 +19,23 @@
 resolution and `Intl`-instance caching are as described under `lr-format-number` above.
 
 **Properties:**
-- `date: string | number | Date = ''` — a `Date`, or anything the `Date` constructor accepts
-- `year: Intl.DateTimeFormatOptions['year'] = 'numeric'`, `month: … = 'long'`, `day: … = 'numeric'`
-  — the granular option set
+
+- `date: string | number | Date = new Date()` — unset means the construction-time current instant.
+  **Changed in 8.0.0:** the former empty-string default rendered fallback content
+- optional granular fields: `weekday`, `era`, `year`, `month`, `day`, `hour`, `minute`, `second`,
+  and `timeZoneName` (attribute `time-zone-name`), each restricted to its corresponding published
+  `Intl.DateTimeFormat` literal set
 - `dateStyle?: 'full'|'long'|'medium'|'short'` (attribute `date-style`), `timeStyle?: …`
   (attribute `time-style`) — the preset-style set
 - `timeZone?: string` (attribute `time-zone`) — an IANA zone name, forwarded through **both** option
   sets
+- `hourFormat: 'auto' | '12' | '24' = 'auto'` (`hour-format`) — maps to `hour12` when explicit
 
 Setting either `dateStyle` or `timeStyle` switches the component to the preset-style set and the
-granular `year`/`month`/`day` are then ignored entirely (`Intl` throws when the two are mixed); leave
-both unset to use the granular set. An unparseable `date` renders the default slot. An invalid
+granular fields are then ignored entirely (`Intl` throws when the two are mixed); leave both unset
+to use the granular set. An unparseable `date` renders the default slot. An invalid
 `timeZone` throws a `RangeError` inside `Intl`, which is caught and retried once without the zone —
-so the output falls back to the browser's local zone instead of failing to render.
+so the output falls back to the browser's local zone instead of failing to render. Valid output is
+wrapped in semantic `<time datetime="…">`.
 
 **Slots:** default — fallback content for an invalid/unparseable `date`.

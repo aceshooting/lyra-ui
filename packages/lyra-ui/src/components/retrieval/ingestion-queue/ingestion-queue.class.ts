@@ -166,6 +166,8 @@ const DEFAULT_VIRTUALIZE_THRESHOLD = 100;
  *   `<lr-virtual-list>`'s own viewport keeps its independent, fixed default height (retheme it
  *   directly via `<lr-ingestion-queue>`'s own `lr-virtual-list { --lr-virtual-list-height: ... }`
  *   if needed).
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

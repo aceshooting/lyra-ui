@@ -9,14 +9,18 @@
   `defineElement(name, ctor)` (`src/internal/prefix.ts`, idempotent — safe to import twice). The
   prefix is a single constant (`LYRA_PREFIX`) so a rename stays cheap.
 - **Design tokens only.** Every color/space/font/radius value in component styles references a
-  `--lr-*` custom property already defined in `src/internal/tokens.styles.ts`, which itself falls
-  back through `var(--lr-theme-*-token, <hardcoded-default>)` — e.g.
-  `--lr-color-brand: var(--lr-theme-color-brand-fill-loud, #0969da);`. That lets a consumer
-  retheme the whole library by overriding one `--lr-theme-*` property per token at any ancestor,
-  while every component still renders sensibly with zero configuration. No raw hex/px design
-  values, except where an algorithm genuinely requires a literal (e.g. gauge sweep-angle math) —
-  and expose even that as a retheme-able `--lr-*` property when it's data-driven (e.g. a
-  color-ramp endpoint).
+  centralized `--lr-*` custom property. Themeable base tokens read a `--lr-theme-*` application
+  input and provide a built-in fallback; aliases, computed tokens, the colour ramp, environment
+  values, and fixed contract constants may instead resolve through another internal token or a
+  value that is not a theme decision. The brand accent illustrates the chain:
+  `--lr-color-brand` aliases `--lr-color-brand-fill-loud`, whose themeable semantic token reads
+  `--lr-theme-color-brand-fill-loud` and falls back to the mode-specific ramp (`#035ec6` in light
+  mode, `#5b9eff` in dark mode today). Consumers retheme through the supported `--lr-theme-*`
+  inputs at any ancestor; consult the generated `packages/lyra-ui/llms/tokens.md` catalog because
+  aliases, derived tokens, and fixed values have no direct theme hook. No raw hex/px design values
+  in component styles, except where an algorithm genuinely requires a literal (e.g. gauge
+  sweep-angle math) — and expose even that as a retheme-able `--lr-*` property when it's
+  data-driven (e.g. a color-ramp endpoint).
 - **Every `true`-defaulting boolean `@property` needs a custom converter.** Lit's default
   `type: Boolean` converter toggles on attribute *presence*, so plain `prop="false"` markup is
   indistinguishable from never setting the attribute — the property silently stays `true` for
@@ -132,19 +136,24 @@
   uses.
 - **Granular, tree-shakeable exports.** Each component's `.ts` file is a side-effect-free class
   export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the barrel —
-  side-effect imports for every component (registers all tags) plus named re-exports of
-  classes/types/helpers. `package.json#exports` maps `.`, `./components/*`, `./utilities/*` — NOT
+  an inventory-generated side-effect import block registers every root-included tag, followed by
+  curated named re-exports of classes/types/helpers. Never put a named export inside the generated
+  block or generate the named-export region: that surface is reviewed and semver-covered by hand.
+  `package.json#exports` maps `.`, `./components/*`, `./utilities/*` — NOT
   `./internal/*`, which 8.0.0 removed on purpose: only the curated `src/utilities/` re-exports are
   semver-covered, and an `internal/` specifier now fails to resolve outright
   (`ERR_PACKAGE_PATH_NOT_EXPORTED`) rather than degrading, in a consumer's code and in this repo's
   own check fixtures alike. A helper that needs to be reachable gets a `src/utilities/` re-export,
   not just its `src/internal/` home.
-  `sideEffects` is an explicit enumerated array, not globs — every registration module listed
-  individually in both compiled (`./dist/components/<name>/<name>.js`) and source
-  (`./src/components/<name>/<name>.ts`) forms, alongside the barrel (`./dist/lyra.js` +
-  `./src/lyra.ts`) and `./dist/theme.css`. A new component therefore needs BOTH entries added by
-  hand; `scripts/check-side-effects.mjs` (in contract-policy) fails when either form is missing
-  or duplicated. The `.ts` entries matter because Storybook's production build
+  `sideEffects` is an explicit enumerated array, not globs — every registration module is listed
+  individually in both compiled (`./dist/components/<family>/<name>/<name>.js`) and source
+  (`./src/components/<family>/<name>/<name>.ts`) forms, alongside the barrel (`./dist/lyra.js` +
+  `./src/lyra.ts`) and CSS/locale/companion registration side effects. Do not edit that array or
+  the root-registration allowlist by hand. After adding, moving, or removing a component, refresh
+  the inventory and run `pnpm registrations`; this regenerates the root import block, allowlist,
+  and both side-effect forms together. `check:registrations`, `check-side-effects`, their
+  deterministic self-tests, and CI's regenerate-and-diff step fail on stale, duplicate, or missing
+  entries. The `.ts` entries matter because Storybook's production build
   (`pnpm docs:build`, i.e. the live docs site) imports `src/*.ts` directly rather than `dist/`;
   without them Rollup treats those source files as side-effect-free and tree-shakes away every
   side-effect-only component import, so no `<lr-*>` element ever registers on the deployed site.

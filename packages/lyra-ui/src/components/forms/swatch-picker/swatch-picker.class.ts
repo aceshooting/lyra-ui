@@ -76,6 +76,8 @@ export interface LyraSwatchPickerEventMap {
  * @cssprop [--lr-swatch-picker-fill-size=var(--lr-size-1-5rem)] - Visible fill/icon diameter
  *   for the swatch, swapped per tier.
  * @cssprop [--lr-swatch-picker-gap=var(--lr-space-xs)] - Gap between swatches.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   static override styles = [LyraElement.styles, styles];

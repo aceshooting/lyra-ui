@@ -19,6 +19,8 @@ import { styles } from './result-field.styles.js';
  * @csspart label - The label text (including its trailing colon).
  * @csspart value - The wrapper around the value — either the slotted
  * content or the plain `value` prop text.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraResultField extends LyraElement {
   static override styles = [LyraElement.styles, styles];

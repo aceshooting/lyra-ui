@@ -3,7 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { variants } from '../../../internal/variants.styles.js';
-import { LyraBadge } from './badge.class.js';
+import { LyraBadge, type BadgeVariant } from './badge.class.js';
 import { styles as badgeStyles } from './badge.styles.js';
 import { styles as tagStyles } from './tag.styles.js';
 
@@ -26,23 +26,53 @@ export interface LyraTagEventMap {
  * @slot end - Content placed after the label, typically an icon.
  * @event lr-remove - The remove button was activated (click, or Enter/Space while focused —
  * native `<button>` behavior). Cancelable: `preventDefault()` keeps the tag in the DOM, otherwise
- * the tag removes itself. Only rendered, and therefore only fired, while `withRemove` is set. The
- * event's `target` is the tag.
+ * the tag removes itself. Only rendered, and therefore only fired, while `withRemove` or its
+ * Shoelace-compatible `removable` alias is set. The event's `target` is the tag.
  * @csspart base - The tag surface.
  * @csspart start - Wrapper around the `start` slot. Hidden entirely while empty.
  * @csspart content - Wrapper around the default slot; the part that truncates with an ellipsis.
  * @csspart end - Wrapper around the `end` slot. Hidden entirely while empty.
  * @csspart remove-button - The remove affordance, only rendered while `withRemove`.
+ * @csspart remove-button__base - Shoelace-compatible alias for `remove-button`; both names are on
+ *   the same node.
  * @cssprop [--lr-tag-remove-radius=var(--lr-badge-radius)] - Corner radius of the remove button,
  * defaulting to the tag's own corner so retuning one retunes both.
  * @cssprop [--lr-tag-remove-hover-background=color-mix(in srgb, currentColor 16%, transparent)] -
  * Background of the remove button on hover.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTag extends LyraBadge<LyraTagEventMap> {
   static override styles = [LyraElement.styles, variants, badgeStyles, tagStyles];
 
+  private upstreamTextVariant = false;
+
+  /** Adds Shoelace's `text` variant write spelling. It renders as a neutral plain tag while the
+   * public read value remains Lyra's canonical `neutral` semantic palette. */
+  override get variant(): BadgeVariant {
+    return super.variant;
+  }
+  override set variant(value: BadgeVariant | 'primary' | 'text') {
+    const text = value === 'text';
+    const textChanged = text !== this.upstreamTextVariant;
+    this.upstreamTextVariant = text;
+    super.variant = text ? 'neutral' : value;
+    if (textChanged) this.requestUpdate();
+  }
+
   /** Renders the remove affordance. */
   @property({ attribute: 'with-remove', type: Boolean, reflect: true }) withRemove = false;
+
+  /** Shoelace-compatible alias for `withRemove`. */
+  @property({ type: Boolean })
+  get removable(): boolean {
+    return this.withRemove;
+  }
+  set removable(next: boolean) {
+    const old = this.withRemove;
+    this.withRemove = Boolean(next);
+    this.requestUpdate('removable', old);
+  }
 
   // The remove button's accessible name is derived from the light-DOM label, which a consumer can
   // rewrite at any time without touching a reactive property -- nothing would otherwise re-render
@@ -103,13 +133,14 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.toggleAttribute('data-upstream-text-variant', this.upstreamTextVariant);
     if (changed.has('withRemove')) this.syncLabelObserver();
   }
 
   protected override renderTrailing(): unknown {
     if (!this.withRemove) return nothing;
     return html`<button
-      part="remove-button"
+      part="remove-button remove-button__base"
       type="button"
       aria-label=${this.accessibleRemoveLabel}
       @click=${this.onRemoveClick}

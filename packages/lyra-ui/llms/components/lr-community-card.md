@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/retrieval/community-card/community-card.js';` (registers the tag; side-effect import)
 - **Class** `LyraCommunityCard`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/community-card/community-card.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

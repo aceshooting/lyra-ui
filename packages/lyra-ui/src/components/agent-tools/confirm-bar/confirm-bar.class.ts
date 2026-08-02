@@ -107,7 +107,8 @@ function deniedIcon(): SVGTemplateResult {
  *   defined.
  * @csspart footer - The action row.
  * @csspart deny-button - The built-in Deny `<lr-button>`. Named identically to the dialog's part.
- * @csspart deny-button-base - Forwarded from the internal Deny `<lr-button>`'s own `base` part.
+ * @csspart deny-button-base - Forwarded from the internal Deny `<lr-button>`'s same-node `base`
+ *   and `button` wrapper aliases.
  * @csspart deny-button-label - Forwarded from the internal Deny `<lr-button>`'s own `label` part.
  * @csspart deny-button-start - Forwarded from the internal Deny `<lr-button>`'s own `start` part.
  * @csspart deny-button-end - Forwarded from the internal Deny `<lr-button>`'s own `end` part.
@@ -115,7 +116,8 @@ function deniedIcon(): SVGTemplateResult {
  *   part, present only while `pending` is `'denied'`.
  * @csspart approve-button - The built-in Approve `<lr-button>`. Named identically to the dialog's
  *   part.
- * @csspart approve-button-base - Forwarded from the internal Approve `<lr-button>`'s own `base` part.
+ * @csspart approve-button-base - Forwarded from the internal Approve `<lr-button>`'s same-node
+ *   `base` and `button` wrapper aliases.
  * @csspart approve-button-label - Forwarded from the internal Approve `<lr-button>`'s own `label`
  *   part.
  * @csspart approve-button-start - Forwarded from the internal Approve `<lr-button>`'s own `start`
@@ -139,6 +141,8 @@ function deniedIcon(): SVGTemplateResult {
  * color once `decision` is `'approved'`.
  * @cssprop [--lr-confirm-bar-denied-color=var(--lr-color-danger)] - `[part='status']` text/icon
  * color once `decision` is `'denied'`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -268,7 +272,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
                   type="button"
                   ?loading=${this.pending === 'denied'}
                   ?disabled=${this.pending === 'approved'}
-                  exportparts="base:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
+                  exportparts="base:deny-button-base, button:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
                   @click=${() => this.decide('denied')}
                 >${this.localize('deny')}</lr-button>
                 <lr-button
@@ -277,7 +281,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
                   type="button"
                   ?loading=${this.pending === 'approved'}
                   ?disabled=${this.pending === 'denied'}
-                  exportparts="base:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
+                  exportparts="base:approve-button-base, button:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
                   @click=${() => this.decide('approved')}
                 >${this.localize('approve')}</lr-button>
               `}

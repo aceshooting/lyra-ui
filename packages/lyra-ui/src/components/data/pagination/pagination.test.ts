@@ -21,13 +21,32 @@ async function compactPagination(
   return pagination(template);
 }
 
-it('derives pageCount and a localized item-range summary', async () => {
+it('derives the pageCount and totalPages aliases plus a localized item-range summary', async () => {
   const el = await pagination();
 
   expect(el.pageCount).to.equal(10);
+  expect(el.totalPages).to.equal(10);
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
     '1–10 of 95 items',
   );
+});
+
+it('publishes the disabled CSS custom state only for the public disabled property', async () => {
+  const el = await pagination();
+
+  expect(el.matches(':state(disabled)')).to.equal(false);
+
+  el.loading = true;
+  await el.updateComplete;
+  expect(el.matches(':state(disabled)')).to.equal(false);
+
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.matches(':state(disabled)')).to.equal(true);
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.matches(':state(disabled)')).to.equal(false);
 });
 
 it('forwards a host aria-label to the internal navigation landmark', async () => {
@@ -42,14 +61,133 @@ it('forwards a host aria-label to the internal navigation landmark', async () =>
 
 it('is controlled and emits the requested page without mutating page itself', async () => {
   const el = await pagination();
-  const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement;
   const eventPromise = oneEvent(el, 'lr-page-change');
 
   next.click();
   const event = await eventPromise;
 
-  expect(event.detail).to.deep.equal({ page: 2 });
+  expect(event.detail).to.deep.equal({ page: 2, pageSize: 10 });
   expect(el.page).to.equal(1);
+});
+
+it('moves focus to the applied current-page control after navigation is accepted', async () => {
+  const applyRequestedPage = (el: LyraPagination): void => {
+    el.addEventListener('lr-page-change', (event) => {
+      el.page = (event as CustomEvent<{ page: number }>).detail.page;
+    });
+  };
+
+  const nextPage = await pagination(html`
+    <lr-pagination total="200" page-size="10" page="10"></lr-pagination>
+  `);
+  applyRequestedPage(nextPage);
+  const nextButton = nextPage.shadowRoot!.querySelector(
+    '[part~="next-button"]',
+  ) as HTMLButtonElement;
+  nextButton.focus();
+  nextButton.click();
+  await nextPage.updateComplete;
+  const nextCurrent = nextPage.shadowRoot!.querySelector('[part~="page-current"]') as HTMLElement;
+  expect(nextCurrent.textContent?.trim()).to.equal('11');
+  expect(nextPage.shadowRoot!.activeElement === nextCurrent).to.equal(true);
+
+  const skippedRange = await pagination(html`
+    <lr-pagination total="200" page-size="10" page="10" sibling-count="1"></lr-pagination>
+  `);
+  applyRequestedPage(skippedRange);
+  const trailingGap = skippedRange.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="ellipsis"]')[1]!;
+  trailingGap.click();
+  await skippedRange.updateComplete;
+  const gapCurrent = skippedRange.shadowRoot!.querySelector('[part~="page-current"]') as HTMLElement;
+  expect(skippedRange.shadowRoot!.activeElement === gapCurrent).to.equal(true);
+
+  const compact = await compactPagination();
+  applyRequestedPage(compact);
+  (compact.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement).click();
+  await compact.updateComplete;
+  expect(compact.shadowRoot!.activeElement === compact.shadowRoot!.querySelector('[part="page-input"]')).to.equal(true);
+});
+
+it('does not reclaim focus when an asynchronously accepted request applies after focus left', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <lr-pagination total="50" page="2"></lr-pagination>
+      <button type="button">Continue elsewhere</button>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-pagination') as LyraPagination;
+  const outside = wrapper.querySelector('button') as HTMLButtonElement;
+  await el.updateComplete;
+  const next = el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement;
+  let requestedPage = 0;
+  el.addEventListener('lr-page-change', (event) => {
+    requestedPage = event.detail.page;
+  });
+
+  next.focus();
+  next.click();
+  outside.focus();
+  await Promise.resolve();
+  expect(requestedPage).to.equal(3);
+  expect(document.activeElement === outside).to.equal(true);
+
+  el.page = requestedPage;
+  await el.updateComplete;
+  expect(document.activeElement === outside).to.equal(true);
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+});
+
+it('does not reclaim focus after a synthetic request when focus later moves outside', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <lr-pagination total="50" page="2"></lr-pagination>
+      <button type="button">Continue elsewhere</button>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-pagination') as LyraPagination;
+  const outside = wrapper.querySelector('button') as HTMLButtonElement;
+  await el.updateComplete;
+  let requestedPage = 0;
+  el.addEventListener('lr-page-change', (event) => {
+    requestedPage = event.detail.page;
+  });
+
+  (el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement).click();
+  outside.focus();
+  el.page = requestedPage;
+  await el.updateComplete;
+
+  expect(requestedPage).to.equal(3);
+  expect(document.activeElement === outside).to.equal(true);
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+});
+
+it('clears a pending synthetic focus-follow request when disconnected', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <lr-pagination total="50" page="2"></lr-pagination>
+      <button type="button">Continue elsewhere</button>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-pagination') as LyraPagination;
+  const outside = wrapper.querySelector('button') as HTMLButtonElement;
+  await el.updateComplete;
+  let requestedPage = 0;
+  el.addEventListener('lr-page-change', (event) => {
+    requestedPage = event.detail.page;
+  });
+
+  (el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement).click();
+  el.remove();
+  wrapper.prepend(el);
+  outside.focus();
+  el.page = requestedPage;
+  await el.updateComplete;
+
+  expect(requestedPage).to.equal(3);
+  expect(document.activeElement === outside).to.equal(true);
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
 });
 
 it('announces a page after the controlled value is applied', async () => {
@@ -74,7 +212,7 @@ it('commits a valid numeric page jump on Enter', async () => {
   const event = await eventPromise;
   await el.updateComplete;
 
-  expect(event.detail).to.deep.equal({ page: 7 });
+  expect(event.detail).to.deep.equal({ page: 7, pageSize: 10 });
   expect(input.value).to.equal('1');
 });
 
@@ -108,28 +246,96 @@ it('keeps previous and next actions at the shared hit-area floor in every size',
       html`<lr-pagination size=${size} total="95" page-size="10"></lr-pagination>`,
     );
     for (const part of ['previous-button', 'next-button']) {
-      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      const button = el.shadowRoot!.querySelector(`[part~="${part}"]`) as HTMLElement;
       expect(button.getBoundingClientRect().width, `${size} ${part}`).to.be.at.least(40);
       expect(button.getBoundingClientRect().height, `${size} ${part}`).to.be.at.least(40);
     }
   }
 });
 
-it('bridges internal focus and blur as bubbling, composed host events', async () => {
-  const el = await compactPagination();
-  const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
+it('relays exactly one native FocusEvent from button, link, and compact controls', async () => {
+  const cases = [
+    {
+      name: 'button',
+      template: html`<lr-pagination total="50" page="2"></lr-pagination>`,
+      selector: '[part~="next-button"]',
+      localName: 'button',
+    },
+    {
+      name: 'link',
+      template: html`
+        <lr-pagination
+          total="50"
+          page="2"
+          href-template="/results?page={page}"
+        ></lr-pagination>
+      `,
+      selector: '[part~="next-button"]',
+      localName: 'a',
+    },
+    {
+      name: 'compact input',
+      template: html`<lr-pagination format="compact" total="50" page="2"></lr-pagination>`,
+      selector: '[part="page-input"]',
+      localName: 'input',
+    },
+  ] as const;
 
-  const focusPromise = oneEvent(el, 'focus');
-  input.focus();
-  const focusEvent = await focusPromise;
-  expect(focusEvent.bubbles).to.be.true;
-  expect(focusEvent.composed).to.be.true;
+  for (const testCase of cases) {
+    const wrapper = (await fixture(html`
+      <div>
+        ${testCase.template}
+        <button type="button">Related target</button>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-pagination') as LyraPagination;
+    await el.updateComplete;
+    const control = el.shadowRoot!.querySelector(testCase.selector) as HTMLElement;
+    const relatedTarget = wrapper.querySelector('button') as HTMLButtonElement;
+    expect(control.localName, testCase.name).to.equal(testCase.localName);
 
-  const blurPromise = oneEvent(el, 'blur');
-  input.blur();
-  const blurEvent = await blurPromise;
-  expect(blurEvent.bubbles).to.be.true;
-  expect(blurEvent.composed).to.be.true;
+    for (const type of ['focus', 'blur'] as const) {
+      const hostEvents: Array<{ event: Event; origin: EventTarget | undefined }> = [];
+      const delegatedEvents: Array<{ event: Event; origin: EventTarget | undefined }> = [];
+      el.addEventListener(type, (event) => {
+        hostEvents.push({ event, origin: event.composedPath()[0] });
+      });
+      wrapper.addEventListener(type, (event) => {
+        delegatedEvents.push({ event, origin: event.composedPath()[0] });
+      });
+
+      control.dispatchEvent(
+        new FocusEvent(type, {
+          bubbles: true,
+          composed: true,
+          relatedTarget,
+          view: window,
+          detail: 7,
+        }),
+      );
+
+      expect(hostEvents.length, `${testCase.name} ${type} host count`).to.equal(1);
+      expect(delegatedEvents.length, `${testCase.name} ${type} delegated count`).to.equal(1);
+      for (const seen of [hostEvents[0]!, delegatedEvents[0]!]) {
+        expect(seen.event.constructor, `${testCase.name} ${type} constructor`).to.equal(FocusEvent);
+        expect(seen.event instanceof CustomEvent, `${testCase.name} ${type} is not custom`).to.equal(
+          false,
+        );
+        expect(seen.event.target === el, `${testCase.name} ${type} target`).to.equal(true);
+        expect(seen.origin === el, `${testCase.name} ${type} shadow original stopped`).to.equal(true);
+        expect(seen.event.bubbles, `${testCase.name} ${type} bubbles`).to.equal(true);
+        expect(seen.event.composed, `${testCase.name} ${type} composed`).to.equal(true);
+        expect(
+          (seen.event as FocusEvent).relatedTarget === relatedTarget,
+          `${testCase.name} ${type} relatedTarget`,
+        ).to.equal(true);
+        expect((seen.event as FocusEvent).view === window, `${testCase.name} ${type} view`).to.equal(
+          true,
+        );
+        expect((seen.event as FocusEvent).detail, `${testCase.name} ${type} detail`).to.equal(7);
+      }
+    }
+  }
 });
 
 it('rejects out-of-range and fractional page jumps', async () => {
@@ -169,7 +375,7 @@ it('disables every control for empty data, disabled, and loading states', async 
   el.loading = true;
   await el.updateComplete;
   expect(controls().every((control) => control.disabled)).to.equal(true);
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('true');
+  expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-busy')).to.equal('true');
 });
 
 it('uses singular item text and accepts localized label overrides', async () => {
@@ -192,10 +398,10 @@ it('uses singular item text and accepts localized label overrides', async () => 
     '1–1 / 1 entry',
   );
   expect(
-    (el.shadowRoot!.querySelector('[part="previous-button"]') as HTMLButtonElement).ariaLabel,
+    (el.shadowRoot!.querySelector('[part~="previous-button"]') as HTMLButtonElement).ariaLabel,
   ).to.equal('Back');
   expect(
-    (el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement).ariaLabel,
+    (el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement).ariaLabel,
   ).to.equal('Forward');
   expect(
     (el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement).ariaLabel,
@@ -226,7 +432,7 @@ it('omits the built-in summary by default, without removing the controls', async
 
   expect(el.withSummary).to.equal(false);
   expect(el.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="next-button"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part~="next-button"]')).to.exist;
 });
 
 it('renders the built-in summary when with-summary is set', async () => {
@@ -260,7 +466,7 @@ it('stacks its summary and controls in a narrow allocation', async () => {
   `);
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!).flexDirection).to.equal(
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part~="base"]')!).flexDirection).to.equal(
     'column',
   );
 });
@@ -281,7 +487,7 @@ it('contains long translated labels in a narrow allocation', async () => {
   `);
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
   expect(getComputedStyle(base).flexDirection).to.equal('column');
   expect(summary.scrollWidth).to.be.at.most(base.clientWidth);
@@ -325,7 +531,7 @@ it('clamps an oversized or negative page to the last/first valid page instead of
 
 describe('control padding knob (--lr-pagination-control-padding)', () => {
   const nextButton = (el: LyraPagination): HTMLElement =>
-    el.shadowRoot!.querySelector('[part="next-button"]') as HTMLElement;
+    el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLElement;
   const pageInput = (el: LyraPagination): HTMLElement | null =>
     el.shadowRoot!.querySelector('[part="page-input"]');
 
@@ -366,9 +572,24 @@ describe('nav button hover specificity', () => {
       .find(
         (text) =>
           text.includes(':hover') &&
-          (text.includes("[part='previous-button']") || text.includes("[part='next-button']")),
+          (text.includes("[part~='previous-button']") || text.includes("[part~='next-button']")),
       );
     expect(internalRule).to.contain(':where(');
+  });
+
+  it('wraps every interactive state qualifier in :where()', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    for (const selector of [
+      "[part~='next-button']:where(:hover)",
+      "[part~='next-button']:where(:active)",
+      "[part~='next-button']:where(:focus-visible)",
+      "[part~='next-button']:where(:disabled)",
+      "[part~='button']:where([aria-disabled='true'])",
+      "[part~='page-current']:where(:hover)",
+      "[part~='page-current']:where(:active)",
+    ]) {
+      expect(css, selector).to.contain(selector);
+    }
   });
 });
 
@@ -426,7 +647,7 @@ describe('numbered page list', () => {
 
     expect(el.format).to.equal('standard');
     expect(pageLabels(el)).to.deep.equal(['1', '2', '3', '4', '5']);
-    expect(el.shadowRoot!.querySelectorAll('[part="ellipsis"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part~="ellipsis"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part="page-input"]').length).to.equal(0);
   });
 
@@ -451,7 +672,7 @@ describe('numbered page list', () => {
     `);
 
     expect(pageLabels(el)).to.deep.equal(['1', '9', '10', '11', '20']);
-    expect(el.shadowRoot!.querySelectorAll('[part="ellipsis"]').length).to.equal(2);
+    expect(el.shadowRoot!.querySelectorAll('[part~="ellipsis"]').length).to.equal(2);
     const middleCount = itemCount(el);
 
     el.page = 1;
@@ -463,24 +684,22 @@ describe('numbered page list', () => {
     expect(pageLabels(el).at(-1)).to.equal('20');
   });
 
-  it('never announces an elided gap as a page control', async () => {
+  it('renders each elided gap as a named control that requests a multi-page jump', async () => {
     const el = await pagination(html`
       <lr-pagination total="200" page-size="10" page="10" sibling-count="1" boundary-count="1"></lr-pagination>
     `);
-    const gaps = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="ellipsis"]')];
+    const gaps = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="ellipsis"]')];
 
     expect(gaps.length).to.equal(2);
     for (const gap of gaps) {
-      expect(gap.getAttribute('aria-hidden')).to.equal('true');
-      expect(gap.localName).to.not.equal('button');
-      expect(gap.localName).to.not.equal('a');
-      expect(gap.querySelectorAll('button, a, [tabindex]').length).to.equal(0);
+      expect(gap.localName).to.equal('button');
+      expect(gap.getAttribute('aria-label')).to.match(/^Jump to page \d+$/);
       expect(gap.hasAttribute('aria-current')).to.be.false;
     }
-    // The page list's only focusable stops are real pages.
-    expect(el.shadowRoot!.querySelectorAll('[part="pages"] button, [part="pages"] a').length).to.equal(
-      pageNodes(el).length,
-    );
+    const request = oneEvent(el, 'lr-page-change');
+    gaps[1]!.click();
+    expect((await request).detail).to.deep.equal({ page: 14, pageSize: 10 });
+    expect(el.page, 'the stronger Lyra API remains controlled').to.equal(10);
   });
 
   it('widens the window with sibling-count and pins more pages with boundary-count', async () => {
@@ -501,7 +720,7 @@ describe('numbered page list', () => {
     target.click();
     const event = await eventPromise;
 
-    expect(event.detail).to.deep.equal({ page: 4 });
+    expect(event.detail).to.deep.equal({ page: 4, pageSize: 10 });
     expect(el.page).to.equal(1);
   });
 
@@ -510,24 +729,24 @@ describe('numbered page list', () => {
       <lr-pagination total="50" page-size="10" page="3"></lr-pagination>
     `);
     expect(el.withEdges).to.equal(false);
-    expect(el.shadowRoot!.querySelectorAll('[part="first-button"]').length).to.equal(0);
-    expect(el.shadowRoot!.querySelectorAll('[part="last-button"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part~="first-button"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part~="last-button"]').length).to.equal(0);
   });
 
   it('jumps to the first and last page through the edge controls', async () => {
     const el = await pagination(html`
       <lr-pagination total="50" page-size="10" page="3" with-edges></lr-pagination>
     `);
-    const first = el.shadowRoot!.querySelector('[part="first-button"]') as HTMLButtonElement;
-    const last = el.shadowRoot!.querySelector('[part="last-button"]') as HTMLButtonElement;
+    const first = el.shadowRoot!.querySelector('[part~="first-button"]') as HTMLButtonElement;
+    const last = el.shadowRoot!.querySelector('[part~="last-button"]') as HTMLButtonElement;
 
     const lastRequest = oneEvent(el, 'lr-page-change');
     last.click();
-    expect((await lastRequest).detail).to.deep.equal({ page: 5 });
+    expect((await lastRequest).detail).to.deep.equal({ page: 5, pageSize: 10 });
 
     const firstRequest = oneEvent(el, 'lr-page-change');
     first.click();
-    expect((await firstRequest).detail).to.deep.equal({ page: 1 });
+    expect((await firstRequest).detail).to.deep.equal({ page: 1, pageSize: 10 });
 
     el.page = 1;
     await el.updateComplete;
@@ -556,6 +775,116 @@ describe('numbered page list', () => {
     expect(nodes[0].hasAttribute('target')).to.be.false;
   });
 
+  it('removes every link-mode tab stop while disabled or loading', async () => {
+    const enabled = await pagination(html`
+      <lr-pagination
+        total="50"
+        page="2"
+        href-template="/products?page={page}"
+      ></lr-pagination>
+    `);
+    const enabledCurrent = enabled.shadowRoot!.querySelector(
+      '[part~="page-current"]',
+    ) as HTMLAnchorElement;
+    expect(enabledCurrent.localName).to.equal('a');
+    expect(enabledCurrent.getAttribute('tabindex')).to.equal('0');
+
+    const inertCases = [
+      {
+        name: 'disabled',
+        template: html`
+          <lr-pagination
+            total="50"
+            page="2"
+            href-template="/products?page={page}"
+            disabled
+          ></lr-pagination>
+        `,
+      },
+      {
+        name: 'loading',
+        template: html`
+          <lr-pagination
+            total="50"
+            page="2"
+            href-template="/products?page={page}"
+            loading
+          ></lr-pagination>
+        `,
+      },
+    ] as const;
+
+    for (const testCase of inertCases) {
+      const el = await pagination(testCase.template);
+      const anchors = el.shadowRoot!.querySelectorAll('a');
+      expect(anchors.length, `${testCase.name} link branch`).to.be.greaterThan(0);
+      expect(
+        el.shadowRoot!.querySelectorAll('a[href], a[tabindex="0"]').length,
+        `${testCase.name} tab stops`,
+      ).to.equal(0);
+      expect(
+        el.shadowRoot!.querySelector('[part~="page-current"]')!.hasAttribute('tabindex'),
+        `${testCase.name} current tabindex`,
+      ).to.equal(false);
+    }
+  });
+
+  it('calls an href-template function only for active valid page targets', async () => {
+    const seen: number[] = [];
+    const el = await pagination(html`
+      <lr-pagination total="50" page="1" with-edges></lr-pagination>
+    `);
+    el.hrefTemplate = (page: number) => {
+      seen.push(page);
+      return `/products?page=${page}`;
+    };
+    await el.updateComplete;
+
+    expect(seen.length).to.be.greaterThan(0);
+    expect(
+      seen.every((page) => page >= 1 && page <= el.pageCount && page !== el.page),
+      'first-page render',
+    ).to.equal(true);
+
+    seen.length = 0;
+    el.page = el.pageCount;
+    await el.updateComplete;
+    expect(seen.length).to.be.greaterThan(0);
+    expect(
+      seen.every((page) => page >= 1 && page <= el.pageCount && page !== el.page),
+      'last-page render',
+    ).to.equal(true);
+
+    for (const testCase of [
+      { name: 'disabled', apply: () => { el.disabled = true; } },
+      {
+        name: 'loading',
+        apply: () => {
+          el.disabled = false;
+          el.loading = true;
+        },
+      },
+      {
+        name: 'empty',
+        apply: () => {
+          el.loading = false;
+          el.total = 0;
+        },
+      },
+    ]) {
+      seen.length = 0;
+      testCase.apply();
+      await el.updateComplete;
+      expect(seen.length, `${testCase.name} callback count`).to.equal(0);
+      const anchors = [...el.shadowRoot!.querySelectorAll('a')];
+      expect(anchors.length, `${testCase.name} configured link branch`).to.be.greaterThan(0);
+      expect(
+        anchors.every((anchor) => !anchor.hasAttribute('href')),
+        `${testCase.name} href omission`,
+      ).to.equal(true);
+    }
+  });
+
   it('accepts a function href-template and formats the URL page as a plain integer', async () => {
     const el = await pagination(html`
       <lr-pagination locale="ar-EG" total="50" page-size="10" page="1"></lr-pagination>
@@ -579,11 +908,11 @@ describe('numbered page list', () => {
       ></lr-pagination>
     `);
 
-    expect(pageNodes(el).map((node) => node.localName)).to.deep.equal([
-      'button',
-      'button',
-      'button',
-    ]);
+    const nodes = pageNodes(el);
+    expect(nodes.map((node) => node.localName)).to.deep.equal(['a', 'button', 'button']);
+    expect(nodes[0].hasAttribute('href'), 'the inactive current link is not resolved').to.equal(
+      false,
+    );
   });
 
   it('disables every page control while disabled or loading', async () => {
@@ -618,8 +947,8 @@ describe('numbered page list', () => {
       );
       for (const node of [
         ...pageNodes(el),
-        el.shadowRoot!.querySelector('[part="first-button"]') as HTMLElement,
-        el.shadowRoot!.querySelector('[part="last-button"]') as HTMLElement,
+        el.shadowRoot!.querySelector('[part~="first-button"]') as HTMLElement,
+        el.shadowRoot!.querySelector('[part~="last-button"]') as HTMLElement,
       ]) {
         const box = node.getBoundingClientRect();
         expect(box.width, `${size} ${node.getAttribute('part')}`).to.be.at.least(40);
@@ -652,10 +981,10 @@ describe('numbered page list', () => {
     `);
 
     expect(
-      el.shadowRoot!.querySelector('[part="first-button"]')!.getAttribute('aria-label'),
+      el.shadowRoot!.querySelector('[part~="first-button"]')!.getAttribute('aria-label'),
     ).to.equal('Première page');
     expect(
-      el.shadowRoot!.querySelector('[part="last-button"]')!.getAttribute('aria-label'),
+      el.shadowRoot!.querySelector('[part~="last-button"]')!.getAttribute('aria-label'),
     ).to.equal('Dernière page');
   });
 
@@ -682,14 +1011,14 @@ describe('numbered page list', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="page-input"]').length).to.equal(1);
     expect(el.shadowRoot!.querySelectorAll('[part="pages"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part~="page"]').length).to.equal(0);
-    expect(el.shadowRoot!.querySelectorAll('[part="next-button"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part~="next-button"]').length).to.equal(1);
   });
 
   it('is accessible as a populated page list, as links, and in the compact layout', async () => {
     const standard = await pagination(html`
       <lr-pagination total="200" page-size="10" page="10" with-edges with-summary></lr-pagination>
     `);
-    expect(standard.shadowRoot!.querySelectorAll('[part="ellipsis"]').length).to.be.greaterThan(0);
+    expect(standard.shadowRoot!.querySelectorAll('[part~="ellipsis"]').length).to.be.greaterThan(0);
     await expect(standard).to.be.accessible();
 
     const links = await pagination(html`
@@ -776,9 +1105,8 @@ it('exposes the numbered pages as a real list', async () => {
   // list-style: none strips list semantics in some engines, so the roles are explicit.
   expect(list.localName).to.equal('ul');
   expect(list.getAttribute('role')).to.equal('list');
-  for (const page of el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="page"]')) {
-    expect(page.parentElement!.localName).to.equal('li');
-    expect(page.parentElement!.getAttribute('role')).to.equal('listitem');
+  for (const item of list.querySelectorAll(':scope > li')) {
+    expect(item.getAttribute('role')).to.equal('listitem');
   }
 });
 
@@ -794,7 +1122,7 @@ it('wraps a long page list into a narrow allocation instead of overflowing it', 
     ></lr-pagination>
   `);
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   expect(el.shadowRoot!.querySelectorAll('[part~="page"]').length).to.be.greaterThan(4);
   expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
@@ -805,7 +1133,7 @@ describe('the shared size ladder', () => {
     const el = await pagination(
       html`<lr-pagination size=${size} total="95" page-size="10"></lr-pagination>`,
     );
-    return getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).fontSize;
+    return getComputedStyle(el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).fontSize;
   };
 
   it('accepts the Web Awesome / Shoelace spellings as exact synonyms of s/m/l', async () => {
@@ -826,9 +1154,139 @@ describe('the shared size ladder', () => {
       html`<lr-pagination size="2xs" total="95" page-size="10" with-edges></lr-pagination>`,
     );
     for (const part of ['first-button', 'previous-button', 'next-button', 'last-button']) {
-      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      const button = el.shadowRoot!.querySelector(`[part~="${part}"]`) as HTMLElement;
       expect(button.getBoundingClientRect().width, part).to.be.at.least(40);
       expect(button.getBoundingClientRect().height, part).to.be.at.least(40);
     }
+  });
+
+  it('keeps interactive ellipses and the compact page field at the shared hit-area floor', async () => {
+    const paged = await pagination(html`
+      <lr-pagination size="2xs" total="950" page-size="10" page="48"></lr-pagination>
+    `);
+    for (const ellipsis of paged.shadowRoot!.querySelectorAll<HTMLElement>('[part~="ellipsis"]')) {
+      const box = ellipsis.getBoundingClientRect();
+      expect(box.width, 'ellipsis width').to.be.at.least(40);
+      expect(box.height, 'ellipsis height').to.be.at.least(40);
+    }
+
+    const compact = await pagination(html`
+      <lr-pagination
+        size="2xs"
+        format="compact"
+        total="950"
+        page-size="10"
+        page="48"
+      ></lr-pagination>
+    `);
+    const field = compact.shadowRoot!.querySelector<HTMLElement>('[part="page-input"]')!;
+    const box = field.getBoundingClientRect();
+    expect(box.width, 'page input width').to.be.at.least(40);
+    expect(box.height, 'page input height').to.be.at.least(40);
+  });
+});
+
+describe('Web Awesome navigation surface', () => {
+  it('defaults page/page-size exactly and derives the matching page count', async () => {
+    const el = await pagination(html`<lr-pagination total="95"></lr-pagination>`);
+    expect(el.page).to.equal(1);
+    expect(el.pageSize).to.equal(10);
+    expect(el.pageCount).to.equal(10);
+    expect(el.withoutNav).to.be.false;
+    expect(el.hideSinglePage).to.be.false;
+  });
+
+  it('emits a cancelable before-change with pageSize and suppresses the request when vetoed', async () => {
+    const el = await pagination(html`<lr-pagination total="95"></lr-pagination>`);
+    let changed = 0;
+    el.addEventListener('lr-page-change', () => changed++);
+    el.addEventListener('lr-before-page-change', (event) => event.preventDefault());
+    const before = oneEvent(el, 'lr-before-page-change');
+
+    (el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement).click();
+    const event = await before;
+    await el.updateComplete;
+    expect(event.cancelable).to.be.true;
+    expect(event.detail).to.deep.equal({ page: 2, pageSize: 10 });
+    expect(changed).to.equal(0);
+    expect(el.page).to.equal(1);
+  });
+
+  it('without-nav removes only previous/next and hide-single-page renders nothing', async () => {
+    const withoutNav = await pagination(html`
+      <lr-pagination total="50" without-nav with-edges></lr-pagination>
+    `);
+    expect(withoutNav.shadowRoot!.querySelector('[part~="previous-button"]')).to.not.exist;
+    expect(withoutNav.shadowRoot!.querySelector('[part~="next-button"]')).to.not.exist;
+    expect(withoutNav.shadowRoot!.querySelector('[part~="first-button"]')).to.exist;
+    expect(withoutNav.shadowRoot!.querySelector('[part~="page"]')).to.exist;
+
+    const single = await pagination(html`
+      <lr-pagination total="5" hide-single-page></lr-pagination>
+    `);
+    expect(single.shadowRoot!.querySelector('nav')).to.not.exist;
+  });
+
+  it('projects all four custom icon slots without replacing accessible button names', async () => {
+    const el = await pagination(html`<lr-pagination total="50" page="3" with-edges>
+      <span slot="first-icon">first</span>
+      <span slot="previous-icon">previous</span>
+      <span slot="next-icon">next</span>
+      <span slot="last-icon">last</span>
+    </lr-pagination>`);
+    for (const name of ['first', 'previous', 'next', 'last']) {
+      const icon = el.shadowRoot!.querySelector(`[part="${name}-icon"]`)!;
+      const slot = icon.querySelector('slot') as HTMLSlotElement;
+      expect(slot.assignedElements()).to.have.length(1);
+      expect(el.shadowRoot!.querySelector(`[part~="${name}-button"]`)!.getAttribute('aria-label'))
+        .to.be.a('string').and.not.equal('');
+    }
+  });
+
+  it('renders every link-mode navigation control through href-template', async () => {
+    const el = await pagination(html`
+      <lr-pagination total="50" page="2" with-edges href-template="/results?page={page}"></lr-pagination>
+    `);
+    const expected = new Map([
+      ['first-button', '/results?page=1'],
+      ['previous-button', '/results?page=1'],
+      ['next-button', '/results?page=3'],
+      ['last-button', '/results?page=5'],
+    ]);
+    for (const [part, href] of expected) {
+      const control = el.shadowRoot!.querySelector(`[part~="${part}"]`) as HTMLAnchorElement;
+      expect(control.localName).to.equal('a');
+      expect(control.getAttribute('href')).to.equal(href);
+      expect(control.part.contains('button')).to.be.true;
+    }
+  });
+
+  it('puts the shared button part on pages, ellipses, and navigation and label on compact output', async () => {
+    const standard = await pagination(html`
+      <lr-pagination total="200" page="10" with-edges></lr-pagination>
+    `);
+    const controls = [...standard.shadowRoot!.querySelectorAll<HTMLElement>('[part~="button"]')];
+    expect(controls.length).to.be.greaterThan(8);
+    expect(controls.some((control) => control.part.contains('ellipsis'))).to.be.true;
+    expect(controls.every((control) => control.matches('button, a'))).to.be.true;
+
+    const compact = await compactPagination();
+    const label = compact.shadowRoot!.querySelector('[part~="label"]') as HTMLElement;
+    expect(label.part.contains('page-field')).to.be.true;
+  });
+
+  it('is accessible with interactive ellipses, custom icons, and an RTL link surface', async () => {
+    const el = await pagination(html`<lr-pagination
+      dir="rtl"
+      label="Search result pages"
+      total="200"
+      page="10"
+      with-edges
+      href-template="/results?page={page}"
+    >
+      <span slot="previous-icon" aria-hidden="true">→</span>
+      <span slot="next-icon" aria-hidden="true">←</span>
+    </lr-pagination>`);
+    await expect(el).to.be.accessible();
   });
 });

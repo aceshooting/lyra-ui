@@ -736,8 +736,8 @@ describe('deny/approve as lr-button', () => {
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     const resolve = (token: string) => getComputedStyle(el).getPropertyValue(token).trim();
-    const denyBase = denyButton(el).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const approveBase = approveButton(el).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const denyBase = denyButton(el).shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const approveBase = approveButton(el).shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     // Deny is variant="neutral" appearance="outlined": no fill, so it recedes against the dialog
     // panel, with --lr-color-text for the label. Declared on the button, not inherited -- when
     // lr-button's default appearance became "accent" in 8.0.0, inheriting it would have turned the
@@ -759,8 +759,14 @@ describe('deny/approve as lr-button', () => {
       const el = (await fixture(
         html`<lr-tool-approval-dialog class="consumer-probe" tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
       )) as LyraToolApprovalDialog;
-      const denyBase = denyButton(el).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-      const approveBase = approveButton(el).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const deny = denyButton(el);
+      const approve = approveButton(el);
+      expect(deny.getAttribute('exportparts')).to.include('button:deny-button-base');
+      expect(approve.getAttribute('exportparts')).to.include('button:approve-button-base');
+      deny.setAttribute('exportparts', 'button:deny-button-base');
+      approve.setAttribute('exportparts', 'button:approve-button-base');
+      const denyBase = deny.shadowRoot!.querySelector('[part~="button"]') as HTMLElement;
+      const approveBase = approve.shadowRoot!.querySelector('[part~="button"]') as HTMLElement;
       expect(getComputedStyle(denyBase).letterSpacing).to.equal('3px');
       expect(getComputedStyle(approveBase).letterSpacing).to.equal('5px');
     } finally {

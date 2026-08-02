@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/spinner/spinner.js';` (registers the tag; side-effect import)
 - **Class** `LyraSpinner`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/spinner/spinner.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,11 +28,12 @@ indicator and its text becomes the status name unless `aria-label` overrides it.
 default) applies the native `hidden` state to the label wrapper, removing it from both rendering and
 the accessibility tree; the status then uses `aria-label` or the localized "Loading…" fallback.
 
-**CSS parts:** `base` (the `role="status"` wrapper), `spinner` (the animated ring; `aria-hidden`),
-`label` (the default-slot wrapper).
+**CSS parts:** `base` and `spinner` are aliases on the same `role="status"` outer wrapper;
+`spinner-indicator` is the animated `aria-hidden` ring, and `label` is the default-slot wrapper.
 
 **Themeable custom properties:** `--lr-spinner-size` (default `var(--lr-size-1-25rem)` — both
 dimensions), `--lr-spinner-track-width` (default `var(--lr-border-width-medium)` — ring thickness),
 `--lr-spinner-duration` (default `var(--lr-transition-ambient)` — the duration *and* easing of one
 full rotation; the animation is dropped entirely under `prefers-reduced-motion: reduce`). The ring
-colors come from `--lr-color-brand`/`-brand-quiet`.
+colors come from `--lr-color-brand`/`-brand-quiet`. Upstream aliases are `--track-width`,
+`--track-color`, `--indicator-color`, and `--speed`.

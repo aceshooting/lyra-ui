@@ -14,6 +14,8 @@
     "lint": "pnpm -r --if-present run lint",
     "manifest": "pnpm --filter @aceshooting/lyra-ui run manifest",
     "manifest:check": "pnpm --filter @aceshooting/lyra-ui run manifest:check",
+    "registrations": "pnpm --filter @aceshooting/lyra-ui run registrations",
+    "create:component": "pnpm --filter @aceshooting/lyra-ui run create:component",
     "dev": "storybook dev -p 6006",
     "docs": "storybook dev -p 6006",
     "docs:build": "pnpm manifest:check && storybook build -o storybook-static && pnpm docs:sitemap",

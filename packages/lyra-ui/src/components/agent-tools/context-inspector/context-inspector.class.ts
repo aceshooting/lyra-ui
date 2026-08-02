@@ -136,6 +136,8 @@ export interface LyraContextInspectorEventMap
  * @csspart redaction - One redacted range within a segment's text (a `<mark>`).
  * @csspart truncation-boundary - The marker appended after a `truncated` segment's text.
  * @csspart empty - The empty state, shown when `segments` is empty.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraContextInspector extends LyraElement<LyraContextInspectorEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -19,12 +19,13 @@ reaches**. That is the one thing worth understanding before anything else on thi
 | 2 — internal tokens | `--lr-*` | The library | The element it is set on, and its direct `lr-*` children |
 | 3 — component knobs | `--lr-<component>-*` | You, per element | That one component |
 
-**Layer 1 is the application input layer.** Each `--lr-theme-*` property is declared exactly once,
-at `:root` in `theme.css`, and never inside any component's shadow styles. Set these to retheme.
+**Layer 1 is the application input layer.** `theme.css` supplies `--lr-theme-*` values on its root
+and light/dark mode selectors, and component shadow styles never redeclare them. Set these to retheme.
 
-**Layer 2 is what the components actually read.** Each `--lr-*` token reads one `--lr-theme-*` input
-and falls back to a built-in value when that input is unset — which is why an unthemed component
-dropped onto a blank page still renders correctly.
+**Layer 2 is what the components actually read.** Themeable base tokens read a `--lr-theme-*` input
+and fall back to a built-in value when it is unset. Aliases, computed tokens, and ramp tokens may
+instead resolve through another internal token or a fixed contract value. Either way, an unthemed
+component dropped onto a blank page still renders correctly.
 
 **Layer 3 is per-element trim.** `--lr-select-trigger-min-height`, `--lr-chart-grid-color` and their
 siblings are listed in each component's own page, and are meant for one element at a time.
@@ -88,8 +89,8 @@ changes nothing. Retheme through the `--lr-theme-*` inputs; see
 [Where an override actually reaches](#where-an-override-actually-reaches) for why.
 
 <a href="./llms/tokens.md" target="_blank" rel="noreferrer">`llms/tokens.md`</a> is the generated
-catalog of every token, its `--lr-theme-*` input and its fallback. Read it rather than guessing a
-token name.
+catalog of every token: theme input and fallback for themeable tokens, or the resolved alias, ramp,
+or fixed value for derived tokens. Read it rather than guessing a token name.
 
 ## Light and dark
 
@@ -139,6 +140,24 @@ For a no-flash boot, `lyraThemeBootstrap` is a self-contained IIFE **string** me
 into a `<script>` in `<head>` before any stylesheet, so the persisted theme lands on the root
 element before first paint.
 
+### Invalidating canvas theme values
+
+DOM and SVG styling follows the cascade immediately, but pixels already painted into a canvas do
+not. Lyra's canvas renderers automatically redraw after theme-attribute, style/link, CSSOM,
+adopted-stylesheet, and relevant media-query changes. If an application theme engine changes
+computed tokens through another mechanism, explicitly invalidate the owning browser realm:
+
+```ts
+import { invalidateLyraTheme } from '@aceshooting/lyra-ui/utilities/theme.js';
+
+invalidateLyraTheme();            // the global document realm
+invalidateLyraTheme(shadowRoot);  // the realm owning this root, element, or document
+```
+
+The optional root selects a realm, not a subtree. Calls are coalesced into each connected canvas
+consumer's normal redraw schedule, the function is safe during server rendering, and the watcher
+retains no document or stylesheet after its last consumer disconnects.
+
 ## Cascade layers, and the unlayered-wins rule
 
 `theme.css` declares its layer order up front:
@@ -155,9 +174,10 @@ stylesheet loads *before* `theme.css`, and needs no `!important`.
 That matters because before layering, the theme was unlayered at `:root` — the same specificity as
 your own `:root` rule — and which one won came down to whichever the bundler happened to emit last.
 
-`lr-base` is reserved for a future element-level reset. `lr-utilities` and `lr-overrides` are named
-so an application can opt its own layers into a defined position relative to Lyra's, rather than
-inventing one:
+The optional `native.css` bundle puts its explicitly scoped native-element rules in `lr-base`, and
+the optional `utilities.css` bundle puts its exact `lr-*` classes in `lr-utilities`. Neither bundle
+is loaded by `theme.css` or by a component import. `lr-overrides` remains available when an
+application wants to opt its own rules into the shared order:
 
 ```css
 @layer lr-overrides {
@@ -171,9 +191,10 @@ inventing one:
 an ancestor is re-declared — and lost — at the first `lr-*` element between that ancestor and the
 component you meant to style. It never reaches anything nested inside another component.
 
-**`--lr-theme-*` inputs are declared only once**, at `:root`, and never inside a component's shadow
-styles, so they inherit normally through every nested shadow root. **Setting a `--lr-theme-*` input
-on a wrapper element is the supported way to retheme one subtree.**
+**`--lr-theme-*` inputs are never redeclared inside a component's shadow styles.** `theme.css`
+supplies them on its root and light/dark mode selectors, so an application override inherits normally
+through every nested shadow root. **Setting a `--lr-theme-*` input on a wrapper element is the
+supported way to retheme one subtree.**
 
 ```css
 /* Reaches everything in the subtree, however deeply nested. */

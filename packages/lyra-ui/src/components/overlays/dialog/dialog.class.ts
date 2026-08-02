@@ -1,9 +1,18 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { nextId, srOnly } from '../../../internal/a11y.js';
+import {
+  activateOverlay,
+  collectFocusableElements,
+  type OverlayHandle,
+} from '../../../internal/overlay-manager.js';
+import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import {
+  animateRegistered,
+  type RegisteredAnimationSpec,
+} from '../../../internal/registered-animation.js';
 import { styles } from './dialog.styles.js';
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
@@ -27,22 +36,40 @@ export type DialogCloseReason =
   | 'unmount'
   | (string & Record<never, never>);
 
+/** Shoelace-compatible reason a built-in affordance asked a dialog to close. */
+export type LyraDialogRequestCloseSource = 'close-button' | 'keyboard' | 'overlay';
+
+export interface LyraDialogRequestCloseDetail {
+  source: LyraDialogRequestCloseSource;
+}
+
+/** Web Awesome-compatible source element carried by `lr-hide`. */
+export interface LyraDialogHideDetail {
+  source: Element;
+}
+
+/** Compatibility controller used while a third-party modal temporarily owns focus. */
+export interface LyraDialogModalController {
+  activateExternal(): void;
+  deactivateExternal(): void;
+}
+
 export interface LyraDialogEventMap {
   'lr-show': CustomEvent<undefined>;
   'lr-after-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
+  'lr-hide': CustomEvent<LyraDialogHideDetail>;
   'lr-after-hide': CustomEvent<undefined>;
+  'lr-initial-focus': CustomEvent<undefined>;
+  'lr-request-close': CustomEvent<LyraDialogRequestCloseDetail>;
   'lr-dialog-close': CustomEvent<DialogCloseReason>;
 }
 /**
  * `<lr-dialog>` — a general-purpose modal/overlay. `role="dialog"`,
  * focus-trapped while open, dismissible via Escape or (opt-in) a backdrop click, and
  * scroll-locks the document for as long as it's open. While open it is promoted into the
- * browser top layer, so no consumer stacking context can render on top of it. Chrome stays
- * minimal by default — no built-in title bar or close button; a consumer supplies a
- * heading and any close affordance itself via the default/`footer` slots.
- * `heading`/`label`-slot/`closable` are an opt-in convenience for the common case where
- * hand-building that chrome isn't worth it (see below).
+ * browser top layer, so no consumer stacking context can render on top of it. The mapped
+ * `label` property renders as a visible title and the close affordance is present by default;
+ * `closable="false"`, `no-header`, and the legacy `without-header` alias support custom chrome.
  *
  * Lifecycle: `show()` emits `lr-show` (cancelable) and then, once the enter animation has
  * finished, `lr-after-show`. `hide()`/`close()` emit `lr-hide` (cancelable), then
@@ -50,44 +77,27 @@ export interface LyraDialogEventMap {
  * has finished — `lr-after-hide`. Assigning `open` runs the same lifecycle, so the property, the
  * reflected attribute, and the two method calls can never disagree. Markup that renders open
  * from the start emits nothing, matching `<lr-menu>`.
+ * The panel resolves `dialog.show`/`dialog.hide` through the public animation registry; the
+ * backdrop resolves `dialog.overlay.show`/`dialog.overlay.hide`. A per-element registration wins
+ * over a page default, while keyframes-only overrides retain the dialog's token-derived timing.
  *
- * Accessible name / visible header, in priority order:
- * 0. If the host element itself has an `aria-label` attribute set, its value
- *    becomes `aria-label` on the panel outright, overriding every source
- *    below (including a slotted heading) — the standard ARIA convention for
- *    a consumer that wants full control over the announced name regardless
- *    of whatever `heading`/`label` props are also set. This naming override
- *    does not suppress visible `heading` chrome; sighted users still receive
- *    the heading text the consumer supplied.
- * 1. Otherwise, if a heading element (`h1`–`h6` or `[role="heading"]`) is an *unslotted
- *    direct child*, its text content becomes `aria-label` on the panel —
- *    unchanged, and takes priority over `heading` below so an existing consumer that already
- *    slots its own heading keeps rendering it exactly as before.
- * 2. Otherwise, when the `label` slot is filled or `heading` is set, a visible header row
- *    (`part="header"`) renders containing that content (`part="heading"`), which becomes the
- *    `aria-labelledby` target. The slot wins over the plain-string `heading` when both are
- *    supplied, since it is the richer of the two.
- * 3. Otherwise, when the `label` *property* is set, an invisible (`.sr-only`, exposed as the
- *    `label` part) element carrying that text is rendered inside the panel
- *    and `aria-labelledby` points at it instead.
- * Only one of cases 2/3 ever names the panel at a time, so exactly one element ever
- * claims `aria-labelledby`. The `label` property itself never renders visible chrome on
- * its own — `::part(label)` can be restyled to make the sr-only text visible,
- * or `heading`/the `label` slot can be used instead, if a consumer wants visible chrome without
- * slotting a real heading element. (The `label` *slot* and the `label` *property* are separate
- * knobs: the slot is rich visible header content, the property is a screen-reader-only name.)
+ * Accessible naming and visible-title precedence are independent. A host `aria-label` wins,
+ * followed by `accessible-label`, then the text of a direct light-DOM heading. Otherwise the
+ * visible title wrapper names the panel. Within that wrapper the rich `label` slot wins over the
+ * `label` property, which wins over the legacy `heading` property. Explicit accessible-only
+ * naming never suppresses that visible title.
  *
  * The slotted-heading case deliberately uses `aria-label` (a copied string)
  * rather than `aria-labelledby` pointing at the heading's `id`: the heading is
  * *light-DOM* content while `[part="panel"]` lives in this element's
  * *shadow* tree, and an ID-reference attribute can't resolve across that
  * boundary (verified against axe's `aria-dialog-name` rule) — unlike the
- * `heading`/`label`-prop cases above, where the target element is rendered
+ * mapped-title cases above, where the target element is rendered
  * inside the same shadow root it labels, so `aria-labelledby` there is safe.
  * The `label` *slot* is safe for the same reason: `aria-labelledby` targets the shadow-owned
  * `part="heading"` wrapper, and the accessible-name computation flattens the slot inside it.
  *
- * `closable` renders a close (X) button in the header row (creating one, with
+ * `closable` defaults to true and renders a close (X) button in the header row (creating one, with
  * no heading text, if neither `heading` nor the `label` slot is set) that closes the dialog via
  * the same `close()` path as Escape/backdrop-dismiss, with reason `'close-button'`.
  *
@@ -99,41 +109,59 @@ export interface LyraDialogEventMap {
  * @customElement lr-dialog
  * @slot - The dialog body.
  * @slot label - Rich header content, rendered in the header row and used as the panel's
- *   accessible name. Wins over the plain-string `heading`.
+ *   accessible name. Wins over the plain-string `label` and legacy `heading` properties.
  * @slot header-actions - Extra controls rendered in the header row, before the built-in close
  *   button.
  * @slot footer - Action buttons, rendered in a bottom row.
  * @event lr-show - The dialog is about to open. Cancelable — `preventDefault()` keeps it closed.
  * @event lr-after-show - The dialog is open and its enter animation has finished.
  * @event lr-hide - The dialog is about to close, for every dismissal path. Cancelable —
- *   `preventDefault()` keeps it open and stops `lr-dialog-close` from firing at all.
+ *   `preventDefault()` keeps it open and stops `lr-dialog-close` from firing at all. Detail is
+ *   `{ source: Element }`, the affordance or host that requested the transition.
  * @event lr-after-hide - The dialog is closed and its exit animation has finished.
+ * @event lr-initial-focus - Emitted immediately before the first automatic focus movement for an
+ *   open activation. Cancelable; vetoing it leaves focus where the caller put it. CSS-hidden
+ *   dialogs defer it until rendered, and reconnecting the same open dialog does not repeat it.
+ * @event lr-request-close - A built-in affordance requested dismissal. Cancelable; detail is
+ *   `{ source: 'close-button' | 'keyboard' | 'overlay' }`.
  * @event lr-dialog-close - `detail: DialogCloseReason`. Cancelable — a listener calling
  *   `preventDefault()` stops the dialog from closing, for every dismissal path (Escape, backdrop,
  *   the built-in close button, `hide()`, `open = false`, or a consumer's own `close()` call).
  *   Fires after `lr-hide` and carries the one thing `lr-hide` does not: which affordance asked
  *   for the close. Also fired (with reason `'unmount'`, non-cancelable there since the element is
  *   already being removed) when the dialog is removed from the DOM while still open.
- * @csspart backdrop - The full-viewport scrim behind the panel.
- * @csspart panel - The dialog panel itself (`role="dialog"` while open). Shrink-wraps to its
+ * @csspart base - Shoelace wrapper alias.
+ * @csspart backdrop - The full-viewport scrim behind the panel; also carries `overlay`.
+ * @csspart overlay - Shoelace alias on the backdrop.
+ * @csspart panel - The dialog panel itself (`role="dialog"` while open); also carries `dialog`.
+ *   Shrink-wraps to its
  *   content by default, capped at `--lr-dialog-max-width` (default `32rem`); set
  *   `--lr-dialog-width` for an assertive width instead of only a cap.
- * @csspart header - The header row, rendered when the `label` slot is filled, `heading` is set
- *   (and no heading is slotted into the default slot), `header-actions` is filled, and/or
- *   `closable` is `true` — and never when `withoutHeader` is set.
- * @csspart heading - The visible heading element inside `header`, wrapping the `label` slot and
- *   falling back to the `heading` text.
+ * @csspart dialog - Web Awesome alias on the panel.
+ * @csspart header - The header row, rendered when the `label` slot is filled, `label`/`heading`
+ *   is set (and no heading is slotted into the default slot), `header-actions` is filled, and/or
+ *   `closable` is `true` — and never when `noHeader` or `withoutHeader` is set.
+ * @csspart heading - The visible title inside `header`; also carries `title` and `label`.
+ * @csspart title - Mapped alias on the visible title.
  * @csspart header-actions - The wrapper around the `header-actions` slot.
  * @csspart close-button - The built-in close button, rendered inside `header`
  *   only when `closable` is `true`.
- * @csspart label - The invisible `label`-property element used for
- *   `aria-labelledby` when no heading is slotted and neither `heading` nor the `label` slot is
- *   set.
+ * @csspart close-button__base - Exported mapped alias on the close button.
+ * @csspart label - Mapped alias on the visible title.
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
  * @cssprop [--lr-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
  * @cssprop [--lr-dialog-backdrop-filter=none] - `backdrop-filter` applied to the scrim, for a
  *   frosted-glass treatment over the page behind it.
+ * @cssprop [--backdrop-filter=var(--lr-dialog-backdrop-filter,none)] - Mapped backdrop-filter
+ *   alias.
+ * @cssprop [--width=var(--lr-dialog-width,auto)] - Mapped panel width alias.
+ * @cssprop [--spacing=var(--lr-dialog-spacing,var(--lr-space-l))] - Mapped shared region spacing.
+ * @cssprop [--header-spacing] - Mapped header padding override.
+ * @cssprop [--body-spacing] - Shoelace body padding override.
+ * @cssprop [--footer-spacing] - Shoelace footer padding override.
+ * @cssprop [--show-duration] - Mapped opening animation duration.
+ * @cssprop [--hide-duration] - Mapped closing animation duration.
  * @cssprop [--lr-dialog-width=auto] - Assertive inline size for the panel. Left at `auto` the panel
  *   shrink-wraps to its content.
  * @cssprop [--lr-dialog-max-width=var(--lr-dialog-width, var(--lr-size-32rem))] - Cap on the
@@ -147,9 +175,11 @@ export interface LyraDialogEventMap {
  *   enter/exit animation.
  * @cssprop [--lr-dialog-backdrop-duration=var(--lr-duration-fast)] - Duration of the backdrop's
  *   fade.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraDialog extends LyraElement<LyraDialogEventMap> {
-  static override styles = [LyraElement.styles, srOnly, styles];
+  static override styles = [LyraElement.styles, styles];
 
   private _open = false;
 
@@ -157,6 +187,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    * Whether the dialog is open. Assigning it runs the full `lr-show`/`lr-hide` lifecycle, so it
    * stays in sync with `show()`/`hide()`/`close()` and can be vetoed the same way. Markup that
    * renders open from the start emits nothing.
+   * @default false
    */
   @property({ type: Boolean, reflect: true })
   get open(): boolean {
@@ -175,32 +206,38 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     else this.close('api');
   }
 
-  /** Screen-reader-only accessible name used when no heading is slotted and neither `heading` nor
-   *  the `label` slot is set — see the class doc for the full fallback order. */
-  @property() label = '';
+  /** Visible mapped title. The richer `label` slot wins when both are supplied. */
+  @property({ reflect: true }) label = '';
 
-  /** Visible header text, rendered when no heading element is slotted into
-   *  the default slot and the `label` slot is empty — see the class doc for the full fallback
-   *  order. Has no effect (renders nothing) if a light-DOM heading is slotted; that case
-   *  keeps working completely unchanged whether or not `heading` is set. */
+  /** Legacy visible title fallback. The richer `label` slot and mapped `label` property win. Has
+   *  no effect when a direct light-DOM heading already supplies custom title chrome. */
   @property() heading?: string;
 
   /** Renders a built-in close (X) button in the header row (creating one,
-   *  with no heading text, if `heading` is unset), wired to the same
+   *  with no heading text, if `label` and `heading` are unset), wired to the same
    *  `close()` path Escape/backdrop-dismiss already use, with reason
    *  `'close-button'`. */
-  @property({ type: Boolean, attribute: 'closable' }) closable = false;
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) closable = true;
 
   /** Suppresses the header row entirely, whatever `heading`, `closable`, the `label` slot or the
    *  `header-actions` slot would otherwise render. For a dialog that owns its own chrome. */
   @property({ type: Boolean, attribute: 'without-header', reflect: true }) withoutHeader = false;
+
+  /** Shoelace spelling for suppressing the header row. */
+  @property({ type: Boolean, attribute: 'no-header', reflect: true }) noHeader = false;
+
+  /** SSR hint that keeps the footer wrapper rendered before slot assignment is observable. */
+  @property({ type: Boolean, attribute: 'with-footer', reflect: true }) withFooter = false;
+
+  /** Explicit accessible-only panel name. Unlike `label`, it never renders visible text. */
+  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
 
   /** Host-level `aria-label` override for the panel's accessible name — wins over every other
    *  naming source (a slotted heading, the `label` slot, `heading`, the `label` property) without
    *  suppressing visible heading chrome, matching `<lr-date-input>`'s `accessibleLabel` pattern.
    *  See the class doc for the full precedence order. Set as a plain `aria-label` attribute on
    *  `<lr-dialog>` itself, not a public JS property. */
-  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
 
   /** Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching
    *  `wa-dialog`. This was previously spelled `no-light-dismiss` — an opt-*out* whose default left
@@ -220,8 +257,32 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  the opposite transition (or by a disconnect) never announces a completion that never
    *  happened. */
   private transitionToken = 0;
-  private readonly srLabelId = nextId('dialog-label');
+  private transitionAnimations: Animation[] = [];
+  private initialFocusDecision?: boolean;
   private readonly headingId = nextId('dialog-heading');
+  private externalModalDepth = 0;
+
+  /** Shoelace-compatible modal controller. External activation suspends this dialog's focus/Escape
+   * ownership without changing its logical `open` state; deactivation restores it. */
+  modal: LyraDialogModalController = {
+    activateExternal: () => {
+      this.externalModalDepth++;
+      if (this.externalModalDepth === 1) this.overlay?.suspend();
+    },
+    deactivateExternal: () => {
+      if (this.externalModalDepth === 0) return;
+      this.externalModalDepth--;
+      if (this.externalModalDepth === 0 && this.open && this.modalSurface) {
+        this.overlay?.resume();
+        queueMicrotask(() => this.focusInitial());
+      }
+    },
+  };
+
+  /** Drawer overrides this for its nonmodal `contained` mode. */
+  protected get modalSurface(): boolean {
+    return true;
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
@@ -230,7 +291,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     }
     if (changed.has('open')) {
       if (this.open) {
-        if (this.isConnected) this.activateOverlay();
+        if (this.isConnected && this.modalSurface) this.activateOverlay();
       } else {
         this.deactivateOverlay();
       }
@@ -240,9 +301,9 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   // Runs after render so the manager can resolve the panel and its composed
   // focus targets, including controls projected through either slot.
   protected override updated(changed: PropertyValues): void {
-    if (changed.has('open') && this.open && this.isConnected) {
+    if (changed.has('open') && this.open && this.isConnected && this.modalSurface) {
       this.enterTopLayer();
-      this.overlay?.focusInitial();
+      this.focusInitial();
     }
   }
 
@@ -256,14 +317,14 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     // notice `open` is still true -- restore the scroll lock/trap it dropped.
     // Top-layer membership is dropped by the browser itself on removal, so it is re-established
     // here too.
-    if (this.hasUpdated && this.open) {
+    if (this.hasUpdated && this.open && this.modalSurface) {
       if (this.overlay?.isActive()) {
         this.overlay.resume();
       } else {
         this.activateOverlay();
       }
       this.enterTopLayer();
-      queueMicrotask(() => this.overlay?.focusInitial());
+      queueMicrotask(() => this.focusInitial());
     }
   }
 
@@ -275,6 +336,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     // own lifecycle from scratch, and a pending after-event must not fire for a transition the
     // element is no longer part of.
     this.transitionToken++;
+    this.cancelTransitionAnimations();
     this.removeAttribute('data-closing');
     if (this.open) {
       // A reparent (drag-and-drop moving this same element instance to a new
@@ -292,7 +354,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
           this.applyOpenState(false);
           // Removal cannot be vetoed -- the element is already gone -- so none of these three is
           // cancelable here, and there is no exit animation left to wait on.
-          this.emit('lr-hide');
+          this.emit<LyraDialogHideDetail>('lr-hide', { source: this });
           this.emit<DialogCloseReason>('lr-dialog-close', 'unmount');
           this.emit('lr-after-hide');
         }
@@ -331,23 +393,24 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    * dialog closed and the `open` attribute untouched — then `lr-after-show` once the enter
    * animation has finished.
    */
-  show(): void {
-    if (this._open) return;
+  show(): Promise<void> {
+    if (this._open) return Promise.resolve();
     if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
-      return;
+      return Promise.resolve();
     }
+    this.cancelTransitionAnimations();
     this.removeAttribute('data-closing');
     this.applyOpenState(true);
-    void this.settleTransition('lr-after-show');
+    return this.settleTransition('lr-after-show');
   }
 
   /**
    * Close the dialog with reason `'api'`. Identical to `close()`; it exists so every Lyra overlay
    * exposes the same `show()`/`hide()`/`open` surface.
    */
-  hide(): void {
-    this.close('api');
+  hide(): Promise<void> {
+    return this.close('api');
   }
 
   /**
@@ -360,24 +423,30 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    * toggle `open` itself. `lr-hide` is emitted first and vetoing it stops
    * `lr-dialog-close` from being emitted at all.
    */
-  close(reason: DialogCloseReason = 'api'): void {
-    if (!this._open) return;
-    if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+  close(reason: DialogCloseReason = 'api'): Promise<void> {
+    return this.closeFrom(reason, this);
+  }
+
+  private closeFrom(reason: DialogCloseReason, source: Element): Promise<void> {
+    if (!this._open) return Promise.resolve();
+    if (this.emit<LyraDialogHideDetail>('lr-hide', { source }, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
-      return;
+      return Promise.resolve();
     }
     if (this.emit<DialogCloseReason>('lr-dialog-close', reason, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
-      return;
+      return Promise.resolve();
     }
+    this.cancelTransitionAnimations();
     if (this.isConnected) this.setAttribute('data-closing', '');
     this.applyOpenState(false);
-    void this.settleTransition('lr-after-hide');
+    return this.settleTransition('lr-after-hide');
   }
 
   private applyOpenState(next: boolean): void {
     const old = this._open;
     this._open = next;
+    if (next) this.initialFocusDecision = undefined;
     this.requestUpdate('open', old);
   }
 
@@ -388,13 +457,49 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.toggleAttribute('open', this._open);
   }
 
-  /**
-   * Resolves once the current enter/exit animation on the panel and the backdrop has finished,
-   * then emits the matching `lr-after-*` event. Both surfaces resolve their duration through the
-   * shared `--lr-duration-*` tokens, which the token layer flattens to 0.001ms under
-   * `prefers-reduced-motion: reduce` — so this settles in that branch too rather than being
-   * skipped, and the event contract holds either way.
-   */
+  protected panelAnimationName(showing: boolean): string {
+    return showing ? 'dialog.show' : 'dialog.hide';
+  }
+
+  protected overlayAnimationName(showing: boolean): string {
+    return showing ? 'dialog.overlay.show' : 'dialog.overlay.hide';
+  }
+
+  protected panelAnimationSpec(showing: boolean): RegisteredAnimationSpec {
+    const offset = 'translateY(calc(-1 * var(--lr-size-0-5rem)))';
+    return {
+      keyframes: showing
+        ? [{ opacity: 0, transform: offset }, { opacity: 1, transform: 'translateY(0)' }]
+        : [{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: offset }],
+      durationProperties: [
+        showing ? '--show-duration' : '--hide-duration',
+        '--lr-dialog-panel-duration',
+        '--lr-duration-base',
+      ],
+      easingProperties: ['--lr-easing-standard'],
+    };
+  }
+
+  protected overlayAnimationSpec(showing: boolean): RegisteredAnimationSpec {
+    return {
+      keyframes: showing ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }],
+      durationProperties: [
+        showing ? '--show-duration' : '--hide-duration',
+        '--lr-dialog-backdrop-duration',
+        '--lr-duration-fast',
+      ],
+      easingProperties: ['--lr-easing-standard'],
+    };
+  }
+
+  private cancelTransitionAnimations(): void {
+    for (const animation of this.transitionAnimations) animation.cancel();
+    this.transitionAnimations = [];
+  }
+
+  /** Resolves once the registry-backed panel/backdrop animation has finished, then emits the
+   * matching `lr-after-*` event. A `null` registration intentionally skips native motion but
+   * retains the same event and promise lifecycle. */
   private async settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
     const token = ++this.transitionToken;
     await this.updateComplete;
@@ -404,16 +509,34 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     // dialog *removed* mid-transition is different: disconnectedCallback bumps the token, and the
     // unmount path emits its own complete close sequence.
     if (this.isConnected) {
-      // A CSS animation is created during the style recalculation that follows the render, so read
-      // the running animations only after the browser has had a frame to produce them.
-      const view = this.ownerDocument.defaultView;
-      if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
-      if (this.transitionToken !== token) return;
       const root = this.renderRoot as ShadowRoot;
-      const surfaces = [root.querySelector('[part="panel"]'), root.querySelector('[part="backdrop"]')];
-      const animations = surfaces.flatMap((surface) => surface?.getAnimations() ?? []);
+      const panel = root.querySelector<HTMLElement>('[part~="panel"]');
+      const backdrop = root.querySelector<HTMLElement>('[part~="backdrop"]');
+      const showing = event === 'lr-after-show';
+      const animations = [
+        panel
+          ? animateRegistered(
+              this,
+              panel,
+              this.panelAnimationName(showing),
+              this.effectiveDirection,
+              this.panelAnimationSpec(showing),
+            )
+          : undefined,
+        this.modalSurface && backdrop
+          ? animateRegistered(
+              this,
+              backdrop,
+              this.overlayAnimationName(showing),
+              this.effectiveDirection,
+              this.overlayAnimationSpec(showing),
+            )
+          : undefined,
+      ].filter((animation): animation is Animation => animation !== undefined);
+      this.transitionAnimations = animations;
       await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
       if (this.transitionToken !== token) return;
+      this.cancelTransitionAnimations();
     }
     if (event === 'lr-after-hide') {
       this.removeAttribute('data-closing');
@@ -431,7 +554,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    * dialog reacts, and an `auto` popover would close on the user agent's terms instead. The
    * `z-index` in the stylesheet remains as the fallback for a user agent without popover support.
    */
-  private enterTopLayer(): void {
+  protected enterTopLayer(): void {
     if (!this.isConnected || typeof this.showPopover !== 'function') return;
     if (this.getAttribute('popover') !== 'manual') this.setAttribute('popover', 'manual');
     try {
@@ -441,7 +564,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     }
   }
 
-  private leaveTopLayer(): void {
+  protected leaveTopLayer(): void {
     if (typeof this.hidePopover !== 'function') return;
     try {
       if (this.isTopLayer()) this.hidePopover();
@@ -464,82 +587,116 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   };
 
   private onCloseButtonClick = (): void => {
-    this.close('close-button');
+    const button = this.renderRoot.querySelector('[part~="close-button"]') ?? this;
+    this.requestClose('close-button', 'close-button', button);
   };
 
-  private activateOverlay(): void {
+  private requestClose(
+    source: LyraDialogRequestCloseSource,
+    reason: DialogCloseReason,
+    sourceElement: Element,
+  ): void {
+    if (this.emit<LyraDialogRequestCloseDetail>('lr-request-close', { source }, { cancelable: true }).defaultPrevented) {
+      return;
+    }
+    void this.closeFrom(reason, sourceElement);
+  }
+
+  protected focusInitial(): void {
+    this.overlay?.focusInitial();
+  }
+
+  protected activateOverlay(): void {
     if (!this.isConnected || this.overlay?.isActive()) return;
     this.overlay = activateOverlay({
       host: this,
-      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
-      onEscape: () => this.close('escape'),
-      onBackdrop: () => this.close('backdrop'),
+      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part~="panel"]') ?? null,
+      onEscape: () => {
+        const panel = this.renderRoot.querySelector('[part~="panel"]') ?? this;
+        this.requestClose('keyboard', 'escape', panel);
+      },
+      onBackdrop: () => {
+        const backdrop = this.renderRoot.querySelector('[part~="backdrop"]') ?? this;
+        this.requestClose('overlay', 'backdrop', backdrop);
+      },
+      // Preserve Lyra's body-first initial-focus contract now that the mapped close affordance is
+      // present by default. Explicit autofocus still wins inside the manager; with no body target,
+      // the panel itself is the safe fallback instead of an unexpectedly destructive close action.
+      preferredInitialFocus: () => {
+        const panel = this.renderRoot.querySelector<HTMLElement>('[part~="panel"]');
+        const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+        return (body && collectFocusableElements(body)[0]) || panel;
+      },
+      beforeInitialFocus: () => {
+        if (this.initialFocusDecision === undefined) {
+          this.initialFocusDecision = !this.emit('lr-initial-focus', undefined, { cancelable: true }).defaultPrevented;
+        }
+        return this.initialFocusDecision;
+      },
       lockScroll: true,
       suspendWhenUnrendered: true,
     });
+    if (this.externalModalDepth > 0) this.overlay.suspend();
   }
 
-  private deactivateOverlay(): void {
+  protected deactivateOverlay(): void {
     this.overlay?.deactivate();
     this.overlay = undefined;
   }
 
   override render(): TemplateResult {
-    // Priority order (see class doc): a host-level aria-label attribute always wins; only when
-    // it's unset does a slotted heading get a turn; only when there isn't one of those either does
-    // the header heading (the `label` slot, else `heading`) get a turn, then the `label`
-    // property's sr-only fallback -- never more than one of the two below claims aria-labelledby
-    // for the same panel, and never more than one source ever claims aria-label.
-    const renderHeading = !this.withoutHeader && !this.headingText && (this.hasLabelSlot || !!this.heading);
-    const useHeadingForName = !this.accessibleLabel && renderHeading;
-    const useSrLabel =
-      !this.accessibleLabel && !this.headingText && !useHeadingForName && this.label.length > 0;
+    // Naming precedence (see class doc): host aria-label, accessible-label, a direct light-DOM
+    // heading, then the shadow-owned visible title. Only the final case uses aria-labelledby.
+    const suppressHeader = this.withoutHeader || this.noHeader;
+    const renderHeading =
+      !suppressHeader && !this.headingText && (this.hasLabelSlot || this.label.length > 0 || !!this.heading);
+    const explicitName = this.hostAriaLabel || this.accessibleLabel || this.headingText;
+    const useHeadingForName = !explicitName && renderHeading;
     const showHeader =
-      !this.withoutHeader && (renderHeading || this.hasHeaderActionsSlot || this.closable);
+      !suppressHeader && (renderHeading || this.hasHeaderActionsSlot || this.closable);
     return html`
-      <div part="backdrop" @click=${this.onBackdropClick}></div>
-      <div
-        part="panel"
-        role=${this.open ? 'dialog' : nothing}
-        aria-modal=${this.open ? 'true' : nothing}
-        aria-label=${this.accessibleLabel ?? this.headingText ?? nothing}
-        aria-labelledby=${useHeadingForName ? this.headingId : useSrLabel ? this.srLabelId : nothing}
-        tabindex="-1"
-      >
-        ${useSrLabel
-          ? html`<span id=${this.srLabelId} part="label" class="sr-only">${this.label}</span>`
-          : nothing}
-        ${showHeader
-          ? html`
-              <div part="header">
-                ${renderHeading
-                  ? html`<span id=${this.headingId} part="heading"
-                      ><slot name="label">${this.heading}</slot></span
-                    >`
-                  : nothing}
-                ${this.hasHeaderActionsSlot
-                  ? html`<span part="header-actions"><slot name="header-actions"></slot></span>`
-                  : nothing}
-                ${this.closable
-                  ? html`
-                      <button
-                        part="close-button"
-                        type="button"
-                        aria-label=${this.localize('close')}
-                        @click=${this.onCloseButtonClick}
-                      >
-                        ${closeIcon()}
-                      </button>
-                    `
-                  : nothing}
-              </div>
-            `
-          : nothing}
-        <div part="body">
-          <slot @slotchange=${this.onDefaultSlotChange}></slot>
-        </div>
-        <div part="footer" ?hidden=${!this.hasFooterSlot}>
-          <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
+      <div part="base">
+        <div part="backdrop overlay" @click=${this.onBackdropClick}></div>
+        <div
+          part="panel dialog"
+          role=${this.open ? 'dialog' : nothing}
+          aria-modal=${this.open && this.modalSurface ? 'true' : nothing}
+          aria-label=${explicitName || nothing}
+          aria-labelledby=${useHeadingForName ? this.headingId : nothing}
+          tabindex="-1"
+        >
+          ${showHeader
+            ? html`
+                <div part="header">
+                  ${renderHeading
+                    ? html`<span id=${this.headingId} part="heading title label"
+                        ><slot name="label">${this.label || this.heading}</slot></span
+                      >`
+                    : nothing}
+                  ${this.hasHeaderActionsSlot
+                    ? html`<span part="header-actions"><slot name="header-actions"></slot></span>`
+                    : nothing}
+                  ${this.closable
+                    ? html`
+                        <button
+                          part="close-button close-button__base"
+                          type="button"
+                          aria-label=${this.localize('close')}
+                          @click=${this.onCloseButtonClick}
+                        >
+                          ${closeIcon()}
+                        </button>
+                      `
+                    : nothing}
+                </div>
+              `
+            : nothing}
+          <div part="body">
+            <slot @slotchange=${this.onDefaultSlotChange}></slot>
+          </div>
+          <div part="footer" ?hidden=${!this.hasFooterSlot && !this.withFooter}>
+            <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
+          </div>
         </div>
       </div>
     `;

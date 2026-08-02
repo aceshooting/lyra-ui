@@ -21,6 +21,19 @@ function mockTrackWidth(el: LyraSlider, width: number): void {
     }) as DOMRect;
 }
 
+it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+  const el = (await fixture(html`<lr-slider aria-label="Volume"></lr-slider>`)) as LyraSlider;
+  const aliases: CustomEvent[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+  el.setCustomValidity('Choose another value.');
+
+  expect(el.checkValidity()).to.be.false;
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0].target).to.equal(el);
+  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
+  expect(aliases[0].cancelable).to.be.false;
+});
+
 /** Vertical counterpart of mockTrackWidth: a track box spanning `height` px
  *  down the block axis, with 0% (the domain minimum) at the bottom edge. */
 function mockTrackHeight(el: LyraSlider, height: number): void {
@@ -53,18 +66,152 @@ function stubPointerCapture(el: LyraSlider): void {
   for (const handle of handles(el)) handle.setPointerCapture = () => {};
 }
 
-it('defaults min=0, max=100, step=1, and seeds an unset value to the domain midpoint', async () => {
+describe('mapped numeric and form contract', () => {
+  it('exposes numeric value/defaultValue with an explicit string compatibility accessor', async () => {
+    const el = (await fixture(html`<lr-slider></lr-slider>`)) as LyraSlider;
+    expect(el.value).to.equal(0);
+    expect(el.defaultValue).to.equal(0);
+    expect(el.valueAsNumber).to.equal(0);
+    expect(el.valueAsString).to.equal('0');
+
+    el.step = 0.5;
+    el.valueAsString = '23.5';
+    await el.updateComplete;
+    expect(el.value).to.equal(23.5);
+    el.value = 17;
+    expect(el.valueAsString).to.equal('17');
+  });
+
+  it('defaults a range to 0/50, hides the old readout, and submits two same-name entries', async () => {
+    const form = (await fixture(html`
+      <form><lr-slider range name="window"></lr-slider></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-slider') as LyraSlider;
+    expect(el.minValue).to.equal(0);
+    expect(el.maxValue).to.equal(50);
+    expect(el.showValue).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="value"]').length).to.equal(0);
+    expect(new FormData(form).getAll('window')).to.deep.equal(['0', '50']);
+  });
+
+  it('pushes the sibling handle when either handle crosses it', async () => {
+    const el = (await fixture(html`
+      <lr-slider range min="0" max="100" min-value="20" max-value="40"></lr-slider>
+    `)) as LyraSlider;
+    el.minValue = 70;
+    expect(el.minValue).to.equal(70);
+    expect(el.maxValue).to.equal(70);
+    el.maxValue = 10;
+    expect(el.minValue).to.equal(10);
+    expect(el.maxValue).to.equal(10);
+  });
+
+  it('implements silent stepUp/stepDown against the focused handle', async () => {
+    const el = (await fixture(html`
+      <lr-slider range min="0" max="100" step="5" min-value="20" max-value="60"></lr-slider>
+    `)) as LyraSlider;
+    const maxThumb = el.shadowRoot!.querySelector('[part~="thumb-max"]') as HTMLElement;
+    maxThumb.focus();
+    let events = 0;
+    el.addEventListener('input', () => events++);
+    el.addEventListener('change', () => events++);
+    el.stepUp();
+    expect(el.maxValue).to.equal(65);
+    el.stepDown(2);
+    expect(el.maxValue).to.equal(55);
+    expect(events).to.equal(0);
+  });
+
+  it('supports external form ownership and exposes the validity surface', async () => {
+    const wrapper = await fixture(html`
+      <div><form id="remote-slider-form"></form><lr-slider name="gain" value="12"></lr-slider></div>
+    `);
+    const el = wrapper.querySelector('lr-slider') as LyraSlider;
+    el.form = 'remote-slider-form';
+    expect(el.getForm()?.id).to.equal('remote-slider-form');
+    expect(new FormData(wrapper.querySelector('form')!).get('gain')).to.equal('12');
+    el.setCustomValidity('Nope');
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Nope');
+    expect(el.checkValidity()).to.be.false;
+    el.resetValidity();
+    expect(el.reportValidity()).to.be.true;
+  });
+});
+
+describe('mapped presentation surface', () => {
+  it('renders label/reference slots and their named parts', async () => {
+    const el = (await fixture(html`
+      <lr-slider with-label label="Budget">
+        <strong slot="label">Range</strong>
+        <span slot="reference">Low — High</span>
+      </lr-slider>
+    `)) as LyraSlider;
+    expect(el.shadowRoot!.querySelectorAll('[part~="label"] slot[name="label"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="references"] slot[name="reference"]').length).to.equal(1);
+  });
+
+  it('uses indicatorOffset and exposes tooltip placement/distance subparts', async () => {
+    const el = (await fixture(html`
+      <lr-slider
+        value="25"
+        indicator-offset="50"
+        with-tooltip
+        tooltip-placement="bottom"
+        tooltip-distance="12"
+      ></lr-slider>
+    `)) as LyraSlider;
+    const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+    expect(indicator.style.insetInlineStart).to.equal('25%');
+    expect(indicator.style.inlineSize).to.equal('25%');
+    expect(el.tooltipPlacement).to.equal('bottom');
+    expect(el.tooltipDistance).to.equal(12);
+    expect(el.shadowRoot!.querySelectorAll('[part~="tooltip__tooltip"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="tooltip__content"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="tooltip__arrow"]').length).to.equal(1);
+  });
+
+  it('forwards autofocus to the actual first thumb', async () => {
+    const el = (await fixture(html`<lr-slider autofocus></lr-slider>`)) as LyraSlider;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('thumb');
+  });
+
+  it('anchors both range tooltips on the value axis in horizontal, vertical, and RTL layouts', async () => {
+    const horizontal = (await fixture(html`
+      <lr-slider dir="rtl" range with-tooltip min-value="20" max-value="80"></lr-slider>
+    `)) as LyraSlider;
+    const horizontalTooltips = [...horizontal.shadowRoot!.querySelectorAll<HTMLElement>('[part~="tooltip"]')];
+    expect(horizontalTooltips.map((tooltip) => tooltip.style.insetInlineStart)).to.deep.equal([
+      '20%',
+      '80%',
+    ]);
+    expect(horizontalTooltips.every((tooltip) => !tooltip.style.cssText.includes('NaN'))).to.be.true;
+
+    const vertical = (await fixture(html`
+      <lr-slider dir="rtl" orientation="vertical" range with-tooltip min-value="20" max-value="80"></lr-slider>
+    `)) as LyraSlider;
+    const verticalTooltips = [...vertical.shadowRoot!.querySelectorAll<HTMLElement>('[part~="tooltip"]')];
+    expect(verticalTooltips.map((tooltip) => tooltip.style.insetBlockEnd)).to.deep.equal([
+      '20%',
+      '80%',
+    ]);
+    expect(verticalTooltips.every((tooltip) => !tooltip.style.cssText.includes('NaN'))).to.be.true;
+  });
+});
+
+it('defaults min=0, max=100, step=1, and starts at zero', async () => {
   const el = (await fixture(html`<lr-slider></lr-slider>`)) as LyraSlider;
   expect(el.min).to.equal(0);
   expect(el.max).to.equal(100);
   expect(el.step).to.equal(1);
-  expect(el.value).to.equal('50');
-  expect(el.valueAsNumber).to.equal(50);
+  expect(el.value).to.equal(0);
+  expect(el.valueAsNumber).to.equal(0);
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
   expect(thumb.getAttribute('role')).to.equal('slider');
   expect(thumb.getAttribute('aria-valuemin')).to.equal('0');
   expect(thumb.getAttribute('aria-valuemax')).to.equal('100');
-  expect(thumb.getAttribute('aria-valuenow')).to.equal('50');
+  expect(thumb.getAttribute('aria-valuenow')).to.equal('0');
 });
 
 it('keeps extreme finite domains and tiny steps finite instead of overflowing rounding math', async () => {
@@ -83,7 +230,7 @@ it('keeps extreme finite domains and tiny steps finite instead of overflowing ro
   expect(thumb.getAttribute('style')).to.not.contain('Infinity');
 });
 
-it('defaults to the true midpoint and pointer-maps the full finite number range', async () => {
+it('keeps the zero default finite and pointer-maps the full finite number range', async () => {
   const defaulted = (await fixture(html`
     <lr-slider
       min=${-Number.MAX_VALUE}
@@ -112,17 +259,17 @@ it('defaults to the true midpoint and pointer-maps the full finite number range'
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 70 }));
 });
 
-it('honors a declared value attribute instead of the midpoint default', async () => {
+it('honors a declared numeric value attribute instead of the zero default', async () => {
   const el = (await fixture(html`<lr-slider value="70"></lr-slider>`)) as LyraSlider;
-  expect(el.value).to.equal('70');
+  expect(el.value).to.equal(70);
   expect(el.valueAsNumber).to.equal(70);
 });
 
-it('keeps value (string) and valueAsNumber (number) in sync in both directions', async () => {
+it('keeps numeric value and valueAsNumber in sync while accepting compatible string writes', async () => {
   const el = (await fixture(html`<lr-slider min="0" max="1" step="0.1"></lr-slider>`)) as LyraSlider;
   el.valueAsNumber = 0.7;
   await elementUpdated(el);
-  expect(el.value).to.equal('0.7');
+  expect(el.value).to.equal(0.7);
 
   el.value = '0.3';
   await elementUpdated(el);
@@ -143,8 +290,8 @@ it('renders the indicator and thumb position from the current percent-of-range',
   expect(el.shadowRoot!.querySelectorAll('[part~="fill"]').length).to.equal(0);
 });
 
-it('renders the visible value readout by default, and omits it when show-value is false', async () => {
-  const shown = (await fixture(html`<lr-slider value="42"></lr-slider>`)) as LyraSlider;
+it('renders the visible value readout when requested, and omits it by default', async () => {
+  const shown = (await fixture(html`<lr-slider value="42" show-value></lr-slider>`)) as LyraSlider;
   const readout = shown.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   expect(readout).to.exist;
   expect(readout.textContent).to.equal('42');
@@ -159,6 +306,7 @@ it('renders the visible value readout by default, and omits it when show-value i
 it('maps a numeric value to opt-in human-readable aria-valuetext without changing the visible readout', async () => {
   const el = (await fixture(html`
     <lr-slider
+      show-value
       min="0"
       max="2"
       value="1"
@@ -175,7 +323,7 @@ it('maps a numeric value to opt-in human-readable aria-valuetext without changin
 
 it('formats the default visible value and aria-valuetext with the effective locale', async () => {
   const el = (await fixture(
-    html`<lr-slider lang="ar-EG" min="0" max="2000" value="1234"></lr-slider>`,
+    html`<lr-slider show-value lang="ar-EG" min="0" max="2000" value="1234"></lr-slider>`,
   )) as LyraSlider;
   const formatted = new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 20 }).format(1234);
   expect(el.shadowRoot!.querySelector('[part="thumb"]')!.getAttribute('aria-valuetext')).to.equal(formatted);
@@ -201,10 +349,10 @@ it('omits the value readout from a plain HTML show-value="false" content attribu
   expect(el.showValue).to.be.false;
   expect(el.shadowRoot!.querySelector('[part="value"]')).to.equal(null);
 
-  // Removing the attribute (never setting it at all) still defaults to true, the other half of
+  // Removing the attribute (never setting it at all) restores the false default, the other half of
   // the same converter's contract.
   const defaulted = (await fixture(html`<lr-slider value="42"></lr-slider>`)) as LyraSlider;
-  expect(defaulted.showValue).to.be.true;
+  expect(defaulted.showValue).to.be.false;
 });
 
 it('lets a forwarded host aria-label win on the thumb while retaining the label prop fallback', async () => {
@@ -212,7 +360,8 @@ it('lets a forwarded host aria-label win on the thumb while retaining the label 
     html`<lr-slider label="Temperature"></lr-slider>`,
   )) as LyraSlider;
   const thumb1 = labeled.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
-  expect(thumb1.getAttribute('aria-label')).to.equal('Temperature');
+  expect(thumb1.getAttribute('aria-labelledby')).to.equal('slider-label');
+  expect(labeled.shadowRoot!.querySelector('[part~="label"]')!.textContent).to.contain('Temperature');
 
   const forwarded = (await fixture(
     html`<lr-slider aria-label="Forwarded label"></lr-slider>`,
@@ -263,7 +412,7 @@ it('moves by one step on ArrowRight/ArrowUp and emits lr-input on keydown, lr-ch
   thumb.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
   expect(changeDetail!.value).to.equal(25);
   expect(sequence.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
-  expect(sequence[0].event.constructor === Event).to.be.true;
+  expect(sequence[0].event instanceof InputEvent).to.be.true;
   expect(sequence[2].event.constructor === Event).to.be.true;
   expect(sequence[0].event.target === el && sequence[2].event.target === el).to.be.true;
   expect(sequence[1].event instanceof CustomEvent).to.be.true;
@@ -296,7 +445,7 @@ it('does not emit input or change when a keyboard step is clamped to the current
 
   expect(inputCount).to.equal(0);
   expect(changeCount).to.equal(0);
-  expect(el.value).to.equal('100');
+  expect(el.value).to.equal(100);
 });
 
 it('jumps to min/max with Home/End', async () => {
@@ -443,7 +592,7 @@ it('does not double-jump when the pointerdown originates on the thumb itself', a
   thumb.dispatchEvent(
     new PointerEvent('pointerdown', { bubbles: true, pointerId: 3, clientX: 40 }),
   );
-  // A pointerdown on the thumb itself (which bubbles up to [part="base"])
+  // A pointerdown on the thumb itself (which bubbles up to [part~="base"])
   // must not be treated as a separate track click and jump the value out
   // from under the thumb-only pointerdown handler.
   expect(el.valueAsNumber).to.equal(20);
@@ -627,7 +776,7 @@ it('re-clamps value into a narrower domain when min/max change after mount', asy
   el.max = 50;
   await elementUpdated(el);
   expect(el.valueAsNumber).to.equal(50);
-  expect(el.value).to.equal('50');
+  expect(el.value).to.equal(50);
 });
 
 it('rounds a non-integer step to its own decimal precision instead of accumulating float drift', async () => {
@@ -649,6 +798,14 @@ it('does not poison value with NaN when step is 0', async () => {
   thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   expect(Number.isNaN(el.valueAsNumber)).to.be.false;
   expect(el.valueAsNumber).to.equal(20);
+});
+
+it('restores the mapped step default when the step attribute is removed', async () => {
+  const el = (await fixture(html`<lr-slider step="0.25"></lr-slider>`)) as LyraSlider;
+  expect(el.step).to.equal(0.25);
+  el.removeAttribute('step');
+  await elementUpdated(el);
+  expect(el.step).to.equal(1);
 });
 
 it('does not poison the submitted value with the literal string "NaN" when valueAsNumber is written NaN', async () => {
@@ -673,9 +830,7 @@ it('resyncs a post-mount non-numeric value string instead of submitting it as-is
   const el = form.querySelector('lr-slider') as LyraSlider;
   el.value = 'not-a-number';
   await elementUpdated(el);
-  // Before the fix, willUpdate() only re-sanitized an *empty* value string,
-  // so a non-numeric string assigned directly stuck around forever as the
-  // FormAssociated submitted value.
+  // Invalid compatibility string writes must not leak into the numeric IDL or submitted value.
   expect(el.value).to.not.equal('not-a-number');
   expect(Number.isFinite(Number(el.value))).to.be.true;
   expect(new FormData(form).get('temperature')).to.not.equal('not-a-number');
@@ -686,18 +841,18 @@ it('sanitizes value and form submission synchronously when the range changes', a
     <form><lr-slider name="temperature" min="0" max="100" step="10" value="83"></lr-slider></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-slider') as LyraSlider;
-  expect(el.value).to.equal('80');
+  expect(el.value).to.equal(80);
   expect(new FormData(form).get('temperature')).to.equal('80');
 
   el.max = 50;
-  expect(el.value).to.equal('50');
+  expect(el.value).to.equal(50);
   expect(el.valueAsNumber).to.equal(50);
   expect(new FormData(form).get('temperature')).to.equal('50');
 
   el.value = 'NaN';
-  expect(el.value).to.equal('30');
+  expect(el.value).to.equal(0);
   expect(Number.isFinite(el.valueAsNumber)).to.be.true;
-  expect(new FormData(form).get('temperature')).to.equal('30');
+  expect(new FormData(form).get('temperature')).to.equal('0');
 });
 
 it('rounds exponential step values without collapsing them to zero', async () => {
@@ -707,22 +862,16 @@ it('rounds exponential step values without collapsing them to zero', async () =>
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
   thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   expect(el.valueAsNumber).to.equal(0.0000001);
-  expect(el.value).to.equal('1e-7');
+  expect(el.value).to.equal(1e-7);
 });
 
 it('does not render invalid CSS or an aria-valuenow="Infinity" when max is Infinity', async () => {
-  // No `value` attribute -- this forces the eager midpoint default
-  // (`ensureValue()`/`defaultNumericValue()`) to compute off the domain
-  // itself, which is where an unguarded Infinity actually poisons things.
+  // No `value` attribute: the default still has to remain finite against a hostile domain.
   const el = (await fixture(html`<lr-slider min="0" max="Infinity"></lr-slider>`)) as LyraSlider;
   await elementUpdated(el);
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
   // Before the fix, domain()'s `isNaN(this.max)` guard let Infinity straight
-  // through (isNaN(Infinity) is false). The midpoint default then computed
-  // `0 + Infinity / 2` = Infinity, so `value` became the literal string
-  // "Infinity", and percentOf(Infinity) with an infinite span produced
-  // Infinity/Infinity = NaN, rendering `inset-inline-start:NaN%` (invalid
-  // CSS the browser silently drops) and an aria-valuenow of "Infinity".
+  // through (isNaN(Infinity) is false), poisoning value, CSS geometry, and ARIA.
   expect(thumb.style.insetInlineStart).to.match(/^-?\d+(\.\d+)?%$/);
   expect(thumb.getAttribute('aria-valuenow')).to.not.equal('Infinity');
   expect(Number.isFinite(Number(thumb.getAttribute('aria-valuenow')))).to.be.true;
@@ -746,24 +895,24 @@ it('restores the declared default value on form.reset()', async () => {
 
   form.reset();
   await elementUpdated(el);
-  expect(el.value).to.equal('70');
+  expect(el.value).to.equal(70);
 });
 
-it('re-defaults to the domain midpoint on form.reset() when no default was declared', async () => {
+it('re-defaults to zero on form.reset() when no default was declared', async () => {
   const form = (await fixture(html`
     <form><lr-slider name="temperature" min="0" max="100"></lr-slider></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-slider') as LyraSlider;
-  expect(el.valueAsNumber).to.equal(50);
+  expect(el.valueAsNumber).to.equal(0);
   el.valueAsNumber = 90;
   await elementUpdated(el);
 
   form.reset();
   await elementUpdated(el);
-  expect(el.valueAsNumber).to.equal(50);
+  expect(el.valueAsNumber).to.equal(0);
 });
 
-it('restores and submits the implicit midpoint synchronously during form.reset()', async () => {
+it('restores and submits the implicit zero synchronously during form.reset()', async () => {
   const form = (await fixture(html`
     <form><lr-slider name="temperature" min="0" max="100"></lr-slider></form>
   `)) as HTMLFormElement;
@@ -772,9 +921,9 @@ it('restores and submits the implicit midpoint synchronously during form.reset()
   expect(new FormData(form).get('temperature')).to.equal('90');
 
   form.reset();
-  expect(el.value).to.equal('50');
-  expect(el.valueAsNumber).to.equal(50);
-  expect(new FormData(form).get('temperature')).to.equal('50');
+  expect(el.value).to.equal(0);
+  expect(el.valueAsNumber).to.equal(0);
+  expect(new FormData(form).get('temperature')).to.equal('0');
 });
 
 it('sanitizes and submits a declared default synchronously during form.reset()', async () => {
@@ -787,7 +936,7 @@ it('sanitizes and submits a declared default synchronously during form.reset()',
   expect(new FormData(form).get('temperature')).to.equal('20');
 
   form.reset();
-  expect(el.value).to.equal('80');
+  expect(el.value).to.equal(80);
   expect(el.valueAsNumber).to.equal(80);
   expect(new FormData(form).get('temperature')).to.equal('80');
 });
@@ -922,7 +1071,7 @@ it('renders two independently named role="slider" handles in range mode', async 
   expect(el.maxValue).to.equal(80);
 });
 
-it('bounds each handle`s aria-valuemin/aria-valuemax by its sibling, not by the full domain', async () => {
+it('keeps the full domain reachable because a crossing handle pushes its sibling', async () => {
   const el = (await fixture(html`
     <lr-slider range min="0" max="100" min-value="20" max-value="80"></lr-slider>
   `)) as LyraSlider;
@@ -931,9 +1080,9 @@ it('bounds each handle`s aria-valuemin/aria-valuemax by its sibling, not by the 
 
   expect(minThumb.getAttribute('aria-valuenow')).to.equal('20');
   expect(minThumb.getAttribute('aria-valuemin')).to.equal('0');
-  expect(minThumb.getAttribute('aria-valuemax')).to.equal('80');
+  expect(minThumb.getAttribute('aria-valuemax')).to.equal('100');
   expect(maxThumb.getAttribute('aria-valuenow')).to.equal('80');
-  expect(maxThumb.getAttribute('aria-valuemin')).to.equal('20');
+  expect(maxThumb.getAttribute('aria-valuemin')).to.equal('0');
   expect(maxThumb.getAttribute('aria-valuemax')).to.equal('100');
   expect(minThumb.getAttribute('aria-valuetext')).to.equal('20');
   expect(maxThumb.getAttribute('aria-valuetext')).to.equal('80');
@@ -943,20 +1092,20 @@ it('names the two-handle group from label/aria-label while each handle keeps its
   const el = (await fixture(html`
     <lr-slider range label="Price" min-value="20" max-value="80"></lr-slider>
   `)) as LyraSlider;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('role')).to.equal('group');
-  expect(base.getAttribute('aria-label')).to.equal('Price');
+  expect(base.getAttribute('aria-labelledby')).to.equal('slider-label');
 
   const forwarded = (await fixture(html`
     <lr-slider range aria-label="Budget"></lr-slider>
   `)) as LyraSlider;
   expect(
-    (forwarded.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label'),
+    (forwarded.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).getAttribute('aria-label'),
   ).to.equal('Budget');
 
   // A single-handle slider is not a group -- the thumb itself owns the name.
   const single = (await fixture(html`<lr-slider label="Price"></lr-slider>`)) as LyraSlider;
-  expect((single.shadowRoot!.querySelector('[part="base"]') as HTMLElement).hasAttribute('role')).to
+  expect((single.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).hasAttribute('role')).to
     .be.false;
 });
 
@@ -972,13 +1121,13 @@ it('resolves both range handle names through the strings override', async () => 
   ).to.equal('Fin');
 });
 
-it('defaults an unset min-value/max-value to the full domain span', async () => {
+it('clamps the fixed 0/50 range defaults into a narrower domain', async () => {
   const el = (await fixture(html`<lr-slider range min="10" max="30"></lr-slider>`)) as LyraSlider;
   expect(el.minValue).to.equal(10);
   expect(el.maxValue).to.equal(30);
 });
 
-it('never lets the handles cross, and lets them meet at a single value', async () => {
+it('pushes the sibling when keyboard movement crosses it', async () => {
   const el = (await fixture(html`
     <lr-slider range min="0" max="100" step="10" min-value="40" max-value="60"></lr-slider>
   `)) as LyraSlider;
@@ -987,10 +1136,10 @@ it('never lets the handles cross, and lets them meet at a single value', async (
   minThumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   minThumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   expect(el.minValue).to.equal(60);
-  // Meeting is allowed (a zero-width selection); crossing is not.
+  // Crossing pushes the upper handle so the active thumb remains under the user's key gesture.
   minThumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-  expect(el.minValue).to.equal(60);
-  expect(el.maxValue).to.equal(60);
+  expect(el.minValue).to.equal(70);
+  expect(el.maxValue).to.equal(70);
 
   await elementUpdated(el);
   const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
@@ -998,8 +1147,8 @@ it('never lets the handles cross, and lets them meet at a single value', async (
 
   // Both handles can still travel away from the meeting point.
   minThumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-  expect(el.minValue).to.equal(50);
-  expect(el.maxValue).to.equal(60);
+  expect(el.minValue).to.equal(60);
+  expect(el.maxValue).to.equal(70);
 });
 
 it('pulls the sibling handle along instead of crossing when a value is assigned past it', async () => {
@@ -1007,11 +1156,12 @@ it('pulls the sibling handle along instead of crossing when a value is assigned 
     <lr-slider range min="0" max="100" min-value="20" max-value="80"></lr-slider>
   `)) as LyraSlider;
   el.minValue = 95;
-  expect(el.minValue).to.equal(80);
-  expect(el.maxValue).to.equal(80);
+  expect(el.minValue).to.equal(95);
+  expect(el.maxValue).to.equal(95);
 
   el.maxValue = 10;
-  expect(el.maxValue).to.equal(80);
+  expect(el.minValue).to.equal(10);
+  expect(el.maxValue).to.equal(10);
 });
 
 it('renders the range indicator from min-value to max-value, not from the domain floor', async () => {
@@ -1038,10 +1188,10 @@ it('steps each range handle independently with Arrow/Page/Home/End keys', async 
   expect(el.maxValue).to.equal(60);
   expect(el.minValue).to.equal(22);
 
-  // Home/End jump to the *reachable* bound, i.e. the sibling handle, not the
-  // component's full [min, max] domain.
+  // Home/End use the full domain and push the sibling when they cross it.
   maxThumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
-  expect(el.maxValue).to.equal(22);
+  expect(el.minValue).to.equal(0);
+  expect(el.maxValue).to.equal(0);
   maxThumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
   expect(el.maxValue).to.equal(100);
   minThumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
@@ -1137,7 +1287,7 @@ it('mirrors range arrow keys under dir="rtl"', async () => {
 
 it('shows both handle values in the readout, formatted with the effective locale', async () => {
   const el = (await fixture(html`
-    <lr-slider range lang="ar-EG" min="0" max="2000" min-value="1234" max-value="1500"></lr-slider>
+    <lr-slider show-value range lang="ar-EG" min="0" max="2000" min-value="1234" max-value="1500"></lr-slider>
   `)) as LyraSlider;
   const readout = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   const formatter = new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 20 });
@@ -1168,18 +1318,15 @@ it('passes the handle identity to valueFormatter in range mode', async () => {
 // range form participation
 // ---------------------------------------------------------------------------
 
-it('drops out of FormData in range mode and rejoins it when range is turned back off', async () => {
+it('submits two same-name entries in range mode and rejoins as a scalar when range is off', async () => {
   const form = (await fixture(html`
     <form><lr-slider name="temperature" value="70"></lr-slider></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-slider') as LyraSlider;
   expect(new FormData(form).get('temperature')).to.equal('70');
 
-  // A two-value control cannot faithfully submit one string, so range mode
-  // removes the control from submission entirely (mirroring <lr-time-range>)
-  // rather than submitting the unused single-handle value.
   el.range = true;
-  expect(new FormData(form).get('temperature')).to.equal(null);
+  expect(new FormData(form).getAll('temperature')).to.deep.equal(['0', '50']);
 
   el.range = false;
   expect(new FormData(form).get('temperature')).to.equal('70');
@@ -1200,7 +1347,33 @@ it('restores declared min-value/max-value defaults on form.reset()', async () =>
   expect(el.maxValue).to.equal(80);
 });
 
-it('re-defaults the range handles to the full domain on form.reset() when nothing was declared', async () => {
+it('applies fractional range defaults on the final step grid before and after reset', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-slider
+        name="price"
+        range
+        min="0"
+        max="1"
+        min-value="0.2"
+        max-value="0.8"
+        step="0.1"
+      ></lr-slider>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-slider') as LyraSlider;
+  expect(el.minValue).to.equal(0.2);
+  expect(el.maxValue).to.equal(0.8);
+
+  el.minValue = 0.3;
+  el.maxValue = 0.7;
+  form.reset();
+  await elementUpdated(el);
+  expect(el.minValue).to.equal(0.2);
+  expect(el.maxValue).to.equal(0.8);
+});
+
+it('re-defaults the range handles to 0/50 on form.reset() when nothing was declared', async () => {
   const form = (await fixture(html`
     <form><lr-slider name="price" range min="0" max="100"></lr-slider></form>
   `)) as HTMLFormElement;
@@ -1212,7 +1385,7 @@ it('re-defaults the range handles to the full domain on form.reset() when nothin
   form.reset();
   await elementUpdated(el);
   expect(el.minValue).to.equal(0);
-  expect(el.maxValue).to.equal(100);
+  expect(el.maxValue).to.equal(50);
 });
 
 it('still cascades <fieldset disabled> to both range handles', async () => {
@@ -1304,7 +1477,7 @@ it('lays a vertical slider out along the block axis', async () => {
   const el = (await fixture(html`
     <lr-slider orientation="vertical" style="--lr-slider-track-length: 120px;"></lr-slider>
   `)) as LyraSlider;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getBoundingClientRect().height).to.equal(120);
   expect(base.getBoundingClientRect().width).to.be.lessThan(120);
 });
@@ -1413,19 +1586,19 @@ it('shows a locale-formatted tooltip while a handle is focused, and hides it on 
     new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 20 }).format(1234),
   );
   expect(tooltip.getAttribute('aria-hidden')).to.equal('true');
-  expect(tooltip.getAttribute('part')).to.equal('tooltip');
+  expect(tooltip.getAttribute('part')).to.equal('tooltip tooltip__tooltip');
 
   el.focus();
   await elementUpdated(el);
   expect(
     (el.shadowRoot!.querySelector('[part~="tooltip"]') as HTMLElement).getAttribute('part'),
-  ).to.equal('tooltip tooltip-visible');
+  ).to.equal('tooltip tooltip__tooltip tooltip-visible');
 
   el.blur();
   await elementUpdated(el);
   expect(
     (el.shadowRoot!.querySelector('[part~="tooltip"]') as HTMLElement).getAttribute('part'),
-  ).to.equal('tooltip');
+  ).to.equal('tooltip tooltip__tooltip');
 });
 
 it('shows the dragged handle`s tooltip for the duration of the drag', async () => {
@@ -1485,7 +1658,7 @@ it('renders hint text and describes every handle with it', async () => {
   const el = (await fixture(html`
     <lr-slider range hint="Pick a budget window"></lr-slider>
   `)) as LyraSlider;
-  const hintEl = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const hintEl = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
   expect(hintEl.textContent).to.contain('Pick a budget window');
   expect(hintEl.hasAttribute('hidden')).to.be.false;
   for (const handle of handles(el)) {
@@ -1499,7 +1672,7 @@ it('renders slotted hint content and describes the thumb with it', async () => {
     <lr-slider><span slot="hint">Slotted help</span></lr-slider>
   `)) as LyraSlider;
   await elementUpdated(el);
-  const hintEl = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const hintEl = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
   expect(hintEl.hasAttribute('hidden')).to.be.false;
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
   expect(thumb.getAttribute('aria-describedby')).to.equal(hintEl.id);
@@ -1507,7 +1680,7 @@ it('renders slotted hint content and describes the thumb with it', async () => {
 
 it('hides the hint region and adds no aria-describedby when no hint is provided', async () => {
   const el = (await fixture(html`<lr-slider></lr-slider>`)) as LyraSlider;
-  const hintEl = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const hintEl = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
   expect(hintEl.hasAttribute('hidden')).to.be.true;
   expect(getComputedStyle(hintEl).display).to.equal('none');
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
@@ -1524,6 +1697,7 @@ it('leaves the single-handle contract unchanged when none of the new properties 
   expect(el.readonly).to.be.false;
   expect(el.withMarkers).to.be.false;
   expect(el.withTooltip).to.be.false;
+  expect(el.showValue).to.be.false;
   expect(el.orientation).to.equal('horizontal');
   expect(el.hint).to.equal('');
 
@@ -1531,9 +1705,9 @@ it('leaves the single-handle contract unchanged when none of the new properties 
   expect(el.shadowRoot!.querySelectorAll('[part="thumb"]').length).to.equal(1);
   expect(el.shadowRoot!.querySelectorAll('[part="markers"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelectorAll('[part~="tooltip"]').length).to.equal(0);
-  expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).hasAttribute('role')).to.be
+  expect((el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).hasAttribute('role')).to.be
     .false;
-  expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).textContent).to.equal('42');
+  expect(el.shadowRoot!.querySelector('[part="value"]')).to.equal(null);
 });
 
 it('keeps a range slider finite when min > max, step is 0, and the handles start outside the domain', async () => {

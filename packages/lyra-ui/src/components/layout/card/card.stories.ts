@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A generic, styled bordered content container — the "small bordered surface with padding" idiom common to hero highlights, clickable grid tiles, and management-list items. A direct `<lr-*>` counterpart to `<wa-card>`\'s contract. `appearance` picks the visual treatment, `interactive` opts into a hover/focus-visible affordance for a card used as a clickable tile, and `href` renders the card\'s root as a real `<a>` for a whole-card link.',
+          'A generic content surface that mirrors the public card contracts under the `lr-` prefix. `orientation` switches between vertical sections and horizontal media/body/actions, `image` aliases `media`, dedicated header/footer action slots preserve native controls, and `with-*` hints make those wrappers available during SSR. `appearance`, `interactive`, and `href` retain Lyra\'s stronger surface and activation APIs.',
       },
     },
   },
@@ -22,6 +22,17 @@ export const Outlined: Story = {
   render: () => html`
     <lr-card style="max-inline-size:20rem;">
       A bordered surface with padding — the default <code>appearance="outlined"</code>.
+    </lr-card>
+  `,
+};
+
+export const ShoelaceThemeHooks: Story = {
+  name: 'Shoelace-compatible theme hooks',
+  render: () => html`
+    <lr-card
+      style="max-inline-size:20rem;--border-color:var(--lr-color-brand);--border-radius:var(--lr-radius-pill);--border-width:var(--lr-border-width-medium);--padding:var(--lr-space-l)"
+    >
+      Border and padding styled through the upstream hooks.
     </lr-card>
   `,
 };
@@ -110,7 +121,7 @@ export const AsLink: Story = {
 };
 
 export const WithAllSlots: Story = {
-  name: 'header / media / footer / actions slots',
+  name: 'header / media / footer / action slots',
   render: () => html`
     <lr-card style="max-inline-size:20rem;">
       <img
@@ -121,7 +132,7 @@ export const WithAllSlots: Story = {
       />
       <span slot="header" style="font-weight:600;">Rooftop install No. 4021</span>
       <button
-        slot="actions"
+        slot="header-actions"
         type="button"
         style="border:none;background:none;color:var(--lr-color-brand);font:inherit;font-size:0.75rem;font-weight:600;cursor:pointer;padding:0;"
         @click=${() => alert('Edit (demo only)')}
@@ -130,6 +141,65 @@ export const WithAllSlots: Story = {
       </button>
       Body content describing the card in more detail — any content is accepted here.
       <span slot="footer" style="font-size:0.75rem; color:var(--lr-color-text-quiet);">Updated 2 days ago</span>
+      <button slot="footer-actions" type="button">Open report</button>
+    </lr-card>
+  `,
+};
+
+export const Horizontal: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Horizontal cards arrange `image`/`media`, the default body, and `actions` in logical order. Their own 30rem container query stacks those sections when the card—not the viewport—gets narrow.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-card
+      orientation="horizontal"
+      style="inline-size:42rem; max-inline-size:100%; --spacing:var(--lr-space-s);"
+    >
+      <div
+        slot="image"
+        role="img"
+        aria-label="Solar panels on a roof"
+        style="inline-size:12rem; min-block-size:8rem; background:linear-gradient(135deg, var(--lr-color-brand-quiet), var(--lr-color-surface-raised));"
+      ></div>
+      <div>
+        <strong>Rooftop generation report</strong>
+        <p>Review production, storage, and export totals for this installation.</p>
+      </div>
+      <button slot="actions" type="button">Open</button>
+    </lr-card>
+  `,
+};
+
+export const SsrPresenceHints: Story = {
+  name: 'SSR presence hints',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`with-header`, `with-header-actions`, `with-media`, `with-footer`, and `with-footer-actions` expose the corresponding wrappers before slot assignment is measurable. After hydration, populated slots are detected automatically, so the hints may remain in server-rendered markup.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-card
+      with-header
+      with-header-actions
+      with-media
+      with-footer
+      with-footer-actions
+      style="max-inline-size:24rem;"
+    >
+      <span slot="header"><strong>Server-rendered report</strong></span>
+      <button slot="header-actions" type="button">Pin</button>
+      <span slot="media" style="display:block; padding:var(--lr-space-m);">Media placeholder</span>
+      The section wrappers are present before hydration and stay synchronized afterward.
+      <span slot="footer">Updated just now</span>
+      <button slot="footer-actions" type="button">Open</button>
     </lr-card>
   `,
 };

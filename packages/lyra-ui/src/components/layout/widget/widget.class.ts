@@ -99,6 +99,8 @@ export interface LyraWidgetEventMap {
  * `fullscreen-inset` overrides the default `var(--lr-space-l)` inset applied to `[part="base"]`
  * and `[part="backdrop"]` while fullscreen (e.g. `"0 0 0 240px"` to leave a persistent sidebar
  * visible). `compact` tightens header/body padding — same convention as `lr-empty`'s `compact`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   static override styles = [LyraElement.styles, styles];

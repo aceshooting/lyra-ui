@@ -48,6 +48,8 @@ class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
  * @csspart spinner - The loading region.
  * @cssprop [--lr-calendar-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

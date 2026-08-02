@@ -530,6 +530,71 @@ it('submits under a programmatically assigned name in the same tick', async () =
   expect(new FormData(form).has('from-attribute')).to.be.false;
 });
 
+describe('form state restoration', () => {
+  it('restores repeated FormData values and updates submission without user events', async () => {
+    const form = (await fixture(html`
+      <form><lr-token-input name="tags" .value=${['stale']}></lr-token-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+    let changes = 0;
+    el.addEventListener('input', () => changes++);
+    el.addEventListener('change', () => changes++);
+    const state = new FormData();
+    state.append('tags', 'alpha');
+    state.append('tags', 'beta');
+
+    el.formStateRestoreCallback(state, 'restore');
+
+    expect(el.value).to.deep.equal(['alpha', 'beta']);
+    expect(new FormData(form).getAll('tags')).to.deep.equal(['alpha', 'beta']);
+    expect(changes, 'browser restoration is not a user edit').to.equal(0);
+  });
+
+  it('retains an early FormData restore through connection and first update', async () => {
+    const form = document.createElement('form');
+    const el = document.createElement('lr-token-input') as LyraTokenInput;
+    el.name = 'tags';
+    const state = new FormData();
+    state.append('tags', 'early');
+    el.formStateRestoreCallback(state, 'restore');
+    form.append(el);
+    document.body.append(form);
+    try {
+      await el.updateComplete;
+      expect(el.value).to.deep.equal(['early']);
+      expect(new FormData(form).getAll('tags')).to.deep.equal(['early']);
+    } finally {
+      form.remove();
+    }
+  });
+
+  it('clears to a safe empty value for malformed non-FormData state', async () => {
+    const el = (await fixture(html`<lr-token-input .value=${['stale']}></lr-token-input>`)) as LyraTokenInput;
+    expect(() => el.formStateRestoreCallback('not FormData', 'restore')).not.to.throw();
+    expect(el.value).to.deep.equal([]);
+  });
+});
+
+it('separates its live token array from the reflected JSON current default', async () => {
+  const form = (await fixture(html`
+    <form><lr-token-input name="tags" value='["alpha","beta"]'></lr-token-input></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-token-input') as LyraTokenInput;
+  expect(el.value).to.deep.equal(['alpha', 'beta']);
+  expect(el.defaultValue).to.deep.equal(['alpha', 'beta']);
+
+  el.value = ['dirty'];
+  el.setAttribute('value', '["next"]');
+  expect(el.defaultValue).to.deep.equal(['next']);
+  expect(el.value, 'attribute mutation cannot overwrite dirty live state').to.deep.equal(['dirty']);
+
+  form.reset();
+  expect(el.value).to.deep.equal(['next']);
+  el.defaultValue = ['pristine'];
+  expect(el.getAttribute('value')).to.equal('["pristine"]');
+  expect(el.value, 'after reset the live value is pristine again').to.deep.equal(['pristine']);
+});
+
 it('updates validity synchronously when required changes, with no await', async () => {
   const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
   expect(el.checkValidity()).to.be.true;

@@ -3,13 +3,16 @@ import { css } from "lit";
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    container-type: inline-size;
   }
   [part="base"] {
     position: relative;
     display: flex;
     flex-direction: column;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border: var(--border-width, var(--lr-border-width-thin)) solid
+      var(--border-color, var(--lr-color-border));
+    border-radius: var(--border-radius, var(--lr-radius));
     background: var(--lr-color-surface);
     /* Stretches to fill the host's own allocated block-size -- e.g. a CSS Grid row with the
        default align-items: stretch -- so a shorter card's visible border/background reaches the
@@ -81,12 +84,12 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
-  [part="media"][hidden],
+  [part~="media"][hidden],
   [part="header"][hidden],
   [part="footer"][hidden] {
     display: none;
   }
-  [part="media"] ::slotted(*) {
+  [part~="media"] ::slotted(*) {
     display: block;
     inline-size: 100%;
   }
@@ -95,9 +98,10 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     min-inline-size: 0;
-    gap: var(--lr-space-s);
-    padding: var(--lr-space-s) var(--lr-space-m);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    gap: var(--spacing, var(--padding, var(--lr-space-m)));
+    padding: var(--spacing, var(--padding, var(--lr-space-m)));
+    border-block-end: var(--border-width, var(--lr-border-width-thin)) solid
+      var(--border-color, var(--lr-color-border));
   }
   ::slotted([slot="header"]) {
     flex: 1 1 auto;
@@ -107,7 +111,7 @@ export const styles = css`
   [part="actions"] {
     display: flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--spacing, var(--padding, var(--lr-space-m)));
     flex: 0 0 auto;
     margin-inline-start: auto;
   }
@@ -115,11 +119,57 @@ export const styles = css`
     display: none;
   }
   [part="body"] {
-    padding: var(--lr-space-m);
+    padding: var(--spacing, var(--padding, var(--lr-space-m)));
     flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   [part="footer"] {
-    padding: var(--lr-space-s) var(--lr-space-m);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing, var(--padding, var(--lr-space-m)));
+    padding: var(--spacing, var(--padding, var(--lr-space-m)));
+    border-block-start: var(--border-width, var(--lr-border-width-thin)) solid
+      var(--border-color, var(--lr-color-border));
+  }
+  .footer-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing, var(--padding, var(--lr-space-m)));
+    margin-inline-start: auto;
+  }
+  .footer-actions[hidden] { display: none; }
+
+  :host([orientation="horizontal"]) [part="base"] {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  :host([orientation="horizontal"]) [part~="media"] {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+  }
+  :host([orientation="horizontal"]) [part="header"]:not([hidden]) {
+    display: contents;
+  }
+  :host([orientation="horizontal"]) [part="header"] > slot[name="header"],
+  :host([orientation="horizontal"]) [part="header"] > [part="actions"] > slot[name="header-actions"],
+  :host([orientation="horizontal"]) [part="footer"] {
+    display: none;
+  }
+  :host([orientation="horizontal"]) [part="body"] { order: 2; }
+  :host([orientation="horizontal"]) [part="actions"] {
+    order: 3;
+    margin-inline-start: 0;
+    padding: var(--spacing, var(--padding, var(--lr-space-m)));
+  }
+
+  @container (max-inline-size: 30rem) {
+    :host([orientation="horizontal"]) [part="base"] {
+      flex-direction: column;
+    }
+    :host([orientation="horizontal"]) [part~="media"] {
+      inline-size: 100%;
+    }
   }
 `;

@@ -32,6 +32,24 @@ it('resolves the curated utilities barrel and a granular utility subpath', async
   expect(typeof granular.place).to.equal('function');
 });
 
+it('resolves Persian and Hebrew locale subpaths and executes their registration side effects', async () => {
+  const localization = await import('@aceshooting/lyra-ui/localization.js');
+  await import('@aceshooting/lyra-ui/translations/fa.js');
+  await import('@aceshooting/lyra-ui/translations/he.js');
+  expect(localization.getRegisteredLyraLocales()).to.include('fa');
+  expect(localization.getRegisteredLyraLocales()).to.include('he');
+
+  const manifest = (await import('/package.json')) as unknown as { sideEffects: string[] };
+  for (const entry of [
+    './dist/translations/fa.js',
+    './dist/translations/he.js',
+    './src/translations/fa.ts',
+    './src/translations/he.ts',
+  ]) {
+    expect(manifest.sideEffects, entry).to.include(entry);
+  }
+});
+
 it('does not publish src/internal as a deep-import subpath', async () => {
   // `internal/` is deliberately outside the exports map: it is where the library is free to move
   // things, and the curated `utilities/*` re-exports above are the supported way to reach any of

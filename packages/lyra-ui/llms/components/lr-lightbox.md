@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/media/lightbox/lightbox.js';` (registers the tag; side-effect import)
 - **Class** `LyraLightbox`, also available unregistered from `@aceshooting/lyra-ui/components/media/lightbox/lightbox.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -14,7 +16,7 @@
 ## `lr-lightbox`
 
 A modal, full-screen image viewer with prev/next navigation, captions, and pan/zoom delegated to one
-stable embedded `<lr-zoomable-frame>`. It renders its own dialog panel (not a nested `<lr-dialog>`)
+stable embedded `<lr-pan-zoom>`. It renders its own dialog panel (not a nested `<lr-dialog>`)
 but shares the same overlay infrastructure as `<lr-dialog>`/`<lr-command-palette>` — stacking, focus
 trap, Escape/backdrop dismissal, scroll lock, and focus return.
 
@@ -30,7 +32,7 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
   The independent `[part="live-region"]` announcement remains active when the counter is hidden.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/
-  `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-zoomable-frame>`, which does the
+  `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-pan-zoom>`, which does the
   normalizing.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the panel's accessible name,
   overriding the localized `lightboxLabel`.
@@ -55,7 +57,7 @@ padded safe area rather than shrink-wrapping), `toolbar`, `counter` (visible loc
 Total"), `live-region` (visually-hidden `role="status"` that announces position on *every* `index`
 change, including consumer-driven ones), `actions` (wrapper, `hidden` when nothing is slotted),
 `close-button` (always rendered — unlike `<lr-dialog>`'s opt-in `closable`), `stage`, `frame` (the
-embedded `<lr-zoomable-frame>`; its internal parts are not re-exported), `previous-button`,
+embedded `<lr-pan-zoom>`; its internal parts are not re-exported), `previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its
 `id` is the panel's `aria-describedby` target).
 

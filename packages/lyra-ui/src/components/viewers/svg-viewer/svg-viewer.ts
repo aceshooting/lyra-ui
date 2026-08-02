@@ -2,7 +2,7 @@ export * from './svg-viewer.class.js';
 import { html } from 'lit';
 import { LyraSvgViewer } from './svg-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';
-import '../../media/zoomable-frame/zoomable-frame.js';
+import '../../media/pan-zoom/pan-zoom.js';
 import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 
 defineElement('svg-viewer', LyraSvgViewer);

@@ -2,6 +2,27 @@ import { fixture, expect, html, aTimeout, oneEvent } from '@open-wc/testing';
 import './avatar.js';
 import type { LyraAvatar } from './avatar.js';
 
+it('exposes the mapped image and label defaults and the --size hook', async () => {
+  const el = (await fixture(html`
+    <lr-avatar initials="AB" label="Account owner" style="--size: 52px"></lr-avatar>
+  `)) as LyraAvatar;
+  expect(el.image).to.equal('');
+  expect(el.label).to.equal('Account owner');
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(base.getAttribute('role')).to.equal('img');
+  expect(base.getAttribute('aria-label')).to.equal('Account owner');
+  expect(getComputedStyle(base).inlineSize).to.equal('52px');
+});
+
+it('keeps host aria-label ahead of label and alt', async () => {
+  const el = (await fixture(html`
+    <lr-avatar initials="AB" label="Mapped label" alt="Legacy alt" aria-label="Host label"></lr-avatar>
+  `)) as LyraAvatar;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'Host label',
+  );
+});
+
 const TEST_IMAGE_SRC = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
 const TEST_IMAGE_SRC_REPLACEMENT = 'data:image/gif;base64,R0lGODlhAQABAIABAAAAAP///yw=';
 

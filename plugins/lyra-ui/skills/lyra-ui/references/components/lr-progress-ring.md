@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/progress/progress-ring.js';` (registers the tag; side-effect import)
 - **Class** `LyraProgressRing`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/progress/progress-ring.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -15,16 +17,26 @@
 
 A circular progress indicator with the same value contract as `lr-progress-bar`.
 
-**Properties:** `value: number = 0`, `max: number = 100`, `indeterminate: boolean = false`
-(reflected), and `accessibleLabel: string = ''` (attribute `accessible-label`; unset falls back to
-the visible default-slot text when supplied, then the localized "Progress"). Non-finite/out-of-range
+**Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
+(reflected), `label: string = ''` (the mapped accessible-name property), and
+`accessibleLabel: string = ''` (attribute `accessible-label`; Lyra compatibility alias). Host
+`aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
+visible default-slot text when supplied, then the localized "Progress". Non-finite/out-of-range
 `value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
 percentage (and nothing at all while `indeterminate`).
-**CSS parts:** `base`, `track`, `indicator`, `label`.
+**CSS parts:** `base` and `progress-ring` are aliases on the same progressbar; `track`, `indicator`,
+`label`.
 **Themeable custom properties:** `--lr-progress-ring-size` (default `var(--lr-size-2-5rem)` — the
-ring's inline and block size) and `--lr-progress-duration` (default
+ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--lr-size-4px)`),
+`--lr-progress-ring-track-color` (default `var(--lr-color-brand-quiet)`),
+`--lr-progress-ring-indicator-width` (defaulting to the track width),
+`--lr-progress-ring-indicator-color` (default `var(--lr-color-brand)`),
+`--lr-progress-ring-indicator-transition-duration` (default `var(--lr-transition-base)`), and
+`--lr-progress-duration` (default
 `var(--lr-transition-ambient)` — the indeterminate spin period, the same token and the same default
 as `lr-progress-bar`'s sweep, so it flattens under `prefers-reduced-motion: reduce` with the rest of
 the ambient motion).
+Upstream aliases are `--size`, `--track-width`, `--track-color`, `--indicator-width`,
+`--indicator-color`, and `--indicator-transition-duration`.

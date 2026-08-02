@@ -118,6 +118,8 @@ function foldHtmlQuotes(html: string, localize: (key: string) => string, expande
  * @csspart spinner - The loading region.
  * @cssprop [--lr-email-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

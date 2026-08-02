@@ -36,6 +36,8 @@ export type TimelineOrientation = 'vertical' | 'horizontal';
  *   timeline's main axis; also the length each item's own rail visually bridges to reach the next
  *   item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own
  *   stylesheet, via ordinary CSS custom-property inheritance across the slot boundary.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTimeline extends LyraElement {
   static override styles = [LyraElement.styles, styles];

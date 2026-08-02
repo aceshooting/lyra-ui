@@ -72,6 +72,8 @@ function editIcon(): SVGTemplateResult {
  * @csspart regenerate-button - The built-in regenerate icon button.
  * @csspart edit-button - The built-in edit icon button.
  * @csspart feedback - The embedded `lr-message-feedback`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> {
   static override styles = [LyraElement.styles, styles];

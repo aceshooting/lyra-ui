@@ -60,6 +60,8 @@ function formatDuration(ms: number, locale: string): FormattedDuration {
  * @csspart cost - The verbatim `costText`. Only rendered when set.
  * @csspart latency - The formatted `latencyMs`. Only rendered when it's a finite number.
  * @csspart tooltip - The floating detail breakdown, only meaningful while open.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraUsageBadge extends LyraElement {
   static override styles = [LyraElement.styles, styles];

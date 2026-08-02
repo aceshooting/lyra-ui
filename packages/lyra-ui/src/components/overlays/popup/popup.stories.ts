@@ -14,11 +14,19 @@ const panel = (text: string) => html`
 `;
 
 export const Default: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The positioned node is available through `.popup`. Upstream typings make that reference assignment-compatible, but the shadow-owned node remains authoritative so positioning, animations, and CSS parts stay connected.',
+      },
+    },
+  },
   render: () => html`
     <div style="padding: 4rem;">
-      <lr-popup active placement="bottom-start">
+      <lr-popup active>
         <button slot="anchor">Anchor</button>
-        ${panel('Positioned content')}
+        ${panel('Mapped defaults: top, absolute, zero distance')}
       </lr-popup>
     </div>
   `,
@@ -95,6 +103,8 @@ export const ConstrainedByBoundaries: StoryObj = {
         })}
         active
         placement="bottom-start"
+        flip
+        shift
         flip-fallback-placements="top-start right-start"
         auto-size="both"
         auto-size-padding="8"
@@ -134,6 +144,34 @@ export const ExternalAnchor: StoryObj = {
     <div style="padding: 4rem;">
       <button id="popup-external-anchor">Elsewhere in the tree</button>
       <lr-popup active for="popup-external-anchor" placement="right">${panel('Anchored by id')}</lr-popup>
+    </div>
+  `,
+};
+
+export const DirectAnchor: StoryObj = {
+  name: 'Direct element anchor',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `anchor` property accepts an element directly (and also accepts a same-root id string or virtual element), taking priority over `for` and the slot.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="padding: 4rem;">
+      <button id="popup-direct-anchor">Direct property anchor</button>
+      <lr-popup
+        ${ref((node?: Element) => {
+          const popup = node as LyraPopup | undefined;
+          const anchor = popup?.parentElement?.querySelector('#popup-direct-anchor');
+          if (popup && anchor) popup.anchor = anchor;
+        })}
+        active
+        placement="right"
+      >
+        ${panel('Anchored through `.anchor`')}
+      </lr-popup>
     </div>
   `,
 };

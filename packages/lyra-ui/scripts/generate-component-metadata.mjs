@@ -1,0 +1,135 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import {
+  annotateComponentSource,
+  applyMaturityToInventory,
+  buildReleaseHistory,
+  currentHistoryRecord,
+  hasCompleteGitHistory,
+  validateComponentMetadata,
+} from './component-metadata.mjs';
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const packageDir = path.resolve(scriptDir, '..');
+const repoRoot = path.resolve(packageDir, '..', '..');
+const metadataPath = path.join(scriptDir, 'fixtures', 'component-metadata.json');
+const inventoryPath = path.join(scriptDir, 'fixtures', 'component-inventory.json');
+const manifestPath = path.join(packageDir, 'custom-elements.json');
+const packageJsonPath = path.join(packageDir, 'package.json');
+
+function readJson(file) {
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function writeJson(file, value) {
+  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function sourceAnnotationChanges(inventory) {
+  const changes = [];
+  for (const component of inventory.components ?? []) {
+    const file = path.join(packageDir, component.classModule);
+    const source = fs.readFileSync(file, 'utf8');
+    const expected = annotateComponentSource(source, {
+      tag: component.tag,
+      status: component.maturity.status,
+      since: component.maturity.since,
+    });
+    if (source !== expected) changes.push({ component, file, original: source, expected });
+  }
+  return changes;
+}
+
+function sourceAnnotationFindings(changes) {
+  return changes.map(({ component }) =>
+    `${component.tag}: source @status/@since annotations drifted`);
+}
+
+function writeSourceAnnotations(changes) {
+  for (const { component, file, original } of changes) {
+    if (fs.readFileSync(file, 'utf8') !== original) {
+      throw new Error(`${component.tag}: source changed while component metadata was being prepared`);
+    }
+  }
+  for (const { file, expected } of changes) {
+    fs.writeFileSync(file, expected);
+  }
+}
+
+function parseArguments(argv) {
+  const options = { check: argv.length === 0, write: false, refreshHistory: false };
+  for (const argument of argv) {
+    if (argument === '--check') options.check = true;
+    else if (argument === '--write') options.write = true;
+    else if (argument === '--refresh-history') {
+      options.refreshHistory = true;
+      options.write = true;
+    } else throw new Error(`Unknown argument: ${argument}`);
+  }
+  if (options.check && options.write) throw new Error('--check and write modes are mutually exclusive');
+  return options;
+}
+
+export function run(argv = process.argv.slice(2)) {
+  const options = parseArguments(argv);
+  let metadata = readJson(metadataPath);
+  let inventory = readJson(inventoryPath);
+  const rawManifest = fs.readFileSync(manifestPath, 'utf8');
+  const manifest = JSON.parse(rawManifest);
+  const packageJson = readJson(packageJsonPath);
+  let sourceChanges = [];
+
+  if (options.refreshHistory) {
+    const previousTags = new Set((metadata.history?.releases ?? []).map((release) => release.tag));
+    const releases = buildReleaseHistory(repoRoot, metadata.history.manifestPath);
+    const refreshedTags = new Set(releases.map((release) => release.tag));
+    const missing = [...previousTags].filter((tag) => !refreshedTags.has(tag));
+    if (missing.length) {
+      throw new Error(`Refusing to truncate checked-in release history; missing local tags: ${missing.join(', ')}`);
+    }
+    metadata = { ...metadata, history: { ...metadata.history, releases } };
+  }
+
+  if (options.write) {
+    metadata = {
+      ...metadata,
+      history: {
+        ...metadata.history,
+        current: currentHistoryRecord(packageJson.version, rawManifest, manifest),
+      },
+    };
+    inventory = applyMaturityToInventory(metadata, inventory);
+    // Build every source edit before touching disk. A detached/malformed component JSDoc or a
+    // central policy/CEM mismatch must be detected before any file changes instead of validation
+    // leaving a partial mass annotation behind.
+    sourceChanges = sourceAnnotationChanges(inventory);
+  }
+
+  const findings = validateComponentMetadata(metadata, { inventory, manifest, packageJson, rawManifest });
+  if (findings.length) {
+    throw new Error(`Component metadata validation failed:\n- ${findings.join('\n- ')}`);
+  }
+  if (!options.write) sourceChanges = sourceAnnotationChanges(inventory);
+  const annotationFindings = sourceAnnotationFindings(sourceChanges);
+  if (!options.write && annotationFindings.length) {
+    throw new Error(`Component source metadata validation failed:\n- ${annotationFindings.join('\n- ')}`);
+  }
+
+  if (options.write) {
+    writeSourceAnnotations(sourceChanges);
+    writeJson(metadataPath, metadata);
+    writeJson(inventoryPath, inventory);
+  }
+
+  if (options.check && hasCompleteGitHistory(repoRoot)) {
+    const reproduced = buildReleaseHistory(repoRoot, metadata.history.manifestPath);
+    if (JSON.stringify(reproduced) !== JSON.stringify(metadata.history.releases)) {
+      throw new Error('Checked-in component release history is stale; run component-metadata:history.');
+    }
+  }
+  console.log(`Component metadata covers ${inventory.components.length} components with reproducible history.`);
+}
+
+if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) run();

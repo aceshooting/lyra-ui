@@ -188,6 +188,8 @@ const IS_MAC = detectIsMac();
  * `keys`-driven rendering. Leave empty to use `keys`.
  * @csspart base - The chip's root element.
  * @csspart key - Each rendered key cap (one per token in `keys`).
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraKbd extends LyraElement {
   static override styles = [LyraElement.styles, styles];

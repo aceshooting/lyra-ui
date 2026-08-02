@@ -241,25 +241,25 @@ it('filters invalid public region rectangles before rendering highlight geometry
 });
 
 describe('zoomable', () => {
-  it('does not wrap in lr-zoomable-frame by default', async () => {
+  it('does not wrap in lr-pan-zoom by default', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      expect(el.shadowRoot!.querySelector('lr-zoomable-frame') === null).to.be.true;
+      expect(el.shadowRoot!.querySelector('lr-pan-zoom') === null).to.be.true;
     } finally {
       restore();
     }
   });
 
-  it('wraps the sanitized svg in lr-zoomable-frame when zoomable is set', async () => {
+  it('wraps the sanitized svg in lr-pan-zoom when zoomable is set', async () => {
     const el = (await fixture(html`<lr-svg-viewer zoomable></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      const frame = el.shadowRoot!.querySelector('lr-zoomable-frame');
+      const frame = el.shadowRoot!.querySelector('lr-pan-zoom');
       expect(frame).to.exist;
       expect(frame!.querySelector('[part="svg"] circle') !== null).to.be.true;
     } finally {
@@ -267,15 +267,15 @@ describe('zoomable', () => {
     }
   });
 
-  it('does not expose the internal zoomable-frame event', async () => {
+  it('does not expose the internal pan-zoom event', async () => {
     const el = (await fixture(html`<lr-svg-viewer zoomable></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
-      await waitUntil(() => el.shadowRoot!.querySelector('lr-zoomable-frame') !== null);
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-pan-zoom') !== null);
       let leaked = 0;
       el.addEventListener('lr-zoom-change', () => leaked++);
-      el.shadowRoot!.querySelector('lr-zoomable-frame')!.dispatchEvent(new CustomEvent(
+      el.shadowRoot!.querySelector('lr-pan-zoom')!.dispatchEvent(new CustomEvent(
         'lr-zoom-change',
         { detail: { zoom: 2 }, bubbles: true, composed: true },
       ));
@@ -626,7 +626,7 @@ describe('back-compat', () => {
     try {
       el.src = 'https://example.test/icon.svg';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      expect(el.shadowRoot!.querySelector('lr-zoomable-frame') === null).to.be.true;
+      expect(el.shadowRoot!.querySelector('lr-pan-zoom') === null).to.be.true;
       expect(el.shadowRoot!.querySelector('[part="highlight-layer"]') === null).to.be.true;
     } finally {
       restore();

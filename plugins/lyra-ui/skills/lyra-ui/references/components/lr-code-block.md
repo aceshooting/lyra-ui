@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js';` (registers the tag; side-effect import)
 - **Class** `LyraCodeBlock`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/code-block/code-block.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
 - **Themeable via** 11 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -53,7 +55,7 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its lines).
-- `anchorKinds: LyraAnchor['kind'][]` — readonly `['line-range']`, for the shared anchor-target
+- `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract.
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — a map of language id to an
   already-imported shiki grammar module (e.g. `{ bash: bashGrammar }` from a module-scope

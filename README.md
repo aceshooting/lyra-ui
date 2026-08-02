@@ -34,7 +34,7 @@ a live example, source code, and API reference.
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
 </p>
-<p align="center"><sub>A few of 275 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+<p align="center"><sub>A few of 283 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
 
 ## Table of Contents
 
@@ -97,6 +97,9 @@ import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
 
 Per-component optional peers and the tree-shakeable import patterns:
 [`packages/lyra-ui/README.md#install`](./packages/lyra-ui/README.md#install).
+For arbitrary server/CMS markup, the optional guarded loader discovers only rendered tags and has a
+separate ESM-CDN auto-start entry:
+[`packages/lyra-ui/README.md#optional-autoloader-and-cdn-entry`](./packages/lyra-ui/README.md#optional-autoloader-and-cdn-entry).
 
 🔗 **[Open in StackBlitz](https://stackblitz.com/github/aceshooting/lyra-ui)** — try it in-browser, no local install.
 
@@ -106,7 +109,7 @@ For local development of this monorepo:
 pnpm install
 pnpm build        # builds every package
 pnpm test         # tests every package
-pnpm lint         # typechecks every package
+pnpm lint         # contract-policy, source checks, TypeScript, and type-surface tests
 pnpm docs         # Storybook docs site demoing every component
 ```
 
@@ -114,9 +117,10 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Upgrading from 7.x
 
-8.0.0 is mostly renames — two tags, a handful of attributes whose polarity or default was wrong, and
-one styling vocabulary in place of three. The full list, with what each one changes and what to
-search for, is in the package README:
+8.0.0 aligns the mapped component contracts, preserves displaced Lyra behavior under truthful new
+tags, and adds the Page, Video, Playlist, SSR, typing, and optional loading/style surfaces needed for
+a complete migration. It also includes intentional tag, attribute, default, and styling-vocabulary
+changes. The full list, with what each one changes and what to search for, is in the package README:
 [`packages/lyra-ui/README.md#upgrading-from-7x`](./packages/lyra-ui/README.md#upgrading-from-7x).
 
 ## Principles & Guidelines
@@ -138,18 +142,19 @@ search for, is in the package README:
 
 ## Components
 
-275 custom elements across eleven component families. Every tag has a live, interactive example on the
+283 custom elements across eleven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
 
-The family name is also the import path — `@aceshooting/lyra-ui/components/<family>/<name>` for one
-element, or `@aceshooting/lyra-ui/components/<family>` to register the whole family at once.
+The family name is part of every granular import path —
+`@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` for one element, or
+`@aceshooting/lyra-ui/components/<family>` to register the whole family at once.
 
 | Family | Highlights |
 |---|---|
 | `forms` | button, input, textarea, select, combobox, date picker, calendar, phone/token/file input, color and swatch pickers, emoji picker, locale picker, code editor, checkbox/radio/switch/slider, time range, rubric form |
-| `layout` | tabs, menu, command palette, breadcrumb, details, card, widget, split, stepper, carousel, scroller, app rail, dock panel, dashboard grid, drilldown panel, filter bar, segmented, virtual list, responsive panel |
+| `layout` | page, tabs, menu, command palette, breadcrumb, details, card, widget, split, stepper, carousel, scroller, app rail, dock panel, dashboard grid, drilldown panel, filter bar, segmented, virtual list, responsive panel |
 | `overlays` | dialog, drawer, overlay, toast, callout, badge, chip, kbd, rating, progress, spinner, skeleton, empty |
 | `data` | table, data grid, tree, timeline, calendar, gauge, heatmap, sparkline, word cloud, stat, pagination, query builder, flow canvas and nodes, sequence strip, file tree, env list, context meter |
 | `charts` | Chart.js-backed `lr-chart` (optional peer) |
@@ -157,20 +162,21 @@ element, or `@aceshooting/lyra-ui/components/<family>` to register the whole fam
 | `agent-tools` | agent run and trace, subagent panel, MCP app, prompt studio, schema viewer, tool call chip, tool approval dialog and approval queue, task list, terminal, span waterfall, stack trace, test results, activity feed, context inspector, artifact panel, commit card, eval dataset/run/result, evaluation dashboard, policy summary |
 | `retrieval` | retrieval search and results, retrieval comparison, grounded RAG answer, claim evidence, grounding summary, RAG evaluation dashboard, citation badge, chunk inspector, knowledge base and admin, ingestion queue, knowledge-graph explorer, graph, mind map, embedding explorer, entity card/chip/dossier, provenance panel, memory panel, neighbor list, path strip |
 | `viewers` | document, PDF, DOCX, PPTX, spreadsheet, CSV, notebook, ebook, email, calendar, contact, archive, XML, SVG, HTML and GeoJSON viewers, document compare and preview, dataset viewer, highlight layer, page rail |
-| `media` | image viewer and comparer, lightbox, zoomable frame, AV player, playback, animated image, avatar and avatar group, file icon, file input, attachment chip, map, QR code, flag |
+| `media` | video and video playlist, image viewer and comparer, lightbox, sandboxed zoomable frame, pan/zoom, AV player, playback, animated image, avatar and avatar group, file icon, file input, attachment chip, map, QR code, flag |
 | `utility` | icon, format, copy and export buttons, diff view, JSON viewer, divider, live region, mention popover, tour, poll status, known date, resize/intersection/mutation observers |
 
 ## Theming, internationalization & RTL
 
-Every one of the 275 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 283 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn.
 - **Internationalization** via a small runtime (`registerLyraLocale`/`setLyraLocale`, or a
   per-instance `.strings` override) — every built-in string (labels, announcements, aria-labels)
   is translatable without a rebuild or a per-locale bundle.
-- **RTL** with zero per-component opt-in — set `dir="rtl"` (or an RTL `lang`) anywhere up the tree
-  and every component mirrors its layout and keyboard navigation to match.
+- **RTL** with zero per-component opt-in — set `dir="rtl"` anywhere up the tree and every component
+  mirrors its layout and keyboard navigation to match. `lang` selects locale data; it does not
+  silently change writing direction.
 
 See [`packages/lyra-ui/README.md#theming-internationalization--rtl`](./packages/lyra-ui/README.md#theming-internationalization--rtl)
 for the full usage details.
@@ -179,9 +185,11 @@ for the full usage details.
 
 Lyra ships plain custom elements — no framework-specific wrapper package needed.
 
-```jsx
+```tsx
 // React 19+
 import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
+import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
+import type {} from '@aceshooting/lyra-ui/custom-elements-jsx';
 
 <lr-combobox label="Fruit" clearable>
   <lr-option value="a">Apple</lr-option>
@@ -203,22 +211,26 @@ import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
 <lr-combobox label="Fruit" on:lr-change={onChange} />
 ```
 
-Property-vs-attribute binding, Angular's `CUSTOM_ELEMENTS_SCHEMA`, and event-name casing notes:
-[`packages/lyra-ui/README.md#framework-integration-vue-angular-svelte`](./packages/lyra-ui/README.md#framework-integration-vue-angular-svelte).
+React/JSX, Vue, and Svelte each have an opt-in, type-only declaration entry generated from the same
+Custom Elements Manifest; they add template/ref/event/CSS-property types without a runtime wrapper
+or tag registration. Property-vs-attribute binding, Angular's `CUSTOM_ELEMENTS_SCHEMA`, and
+event-name casing notes:
+[`packages/lyra-ui/README.md#framework-integration-react-vue-angular-svelte`](./packages/lyra-ui/README.md#framework-integration-react-vue-angular-svelte).
 
 ## SSR & Declarative Shadow DOM
 
-Lyra components are standard Lit 3 custom elements: they render through `@lit-labs/ssr` into
-Declarative Shadow DOM in principle, and a spot check of `<lr-button>` confirms basic
-server-rendering works — but the library has not been systematically tested or tuned for SSR at
-scale. See
+Root and granular component imports are server-safe. Lyra ships a tested `@lit-labs/ssr` support
+matrix: compatible components emit Declarative Shadow DOM and hydrate in place, while components
+that need browser DOM during their first render use an explicit host-and-light-DOM fallback before
+rendering on upgrade. Import `@aceshooting/lyra-ui/ssr-loader.js` before any other Lit module in the
+browser. See
 [`packages/lyra-ui/README.md#ssr--declarative-shadow-dom`](./packages/lyra-ui/README.md#ssr--declarative-shadow-dom)
-for details.
+for the renderer setup, machine-readable matrix, diagnostics, and capability limits.
 
 ## Browser & Node support
 
-- **Node** ≥ 20 to build/test this repo (`engines.node`); the published packages have no Node
-  runtime dependency — they run in the browser.
+- **Node** ≥ 20 to build/test this repo and to run the supported SSR imports (`engines.node`);
+  browser-only capabilities start after hydration.
 - **Browsers** — any evergreen browser with Custom Elements v1 + Shadow DOM support (Chrome, Edge,
   Firefox, Safari). CI runs the full test suite against Chromium plus a separate platform-contract
   suite against Firefox and WebKit, on Node 20 and 22.
@@ -264,10 +276,15 @@ without Claude Code.
 
 `@aceshooting/lyra-ui` is published at `8.0.0`; `@aceshooting/lyra-flags` at `2.0.0` — see each
 package's own `CHANGELOG.md` for release history. The two are versioned independently (not always
-lockstep) with [Changesets](https://github.com/changesets/changesets) and follow semver: a major
-bump signals a breaking change, everything else is additive or a fix. Every release passes the same
-CI gate as every PR (install, lint, test, build, manifest — see the badge above), and both packages
-are under active development, with new components and fixes shipping regularly.
+lockstep) with [Changesets](https://github.com/changesets/changesets) and follow semver.
+
+Every component also carries machine-readable `stable` or `experimental` status plus its first
+published `since` version. Both statuses receive normal semver protection once published;
+experimental means the design is still under review, not that breaking changes can ship in a minor
+release. A deprecation names its replacement, rationale, deprecation version, and earliest removal
+version, and remains available for the entire following major release line. The full policy is in
+[`packages/lyra-ui/llms/shared.md#component-status-versioning-and-deprecation`](./packages/lyra-ui/llms/shared.md#component-status-versioning-and-deprecation).
+Every release passes the same CI gate as every PR, and both packages are under active development.
 
 ## License
 

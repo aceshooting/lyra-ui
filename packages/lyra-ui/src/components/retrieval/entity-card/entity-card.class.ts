@@ -90,6 +90,8 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  *   `compact`.
  * @cssprop [--lr-entity-card-compact-gap=var(--lr-space-xs)] - Gap between `[part="base"]`'s rows
  *   while `compact`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   static override styles = [LyraElement.styles, styles];

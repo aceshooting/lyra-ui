@@ -1,4 +1,9 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import {
+  html,
+  nothing,
+  type PropertyValues,
+  type TemplateResult,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -7,14 +12,26 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
-import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
+import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
+import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
+import {
+  attachInternalsSafely,
+  getFormOwner,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
+import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 
 export interface LyraRadioGroupEventMap {
-  input: Event;
+  input: InputEvent;
   change: Event;
   'lr-input': CustomEvent<{ value: string; radio: LyraRadio }>;
   'lr-change': CustomEvent<{ value: string; radio: LyraRadio }>;
+  'lr-invalid': CustomEvent<undefined>;
 }
+
+export type RadioGroupOrientation = 'horizontal' | 'vertical';
 
 // The two tags a group manages. `<lr-radio-button>` is a `LyraRadio` subclass, so every group
 // behaviour applies to it unchanged -- but discovery is by local name (an `instanceof` check would
@@ -30,39 +47,77 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
  * @slot - Radio controls.
  * @slot label - Visible group label.
  * @slot hint - Supporting text.
+ * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Validation text.
- * @event input - Native event fired from the group when its selected value changes.
- * @event change - Native event fired after `input` for the same group selection.
+ * @event {InputEvent} input - Native event fired from the group when its selected value changes.
+ * @event {Event} change - Native event fired after `input` for the same group selection.
  * @event lr-input - Prefixed alias for `input`; `detail: { value, radio }`.
  * @event lr-change - A radio was selected. `detail: { value, radio }`.
+ * @event lr-invalid - The group's owned validity control failed a validity check.
+ * @cssstate required - Matches while `required` is set.
+ * @cssstate optional - Matches while `required` is not set.
+ * @cssstate valid - Matches while the aggregate value satisfies every constraint.
+ * @cssstate invalid - Matches while the aggregate value fails a constraint.
+ * @cssstate user-valid - Matches `valid` after user interaction or `reportValidity()`.
+ * @cssstate user-invalid - Matches `invalid` after user interaction or `reportValidity()`.
  * @csspart base - The radiogroup wrapper.
+ * @csspart form-control - Mapped form-control wrapper.
  * @csspart label - The group label.
+ * @csspart form-control-label - Mapped name on the same group label.
+ * @csspart radios - WA option collection.
+ * @csspart form-control-input - Mapped name on the same option collection.
+ * @csspart button-group - Shoelace segmented-option collection alias.
+ * @csspart button-group__base - Shoelace alias on the same collection.
  * @csspart hint - Supporting text.
+ * @csspart form-control-help-text - Shoelace name on the same supporting text.
  * @csspart error - Validation text.
  * @cssprop [--lr-radio-group-row-gap=calc(var(--lr-form-control-height) * 0.2)] - Vertical gap
  * between the group's label, options and messages, scaled by `size`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
+  static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, groupStyles];
+  static override properties = {
+    name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
+    value: { attribute: false, noAccessor: true },
+    defaultValue: {
+      attribute: 'value',
+      reflect: true,
+      useDefault: true,
+      noAccessor: true,
+    },
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
+    required: { type: Boolean, reflect: true, noAccessor: true },
+    disabled: { type: Boolean, reflect: true, noAccessor: true },
+    orientation: { reflect: true },
+    form: { noAccessor: true },
+  };
   /**
    * Size of the group's own chrome, on the library's shared ladder. Accepts both spellings of every
    * tier — `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating
    * either way is a tag rename. Scales the group's label type size and the gaps around and between
-   * its options off the same `--lr-form-control-*` values the controls themselves use. It does not
-   * resize the `<lr-radio>`/`<lr-radio-button>` children: each carries its own `size`, so a group
-   * can hold options at mixed sizes and an explicitly-sized option is never silently overridden by
-   * its container. Set the same `size` on the children to scale the whole group.
+   * its options off the same `--lr-form-control-*` values the controls themselves use, and
+   * propagates the selected tier to all owned plain/button options.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
+  /** Arrow-key axis and option layout. Left/right are mirrored under RTL in horizontal mode. */
+  orientation: RadioGroupOrientation = 'vertical';
   @property() label = '';
   @property() hint = '';
+  /** Shoelace alias for {@link hint}. `hint` wins when both are supplied. */
+  @property({ attribute: 'help-text' }) helpText = '';
+  /** Shoelace's separate spelling for the reset default. */
+  @property({ attribute: 'default-value' }) private shoelaceDefaultValue = '';
+  /** SSR slot-presence hints used before light-DOM assignment can be inspected. */
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
-  @property({ reflect: true }) name = '';
-  @property({ type: Boolean, reflect: true }) required = false;
-  @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
+  @state() private hasHelpTextSlot = false;
   @state() private hasErrorSlot = false;
   private readonly labelId = nextId('radio-group-label');
   private readonly hintId = nextId('radio-group-hint');
@@ -71,9 +126,130 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   private authorNames = new Map<LyraRadio, string>();
   private syncingRadios = false;
   private membershipObserver?: MutationObserver;
+  private internals: ElementInternals;
+  private validityController: AnchoredValidityController;
+  private _name = '';
+  private _value = '';
+  private _defaultValue = '';
+  private _valueDirty = false;
+  private reflectingDefaultValue = false;
+  private reflectingCustomError = false;
+  private _required = false;
+  private _disabled = false;
+  private _fieldsetDisabled = false;
+  private hasInteracted = false;
+  private pendingSelection?: string;
+  private hadShoelaceDefaultValue = false;
+
+  get name(): string { return this._name; }
+  set name(next: string | null) {
+    const old = this._name;
+    this._name = next ?? '';
+    if (this._name) this.setAttribute('name', this._name);
+    else this.removeAttribute('name');
+    this.syncFormState();
+    this.requestUpdate('name', old);
+  }
+
+  get value(): string { return this._value; }
+  set value(next: string | null) {
+    this._valueDirty = true;
+    this.selectValue(next ?? '');
+  }
+
+  /** Reflected current reset default; changing it never overwrites a dirty live selection. */
+  get defaultValue(): string { return this._defaultValue; }
+  set defaultValue(next: string) {
+    if (this.reflectingDefaultValue) return;
+    const old = this._defaultValue;
+    this._defaultValue = next ?? '';
+    this.reflectingDefaultValue = true;
+    try {
+      if (this._defaultValue) this.setAttribute('value', this._defaultValue);
+      else this.removeAttribute('value');
+    } finally {
+      this.reflectingDefaultValue = false;
+    }
+    if (!this._valueDirty) {
+      this.selectValue(this._defaultValue);
+      this._valueDirty = false;
+    }
+    this.requestUpdate('defaultValue', old);
+  }
+
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  get customError(): string | null {
+    return this.validityController?.customValidityMessage || null;
+  }
+  set customError(next: string | null) {
+    if (this.reflectingCustomError) return;
+    const old = this.customError;
+    const message = next ?? '';
+    this.reflectingCustomError = true;
+    try {
+      if (next == null) this.removeAttribute('custom-error');
+      else this.setAttribute('custom-error', message);
+    } finally {
+      this.reflectingCustomError = false;
+    }
+    this.setCustomValidity(message);
+    this.requestUpdate('customError', old);
+  }
+
+  get required(): boolean { return this._required; }
+  set required(next: boolean) {
+    const old = this._required;
+    this._required = Boolean(next);
+    this.toggleAttribute('required', this._required);
+    this.syncRadios();
+    this.updateValidity();
+    this.requestUpdate('required', old);
+  }
+
+  get disabled(): boolean { return this._disabled; }
+  set disabled(next: boolean) {
+    const old = this._disabled;
+    this._disabled = Boolean(next);
+    this.toggleAttribute('disabled', this._disabled);
+    this.syncRadios();
+    this.requestUpdate('disabled', old);
+  }
+
+  get effectiveDisabled(): boolean { return this.disabled || this._fieldsetDisabled; }
+  get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
+  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  get labels(): NodeList { return this.internals.labels; }
+  get validity(): ValidityState { return this.internals.validity; }
+  get validationMessage(): string { return this.internals.validationMessage; }
+  get willValidate(): boolean { return this.internals.willValidate; }
+
+  constructor() {
+    super();
+    this.internals = attachInternalsSafely(this);
+    this.validityController = new AnchoredValidityController(
+      this,
+      this.internals,
+      () => this[VALIDITY_ANCHOR](),
+    );
+    // `invalid` does not bubble, but its capture phase reaches the light-DOM group. Listening here
+    // lets the group own the public alias while one of its radios temporarily owns native validity;
+    // it also covers a host-targeted event when the group itself becomes the aggregate FACE owner.
+    this.addEventListener('invalid', this.onInvalid, true);
+    this.syncFormState();
+    this.updateValidity();
+  }
+
+  private onInvalid = (event: Event): void => {
+    const target = event.target;
+    if (target === this || (target instanceof Element && this.ownsRadio(target))) {
+      this.emit('lr-invalid');
+    }
+  };
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncSupportSlots();
     this.syncRadios();
     this.membershipObserver = new MutationObserver(() => {
       queueMicrotask(() => {
@@ -84,7 +260,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       attributes: true,
       childList: true,
       subtree: true,
-      attributeFilter: ['slot', 'checked', 'disabled'],
+      attributeFilter: ['slot', 'checked', 'disabled', 'value', 'size'],
     });
   }
   override disconnectedCallback(): void {
@@ -94,7 +270,29 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     this.managedRadios.clear();
     super.disconnectedCallback();
   }
-  protected override updated(): void { this.syncRadios(); }
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (
+      changed.has('shoelaceDefaultValue') &&
+      (this.hasAttribute('default-value') || this.hadShoelaceDefaultValue)
+    ) {
+      this.defaultValue = this.shoelaceDefaultValue;
+      this.hadShoelaceDefaultValue = this.hasAttribute('default-value');
+    }
+  }
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.syncRadios();
+  }
+
+  private syncSupportSlots(): void {
+    this.hasLabelSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'label');
+    this.hasHintSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'hint');
+    this.hasHelpTextSlot = Array.from(this.children).some(
+      (element) => element.getAttribute('slot') === 'help-text',
+    );
+    this.hasErrorSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'error');
+  }
 
   private radioGroupOwner(element: Element): Element | null {
     const group = element.closest(tag('radio-group'));
@@ -105,7 +303,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     }
     if (topLevelChild.parentElement !== group) return null;
     const slot = topLevelChild.getAttribute('slot');
-    return slot === 'label' || slot === 'hint' || slot === 'error' ? null : group;
+    return slot === 'label' || slot === 'hint' || slot === 'help-text' || slot === 'error' ? null : group;
   }
 
   /** @internal Whether this group owns the radio through its default option slot. */
@@ -114,8 +312,34 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
 
   private radios(): LyraRadio[] {
-    return [...this.querySelectorAll(RADIO_TAGS().join(','))].filter((radio) => this.ownsRadio(radio)) as LyraRadio[];
+    return [...this.querySelectorAll(RADIO_TAGS().join(','))].filter(
+      (radio) => this.ownsRadio(radio) && typeof (radio as Partial<LyraRadio>).setGroupOwner === 'function',
+    ) as LyraRadio[];
   }
+
+  private selectValue(next: string): void {
+    const desired = next ?? '';
+    const radios = this.radios();
+    if (radios.length === 0) {
+      const old = this._value;
+      this._value = desired;
+      this.pendingSelection = desired;
+      this.syncFormState();
+      this.updateValidity();
+      this.requestUpdate('value', old);
+      return;
+    }
+    const match = radios.find((radio) => radio.value === desired);
+    this.syncingRadios = true;
+    try {
+      for (const radio of radios) radio.checked = radio === match;
+    } finally {
+      this.syncingRadios = false;
+    }
+    this.pendingSelection = undefined;
+    this.syncRadios(match);
+  }
+
   private syncRadios(preferred?: LyraRadio): void {
     if (this.syncingRadios) return;
     this.syncingRadios = true;
@@ -130,21 +354,37 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
         }
       }
       this.managedRadios = current;
-      for (const radio of radios) radio.setGroupDisabled(this.disabled);
+      for (const radio of radios) radio.setGroupDisabled(this.effectiveDisabled);
       const enabled = radios.filter((radio) => !radio.effectiveDisabled);
-      const checked = radios.filter((radio) => radio.checked);
-      const checkedRadio = preferred?.checked && current.has(preferred)
-        ? preferred
-        : checked[checked.length - 1];
+      let checked = radios.filter((radio) => radio.checked);
+      let checkedRadio: LyraRadio | undefined;
+      if (this.pendingSelection !== undefined && radios.length > 0) {
+        checkedRadio = radios.find((radio) => radio.value === this.pendingSelection);
+        for (const radio of radios) radio.checked = radio === checkedRadio;
+        checked = checkedRadio ? [checkedRadio] : [];
+        this.pendingSelection = undefined;
+      } else {
+        checkedRadio = preferred?.checked && current.has(preferred)
+          ? preferred
+          : checked[checked.length - 1];
+      }
       for (const radio of checked) {
         if (radio !== checkedRadio) radio.checked = false;
       }
-      const validityOwner = checkedRadio ?? enabled[0];
+      const tabbableRadio = checkedRadio && !checkedRadio.effectiveDisabled
+        ? checkedRadio
+        : enabled[0];
       for (const radio of radios) {
         radio.name = this.name || this.authorNames.get(radio) || '';
-        radio.setGroupRequired(this.required && radio === validityOwner);
-        radio.setGroupTabbable(checkedRadio ? radio === checkedRadio : radio === enabled[0]);
+        radio.size = this.size;
+        radio.setGroupRequired(this.required && !this.effectiveDisabled);
+        radio.setGroupTabbable(radio === tabbableRadio);
       }
+      const oldValue = this._value;
+      this._value = checkedRadio?.value ?? '';
+      this.syncFormState();
+      this.updateValidity();
+      if (oldValue !== this._value) this.requestUpdate('value', oldValue);
     } finally {
       this.syncingRadios = false;
     }
@@ -172,11 +412,14 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   /** @internal Reconciles silent programmatic, reset, and restored checked-state changes. */
   radioCheckedChanged(radio: LyraRadio): void {
     if (this.syncingRadios || !this.ownsRadio(radio)) return;
+    this._valueDirty = true;
     this.syncRadios(radio.checked ? radio : undefined);
   }
   /** @internal */
   selectRadio(radio: LyraRadio): boolean {
-    if (this.disabled || radio.effectiveDisabled || !this.ownsRadio(radio)) return false;
+    if (this.effectiveDisabled || radio.effectiveDisabled || !this.ownsRadio(radio)) return false;
+    this._valueDirty = true;
+    this.hasInteracted = true;
     this.syncingRadios = true;
     try {
       for (const candidate of this.radios()) candidate.checked = candidate === radio;
@@ -184,15 +427,18 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       this.syncingRadios = false;
     }
     this.syncRadios();
-    dispatchNativeEvent(this, 'input');
+    dispatchNativeInputEvent(this);
     this.emit('lr-input', { value: radio.value, radio });
     dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { value: radio.value, radio });
     return true;
   }
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
-    if (this.disabled) return;
+    const arrows = this.orientation === 'horizontal'
+      ? ['ArrowRight', 'ArrowLeft']
+      : ['ArrowDown', 'ArrowUp'];
+    if (![...arrows, 'Home', 'End'].includes(event.key)) return;
+    if (this.effectiveDisabled) return;
     const radios = this.radios().filter((radio) => !radio.effectiveDisabled);
     const current = event.target as LyraRadio;
     if (current.effectiveDisabled) return;
@@ -200,8 +446,12 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     if (index < 0 || radios.length === 0) return;
     event.preventDefault();
     const rtl = this.effectiveDirection === 'rtl';
-    const forward = event.key === 'ArrowDown' || (rtl ? event.key === 'ArrowLeft' : event.key === 'ArrowRight');
-    const backward = event.key === 'ArrowUp' || (rtl ? event.key === 'ArrowRight' : event.key === 'ArrowLeft');
+    const forward = this.orientation === 'vertical'
+      ? event.key === 'ArrowDown'
+      : (rtl ? event.key === 'ArrowLeft' : event.key === 'ArrowRight');
+    const backward = this.orientation === 'vertical'
+      ? event.key === 'ArrowUp'
+      : (rtl ? event.key === 'ArrowRight' : event.key === 'ArrowLeft');
     const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? radios.length - 1
       : forward ? (index + 1) % radios.length : backward ? (index - 1 + radios.length) % radios.length : index;
     // safe: radios is non-empty (guarded above) and nextIndex is a modulo/clamp into range.
@@ -219,6 +469,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     const elements = slot.assignedElements({ flatten: true });
     if (slot.name === 'label') this.hasLabelSlot = elements.length > 0;
     if (slot.name === 'hint') this.hasHintSlot = elements.length > 0;
+    if (slot.name === 'help-text') this.hasHelpTextSlot = elements.length > 0;
     if (slot.name === 'error') this.hasErrorSlot = elements.length > 0;
   };
   private onRadioSlotChange = (): void => {
@@ -227,9 +478,88 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       if (this.isConnected) this.syncRadios();
     });
   };
+
+  /** Moves focus to the selected enabled option, or the first enabled option when empty. */
+  override focus(options?: FocusOptions): void {
+    const enabled = this.radios().filter((radio) => !radio.effectiveDisabled);
+    (enabled.find((radio) => radio.checked) ?? enabled[0])?.focus(options);
+  }
+
+  /** @internal Native validation is anchored to the owned radiogroup, not an individual option. */
+  [VALIDITY_ANCHOR](): HTMLElement | null {
+    return this.renderRoot?.querySelector('[part~="base"]') ?? null;
+  }
+
+  private syncFormState(): void {
+    if (!this.internals) return;
+    this.internals.setFormValue(this.name && this.value ? this.value : null, this.value);
+  }
+
+  private updateValidity(): void {
+    if (!this.validityController) return;
+    const missing = this.required && !this.value;
+    this.validityController.setValidity(
+      missing ? { valueMissing: true } : {},
+      missing ? this.localize('radioRequired') : '',
+    );
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.hasInteracted,
+    });
+  }
+
+  checkValidity(): boolean { return this.internals.checkValidity(); }
+  reportValidity(): boolean {
+    this.hasInteracted = true;
+    this.updateValidity();
+    return this.internals.reportValidity();
+  }
+  setCustomValidity(message: string = ''): void {
+    this.validityController.setCustomValidity(message ?? '');
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.hasInteracted,
+    });
+    this.requestUpdate();
+  }
+  /** Clears consumer-supplied validity and restores the current required/value constraint. */
+  resetValidity(): void {
+    this.validityController.setCustomValidity('');
+    this.updateValidity();
+    this.requestUpdate();
+  }
+  formResetCallback(): void {
+    this._valueDirty = false;
+    this.pendingSelection = undefined;
+    this.syncingRadios = true;
+    try {
+      for (const radio of this.radios()) radio.resetFromGroup();
+    } finally {
+      this.syncingRadios = false;
+    }
+    if (this.defaultValue) this.pendingSelection = this.defaultValue;
+    this.hasInteracted = false;
+    this.syncRadios();
+  }
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    reason: 'autocomplete' | 'restore',
+  ): void {
+    void reason;
+    this._valueDirty = true;
+    this.hasInteracted = false;
+    this.pendingSelection = typeof state === 'string' ? state : '';
+    this.selectValue(this.pendingSelection);
+  }
+  formDisabledCallback(disabled: boolean): void {
+    this._fieldsetDisabled = disabled;
+    this.syncRadios();
+    this.requestUpdate();
+  }
+
   override render(): TemplateResult {
-    const hasLabel = this.hasLabelSlot || Boolean(this.label);
-    const hasHint = this.hasHintSlot || Boolean(this.hint);
+    const hasLabel = this.hasLabelSlot || Boolean(this.label) || this.withLabel;
+    const hasHint = this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText) || this.withHint;
     const hasError = this.hasErrorSlot || Boolean(this.errorText);
     const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
     return html`
@@ -238,11 +568,21 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
         aria-labelledby=${!this.accessibleLabel && hasLabel ? this.labelId : nothing}
         aria-describedby=${described}
         aria-required=${this.required ? 'true' : 'false'}
+        aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
+        aria-orientation=${this.orientation}
+        aria-invalid=${!this.internals.validity.valid ? 'true' : 'false'}
         @keydown=${this.onKeyDown}>
-        <div part="label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>
-        <slot @slotchange=${this.onRadioSlotChange}></slot>
-        <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onSlotChange}></slot></div>
-        <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot></div>
+        <div part="form-control">
+          <div part="label form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>
+          <div part="radios form-control-input button-group button-group__base">
+            <slot @slotchange=${this.onRadioSlotChange}></slot>
+          </div>
+          <div part="hint form-control-help-text" id=${this.hintId} ?hidden=${!hasHint}>
+            ${this.hint || this.helpText}<slot name="hint" @slotchange=${this.onSlotChange}></slot
+            ><slot name="help-text" @slotchange=${this.onSlotChange}></slot>
+          </div>
+          <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot></div>
+        </div>
       </div>
     `;
   }

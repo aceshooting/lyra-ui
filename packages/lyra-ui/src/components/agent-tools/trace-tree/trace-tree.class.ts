@@ -136,6 +136,8 @@ export interface LyraTraceTreeEventMap {
  * @cssprop [--lr-trace-tree-pending-color=var(--lr-color-text-quiet)] - Pending status text and bar.
  * @cssprop [--lr-trace-tree-bar-track-bg=var(--lr-color-surface-raised)] - Duration bar track.
  * @cssprop [--lr-trace-tree-running-stripe-bg=var(--lr-color-brand-quiet)] - Running stripe contrast.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   static override styles = [LyraElement.styles, styles];

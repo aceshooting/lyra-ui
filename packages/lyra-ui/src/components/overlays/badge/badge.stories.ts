@@ -60,6 +60,33 @@ export const Attention: StoryObj = {
   </div>`,
 };
 
+export const PulseAlias: StoryObj = {
+  name: 'pulse shorthand and --pulse-color',
+  render: () => html`
+    <lr-badge pulse appearance="accent" variant="danger" style="--pulse-color:var(--lr-color-warning)">
+      Live
+    </lr-badge>
+  `,
+};
+
+export const UpstreamWriteAliases: StoryObj = {
+  name: 'Upstream variant and size aliases',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`primary` normalizes to the canonical `brand` variant. `small`, `medium`, and `large` normalize to `s`, `m`, and `l`; `lr-tag` also maps `text` to its neutral plain treatment.',
+      },
+    },
+  },
+  render: () => html`<div style=${row}>
+    <lr-badge variant="primary" size="small">Primary / small</lr-badge>
+    <lr-badge variant="primary" size="large">Primary / large</lr-badge>
+    <lr-tag variant="primary" size="medium">Primary tag</lr-tag>
+    <lr-tag variant="text" size="medium">Text tag</lr-tag>
+  </div>`,
+};
+
 export const NarrowAllocation: StoryObj = {
   name: 'Narrow allocation and long content',
   render: () => html`<div style="inline-size:320px;display:grid;gap:0.5rem;justify-items:start">

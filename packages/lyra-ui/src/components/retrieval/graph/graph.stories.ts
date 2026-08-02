@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { GraphNode, GraphLink } from './graph.js';
+import type {
+  GraphCommunity,
+  GraphLink,
+  GraphNode,
+  GraphNodeType,
+  LyraGraph,
+} from './graph.js';
 
 const nodes: GraphNode[] = [
   { id: 'a', label: 'A' },
@@ -251,6 +257,80 @@ export const DirectedRelationships: Story = {
           @lr-link-click=${reportLink}
         ></lr-graph>
         <output aria-live="polite">Activate a link to inspect its stable id.</output>
+      </div>
+    `;
+  },
+};
+
+const typedNodes: GraphNode[] = [
+  { id: 'collect', label: 'Collect', type: 'input', communityId: 'pipeline' },
+  { id: 'rank', label: 'Rank', type: 'process', communityId: 'pipeline' },
+  { id: 'answer', label: 'Answer', type: 'output', communityId: 'response' },
+];
+
+const typedLinks: GraphLink[] = [
+  { id: 'collect-rank', source: 'collect', target: 'rank', label: 'feeds', directed: true },
+  { id: 'rank-answer', source: 'rank', target: 'answer', label: 'grounds', directed: true },
+];
+
+const nodeTypes: GraphNodeType[] = [
+  { id: 'input', label: 'Input', shape: 'circle' },
+  { id: 'process', label: 'Processing', shape: 'diamond' },
+  { id: 'output', label: 'Output', shape: 'square' },
+];
+
+const communities: GraphCommunity[] = [
+  { id: 'pipeline', label: 'Retrieval pipeline', memberIds: ['collect', 'rank'] },
+  { id: 'response', label: 'Response', memberIds: ['answer'] },
+];
+
+export const CanvasLayeredCommunities: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Canvas rendering, deterministic layered layout, node types, community hulls, and controlled multiple selection. The palette button changes inherited graph tokens; the canvas repaints without reassigning its data.',
+      },
+    },
+  },
+  render: () => {
+    const applySelection = (event: CustomEvent<{ nodeIds: string[]; linkIds: string[] }>) => {
+      const graph = event.currentTarget as LyraGraph;
+      graph.selectedNodeIds = event.detail.nodeIds;
+      graph.selectedLinkIds = event.detail.linkIds;
+    };
+    const togglePalette = (event: Event) => {
+      const graph = (event.currentTarget as HTMLElement)
+        .closest('.graph-canvas-demo')
+        ?.querySelector('lr-graph') as LyraGraph | null;
+      if (!graph) return;
+      const alternate = graph.dataset.palette !== 'alternate';
+      graph.dataset.palette = alternate ? 'alternate' : 'default';
+      graph.style.setProperty('--lr-node-fill', alternate ? 'var(--lr-color-warning)' : 'var(--lr-color-brand)');
+      graph.style.setProperty('--lr-link-color', alternate ? 'var(--lr-color-success)' : 'var(--lr-color-border)');
+    };
+
+    return html`
+      <div class="graph-canvas-demo" style="display:grid;gap:0.75rem">
+        <button type="button" style="justify-self:start" @click=${togglePalette}>
+          Toggle canvas palette
+        </button>
+        <lr-graph
+          aria-label="Layered retrieval pipeline"
+          renderer="canvas"
+          layout="layered"
+          selection-mode="multiple"
+          show-edge-labels
+          width="520"
+          height="320"
+          style="height:20rem"
+          .nodes=${typedNodes}
+          .links=${typedLinks}
+          .nodeTypes=${nodeTypes}
+          .communities=${communities}
+          .selectedNodeIds=${['rank']}
+          @lr-selection-change=${applySelection}
+        ></lr-graph>
       </div>
     `;
   },

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './menu-item.js';
+import './menu.js';
 
 const meta: Meta = { title: 'Navigation/Menu item', component: 'lr-menu-item', tags: ['autodocs'] };
 export default meta;
@@ -24,6 +25,28 @@ export const Sizes: StoryObj = {
       <lr-menu-item size="l" value="e">Large</lr-menu-item>
       <lr-menu-item size="xl" value="f">Extra large</lr-menu-item>
       <lr-menu-item size="large" value="g">size="large" — the same tier as "l"</lr-menu-item>
+    </div>
+  `,
+};
+
+export const SubmenuOffset: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--submenu-offset` is the final signed distance from the parent row: the `-2px` default overlaps its edge, while a positive value creates separation. This story keeps the submenu open and uses a spacing token as a positive override.',
+      },
+    },
+  },
+  render: () => html`
+    <div role="menu" aria-label="Share actions" style="inline-size: 12rem; margin: var(--lr-space-2xl);">
+      <lr-menu-item value="share" style="--submenu-offset: var(--lr-space-l);">
+        Share
+        <lr-menu slot="submenu" label="Share" open>
+          <lr-menu-item value="email">Email</lr-menu-item>
+          <lr-menu-item value="link">Copy link</lr-menu-item>
+        </lr-menu>
+      </lr-menu-item>
     </div>
   `,
 };

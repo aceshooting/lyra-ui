@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraEbookViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `epubjs` — see `llms/peers.md`
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -17,13 +19,15 @@ Renders EPUB ebooks through the optional `epubjs` peer. `src` is fetched as an `
 epub.js renders the reading area into its stable `mount` element, using an internal iframe for
 chapter content.
 
-**Properties:** `src` and `name` are strings. `accessibleLabel` (attribute `aria-label`) overrides
-the reading region's accessible name. `location: string = ''` (not reflected — CFIs are long) is
+**Properties:** `src: string = ''` and `name: string = ''`. `accessibleLabel: string = ''`
+(attribute `aria-label`) overrides the reading region's accessible name. `location: string = ''`
+(not reflected — CFIs are long) is
 a CFI or spine href identifying the current reading position: set before the book finishes
 loading it's recorded and applied once ready, set after it applies immediately, and epub.js's own
 `relocated` event keeps it in sync with user navigation without re-triggering its own `display()`
 call. A controlled `location` assignment made synchronously inside `lr-location-change` wins over
-the peer-reported CFI and is displayed. `anchorKinds` is a readonly `['cfi', 'text-quote']` (this
+the peer-reported CFI and is displayed. `anchorKinds: readonly LyraAnchorKind[] = ['cfi',
+'text-quote']` (this
 viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `getToc()` resolves the EPUB's own navigation document (`book.navigation.toc`,

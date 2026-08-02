@@ -189,12 +189,13 @@ it('treats a NaN cell as no-data instead of leaking whatever color the previous 
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
-  const dpr = window.devicePixelRatio || 1;
   // Second column (NaN): PAD_LEFT=60 + 1*cellSize(22) = 82, PAD_TOP=20.
-  const pixel = ctx.getImageData(Math.round(87 * dpr), Math.round(25 * dpr), 1, 1).data;
-  expect(pixel[0]).to.equal(128);
-  expect(pixel[1]).to.equal(128);
-  expect(pixel[2]).to.equal(128);
+  const pixel = pixelRgb(ctx, 87, 25);
+  const expected = resolveTokenRgb(el, '--lr-heatmap-no-data-fill');
+  // Firefox's canvas color pipeline can round an 8-bit channel one step below Chromium/WebKit.
+  // Resolve the live token and allow that single quantization step rather than pinning a palette
+  // literal; the behavioral assertion is that all three channels use the no-data color.
+  pixel.forEach((channel, index) => expect(channel).to.be.closeTo(expected[index]!, 1));
 });
 
 it('is accessible', async () => {
@@ -1882,7 +1883,9 @@ describe('weekdayLabelText', () => {
       ></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
-    expect(seen.slice().sort()).to.deep.equal([1, 3, 5]);
+    // A render callback may be consulted again when the canvas redraws; its semantic contract is
+    // the real weekday domain, not an exact invocation count.
+    expect([...new Set(seen)].sort()).to.deep.equal([1, 3, 5]);
   });
 });
 

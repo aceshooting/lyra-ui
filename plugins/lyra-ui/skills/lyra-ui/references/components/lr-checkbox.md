@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/checkbox/checkbox.js';` (registers the tag; side-effect import)
 - **Class** `LyraCheckbox`, also available unregistered from `@aceshooting/lyra-ui/components/forms/checkbox/checkbox.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,7 +20,10 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 `ElementInternals`, click and Space toggle) but with checkbox semantics.
 
 **Properties:**
-- `checked: boolean = false` (reflected)
+- `checked: boolean = false` — the live, non-reflecting state
+- `defaultChecked: boolean = false` (WA attribute `checked`, reflected; Shoelace alias
+  `default-checked`) — the current reset default; changing it updates `checked` only while the live
+  state is pristine
 - `indeterminate: boolean = false` (reflected) — visual-only mixed state; does not affect `checked`,
   and is cleared back to `false` by any user interaction (click or keyboard), matching native
   `<input type="checkbox">`
@@ -27,25 +32,34 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked` (a native checkbox
   submits nothing at all, not even an empty string, while unchecked)
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
+- `hint: string = ''` — WA supporting text below the control
+- `helpText: string = ''` (attribute `help-text`) — Shoelace alias for the same supporting-text
+  surface; `hint` wins when both properties are set
 - `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
   `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the box and its checkmark off
   the same values `lr-input`/`lr-select`/`lr-button` read, so controls of one `size` line up in a
   row. The slotted label keeps the library's standard control-label type size at every tier —
   restyle it through `::part(label)` if you want it to track the control.
 
-**Events:** user toggles emit bubbling/composed `input`, then `change`, then the compatibility
-`lr-change` alias (`detail: { checked: boolean }`). Programmatic `.checked` assignments are
-silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events.
+**Events:** user toggles emit, in order, bubbling/composed `input`, the compatibility `lr-input`
+alias, bubbling/composed `change`, then the compatibility `lr-change` alias (both aliases carry
+`detail: { checked: boolean }`). Programmatic `.checked` assignments are
+silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events, each followed
+by its prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires when a
+validity check finds the checkbox invalid.
 
-**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control;
+`getForm()` returns its owning form (including an external owner selected by `form`).
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("those terms have been
 superseded"): a non-empty message raises `customError` and blocks submission, `''` restores the
 control's own computed validity so a required-and-unchecked box goes back to `valueMissing`. It
-survives every toggle and a form reset; only another `setCustomValidity('')` clears it.
+survives every toggle and a form reset; `setCustomValidity('')` or `resetValidity()` clears it.
 
 **Slots:** default — label text, rendered next to the box. Clicking it toggles the checkbox, the
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
-host so the control still has an accessible name.
+host so the control still has an accessible name. `hint` is the WA supporting-text slot;
+`help-text` is the Shoelace spelling for the same described-by surface.
 
 Host `aria-describedby` targets in the host's own root are resolved onto the internal
 `role="checkbox"` through `ariaDescribedByElements`, so an externally-owned description remains
@@ -54,9 +68,12 @@ leaves the internal role's serialized attribute empty; browsers without the refl
 API keep the string fallback. The relationship tracks host attribute changes and clears when
 unset.
 
-**CSS parts:** `base` (the whole interactive control, `role="checkbox"`), `box` (the small square
-showing the checkmark/indeterminate dash), `checkmark` (the checkmark or indeterminate-dash glyph),
-`label` (wrapper around the default slot)
+**CSS parts:** `base` (compatibility name for the interactive control; use `checkbox`),
+`checkbox` (the whole interactive control, `role="checkbox"`; it is the same node as `base`),
+`box` / `control` (the small square showing the checkmark/indeterminate dash; while active it also
+carries Shoelace's `control--checked` or `control--indeterminate` state token), `checkmark` plus
+`checked-icon` or `indeterminate-icon` on the visible glyph, `label` (wrapper around the default
+slot), and `hint` / `form-control-help-text` on the supporting-text wrapper.
 
 **Themeable custom properties:** `--lr-checkbox-box-size` and `--lr-checkbox-label-indent` (both
 below), plus shared tokens — `--lr-space-s`, `--lr-icon-button-size`,
@@ -101,6 +118,9 @@ substitute the one you actually use:
 checked/indeterminate fill without hijacking the shared `--lr-color-brand` token everything else
 reads.
 
+WA's `--checked-icon-color` and `--checked-icon-scale` aliases directly control the visible
+checkmark/dash color and scale.
+
 **Optional peer deps:** none.
 
 ```html
@@ -123,10 +143,10 @@ empty string. Restoration updates state, form data, and validity synchronously w
 `lr-change`.
 
 **Known gotchas:**
-- `formResetCallback()` restores `checked` to whatever the declarative `checked` attribute parsed to
-  at first connect — captured once via a one-shot flag (not from `attributeChangedCallback` alone,
-  since `checked` reflects and that would wrongly re-capture on every later user toggle). A later
-  `el.checked = true` assignment never redefines the reset default.
+- `checked` follows native dirty-state rules. A later `el.checked = true` assignment changes only
+  the live state and never rewrites the attribute. Changing `defaultChecked` or the `checked`
+  attribute updates the reset target but cannot overwrite a dirty live state; `form.reset()` uses
+  that current default and makes the control pristine again.
 - `indeterminate` is visual-only and silently clears on any user click/keypress — a consumer relying
   on it staying `true` after a user interacts with the box will be surprised.
 - The rendered `aria-label` is copied from the host's own `aria-label` attribute at render time; if

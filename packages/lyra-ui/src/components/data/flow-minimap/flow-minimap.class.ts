@@ -41,6 +41,8 @@ interface FlowCanvasLike extends HTMLElement {
  * @cssprop [--lr-flow-minimap-node-success-color=var(--lr-color-success)] - Successful-node fill.
  * @cssprop [--lr-flow-minimap-node-error-color=var(--lr-color-danger)] - Failed-node fill.
  * @cssprop [--lr-flow-minimap-node-denied-color=var(--lr-color-warning)] - Denied-node fill.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraFlowMinimap extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];

@@ -113,6 +113,8 @@ export interface LyraRetrievalTraceEventMap {
  * @csspart evidence-metadata-value - One metadata entry's value (a `<dd>`).
  * @cssprop [--lr-retrieval-trace-active-border=var(--lr-color-brand)] - Border color of the
  *   `[part="evidence-row"]` whose stage matches `activeStageId`.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> {
   static override styles = [LyraElement.styles, styles];

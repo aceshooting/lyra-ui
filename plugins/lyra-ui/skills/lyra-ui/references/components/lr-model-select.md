@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/conversation/model-select/model-select.js';` (registers the tag; side-effect import)
 - **Class** `LyraModelSelect`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/model-select/model-select.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -57,8 +59,6 @@ emitting `lr-change`.
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`), and
   `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the free-text input;
   they have no effect in closed-dropdown mode
-- `autocomplete: string = 'off'`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
-  (`enterkeyhint`) — forwarded to the free-text mode's native `<input>`.
 - `name: string = ''` (reflected)
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
@@ -74,6 +74,14 @@ emitting `lr-change`.
 - `value: string` — getter/setter (hand-rolled, not the `FormAssociated` mixin); the current model id,
   `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously. A named,
   untouched model-select contributes `''` to `FormData` instead of omitting its key.
+- `defaultValue: string = ''` (attribute `value`, reflected) — the current reset default. The live
+  `value` is non-reflecting and dirty, so changing the default/attribute cannot overwrite it until
+  `form.reset()` restores the current default.
+- `customError: string | null = null` (attribute `custom-error`) — reflected consumer validation
+  message.
+- `form: HTMLFormElement | null = null` — browser-resolved owner (and an assignable external owner);
+  readonly `labels: NodeList`, `validity: ValidityState`, `validationMessage: string`,
+  `willValidate: boolean`, and `effectiveDisabled: boolean` expose the native FACE state.
 
 **Methods:** `click()` (override) — forwards to whichever internal control the active mode renders,
 since `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
@@ -86,7 +94,10 @@ combobox `<input>`: unlike a genuine pointer click, `HTMLElement.click()` never 
 behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` handler on the input
 itself.
 
-`checkValidity()` / `reportValidity()` behave as on any form-associated control.
+`focus(options?)` and `blur()` forward to the active semantic control in either rendering mode.
+
+`getForm()` returns the browser-resolved owning form. `checkValidity()` / `reportValidity()` behave
+as on any form-associated control.
 `setCustomValidity(message: string)` is the standard channel for a server-side rejection ("that
 model was retired by the provider") that no client-side constraint can express: a non-empty
 `message` raises `customError` and becomes `validationMessage`, so the control fails
@@ -117,16 +128,17 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
   distinctly from a real catalog pick)
-- `change` (`Event`, no detail) — fired alongside `lr-change`, mirroring `<lr-select>`/
+- `change` (`Event`, no detail) — fired on a committed value alongside `lr-change`, mirroring `<lr-select>`/
   `<lr-combobox>`'s native-style value-change pair so native form bindings/framework `v-model`
   handlers behave consistently across the picker family.
-- `input` (`Event`, no detail) — fired immediately before `change` alongside each committed
-  `lr-change`, providing the same native-style value-event pair as `<lr-select>`/`<lr-combobox>`.
-- `blur` (no detail) — re-dispatched from the free-text mode's internal `<input>`'s own `blur`,
-  bubbling and composed unlike the native event. Closed-dropdown mode's trigger `<button>` has no
-  equivalent re-dispatch, matching `<lr-select>`'s own trigger.
-- `focus` (no detail) — re-dispatched from the free-text mode's internal `<input>`'s own `focus`,
-  for the same reason as `blur`.
+- `input` — a payload-preserving `InputEvent` for each free-text edit, and a plain `Event` fired
+  immediately before `change` when either mode commits a value.
+- `blur` / `focus` (no detail) — one native `FocusEvent` re-dispatched from the active control in
+  either mode (the closed trigger button or free-text input), bubbling and composed unlike the
+  shadow-internal original.
+- `lr-blur` and `lr-focus` (no detail) — prefixed compatibility aliases, each fired immediately
+  after its unprefixed counterpart.
+- `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
 
 **Slots:** `hint` (custom hint content), `error` (custom error content).
 

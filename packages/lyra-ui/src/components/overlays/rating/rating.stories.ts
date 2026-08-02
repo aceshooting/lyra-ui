@@ -4,6 +4,29 @@ import './rating.js';
 const meta: Meta = { title: 'Form/Rating', component: 'lr-rating', tags: ['autodocs'] };
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-rating value="3" label="Satisfaction"></lr-rating>` };
+export const NativeChangeEvent: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A user commit emits a bubbling native change Event before lr-change. Native events have no detail; read event.target.value.',
+      },
+    },
+  },
+  render: () => {
+    const onChange = (event: Event) => {
+      const rating = event.currentTarget as HTMLElement & { value: number };
+      const output = rating.parentElement?.querySelector('output');
+      if (output) output.textContent = `Native change: ${rating.value}`;
+    };
+    return html`
+      <div style="display: flex; gap: var(--lr-space-m); align-items: center;">
+        <lr-rating value="2" label="Satisfaction" @change=${onChange}></lr-rating>
+        <output aria-live="polite">Choose a rating</output>
+      </div>
+    `;
+  },
+};
 export const HalfStarPrecision: StoryObj = {
   parameters: {
     docs: {
@@ -20,6 +43,22 @@ export const Sizes: StoryObj = {
       ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
         (size) => html`<lr-rating size=${size} value="3" label=${`Satisfaction (${size})`}></lr-rating>`,
       )}
+    </div>
+  `,
+};
+export const AliasSizes: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story: '`small`, `medium`, and `large` are accepted write aliases whose getters normalize to `s`, `m`, and `l`.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: var(--lr-space-s); align-items: start;">
+      <lr-rating size="small" value="3" label="Small alias"></lr-rating>
+      <lr-rating size="medium" value="3" label="Medium alias"></lr-rating>
+      <lr-rating size="large" value="3" label="Large alias"></lr-rating>
     </div>
   `,
 };
@@ -95,5 +134,20 @@ export const CustomTheming: StoryObj = {
     value="4"
     label="Satisfaction"
     style="--lr-rating-fill: seagreen; --lr-rating-empty-color: gainsboro; --lr-rating-size: 2rem;"
+  ></lr-rating>`,
+};
+export const CompatibilityAliases: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'default-value targets the reset default, while --symbol-color, --symbol-color-active, --symbol-size, and --symbol-spacing theme the mapped symbol surface.',
+      },
+    },
+  },
+  render: () => html`<lr-rating
+    default-value="3"
+    label="Compatibility-themed satisfaction"
+    style="--symbol-color: var(--lr-color-border-strong); --symbol-color-active: var(--lr-color-success); --symbol-size: var(--lr-font-size-2xl); --symbol-spacing: var(--lr-space-m);"
   ></lr-rating>`,
 };

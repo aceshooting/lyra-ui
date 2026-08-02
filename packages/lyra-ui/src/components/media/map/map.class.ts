@@ -162,6 +162,8 @@ export interface LyraMapEventMap {
  * server, which is not suitable for production traffic — see the
  * `DEFAULT_STYLE` doc comment above. Always pass an explicit
  * `mapStyle` in production.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraMap extends LyraElement<LyraMapEventMap> {
   static override styles = [LyraElement.styles, styles];

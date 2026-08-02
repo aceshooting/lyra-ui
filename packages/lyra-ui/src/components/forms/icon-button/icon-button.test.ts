@@ -159,7 +159,7 @@ it('leaves a complete slotted svg/img untouched by the fallback path', async () 
 it('still floors slotted content at the tappable target size on both axes', async () => {
   const el = await fixture(html`
     <lr-icon-button aria-label="Tiny">
-      <lr-flag src=${TEST_FLAG_SRC} label="Tiny" style="block-size: 0.5rem"></lr-flag>
+      <span style="display: block; inline-size: 0.5rem; block-size: 0.5rem"></span>
     </lr-icon-button>
   `);
   const box = el.shadowRoot!.querySelector('button')!.getBoundingClientRect();
@@ -278,6 +278,32 @@ it('type="reset" resets the closest ancestor form via host click()', async () =>
   const el = form.querySelector('lr-icon-button')!;
   el.click();
   expect(input.value).to.equal('');
+});
+
+it('submits and resets through an external form owner', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <form id="external-icon-owner"><input name="draft" value="initial"></form>
+      <lr-icon-button form="external-icon-owner" icon="close" aria-label="Act" type="submit"></lr-icon-button>
+    </div>
+  `);
+  const form = wrapper.querySelector('form')!;
+  const input = form.querySelector('input')!;
+  const el = wrapper.querySelector('lr-icon-button') as LyraIconButton;
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits++;
+  });
+
+  el.click();
+  expect(submits).to.equal(1);
+
+  input.value = 'changed';
+  el.type = 'reset';
+  await el.updateComplete;
+  el.click();
+  expect(input.value).to.equal('initial');
 });
 
 it('honours --lr-icon-button-background and --lr-icon-button-color on the native button', async () => {
@@ -483,4 +509,85 @@ it('blur() releases the native button it focused', async () => {
   expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('button'));
   el.blur();
   expect(el.shadowRoot!.activeElement).to.be.null;
+});
+
+describe('lr-icon-button — mapped Shoelace surface', () => {
+  it('accepts name/library/src aliases and forwards them to the resolved lr-icon', async () => {
+    const named = (await fixture(html`
+      <lr-icon-button name="close" library="default" label="Dismiss"></lr-icon-button>
+    `)) as LyraIconButton;
+    const namedIcon = named.shadowRoot!.querySelector('lr-icon')!;
+    expect(named.name).to.equal('close');
+    expect(named.icon).to.equal('close');
+    expect(named.library).to.equal('default');
+    expect(namedIcon.getAttribute('name')).to.equal('close');
+    expect(namedIcon.getAttribute('library')).to.equal('default');
+
+    named.name = 'search';
+    await named.updateComplete;
+    expect(named.icon).to.equal('search');
+    expect(named.shadowRoot!.querySelector('lr-icon')!.getAttribute('name')).to.equal('search');
+
+    const sourced = (await fixture(html`
+      <lr-icon-button src=${TEST_FLAG_SRC} label="Remote icon"></lr-icon-button>
+    `)) as LyraIconButton;
+    const sourcedIcon = sourced.shadowRoot!.querySelector('lr-icon')!;
+    expect(sourced.src).to.equal(TEST_FLAG_SRC);
+    expect(sourcedIcon.getAttribute('src')).to.equal(TEST_FLAG_SRC);
+  });
+
+  it('exports base and button from the same native control in button mode', async () => {
+    const el = (await fixture(html`
+      <lr-icon-button name="close" label="Dismiss"></lr-icon-button>
+    `)) as LyraIconButton;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const button = el.shadowRoot!.querySelector('[part~="button"]') as HTMLElement;
+    expect(base.isSameNode(button)).to.be.true;
+    expect(base.localName).to.equal('button');
+  });
+
+  it('renders safe href/target/download as a real anchor with a derived safe rel', async () => {
+    const el = (await fixture(html`
+      <lr-icon-button
+        name="close"
+        label="Download"
+        href="https://example.com/icon.svg"
+        target="_blank"
+        download="icon.svg"
+      ></lr-icon-button>
+    `)) as LyraIconButton;
+    const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+    expect(anchor).to.exist;
+    expect(anchor.getAttribute('href')).to.equal('https://example.com/icon.svg');
+    expect(anchor.target).to.equal('_blank');
+    expect(anchor.rel).to.equal('noopener noreferrer');
+    expect(anchor.download).to.equal('icon.svg');
+    await expect(el).to.be.accessible();
+  });
+
+  it('makes disabled link mode inert and restores its href when re-enabled', async () => {
+    const el = (await fixture(html`
+      <lr-icon-button name="close" label="Open" href="https://example.com" disabled></lr-icon-button>
+    `)) as LyraIconButton;
+    let clicks = 0;
+    el.addEventListener('click', () => clicks++);
+    const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+    expect(anchor.hasAttribute('href')).to.be.false;
+    expect(anchor.getAttribute('aria-disabled')).to.equal('true');
+    el.click();
+    expect(clicks).to.equal(0);
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(anchor.getAttribute('href')).to.equal('https://example.com');
+    await expect(el).to.be.accessible();
+  });
+
+  it('falls back to the native button for an unsafe href', async () => {
+    const el = (await fixture(html`
+      <lr-icon-button name="close" label="Unsafe" href="javascript:alert(1)"></lr-icon-button>
+    `)) as LyraIconButton;
+    expect(el.shadowRoot!.querySelectorAll('a').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('button[part~="base"]').length).to.equal(1);
+  });
 });

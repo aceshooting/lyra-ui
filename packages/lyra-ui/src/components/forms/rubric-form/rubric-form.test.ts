@@ -453,9 +453,9 @@ describe('lr-rubric-form', () => {
       html`<lr-rubric-form .keys=${keys} .value=${{ s2: 42 }}></lr-rubric-form>`,
     )) as LyraRubricForm;
     await el.updateComplete;
-    const slider = el.shadowRoot!.querySelector('[data-key="s2"] lr-slider') as HTMLElement & { value: string };
+    const slider = el.shadowRoot!.querySelector('[data-key="s2"] lr-slider') as HTMLElement & { value: number };
     expect(slider).to.exist;
-    expect(slider.value).to.equal('42');
+    expect(slider.value).to.equal(42);
   });
 
   it('defaults to an empty option list for a category field with no options, and reflects a preset string value in a single-select', async () => {
@@ -803,13 +803,16 @@ it('forwards field labels, descriptions, errors, and option descriptions to comp
   const segmented = el.shadowRoot!.querySelector<HTMLElement & { label: string }>(
     '[data-key="score"] lr-segmented',
   )!;
-  const slider = el.shadowRoot!.querySelector<HTMLElement & { label: string }>(
+  const slider = el.shadowRoot!.querySelector<HTMLElement & { label: string; updateComplete: Promise<unknown> }>(
     '[data-key="scoreWide"] lr-slider',
   )!;
+  await slider.updateComplete;
   expect(segmented.label).to.contain('Accuracy');
   expect(segmented.label).to.contain('Judge factual correctness');
-  expect(slider.label).to.contain('Confidence');
-  expect(slider.label).to.contain('Use the full confidence range');
+  expect(slider.label).to.equal('');
+  const sliderThumb = slider.shadowRoot!.querySelector('[part~="thumb"]') as HTMLElement;
+  expect(sliderThumb.getAttribute('aria-label')).to.contain('Confidence');
+  expect(sliderThumb.getAttribute('aria-label')).to.contain('Use the full confidence range');
 
   const select = el.shadowRoot!.querySelector('lr-select')!;
   const selectTrigger = select.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;

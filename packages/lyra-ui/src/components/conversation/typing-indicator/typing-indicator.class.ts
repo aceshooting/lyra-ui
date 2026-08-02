@@ -67,6 +67,8 @@ export type TypingIndicatorSize = LyraSize;
  * just this component doesn't affect other ambient-looping components in the library.
  * @cssprop [--lr-typing-dot-stagger-1=600ms] - Delay for the second dot in the dots variant.
  * @cssprop [--lr-typing-dot-stagger-2=1200ms] - Delay for the third dot in the dots variant.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTypingIndicator extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];

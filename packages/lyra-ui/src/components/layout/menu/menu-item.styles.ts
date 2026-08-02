@@ -3,6 +3,14 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    /* place() gives every floating panel a 4px main-axis gap. Shoelace's public
+       --submenu-offset is the *final* signed distance instead: its -2px default
+       overlaps the parent menu by 2px. Keep that exact compatibility default,
+       but resolve both literals through design tokens before the class forwards
+       this internal translation to the nested menu's popup. */
+    --_lr-menu-item-submenu-translation: calc(
+      var(--submenu-offset, calc(-1 * var(--lr-size-2px))) - var(--lr-size-4px)
+    );
     /* The host itself is the focusable role="menuitem" target (see the class
        doc) -- the ring paints on [part='base'] instead of the host's own
        box, matching lr-tree-item's identical :host(:focus-visible)
@@ -48,37 +56,43 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  :host([disabled]) [part='base'] {
+  :host([disabled]) [part='base'],
+  :host([loading]) [part='base'] {
     /* Shared library-wide disabled-state token -- see lr-checkbox/lr-select. */
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  :host([disabled]) [part='base']:hover {
+  :host([disabled]) [part='base']:hover,
+  :host([loading]) [part='base']:hover {
     background: none;
   }
   /* Suppression, not a treatment: the host is the role="menuitem" target and stays in the DOM as a
      pressable box while disabled, so without this the pressed mix above would still paint under a
      pointer that a disabled row must not respond to. */
-  :host([disabled]) [part='base']:active {
+  :host([disabled]) [part='base']:active,
+  :host([loading]) [part='base']:active {
     background: none;
   }
-  :host([destructive]) [part='base'] {
+  :host([destructive]) [part='base'],
+  :host([variant='danger']) [part='base'] {
     color: var(--lr-color-danger);
   }
-  :host([destructive]) [part='base']:hover {
+  :host([destructive]) [part='base']:hover,
+  :host([variant='danger']) [part='base']:hover {
     background: var(--lr-color-danger-quiet);
   }
   /* Same step past hover as the ordinary row above, taken on the danger fill this variant hovers
      with. Ordered exactly like the :hover rules it mirrors, so the disabled/destructive precedence
      stays whatever it already was rather than diverging between the two states. */
-  :host([destructive]) [part='base']:active {
+  :host([destructive]) [part='base']:active,
+  :host([variant='danger']) [part='base']:active {
     background: color-mix(
       in oklab,
       var(--lr-color-danger-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part='icon'] {
+  [part~='icon'] {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
@@ -90,7 +104,7 @@ export const styles = css`
      content, so :empty never matches (same fix as lr-select's
      [part='hint']/[part='error']). Real emptiness is tracked in JS
      (hasIconSlot) and reflected via the hidden attribute instead. */
-  [part='icon'][hidden] {
+  [part~='icon'][hidden] {
     display: none;
   }
   [part='label'] {
@@ -99,6 +113,25 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  [part='details'],
+  [part='suffix'] {
+    flex: 0 0 auto;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
+  [part='details'][hidden],
+  [part='suffix'][hidden] {
+    display: none;
+  }
+  [part~='spinner'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--lr-color-text-quiet);
+    animation: lr-menu-item-spin var(--lr-transition-ambient) linear infinite;
+  }
+  @keyframes lr-menu-item-spin {
+    to { transform: rotate(360deg); }
   }
   /* Only ever present in the DOM at all for a checked type="checkbox" item
      (see menu-item.ts's render()) -- no [hidden]-toggling needed, unlike
@@ -125,5 +158,18 @@ export const styles = css`
      the shared icon set stays direction-free. */
   :host(:dir(rtl)) [part='submenu-icon'] {
     transform: scaleX(-1);
+  }
+  :host(:dir(rtl)) {
+    /* A positive distance moves away from the parent and a negative distance
+       overlaps it, regardless of which inline edge owns the submenu. */
+    --_lr-menu-item-submenu-translation: calc(
+      var(--lr-size-4px) - var(--submenu-offset, calc(-1 * var(--lr-size-2px)))
+    );
+  }
+  [part='submenu'] {
+    display: contents;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part~='spinner'] { animation: none; }
   }
 `;

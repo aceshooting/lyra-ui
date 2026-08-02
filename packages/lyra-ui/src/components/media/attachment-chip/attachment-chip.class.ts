@@ -139,6 +139,8 @@ export interface LyraAttachmentChipEventMap {
  * `[part="base"]` while `compact`.
  * @cssprop [--lr-attachment-chip-compact-gap=var(--lr-size-0-25rem)] - Gap between the chip's parts
  * while `compact`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -5,6 +5,8 @@ import { LyraChart, lockChartType } from './chart.class.js';
  * one `Series` with `data: number[]` and `color: string[]` as the slice palette.
  *
  * @customElement lr-pie-chart
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraPieChart extends LyraChart {
   declare type: 'pie';

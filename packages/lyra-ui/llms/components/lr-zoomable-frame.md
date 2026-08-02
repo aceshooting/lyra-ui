@@ -5,54 +5,77 @@
 - **Import** `import '@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js';` (registers the tag; side-effect import)
 - **Class** `LyraZoomableFrame`, also available unregistered from `@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-zoomable-frame`
 
-Scrollable inspection frame with bounded zoom controls and keyboard shortcuts. Scrolling provides
-panning when zoomed content exceeds the viewport.
+Sandboxed iframe preview that mirrors Web Awesome's zoomable-frame contract. It scales a real
+`<iframe>` through discrete controls without changing the document's own viewport, and fills its
+allocated inline size with a 16:9 aspect ratio by default (override `aspect-ratio` on the host).
 
 **Properties:**
-- `zoom: number = 1` (attribute `zoom`, reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`,
-  and `zoomStep: number = 0.25` — bounded zoom configuration
-- `src: string = ''` and `alt: string = ''` — optional image source; otherwise the default slot is
-  rendered
-- `accessibleLabel: string | null` (attribute `aria-label`) — host-level accessible name
+- `src: string = ''` — iframe URL. Relative, `http:`, `https:`, `blob:`, and exact `about:blank`
+  values are accepted; active `data:`/`javascript:` and non-embeddable schemes are omitted.
+- `srcdoc: string = ''` — inline iframe document. A present `srcdoc` wins over `src`, including an
+  explicitly empty `srcdoc` attribute.
+- `allowfullscreen: boolean = false`, `loading: 'eager' | 'lazy' = 'eager'`,
+  `referrerpolicy: string = ''`, and `sandbox: string = 'allow-same-origin'` forward the native
+  iframe controls after validation. Invalid loading becomes `eager`; an invalid non-empty referrer
+  policy becomes `no-referrer`.
+- `zoom: number = 1` (reflected) — current scale. Finite programmatic values do not have to occur
+  in `zoomLevels`; unsafe/non-finite layout values render as a finite positive fallback.
+- `zoomLevels: string = '25% 50% 75% 100% 125% 150% 175% 200%'` (attribute `zoom-levels`) —
+  decimal/percentage stops used by the controls, parsed, deduplicated, and sorted.
+- `withoutControls: boolean = false`, `withoutInteraction: boolean = false`, and
+  `withThemeSync: boolean = false` (reflected attributes `without-controls`,
+  `without-interaction`, `with-theme-sync`) — respectively remove the toolbar, remove pointer and
+  sequential-keyboard iframe interaction, and opt into best-effort same-origin theme sync.
+- `accessibleLabel: string | null` (attribute `aria-label`) — forwarded to the actual iframe
+  `title`; otherwise the localized zoomable-frame label names it.
+- readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
+  `contentDocument: Document | null`. Both content accessors return `null` while detached;
+  `contentDocument` also returns `null` across an origin boundary.
 
-**Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update the zoom and emit
-`lr-zoom-change` (`detail: { zoom }`). `resetView()` calls `resetZoom()` **and** scrolls the
-viewport back to the origin — `resetZoom()` deliberately preserves the current pan/scroll offset
-(it backs the built-in reset button and the `0` shortcut), `resetView()` is the stronger reset for
-a caller swapping in entirely new content (`<lr-lightbox>` calls it on every navigation). The
-viewport accepts `+`/`=` (zoom in), `-`/`_` (zoom out), and `0` (reset zoom) while focused.
+**Methods:** `zoomIn()` selects the nearest configured level above the current value;
+`zoomOut()` selects the nearest below it. The toolbar also accepts `+`/`=` and `-`/`_` while one
+of its controls has focus.
 
-**Slots:** default slot — content to inspect; ignored while `src` is set (an `<img>` renders
-instead).
+**Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs.
 
-**Events:** `lr-zoom-change` (`detail: { zoom }`).
+**Events:** native `load` and `error`, relayed exactly once from the current iframe generation as
+non-bubbling, non-composed `Event` instances. Navigation/source-policy changes replace the iframe,
+so a late event from an earlier document is ignored; detached frames do not notify.
 
-**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`.
+**CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`.
 
-**Themeable custom properties:** `--lr-zoomable-frame-min-block-size` (default
-`var(--lr-size-10rem)` — the scrollable viewport's minimum block size).
-`--lr-zoomable-frame-zoom` is a read-only hook, not a knob: the component writes the resolved
-zoom factor inline on `[part="content"]`, which `transform: scale()` consumes — setting it from
-outside is overwritten on the next render.
+**CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
+property and applied to the internal iframe scale.
 
-```html
-<lr-zoomable-frame src="map-preview.png" alt="Map preview" aria-label="Map preview"></lr-zoomable-frame>
+**Security and theme sync:** the iframe always keeps a `sandbox` attribute. The secure Lyra default
+allows same-origin access but not scripts, forms, popups, downloads, or top navigation. Supplied
+sandbox tokens are allowlisted; if both `allow-scripts` and `allow-same-origin` are requested, the
+latter is dropped so framed script cannot escape a same-origin sandbox. `with-theme-sync` never
+widens those permissions: when the document is accessible it copies only Lyra theme-selector
+classes, theme attributes, computed `--lr-theme-*` inputs, and `color-scheme`; cross-origin
+documents remain untouched. Changing a watched host-page theme attribute syncs again.
+
+```js
+import '@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js';
 ```
 
-**Known gotchas:**
-- `zoom`/`minZoom`/`maxZoom`/`zoomStep` are all normalized before any zoom math: `minZoom` falls
-  back to `0.5`, `maxZoom` to `4` (and is floored at the effective `minZoom`), `zoomStep` to
-  `0.25`, each clamped into `[0.01, 1000]`, so a `NaN`/zero/negative attribute can't stall or
-  reverse `zoomIn()`/`zoomOut()`.
-- every zoom is snapped to a multiple of `zoomStep` and rounded to 2 decimals, so `zoom` will not
-  always equal the exact value you assigned.
+```html
+<lr-zoomable-frame
+  aria-label="Component preview"
+  srcdoc="<!doctype html><html><body><h1>Preview</h1></body></html>"
+  zoom="0.75"
+  with-theme-sync
+></lr-zoomable-frame>
+```
 
 ---

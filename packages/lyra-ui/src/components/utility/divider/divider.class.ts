@@ -10,15 +10,23 @@ export type DividerOrientation = 'horizontal' | 'vertical';
  *
  * @customElement lr-divider
  * @csspart base - The separator element.
+ * @cssprop [--color=var(--lr-color-border)] - Separator color.
+ * @cssprop [--spacing=0] - Space on both block sides (inline sides when vertical).
+ * @cssprop [--width=var(--lr-border-width-thin)] - Separator thickness.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraDivider extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   @property({ reflect: true }) orientation: DividerOrientation = 'horizontal';
+  /** Shoelace-compatible vertical-orientation shorthand. */
+  @property({ type: Boolean, reflect: true }) vertical = false;
   override render(): TemplateResult {
+    const orientation: DividerOrientation = this.vertical ? 'vertical' : this.orientation;
     return html`<hr
       part="base"
       role="separator"
-      aria-orientation=${this.orientation}
+      aria-orientation=${orientation}
       aria-label=${this.getAttribute('aria-label') || nothing}
     >`;
   }

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/format/relative-time.js';` (registers the tag; side-effect import)
 - **Class** `LyraRelativeTime`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/relative-time.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** nothing component-specific — inherits only the shared surface
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -18,15 +20,17 @@ Text-only host — no CSS parts, events, or own tokens; locale resolution and `I
 are as described under `lr-format-number` above.
 
 **Properties:**
-- `date: string | number | Date = ''` — the target instant; past values format as "ago"
+
+- `date: string | number | Date = new Date()` — the target instant; unset means now. **Changed in
+  8.0.0:** the former empty-string default rendered no content
 - `unit: 'second'|'minute'|'hour'|'day'|'week'|'month'|'quarter'|'year'|'auto' = 'auto'` — `'auto'`
   picks the largest unit whose own length fits inside the elapsed time, then rounds; naming a unit
   forces it (so a 90-minute delta with `unit="day"` rounds to "today"/0 days)
 - `numeric: 'always' | 'auto' = 'auto'` — `Intl`'s own option: `'auto'` allows "yesterday"/"tomorrow"
   in place of "1 day ago"/"in 1 day"; `'always'` keeps the numeric phrasing
-- `sync: boolean = false` — re-renders on a fixed 30-second interval so the text stays current. The
-  interval is cleared on disconnect and restarted whenever `date`/`unit`/`numeric`/`locale` changes.
-  Not adaptive: a "3 seconds ago" readout still only updates every 30 s
+- `format: 'long' | 'short' | 'narrow' = 'long'` — forwarded as relative-time `style`
+- `sync: boolean = false` — schedules one timeout at the next rounded-value or auto-unit boundary,
+  rather than fixed polling; it is cleared on disconnect and recalculated when inputs change
 
-**Slots:** none — an unparseable `date` renders the empty string, with no fallback-content hook
-(unlike the three `lr-format-*` components above).
+Valid output is semantic `<time datetime="…">`. **Slots:** none — an unparseable `date` renders the
+empty string, with no fallback-content hook (unlike the three `lr-format-*` components above).

@@ -91,6 +91,68 @@ export const ReportValidity: Story = {
   },
 };
 
+export const NativeFormAndCustomError: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The complete parameter object participates in a native form. The controls exercise `customError`, `getForm()`, and the bubbling `lr-invalid` alias.',
+      },
+    },
+  },
+  render: () => {
+    const controlFor = (event: Event) =>
+      (event.currentTarget as HTMLElement)
+        .closest('form')
+        ?.querySelector('lr-tool-param-form') as LyraToolParamForm | null;
+    const outputFor = (event: Event) =>
+      (event.currentTarget as HTMLElement).closest('form')?.querySelector('output');
+    const reject = (event: Event) => {
+      const control = controlFor(event);
+      if (!control) return;
+      control.customError = 'The tool rejected these arguments.';
+      control.reportValidity();
+    };
+    const clear = (event: Event) => {
+      const control = controlFor(event);
+      const output = outputFor(event);
+      if (!control || !output) return;
+      control.customError = null;
+      output.textContent = `Owner resolved: ${control.getForm() === control.closest('form')}`;
+    };
+    const reportInvalid = (event: Event) => {
+      const output = (event.currentTarget as HTMLElement).closest('form')?.querySelector('output');
+      if (output) output.textContent = 'lr-invalid: the complete parameter form is invalid.';
+    };
+    const submit = (event: SubmitEvent) => {
+      event.preventDefault();
+      const form = event.currentTarget as HTMLFormElement;
+      const output = form.querySelector('output');
+      if (output) output.textContent = `Submitted: ${String(new FormData(form).get('arguments'))}`;
+    };
+
+    return html`
+      <form
+        style="max-width:26rem;display:grid;gap:0.75rem"
+        @submit=${submit}
+      >
+        <lr-tool-param-form
+          name="arguments"
+          .schema=${weatherSchema}
+          .value=${{ city: 'Lisbon' }}
+          @lr-invalid=${reportInvalid}
+        ></lr-tool-param-form>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+          <button type="submit">Submit</button>
+          <button type="button" @click=${reject}>Set tool error</button>
+          <button type="button" @click=${clear}>Clear tool error</button>
+        </div>
+        <output aria-live="polite"></output>
+      </form>
+    `;
+  },
+};
+
 /** Live `lr-input`/`lr-validity-change` events, mirroring what a consumer's dialog would listen for. */
 export const LiveEvents: Story = {
   render: () => {

@@ -6,7 +6,7 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
 
 export interface LyraMutationObserverEventMap {
-  'lr-mutation': CustomEvent<{ records: MutationRecord[] }>;
+  'lr-mutation': CustomEvent<{ records: MutationRecord[]; mutationList: MutationRecord[] }>;
 }
 
 /**
@@ -16,15 +16,25 @@ export interface LyraMutationObserverEventMap {
  *
  * @customElement lr-mutation-observer
  * @slot - Elements to observe.
- * @event lr-mutation - Observed DOM mutations.
+ * @event lr-mutation - Observed DOM mutations; `detail.records` and
+ * `detail.mutationList` reference the same `MutationRecord[]` batch.
  * @csspart base - The non-layout wrapper around the observed slot.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   @property({ type: Boolean, reflect: true }) disabled = false;
-  @property({ type: Boolean, attribute: 'child-list', converter: trueDefaultBooleanConverter }) childList = true;
+  @property({ type: Boolean, attribute: 'child-list', reflect: true }) childList = false;
+  /** Mapped attribute selector: `*` observes all attributes; otherwise use space-separated names. */
+  @property({ reflect: true }) attr: string | null = null;
+  @property({ type: Boolean, attribute: 'attr-old-value', reflect: true }) attrOldValue = false;
+  @property({ type: Boolean, attribute: 'char-data', reflect: true }) charData = false;
+  @property({ type: Boolean, attribute: 'char-data-old-value', reflect: true }) charDataOldValue = false;
+  /** Lyra compatibility alias for `attr`. */
   @property({ type: Boolean, attribute: 'attributes' }) observeAttributes = false;
+  /** Lyra compatibility alias for `charData`. */
   @property({ type: Boolean, attribute: 'character-data' }) characterData = false;
   @property({ type: Boolean, converter: trueDefaultBooleanConverter }) subtree = true;
   @property({ attribute: false }) attributeFilter: string[] = [];
@@ -52,7 +62,20 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   }
 
   protected override updated(changed: PropertyValues): void {
-    if (['disabled', 'childList', 'observeAttributes', 'characterData', 'subtree', 'attributeFilter'].some((key) => changed.has(key))) {
+    if (
+      [
+        'disabled',
+        'childList',
+        'attr',
+        'attrOldValue',
+        'charData',
+        'charDataOldValue',
+        'observeAttributes',
+        'characterData',
+        'subtree',
+        'attributeFilter',
+      ].some((key) => changed.has(key))
+    ) {
       this.scheduleAfterUpdate(this.observeTargets);
     }
   }
@@ -67,22 +90,33 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     this.disconnect();
     if (this.disabled || typeof MutationObserver === 'undefined') return;
     const targets = slottedElementTargets(this.renderRoot);
-    const observesAttributes = this.observeAttributes || this.attributeFilter.length > 0;
-    if (targets.length === 0 || (!this.childList && !observesAttributes && !this.characterData)) return;
+    const attr = this.attr?.trim() ?? null;
+    const attrTokens = (attr ?? '').split(/\s+/).filter(Boolean);
+    const mappedAttributes = attr === '*' || attrTokens.length > 0;
+    const observesAttributes =
+      mappedAttributes || this.attrOldValue || this.observeAttributes || this.attributeFilter.length > 0;
+    const observesCharacterData = this.charData || this.charDataOldValue || this.characterData;
+    if (targets.length === 0 || (!this.childList && !observesAttributes && !observesCharacterData)) return;
     const options: MutationObserverInit = {
       childList: this.childList,
       attributes: observesAttributes,
-      characterData: this.characterData,
+      characterData: observesCharacterData,
       subtree: this.subtree,
     };
-    if (this.attributeFilter.length > 0) options.attributeFilter = this.attributeFilter;
+    const attributeFilter = attr === null ? this.attributeFilter : attr === '*' ? [] : attrTokens;
+    if (attributeFilter.length > 0) options.attributeFilter = attributeFilter;
+    if (this.attrOldValue && observesAttributes) options.attributeOldValue = true;
+    if (this.charDataOldValue && observesCharacterData) options.characterDataOldValue = true;
     // One shared observer across every slotted target (mirrors <lr-intersection-observer>'s and
     // <lr-resize-observer>'s identical single-instance pattern) rather than one instance per
     // target -- MutationObserver natively supports observing multiple nodes and batches every
     // mutation queued in the same microtask into a single callback invocation, so two targets
     // mutated synchronously in the same script produce one coalesced `lr-mutation` event instead
     // of one per target.
-    this.observer = new MutationObserver((records) => this.emit('lr-mutation', { records: [...records] }));
+    this.observer = new MutationObserver((records) => {
+      const mutationList = [...records];
+      this.emit('lr-mutation', { records: mutationList, mutationList });
+    });
     for (const target of targets) this.observer.observe(target, options);
   };
 

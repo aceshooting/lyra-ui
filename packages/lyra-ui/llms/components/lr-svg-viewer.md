@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/svg-viewer/svg-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraSvgViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/svg-viewer/svg-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -22,10 +24,11 @@ anchor addresses one `highlights` entry, matched by reference or by structural e
 here — a sanitized SVG document has neither pages nor extractable text to quote, which is also why
 its registry entry declares `capabilities: { anchors: ['region'], search: false, textSelect: false }`.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
-the scrollable body; invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`). `maxHeight` caps the scrollable body; invalid CSS `max-height` values, declaration
+breaks, and `url()` are ignored.
 `zoomable: boolean = false` (reflected) — wraps the rendered content in an
-internal `<lr-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
+internal `<lr-pan-zoom>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
 inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome viewport;
 an inspection surface opts in. `anchor: LyraAnchor | string | null = null` (attribute: false) —
 declaratively jump to an anchor (a `LyraAnchor` object, or a `highlights` entry's `id`). Assigning it
@@ -36,8 +39,8 @@ from `DocumentAnchorTarget` rather than declared locally. A region rectangle ren
 when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
 `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`) — the `highlights` entry, if any, currently treated as active
-(`data-active` on its `region-highlight`). `anchorKinds` is a readonly `['region']` (this viewer's
-supported `LyraAnchor.kind` values for the shared anchor-target contract).
+(`data-active` on its `region-highlight`). `anchorKinds: readonly LyraAnchorKind[] = ['region']`
+(this viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `scrollToAnchor(target): Promise<boolean>` — scrolls the `highlights` entry matching
 `target` (a `region`-kind `LyraAnchor`, matched by reference or by structural equality of
@@ -59,7 +62,7 @@ rendered region highlight), `region-highlight` (one region highlight, `data-tone
 `highlight-actions` (non-overlapping actions for multiple highlights), `region-highlight-action`
 (one action in that list),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
-(forwarded from the internal `<lr-zoomable-frame>` while `zoomable`).
+(forwarded from the internal `<lr-pan-zoom>` while `zoomable`).
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.

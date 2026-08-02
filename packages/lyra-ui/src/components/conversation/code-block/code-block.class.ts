@@ -145,6 +145,8 @@ export interface LyraCodeBlockEventMap {
  *   the line marked active by `active-highlight-id`. Retints just that outline, leaving every
  *   other `--lr-color-brand` surface in the component (header pill, hover states, focus ring)
  *   alone. Inherits, so it can also be set on an ancestor or at the theme level.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   static override styles = [LyraElement.styles, styles];

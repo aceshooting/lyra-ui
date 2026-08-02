@@ -64,7 +64,11 @@ export const FixedPrimaryWithConstraints: Story = {
       aria-label="Resize navigation"
       style="block-size: 16rem; --min: 10rem; --max: 22rem; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
     >
-      <nav slot="start" aria-label="Project" style=${`${paneStyle} background: var(--lr-color-surface-raised);`}>
+      <nav
+        slot="start"
+        aria-label="Project"
+        style=${`${paneStyle} background: var(--lr-color-surface-raised);`}
+      >
         The start pane remains 240px wide when the story canvas resizes.
       </nav>
       <main slot="end" style=${paneStyle}>Flexible workspace</main>

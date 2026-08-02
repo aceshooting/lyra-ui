@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/overlay/tooltip.js';` (registers the tag; side-effect import)
 - **Class** `LyraTooltip`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/overlay/tooltip.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,22 +37,33 @@ interactions open it is configurable as of 8.0.0; by default it is still hover a
   `0` (immediate) and an oversized one to the largest delay `setTimeout` can represent, so neither
   can hang the tooltip open.
 - `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored under RTL
-- `distance: number = 6` — anchor-offset distance in px; identical semantics to
+- `distance: number = 8` — anchor-offset distance in px; identical semantics to
   `<lr-popover>.distance` (both wrap the same `place()`/`offset()` middleware)
 - `skidding: number = 0` — offset along the anchor's edge, in px. New in 8.0.0.
 - `for: string = ''` (reflected) — id of an element in this tooltip's own root to position against
   instead of the slotted trigger; the trigger keeps owning the interaction listeners and
-  `aria-describedby`. New in 8.0.0.
-- `arrow: boolean = false` (reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
+  `aria-describedby`. New in 8.0.0. Assigning `null` clears the attribute to the canonical `''`
+  read value; the getter itself remains non-nullable
+- `anchor: Element | null = null` (property only) — direct anchor, taking priority over `for` and
+  the active trigger
+- `disabled: boolean = false` (reflected) — prevents both interaction and programmatic opening;
+  setting it while open closes the tooltip
+- `hoist: boolean = false` (reflected) — switches the mapped absolute positioning default to fixed
+- `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
+  reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
   same arrow trio `<lr-popover>` documents above, new in 8.0.0
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted
 - `accessibleLabel: string = ''` (attribute **`aria-label`**)
 
+To preserve the previous Lyra-shaped visual defaults explicitly, use `distance="6" without-arrow`;
+origin-aware migration emits those tokens.
+
 **Methods:**
-- `show(): void` — open immediately, bypassing `show-delay` and whatever `trigger` allows. New in
-  8.0.0.
-- `hide(): void` — close immediately, bypassing `hide-delay`. New in 8.0.0.
+- `show(): Promise<void>` — open immediately, bypassing `show-delay` and interaction policy, then
+  resolve after `lr-after-show`
+- `hide(): Promise<void>` — close immediately, bypassing `hide-delay`, then resolve after
+  `lr-after-hide`
 - `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?: HTMLElement })`
   — same virtual-anchor contract as `lr-popover.showAt()` above (anchors to an arbitrary rectangle
   instead of the slotted `trigger`, `width`/`height` default to `0`, `contextElement` gives
@@ -65,25 +78,34 @@ same four-event contract, timing and veto semantics `<lr-popover>` documents abo
 new to this component in 8.0.0. A vetoed `lr-show` leaves the tooltip closed whether the delay
 elapsed, `show()` was called, or `open` was assigned.
 
-**Slots:** `trigger` (the element that receives the configured interaction listeners), default
-(tooltip content, overriding the `content` property).
+Tooltip motion resolves `tooltip.show` / `tooltip.hide` through the public animation registry.
+The same per-element/global precedence, RTL keyframe selection, token-timing fallback,
+reduced-motion flattening, and null-disable lifecycle rules documented for `lr-popover` apply.
 
-**CSS parts:** `trigger`, `popup`, and `arrow` (rendered only when `arrow` is set; its part
-attribute also carries the resolved side — `arrow-top`, `arrow-bottom`, `arrow-left`,
-`arrow-right`).
+**Slots:** both mapped shapes are supported. Web Awesome uses named `trigger` plus default tooltip
+content. Shoelace uses the default slot for the trigger and `slot="content"` (or the `content`
+property) for tooltip content. A named trigger always selects the first shape; without one, an
+explicit content source makes the default slot unambiguously the trigger.
 
-**Themeable custom properties:** `--lr-tooltip-max-inline-size` (default `--lr-size-20rem`),
-`--lr-tooltip-background` (default `--lr-color-neutral`), `--lr-tooltip-color` (default
-`--lr-color-on-neutral`), and `--lr-tooltip-arrow-size` (default `--lr-size-0-375rem` — *half* the
-arrow square's width; the arrow also picks up `--lr-tooltip-background`, so retinting the tooltip
-retints its arrow). A tooltip popup has no inner scroll wrapper to move overflow onto, so setting
-`arrow` switches the popup to `overflow: visible` and trades internal scrolling for a visible arrow
-— reach for `<lr-popover>` when a floating surface needs both.
+**CSS parts:** `popup base tooltip base__popup` are aliases on the same wrapper; `trigger`; `body`;
+and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the resolved side —
+`arrow-top`, `arrow-bottom`, `arrow-left`, or `arrow-right`.
+
+**Themeable custom properties:** mapped `--max-width`, `--show-delay`, `--hide-delay`, and
+`--arrow-size`; retained `--lr-tooltip-max-inline-size`, `--lr-tooltip-background`,
+`--lr-tooltip-color`, and `--lr-tooltip-arrow-size` remain fallbacks. A tooltip popup has no inner
+scroll wrapper to move overflow onto, so its default arrow trades internal scrolling for a visible
+arrow — use `<lr-popover>` when a floating surface needs both.
 
 ```html
 <lr-tooltip trigger="hover focus click" show-delay="0" hide-delay="400" arrow placement="right">
   Copied to clipboard
   <button slot="trigger" type="button">Copy</button>
+</lr-tooltip>
+
+<!-- Shoelace-compatible shape: default trigger, named content. -->
+<lr-tooltip content="Save your changes">
+  <button type="button">Save</button>
 </lr-tooltip>
 ```
 

@@ -39,6 +39,8 @@ export interface LyraRetrievalCompareEventMap {
  * @csspart scores - Score-breakdown list.
  * @csspart score - One named score.
  * @csspart empty - The empty state.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventMap> {
   static override styles = [LyraElement.styles, styles];

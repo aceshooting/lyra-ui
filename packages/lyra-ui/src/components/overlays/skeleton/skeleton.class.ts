@@ -6,24 +6,33 @@ import { styles } from './skeleton.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export type SkeletonVariant = 'text' | 'circle' | 'rect';
-export type SkeletonEffect = 'pulse' | 'sheen';
+export type SkeletonEffect = 'pulse' | 'sheen' | 'none';
 
 /**
  * `<lr-skeleton>` — a loading placeholder. First-party invention, standing
  * in for the bespoke `animate-pulse` div most dashboards hand-roll.
  *
  * @customElement lr-skeleton
- * @csspart base - The placeholder shape.
+ * @csspart base - Compatibility name for the placeholder shape.
+ * @csspart indicator - The placeholder shape and animation surface. It is the same node as `base`.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Animation duration and timing function
  *   shared by the pulse and sheen effects.
  * @cssprop [--lr-skeleton-w=100%] - Inline size of the placeholder.
  * @cssprop [--lr-skeleton-h=var(--lr-size-1em)] - Block size of the placeholder.
+ * @cssprop [--lr-skeleton-color=var(--lr-color-border)] - Placeholder color.
+ * @cssprop [--lr-skeleton-sheen-color=var(--lr-color-surface)] - Sheen highlight color.
+ * @cssprop [--lr-skeleton-border-radius=var(--lr-radius)] - Text/rectangle corner radius.
+ * @cssprop [--color=var(--lr-skeleton-color)] - Upstream-compatible placeholder color.
+ * @cssprop [--sheen-color=var(--lr-skeleton-sheen-color)] - Upstream-compatible sheen color.
+ * @cssprop [--border-radius=var(--lr-skeleton-border-radius)] - Shoelace-compatible corner radius.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSkeleton extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ reflect: true }) variant: SkeletonVariant = 'text';
-  @property({ reflect: true }) effect: SkeletonEffect = 'pulse';
+  @property({ reflect: true }) effect: SkeletonEffect = 'none';
   @property() width?: string;
   @property() height?: string;
 
@@ -60,7 +69,7 @@ export class LyraSkeleton extends LyraElement {
 
   override render(): TemplateResult {
     const label = this.localize('loading', this.label === 'Loading…' ? undefined : this.label);
-    return html`<span part="base"
+    return html`<span part="base indicator"
       >${this.announce ? html`<span class="sr-only">${label}</span>` : ''}</span
     >`;
   }

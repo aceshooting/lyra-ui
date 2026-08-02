@@ -75,6 +75,8 @@ export type FlowControlsAppearance = LyraFrame;
  * @csspart zoom-out - Zoom-out button.
  * @csspart fit - Zoom-to-fit button.
  * @csspart lock - Lock/unlock toggle button (omitted when `hideLock`).
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraFlowControls extends LyraElement {
   static override styles = [LyraElement.styles, styles];

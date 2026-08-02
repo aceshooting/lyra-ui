@@ -17,7 +17,21 @@ import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/v
 import { LyraOption } from '../combobox/option.class.js';
 import '../combobox/option.class.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
-import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import {
+  dispatchNativeEvent,
+  dispatchNativeInputEvent,
+  relayNativeEvent,
+} from '../../../internal/native-event-relay.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import {
+  isOptionSelectedDirty,
+  wasOptionInitiallySelected,
+  RESET_OPTION_SELECTED_FROM_OWNER,
+  SET_OPTION_SELECTED_FROM_OWNER,
+} from '../../../internal/option-selection.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -72,8 +86,11 @@ export type LyraSelectTagRenderer = (option: LyraOption, index: number) => unkno
 export interface LyraSelectEventMap {
   'lr-show': CustomEvent<undefined>;
   'lr-hide': CustomEvent<undefined>;
+  'lr-after-show': CustomEvent<undefined>;
+  'lr-after-hide': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<undefined>;
   'lr-clear': CustomEvent<undefined>;
-  input: Event;
+  input: InputEvent;
   change: Event;
   'lr-input': CustomEvent<{ value: string | string[] }>;
   'lr-change': CustomEvent<{ value: string | string[] }>;
@@ -94,17 +111,12 @@ export interface LyraSelectEventMap {
  * uses. Unlike `lr-combobox` there is no filter/source/empty-text/max-render
  * surface -- see `<lr-combobox>` for the filterable case.
  *
- * `multiple` turns the committed `value` into a `string[]` and renders one
- * chip per selection inside the trigger. Because that trigger is a real
- * `<button>`, the chips are deliberately non-interactive: a nested remove
- * button would be invalid interactive-content nesting and unreachable by
- * keyboard or AT anyway, since the outer button intercepts every
- * click/Enter/Space first. Removal instead has three affordances -- pick the
- * selected row again to toggle it off, press Backspace/Delete on the trigger
- * to drop the last selection, or use the `with-clear` button to drop all of
- * them. `getTag` customizes a chip's content under the same
- * non-interactive-content constraint; `max-options-visible` caps how many
- * chips render before the rest collapse behind a localized "+N" chip.
+ * `multiple` turns the committed `value` into a `string[]` and renders one removable chip per
+ * selection. The chip row is a sibling overlaid on the real trigger button, never nested inside it,
+ * so every remove control is valid independently-focusable interactive content. Picking a selected
+ * row again still toggles it off, Backspace/Delete on the trigger removes the last selection, and
+ * `with-clear` removes all of them. `getTag` replaces a built-in chip entirely;
+ * `max-options-visible` caps how many render before the rest collapse behind a localized "+N" chip.
  *
  * `with-clear`'s button renders inside the trigger's inline-end padding,
  * outboard of the expand icon, as a sibling of the trigger rather than a child
@@ -142,6 +154,7 @@ export interface LyraSelectEventMap {
  * @slot - `<lr-option>` elements.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
+ * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Custom error content.
  * @slot start - Adornment at the inline-start of the trigger row, before the selected-value label.
  *   Content should be non-focusable/non-interactive only: the trigger itself renders as a native
@@ -153,9 +166,13 @@ export interface LyraSelectEventMap {
  *   against axe-core 4.12.1) -- the hazard is real but not automatically detectable today.
  * @slot end - Adornment after the selected-value label and before the expand icon. Same
  *   non-focusable/non-interactive-content caveat as `start`.
- * @event change - A native `Event` fired when the selection changed, mirroring native
+ * @slot prefix - Shoelace alias for `start`.
+ * @slot suffix - Shoelace alias for `end`.
+ * @slot clear-icon - Replaces the built-in clear glyph.
+ * @slot expand-icon - Replaces the built-in expand glyph.
+ * @event {Event} change - Fired when the selection changed, mirroring native
  *   `<select>`'s own event name. Read the new selection from `value`.
- * @event input - A native `Event` fired alongside `change` on every
+ * @event {InputEvent} input - Fired alongside `change` on every
  *   selection change (native `<select>` doesn't meaningfully distinguish the two either).
  * @event lr-input - Prefixed compatibility alias for `input`; `detail: { value }`.
  * @event {CustomEvent<{ value: string | string[] }>} lr-change - Prefixed compatibility alias
@@ -165,6 +182,9 @@ export interface LyraSelectEventMap {
  *   `input`/`lr-input`/`change`/`lr-change` sequence. Never fired when there was nothing to clear.
  * @event lr-show - The listbox opened.
  * @event lr-hide - The listbox closed.
+ * @event lr-after-show - The listbox finished opening and its transition settled.
+ * @event lr-after-hide - The listbox finished closing and its transition settled.
+ * @event lr-invalid - The select failed a validity check.
  * @event blur - Re-dispatched from the trigger as a bubbling, composed event.
  * @event focus - Re-dispatched from the trigger as a bubbling, composed event.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
@@ -180,16 +200,27 @@ export interface LyraSelectEventMap {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required select is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
+ * @cssstate blank - Matches while no option is selected.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
  * @csspart form-control-label - The `<label>` element.
+ * @csspart label - Wrapper around the visible label content.
+ * @csspart form-control-input - Compatibility name for the control wrapper.
+ * @csspart combobox - Compatibility name for the control wrapper.
  * @csspart trigger - The trigger button (positioning anchor).
+ * @csspart display-input - The selected-value/placeholder display inside the trigger.
  * @csspart start - Wrapper around the `start` adornment slot; `hidden` while nothing is slotted.
  * @csspart end - Wrapper around the `end` adornment slot; `hidden` while nothing is slotted.
- * @csspart tags - The `multiple`-mode chip row inside the trigger.
+ * @csspart prefix - Shoelace compatibility part on the `prefix` slot.
+ * @csspart suffix - Shoelace compatibility part on the `suffix` slot.
+ * @csspart tags - The `multiple`-mode chip row, rendered as a sibling overlaid on the trigger.
  * @csspart tag - One selected-value chip. The "+N" overflow chip carries both `tag` and
  *   `tag-overflow`, so `::part(tag)` styles every chip and `::part(tag-overflow)` only that one --
  *   state after `::part()` never matches, so it is encoded in the part name instead.
  * @csspart tag-label - A chip's ellipsis-safe label.
+ * @csspart tag__base - Compatibility name on a built-in selected-value chip.
+ * @csspart tag__content - Compatibility name around a built-in chip's visible label.
+ * @csspart tag__remove-button - A built-in chip's remove button.
+ * @csspart tag__remove-button__base - Compatibility name on the same remove button.
  * @csspart tag-overflow - The "+N" chip standing in for the selections past `max-options-visible`.
  * @csspart clear-button - The `with-clear` button.
  * @csspart listbox - The options popover.
@@ -201,6 +232,7 @@ export interface LyraSelectEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart error - The error message.
  * @csspart hint - The hint message.
+ * @csspart form-control-help-text - Shoelace compatibility name for the hint message.
  * @cssprop --lr-select-expand-size - Decorative expand-icon box size, scaled by `size`. The one
  *   piece of this component's geometry the shared ladder does not own: it sizes a glyph, not the
  *   control row.
@@ -219,6 +251,9 @@ export interface LyraSelectEventMap {
  *   active `size` tier.
  * @cssprop --lr-select-tag-padding - Padding inside a `multiple`-mode chip. Doesn't vary by `size`.
  * @cssprop --lr-select-tag-font-size - Chip text size. Doesn't vary by `size`.
+ * @cssprop [--tag-max-size=var(--lr-size-12rem)] - Maximum inline size of one selected-value tag.
+ * @cssprop [--show-duration=var(--lr-transition-fast)] - Listbox enter-transition timing.
+ * @cssprop [--hide-duration=var(--lr-transition-fast)] - Listbox exit-transition timing.
  * @cssprop [--lr-select-option-active-bg=var(--lr-color-brand-quiet)] - Background of the
  *   hovered/keyboard-active option row. Not declared on `:host`, so a value set on any ancestor
  *   is never shadowed -- retheme just this row state without hijacking the shared
@@ -237,6 +272,8 @@ export interface LyraSelectEventMap {
  *   trigger (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never
  *   declared by the component itself, it can be set from an ancestor or an outer-tree rule as well
  *   as inline on the element.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   static formAssociated = true;
@@ -246,18 +283,29 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
     multiple: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     value: { noAccessor: true },
-    name: { reflect: true, noAccessor: true },
+    name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
     maxOptionsVisible: { type: Number, attribute: 'max-options-visible', noAccessor: true },
+    defaultValue: { attribute: 'default-value', noAccessor: true },
   };
 
   @property() placeholder = '';
   @property() label = '';
   @property() hint = '';
+  /** Shoelace alias for {@link hint}. `hint` wins when both are present. */
+  @property({ attribute: 'help-text' }) helpText = '';
+  /** SSR slot-presence hints for pre-hydration form chrome. */
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Forwarded to the internal trigger button. */
+  @property({ type: Boolean }) override autofocus = false;
+  /** Forwarded to the internal trigger button. */
+  @property() override title = '';
   @property({ type: Boolean, reflect: true }) open = false;
   /** Visual size on the library's one control ladder — shared with `lr-button`/`lr-input`/
    *  `lr-combobox`/`lr-locale-picker`, so same-tier controls line up in a toolbar row. Accepts both
@@ -271,7 +319,12 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @property({ type: Boolean, reflect: true }) pill = false;
   /** Preferred listbox placement. `flip`/`shift` may still override it to keep the popup in view,
    *  and the `left`/`right` component is swapped under RTL. */
-  @property({ reflect: true }) placement: Placement = 'bottom-start';
+  @property({ reflect: true }) placement: Placement = 'bottom';
+  /** Uses fixed positioning when true; the mapped default (`false`) positions against the nearest
+   * containing block with Floating UI's absolute strategy. */
+  @property({ type: Boolean, reflect: true }) hoist = false;
+  /** Shoelace boolean alias for the filled appearance. */
+  @property({ type: Boolean, reflect: true }) filled = false;
   /** Show a button that empties the selection while there is anything selected. */
   @property({ type: Boolean, reflect: true, attribute: 'with-clear' }) withClear = false;
   /** Shoelace's spelling of {@link withClear}, accepted so a mechanical `sl-` → `lr-` rename does
@@ -302,19 +355,17 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    *  counts as one too, exactly as it does for native `:user-invalid`. Not `@state`: nothing in
    *  `render()` reads it. */
   private hasInteracted = false;
-  // `[part]:empty` never matches -- the part always contains a literal
-  // `<slot>` child element regardless of assigned content -- so real
-  // emptiness is tracked in JS instead (same fix as lr-combobox's
-  // hasHintSlot/hasErrorSlot/hasLabelSlot) and reflected via `hidden`.
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
-  @state() private hasLabelSlot = false;
-  @state() private hasStartSlot = false;
-  @state() private hasEndSlot = false;
+  // `[part]:empty` never matches because the literal `<slot>` child itself counts as content.
+  // The shared controller seeds light DOM synchronously and delegates every named slot through one
+  // listener, while the option collection below keeps its specialized identity-aware handler.
+  private readonly slotPresence = new SlotPresenceController(this);
   @query('[part="trigger"]') private triggerElement?: HTMLButtonElement;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`.
+   * @default null */
+  declare customError: string | null;
   // Tracked separately from the consumer's own `disabled` -- a native
   // `<input>`'s own `disabled` IDL property/attribute is never mutated by
   // fieldset cascading, so a consumer's explicit `disabled` must survive the
@@ -324,13 +375,15 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private triggerId = nextId('select-trigger');
   private cleanup?: () => void;
   private _isFirstUpdate = true;
+  private transitionToken = 0;
+  private transitionWaiters = new Map<'lr-after-show' | 'lr-after-hide', Set<() => void>>();
   // The committed selection, always an array -- capped to one entry outside
   // `multiple` mode, where `value`'s getter unwraps it back to a plain string.
   private _selected: string[] = [];
   // Public values are not required to be unique. Keep the selected options'
   // element identity separately so two same-valued rows never both become
   // selected and a click on the later occurrence cannot route to the first.
-  private selectedOptions: LyraOption[] = [];
+  private _selectedOptions: LyraOption[] = [];
   private _multiple = false;
   private _disabled = false;
   private _required = false;
@@ -343,6 +396,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private _defaultSelected: string[] = [];
   private _defaultSelectedOptions: LyraOption[] = [];
   private _defaultCaptured = false;
+  private _valueDirty = false;
   // A restored value must win over declarative selected markup collected by
   // the first asynchronous slotchange. Cleared by the next ordinary value write.
   private _restoredStateActive = false;
@@ -387,13 +441,26 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   constructor() {
     super();
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     this.syncFormValue();
   }
 
+  /** Browser-resolved form owner. Assigning a form id string or form element updates the `form`
+   * content attribute while reads remain element-valued.
+   * @attr form ID of an external form owner.
+   * @default null */
   get form(): HTMLFormElement | null {
-    return this.internals.form;
+    return getFormOwner(this.internals);
+  }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  /** Returns the browser-resolved form owner, including an external owner selected by `form`. */
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
   }
   get labels(): NodeList {
     return this.internals.labels;
@@ -426,19 +493,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // -- capture that distinction here, while it's still reliable, for
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
-    if (!this.hasUpdated) {
-      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
-      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
-      this.hasStartSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'start');
-      this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
-    }
   }
 
+  /** Submission name.
+   * @default '' */
   get name(): string {
     return this._name;
   }
-  set name(next: string) {
+  set name(next: string | null) {
     const old = this._name;
     this._name = next ?? '';
     if (this._name) {
@@ -454,7 +516,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   }
 
   /** Whether several options can be selected at once. Flipping it re-shapes `value` (a string
-   *  becomes a `string[]`) and the submitted form entry, so it is normally set once declaratively. */
+   *  becomes a `string[]`) and the submitted form entry, so it is normally set once declaratively.
+   *  @default false */
   get multiple(): boolean {
     return this._multiple;
   }
@@ -465,7 +528,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // Leaving `multiple` collapses the selection to its first entry, so the single-mode
     // string value and the submitted entry can never disagree with what the trigger shows.
     if (!this._multiple && this._selected.length > 1) {
-      this.setSelection(this._selected.slice(0, 1), this.selectedOptions.slice(0, 1));
+      this.setSelection(this._selected.slice(0, 1), this._selectedOptions.slice(0, 1));
     } else {
       this.syncFormValue();
     }
@@ -474,7 +537,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   /** Maximum number of selected-value chips shown before the rest collapse behind a localized
    *  "+N" chip (`multiple` only). `0` removes the cap. Sanitized to a finite, non-negative
-   *  integer, falling back to `3`. */
+   *  integer, falling back to `3`.
+   *  @default 3 */
   get maxOptionsVisible(): number {
     return this._maxOptionsVisible;
   }
@@ -484,6 +548,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.requestUpdate('maxOptionsVisible', old);
   }
 
+  /** Whether user interaction and form participation are disabled.
+   * @default false */
   get disabled(): boolean {
     return this._disabled;
   }
@@ -491,10 +557,12 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
-    if (this._disabled) this.hide();
+    if (this._disabled) void this.hide();
     this.requestUpdate('disabled', old);
   }
 
+  /** Whether at least one selected option is required for validity.
+   * @default false */
   get required(): boolean {
     return this._required;
   }
@@ -513,12 +581,59 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   }
   set value(next: string | string[]) {
     this._restoredStateActive = false;
+    this._valueDirty = true;
     const values = (Array.isArray(next) ? next : next ? [next] : []).filter(
       (value): value is string => typeof value === 'string',
     );
     this.setSelection(
       values,
       values.map((value) => this.options.find((option) => option.value === value)),
+    );
+  }
+
+  /** Reset value, matching the mapped native-like select contract. The `default-value` attribute
+   * supplies the single-mode string form; property writes may use a string array in `multiple`
+   * mode. Changing the default updates the live value only while it is still pristine.
+   * @default '' */
+  get defaultValue(): string | string[] {
+    return this.multiple ? [...this._defaultSelected] : (this._defaultSelected[0] ?? '');
+  }
+  set defaultValue(next: string | string[]) {
+    const old = this.multiple ? [...this._defaultSelected] : (this._defaultSelected[0] ?? '');
+    const values = (Array.isArray(next) ? next : next ? [next] : []).filter(
+      (value): value is string => typeof value === 'string',
+    );
+    this._defaultSelected = this.multiple ? [...new Set(values)] : values.slice(0, 1);
+    this._defaultSelectedOptions = this.resolveOccurrences(this._defaultSelected);
+    if (!this._valueDirty && !this._restoredStateActive) {
+      this.setSelection([...this._defaultSelected], [...this._defaultSelectedOptions]);
+    }
+    this.requestUpdate('defaultValue', old);
+  }
+
+  /** Live selected option occurrences. Writes commit the referenced live options through the
+   * same event-silent path as a `value` assignment; foreign/detached options are ignored and
+   * single mode keeps only the first occurrence. Reads return a fresh snapshot, so mutating the
+   * returned array never mutates the control's identity bookkeeping.
+   * @default [] */
+  get selectedOptions(): LyraOption[] {
+    return [...this._selectedOptions];
+  }
+  set selectedOptions(next: LyraOption[]) {
+    this._restoredStateActive = false;
+    this._valueDirty = true;
+    const candidates = Array.isArray(next) ? next : [];
+    const live = candidates.filter(
+      (option, index): option is LyraOption =>
+        option instanceof LyraOption &&
+        this.contains(option) &&
+        this.options.includes(option) &&
+        candidates.indexOf(option) === index,
+    );
+    const selected = this.multiple ? live : live.slice(0, 1);
+    this.setSelection(
+      selected.map((option) => option.value),
+      selected,
     );
   }
 
@@ -531,10 +646,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private setSelection(next: string[], preferred: Array<LyraOption | undefined> = []): void {
     const values = this.multiple ? [...new Set(next)] : next.slice(0, 1);
     const previousValues = this._selected;
-    const previousOptions = this.selectedOptions;
+    const previousOptions = this._selectedOptions;
     const old = this.multiple ? [...previousValues] : (previousValues[0] ?? '');
     this._selected = values;
-    this.selectedOptions = this.resolveOccurrences(values, preferred);
+    this._selectedOptions = this.resolveOccurrences(values, preferred);
     this.syncFormValue();
     this.reflectSelected();
     this.updateValidity();
@@ -545,8 +660,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const sameValues =
       previousValues.length === values.length && previousValues.every((value, i) => value === values[i]);
     const sameOptions =
-      previousOptions.length === this.selectedOptions.length &&
-      previousOptions.every((option, i) => option === this.selectedOptions[i]);
+      previousOptions.length === this._selectedOptions.length &&
+      previousOptions.every((option, i) => option === this._selectedOptions[i]);
     if (sameValues && !sameOptions) this.requestUpdate();
   }
 
@@ -585,6 +700,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    *  every path that can move either validity or the interaction flag. */
   private reflectValidityStates(): void {
     syncValidityStates(this.internals, { required: this.required, hasInteracted: this.hasInteracted });
+    if (this._selected.length === 0) this.internals.states?.add('blank');
+    else this.internals.states?.delete('blank');
   }
 
   private syncFormValue(): void {
@@ -619,12 +736,25 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.touched = false;
     this.hasInteracted = false;
     this._restoredStateActive = false;
+    this._valueDirty = false;
+    const resetOptions = this._defaultSelectedOptions.length > 0
+      ? this._defaultSelectedOptions
+      : this.options.filter((option) => wasOptionInitiallySelected(option));
+    if (this._defaultSelectedOptions.length === 0 && resetOptions.length > 0) {
+      this._defaultSelectedOptions = [...resetOptions];
+      this._defaultSelected = resetOptions.map((option) => option.value);
+    }
+    const defaults = new Set(resetOptions);
+    for (const option of this.options) {
+      option[RESET_OPTION_SELECTED_FROM_OWNER](defaults.has(option));
+    }
     this.setSelection([...this._defaultSelected], [...this._defaultSelectedOptions]);
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,
-    _mode?: 'restore' | 'autocomplete',
+    reason: 'autocomplete' | 'restore',
   ): void {
+    void reason;
     // Single-select persists the submitted string itself; `multiple` persists a JSON array,
     // since its own form value is a FormData whose entries the platform never hands back here.
     if (!this.multiple) {
@@ -642,6 +772,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       this.value = restored;
     }
     this._restoredStateActive = true;
+    this._valueDirty = true;
   }
   /**
    * Called by the browser when an ancestor `<fieldset disabled>` toggles.
@@ -651,7 +782,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    */
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
-    if (disabled) this.hide();
+    if (disabled) void this.hide();
     this.requestUpdate();
   }
   checkValidity(): boolean {
@@ -685,12 +816,20 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.reflectValidityStates();
   }
 
+  /** Clears consumer-supplied validity and restores the current required/selection constraint. */
+  resetValidity(): void {
+    this.setCustomValidity('');
+  }
+
   override disconnectedCallback(): void {
+    this.transitionToken++;
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
     clearTimeout(this.typeAheadTimer);
     this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+    this.resolveTransitionWaiters('lr-after-show');
+    this.resolveTransitionWaiters('lr-after-hide');
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // `true` across the disconnect/reconnect and `changed.has('open')` never
@@ -714,13 +853,39 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       // mirroring lr-combobox's single-mode behavior. This is the only place
       // `_defaultSelected` is set; picking an option later (the `value`
       // setter) never redefines the reset default.
-      const allDeclared = this.options.filter((option) => option.selected);
-      const declared = this.multiple ? allDeclared : allDeclared.slice(0, 1);
-      this._defaultSelected = declared.map((option) => option.value);
-      this._defaultSelectedOptions = [...declared];
-      if (declared.length > 0 && !this._restoredStateActive) {
-        this.setSelection([...this._defaultSelected], [...this._defaultSelectedOptions]);
+      const hasDefaultValue = this.hasAttribute('default-value');
+      const allDefaults = this.options.filter((option) => option.defaultSelected);
+      const defaults = this.multiple ? allDefaults : allDefaults.slice(0, 1);
+      const allLive = this.options.filter((option) => option.selected);
+      const live = this.multiple ? allLive : allLive.slice(0, 1);
+      const initialLive = this.options.filter((option) => wasOptionInitiallySelected(option));
+      const optionDirty = this.options.some((option) => isOptionSelectedDirty(option));
+      const dirtySelected = this.options.filter(
+        (option) => isOptionSelectedDirty(option) && option.selected,
+      );
+      if (!hasDefaultValue) {
+        const resetOptions = defaults.length > 0 ? defaults : (initialLive.length > 0 ? initialLive : live);
+        this._defaultSelected = resetOptions.map((option) => option.value);
+        this._defaultSelectedOptions = [...resetOptions];
+      } else {
+        this._defaultSelectedOptions = this.resolveOccurrences(this._defaultSelected);
+      }
+      const fromDefaults = hasDefaultValue || defaults.length > 0;
+      const initial = optionDirty
+        ? (this.multiple ? allLive : (dirtySelected.slice(-1)[0] ? dirtySelected.slice(-1) : live))
+        : (hasDefaultValue ? this._defaultSelectedOptions : (fromDefaults ? defaults : live));
+      if (initial.length > 0 && !this._restoredStateActive && !this._valueDirty) {
+        if (!fromDefaults || optionDirty) this._valueDirty = true;
+        this.setSelection(
+          initial.map((option) => option.value),
+          [...initial],
+        );
         return; // setSelection() already called reflectSelected()
+      }
+      if (optionDirty) this._valueDirty = true;
+      if (hasDefaultValue && !this._valueDirty && !this._restoredStateActive) {
+        this.setSelection([...this._defaultSelected], [...this._defaultSelectedOptions]);
+        return;
       }
     } else {
       // Options slotted in after the first pass (e.g. a lazily-populated
@@ -728,10 +893,23 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       // native `<select><option selected>` would -- seed the newest one
       // (all of them, in `multiple` mode) into the live selection instead of
       // letting reflectSelected() below strip the `selected` attribute back off.
-      const newlySelected = this.options.filter((o) => !previous.has(o) && o.selected);
-      if (newlySelected.length > 0 && !this._restoredStateActive) {
-        const added = this.multiple ? newlySelected : newlySelected.slice(-1);
-        const occurrences = this.multiple ? [...this.selectedOptions, ...added] : added;
+      const newDefaults = this.options.filter(
+        (option) => !previous.has(option) && option.defaultSelected,
+      );
+      const newLive = this.options.filter(
+        (option) => !previous.has(option) && option.selected && !option.defaultSelected,
+      );
+      this.refreshOptionDefaults();
+      const eligible = [
+        ...(!this._restoredStateActive && !this._valueDirty ? newDefaults : []),
+        ...(!this._restoredStateActive ? newLive : []),
+      ];
+      if (eligible.length > 0) {
+        const added = this.multiple ? eligible : eligible.slice(-1);
+        const occurrences = this.multiple
+          ? [...new Set([...this._selectedOptions, ...added])]
+          : added;
+        if (newLive.length > 0) this._valueDirty = true;
         this.setSelection(
           occurrences.map((option) => option.value),
           occurrences,
@@ -742,20 +920,33 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.reflectSelected();
   };
 
+  private refreshOptionDefaults(): void {
+    if (this.hasAttribute('default-value')) return;
+    const declared = this.options.filter((option) => option.defaultSelected);
+    const defaults = this.multiple ? declared : declared.slice(0, 1);
+    this._defaultSelected = defaults.map((option) => option.value);
+    this._defaultSelectedOptions = [...defaults];
+    if (!this._valueDirty && !this._restoredStateActive) {
+      this.setSelection([...this._defaultSelected], [...this._defaultSelectedOptions]);
+    }
+  }
+
   private reflectSelected(): void {
     // Re-resolve first: an option list that changed under us (slotchange, a removed row) can
     // leave a stale element behind, and the light-DOM `selected` reflection below has to follow
     // whatever is actually slotted now.
-    this.selectedOptions = this.resolveOccurrences(this._selected, this.selectedOptions);
-    const chosen = new Set(this.selectedOptions);
-    for (const option of this.options) option.selected = chosen.has(option);
+    this._selectedOptions = this.resolveOccurrences(this._selected, this._selectedOptions);
+    const chosen = new Set(this._selectedOptions);
+    for (const option of this.options) {
+      option[SET_OPTION_SELECTED_FROM_OWNER](chosen.has(option));
+    }
   }
 
   /** The label to show for one committed value: the selected occurrence's own label, else any
    *  option sharing that value, else the raw value (a programmatic write with no matching row). */
   private labelFor(value: string): string {
     return (
-      this.selectedOptions.find((option) => option.value === value)?.label ??
+      this._selectedOptions.find((option) => option.value === value)?.label ??
       this.options.find((option) => option.value === value)?.label ??
       value
     );
@@ -787,20 +978,32 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // without this the rendered listbox row would go stale. Reassigning (not
   // mutating) `options` gives Lit a new array reference to diff against.
   private onOptionChange = (): void => {
-    this.options = [...this.options];
+    queueMicrotask(() => {
+      this.refreshOptionDefaults();
+      this.reflectSelected();
+      this.options = [...this.options];
+    });
   };
 
-  private show(): void {
-    if (this.open || this.effectiveDisabled) return;
+  /** Opens the listbox and resolves after `lr-after-show`. */
+  show(): Promise<void> {
+    if (this.open || this.effectiveDisabled) return Promise.resolve();
+    this.resolveTransitionWaiters('lr-after-hide');
+    const settled = this.waitForTransition('lr-after-show');
     this.open = true;
+    return settled;
   }
-  private hide(): void {
-    if (!this.open) return;
+  /** Closes the listbox and resolves after `lr-after-hide`. */
+  hide(): Promise<void> {
+    if (!this.open) return Promise.resolve();
+    this.resolveTransitionWaiters('lr-after-show');
+    const settled = this.waitForTransition('lr-after-hide');
     this.open = false;
     this.activeIndex = -1;
+    return settled;
   }
   private onDocPointer = (e: PointerEvent): void => {
-    if (!e.composedPath().includes(this)) this.hide();
+    if (!e.composedPath().includes(this)) void this.hide();
   };
 
   protected override updated(changed: PropertyValues): void {
@@ -819,17 +1022,26 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         // Don't announce a "show" transition for markup that's simply
         // rendering open for the first time (e.g. `<lr-select open>`) --
         // only for an actual closed-to-open transition.
-        if (!this._isFirstUpdate) this.emit('lr-show');
+        if (!this._isFirstUpdate) {
+          this.emit('lr-show');
+          void this.settleTransition('lr-after-show');
+        }
         const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
         const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
         // Floating UI positions purely by physical sides, so a left/right placement has to be
         // resolved against the effective direction before it is handed over.
         if (anchor && listbox) {
-          this.cleanup = place(anchor, listbox, { placement: rtlAwarePlacement(this.placement, this) });
+          this.cleanup = place(anchor, listbox, {
+            placement: rtlAwarePlacement(this.placement, this),
+            strategy: this.hoist ? 'fixed' : 'absolute',
+          });
         }
       } else {
         this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
-        if (!this._isFirstUpdate) this.emit('lr-hide');
+        if (!this._isFirstUpdate) {
+          this.emit('lr-hide');
+          void this.settleTransition('lr-after-hide');
+        }
       }
     }
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
@@ -837,12 +1049,44 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     }
   }
 
+  private async settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
+    const token = ++this.transitionToken;
+    await this.updateComplete;
+    if (this.transitionToken !== token) return;
+    if (this.isConnected) {
+      const view = this.ownerDocument.defaultView;
+      if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
+      if (this.transitionToken !== token) return;
+      const listbox = this.renderRoot.querySelector('[part="listbox"]');
+      const animations = listbox?.getAnimations({ subtree: true }) ?? [];
+      await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
+      if (this.transitionToken !== token) return;
+    }
+    this.emit(event);
+    this.resolveTransitionWaiters(event);
+  }
+
+  private waitForTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const waiters = this.transitionWaiters.get(event) ?? new Set<() => void>();
+      waiters.add(resolve);
+      this.transitionWaiters.set(event, waiters);
+    });
+  }
+
+  private resolveTransitionWaiters(event: 'lr-after-show' | 'lr-after-hide'): void {
+    const waiters = this.transitionWaiters.get(event);
+    if (!waiters) return;
+    this.transitionWaiters.delete(event);
+    for (const resolve of waiters) resolve();
+  }
+
   /** Dispatches the native value-change pair and prefixed aliases. `input`/`change` stay deliberately unprefixed -- this
    *  control is a direct `<select>` counterpart, so its value-change events keep `<select>`'s own
    *  naming instead of the `lr-` prefix `<lr-slider>` uses for its analogous rename. See the class
    *  doc's `change` entry for the full rule. The prefixed aliases carry `detail: { value }`. */
   private emitValueEvents(): void {
-    dispatchNativeEvent(this, 'input');
+    dispatchNativeInputEvent(this);
     this.emit('lr-input', { value: this.value });
     dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { value: this.value });
@@ -852,13 +1096,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (this.effectiveDisabled || option.disabled) return;
     this.hasInteracted = true;
     this._restoredStateActive = false;
+    this._valueDirty = true;
     if (this.multiple) {
       // Picking a selected row again toggles it back off, the standard multi-select listbox
       // contract -- and the listbox stays open, since one pick is rarely the whole intent.
       const selected = this._selected.includes(option.value);
       const occurrences = selected
-        ? this.selectedOptions.filter((candidate) => candidate.value !== option.value)
-        : [...this.selectedOptions, option];
+        ? this._selectedOptions.filter((candidate) => candidate.value !== option.value)
+        : [...this._selectedOptions, option];
       const values = selected
         ? this._selected.filter((value) => value !== option.value)
         : [...this._selected, option.value];
@@ -872,9 +1117,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // firing when "the selection changed", so only emit them when the
     // value actually moves, matching a native <select> (which never fires
     // `change` for re-picking the currently-selected <option>).
-    const changed = option !== this.selectedOptions[0] || option.value !== this._selected[0];
+    const changed = option !== this._selectedOptions[0] || option.value !== this._selected[0];
     this.setSelection([option.value], [option]);
-    this.hide();
+    void this.hide();
     if (changed) this.emitValueEvents();
   }
 
@@ -882,9 +1127,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private removeValue(value: string): void {
     if (this.effectiveDisabled || !this._selected.includes(value)) return;
     this._restoredStateActive = false;
+    this._valueDirty = true;
     this.setSelection(
       this._selected.filter((candidate) => candidate !== value),
-      this.selectedOptions.filter((option) => option.value !== value),
+      this._selectedOptions.filter((option) => option.value !== value),
     );
     this.emitValueEvents();
   }
@@ -894,15 +1140,26 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private clear(): void {
     if (this.effectiveDisabled || this._selected.length === 0) return;
     this._restoredStateActive = false;
+    this._valueDirty = true;
     this.setSelection([], []);
     this.emitValueEvents();
     this.emit('lr-clear');
   }
 
+  private removeTag(value: string, index: number, event: Event): void {
+    event.stopPropagation();
+    this.removeValue(value);
+    void this.updateComplete.then(() => {
+      const buttons = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part~="tag__remove-button"]')];
+      (buttons[Math.min(index, buttons.length - 1)] ?? this.triggerElement)?.focus();
+    });
+  }
+
   private onTriggerClick = (): void => {
     if (this.effectiveDisabled) return;
     if (this.onlyOption) return this.selectOption(this.onlyOption);
-    this.open ? this.hide() : this.show();
+    if (this.open) void this.hide();
+    else void this.show();
   };
 
   private onTriggerBlur = (event: FocusEvent): void => {
@@ -913,7 +1170,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // onDocPointer/hide(), but that leaves keyboard users with no way to
     // dismiss the listbox short of Escape -- tabbing focus away from the
     // trigger should close it too, the same as lr-combobox's input blur.
-    this.hide();
+    void this.hide();
     relayNativeEvent(this, event);
     this.emit('lr-blur');
   };
@@ -921,26 +1178,6 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private onTriggerFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
     this.emit('lr-focus');
-  };
-
-  private onHintSlotChange = (e: Event): void => {
-    this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onErrorSlotChange = (e: Event): void => {
-    this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onLabelSlotChange = (e: Event): void => {
-    this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onStartSlotChange = (e: Event): void => {
-    this.hasStartSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onEndSlotChange = (e: Event): void => {
-    this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
   /**
@@ -963,7 +1200,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (!navigable.length) return;
     const currentOption = this.open
       ? navigable[this.activeIndex]
-      : this.selectedOptions[this.selectedOptions.length - 1];
+      : this._selectedOptions[this._selectedOptions.length - 1];
     const currentIndex = navigable.indexOf(currentOption as LyraOption);
     const n = navigable.length;
     for (let step = 1; step <= n; step++) {
@@ -989,13 +1226,19 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       case 'ArrowDown':
         e.preventDefault();
         if (this.onlyOption) return this.selectOption(this.onlyOption);
-        if (!this.open) return this.show();
+        if (!this.open) {
+          void this.show();
+          return;
+        }
         this.activeIndex = Math.min(navigable.length - 1, this.activeIndex + 1);
         break;
       case 'ArrowUp':
         e.preventDefault();
         if (this.onlyOption) return this.selectOption(this.onlyOption);
-        if (!this.open) return this.show();
+        if (!this.open) {
+          void this.show();
+          return;
+        }
         this.activeIndex = Math.max(0, this.activeIndex - 1);
         break;
       case 'Enter':
@@ -1010,14 +1253,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           if (this.activeIndex >= 0 && active) {
             this.selectOption(active);
           } else {
-            this.hide();
+            void this.hide();
           }
         }
         break;
       case 'Escape':
         if (this.open) {
           e.preventDefault();
-          this.hide();
+          void this.hide();
         }
         break;
       case 'Home':
@@ -1034,8 +1277,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         break;
       case 'Backspace':
       case 'Delete':
-        // The chips inside the trigger cannot carry their own remove buttons (see the class
-        // doc), so this is the keyboard removal affordance, mirroring `<lr-combobox>`'s.
+        // The trigger keeps the native select-style Backspace/Delete shortcut even though the
+        // sibling tag row now also provides independently-focusable remove buttons.
         if (this.multiple && this._selected.length > 0) {
           e.preventDefault();
           this.removeValue(this._selected[this._selected.length - 1]!);
@@ -1066,7 +1309,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   private renderRows(options: LyraOption[], activeId: string): TemplateResult[] {
     const out: TemplateResult[] = [];
-    const chosen = new Set(this.selectedOptions);
+    const chosen = new Set(this._selectedOptions);
     let currentGroup: string | undefined;
     options.forEach((o, i) => {
       if (o.group !== currentGroup) {
@@ -1103,14 +1346,24 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   }
 
   /** One selected value's chip. `getTag` replaces the whole built-in chip so a consumer owns the
-   *  markup (and re-declares `part="tag"` if it wants the default styling hooks); a returned
-   *  string lands in a Lit child position and therefore renders as text, never as markup. */
+   * markup (and re-declares parts/removal behavior if desired); a returned string renders as text,
+   * never as markup. Built-in remove buttons are siblings of the trigger, never nested inside it. */
   private renderTag(value: string, index: number): unknown {
     const option =
-      this.selectedOptions.find((candidate) => candidate.value === value) ??
+      this._selectedOptions.find((candidate) => candidate.value === value) ??
       this.options.find((candidate) => candidate.value === value);
     if (this.getTag && option) return this.getTag(option, index);
-    return html`<span part="tag"><span part="tag-label">${this.labelFor(value)}</span></span>`;
+    const label = this.labelFor(value);
+    return html`<span part="tag tag__base">
+      <span part="tag-label"><span part="tag__content">${label}</span></span>
+      <button
+        part="tag__remove-button tag__remove-button__base"
+        type="button"
+        ?disabled=${this.effectiveDisabled}
+        aria-label=${this.localize('removeWithContext', undefined, { label })}
+        @click=${(event: Event) => this.removeTag(value, index, event)}
+      >${closeIcon()}</button>
+    </span>`;
   }
 
   override render(): TemplateResult {
@@ -1125,9 +1378,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       this.maxOptionsVisible > 0 ? this._selected.slice(0, this.maxOptionsVisible) : this._selected;
     const overflow = this._selected.length - shownValues.length;
     const showClear = (this.withClear || this.clearable) && hasValue;
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
-    const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const hasHint =
+      this.slotPresence.has('hint') ||
+      this.slotPresence.has('help-text') ||
+      this.hint.length > 0 ||
+      this.helpText.length > 0 ||
+      this.withHint;
+    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
+    const hasLabel = this.slotPresence.has('label') || this.label.length > 0 || this.withLabel;
     const describedBy = [hasError ? 'select-error' : '', hasHint ? 'select-hint' : ''].filter(Boolean).join(' ');
     // A single navigable option has no popup to expand into -- when opted in via
     // autoCommitSingleOption, the trigger commits it directly on activation (see
@@ -1141,13 +1399,19 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return html`
       <div part="form-control">
         <label part="form-control-label" for=${this.triggerId} ?hidden=${!hasLabel}>
-          ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
+          <span part="label">${this.label}<slot name="label"></slot></span>
         </label>
-        <div class="control" ?data-clearable=${showClear}>
+        <div
+          class="control"
+          part="combobox form-control-input"
+          ?data-clearable=${showClear}
+          ?data-multiple=${this.multiple && hasValue}
+        >
           <button
             id=${this.triggerId}
             part="trigger"
             type="button"
+            title=${this.title || nothing}
             role=${isSingleOption ? 'button' : 'combobox'}
             aria-haspopup=${isSingleOption ? nothing : 'listbox'}
             aria-expanded=${isSingleOption ? nothing : this.open ? 'true' : 'false'}
@@ -1158,32 +1422,56 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
             ?disabled=${this.effectiveDisabled}
+            ?autofocus=${this.autofocus}
             @click=${this.onTriggerClick}
             @keydown=${this.onKeyDown}
             @focus=${this.onTriggerFocus}
             @blur=${this.onTriggerBlur}
           >
-            <span part="start" ?hidden=${!this.hasStartSlot}>
-              <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+            <span
+              part="start"
+              ?hidden=${!this.slotPresence.has('start') && !this.slotPresence.has('prefix')}
+            >
+              <slot name="start"></slot>
+              <slot part="prefix" name="prefix"></slot>
             </span>
-            ${this.multiple && hasValue
-              ? html`<span part="tags"
-                  >${shownValues.map((value, index) => this.renderTag(value, index))}${overflow > 0
-                    ? html`<span part="tag tag-overflow"
+            <span
+              class="trigger-label"
+              part="display-input"
+              ?data-placeholder=${!hasValue}
+              ?data-multiple-value=${this.multiple && hasValue}
+              >${hasValue && !this.multiple
+                ? selectedLabel
+                : this.multiple && hasValue
+                  ? shownValues.map((value) => this.labelFor(value)).join(', ')
+                  : this.placeholder}</span
+            >
+            <span
+              part="end"
+              ?hidden=${!this.slotPresence.has('end') && !this.slotPresence.has('suffix')}
+            >
+              <slot name="end"></slot>
+              <slot part="suffix" name="suffix"></slot>
+            </span>
+            ${isSingleOption
+              ? nothing
+              : html`<span part="expand-icon" aria-hidden="true"
+                  ><slot name="expand-icon">${chevronIcon()}</slot></span
+                >`}
+          </button>
+          ${this.multiple && hasValue
+            ? html`<span part="tags"
+                >${shownValues.map((value, index) => this.renderTag(value, index))}${overflow > 0
+                  ? html`<span part="tag tag-overflow tag__base"
+                      ><span part="tag__content"
                         >${this.localize('selectSelectedOverflow', undefined, {
                           n: getNumberFormat(this.effectiveLocale).format(overflow),
                         })}</span
-                      >`
-                    : ''}</span
-                >`
-              : html`<span class="trigger-label" ?data-placeholder=${!hasValue}
-                  >${hasValue && !this.multiple ? selectedLabel : this.placeholder}</span
-                >`}
-            <span part="end" ?hidden=${!this.hasEndSlot}>
-              <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
-            </span>
-            ${isSingleOption ? nothing : html`<span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>`}
-          </button>
+                      ></span
+                    >`
+                  : ''}</span
+              >`
+            : nothing}
           ${showClear
             ? html`<button
                 part="clear-button"
@@ -1195,7 +1483,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
                   this.clear();
                 }}
               >
-                ${closeIcon()}
+                <slot name="clear-icon">${closeIcon()}</slot>
               </button>`
             : ''}
         </div>
@@ -1210,10 +1498,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           ${this.renderRows(options, activeId)}
         </div>
         <div id="select-error" part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+          ${this.errorText}<slot name="error"></slot>
         </div>
-        <div id="select-hint" part="hint" ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+        <div id="select-hint" part="hint form-control-help-text" ?hidden=${!hasHint}>
+          ${this.hint || this.helpText}<slot name="hint"></slot><slot name="help-text"></slot>
         </div>
       </div>
       <slot @slotchange=${this.collectOptions} @lr-option-change=${this.onOptionChange} hidden></slot>

@@ -23,12 +23,45 @@ export const styles = css`
     scrollbar-width: auto;
   }
 
-  :host([hide-scrollbar]) [part="viewport"] {
+  :host([hide-scrollbar]) [part="viewport"],
+  :host([without-scrollbar]) [part="viewport"] {
     scrollbar-width: none;
   }
 
-  :host([hide-scrollbar]) [part="viewport"]::-webkit-scrollbar {
+  :host([hide-scrollbar]) [part="viewport"]::-webkit-scrollbar,
+  :host([without-scrollbar]) [part="viewport"]::-webkit-scrollbar {
     display: none;
+  }
+
+  .viewport-wrap {
+    position: relative;
+    min-inline-size: 0;
+    min-block-size: 0;
+  }
+
+  [part="start-shadow"],
+  [part="end-shadow"] {
+    position: absolute;
+    z-index: var(--lr-layer-content);
+    inset-block: 0;
+    inline-size: var(--shadow-size, var(--lr-size-2rem));
+    pointer-events: none;
+  }
+  [part="start-shadow"][hidden],
+  [part="end-shadow"][hidden] { display: none; }
+  [part="start-shadow"] {
+    inset-inline-start: 0;
+    background: linear-gradient(to right, var(--shadow-color, var(--lr-color-surface)), transparent);
+  }
+  [part="end-shadow"] {
+    inset-inline-end: 0;
+    background: linear-gradient(to left, var(--shadow-color, var(--lr-color-surface)), transparent);
+  }
+  :host(:dir(rtl)) [part="start-shadow"] {
+    background: linear-gradient(to left, var(--shadow-color, var(--lr-color-surface)), transparent);
+  }
+  :host(:dir(rtl)) [part="end-shadow"] {
+    background: linear-gradient(to right, var(--shadow-color, var(--lr-color-surface)), transparent);
   }
 
   [part="content"] {
@@ -44,7 +77,8 @@ export const styles = css`
   }
 
   :host([orientation="vertical"]) [part="viewport"],
-  :host([orientation="vertical"]) [part="content"] {
+  :host([orientation="vertical"]) [part="content"],
+  :host([orientation="vertical"]) .viewport-wrap {
     block-size: 100%;
   }
 
@@ -52,6 +86,21 @@ export const styles = css`
     flex-direction: column;
     min-block-size: max-content;
     min-inline-size: 100%;
+  }
+
+  :host([orientation="vertical"]) [part="start-shadow"],
+  :host([orientation="vertical"]) [part="end-shadow"] {
+    inset-inline: 0;
+    inline-size: auto;
+    block-size: var(--shadow-size, var(--lr-size-2rem));
+  }
+  :host([orientation="vertical"]) [part="start-shadow"] {
+    inset-block: 0 auto;
+    background: linear-gradient(to bottom, var(--shadow-color, var(--lr-color-surface)), transparent);
+  }
+  :host([orientation="vertical"]) [part="end-shadow"] {
+    inset-block: auto 0;
+    background: linear-gradient(to top, var(--shadow-color, var(--lr-color-surface)), transparent);
   }
 
   [part="control"] {

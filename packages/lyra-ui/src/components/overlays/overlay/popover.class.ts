@@ -1,17 +1,34 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import {
+  html,
+  nothing,
+  type PropertyValues,
+  type TemplateResult,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
-import { place, virtualAnchorFromRect, type VirtualAnchor } from '../../../internal/positioner.js';
+import {
+  place,
+  virtualAnchorFromRect,
+  type PlaceStrategy,
+  type PlaceSync,
+  type VirtualAnchor,
+} from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
+import {
+  omittedEmptyStringConverter,
+  trueDefaultBooleanConverter,
+} from '../../../internal/converters.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import { styles } from './overlay.styles.js';
 
 /** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware. */
-const DEFAULT_DISTANCE = 4;
+const DEFAULT_DISTANCE = 8;
 
 /** Semantic role vocabulary for the popup surface. Dropdown subclasses set this to `menu`. */
 export type LyraPopupRole = 'dialog' | 'menu';
@@ -61,11 +78,12 @@ export interface LyraPopoverEventMap {
  * transition has finished; `hide()` emits `lr-hide` (cancelable) then `lr-after-hide`. Assigning
  * `open` runs the same sequence, so the property, the reflected attribute and the two methods can
  * never disagree. Markup that renders open from the start emits nothing.
+ * Motion resolves through `popover.show`/`popover.hide` in the public animation registry.
  *
- * Positioning knobs mirror `<lr-popup>`: `placement`, `distance`, `skidding`, `for` and the
- * `arrow`/`arrow-placement`/`arrow-padding` trio. `for` changes only what the popup is positioned
- * against — the slotted trigger keeps owning the click and the ARIA relationship — so a popover
- * can be anchored to an element it does not contain.
+ * Positioning knobs mirror the mapped popover surface: `placement`, `distance`, `skidding`,
+ * `anchor`, `for`, and the `arrow`/`without-arrow` compatibility pair. `anchor` and `for` change
+ * only what the popup is positioned against — the slotted trigger keeps owning the click and the
+ * ARIA relationship — so a popover can be anchored to an element it does not contain.
  *
  * @customElement lr-popover
  * @slot trigger - The interactive element that toggles the popover.
@@ -75,23 +93,39 @@ export interface LyraPopoverEventMap {
  * @event lr-hide - The popover is about to close, for every dismissal path (Escape, light
  *   dismiss, `hide()`, `open = false`). Cancelable — `preventDefault()` keeps it open.
  * @event lr-after-hide - The popover is closed and its transition has finished.
- * @method show - `show(): void` — programmatically open the popover.
- * @method hide - `hide(options?: { focusTrigger?: boolean }): void` — programmatically close the
- *   popover. Focus returns to the slotted trigger by default, matching Escape, light dismiss, and
- *   `el.open = false`; pass `focusTrigger: false` to preserve the current focus instead.
+ * @method show - `show(): Promise<void>` — programmatically open and resolve after
+ *   `lr-after-show`.
+ * @method hide - `hide(options?: { focusTrigger?: boolean }): Promise<void>` — programmatically
+ *   close and resolve after `lr-after-hide`. Focus returns to the slotted trigger by default,
+ *   matching Escape, light dismiss, and `el.open = false`; pass `focusTrigger: false` to preserve
+ *   the current focus instead.
  * @csspart trigger - The trigger wrapper.
- * @csspart popup - The positioned popup.
- * @csspart content - The content wrapper.
+ * @csspart popup - The positioned popup; also carries `dialog` and `popup__popup` aliases.
+ * @csspart dialog - Mapped alias on the positioned popup.
+ * @csspart popup__popup - Exported popup alias on the positioned popup.
+ * @csspart content - The content wrapper; also carries the `body` alias.
+ * @csspart body - Mapped alias on the content wrapper.
  * @csspart arrow - The arrow element, rendered only when `arrow` is set. Its part name also
  *   carries the resolved side (`arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right`), so
  *   `::part(arrow arrow-top)` can style one side — state after `::part()` never matches.
- * @cssprop --lr-overlay-max-inline-size - Maximum inline size of the popup (default `--lr-size-20rem`).
- * @cssprop [--lr-overlay-arrow-size=var(--lr-size-0-375rem)] - Half-width of the arrow square.
+ * @csspart popup__arrow - Exported mapped alias on the arrow.
+ * @cssprop [--max-width=var(--lr-overlay-max-inline-size,var(--lr-size-20rem))] - Maximum inline
+ * size of the popup.
+ * @cssprop --lr-overlay-max-inline-size - Retained Lyra fallback for `--max-width`.
+ * @cssprop [--arrow-size=var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))] - Half-width of the
+ * arrow square.
+ * @cssprop --lr-overlay-arrow-size - Retained Lyra fallback for `--arrow-size`.
+ * @cssprop [--show-duration=var(--lr-duration-fast)] - Opening transition duration.
+ * @cssprop [--hide-duration=var(--lr-duration-fast)] - Closing transition duration.
+ * @cssstate open - Present while the popover is open.
+ * @status stable
+ * @since 4.0.0
  */
-export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
+export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMap> extends LyraElement<Events> {
   static override styles = [LyraElement.styles, styles];
   private _open = false;
-  /** Whether the popover is open. Assigning it runs the full `lr-show`/`lr-hide` lifecycle. */
+  /** Whether the popover is open. Assigning it runs the full `lr-show`/`lr-hide` lifecycle.
+   * @default false */
   @property({ type: Boolean, reflect: true })
   get open(): boolean {
     return this._open;
@@ -104,13 +138,13 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
       this.setOpen(normalized);
       return;
     }
-    if (normalized) this.show();
-    else this.hide();
+    if (normalized) void this.show();
+    else void this.hide();
   }
-  @property({ reflect: true }) placement: Placement = 'bottom-start';
+  @property({ reflect: true }) placement: Placement = 'top';
   /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware. Can legitimately
    *  be negative (overlaps the popup with the trigger); NaN/non-finite falls back to the default. */
-  @property({ type: Number }) distance = DEFAULT_DISTANCE;
+  @property({ type: Number }) distance = 8;
   /** Offset along the anchor's edge, in pixels — Floating UI's cross-axis offset. */
   @property({ type: Number }) skidding = 0;
   /**
@@ -119,9 +153,20 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
    * this element's own root, so it works inside a shadow tree where an idref could not cross the
    * boundary. A `showAt()` virtual anchor still wins over it.
    */
-  @property({ reflect: true }) for = '';
-  /** Render an arrow that points at the anchor. */
-  @property({ type: Boolean, reflect: true }) arrow = false;
+  private _for = '';
+  @property({ reflect: true, converter: omittedEmptyStringConverter })
+  get for(): string {
+    return this._for;
+  }
+  set for(next: string | null) {
+    this._for = next ?? '';
+  }
+  /** Direct element anchor. Takes precedence over `for` and the slotted trigger. */
+  @property({ attribute: false }) anchor: Element | null = null;
+  /** Render an arrow that points at the anchor. Defaults on for the mapped surface. */
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) arrow = true;
+  /** Positive mapped spelling for suppressing the default arrow. */
+  @property({ type: Boolean, attribute: 'without-arrow', reflect: true }) withoutArrow = false;
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */
@@ -157,6 +202,59 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   private hostIdObserver?: MutationObserver;
   /** Invalidates an in-flight `lr-after-*` wait when the opposite transition interrupts it. */
   private transitionToken = 0;
+  private transitionAnimation?: Animation;
+  private readonly popoverInternals =
+    typeof this.attachInternals === 'function' ? this.attachInternals() : undefined;
+
+  /** Subclass seam for mapped overlays whose public distance default differs from the popover. */
+  protected get defaultDistance(): number {
+    return DEFAULT_DISTANCE;
+  }
+
+  /** Positioning hooks for mapped overlays that expose Floating UI's strategy/sync surface. */
+  protected get positioningStrategy(): PlaceStrategy {
+    return 'fixed';
+  }
+  protected get positioningSync(): PlaceSync | undefined {
+    return undefined;
+  }
+
+  /** Registry namespace and token fallbacks are override seams for mapped dropdowns. */
+  protected get animationNamespace(): string {
+    return 'popover';
+  }
+  protected animationDurationProperties(showing: boolean): readonly string[] {
+    return [showing ? '--show-duration' : '--hide-duration', '--lr-duration-fast'];
+  }
+
+  /** Additive part aliases for mapped subclasses. `popup`/`content` remain present. */
+  protected get popupPartNames(): string {
+    const parts = ['popup', 'dialog', 'popup__popup'];
+    return parts.join(' ');
+  }
+  protected get contentPartNames(): string {
+    const parts = ['content', 'body'];
+    return parts.join(' ');
+  }
+
+  /** Subclasses can retain a different arrow default without forking rendering/positioning. */
+  protected get rendersArrow(): boolean {
+    return this.arrow && !this.withoutArrow;
+  }
+
+  /** Generic popovers project their default slot directly. A mapped subclass can insert an owned
+   * interaction controller without replacing the trigger/popup shell. */
+  protected renderPopupContent(): unknown {
+    return html`<slot></slot>`;
+  }
+
+  /** Trigger-key extension point. Generic popovers deliberately retain click-only toggling. */
+  protected onTriggerKeyDown(_event: KeyboardEvent): void {}
+
+  /** Lets a mapped subclass include a separate containing element in its dismiss boundary. */
+  protected isInsideLightDismissBoundary(path: EventTarget[]): boolean {
+    return path.includes(this);
+  }
 
   protected override updated(changed: PropertyValues): void {
     if (
@@ -165,14 +263,16 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
       changed.has('distance') ||
       changed.has('skidding') ||
       changed.has('for') ||
+      changed.has('anchor') ||
       changed.has('arrow') ||
+      changed.has('withoutArrow') ||
       changed.has('arrowPlacement') ||
       changed.has('arrowPadding') ||
       changed.has('popupRole')
     ) {
       this.cleanup?.();
       this.cleanup = undefined;
-      if (this.open && this.isConnected) this.position();
+      if (this.open && this.isConnected) this.positionPopup();
       // Scoped to a real open/close transition -- a placement/distance-only
       // change re-runs this whole block to reposition, but must not toggle the
       // document listener when `open` itself didn't change. The lifecycle
@@ -217,7 +317,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
       this.startLightDismiss();
       if (wasPreviouslyActivated) this.overlayHandle!.resume();
       else this.activatePopoverOverlay();
-      this.position();
+      this.positionPopup();
     }
   }
   override disconnectedCallback(): void {
@@ -229,6 +329,8 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     this.restoreTriggerA11y();
     // A pending after-event must not announce a transition the detached element left behind.
     this.transitionToken++;
+    this.cancelTransitionAnimation();
+    this.removeAttribute('data-closing');
     super.disconnectedCallback();
   }
   /** Registers every open popover with the shared, topmost-stack-aware overlay manager. Popovers
@@ -238,8 +340,8 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     if (!this.isConnected || this.overlayHandle?.isActive()) return;
     this.overlayHandle = activateOverlay({
       host: this,
-      panel: () => this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null,
-      onEscape: () => this.hide(),
+      panel: () => this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null,
+      onEscape: () => void this.hide(),
       restoreFocusTo: this.virtualAnchor ? (this.returnFocusTo ?? null) : (this.trigger ?? null),
       modal: false,
       trapFocus: false,
@@ -287,14 +389,15 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     this.returnFocusTo = options?.returnFocusTo;
     if (this.open) {
       this.updatePopoverRestoreFocusTarget();
-      this.position();
+      this.positionPopup();
     }
-    else this.show();
+    else void this.show();
   }
   /** Resolves what the popup is positioned against: an explicit virtual anchor first, then the
    *  `for` idref, then the slotted trigger. */
   private resolveAnchor(): Element | VirtualAnchor | null {
     if (this.virtualAnchor) return this.virtualAnchor;
+    if (this.anchor) return this.anchor;
     if (this.for) {
       const root = this.getRootNode() as Document | ShadowRoot;
       const target = root.getElementById?.(this.for) ?? null;
@@ -302,28 +405,31 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     }
     return this.trigger ?? null;
   }
-  private position(): void {
+  protected positionPopup(): void {
     this.cleanup?.();
     this.cleanup = undefined;
-    const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
+    const popup = this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null;
     const arrowElement = this.renderRoot.querySelector('[part~="arrow"]') as HTMLElement | null;
     const anchor = this.resolveAnchor();
     if (!this.open || !anchor || !popup) return;
     this.cleanup = place(anchor, popup, {
       placement: rtlAwarePlacement(this.placement, this),
-      offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
+      strategy: this.positioningStrategy,
+      offset: finiteNumber(this.distance, this.defaultDistance),
       skidding: finiteNumber(this.skidding, 0),
-      arrow: this.arrow && arrowElement ? arrowElement : undefined,
+      sync: this.positioningSync,
+      arrow: this.rendersArrow && arrowElement ? arrowElement : undefined,
       arrowPadding: Math.max(0, finiteNumber(this.arrowPadding, 0)),
       onPlaced: ({ placement, arrow }) => {
         const side = applyOverlayArrow(arrowElement, {
           placement,
           coords: arrow,
-          enabled: this.arrow,
+          enabled: this.rendersArrow,
           arrowPlacement: this.arrowPlacement,
           arrowPadding: Math.max(0, finiteNumber(this.arrowPadding, 0)),
           rtl: this.effectiveDirection === 'rtl',
-          sizeProperty: '--lr-overlay-arrow-size',
+          sizeProperty: '--arrow-size',
+          fallbackSizeProperty: '--lr-overlay-arrow-size',
         });
         if (side !== this.resolvedSide) this.resolvedSide = side;
       },
@@ -414,21 +520,21 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     if (this.trigger) this.snapshotTriggerA11y(this.trigger);
     this.syncTriggerA11y();
     if (hadTrigger && !this.trigger && this.open && !this.virtualAnchor && !this.for) {
-      this.forceClose({ focusTrigger: false });
+      void this.forceClose({ focusTrigger: false });
       return;
     }
     if (this.open) {
       this.updatePopoverRestoreFocusTarget();
-      this.position();
+      this.positionPopup();
     }
   };
   private onTriggerClick = (): void => {
-    if (this.open) this.hide();
-    else this.show();
+    if (this.open) void this.hide();
+    else void this.show();
   };
   private onDocumentPointer = (event: PointerEvent): void => {
     if (!this.overlayHandle?.isTopmost()) return;
-    if (!event.composedPath().includes(this)) this.hide();
+    if (!this.isInsideLightDismissBoundary(event.composedPath())) void this.hide();
   };
 
   private startLightDismiss(): void {
@@ -457,6 +563,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     if (this._open === next) return;
     const old = this._open;
     this._open = next;
+    setCustomState(this.popoverInternals, 'open', next);
     this.requestUpdate('open', old);
   }
 
@@ -468,58 +575,82 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
 
   /** Open the popover. Emits `lr-show` first — vetoing it leaves the popover closed — and
    *  `lr-after-show` once the popup's transition has finished. */
-  show(): void {
-    if (this._open) return;
+  show(): Promise<void> {
+    if (this._open) return Promise.resolve();
     if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
-      return;
+      return Promise.resolve();
     }
+    this.cancelTransitionAnimation();
+    this.removeAttribute('data-closing');
     this.setOpen(true);
-    void this.settleTransition('lr-after-show');
+    return this.settleTransition('lr-after-show');
   }
 
   /** Programmatically close the popover and return focus to its trigger by default, matching
    *  Escape, light dismiss, and a bare `el.open = false`. Pass `{ focusTrigger: false }` to opt
    *  out and leave focus where it is. Virtual anchors restore their explicit `returnFocusTo`.
    *  Emits `lr-hide` first — vetoing it leaves the popover open — then `lr-after-hide`. */
-  hide(options?: { focusTrigger?: boolean }): void {
-    if (!this._open) return;
+  hide(options?: { focusTrigger?: boolean }): Promise<void> {
+    if (!this._open) return Promise.resolve();
     if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
-      return;
+      return Promise.resolve();
     }
-    this.forceClose(options);
+    return this.forceClose(options);
   }
 
   /** The close half of `hide()` without the veto point, for the one path that has no consumer
    *  decision to offer: the slotted trigger being removed from the DOM out from under an open
    *  trigger-anchored popover, which leaves nothing to anchor or return focus to. */
-  private forceClose(options?: { focusTrigger?: boolean }): void {
-    if (!this._open) return;
+  private forceClose(options?: { focusTrigger?: boolean }): Promise<void> {
+    if (!this._open) return Promise.resolve();
     if (options?.focusTrigger === false) {
       this.overlayHandle?.deactivate({ restoreFocus: false });
       this.overlayHandle = undefined;
     }
+    this.cancelTransitionAnimation();
+    if (this.isConnected) this.setAttribute('data-closing', '');
     this.setOpen(false);
-    void this.settleTransition('lr-after-hide');
+    return this.settleTransition('lr-after-hide');
   }
 
-  /** Resolves once the popup's open/close transition has finished, then emits the matching
-   *  `lr-after-*` event. The transition resolves through `--lr-transition-fast`, which the token
-   *  layer flattens under `prefers-reduced-motion: reduce`, so this settles in that branch too. */
+  private cancelTransitionAnimation(): void {
+    this.transitionAnimation?.cancel();
+    this.transitionAnimation = undefined;
+  }
+
+  /** Resolves once the registry-backed popup animation has finished, then emits the matching
+   * `lr-after-*` event. A disabled registration retains the lifecycle without native motion. */
   private async settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
     const token = ++this.transitionToken;
     await this.updateComplete;
     if (this.transitionToken !== token) return;
     if (this.isConnected) {
-      const view = this.ownerDocument.defaultView;
-      if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
+      const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
+      const showing = event === 'lr-after-show';
+      const offset = 'translateY(var(--lr-size-neg-0-25rem))';
+      const animation = popup
+        ? animateRegistered(
+            this,
+            popup,
+            `${this.animationNamespace}.${showing ? 'show' : 'hide'}`,
+            this.effectiveDirection,
+            {
+              keyframes: showing
+                ? [{ opacity: 0, transform: offset }, { opacity: 1, transform: 'translateY(0)' }]
+                : [{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: offset }],
+              durationProperties: this.animationDurationProperties(showing),
+              easingProperties: ['--lr-easing-standard'],
+            },
+          )
+        : undefined;
+      this.transitionAnimation = animation;
+      await animation?.finished.catch(() => undefined);
       if (this.transitionToken !== token) return;
-      const popup = this.renderRoot.querySelector('[part="popup"]');
-      const animations = popup?.getAnimations({ subtree: true }) ?? [];
-      await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
-      if (this.transitionToken !== token) return;
+      this.cancelTransitionAnimation();
     }
+    if (event === 'lr-after-hide') this.removeAttribute('data-closing');
     this.emit(event);
   }
 
@@ -533,12 +664,14 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
       this.accessibleLabel ||
       this.localize(this.popupRole === 'menu' ? 'menuLabel' : 'popover');
     return html`
-      <span part="trigger" @click=${this.onTriggerClick}>
+      <span part="trigger" @click=${this.onTriggerClick} @keydown=${this.onTriggerKeyDown}>
         <slot name="trigger" @slotchange=${this.onTriggerSlotChange}></slot>
       </span>
-      <div id=${this.popupId} part="popup" role=${this.popupRole} aria-label=${label} ?data-hidden=${!this.open}>
-        <div part="content"><slot></slot></div>
-        ${this.arrow ? html`<span part="arrow arrow-${this.resolvedSide}"></span>` : nothing}
+      <div id=${this.popupId} part=${this.popupPartNames} role=${this.popupRole} aria-label=${label} ?data-hidden=${!this.open}>
+        <div part=${this.contentPartNames}>${this.renderPopupContent()}</div>
+        ${this.rendersArrow
+          ? html`<span part="arrow popup__arrow arrow-${this.resolvedSide}"></span>`
+          : nothing}
       </div>
     `;
   }

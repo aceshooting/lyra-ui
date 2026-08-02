@@ -44,6 +44,8 @@ export interface LyraPromptQueueEventMap {
  * @csspart actions - One item's action row.
  * @csspart action - Every item action.
  * @csspart empty - The empty state.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   static override styles = [LyraElement.styles, styles];

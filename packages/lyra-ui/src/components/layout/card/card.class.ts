@@ -2,14 +2,11 @@ import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { safeLinkHref } from "../../../internal/safe-url.js";
+import type { LyraAppearance } from "../../../internal/variants.js";
 import { styles } from "./card.styles.js";
 
-export type CardAppearance =
-  | "accent"
-  | "filled"
-  | "outlined"
-  | "filled-outlined"
-  | "plain";
+export type CardAppearance = LyraAppearance;
+export type CardOrientation = "horizontal" | "vertical";
 
 export interface LyraCardEventMap {
   "lr-card-activate": CustomEvent<undefined>;
@@ -59,23 +56,36 @@ const NESTED_CONTROL_SELECTOR = [
  * @customElement lr-card
  * @slot - The card body.
  * @slot header - Header row content, rendered above the body.
- * @slot media - Media content (e.g. an image), rendered above the header.
+ * @slot media - Media content, rendered above the header or at logical start when horizontal.
+ * @slot image - Shoelace-compatible alias for `media`.
  * @slot footer - Footer content, rendered below the body.
- * @slot actions - Small header controls, rendered alongside the header content.
+ * @slot actions - Horizontal-card actions; retained as the legacy header-actions alias vertically.
+ * @slot header-actions - Controls rendered alongside the vertical header.
+ * @slot footer-actions - Controls rendered alongside the vertical footer.
  * @csspart base - The outer container (a `<div>`, or an `<a>` when `href` is set).
  * @csspart activation-button - The native whole-card action, rendered while `interactive`
  *   without `href`. It is a sibling of slotted controls, so actionable descendants are never
  *   nested inside another actionable role.
- * @csspart media - Wrapper around the `media` slot. Hidden entirely when empty.
+ * @csspart media - Wrapper around the `media` and `image` slots. Hidden entirely when empty.
+ * @csspart image - Shoelace-compatible alias on the same wrapper as `media`.
  * @csspart header - Wrapper around the `header` slot and `actions`. Hidden entirely when both are empty.
- * @csspart actions - Wrapper around the `actions` slot. Hidden entirely when empty.
+ * @csspart actions - Wrapper around the `actions` and `header-actions` slots. Hidden entirely
+ *   when both are empty.
  * @csspart body - Wrapper around the default slot.
- * @csspart footer - Wrapper around the `footer` slot. Hidden entirely when empty.
+ * @csspart footer - Wrapper around the `footer` and `footer-actions` slots. Hidden entirely when
+ *   both are empty.
  * @event lr-card-activate - The whole card was activated (click, or Enter/Space on the native
  * `activation-button`). No detail. Only fired while `interactive` is set **without** `href`
  * -- with `href` the root is a real `<a>` and native navigation is the activation. Never fired for
  * an interaction that originated in a slotted control (a button, link, input, or anything else
  * focusable), so a card can keep its own action buttons.
+ * @cssprop [--spacing=var(--lr-space-m)] - Space around and between card sections.
+ * @cssprop [--padding=var(--spacing,var(--lr-space-m))] - Shoelace-compatible section padding.
+ * @cssprop [--border-color=var(--lr-color-border)] - Shoelace-compatible border color.
+ * @cssprop [--border-radius=var(--lr-radius)] - Shoelace-compatible corner radius.
+ * @cssprop [--border-width=var(--lr-border-width-thin)] - Shoelace-compatible border width.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCard extends LyraElement<LyraCardEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -83,6 +93,21 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   /** Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)
    *  is a bordered surface -- the common "small bordered surface with padding" idiom. */
   @property({ reflect: true }) appearance: CardAppearance = "outlined";
+
+  /** Section flow. Horizontal cards arrange media, body, and `actions` side by side. */
+  @property({ reflect: true }) orientation: CardOrientation = "vertical";
+
+  /** SSR presence hints. Hydrated cards also detect populated slots automatically. */
+  @property({ type: Boolean, attribute: "with-header", reflect: true })
+  withHeader = false;
+  @property({ type: Boolean, attribute: "with-header-actions", reflect: true })
+  withHeaderActions = false;
+  @property({ type: Boolean, attribute: "with-media", reflect: true })
+  withMedia = false;
+  @property({ type: Boolean, attribute: "with-footer", reflect: true })
+  withFooter = false;
+  @property({ type: Boolean, attribute: "with-footer-actions", reflect: true })
+  withFooterActions = false;
 
   /** Opt-in clickable-tile behavior: the hover/focus-visible treatment (border-color shift,
    *  `cursor: pointer`) plus, when `href` is **not** also set, real activation semantics --
@@ -108,8 +133,11 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   @state() private hasHeaderSlot = false;
   @state() private hasMediaSlot = false;
+  @state() private hasImageSlot = false;
   @state() private hasFooterSlot = false;
   @state() private hasActionsSlot = false;
+  @state() private hasHeaderActionsSlot = false;
+  @state() private hasFooterActionsSlot = false;
   @state() private accessibleContentText = "";
   private contentObserver?: MutationObserver;
 
@@ -121,11 +149,20 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
       this.hasMediaSlot = Array.from(this.children).some(
         (el) => el.getAttribute("slot") === "media"
       );
+      this.hasImageSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "image"
+      );
       this.hasFooterSlot = Array.from(this.children).some(
         (el) => el.getAttribute("slot") === "footer"
       );
       this.hasActionsSlot = Array.from(this.children).some(
         (el) => el.getAttribute("slot") === "actions"
+      );
+      this.hasHeaderActionsSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "header-actions"
+      );
+      this.hasFooterActionsSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "footer-actions"
       );
       this.accessibleContentText = this.textContent?.trim() ?? "";
     }
@@ -142,6 +179,11 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
       (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
       0;
   };
+  private onImageSlotChange = (e: Event): void => {
+    this.hasImageSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
+  };
   private onFooterSlotChange = (e: Event): void => {
     this.hasFooterSlot =
       (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
@@ -149,6 +191,16 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   };
   private onActionsSlotChange = (e: Event): void => {
     this.hasActionsSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
+  };
+  private onHeaderActionsSlotChange = (e: Event): void => {
+    this.hasHeaderActionsSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
+  };
+  private onFooterActionsSlotChange = (e: Event): void => {
+    this.hasFooterActionsSlot =
       (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
       0;
   };
@@ -209,7 +261,12 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   }
 
   override render(): TemplateResult {
-    const hasHeader = this.hasHeaderSlot || this.hasActionsSlot;
+    const hasMedia = this.withMedia || this.hasMediaSlot || this.hasImageSlot;
+    const hasHeaderActions =
+      this.withHeaderActions || this.hasHeaderActionsSlot || this.hasActionsSlot;
+    const hasHeader = this.withHeader || this.hasHeaderSlot || hasHeaderActions;
+    const hasFooterActions = this.withFooterActions || this.hasFooterActionsSlot;
+    const hasFooter = this.withFooter || this.hasFooterSlot || hasFooterActions;
     const href = safeLinkHref(this.href);
     const activatable = this.interactive && !href;
     const body = html`
@@ -223,18 +280,29 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
             nothing}
           ></button>`
         : nothing}
-      <div part="media" ?hidden=${!this.hasMediaSlot}>
+      <div part="media image" ?hidden=${!hasMedia}>
         <slot name="media" @slotchange=${this.onMediaSlotChange}></slot>
+        <slot name="image" @slotchange=${this.onImageSlotChange}></slot>
       </div>
       <div part="header" ?hidden=${!hasHeader}>
         <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
-        <div part="actions" ?hidden=${!this.hasActionsSlot}>
+        <div part="actions" ?hidden=${!hasHeaderActions}>
           <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
+          <slot
+            name="header-actions"
+            @slotchange=${this.onHeaderActionsSlotChange}
+          ></slot>
         </div>
       </div>
       <div part="body"><slot></slot></div>
-      <div part="footer" ?hidden=${!this.hasFooterSlot}>
+      <div part="footer" ?hidden=${!hasFooter}>
         <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
+        <span class="footer-actions" ?hidden=${!hasFooterActions}>
+          <slot
+            name="footer-actions"
+            @slotchange=${this.onFooterActionsSlotChange}
+          ></slot>
+        </span>
       </div>
     `;
     // With `href`, the `<a>` is already focusable and Enter-activated natively -- layering the

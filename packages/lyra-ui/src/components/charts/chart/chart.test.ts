@@ -33,15 +33,15 @@ it('normalizes an invalid HTML `type` attribute before it can reach Chart.js', (
   const el = document.createElement('lr-chart') as LyraChart;
   el.setAttribute('type', 'unregistered-controller');
 
-  expect(el.type).to.equal('line');
-  expect((el as any).buildConfig().type).to.equal('line');
+  expect(el.type).to.equal('bar');
+  expect((el as any).buildConfig().type).to.equal('bar');
 });
 
-it('falls back to line when an untyped runtime write assigns an invalid chart type', () => {
+it('falls back to bar when an untyped runtime write assigns an invalid chart type', () => {
   const el = document.createElement('lr-chart') as LyraChart;
   (el as unknown as { type: string }).type = 'unregistered-controller';
 
-  expect((el as any).buildConfig().type).to.equal('line');
+  expect((el as any).buildConfig().type).to.equal('bar');
 });
 
 it('appends streamed category data, caps numeric series, and preserves point series', () => {
@@ -452,7 +452,8 @@ it('forwards a host aria-label to the canvas and keeps the chart role on that se
   expect(canvas.getAttribute('aria-label')).to.equal('Quarterly revenue');
   expect(canvas.getAttribute('role')).to.equal('application');
   expect(el.getAttribute('role')).to.equal(null);
-  expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(2);
+  expect(el.shadowRoot!.querySelectorAll('[part="legend"][role="group"]')).to.have.length(1);
 });
 
 it('formats generated summary values with the effective locale', async () => {
@@ -1322,14 +1323,14 @@ it('does not emit `lr-point-click` when the click misses every point/segment', a
   }
 });
 
-it('sets `options.indexAxis` to "y" only when `horizontal` is true', async () => {
+it('defaults `options.indexAxis` to "x" and keeps `horizontal` as a positive "y" alias', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
-  expect((el as any).buildConfig().options.indexAxis).to.equal(undefined);
+  expect((el as any).buildConfig().options.indexAxis).to.equal('x');
 
   el.horizontal = true;
   await el.updateComplete;
@@ -2068,7 +2069,7 @@ it('returns a fresh light-mode fallback palette without a DOM target', () => {
   expect(first).to.not.equal(second);
 });
 
-it('leaves a series that sets neither pointRadius nor segmentColors exactly as it built before', async () => {
+it('applies the public point-radius default without adding an inert segment object', async () => {
   const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
   el.labels = ['A', 'B', 'C'];
   el.datasets = [{ label: 'S', data: [1, 2, 3] }];
@@ -2078,13 +2079,13 @@ it('leaves a series that sets neither pointRadius nor segmentColors exactly as i
   // presence, so an unconditional `segment: {}` would change line rendering for every consumer
   // who never asked for per-segment colors.
   expect(Object.prototype.hasOwnProperty.call(ds, 'segment')).to.be.false;
-  expect(ds.pointRadius).to.equal(undefined);
-  // The rest of the generated dataset is untouched by the two new opt-in keys.
+  expect(ds.pointRadius).to.be.a('number').and.greaterThan(0);
   expect(Object.keys(ds)).to.deep.equal([
     'label',
     'data',
     'type',
     'fill',
+    'borderRadius',
     'borderWidth',
     'borderDash',
     'backgroundColor',

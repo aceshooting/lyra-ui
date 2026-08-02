@@ -19,6 +19,21 @@ function key(el: HTMLElement, k: string): KeyboardEvent {
 }
 
 describe("lr-card", () => {
+
+  it("accepts the Shoelace border and padding CSS hooks", async () => {
+    const el = (await fixture(html`
+      <lr-card style="--border-color: rgb(1, 2, 3); --border-radius: 9px; --border-width: 3px; --padding: 13px">
+        body
+      </lr-card>
+    `)) as LyraCard;
+    const root = base(el);
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const computed = getComputedStyle(root);
+    expect(computed.borderTopColor).to.equal("rgb(1, 2, 3)");
+    expect(computed.borderTopWidth).to.equal("3px");
+    expect(computed.borderRadius).to.equal("9px");
+    expect(getComputedStyle(body).paddingTop).to.equal("13px");
+  });
   it("renders as a div by default, an <a> when href is set", async () => {
     const plain = (await fixture(html`<lr-card>body</lr-card>`)) as LyraCard;
     expect(plain.shadowRoot!.querySelector('a[part="base"]')).to.not.exist;
@@ -93,7 +108,7 @@ describe("lr-card", () => {
     const header = el.shadowRoot!.querySelector(
       '[part="header"]'
     ) as HTMLElement;
-    const media = el.shadowRoot!.querySelector('[part="media"]') as HTMLElement;
+    const media = el.shadowRoot!.querySelector('[part~="media"]') as HTMLElement;
     const footer = el.shadowRoot!.querySelector(
       '[part="footer"]'
     ) as HTMLElement;
@@ -107,7 +122,7 @@ describe("lr-card", () => {
     const header = el.shadowRoot!.querySelector(
       '[part="header"]'
     ) as HTMLElement;
-    const media = el.shadowRoot!.querySelector('[part="media"]') as HTMLElement;
+    const media = el.shadowRoot!.querySelector('[part~="media"]') as HTMLElement;
     const footer = el.shadowRoot!.querySelector(
       '[part="footer"]'
     ) as HTMLElement;
@@ -322,6 +337,97 @@ describe("lr-card", () => {
       key(base(el), " ");
       await el.updateComplete;
       expect(fired).to.be.false;
+    });
+  });
+
+  describe("upstream layout surface", () => {
+    it("defaults to vertical and keeps every SSR presence hint opt-in", async () => {
+      const el = (await fixture(html`<lr-card>body</lr-card>`)) as LyraCard;
+      expect(el.orientation).to.equal("vertical");
+      expect(el.getAttribute("orientation")).to.equal("vertical");
+      expect(el.withHeader).to.be.false;
+      expect(el.withHeaderActions).to.be.false;
+      expect(el.withMedia).to.be.false;
+      expect(el.withFooter).to.be.false;
+      expect(el.withFooterActions).to.be.false;
+    });
+
+    it("accepts Shoelace image as the same rendered media/image wrapper", async () => {
+      const el = (await fixture(html`<lr-card>
+        <img slot="image" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" />
+        body
+      </lr-card>`)) as LyraCard;
+      const media = el.shadowRoot!.querySelector('[part~="media"]') as HTMLElement;
+      expect(media.part.contains("image")).to.be.true;
+      expect(media.hidden).to.be.false;
+      const imageSlot = media.querySelector('slot[name="image"]') as HTMLSlotElement;
+      expect(imageSlot.assignedElements()).to.have.length(1);
+    });
+
+    it("renders header-actions and footer-actions alongside their sections", async () => {
+      const el = (await fixture(html`<lr-card>
+        <strong slot="header">Heading</strong>
+        <button slot="header-actions">Settings</button>
+        body
+        <span slot="footer">Updated today</span>
+        <button slot="footer-actions">Share</button>
+      </lr-card>`)) as LyraCard;
+      const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+      const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+      const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+      expect(header.hidden).to.be.false;
+      expect(actions.hidden).to.be.false;
+      expect(footer.hidden).to.be.false;
+      expect(
+        (actions.querySelector('slot[name="header-actions"]') as HTMLSlotElement).assignedElements()
+      ).to.have.length(1);
+      expect(
+        (footer.querySelector('slot[name="footer-actions"]') as HTMLSlotElement).assignedElements()
+      ).to.have.length(1);
+    });
+
+    it("uses with-* hints to render empty section wrappers before slot discovery", async () => {
+      const el = (await fixture(html`<lr-card
+        with-header
+        with-header-actions
+        with-media
+        with-footer
+        with-footer-actions
+      >body</lr-card>`)) as LyraCard;
+      expect((el.shadowRoot!.querySelector('[part~="media"]') as HTMLElement).hidden).to.be.false;
+      expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hidden).to.be.false;
+      expect((el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement).hidden).to.be.false;
+      expect((el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement).hidden).to.be.false;
+    });
+
+    it("lays out a horizontal card side-by-side, then stacks at a narrow allocation", async () => {
+      const wide = (await fixture(html`<lr-card orientation="horizontal" style="inline-size: 40rem">
+        <span slot="media">media</span>body<span slot="actions">actions</span>
+      </lr-card>`)) as LyraCard;
+      expect(getComputedStyle(base(wide)).flexDirection).to.equal("row");
+
+      const narrow = (await fixture(html`<lr-card orientation="horizontal" style="inline-size: 20rem">
+        <span slot="media">media</span>body<span slot="actions">actions</span>
+      </lr-card>`)) as LyraCard;
+      expect(getComputedStyle(base(narrow)).flexDirection).to.equal("column");
+    });
+
+    it("consumes --spacing for section rhythm", async () => {
+      const el = (await fixture(html`<lr-card style="--spacing: 11px">body</lr-card>`)) as LyraCard;
+      const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+      expect(getComputedStyle(body).paddingInlineStart).to.equal("11px");
+      expect(getComputedStyle(body).paddingBlockStart).to.equal("11px");
+    });
+
+    it("is accessible with every vertical action slot populated", async () => {
+      const el = (await fixture(html`<lr-card>
+        <strong slot="header">Heading</strong>
+        <button slot="header-actions">Settings</button>
+        Body
+        <span slot="footer">Updated today</span>
+        <button slot="footer-actions">Share</button>
+      </lr-card>`)) as LyraCard;
+      await expect(el).to.be.accessible();
     });
   });
 });

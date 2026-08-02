@@ -16,6 +16,8 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
@@ -90,6 +92,7 @@ interface NormalizedLocaleEntry {
 export type LyraLocalePickerSize = LyraSizeStep;
 
 export interface LyraLocalePickerEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   'lr-change': CustomEvent<{ value: string; previousValue: string }>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
@@ -133,6 +136,7 @@ export interface LyraLocalePickerEventMap {
  *   `event.preventDefault()` stops the automatic `setLyraLocale()` call without reverting `value`.
  * @event blur - Re-dispatched from the internal trigger button as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal trigger button as a bubbling, composed event.
+ * @event lr-invalid - The locale picker failed a validity check.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
@@ -175,15 +179,24 @@ export interface LyraLocalePickerEventMap {
  *   been through a `reportValidity()`/submit attempt).
  * @cssstate user-invalid - `invalid`, but only after that same interaction — a required picker
  *   nobody has touched yet is invalid without being styled as an error.
+ * @status stable
+ * @since 6.0.0
  */
 export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
-    value: { noAccessor: true },
+    value: { attribute: false, noAccessor: true },
+    defaultValue: {
+      attribute: 'value',
+      reflect: true,
+      useDefault: true,
+      noAccessor: true,
+    },
     name: { reflect: true, noAccessor: true },
   };
 
@@ -220,6 +233,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   private listId = nextId('locale-picker-list');
   private controlId = nextId('locale-picker-control');
   private cleanup?: () => void;
@@ -230,6 +245,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private _disabled = false;
   private _required = false;
   private _defaultValue = '';
+  private _valueDirty = false;
+  private settingDefaultValue = false;
+  private reflectingDefaultValue = false;
   // Standard listbox type-ahead: printable keystrokes accumulate into this buffer and reset
   // ~500ms after the last one, matching lr-select's identical buffer/timer pair.
   private typeAheadBuffer = '';
@@ -239,6 +257,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     super();
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     this.internals.setFormValue('');
   }
 
@@ -258,7 +278,13 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   get form(): HTMLFormElement | null {
-    return this.internals.form;
+    return getFormOwner(this.internals);
+  }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
   }
   get labels(): NodeList {
     return this.internals.labels;
@@ -301,11 +327,6 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.open = false;
   }
 
-  override attributeChangedCallback(name: string, old: string | null, val: string | null): void {
-    super.attributeChangedCallback(name, old, val);
-    if (name === 'value') this._defaultValue = this._value;
-  }
-
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
@@ -321,10 +342,27 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
   set value(next: string) {
     const old = this._value;
+    if (!this.settingDefaultValue) this._valueDirty = true;
     this._value = next ?? '';
     this.internals.setFormValue(this._value);
     this.updateValidity();
     this.requestUpdate('value', old);
+  }
+  /** Reflected current reset default; changing it never overwrites a dirty live `value`. */
+  get defaultValue(): string { return this._defaultValue; }
+  set defaultValue(next: string) {
+    if (this.reflectingDefaultValue) return;
+    const old = this._defaultValue;
+    this._defaultValue = next ?? '';
+    this.reflectingDefaultValue = true;
+    try {
+      if (this._defaultValue) this.setAttribute('value', this._defaultValue);
+      else this.removeAttribute('value');
+    } finally {
+      this.reflectingDefaultValue = false;
+    }
+    if (!this._valueDirty) this.restoreLiveValueFromDefault();
+    this.requestUpdate('defaultValue', old);
   }
 
   get name(): string {
@@ -394,7 +432,13 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     // immediately invalid once more. The `value` write below re-runs updateValidity() (and
     // therefore syncCustomStates()) with this flag already cleared.
     this.touched = false;
-    this.value = this._defaultValue;
+    this.restoreLiveValueFromDefault();
+  }
+  private restoreLiveValueFromDefault(): void {
+    this.settingDefaultValue = true;
+    try { this.value = this._defaultValue; }
+    finally { this.settingDefaultValue = false; }
+    this._valueDirty = false;
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,

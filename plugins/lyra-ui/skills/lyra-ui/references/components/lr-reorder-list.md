@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/reorder-list/reorder-list.js';` (registers the tag; side-effect import)
 - **Class** `LyraReorderList`, also available unregistered from `@aceshooting/lyra-ui/components/layout/reorder-list/reorder-list.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-reorder-item` (same section below)

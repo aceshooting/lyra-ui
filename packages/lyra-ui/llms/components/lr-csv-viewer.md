@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/csv-viewer/csv-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraCsvViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/csv-viewer/csv-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `papaparse` — see `llms/peers.md`
 - **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -20,12 +22,13 @@ header row included whenever `has-header-row` is set; `scrollToAnchor()` scrolls
 row/column into view via the virtualized list's `active-id`. `highlights` paint as a focusable
 `part="cell-highlight"`.
 
-**Properties:** `src` and `name` are strings. `hasHeaderRow: boolean = true` (attribute
+**Properties:** `src: string = ''` and `name: string = ''`. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
 setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`; invalid CSS `max-height`
-values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly `['cell-range']`
-(this viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] =
+['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
+contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
 the same stringified cell values `cell()` renders, ordered row then column (empty/whitespace query

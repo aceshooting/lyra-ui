@@ -11,21 +11,26 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`
-    <lr-known-date label="Birth date" hint="For example, 27 3 2007"></lr-known-date>
-  `,
+  render: () => html` <lr-known-date label="Birth date" hint="For example, 27 3 2007"></lr-known-date> `,
 };
 
 export const PrefilledValue: Story = {
+  render: () => html` <lr-known-date label="Birth date" value="2007-03-27"></lr-known-date> `,
+};
+
+export const AppearancesAndPill: Story = {
   render: () => html`
-    <lr-known-date label="Birth date" value="2007-03-27"></lr-known-date>
+    <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
+      <lr-known-date appearance="outlined" label="Outlined" value="2007-03-27"></lr-known-date>
+      <lr-known-date appearance="filled" label="Filled" value="2007-03-27"></lr-known-date>
+      <lr-known-date appearance="filled-outlined" label="Filled and outlined" value="2007-03-27"></lr-known-date>
+      <lr-known-date pill label="Pill fields" value="2007-03-27"></lr-known-date>
+    </div>
   `,
 };
 
 export const RequiredWithValidation: Story = {
-  render: () => html`
-    <lr-known-date label="Birth date" hint="For example, 27 3 2007" required></lr-known-date>
-  `,
+  render: () => html` <lr-known-date label="Birth date" hint="For example, 27 3 2007" required></lr-known-date> `,
 };
 
 export const PassportDateRange: Story = {

@@ -17,16 +17,22 @@
 // A regex, not the TypeScript API: this repo pins TypeScript 7's native compiler, which ships no
 // JavaScript compiler API at all (`ts.createProgram` and friends are simply absent), so every
 // AST-based tool is unavailable. That is workable here only because the contributor contract
-// forbids `enum` and requires these sets to be colocated exported literal unions -- a narrow,
-// uniform shape a regex reads reliably. A declaration it cannot parse is skipped, never guessed at.
+// forbids `enum` and requires these sets to be exported literal unions or unambiguous chains of
+// those aliases -- a narrow, uniform graph a small parser reads reliably. A declaration it cannot
+// parse, a cycle, or an ambiguous name is skipped, never guessed at.
 //
 // Wired into `prepack`, right after `manifest`, so these never drift from a freshly regenerated
 // custom-elements.json before publish. Also runnable directly: `node
 // scripts/generate-editor-data.mjs` (or `pnpm run generate-editor-data`) from `packages/lyra-ui/`
 // any time after `pnpm run manifest`.
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  htmlDataValues,
+  readTypeAliases,
+  webTypesValue,
+} from './editor-type-values.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const manifestPath = join(packageDir, 'custom-elements.json');
@@ -41,76 +47,25 @@ function markdown(value) {
   return { kind: 'markdown', value };
 }
 
-// Matches a CEM `type.text` that is entirely a union of literal values, e.g. `'sm' | 'm' | 'l'`
-// or `1 | 2 | null | undefined`. This deliberately rejects an aliased type name (the manifest
-// records the alias itself, e.g. `ButtonVariant`, not its expansion -- there is nothing to
-// enumerate without re-parsing TypeScript) and a lookup type like
-// `Intl.DateTimeFormatOptions['dateStyle'] | undefined`, which contains a quoted substring but
-// isn't an enumerable set of attribute values.
-const LITERAL = `(?:'[^']*'|"[^"]*"|-?\\d+(?:\\.\\d+)?|null|undefined|true|false)`;
-const LITERAL_UNION = new RegExp(`^\\s*${LITERAL}(?:\\s*\\|\\s*${LITERAL})*\\s*$`);
-const LITERAL_TOKEN = /'([^']*)'|"([^"]*)"|(-?\d+(?:\.\d+)?)/g;
-
-/**
- * Every `export type Name = 'a' | 'b';` in the source tree, as `Name -> "'a' | 'b'"`.
- *
- * Only a declaration whose right-hand side is entirely a literal union is recorded; one that
- * references another type, a mapped type or anything else is skipped rather than half-parsed. A
- * name declared twice with different members is dropped entirely — an ambiguous expansion would
- * offer an editor values that are wrong for one of the two components.
- */
-function readTypeAliases(root) {
-  const sources = [];
-  const walk = (dir) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) sources.push(full);
-    }
-  };
-  walk(root);
-
-  const aliases = new Map();
-  const ambiguous = new Set();
-  // `export type Name =` up to the terminating `;`, across line breaks.
-  const DECLARATION = /export\s+type\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*([^;]+);/g;
-  for (const file of sources) {
-    for (const match of readFileSync(file, 'utf8').matchAll(DECLARATION)) {
-      const [, name, rawBody] = match;
-      const body = rawBody.replace(/\s+/g, ' ').trim().replace(/^\|\s*/, '');
-      if (!LITERAL_UNION.test(body)) continue;
-      const existing = aliases.get(name);
-      if (existing !== undefined && existing !== body) ambiguous.add(name);
-      aliases.set(name, body);
-    }
-  }
-  for (const name of ambiguous) aliases.delete(name);
-  return { aliases, ambiguous };
-}
-
-const { aliases: TYPE_ALIASES, ambiguous: AMBIGUOUS_ALIASES } = readTypeAliases(join(packageDir, 'src'));
-
-/**
- * Expands an attribute's `type.text` to a literal union where possible: either it already is one,
- * or it names an alias (optionally with `| undefined`, which an attribute can't carry anyway).
- */
-function expandTypeText(typeText) {
-  if (!typeText) return undefined;
-  if (LITERAL_UNION.test(typeText)) return typeText;
-  const bare = typeText.replace(/\s*\|\s*(?:undefined|null)\s*/g, '').trim();
-  return TYPE_ALIASES.get(bare);
-}
+const TYPE_ALIAS_REGISTRY = readTypeAliases(join(packageDir, 'src'));
 
 function literalValues(typeText) {
-  const expanded = expandTypeText(typeText);
-  if (!expanded) return undefined;
-  const values = [...expanded.matchAll(LITERAL_TOKEN)].map((match) => match[1] ?? match[2] ?? match[3]);
-  return values.length ? values.map((name) => ({ name })) : undefined;
+  return htmlDataValues(typeText, TYPE_ALIAS_REGISTRY);
+}
+
+function deprecationDescription(deprecation) {
+  if (!deprecation) return undefined;
+  const replacement = deprecation.replacement?.usage ?? deprecation.replacement?.name;
+  return `Deprecated since \`${deprecation.since}\`. Use ${deprecation.replacement?.kind ?? 'API'} ` +
+    `\`${replacement}\`. Removal is not permitted before \`${deprecation.removalNotBefore}\`. ` +
+    deprecation.rationale;
 }
 
 function attributeDescriptionText(attribute) {
   const lines = [];
   if (attribute.description) lines.push(attribute.description);
+  const deprecation = deprecationDescription(attribute.deprecation);
+  if (deprecation) lines.push(deprecation);
   const meta = [];
   if (attribute.type?.text) meta.push(`Type: \`${attribute.type.text}\``);
   if (attribute.default !== undefined) meta.push(`Default: \`${attribute.default}\``);
@@ -129,16 +84,8 @@ function attributeDescription(attribute) {
 // is expanded here too; a bare identifier-shaped type that does not (`boolean`, `string`) is
 // recorded as itself; anything else is left undescribed structurally, still covered in prose by
 // `attributeDescriptionText` above, rather than guessed at.
-const SIMPLE_TYPE_NAME = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 function webTypesAttributeValue(attribute) {
-  const text = attribute.type?.text;
-  if (!text) return undefined;
-  const expanded = expandTypeText(text);
-  if (expanded) {
-    const members = expanded.split('|').map((member) => member.trim()).filter(Boolean);
-    if (members.length) return { type: members };
-  }
-  return SIMPLE_TYPE_NAME.test(text) ? { type: [text] } : undefined;
+  return webTypesValue(attribute.type?.text, TYPE_ALIAS_REGISTRY);
 }
 
 function escapeTableCell(text) {
@@ -151,8 +98,31 @@ function markdownTable(rows) {
   return `${header}\n${body}`;
 }
 
+function componentMetadataDescription(declaration) {
+  if (!declaration.status || !declaration.since) return undefined;
+  const lines = [
+    '**Component metadata**',
+    '',
+    `- Status: \`${declaration.status}\``,
+    `- Since: \`${declaration.since}\``,
+  ];
+  if (declaration.maturity?.rationale) lines.push(`- Rationale: ${declaration.maturity.rationale}`);
+  if (declaration.maturity?.graduationCriteria) {
+    lines.push(`- Graduation: ${declaration.maturity.graduationCriteria}`);
+  }
+  for (const entry of declaration.deprecations ?? []) {
+    const subject = entry.kind === 'component'
+      ? `\`${declaration.tagName}\``
+      : `\`${entry.name}\`${entry.attribute ? ` / \`${entry.attribute}\`` : ''}`;
+    lines.push(`- Deprecated ${entry.kind} ${subject}: ${deprecationDescription(entry)}`);
+  }
+  return lines.join('\n');
+}
+
 function tagDescription(declaration) {
   const sections = [declaration.description || `\`<${declaration.tagName}>\` custom element.`];
+  const componentMetadata = componentMetadataDescription(declaration);
+  if (componentMetadata) sections.push(componentMetadata);
 
   if (declaration.slots?.length) {
     sections.push(
@@ -201,6 +171,10 @@ function collectCustomElements() {
   for (const module of manifest.modules ?? []) {
     for (const declaration of module.declarations ?? []) {
       if (declaration.kind === 'class' && declaration.customElement === true && declaration.tagName) {
+        if (!['stable', 'experimental'].includes(declaration.status) ||
+            !/^\d+\.\d+\.\d+/.test(declaration.since ?? '')) {
+          throw new Error(`${declaration.tagName} is missing valid CEM status/since metadata`);
+        }
         declarations.push(declaration);
       }
     }

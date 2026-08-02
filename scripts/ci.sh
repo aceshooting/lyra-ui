@@ -4,13 +4,14 @@
 # list -- when it changes, change this script to match.
 #
 # Usage:
-#   ./scripts/ci.sh                 # full local CI gate
-#   CI_SH_SKIP_INSTALL=1 ./scripts/ci.sh   # skip install + browser download (deps already present)
+#   ./scripts/ci.sh                 # aggregate the six primary Node 22/Chromium CI jobs
+#   CI_SH_SKIP_INSTALL=1 ./scripts/ci.sh   # skip primary install + Chromium download
+#                                          # (platform modes still install their own engines)
 #   ./scripts/ci.sh --platform      # ALSO run the platform-contracts suite locally
 #                                   # (firefox + webkit; browsers are downloaded on demand)
-#   ./scripts/ci.sh --platform-matrix # run the CI platform matrix (Node 20/22 x Firefox/WebKit)
+#   ./scripts/ci.sh --platform-matrix # primary jobs plus CI's Node 20/22 x Firefox/WebKit matrix
 #                                   # requires Node 20/22 and pnpm 10/11 locally
-#   ./scripts/ci.sh --all           # full local CI gate plus the platform matrix
+#   ./scripts/ci.sh --all           # alias for --platform-matrix
 #   ./scripts/ci.sh --keep-going    # (-k) don't abort at the first STALE GENERATED ARTIFACT;
 #                                   # collect every freshness failure and report them together at
 #                                   # the end, still exiting non-zero. Useful before a release,
@@ -47,6 +48,24 @@ if [[ "$RUN_PLATFORM" == "1" && "$RUN_PLATFORM_MATRIX" == "1" ]]; then
 fi
 
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
+
+require_primary_toolchain() {
+  local actual_node_major
+  actual_node_major="$(node -p 'process.versions.node.split(".")[0]')"
+  if [[ "$actual_node_major" != "22" ]]; then
+    echo "primary CI jobs require Node 22 (active: $(node --version)); activate Node 22 before running scripts/ci.sh" >&2
+    exit 1
+  fi
+
+  local expected_pnpm
+  local actual_pnpm
+  expected_pnpm="$(node -p 'require("./package.json").packageManager.replace(/^pnpm@/, "")')"
+  actual_pnpm="$(pnpm --version)"
+  if [[ "$actual_pnpm" != "$expected_pnpm" ]]; then
+    echo "primary CI jobs require pnpm $expected_pnpm (active: $actual_pnpm); install/activate the packageManager-pinned version" >&2
+    exit 1
+  fi
+}
 
 # Regenerated-artifact freshness checks. Every one of these follows the same shape -- run a
 # generator, then `git diff --exit-code` its outputs -- and every one has the same fix: the
@@ -111,11 +130,17 @@ resolve_node_for_version() {
   [[ -n "$resolved" ]] && { printf '%s\n' "$resolved"; return; }
 
   # NVM installations commonly expose versioned node binaries without a
-  # node20/node22 shim. Pick the newest installed patch release for the major.
+  # node20/node22 shim. Pick the newest installed patch release for the major;
+  # shell glob order is lexical (v20.9 sorts after v20.19), so sort versions
+  # explicitly before selecting the last executable candidate.
   if [[ -n "${NVM_DIR:-}" ]]; then
-    local candidates=("$NVM_DIR"/versions/node/v"$version".*/bin/node)
-    if ((${#candidates[@]} > 0)) && [[ -x "${candidates[${#candidates[@]}-1]}" ]]; then
-      printf '%s\n' "${candidates[${#candidates[@]}-1]}"
+    local candidate=""
+    local newest=""
+    while IFS= read -r candidate; do
+      [[ -x "$candidate" ]] && newest="$candidate"
+    done < <(compgen -G "$NVM_DIR/versions/node/v$version.*/bin/node" | LC_ALL=C sort -V)
+    if [[ -n "$newest" ]]; then
+      printf '%s\n' "$newest"
       return
     fi
   fi
@@ -132,6 +157,30 @@ run_with_toolchain() {
     "$pnpm_bin" "$@"
 }
 
+validate_platform_toolchain() {
+  local node_version="$1"
+  local node_bin="$2"
+  local pnpm_bin="$3"
+  local manifest="package.json"
+  [[ "$node_version" == "20" ]] && manifest=".github/ci-pnpm10.json"
+
+  local actual_node_major
+  actual_node_major="$("$node_bin" -p 'process.versions.node.split(".")[0]')"
+  if [[ "$actual_node_major" != "$node_version" ]]; then
+    echo "$node_bin is Node $actual_node_major, expected Node $node_version" >&2
+    return 1
+  fi
+
+  local expected_pnpm
+  local actual_pnpm
+  expected_pnpm="$("$node_bin" -p "require('./$manifest').packageManager.replace(/^pnpm@/, '')")"
+  actual_pnpm="$(run_with_toolchain "$node_bin" "$pnpm_bin" --version)"
+  if [[ "$actual_pnpm" != "$expected_pnpm" ]]; then
+    echo "$pnpm_bin is pnpm $actual_pnpm under Node $node_version, expected pnpm $expected_pnpm" >&2
+    return 1
+  fi
+}
+
 run_platform_matrix_leg() {
   local node_version="$1"
   local node_bin="$2"
@@ -143,6 +192,8 @@ run_platform_matrix_leg() {
   WTR_BROWSER="$browser" WTR_STRICT_CONSOLE=1 \
     run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui test:platform || return
 }
+
+require_primary_toolchain
 
 if [[ "${CI_SH_SKIP_INSTALL:-0}" != "1" ]]; then
   step "pnpm install --frozen-lockfile"
@@ -160,6 +211,12 @@ pnpm lint
 step "pnpm build"
 pnpm build
 
+step "SSR import/render matrix"
+pnpm --filter @aceshooting/lyra-ui test:ssr
+
+step "SSR hydration crawl"
+pnpm --filter @aceshooting/lyra-ui test:hydration
+
 step "bundle-size budgets"
 pnpm --filter @aceshooting/lyra-ui check:bundle-size
 
@@ -174,6 +231,13 @@ pnpm run check:dead-code
 
 step "check:secrets"
 pnpm run check:secrets
+
+step "registration artifact freshness"
+pnpm registrations
+freshness_diff "registration artifacts (pnpm registrations)" \
+  packages/lyra-ui/src/lyra.ts \
+  packages/lyra-ui/src/internal/root-registration-allowlist.ts \
+  packages/lyra-ui/package.json
 
 step "lyra-ui test:coverage"
 pnpm --filter @aceshooting/lyra-ui test:coverage
@@ -190,7 +254,9 @@ pnpm readme:check
 
 step "plugin reference sync"
 ./package.sh
-freshness_diff "plugin skill references (./package.sh)" plugins/lyra-ui/skills/lyra-ui/references/
+freshness_diff "plugin skill package (./package.sh)" \
+  plugins/lyra-ui/skills/lyra-ui/references/ \
+  skills/lyra-ui.skill
 
 step "skill:check"
 pnpm skill:check
@@ -220,7 +286,7 @@ step "verify published tarball contents"
 out="$(pnpm --filter @aceshooting/lyra-ui pack --dry-run 2>&1)"
 echo "$out"
 missing=0
-for f in custom-elements.json llms.txt llms-full.txt llms/index.md llms/shared.md llms/tokens.md llms/peers.md llms/migration.md llms/components/lr-table.md; do
+for f in dist/ssr-loader.js custom-elements.json llms.txt llms-full.txt llms/index.md llms/shared.md llms/tokens.md llms/peers.md llms/migration.md llms/components/lr-table.md; do
   if ! grep -qF "$f" <<< "$out"; then
     echo "ERROR: tarball is missing expected file: $f" >&2
     missing=1
@@ -259,6 +325,9 @@ if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
     pnpm_bin="$(resolve_command "$pnpm_request")"
     if [[ -z "$pnpm_bin" ]]; then
       echo "could not find $pnpm_request for Node $node_version; install it or set CI_SH_PNPM${node_version}_BIN" >&2
+      exit 1
+    fi
+    if ! validate_platform_toolchain "$node_version" "$node_bin" "$pnpm_bin"; then
       exit 1
     fi
 

@@ -55,7 +55,7 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   `lr-json-viewer`'s identically-named prop. Invalid CSS `max-height` values, declaration breaks,
   and `url()` are ignored, leaving the stylesheet token in control.
 - `zoomable: boolean = false` (reflected) — wraps the rendered image (image format only) in an
-  internal `<lr-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
+  internal `<lr-pan-zoom>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
   inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome
   viewport; an inspection surface opts in.
 - `highlights: LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
@@ -63,7 +63,8 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
-- `anchorKinds` is a readonly `['region']` (this viewer's supported `LyraAnchor.kind` values for the
+- `anchorKinds: readonly LyraAnchor['kind'][] = ['region']` (this viewer's supported
+  `LyraAnchor.kind` values for the
   shared anchor-target contract).
 
 **Methods:** `scrollToAnchor(target)` — scrolls a `region` highlight (by id, or a `LyraAnchor`
@@ -95,7 +96,7 @@ every rendered region highlight, image format only), `region-highlight` (one reg
 geometry with a minimum hit area independent of the visual rectangle), `highlight-actions`
 (non-overlapping actions used when multiple minimum hit areas would overlap),
 `region-highlight-action` (one action in that list), `frame-viewport`/`frame-content`/`frame-controls`/
-`frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lr-zoomable-frame>`
+`frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lr-pan-zoom>`
 while `zoomable`; image format only)
 
 **Themeable custom properties:** `--lr-document-preview-max-height` (default `none`) — the
@@ -281,9 +282,10 @@ the shared quote-scoping helpers; `highlights` re-resolve by quote after every r
 keyboard actions are exposed only for highlights whose quote resolves in the currently loaded
 document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
-the scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
-ignored. `anchorKinds` is a readonly `['fragment', 'text-quote']` (this
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`). `maxHeight` caps the scrollable document body; invalid CSS `max-height` values,
+declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['fragment',
+'text-quote']` (this
 viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `getHeadingTree()` returns the document-ordered outline as `DocxHeadingItem[]` (`{ id,
@@ -349,7 +351,8 @@ downloading, or object-URL'ing them is the host's job (e.g.
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the message.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
 (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
 localized show/hide toggle. `false` (the default) preserves the full body rendering. A host
@@ -387,7 +390,8 @@ matching `.eml` filenames in `<lr-document-viewer>`. Fail-closed behavior is exp
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
 plain text, including its title, start/end time, location, and description. No HTML is injected.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
@@ -417,7 +421,8 @@ read straight from JSZip's local file header (`uncompressedSize`) when available
 fully decompressing only the rare entry missing that header field. The list composes
 `<lr-virtual-list>` for large archives.
 
-**Properties:** `src` and `name` are strings — a host-level `aria-label` takes precedence over
+**Properties:** `src: string = ''` and `name: string = ''` — a host-level `aria-label` takes
+precedence over
 `name` when naming the `role="region"` listing. The viewer also exposes the shared text-viewer
 contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
 
@@ -470,13 +475,15 @@ Renders EPUB ebooks through the optional `epubjs` peer. `src` is fetched as an `
 epub.js renders the reading area into its stable `mount` element, using an internal iframe for
 chapter content.
 
-**Properties:** `src` and `name` are strings. `accessibleLabel` (attribute `aria-label`) overrides
-the reading region's accessible name. `location: string = ''` (not reflected — CFIs are long) is
+**Properties:** `src: string = ''` and `name: string = ''`. `accessibleLabel: string = ''`
+(attribute `aria-label`) overrides the reading region's accessible name. `location: string = ''`
+(not reflected — CFIs are long) is
 a CFI or spine href identifying the current reading position: set before the book finishes
 loading it's recorded and applied once ready, set after it applies immediately, and epub.js's own
 `relocated` event keeps it in sync with user navigation without re-triggering its own `display()`
 call. A controlled `location` assignment made synchronously inside `lr-location-change` wins over
-the peer-reported CFI and is displayed. `anchorKinds` is a readonly `['cfi', 'text-quote']` (this
+the peer-reported CFI and is displayed. `anchorKinds: readonly LyraAnchorKind[] = ['cfi',
+'text-quote']` (this
 viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `getToc()` resolves the EPUB's own navigation document (`book.navigation.toc`,
@@ -533,7 +540,8 @@ Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-render
 localized fidelity notice is always visible because animations, equations, embedded objects,
 speaker notes, and several advanced effects are not rendered.
 
-**Properties:** `src`, `name`, and `label` are strings. A host `aria-label` takes precedence over
+**Properties:** `src: string = ''`, `name: string = ''`, and `label: string = ''`. A host
+`aria-label` takes precedence over
 `label` and `name`. `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds`
 (`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
 DOM text.
@@ -568,10 +576,11 @@ anchor addresses one `highlights` entry, matched by reference or by structural e
 here — a sanitized SVG document has neither pages nor extractable text to quote, which is also why
 its registry entry declares `capabilities: { anchors: ['region'], search: false, textSelect: false }`.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
-the scrollable body; invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`). `maxHeight` caps the scrollable body; invalid CSS `max-height` values, declaration
+breaks, and `url()` are ignored.
 `zoomable: boolean = false` (reflected) — wraps the rendered content in an
-internal `<lr-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
+internal `<lr-pan-zoom>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
 inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome viewport;
 an inspection surface opts in. `anchor: LyraAnchor | string | null = null` (attribute: false) —
 declaratively jump to an anchor (a `LyraAnchor` object, or a `highlights` entry's `id`). Assigning it
@@ -582,8 +591,8 @@ from `DocumentAnchorTarget` rather than declared locally. A region rectangle ren
 when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
 `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`) — the `highlights` entry, if any, currently treated as active
-(`data-active` on its `region-highlight`). `anchorKinds` is a readonly `['region']` (this viewer's
-supported `LyraAnchor.kind` values for the shared anchor-target contract).
+(`data-active` on its `region-highlight`). `anchorKinds: readonly LyraAnchorKind[] = ['region']`
+(this viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `scrollToAnchor(target): Promise<boolean>` — scrolls the `highlights` entry matching
 `target` (a `region`-kind `LyraAnchor`, matched by reference or by structural equality of
@@ -605,7 +614,7 @@ rendered region highlight), `region-highlight` (one region highlight, `data-tone
 `highlight-actions` (non-overlapping actions for multiple highlights), `region-highlight-action`
 (one action in that list),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
-(forwarded from the internal `<lr-zoomable-frame>` while `zoomable`).
+(forwarded from the internal `<lr-pan-zoom>` while `zoomable`).
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -632,7 +641,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 Fetches an HTML document, sanitizes it with the optional `dompurify` peer, and renders the safe markup
 inside a bounded, scrollable body.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
@@ -668,10 +678,10 @@ is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed
 the virtualized list's `active-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
 focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
-`max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
-`['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
-contract).
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`); invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+`anchorKinds: readonly LyraAnchorKind[] = ['cell-range']` (this viewer's supported `LyraAnchor.kind`
+values for the shared anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every body cell's raw string value, ordered row then column (empty/whitespace query behaves like
@@ -718,7 +728,8 @@ label when `FN` is absent).
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the contacts.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
@@ -751,12 +762,13 @@ directly, since z-stacking doesn't affect tab order. Residual: a click that *end
 drag* over a highlighted passage never activates it — the selection-in-progress check exists exactly
 to tell that apart from a genuine activation click.
 
-**Properties:** `src` and `name` are strings. `page: number = 1` is the one-based current page and
+**Properties:** `src: string = ''` and `name: string = ''`. `page: number = 1` is the one-based
+current page and
 `zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
 CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
  page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
- declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
-`['page', 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
+ declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['page',
+'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
 anchor-target contract). Page and page-addressed region anchors require an in-range integer page
 and are rejected rather than clamped; region rectangles also require finite coordinates and
 nonnegative dimensions.
@@ -844,8 +856,9 @@ back to a `Sheet!`-prefixed `range`, then the active sheet); `scrollToAnchor()` 
 `<lr-tab-group>`'s active tab first when needed, then scrolls the addressed row/column into view.
 `highlights` paint as a focusable `part="cell-highlight"`.
 
-**Properties:** `src` and `name` are strings. `anchorKinds` is a readonly `['cell-range']` (this
-viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+**Properties:** `src: string = ''` and `name: string = ''`. `anchorKinds: readonly LyraAnchorKind[] =
+['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
+contract).
 
 **Methods:** `search(query)` resolves the match count across every sheet's stringified cell values,
 ordered sheet then row then column, switching tabs as navigation crosses sheets (empty/whitespace
@@ -889,12 +902,13 @@ header row included whenever `has-header-row` is set; `scrollToAnchor()` scrolls
 row/column into view via the virtualized list's `active-id`. `highlights` paint as a focusable
 `part="cell-highlight"`.
 
-**Properties:** `src` and `name` are strings. `hasHeaderRow: boolean = true` (attribute
+**Properties:** `src: string = ''` and `name: string = ''`. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
 setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`; invalid CSS `max-height`
-values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly `['cell-range']`
-(this viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] =
+['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
+contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
 the same stringified cell values `cell()` renders, ordered row then column (empty/whitespace query
@@ -935,7 +949,7 @@ the table.
 
 ## `lr-include`
 
-Fetches an HTML fragment from `src` and transcludes it as sanitized **light-DOM** content, so the
+Loads an HTML fragment from `src` and transcludes it as sanitized **light-DOM** content, so the
 fragment participates in the surrounding page's CSS cascade like a native server-side include —
 unlike `<lr-html-viewer>`, which renders a foreign document inside an isolated preview card. The
 markup always passes through the shared DOMPurify-backed sanitizer before it reaches `innerHTML`;
@@ -944,18 +958,30 @@ raw injection option is omitted, not shipped as a no-op).
 
 A bare primitive: no label/hint/error chrome, no implicit role, no computed accessible name, and no
 `aria-live` wrapper (the fragment can carry its own landmarks; wrapping the host would re-announce
-all of it on every load). The host always carries explicit `aria-busy="true"|"false"`: true only
-while a fetch is in flight. Build error UI from `lr-include-error`.
+all of it on every load). The host always carries explicit `aria-busy="true"|"false"`: true while
+the source is loading and being sanitized. Build error UI from `lr-include-error`.
 
 **Properties:**
-- `src: string = ''` (reflected) — URL of the fragment, validated through the shared `safeFetchUrl()`
-  allowlist (`http:`, `https:`, `blob:`, `data:`). Empty/falsy is a no-op: no fetch, no events,
-  existing content untouched.
+- `src: string = ''` (reflected) — source of the fragment. `#id` clones the matching same-page
+  template content or element children without fetching or moving the source nodes.
+  `/partial.html#id` fetches `/partial.html` without its hash, sanitizes the complete response, then
+  clones the target's children; a URL without a hash transcludes the complete sanitized document.
+  Remote URLs pass the shared `safeFetchUrl()` allowlist (`http:`, `https:`, `blob:`, `data:`).
+  Empty/falsy is a no-op: no fetch, no events, existing content untouched.
 - `mode: 'cors' | 'no-cors' | 'same-origin' = 'same-origin'` (reflected) — forwarded to
   `fetch(url, { mode })`. Defaults to `same-origin` (not the upstream components' `cors`) so
   cross-origin fetching is opt-in; an invalid value is normalized back to `same-origin` rather than
   letting `fetch()` throw. `no-cors` is accepted for enum completeness but always yields an opaque
   response (`status` `0`, unreadable body) — a Fetch API limitation, not a bug here.
+- `cache: boolean = true` (attribute is not reflected) — shares matching in-flight work and retains
+  successful sanitized remote documents in a bounded cache. `cache="false"` (including that exact
+  HTML attribute syntax) opts this instance out of both deduplication and retention. Fragment ids
+  are deliberately not part of the key: `/partial.html#one` and `/partial.html#two` share only the
+  fragmentless fetch/sanitize work, then select and clone independently. Request mode, byte cap,
+  and sanitizer profile are part of the key.
+
+**Methods:** `reload(): Promise<void>` invalidates the retained remote document for this URL and
+mode, then loads it again. A same-page source is simply re-cloned from its current DOM.
 
 The shared text-viewer contract is also available for the sanitized light-DOM fragment:
 `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
@@ -968,9 +994,10 @@ against the new fragment rather than leaving results from the previous content.
 - `lr-include-error` — `detail: { status, reason, error? }`. `reason` is a `LyraIncludeErrorReason`:
   `'blocked-url'` (`src` failed the allowlist; `fetch()` never ran), `'network'` (`fetch()` rejected),
   `'http'` (response not `ok`; `status` carries the code), `'missing-sanitizer'` (the optional
-  `dompurify` peer failed to load), or `'resource-too-large'` (the body exceeded the shared 25 MB
-  cap). Non-HTTP reasons use status `0`; `'http'` normally carries the response code, but an opaque
-  `mode="no-cors"` response is also classified as `'http'` with status `0`.
+  `dompurify` peer failed to load), `'resource-too-large'` (the body exceeded the 2 MiB Include
+  cap), or `'missing-fragment'` (the requested id was absent after sanitization). Non-HTTP reasons
+  use status `0`; `'http'` normally carries the response code, but an opaque `mode="no-cors"`
+  response is also classified as `'http'` with status `0`.
 
 **Slots:** default — fallback content shown until (or unless) a fetch succeeds. It is overwritten by
 the sanitized fragment on success, and left untouched on failure (as is any previously successful
@@ -981,6 +1008,27 @@ include).
 An absent `dompurify` fails closed: it fires `lr-include-error` with
 `reason: 'missing-sanitizer'` and leaves the existing content in place — unsanitized markup is
 never transcluded.
+
+Every inserted subtree is a clone. Its ids are rebased per Include instance, including references
+from labels, ARIA idrefs, fragment links, and `url(#id)` attributes, so repeating one source does
+not add duplicate document ids. Concurrent consumers lease shared work: disconnecting one aborts
+the request only when no other subscriber still needs it. Rejected work is evicted and can be
+retried; a stale response never paints over a newer `src`.
+
+```html
+<lr-include id="navigation" src="/partials/navigation.html#primary">
+  Loading navigation…
+</lr-include>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/viewers/include/include.js';
+
+  const include = document.querySelector('#navigation');
+  include.addEventListener('lr-include-error', (event) => {
+    console.error(event.detail.reason, event.detail.status);
+  });
+  await include.reload();
+</script>
+```
 
 ## `lr-highlight-layer`
 
@@ -1082,9 +1130,9 @@ accessible label, and matched against a `fragment` anchor's cell id. `outputColl
 40` (attribute `output-collapse-lines`) — a plain-text output longer than this many lines renders
 collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (attribute
 `max-height`) — once set, the notebook scrolls internally past this height; invalid CSS
-`max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
-`['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for the shared
-anchor-target contract).
+`max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly
+LyraAnchorKind[] = ['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for
+the shared anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
@@ -1157,8 +1205,8 @@ string` (property only) — raw XML text to parse and render; wins over `src`, a
 synchronously. `name: string = ''` — accessible label. `collapsedDepth?: number` (attribute
 `collapsed-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed. `copyable:
 boolean = false` (reflected) — shows copy-to-clipboard affordances, one for the whole document plus
-one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds` is a readonly
-`['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
+one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds: readonly
+LyraAnchorKind[] = ['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
 contract) — each numeric path segment is the 0-based index within the parent's *element* children,
 and an optional trailing string segment `'@attrName'` addresses one existing, nonempty-named
 attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.

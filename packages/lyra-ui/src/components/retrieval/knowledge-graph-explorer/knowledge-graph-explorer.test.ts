@@ -420,7 +420,7 @@ describe('lr-knowledge-graph-explorer', () => {
     });
     expect(el.selectedNodeId).to.equal('marie');
     const popup = (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).shadowRoot!.querySelector(
-      '[part="popup"]',
+      '[part~="popup"]',
     ) as HTMLElement;
     // showAt() positions the popup as position:fixed with explicit left/top -- proves showAt() was
     // actually invoked with a resolved rect rather than the popover just toggling open with no

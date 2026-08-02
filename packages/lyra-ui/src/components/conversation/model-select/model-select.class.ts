@@ -14,6 +14,8 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import {
   filterCatalogEntries,
   normalizeCatalog,
@@ -77,6 +79,7 @@ export type LyraModelCatalog = string[] | LyraModelCatalogEntry[];
 type DisplayEntry = DisplayCatalogEntry<LyraModelCatalogEntry>;
 
 export interface LyraModelSelectEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
   input: Event;
   change: Event;
@@ -119,6 +122,7 @@ export interface LyraModelSelectEventMap {
  * @event focus - Native focus relayed once from the active control in either rendering mode.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-invalid - The picker failed a validity check.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @cssstate required - Matches while `required` is set. Style with `lr-model-select:state(required)`.
@@ -155,6 +159,8 @@ export interface LyraModelSelectEventMap {
  * @cssprop [--lr-model-select-option-selected-border=var(--lr-color-brand)] - Border color of the selected option row.
  * @cssprop [--lr-model-select-option-selected-color=var(--lr-color-brand)] - Text color of the selected option row.
  * @cssprop [--lr-model-select-option-selected-font-weight=var(--lr-font-weight-semibold)] - Font weight of the selected option row.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   static formAssociated = true;
@@ -163,9 +169,16 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
-    value: { noAccessor: true },
+    value: { attribute: false, noAccessor: true },
+    defaultValue: {
+      attribute: 'value',
+      reflect: true,
+      useDefault: true,
+      noAccessor: true,
+    },
     name: { reflect: true, noAccessor: true },
   };
 
@@ -231,6 +244,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   private listId = nextId('model-select-list');
   private controlId = nextId('model-select-control');
   private popupPosition = new AnchoredPopoverController();
@@ -249,11 +264,16 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   // markup here to seed a declarative default from (unlike lr-select's
   // `<lr-option selected>`), so the initial attribute is the only source.
   private _defaultValue = '';
+  private _valueDirty = false;
+  private settingDefaultValue = false;
+  private reflectingDefaultValue = false;
 
   constructor() {
     super();
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     // Native <input> always has a submission value ("") from construction —
     // without this, a control whose `value` is never touched is entirely
     // absent from FormData instead of present as "" (see form-associated.ts).
@@ -294,7 +314,14 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   }
 
   get form(): HTMLFormElement | null {
-    return this.internals.form;
+    return getFormOwner(this.internals);
+  }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  /** Returns the browser-resolved owning form, including an external owner selected by `form`. */
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
   }
   get labels(): NodeList {
     return this.internals.labels;
@@ -356,21 +383,33 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.open = false;
   }
 
-  override attributeChangedCallback(name: string, old: string | null, val: string | null): void {
-    super.attributeChangedCallback(name, old, val);
-    if (name === 'value') this._defaultValue = this._value;
-  }
-
   /** The current model id (empty string when nothing is selected). */
   get value(): string {
     return this._value;
   }
   set value(next: string) {
     const old = this._value;
+    if (!this.settingDefaultValue) this._valueDirty = true;
     this._value = next ?? '';
     this.internals.setFormValue(this._value);
     this.updateValidity();
     this.requestUpdate('value', old);
+  }
+  /** Reflected current reset default; changing it never overwrites a dirty live `value`. */
+  get defaultValue(): string { return this._defaultValue; }
+  set defaultValue(next: string) {
+    if (this.reflectingDefaultValue) return;
+    const old = this._defaultValue;
+    this._defaultValue = next ?? '';
+    this.reflectingDefaultValue = true;
+    try {
+      if (this._defaultValue) this.setAttribute('value', this._defaultValue);
+      else this.removeAttribute('value');
+    } finally {
+      this.reflectingDefaultValue = false;
+    }
+    if (!this._valueDirty) this.restoreLiveValueFromDefault();
+    this.requestUpdate('defaultValue', old);
   }
 
   /** The form submission key, reflected synchronously for native form APIs. */
@@ -436,7 +475,13 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   formResetCallback(): void {
     this.touched = false;
-    this.value = this._defaultValue;
+    this.restoreLiveValueFromDefault();
+  }
+  private restoreLiveValueFromDefault(): void {
+    this.settingDefaultValue = true;
+    try { this.value = this._defaultValue; }
+    finally { this.settingDefaultValue = false; }
+    this._valueDirty = false;
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,

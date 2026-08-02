@@ -1,13 +1,16 @@
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
-import { state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { syncValidityStates } from '../../../internal/custom-states.js';
+import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -56,7 +59,7 @@ const GLYPH_STROKE_WIDTH = '1.75';
 function checkmarkGlyph(): SVGTemplateResult {
   return svg`
     <svg
-      part="checkmark"
+      part="checkmark checked-icon"
       width="1em"
       height="1em"
       viewBox=${GLYPH_VIEW_BOX}
@@ -75,7 +78,7 @@ function checkmarkGlyph(): SVGTemplateResult {
 function indeterminateGlyph(): SVGTemplateResult {
   return svg`
     <svg
-      part="checkmark"
+      part="checkmark indeterminate-icon"
       width="1em"
       height="1em"
       viewBox=${GLYPH_VIEW_BOX}
@@ -99,6 +102,7 @@ export interface LyraCheckboxEventMap {
   blur: FocusEvent;
   'lr-focus': CustomEvent<undefined>;
   'lr-blur': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<undefined>;
 }
 /**
  * `<lr-checkbox>` — a boolean form control. Structurally the same idea as
@@ -112,18 +116,17 @@ export interface LyraCheckboxEventMap {
  * `FormAssociated` mixin — see `<lr-combobox>` for the same
  * direct-`ElementInternals` shape with a non-string value.
  *
- * Deliberately no hint/error chrome of its own -- the default slot already carries real, visible
- * label text (see `@slot` below), so a labeled-field frame built around `label`/`hint`/`errorText`
- * props has nothing to add here. A consumer needing hint/error messaging composes it in their own
- * wrapper (e.g. `<lr-tool-param-form>` supplies adjacent description/error nodes through this
- * component's `aria-describedby` bridge rather than a `<lr-checkbox>`-owned slot), the same way a
- * native `<input type="checkbox">` plus `<label>` pairs with an externally-owned error node.
+ * Supporting text is optional through either Web Awesome's `hint` spelling or Shoelace's
+ * `help-text` spelling. Both render on the same described-by surface; an externally-owned host
+ * `aria-describedby` relationship remains additive.
  *
  * @customElement lr-checkbox
  * @slot - Label text, rendered next to the box. Clicking it toggles the
  * checkbox, the same as clicking a native checkbox's associated `<label>`.
  * If left empty, set `aria-label` on the host so the control still has an
  * accessible name.
+ * @slot hint - Web Awesome-compatible supporting text.
+ * @slot help-text - Shoelace-compatible supporting text; the same surface as `hint`.
  * A host `aria-describedby` attribute is resolved onto the internal `role="checkbox"` through
  * `ariaDescribedByElements` so externally-owned descriptions remain valid across the shadow
  * boundary.
@@ -136,6 +139,7 @@ export interface LyraCheckboxEventMap {
  * @event blur - Re-dispatched from the internal control as a bubbling, composed event.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-invalid - The checkbox failed a validity check.
  * @cssstate required - Matches while `required` is set. Style with `lr-checkbox:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
  * @cssstate valid - Matches while the control satisfies its constraints, including any
@@ -147,10 +151,22 @@ export interface LyraCheckboxEventMap {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required checkbox is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
- * @csspart base - The whole interactive control (`role="checkbox"`); wraps the box and label.
+ * @cssstate checked - Matches while the live checked state is true.
+ * @cssstate disabled - Matches while disabled directly or by an ancestor fieldset.
+ * @cssstate indeterminate - Matches while the visual mixed state is true.
+ * @csspart base - Compatibility name for the interactive control; use `checkbox`.
+ * @csspart checkbox - The whole interactive control (`role="checkbox"`); wraps the box and label.
+ *   It is the same node as `base`.
  * @csspart box - The small square that shows the checkmark/indeterminate dash.
- * @csspart checkmark - The checkmark (or indeterminate dash) glyph inside the box.
+ * @csspart control - WA/Shoelace name for `box`.
+ * @csspart control--checked - Shoelace state alias on the control while checked.
+ * @csspart control--indeterminate - Shoelace state alias on the control while indeterminate.
+ * @csspart checkmark - Lyra name for the visible glyph inside the box.
+ * @csspart checked-icon - WA/Shoelace name for the checked glyph.
+ * @csspart indeterminate-icon - WA/Shoelace name for the indeterminate glyph.
  * @csspart label - The wrapper around the default slot.
+ * @csspart hint - Web Awesome name for the supporting-text wrapper.
+ * @csspart form-control-help-text - Shoelace name for the same supporting-text wrapper.
  * @cssprop [--lr-checkbox-label-indent=calc(var(--lr-checkbox-box-size) + var(--lr-space-s))] -
  * The inline distance from the control's start edge to the start of the label text, i.e. the box's
  * own floor plus the gap next to it — so it tracks `size` along with the box. Published so a
@@ -165,23 +181,38 @@ export interface LyraCheckboxEventMap {
  * `--lr-color-brand` token every other component also reads.
  * @cssprop [--lr-checkbox-checked-border=var(--lr-color-brand)] - Border color of `[part='box']`
  * while `checked` or `indeterminate`.
+ * @cssprop [--checked-icon-color=currentColor] - WA-compatible color of the checked or
+ * indeterminate glyph.
+ * @cssprop [--checked-icon-scale=1] - WA-compatible scale of the checked or indeterminate glyph.
  * @cssprop [--lr-checkbox-box-size=min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))] -
  * Edge length of `[part='box']`. Derived from the `size` tier's shared control height, so the box
  * lines up with an `<lr-input>`/`<lr-select>`/`<lr-button>` of the same `size`; set it to pin the box
  * independently of the tier.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   static override styles = [LyraElement.styles, sizes, styles];
   static formAssociated = true;
 
   static override properties = {
-    checked: { type: Boolean, reflect: true, noAccessor: true },
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
+    checked: { attribute: false, noAccessor: true },
+    defaultChecked: {
+      attribute: 'checked',
+      type: Boolean,
+      reflect: true,
+      useDefault: true,
+      noAccessor: true,
+    },
     indeterminate: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
-    name: { reflect: true, noAccessor: true },
+    name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
     required: { type: Boolean, reflect: true, noAccessor: true },
     size: { reflect: true },
-    value: { noAccessor: true },
+    // Hand-reflected by the accessor so a null write can restore the absent default while an
+    // explicit non-null `'on'` write remains observably present as `value="on"`.
+    value: { reflect: true, noAccessor: true },
   };
 
   /**
@@ -194,6 +225,14 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
    */
   size: LyraSize = 'm';
 
+  /** Web Awesome supporting text. It wins when both mapped spellings are supplied. */
+  @property() hint = '';
+  /** Shoelace alias for {@link hint}. */
+  @property({ attribute: 'help-text' }) helpText = '';
+  /** Shoelace's separate reset-default attribute. The public IDL remains `defaultChecked`. */
+  @property({ type: Boolean, attribute: 'default-checked' })
+  private shoelaceDefaultChecked = false;
+
   // Visual-only mixed state, matching native `<input type="checkbox">`
   // semantics: it does not affect `checked`'s own value, and a user
   // interaction (click/keyboard) clears it back to `false`, exactly like the
@@ -205,6 +244,8 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // `assignedNodes` (not `assignedElements`) is checked — the common case is
   // a bare slotted text label, e.g. `<lr-checkbox>Accept terms</lr-checkbox>`.
   @state() private hasLabelSlot = false;
+  @state() private hasHintSlot = false;
+  @state() private hasHelpTextSlot = false;
   // Set on the control's first `blur`; gates the `data-invalid`/`aria-invalid`
   // reflection below so validity styling never flashes on first render,
   // mirroring `<lr-combobox>`/`<lr-select>`'s identical `touched` field.
@@ -218,6 +259,8 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   // `slotchange` only fires when the *set* of distributed nodes changes, not
   // when an already-slotted element mutates its own text content in place
   // (e.g. a consumer filling in a previously-empty `<span>` label) — so
@@ -226,18 +269,11 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // `<lr-option>`'s identical `labelObserver`.
   private labelObserver?: MutationObserver;
   private hasSyncedDescribedByElements = false;
-  // What `form.reset()` restores to — captured once from the declarative
-  // `checked` content attribute at first connect. A pre-connect `.checked`
-  // property assignment changes live state but not the reset default, matching
-  // native `checked`/`defaultChecked` semantics. `checked` reflects, so unlike `FormAssociated`'s
-  // non-reflecting `value` this can't be captured from
-  // `attributeChangedCallback` alone — that would also fire (and wrongly
-  // redefine the default) every time the property setter reflects a later
-  // user toggle back into the attribute. Guarding with a one-shot flag
-  // instead mirrors `<lr-combobox>`'s `_defaultCaptured`/`_defaultSelected`
-  // and `<lr-switch>`'s identical `_defaultChecked`.
   private _defaultChecked = false;
-  private _defaultCaptured = false;
+  private _checkedDirty = false;
+  private settingDefaultChecked = false;
+  private reflectingDefaultChecked = false;
+  private hadShoelaceDefaultChecked = false;
   private _fieldsetDisabled = false;
   // Tracked separately from `_fieldsetDisabled` -- driven by an owning
   // `<lr-checkbox-group>` propagating its own effective (explicit-or-
@@ -264,9 +300,23 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   }
   set checked(next: boolean) {
     const old = this._checked;
+    if (!this.settingDefaultChecked) this._checkedDirty = true;
     this._checked = Boolean(next);
     this.syncFormState();
     this.requestUpdate('checked', old);
+  }
+
+  /** Reflected current reset default; changing it never overwrites dirty live `checked` state. */
+  get defaultChecked(): boolean { return this._defaultChecked; }
+  set defaultChecked(next: boolean) {
+    if (this.reflectingDefaultChecked) return;
+    const old = this._defaultChecked;
+    this._defaultChecked = Boolean(next);
+    this.reflectingDefaultChecked = true;
+    try { this.toggleAttribute('checked', this._defaultChecked); }
+    finally { this.reflectingDefaultChecked = false; }
+    if (!this._checkedDirty) this.restoreCheckedFromDefault();
+    this.requestUpdate('defaultChecked', old);
   }
 
   get indeterminate(): boolean {
@@ -286,6 +336,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this.reflectInvalid();
     this.requestUpdate('disabled', old);
   }
 
@@ -293,7 +344,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   get name(): string {
     return this._name;
   }
-  set name(next: string) {
+  set name(next: string | null) {
     const old = this._name;
     this._name = next ?? '';
     if (this._name) {
@@ -318,23 +369,34 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   get value(): string {
     return this._value;
   }
-  set value(next: string) {
+  set value(next: string | null) {
     const old = this._value;
     this._value = next ?? 'on';
+    if (next == null) {
+      if (this.hasAttribute('value')) this.removeAttribute('value');
+    } else if (this.getAttribute('value') !== this._value) {
+      this.setAttribute('value', this._value);
+    }
     this.syncFormState();
-    this.requestUpdate('value', old);
+    // Reflection is synchronous and source-sensitive above. Keep Lit's public reflection metadata,
+    // but never queue a second reflection that could turn a same-tick null reset back into `on`.
+    this.requestUpdate('value', old, { reflect: false });
   }
 
   constructor() {
     super();
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     this.syncFormState();
   }
 
   get form(): HTMLFormElement | null {
-    return this.internals.form;
+    return getFormOwner(this.internals);
   }
+  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
+  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
   get labels(): NodeList {
     return this.internals.labels;
   }
@@ -350,15 +412,11 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
-    return this.renderRoot?.querySelector('[part="base"]') ?? null;
+    return this.renderRoot?.querySelector('[part~="base"]') ?? null;
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (!this._defaultCaptured) {
-      this._defaultCaptured = true;
-      this._defaultChecked = this.hasAttribute('checked');
-    }
     this.updateValidity();
     this.labelObserver = new MutationObserver(() => this.recomputeHasLabelSlot());
     this.labelObserver.observe(this, {
@@ -376,25 +434,45 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // keeps a future LyraElement/mixin lifecycle hook wired in
+    if (
+      changed.has('shoelaceDefaultChecked') &&
+      (this.hasAttribute('default-checked') || this.hadShoelaceDefaultChecked)
+    ) {
+      this.defaultChecked = this.shoelaceDefaultChecked;
+      this.hadShoelaceDefaultChecked = this.hasAttribute('default-checked');
+    }
     // Seed `hasLabelSlot` from the light-DOM children synchronously before
     // the very first render (same `!hasUpdated` guard as combobox/date-input's
     // `hasHintSlot` etc.) so declaratively-provided label text doesn't flash
     // hidden for one frame while waiting on the first `slotchange` event.
     if (!this.hasUpdated) {
-      this.hasLabelSlot = Array.from(this.childNodes).some((n) => (n.textContent ?? '').trim().length > 0);
+      this.hasLabelSlot = Array.from(this.childNodes).some((node) => {
+        const slot = node instanceof Element ? node.getAttribute('slot') : null;
+        return !slot && (node.textContent ?? '').trim().length > 0;
+      });
+      this.hasHintSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'hint');
+      this.hasHelpTextSlot = Array.from(this.children).some(
+        (element) => element.getAttribute('slot') === 'help-text',
+      );
     }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const describedBy = this.getAttribute('aria-describedby');
-    if (!describedBy && !this.hasSyncedDescribedByElements) return;
-    const control = this.renderRoot.querySelector<HTMLElement>('[part="base"]') ?? undefined;
+    const hint = this.renderRoot.querySelector<HTMLElement>('#checkbox-hint');
+    if (!describedBy && !this.hasSyncedDescribedByElements && (!hint || hint.hidden)) return;
+    const control = this.renderRoot.querySelector<HTMLElement>('[part~="base"]') ?? undefined;
     this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
       this,
       control,
       describedBy,
     );
+    if (hint && !hint.hidden && control && 'ariaDescribedByElements' in control) {
+      const reflected = control as HTMLElement & { ariaDescribedByElements: Element[] | null };
+      const current = reflected.ariaDescribedByElements ?? [];
+      reflected.ariaDescribedByElements = [...current.filter((element) => element !== hint), hint];
+    }
   }
 
   private updateValidity(): void {
@@ -414,6 +492,9 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   private reflectInvalid(): void {
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     syncValidityStates(this.internals, { required: this.required, hasInteracted: this.hasInteracted });
+    setCustomState(this.internals, 'checked', this.checked);
+    setCustomState(this.internals, 'indeterminate', this.indeterminate);
+    setCustomState(this.internals, 'disabled', this.effectiveDisabled);
   }
 
   private syncFormState(): void {
@@ -426,31 +507,43 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   }
 
   formResetCallback(): void {
-    this.checked = this._defaultChecked;
+    this.restoreCheckedFromDefault();
     this.touched = false;
     this.hasInteracted = false;
     this.reflectInvalid();
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,
-    _mode?: 'restore' | 'autocomplete',
+    reason: 'autocomplete' | 'restore',
   ): void {
+    void reason;
     const oldChecked = this._checked;
     const oldIndeterminate = this._indeterminate;
     this._checked = state === 'checked' || state === 'checked/indeterminate';
+    this._checkedDirty = true;
     this._indeterminate = state === 'checked/indeterminate' || state === 'unchecked/indeterminate';
     this.syncFormState();
     this.requestUpdate('checked', oldChecked);
     this.requestUpdate('indeterminate', oldIndeterminate);
   }
+  /** @internal Lets `<lr-checkbox-group>` restore all child defaults before one aggregate sync. */
+  resetFromGroup(): void { this.restoreCheckedFromDefault(); }
+  private restoreCheckedFromDefault(): void {
+    this.settingDefaultChecked = true;
+    try { this.checked = this._defaultChecked; }
+    finally { this.settingDefaultChecked = false; }
+    this._checkedDirty = false;
+  }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    this.reflectInvalid();
     this.requestUpdate();
   }
   /** @internal Driven by an owning `<lr-checkbox-group>`; released when the checkbox leaves the group's control. */
   setGroupDisabled(value: boolean): void {
     if (this._groupDisabled === value) return;
     this._groupDisabled = value;
+    this.reflectInvalid();
     this.requestUpdate();
   }
   checkValidity(): boolean {
@@ -484,6 +577,11 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this.reflectInvalid();
     // `aria-invalid` is rendered from `internals.validity`, which the call above just moved.
     this.requestUpdate();
+  }
+
+  /** Clears consumer-supplied validity and restores the current required/checked constraint. */
+  resetValidity(): void {
+    this.setCustomValidity('');
   }
 
   /** Activates the internal checkbox control (toggling it), mirroring `<lr-button>`'s host
@@ -533,6 +631,14 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this.recomputeHasLabelSlot();
   };
 
+  private onHintSlotChange = (event: Event): void => {
+    this.hasHintSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onHelpTextSlotChange = (event: Event): void => {
+    this.hasHelpTextSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   // Shared by `onSlotChange` (the "set of distributed nodes changed" case)
   // and `labelObserver` (the "an already-slotted node mutated in place"
   // case) so both paths agree on what counts as real label content.
@@ -558,27 +664,45 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   override render(): TemplateResult {
     const mixed = this.indeterminate;
+    const hasHint = this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText);
+    const controlParts = [
+      'box',
+      'control',
+      this.checked ? 'checked control--checked' : '',
+      mixed ? 'indeterminate control--indeterminate' : '',
+    ].filter(Boolean).join(' ');
+    const describedBy = [this.getAttribute('aria-describedby') ?? '', hasHint ? 'checkbox-hint' : '']
+      .filter(Boolean)
+      .join(' ');
     return html`
-      <span
-        part="base"
-        role="checkbox"
-        tabindex=${this.effectiveDisabled ? '-1' : '0'}
-        aria-checked=${mixed ? 'mixed' : this.checked ? 'true' : 'false'}
-        aria-required=${this.required ? 'true' : 'false'}
-        aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
-        aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-        aria-label=${this.getAttribute('aria-label') || nothing}
-        aria-describedby=${this.getAttribute('aria-describedby') || nothing}
-        @click=${this.onClick}
-        @keydown=${this.onKeyDown}
-        @focus=${this.onFocus}
-        @blur=${this.onBlur}
-      >
-        <span part="box"> ${mixed ? indeterminateGlyph() : this.checked ? checkmarkGlyph() : nothing} </span>
-        <span part="label" ?hidden=${!this.hasLabelSlot}>
-          <slot @slotchange=${this.onSlotChange}></slot>
+      <div>
+        <span
+          part="base checkbox"
+          role="checkbox"
+          tabindex=${this.effectiveDisabled ? '-1' : '0'}
+          aria-checked=${mixed ? 'mixed' : this.checked ? 'true' : 'false'}
+          aria-required=${this.required ? 'true' : 'false'}
+          aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+          aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
+          aria-label=${this.getAttribute('aria-label') || nothing}
+          aria-describedby=${describedBy || nothing}
+          @click=${this.onClick}
+          @keydown=${this.onKeyDown}
+          @focus=${this.onFocus}
+          @blur=${this.onBlur}
+        >
+          <span part=${controlParts}>
+            ${mixed ? indeterminateGlyph() : this.checked ? checkmarkGlyph() : nothing}
+          </span>
+          <span part="label" ?hidden=${!this.hasLabelSlot}>
+            <slot @slotchange=${this.onSlotChange}></slot>
+          </span>
         </span>
-      </span>
+        <div id="checkbox-hint" part="hint form-control-help-text" ?hidden=${!hasHint}>
+          ${this.hint || this.helpText}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot
+          ><slot name="help-text" @slotchange=${this.onHelpTextSlotChange}></slot>
+        </div>
+      </div>
     `;
   }
 }

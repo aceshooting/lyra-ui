@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { LyraInput } from './input.js';
 import './input.js';
 import '../button/button.js';
 
@@ -29,6 +30,49 @@ export const Password: Story = {
 
 export const Email: Story = {
   render: () => html`<lr-input type="email" label="Email" required></lr-input>`,
+};
+
+/** Remaining mapped native input types keep the browser's editing and validation semantics. */
+export const NativeTypes: Story = {
+  render: () => html`
+    <div style="display:grid; gap:0.75rem; max-inline-size:24rem">
+      <lr-input type="date" label="Date"></lr-input>
+      <lr-input type="datetime-local" label="Local date and time"></lr-input>
+      <lr-input type="tel" label="Telephone"></lr-input>
+      <lr-input type="url" label="URL"></lr-input>
+    </div>
+  `,
+};
+
+/**
+ * `autocorrect` always reads as boolean while accepting Web Awesome's boolean writes and
+ * Shoelace's `'off'`/`'on'` writes.
+ */
+export const AutocorrectPropertyWrites: Story = {
+  render: () => {
+    const write = (event: Event, value: boolean | 'off' | 'on') => {
+      const root = (event.currentTarget as HTMLElement).closest('[data-autocorrect-story]')!;
+      const input = root.querySelector('lr-input') as LyraInput;
+      input.autocorrect = value;
+      const output = root.querySelector('output')!;
+      output.textContent = `autocorrect reads ${String(input.autocorrect)}`;
+    };
+
+    return html`
+      <div
+        data-autocorrect-story
+        style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-20rem);"
+      >
+        <lr-input label="Editing assistance"></lr-input>
+        <div style="display: flex; gap: var(--lr-space-xs); flex-wrap: wrap;">
+          <button type="button" @click=${(event: Event) => write(event, false)}>Write false</button>
+          <button type="button" @click=${(event: Event) => write(event, 'off')}>Write "off"</button>
+          <button type="button" @click=${(event: Event) => write(event, 'on')}>Write "on"</button>
+        </div>
+        <output aria-live="polite">autocorrect reads true</output>
+      </div>
+    `;
+  },
 };
 
 export const NumericType: Story = {
@@ -87,13 +131,23 @@ export const SizeSpellings: Story = {
 export const Appearance: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; max-inline-size: 20rem">
-      <lr-input appearance="filled-outlined" label="filled-outlined (default)"></lr-input>
-      <lr-input appearance="outlined" label="outlined"></lr-input>
+      <lr-input appearance="outlined" label="outlined (default)"></lr-input>
+      <lr-input appearance="filled-outlined" label="filled-outlined"></lr-input>
       <lr-input appearance="filled" label="filled"></lr-input>
       <lr-input appearance="plain" label="plain"></lr-input>
       <lr-input appearance="accent" label="accent"></lr-input>
       <lr-input pill label="pill" placeholder="Rounded ends"></lr-input>
     </div>
+  `,
+};
+
+/** Shoelace aliases converge on the same state/slots as Lyra's canonical spellings. */
+export const ShoelaceAliases: Story = {
+  render: () => html`
+    <lr-input filled help-text="Rendered through help-text" no-spin-buttons type="number" label="Quantity">
+      <span slot="prefix" aria-hidden="true">#</span>
+      <span slot="suffix">units</span>
+    </lr-input>
   `,
 };
 

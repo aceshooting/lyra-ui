@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/code-editor/code-editor.js';` (registers the tag; side-effect import)
 - **Class** `LyraCodeEditor`, also available unregistered from `@aceshooting/lyra-ui/components/forms/code-editor/code-editor.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,6 +38,11 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 - `autocapitalize: string = 'off'`, `autoCorrect: string = 'off'` (attribute `autocorrect`)
 - `accessibleLabel: string = ''` (attribute `aria-label`) — wins over `label`/the localized
   `codeEditorLabel` fallback on the internal textarea
+- The shared form surface adds `value`, `defaultValue`, `customError` (`custom-error`), `name`,
+  `disabled`, `required`, `form`, `getForm()`, `checkValidity()`, `reportValidity()`, and
+  `setCustomValidity()` / `resetValidity()`. The latter clears only consumer custom validity and
+  restores current intrinsic constraints; it does not change the value/default or prior
+  interaction state.
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange(start, end, direction?)`,
 `setRangeText(replacement, start?, end?, selectMode?)` (writes the result back into `value` without
@@ -43,7 +50,8 @@ emitting an event), plus the `selectionStart`/`selectionEnd` getters (both `0` b
 
 **Events:** `input` and `change` — Lyra-emitted, bubbling/composed, each with `detail: { value }`
 (so they carry a detail a native `input`/`change` would not); also `focus`/`blur`, re-dispatched
-bubbling and composed from the internal textarea.
+bubbling and composed from the internal textarea, and `lr-invalid` (no detail) once when native
+validity fails.
 
 **Slots:** `label`, `hint`, `error`.
 

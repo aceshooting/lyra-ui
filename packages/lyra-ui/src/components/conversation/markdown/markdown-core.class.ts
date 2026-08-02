@@ -188,6 +188,8 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  *   inherited because `lr-code-block` is a sibling element, not an ancestor. A markdown code
  *   block wraps (`white-space: pre-wrap`) while `lr-code-block` does not, so the same value can
  *   render differently on a wrapped line, where tab stops restart.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

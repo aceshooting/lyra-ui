@@ -1,0 +1,390 @@
+import { expect, fixture, html } from '@open-wc/testing';
+import './dropdown.js';
+import '../../layout/menu/dropdown-item.js';
+import '../../layout/menu/menu.js';
+import type { LyraDropdown } from './dropdown.class.js';
+import type { LyraDropdownItem } from '../../layout/menu/dropdown-item.class.js';
+import type { LyraMenu } from '../../layout/menu/menu.class.js';
+
+function trigger(el: LyraDropdown): HTMLButtonElement {
+  return el.querySelector('[slot="trigger"]') as HTMLButtonElement;
+}
+
+function items(el: LyraDropdown): LyraDropdownItem[] {
+  return [...el.querySelectorAll(':scope > lr-dropdown-item')] as LyraDropdownItem[];
+}
+
+async function basic(extra = ''): Promise<LyraDropdown> {
+  return fixture(html`
+    <lr-dropdown aria-label="Row actions">
+      <button slot="trigger">Actions</button>
+      <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+      <lr-dropdown-item value="archive" ?disabled=${extra === 'disabled'}>Archive</lr-dropdown-item>
+      <lr-dropdown-item value="delete" variant="danger">Delete</lr-dropdown-item>
+    </lr-dropdown>
+  `) as Promise<LyraDropdown>;
+}
+
+it('owns direct dropdown items through one contained lr-menu engine without replacing the dropdown popup', async () => {
+  const el = await basic();
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  const engine = el.shadowRoot!.querySelector('lr-menu[part~="menu"]') as LyraMenu | null;
+
+  expect(popup.getAttribute('role')).to.equal('menu');
+  expect(popup.getAttribute('part')?.split(/\s+/)).to.include.members([
+    'popup',
+    'base',
+    'base__popup',
+    'panel',
+  ]);
+  expect(engine?.localName).to.equal('lr-menu');
+  expect(engine?.shadowRoot?.querySelector('[role="menu"]')).to.equal(null);
+});
+
+it('uses the mapped distance=0 default without changing an explicit distance', async () => {
+  const implicit = await basic();
+  expect(implicit.distance).to.equal(0);
+
+  const explicit = (await fixture(html`
+    <lr-dropdown distance="12">
+      <button slot="trigger">Actions</button>
+      <lr-dropdown-item>Rename</lr-dropdown-item>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  expect(explicit.distance).to.equal(12);
+});
+
+it('returns lifecycle promises that settle after the matching after-event', async () => {
+  const el = await basic();
+  let afterShow = false;
+  let afterHide = false;
+  el.addEventListener('lr-after-show', () => {
+    afterShow = true;
+  });
+  el.addEventListener('lr-after-hide', () => {
+    afterHide = true;
+  });
+
+  const showing = el.show();
+  expect(showing).to.be.instanceOf(Promise);
+  await showing;
+  expect(afterShow).to.equal(true);
+
+  const hiding = el.hide();
+  expect(hiding).to.be.instanceOf(Promise);
+  await hiding;
+  expect(afterHide).to.equal(true);
+});
+
+it('opens from ArrowDown/ArrowUp and reuses disabled-skipping roving focus', async () => {
+  const el = await basic('disabled');
+  const [first, , last] = items(el);
+
+  trigger(el).dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowDown',
+    bubbles: true,
+    cancelable: true,
+  }));
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal(first?.value);
+
+  el.hide();
+  await el.updateComplete;
+  trigger(el).dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowUp',
+    bubbles: true,
+    cancelable: true,
+  }));
+  await el.updateComplete;
+  expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal(last?.value);
+});
+
+it('emits one cancelable lr-select with detail.item, closes, and returns focus', async () => {
+  const el = await basic();
+  trigger(el).click();
+  await el.updateComplete;
+  let count = 0;
+  let event: CustomEvent<{ item: LyraDropdownItem }> | undefined;
+  el.addEventListener('lr-select', (received) => {
+    count += 1;
+    event = received as CustomEvent<{ item: LyraDropdownItem }>;
+  });
+
+  const selected = items(el)[1]!;
+  selected.select();
+  await el.updateComplete;
+
+  expect(event?.cancelable).to.equal(true);
+  expect(event?.detail.item.localName).to.equal('lr-dropdown-item');
+  expect(event?.detail.item.value).to.equal('archive');
+  expect(count).to.equal(1);
+  expect(el.open).to.equal(false);
+  expect((document.activeElement as HTMLElement).localName).to.equal('button');
+});
+
+it('keeps the dropdown open when lr-select is prevented or stay-open-on-select is set', async () => {
+  const prevented = await basic();
+  prevented.addEventListener('lr-select', (event) => event.preventDefault());
+  trigger(prevented).click();
+  await prevented.updateComplete;
+  items(prevented)[0]!.select();
+  await prevented.updateComplete;
+  expect(prevented.open).to.equal(true);
+
+  const persistent = (await fixture(html`
+    <lr-dropdown stay-open-on-select>
+      <button slot="trigger">Actions</button>
+      <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  trigger(persistent).click();
+  await persistent.updateComplete;
+  (persistent.querySelector('lr-dropdown-item') as LyraDropdownItem).select();
+  await persistent.updateComplete;
+  expect(persistent.open).to.equal(true);
+});
+
+it('disabled blocks pointer and keyboard opening and closes an already-open dropdown', async () => {
+  const el = await basic();
+  el.disabled = true;
+  await el.updateComplete;
+  trigger(el).click();
+  trigger(el).dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowDown',
+    bubbles: true,
+    cancelable: true,
+  }));
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+
+  el.disabled = false;
+  el.show();
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+});
+
+it('propagates the dropdown size to mapped items without changing the shared item ladder', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown size="small">
+      <button slot="trigger">Actions</button>
+      <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  await el.updateComplete;
+  const item = el.querySelector('lr-dropdown-item') as LyraDropdownItem;
+  expect(el.size).to.equal('small');
+  expect(item.size).to.equal('small');
+});
+
+it('accepts a consumer-supplied lr-menu as the owned content without adding a second menu role', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown>
+      <button slot="trigger">Actions</button>
+      <lr-menu label="Actions">
+        <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+        <lr-dropdown-item value="archive">Archive</lr-dropdown-item>
+      </lr-menu>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  const supplied = el.querySelector('lr-menu') as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  await supplied.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('lr-menu[part~="menu"]').length).to.equal(0);
+  expect(supplied.shadowRoot!.querySelector('[role="menu"]')).to.equal(null);
+  expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal('rename');
+});
+
+it('rejoins the contained menu engine after an open dropdown is reparented', async () => {
+  const el = await basic();
+  const fixtureParent = el.parentElement!;
+  trigger(el).click();
+  await el.updateComplete;
+  const engine = el.shadowRoot!.querySelector('lr-menu[part~="menu"]') as LyraMenu;
+  await engine.updateComplete;
+  expect(engine.open).to.equal(true);
+
+  el.remove();
+  expect(engine.open).to.equal(false);
+  fixtureParent.append(el);
+  await el.updateComplete;
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await engine.updateComplete;
+
+  expect(el.open).to.equal(true);
+  expect(engine.open).to.equal(true);
+  engine.show('last');
+  expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal('delete');
+});
+
+it('uses the direct-item WA submenu shape for nested keyboard selection and one outer lr-select', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown>
+      <button slot="trigger">Actions</button>
+      <lr-dropdown-item id="share">
+        Share
+        <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+        <lr-dropdown-item slot="submenu" value="copy">Copy link</lr-dropdown-item>
+      </lr-dropdown-item>
+      <lr-dropdown-item value="move">Move</lr-dropdown-item>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  const parent = el.querySelector('#share') as LyraDropdownItem;
+  trigger(el).click();
+  await el.updateComplete;
+  await parent.updateComplete;
+
+  parent.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowRight',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  }));
+  await parent.updateComplete;
+  expect(parent.submenuOpen).to.equal(true);
+  expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal('email');
+
+  let selectedValue = '';
+  let selectCount = 0;
+  el.addEventListener('lr-select', (event) => {
+    selectedValue = event.detail.item.value;
+    selectCount += 1;
+  });
+  (document.activeElement as LyraDropdownItem).select();
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+  expect(selectedValue).to.equal('email');
+  expect(selectCount).to.equal(1);
+  expect(el.open).to.equal(false);
+  expect((document.activeElement as HTMLElement).textContent).to.equal('Actions');
+});
+
+it('mirrors submenu arrows and preserves the safe pointer corridor under RTL', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown dir="rtl">
+      <button slot="trigger">Actions</button>
+      <lr-dropdown-item id="share">
+        Share
+        <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+      </lr-dropdown-item>
+      <lr-dropdown-item value="move">Move</lr-dropdown-item>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  const parent = el.querySelector('#share') as LyraDropdownItem;
+  trigger(el).click();
+  await el.updateComplete;
+  await parent.updateComplete;
+
+  parent.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowLeft',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  }));
+  await parent.updateComplete;
+  expect(parent.submenuOpen).to.equal(true);
+  expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal('email');
+
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowRight',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  }));
+  await parent.updateComplete;
+  expect(parent.submenuOpen).to.equal(false);
+  expect((document.activeElement as HTMLElement).id).to.equal('share');
+
+  // Pointer intent opens after 150ms. Leaving the outer list schedules a 300ms close; reaching
+  // the submenu before that deadline cancels it, which is the safe-corridor behavior.
+  parent.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, composed: true }));
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  expect(parent.submenuOpen).to.equal(true);
+  const engine = el.shadowRoot!.querySelector('lr-menu[part~="menu"]') as LyraMenu;
+  const engineSlot = engine.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  engineSlot.dispatchEvent(new PointerEvent('pointerleave'));
+  const nestedItem = parent.querySelector('[slot="submenu"]') as LyraDropdownItem;
+  nestedItem.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, composed: true }));
+  await new Promise((resolve) => setTimeout(resolve, 330));
+  expect(parent.submenuOpen).to.equal(true);
+  await expect(el).to.be.accessible();
+});
+
+it('maps hoist and sync into positioning and exposes an immediate reposition method', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown hoist sync="width">
+      <button slot="trigger" style="inline-size: 180px">Actions</button>
+      <lr-dropdown-item>Rename</lr-dropdown-item>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  el.show();
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  expect(popup.style.position).to.equal('fixed');
+  expect(Math.round(popup.getBoundingClientRect().width)).to.equal(
+    Math.round(trigger(el).getBoundingClientRect().width),
+  );
+  expect(() => el.reposition()).not.to.throw();
+});
+
+it('uses absolute positioning by default and treats containingElement as inside light dismiss', async () => {
+  const containing = document.createElement('div');
+  const inside = document.createElement('button');
+  inside.textContent = 'Inside containing element';
+  containing.append(inside);
+  document.body.append(containing);
+  try {
+    const el = await basic();
+    el.containingElement = containing;
+    el.show();
+    await el.updateComplete;
+    const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+    expect(popup.style.position).to.equal('absolute');
+
+    inside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+  } finally {
+    containing.remove();
+  }
+});
+
+it('uses an external `for` anchor while keeping the slotted trigger as the focus-return owner', async () => {
+  const wrapper = await fixture(html`
+    <div style="position: relative">
+      <button id="external" style="position: absolute; inset-inline-start: 240px">Anchor</button>
+      <lr-dropdown for="external">
+        <button slot="trigger">Actions</button>
+        <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+      </lr-dropdown>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-dropdown') as LyraDropdown;
+  el.show();
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  expect(Math.abs(popup.getBoundingClientRect().left - wrapper.querySelector('#external')!.getBoundingClientRect().left)).to.be.lessThan(2);
+
+  (el.querySelector('lr-dropdown-item') as LyraDropdownItem).select();
+  await el.updateComplete;
+  expect((document.activeElement as HTMLElement).textContent).to.equal('Actions');
+});
+
+it('is accessible populated and open with mapped items', async () => {
+  const el = await basic('disabled');
+  await expect(el).to.be.accessible();
+  trigger(el).click();
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});

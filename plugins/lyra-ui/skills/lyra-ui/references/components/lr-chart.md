@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/charts/chart/chart.js';` (registers the tag; side-effect import)
 - **Class** `LyraChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,10 +20,23 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 `wa-chart` `config` property).
 
 **Properties:**
-- `type: LyraChartType = 'line'` — `LyraChartType = 'line' | 'bar' | 'scatter' | 'pie' | 'doughnut' |
+- `type: LyraChartType = 'bar'` — `LyraChartType = 'line' | 'bar' | 'scatter' | 'pie' | 'doughnut' |
   'radar' | 'polarArea' | 'bubble'` — every type string the typed `lr-*-chart` subclasses lock `type` to is
   already a first-class member, so `<lr-chart type="pie">` needs no subclass or cast to work;
-  unknown runtime attribute/property values fall back to `line` before reaching Chart.js
+  unknown runtime attribute/property values fall back to `bar` before reaching Chart.js
+- `description: string | null = null` — accessible chart description; the additive
+  `accessibleDescription` remains a fallback alias
+- `grid: 'x'|'y'|'both'|'none' = 'both'` — controls cartesian grid lines. On a radial chart, `x`
+  controls angle lines and `y` controls concentric grid lines
+- `indexAxis: 'x'|'y' = 'x'` (attribute `index-axis`) — Chart.js index axis. The additive
+  `horizontal` boolean remains a positive alias for `'y'`
+- `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence;
+  additive `accessibleLabel` remains the fallback alias
+- `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
+  the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
+  omitted before Chart.js sees them
+- `plugins: object[] = []` — per-instance Chart.js plugins, combined without duplicates with Lyra's
+  on-demand data-label plugin and any `config.plugins` entries
 - `labels: string[] = []` (attribute: false)
 - `datasets: Series[] = []` (attribute: false) — `Series { label: string; data?: (number|null)[];
   points?: ChartPoint[]; color?: string|string[]; fill?: boolean; width?: number; dash?: boolean;
@@ -40,14 +55,16 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
     `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
     Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
     empty array) emits no `segment` key at all, leaving line rendering exactly as before.
-- `legend: boolean = false` — renders a wrapping DOM legend whose keyboard-operable buttons toggle
+- `legend: boolean = true` — additive positive alias for the visible legend; renders a wrapping DOM
+  legend whose keyboard-operable buttons toggle
   dataset visibility. The DOM surface preserves long public labels that a canvas legend would clip.
   Its pressed state honors an effective dataset's declarative `hidden` value before Chart.js is
   ready and across chart type/plugin rebuilds, while an in-place redraw preserves an explicit
   legend-button toggle.
-- `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — places the
-  legend at `top`, `right`, `bottom`, or `left`; `auto` chooses right above 480px and bottom below
-  that allocation width
+- `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — accepts the
+  Chart.js `left|top|right|bottom|center|chartArea|{ [scaleId]: number }` positions plus logical
+  `start`/`end`; the additive `auto` chooses right above 480px and bottom below that allocation
+  width. Logical positions swap under RTL
 - `valueFormatter?: LyraChartValueFormatter` (attribute: false) — formats numeric (value-axis)
   tick, tooltip, legend, and generated accessible-table values; the callback receives the value
   and `'tick'`, `'tooltip'`, `'legend'`, or `'table'` context. Never runs against the categorical
@@ -57,8 +74,8 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
   range is limited to the original data extent); shows the `reset-zoom-button` while zoomed
 - `height: string = '280px'`
-- `xLabel: string = ''` (attribute `x-label`)
-- `yLabel: string = ''` (attribute `y-label`)
+- `xLabel: string | null = null` (attribute `x-label`)
+- `yLabel: string | null = null` (attribute `y-label`)
 - `y2Label: string = ''` (attribute `y2-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
 - `horizontal: boolean = false` — sets `options.indexAxis = 'y'`, Chart.js's own mechanism for
@@ -66,6 +83,12 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `stacked: boolean = false` — stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only
   meaningful for `bar`/`line` types (scatter/bubble's linear `x` scale and the radial `r` scale used
   by radar/polar-area are out of scope)
+- `withoutAnimation: boolean = false` (attribute `without-animation`, reflected) — disables Chart.js
+  construction animation; reduced-motion preference also disables it regardless of this value
+- `withoutLegend: boolean = false` (attribute `without-legend`, reflected) — hides the legend;
+  it wins over the positive `legend` alias
+- `withoutTooltip: boolean = false` (attribute `without-tooltip`, reflected) — disables the
+  Chart.js tooltip plugin for this instance
 - `dataLabels: boolean = false` (attribute `data-labels`) — draws each point's value on the chart via
   the optional `chartjs-plugin-datalabels` peer (see `peers.md`). Unset (the default) leaves labels
   off; because the plugin is registered **per chart instance** (not globally), a `<lr-chart
@@ -87,6 +110,9 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   explicit array replaces that generated member rather than concatenating with it. This effective
   model drives canvas rendering, `appendData()`, export, the accessible name/summary, keyboard
   navigation and activation events, the DOM legend, and the generated fallback table.
+  As a declarative alternative, place one `<script type="application/json">` in the default slot;
+  an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
+  ignored without evaluating script or exposing prototype-pollution keys to the merge.
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — canvas name override; a host
   `aria-label` has highest precedence
 - `accessibleDescription: string = ''` (attribute `accessible-description`) — overrides the
@@ -173,7 +199,8 @@ keyboard-current canvas datum; `detail: { datasetIndex: number, index: number, l
 undefined, value: unknown }`). For scatter/bubble points, `label` prefers the per-point label and
 `value` is the complete `ChartPoint`, including optional `r` and `label`.
 
-**Slots:** `data-table` — an optional consumer-provided accessible table alternative; `center` —
+**Slots:** default — one optional `<script type="application/json">` Chart.js configuration;
+`data-table` — an optional consumer-provided accessible table alternative; `center` —
 optional overlay content positioned at the chart area's center, useful for doughnut and pie totals.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
@@ -201,6 +228,22 @@ consumed directly with no `getComputedStyle` bridging; it is an inline `var()` f
 of use, so it can be set on the element or any ancestor, and left unset the outline is exactly the
 `--lr-border-width-thin` it always was. Plus shared `--lr-space-xs`.
 
+The mirrored Chart styling hooks are also available on all nine tags. All canvas-bound values are
+resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live root font size and
+`em` uses the chart's own font size rather than a hard-coded conversion.
+
+- `--border-color-1`, `--border-color-2`, `--border-color-3`, `--border-color-4`,
+  `--border-color-5`, `--border-color-6` — first six dataset/slice stroke colors, each falling back
+  to matching `--lr-color-chart-N`
+- `--fill-color-1`, `--fill-color-2`, `--fill-color-3`, `--fill-color-4`, `--fill-color-5`,
+  `--fill-color-6` — first six dataset/slice fill colors, with the same Lyra
+  palette fallbacks. A directly authored fill is used as-is; an unoverridden line-area fallback
+  retains Lyra's translucent area treatment
+- `--border-radius` → `--lr-radius`; `--border-width` → `--lr-border-width-thin`
+- `--grid-border-width` → `--lr-border-width-thin`; `--grid-color` →
+  `--lr-chart-grid-color`
+- `--line-border-width` → `--lr-border-width-medium`; `--point-radius` → `--lr-space-2xs`
+
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
 regardless of `zoom`), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
 later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
@@ -219,7 +262,7 @@ subset actually used.
 
 **Known gotchas:**
 - supported `type` values are normalized before reaching Chart.js; unknown runtime attribute or
-  property values fall back to `line`. Each typed `lr-*-chart` subclass (e.g.
+  property values fall back to `bar`. Each typed `lr-*-chart` subclass (e.g.
   `llms/components/lr-bar-chart.md`) locks its *own* `type` via a real prototype accessor — a
   genuine runtime lock, not just a compile-time default.
 - a built-in `ThemeWatcher` automatically rethemes an already-drawn chart when
@@ -246,17 +289,20 @@ subset actually used.
   `lr-graph`/`lr-map`/`lr-flag`). Chart.js's own ~1000ms draw-in animation only ever fires on
   initial construction or a type change that rebuilds the `Chart` instance (every in-place data
   update already passes `'none'` to `Chart#update()` and never animates regardless); that
-  construction-time animation is additionally skipped outright under `prefers-reduced-motion: reduce`.
+  construction-time animation is additionally skipped when `without-animation` is set or under
+  `prefers-reduced-motion: reduce`.
   The raw `config` passthrough is deep-merged with `__proto__`/`constructor`/`prototype` keys skipped
   unconditionally, so a JSON-sourced `config` (e.g. parsed from an API response) can't reach up and
   pollute `Object.prototype` through the merge.
 - lazy-redraw + change gating: an `IntersectionObserver` gates `draw()` — while the host is scrolled
   off-screen, property changes that would otherwise trigger a Chart.js redraw are skipped (and a
   single redraw fires once it re-enters the viewport). Independently, `updated()` only reaches
-  Chart.js when at least one of `type`, `labels`, `datasets`, `legend`, `legendPosition`, the
-  internal resolved auto legend position, `valueFormatter`, `area`, `height`, `xLabel`, `yLabel`,
-  `y2Label`, `beginAtZero`, `horizontal`, `stacked`, `dataLabels`, `stackTotals`, `config`, `zoom`,
-  `locale`, `strings`, or the internal loading state actually changed in that update (so an
+  Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `indexAxis`,
+  `label`, `legend`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
+  position, `valueFormatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
+  `horizontal`, `stacked`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
+  slotted config, `zoom`, `locale`, `strings`, or the internal loading state actually changed in
+  that update (so an
   unrelated property/state update, or a bare `requestUpdate()`, draws nothing). Resize callbacks
   ignore unchanged inline sizes and coalesce into one animation-frame task; a responsive legend
   position change and its reactive update share that same single redraw. `refreshTheme()`, resize,

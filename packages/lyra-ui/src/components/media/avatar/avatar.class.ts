@@ -47,6 +47,7 @@ export interface LyraAvatarEventMap {
  *   no default-slot glyph is provided).
  * @csspart initials - The initials text, only rendered once every glyph and image fallback ahead of
  *   it in the priority order has been ruled out.
+ * @cssprop [--size=var(--lr-avatar-size)] - Upstream-compatible avatar diameter.
  * @cssprop [--lr-avatar-size=var(--lr-size-2rem)] - Inline and block size of the container. `size`
  *   steps it across the shared six-step ladder, from `var(--lr-size-1rem)` (`2xs`) to
  *   `var(--lr-size-3rem)` (`xl`); the default `medium`/`m` tier is `var(--lr-size-2rem)`.
@@ -57,6 +58,8 @@ export interface LyraAvatarEventMap {
  * @cssprop [--lr-avatar-font-size=var(--lr-font-size-sm)] - Font size of the initials fallback (and
  *   of any `em`-sized slotted glyph). `size` steps it alongside the diameter, so the initials track
  *   the circle instead of staying at one fixed size across every tier.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -69,7 +72,11 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
    *  (but not over default-slotted icon content); falls back to them on a load error. Named
    *  `image` to match `wa-avatar`; it used to be `src`, which a mechanical rename left unset —
    *  silently falling back to initials. */
-  @property() image?: string;
+  @property() image = '';
+
+  /** Accessible description matching the upstream avatar contract. A host `aria-label` wins,
+   * followed by this value and then the older `alt` compatibility property. */
+  @property() label = '';
 
   /** Alt text -- required alongside `image` for accessibility, and also used as the accessible
    *  name (via `aria-label`) when showing icon-only slotted content, since a decorative glyph
@@ -149,7 +156,8 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
     const showIconSlot = !this.hasIcon && !showImage && this.hasIconSlot;
     const showGlyph = this.hasIcon || showIconSlot;
     const showInitials = !showGlyph && !showImage;
-    const accessibleName = this.getAttribute('aria-label') ?? this.alt;
+    const hostLabel = this.getAttribute('aria-label');
+    const accessibleName = hostLabel === null ? this.label || this.alt : hostLabel;
     // Whenever `alt` is set, [part='base'] needs a real accessible name
     // regardless of which fallback tier ends up rendering -- the glyph cases
     // (their content is aria-hidden) and the initials-fallback case (its

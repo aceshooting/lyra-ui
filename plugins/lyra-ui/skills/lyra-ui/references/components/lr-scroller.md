@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/scroller/scroller.js';` (registers the tag; side-effect import)
 - **Class** `LyraScroller`, also available unregistered from `@aceshooting/lyra-ui/components/layout/scroller/scroller.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,7 +22,11 @@ well as full-width layouts.
 **Properties:**
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
 - `controls: boolean = false` (reflected) — show previous/next controls
-- `hideScrollbar: boolean = false` (attribute `hide-scrollbar`, reflected)
+- `hideScrollbar: boolean = false` (attribute `hide-scrollbar`, reflected) and
+  `withoutScrollbar: boolean = false` (attribute `without-scrollbar`, reflected) — retained Lyra
+  and upstream spellings of the same native-scrollbar opt-out; either one hides it
+- `withoutShadow: boolean = false` (attribute `without-shadow`, reflected) — suppresses both
+  logical edge cues without changing native scrolling or the optional controls
 - `scrollStep: number = 0` (attribute `scroll-step`) — custom step; zero uses 80% of the viewport
 - `label: string = ''` — accessible region name; a host `aria-label` is used when set
 
@@ -29,13 +35,18 @@ detail object.
 
 **Slots:** default scrollable content.
 
-**CSS parts:** `base`, `viewport`, `content`, `previous`, `next`, `control` (shared by `previous` and
-`next`), and `previous-glyph`/`next-glyph` (the chevron inside each, mirrored under RTL).
+**CSS parts:** `base`, `viewport`, `content`, `start-shadow`, `end-shadow`, `previous`, `next`,
+`control` (shared by `previous` and `next`), and `previous-glyph`/`next-glyph` (the chevron inside
+each, mirrored under RTL). Each shadow is hidden at its corresponding measured edge and uses
+logical positioning, so both cues and gradients mirror under RTL and rotate to the block axis in a
+vertical scroller.
 
 **Themeable custom properties:** `--lr-scroller-control-size` (default `var(--lr-size-2rem)`) — the
 previous/next control's box size; the interactive target never shrinks below `--lr-icon-button-size`
 regardless. `--lr-scroller-min-block-size` (default `var(--lr-size-10rem)`) — the vertical
-orientation's minimum block size, ignored while horizontal.
+orientation's minimum block size, ignored while horizontal. `--shadow-color` (default
+`var(--lr-color-surface)`) and `--shadow-size` (default `var(--lr-size-2rem)`) theme each edge cue's
+base color and logical extent.
 
 ```html
 <lr-scroller controls label="Project cards">

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/media/animation/animation.js';` (registers the tag; side-effect import)
 - **Class** `LyraAnimation`, also available unregistered from `@aceshooting/lyra-ui/components/media/animation/animation.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 0 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -16,17 +18,20 @@
 Declaratively animates one slotted element through the native Web Animations API.
 
 **Properties:**
-- `name: LyraAnimationPreset = 'none'` — `'none' | 'fade-in' | 'fade-out' | 'zoom-in' | 'zoom-out' |
-  'slide-in-start' | 'slide-in-end' | 'slide-out-start' | 'slide-out-end' | 'slide-in-up' |
-  'slide-in-down' | 'bounce' | 'pulse' | 'spin' | 'shake'`. The four `-start`/`-end` slide presets
-  are logical: "start" is physically left under `ltr`, right under `rtl`.
+- `name: string = 'none'` — accepts any animation registry name. The built-in names are `'none' |
+  'fade-in' | 'fade-out' | 'zoom-in' | 'zoom-out' | 'slide-in-start' | 'slide-in-end' |
+  'slide-out-start' | 'slide-out-end' | 'slide-in-up' | 'slide-in-down' | 'bounce' | 'pulse' |
+  'spin' | 'shake'`; `LyraAnimationPreset` remains the exported convenience type for that built-in
+  subset. Other strings resolve through the registry key `animation.<name>`. The four built-in
+  `-start`/`-end` slide presets are logical: "start" is physically left under `ltr`, right under
+  `rtl`.
 - `keyframes?: Keyframe[]` (attribute: false) — raw WAAPI keyframes; always wins over `name`.
 - `play: boolean = false` (reflected) — playback intent.
 - `delay: number = 0`, `duration: number = 1000`, `endDelay: number = 0` (attribute `end-delay`),
   `easing: string = 'linear'`, `fill: FillMode = 'auto'`, `direction: PlaybackDirection = 'normal'`,
   `iterations: number = Infinity`, `iterationStart: number = 0` (attribute `iteration-start`),
   `playbackRate: number = 1` (attribute `playback-rate`) — straight WAAPI timing. `direction` is
-  the WAAPI `PlaybackDirection`, unrelated to text direction.
+  the WAAPI `PlaybackDirection`, unrelated to text direction; `iterations` is always numeric.
 - `timingPreset: LyraAnimationTimingPreset = 'custom'` (attribute `timing-preset`, reflected) —
   `'custom' | 'fast' | 'base' | 'ambient'`. Anything other than `'custom'` derives `duration` and
   `easing` from the matching `--lr-transition-*` token (read off computed style and decomposed into
@@ -41,8 +46,8 @@ Declaratively animates one slotted element through the native Web Animations API
   when unset the observer disconnects after the first trigger. `root: Element | null = null` and
   `threshold: number | number[] = 0` (both attribute: false) plus `rootMargin: string = '0px'`
   (attribute `root-margin`) configure that observer.
-- `currentTime: number` — the underlying `Animation.currentTime` (`0` when no animation exists);
-  writable, forwarded to the animation when one exists. Non-finite assignments are ignored.
+- `currentTime: CSSNumberish` — the underlying `Animation.currentTime` (`0` when no animation
+  exists); writable and forwarded when one exists. Non-finite numeric assignments are ignored.
 
 **Methods:** `start()` (sugar for `play = true` — named `start` because `play` is already a
 property), `pause()` (`play = false`), `finish()`, `cancel()`.
@@ -61,6 +66,41 @@ for the slide presets), `--lr-animation-zoom-scale` (default `0.5` — start/end
 `zoom-in`/`zoom-out`), `--lr-animation-bounce-height` (default `25%` — peak lift of `bounce`),
 `--lr-animation-shake-distance` (default `4%` — horizontal travel of `shake`).
 
+**Animation registry:** every named preset resolves the public registry key
+`animation.<name>` before using its built-in keyframes. A per-element `setAnimation()` registration
+wins over `setDefaultAnimation()`; a keyframes-only registration retains this component's
+property- or token-derived timing, and `rtlKeyframes` is selected from the live inherited text
+direction. Both setters return an idempotent cleanup. Passing `null` disables interpolation but
+still emits `lr-start` then `lr-finish`, so code sequencing work from the lifecycle does not stall.
+Direct `keyframes` property input remains the strongest, instance-local override and does not use a
+registry name. Register an override before the first render when creating an animation
+programmatically. For an already-rendered `<lr-animation>`, the override is selected on its next
+normal rebuild (a keyframe/timing/direction change or reconnect); the registry never mutates a
+native timeline that is already running.
+
+```js
+import '@aceshooting/lyra-ui/components/media/animation/animation.js';
+import { setAnimation } from '@aceshooting/lyra-ui/utilities/animation-registry.js';
+
+const animation = document.createElement('lr-animation');
+animation.name = 'slide-in-start';
+animation.iterations = 1;
+animation.innerHTML = '<span>Registry-controlled content</span>';
+const release = setAnimation(animation, 'animation.slide-in-start', {
+  keyframes: [
+    { transform: 'translateX(calc(-1 * var(--lr-size-2rem)))' },
+    { transform: 'translateX(0)' },
+  ],
+  rtlKeyframes: [
+    { transform: 'translateX(var(--lr-size-2rem))' },
+    { transform: 'translateX(0)' },
+  ],
+});
+document.body.append(animation);
+animation.start();
+// release() restores the previous registration.
+```
+
 **Optional peer deps:** none.
 
 **Known gotchas:**
@@ -68,7 +108,7 @@ for the slide presets), `--lr-animation-zoom-scale` (default `0.5` — start/end
   preset plays forever unless you set `iterations="1"`.
 - changing any timing/keyframe property rebuilds the animation from scratch; the rebuild's internal
   `cancel()` is deliberately silent (no `lr-cancel`), only the public `cancel()` emits.
-- the slide presets read the inherited text direction only when the animation is (re)built — an
-  animation already mid-flight is not re-mirrored if an ancestor `dir` flips.
+- the slide presets re-resolve when an inherited text-direction change is observed. The old native
+  animation is replaced rather than mirrored in place, so its timeline restarts from the new edge.
 - reduced-motion handling is entirely in JS; the shared shadow-DOM reduced-motion CSS block can't
   reach light-DOM slotted content driven by `Element.animate()`.

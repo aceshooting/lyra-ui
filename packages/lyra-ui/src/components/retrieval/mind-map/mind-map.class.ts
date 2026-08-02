@@ -45,6 +45,8 @@ const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Ho
  * @cssprop [--lr-mind-map-node-hover-halo=var(--lr-color-brand-quiet)] - Stroke color of the
  * hover halo drawn around a topic node's dot, giving mouse users the same "this is clickable"
  * feedback keyboard users get from the drawn focus ring.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

@@ -83,6 +83,8 @@ export interface LyraFileTreeEventMap {
  *   (keyboard-open parity: a second activation of the same file opens it).
  * @event lr-load-children - `detail: { path }` — a lazy (hasChildren, unloaded) directory expanded.
  * @csspart base - The root wrapper.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -22,6 +22,8 @@ import { styles } from './handoff-divider.styles.js';
  * @csspart chip - The visual (`aria-hidden`) chip wrapping the avatar and label.
  * @csspart avatar - Wrapper around the `avatar` slot. Only shown while the slot has content.
  * @csspart label - The computed label text.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraHandoffDivider extends LyraElement {
   static override styles = [LyraElement.styles, styles];

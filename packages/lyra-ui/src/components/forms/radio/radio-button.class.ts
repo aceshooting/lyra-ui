@@ -25,6 +25,8 @@ import { styles } from './radio-button.styles.js';
  * owning radio group emits its aggregate event instead.
  * @event focus - The internal control received focus.
  * @event blur - The internal control lost focus.
+ * @event lr-invalid - The standalone radio button failed a validity check. Aggregate groups emit
+ *   their own alias instead.
  * @cssstate required - Matches while the control is required, either by its own `required`
  * attribute or by an owning `<lr-radio-group required>`. Style with
  * `lr-radio-button:state(required)`.
@@ -40,19 +42,30 @@ import { styles } from './radio-button.styles.js';
  * before the user has done anything is hostile.
  * @csspart base - The interactive button. Carries `checked` and `disabled` in the part name so a
  * consumer can target either state through `::part()`.
+ * @csspart button - Shoelace name for the interactive button.
+ * @csspart button--checked - Shoelace state alias on the selected button.
+ * @csspart control - Compatibility alias for the interactive control.
  * @csspart prefix - The leading-content wrapper.
  * @csspart label - The default slot wrapper.
  * @csspart suffix - The trailing-content wrapper.
  * @cssprop [--lr-radio-radius=var(--lr-form-control-radius)] - Corner radius of the outer edges of
  * the button row. Inherited from `<lr-radio>` and re-pointed here at the shared control radius;
  * `pill` swaps it for `--lr-radius-pill`.
+ * @status stable
+ * @since 8.0.0
  */
 export class LyraRadioButton extends LyraRadio {
   static override styles = [LyraElement.styles, sizes, styles];
 
   override render(): TemplateResult {
     const disabled = this.effectiveDisabled;
-    const parts = ['base', this.checked ? 'checked' : '', disabled ? 'disabled' : ''].filter(Boolean).join(' ');
+    const parts = [
+      'base',
+      'button',
+      'control',
+      this.checked ? 'checked button--checked' : '',
+      disabled ? 'disabled' : '',
+    ].filter(Boolean).join(' ');
     return html`
       <span
         part=${parts}

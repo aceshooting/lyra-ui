@@ -178,12 +178,12 @@ export interface LyraDocumentPreviewEventMap {
  * @csspart spinner - The converting/loading indicator — indeterminate (`role="status"`) or, once numeric progress is known, a determinate `role="progressbar"`. Used both for `status="converting"` and for this component's own in-flight text fetch.
  * @csspart error - The error message region (`role="alert"`) — used both for `status="error"` and for a failed text fetch.
  * @csspart download-link - The `<a download>` affordance in the generic fallback. Only rendered when `src` is set and safe for link navigation.
- * @csspart frame-viewport - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
- * @csspart frame-content - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
- * @csspart frame-controls - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
- * @csspart frame-zoom-in - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
- * @csspart frame-zoom-out - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
- * @csspart frame-reset - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-viewport - Forwarded from the internal `<lr-pan-zoom>` when `zoomable` (image format only).
+ * @csspart frame-content - Forwarded from the internal `<lr-pan-zoom>` when `zoomable` (image format only).
+ * @csspart frame-controls - Forwarded from the internal `<lr-pan-zoom>` when `zoomable` (image format only).
+ * @csspart frame-zoom-in - Forwarded from the internal `<lr-pan-zoom>` when `zoomable` (image format only).
+ * @csspart frame-zoom-out - Forwarded from the internal `<lr-pan-zoom>` when `zoomable` (image format only).
+ * @csspart frame-reset - Forwarded from the internal `<lr-pan-zoom>` when `zoomable` (image format only).
  * @csspart highlight-layer - The wrapper around every rendered region highlight (image format only).
  * @csspart region-highlight - One region highlight (`data-tone`, `data-active`) (image format only).
  * @csspart region-highlight-target - Transparent activation geometry around a region highlight,
@@ -206,6 +206,8 @@ export interface LyraDocumentPreviewEventMap {
  * @cssprop [--lr-document-preview-highlight-warning-color=var(--lr-color-warning)] - Warning highlight border and hover tint.
  * @cssprop [--lr-document-preview-highlight-danger-color=var(--lr-color-danger)] - Danger highlight border and hover tint.
  * @cssprop [--lr-document-preview-highlight-neutral-color=var(--lr-color-neutral)] - Neutral highlight border and hover tint.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -246,7 +248,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
    *  contract as `<lr-json-viewer>`'s identically-named prop. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
-  /** Wraps the rendered image (image format only) in an internal `<lr-zoomable-frame>`. `false`
+  /** Wraps the rendered image (image format only) in an internal `<lr-pan-zoom>`. `false`
    *  (the default) preserves today's exact DOM -- an inline thumbnail (e.g. in a chat stream) must
    *  not unexpectedly grow a focusable zoom-chrome viewport; an inspection surface opts in. */
   @property({ type: Boolean, reflect: true }) zoomable = false;
@@ -441,11 +443,11 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     );
   }
 
-  private stopZoomableFrameEvent(event: Event): void {
+  private stopPanZoomEvent(event: Event): void {
     event.stopPropagation();
   }
 
-  /** Wraps `content` in the internal `<lr-zoomable-frame>` when `zoomable`; otherwise renders it
+  /** Wraps `content` in the internal `<lr-pan-zoom>` when `zoomable`; otherwise renders it
    *  (plus the highlight layer, which needs the same relatively-positioned sibling context either
    *  way) unwrapped, preserving pre-`zoomable` DOM exactly. Mirrors `<lr-svg-viewer>`'s identical
    *  helper. */
@@ -454,10 +456,10 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     const inner = html`<div class="zoom-content">
       ${content}${this.renderHighlightLayer(regionHighlights, regionHighlights.length === 1)}
     </div>`;
-    const frame = this.zoomable ? html`<lr-zoomable-frame
+    const frame = this.zoomable ? html`<lr-pan-zoom
       exportparts="viewport:frame-viewport, content:frame-content, controls:frame-controls, zoom-in:frame-zoom-in, zoom-out:frame-zoom-out, reset:frame-reset"
-      @lr-zoom-change=${this.stopZoomableFrameEvent}
-    >${inner}</lr-zoomable-frame>` : inner;
+      @lr-zoom-change=${this.stopPanZoomEvent}
+    >${inner}</lr-pan-zoom>` : inner;
     return html`${frame}${this.renderHighlightActions(regionHighlights)}`;
   }
 

@@ -4,33 +4,71 @@ export const styles = css`
   :host {
     display: block;
     --lr-otp-input-mask-char: '•';
+    --lr-otp-input-segment-fill: transparent;
+    --lr-otp-input-segment-border-color: var(--lr-color-border);
+    --lr-otp-input-segment-radius: var(
+      --segment-border-radius,
+      var(--lr-form-control-radius, var(--lr-radius))
+    );
   }
-  [part='base'] {
+  :host([appearance='filled']) {
+    --lr-otp-input-segment-fill: var(--lr-color-surface-raised);
+    --lr-otp-input-segment-border-color: transparent;
+  }
+  :host([appearance='filled-outlined']) {
+    --lr-otp-input-segment-fill: var(--lr-color-surface-raised);
+    --lr-otp-input-segment-border-color: var(--lr-color-border);
+  }
+  :host([appearance='contained']) {
+    --lr-otp-input-segment-fill: transparent;
+    --lr-otp-input-segment-border-color: transparent;
+    --lr-otp-input-segment-radius: 0;
+  }
+  [part~='base'] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-2xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
-  [part='label'] {
+  [part~='label'] {
     font-size: var(--lr-font-size-sm);
     font-weight: var(--lr-font-weight-medium);
     color: var(--lr-color-text);
+    overflow-wrap: anywhere;
   }
-  [part='label'][hidden],
+  [part~='label'][hidden],
   [part='hint'][hidden],
   [part='error'][hidden] {
     display: none;
   }
+  :host([required]) [part~='form-control-label']::after {
+    content: ' *';
+    color: var(--lr-color-danger);
+  }
 
-  /* One real <input> stretched invisibly across the presentational segments. A single field is
-     what makes paste, SMS autofill, IME composition and mobile keyboards work without any of it
-     being reimplemented -- and it keeps the control to one tab stop, which is what the WAI-ARIA
-     text-input pattern expects. */
-  [part='field'] {
+  /* One real <input> stretched invisibly across the presentational segments. It remains the native
+     integration point for SMS autofill, IME composition, mobile keyboards and selection, while the
+     fixed-cell key/paste handlers map editing intents into the visual model. One field also keeps
+     the control to one tab stop, which is what the WAI-ARIA text-input pattern expects. */
+  [part~='segments'] {
     position: relative;
     display: flex;
     align-items: center;
-    gap: var(--lr-space-2xs);
+    gap: var(--segment-gap, var(--lr-space-xs));
     inline-size: fit-content;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
+    box-sizing: border-box;
+    overflow-inline: auto;
+    overflow-block: hidden;
+  }
+  :host([appearance='contained']) [part~='segments'] {
+    gap: 0;
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--segment-border-radius, var(--lr-form-control-radius, var(--lr-radius)));
+    background: var(--lr-color-surface-raised);
   }
   [part='control'] {
     position: absolute;
@@ -60,17 +98,17 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    /* WCAG 2.5.8: each box is part of one target, but the field as a whole must still clear the
-       minimum, and this is the dimension that sets it. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-    padding: 0 var(--lr-space-2xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface-raised);
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    inline-size: var(--segment-size, var(--lr-otp-input-segment-size));
+    block-size: var(--segment-size, var(--lr-otp-input-segment-size));
+    padding: 0;
+    border: var(--lr-border-width-thin) solid var(--lr-otp-input-segment-border-color);
+    border-radius: var(--lr-otp-input-segment-radius);
+    background: var(--lr-otp-input-segment-fill);
     color: var(--lr-color-text);
     font-variant-numeric: tabular-nums;
-    font-size: var(--lr-font-size-lg);
+    font-size: var(--lr-form-control-font-size, var(--lr-font-size-m));
     line-height: var(--lr-line-height-snug);
     transition: border-color var(--lr-transition-fast), box-shadow var(--lr-transition-fast);
   }
@@ -86,7 +124,8 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
 
-  [part='separator'] {
+  [part~='segment-literal'] {
+    flex: 0 0 auto;
     color: var(--lr-color-text-quiet);
     user-select: none;
   }
@@ -99,7 +138,7 @@ export const styles = css`
      field reads as a fixed-length code before any entry. */
   [part~='masked']::after,
   [part~='placeholder-mask']::after {
-    content: var(--lr-otp-input-mask-char);
+    content: var(--mask-char, var(--lr-otp-input-mask-char));
   }
   /* An unentered glyph is a placeholder, so it sits quieter than an entered character. */
   [part~='placeholder-mask'] {
@@ -109,10 +148,12 @@ export const styles = css`
   [part='hint'] {
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
   }
   [part='error'] {
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-danger);
+    overflow-wrap: anywhere;
   }
 
   @media (prefers-reduced-motion: reduce) {

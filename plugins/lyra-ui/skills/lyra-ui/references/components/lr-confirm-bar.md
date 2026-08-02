@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/agent-tools/confirm-bar/confirm-bar.js';` (registers the tag; side-effect import)
 - **Class** `LyraConfirmBar`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/confirm-bar/confirm-bar.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 19 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -57,8 +59,9 @@ details/json-viewer wrapper, only rendered when `args` is defined), `footer`, `d
 `deny-button-base`, `deny-button-label`, `deny-button-start`, `deny-button-end`,
 `deny-button-spinner`, `approve-button-base`, `approve-button-label`, `approve-button-start`,
 `approve-button-end`, `approve-button-spinner` (re-exported from each button's own
-`lr-button` parts via `exportparts`), `status` (the decided-state text, always present in the DOM
-as a focus landing spot).
+`lr-button` parts via `exportparts`; each `*-button-base` route accepts the same-node `base` and
+`button` wrapper aliases), `status` (the decided-state text, always present in the DOM as a focus
+landing spot).
 
 **Themeable custom properties:** the `compact` presentation is deliberately chrome-less by default
 and re-chromed entirely through five properties, all scoped to `[part="base"]` while `compact`:

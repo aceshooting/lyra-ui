@@ -47,6 +47,8 @@ export interface LyraChipGroupEventMap {
  *   `[part="overflow-indicator"]` while expanded (`aria-expanded="true"`).
  *   `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS, so this is the only way to
  *   retint the expanded state without re-pointing the shared `--lr-color-text` token.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   static override styles = [LyraElement.styles, styles];

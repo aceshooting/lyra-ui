@@ -19,7 +19,7 @@ it("renders a disclosure panel and reports its state", async () => {
   el.open = true;
   await el.updateComplete;
   expect(
-    (el.shadowRoot!.querySelector('[part="base"]') as HTMLDetailsElement).open
+    (el.shadowRoot!.querySelector('[part~="base"]') as HTMLDetailsElement).open
   ).to.be.true;
   expect(summary.getAttribute("aria-expanded")).to.equal("true");
   await expect(el).to.be.accessible();
@@ -178,7 +178,7 @@ it("blocks both pointer and synthesized keyboard activation while disabled", asy
     html`<lr-details summary="More" disabled>Content</lr-details>`
   )) as LyraDetails;
   const base = el.shadowRoot!.querySelector(
-    '[part="base"]'
+    '[part~="base"]'
   ) as HTMLDetailsElement;
   const summary = el.shadowRoot!.querySelector(
     '[part="summary"]'
@@ -192,47 +192,34 @@ it("blocks both pointer and synthesized keyboard activation while disabled", asy
   expect(base.open).to.be.false;
 });
 
-it("mirrors the disclosure marker rotation under RTL so it still points down/up instead of sideways", () => {
+it("keeps the disclosure marker vertical under RTL in both states", () => {
   const css = detailsStyles.cssText.replace(/\s+/g, " ");
-  expect(css).to.include(
-    ":host(:dir(rtl)) [part='summary']::after { transform: rotate(-45deg); }"
-  );
-  expect(css).to.include(
-    ":host([open]:dir(rtl)) [part='summary']::after { transform: rotate(-225deg); }"
-  );
+  expect(css).to.include(".icon-fallback { display: inline-flex; transform: rotate(90deg)");
+  expect(css).to.include(":host([open]) .icon-fallback { transform: rotate(-90deg)");
 });
 
 it('actually rotates the rendered chevron under a real dir="rtl" fixture instead of pointing sideways (getComputedStyle, not just source text)', async () => {
-  // The test above only proves the declarations exist as raw stylesheet source text -- it can't
-  // catch a regression that breaks the real cascade (specificity conflict, a :dir(rtl) selector
-  // typo, the `[open]` compound no longer matching under rtl). This reads the actual rendered
-  // ::after transform on freshly-rendered closed and open fixtures (rather than toggling `open`
-  // on one already-connected instance, which doesn't reliably re-invalidate this particular
-  // dynamic-attribute + :dir() compound selector).
   function chevronAngleDeg(el: HTMLElement): number {
-    const matrix = new DOMMatrixReadOnly(
-      getComputedStyle(el, "::after").transform
-    );
+    const matrix = new DOMMatrixReadOnly(getComputedStyle(el).transform);
     return Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
   }
   const closedWrapper = await fixture(
     html`<div dir="rtl"><lr-details summary="More">Content</lr-details></div>`
   );
-  const closedSummary = (
+  const closedIcon = (
     closedWrapper.querySelector("lr-details") as LyraDetails
-  ).shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
-  expect(chevronAngleDeg(closedSummary)).to.be.closeTo(-45, 0.01);
+  ).shadowRoot!.querySelector('.icon-fallback') as HTMLElement;
+  expect(chevronAngleDeg(closedIcon)).to.be.closeTo(90, 0.01);
 
   const openWrapper = await fixture(
     html`<div dir="rtl">
       <lr-details summary="More" open>Content</lr-details>
     </div>`
   );
-  const openSummary = (
+  const openIcon = (
     openWrapper.querySelector("lr-details") as LyraDetails
-  ).shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
-  // rotate(-225deg) normalizes to the same matrix as rotate(135deg) -- atan2's range is (-180, 180].
-  expect(chevronAngleDeg(openSummary)).to.be.closeTo(135, 0.01);
+  ).shadowRoot!.querySelector('.icon-fallback') as HTMLElement;
+  expect(chevronAngleDeg(openIcon)).to.be.closeTo(-90, 0.01);
 });
 
 it('renders a localized "Details" fallback from a .strings override when no summary/slot is supplied', async () => {
@@ -292,8 +279,8 @@ it("gives the summary (the real focusable/clickable surface) hover and focus-vis
 
 it("gives lr-accordion its own stylesheet instead of reusing details.styles.ts wholesale", () => {
   const css = accordionStyles.cssText.replace(/\s+/g, " ");
-  // details.styles.ts's [part='base'] rule paints a border-block-end meant for <lr-details>'s
-  // own root; the accordion's [part='base'] is a plain wrapper div, so inheriting that rule
+  // details.styles.ts's [part~='base'] rule paints a border-block-end meant for <lr-details>'s
+  // own root; the accordion's [part~='base'] is a plain wrapper div, so inheriting that rule
   // doubled up with the last panel's own border. None of details.styles.ts's <details>-shaped
   // selectors (summary/content/disabled/reduced-motion) apply to the accordion's shadow root.
   expect(css).to.not.include("border-block-end");
@@ -347,7 +334,7 @@ describe("unified show/hide lifecycle", () => {
       html`<lr-details summary="More">Content</lr-details>`
     )) as LyraDetails;
     const base = el.shadowRoot!.querySelector(
-      '[part="base"]'
+      '[part~="base"]'
     ) as HTMLDetailsElement;
     const summary = el.shadowRoot!.querySelector(
       '[part="summary"]'
@@ -372,7 +359,7 @@ describe("unified show/hide lifecycle", () => {
     )) as LyraDetails;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector(
-      '[part="base"]'
+      '[part~="base"]'
     ) as HTMLDetailsElement;
     const summary = el.shadowRoot!.querySelector(
       '[part="summary"]'
@@ -392,7 +379,7 @@ describe("unified show/hide lifecycle", () => {
       html`<lr-details summary="More">Content</lr-details>`
     )) as LyraDetails;
     const base = el.shadowRoot!.querySelector(
-      '[part="base"]'
+      '[part~="base"]'
     ) as HTMLDetailsElement;
     const summary = el.shadowRoot!.querySelector(
       '[part="summary"]'
@@ -521,5 +508,135 @@ describe("size", () => {
     summary.click();
     await el.updateComplete;
     expect(el.open).to.be.true;
+  });
+});
+
+describe("Web Awesome disclosure surface", () => {
+  it("defaults and reflects appearance/icon placement while preserving the Lyra size default", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More">Content</lr-details>`
+    )) as LyraDetails;
+    expect(el.appearance).to.equal("outlined");
+    expect(el.getAttribute("appearance")).to.equal("outlined");
+    expect(el.iconPlacement).to.equal("end");
+    expect(el.getAttribute("icon-placement")).to.equal("end");
+    expect(el.size).to.equal("m");
+  });
+
+  it("groups same-name details in one root and leaves other names alone", async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-details name="faq" summary="One" open>One</lr-details>
+      <lr-details name="faq" summary="Two">Two</lr-details>
+      <lr-details name="other" summary="Other" open>Other</lr-details>
+    </div>`);
+    const [one, two, other] = [...wrapper.querySelectorAll("lr-details")] as LyraDetails[];
+
+    await two.show();
+
+    expect(one.open).to.be.false;
+    expect(two.open).to.be.true;
+    expect(other.open).to.be.true;
+    expect(
+      (two.shadowRoot!.querySelector('[part~="base"]') as HTMLDetailsElement).name
+    ).to.equal("faq");
+  });
+
+  it("keeps a named group single-open when an existing peer vetoes its hide", async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-details name="faq" summary="One" open>One</lr-details>
+      <lr-details name="faq" summary="Two">Two</lr-details>
+    </div>`);
+    const [one, two] = [...wrapper.querySelectorAll("lr-details")] as LyraDetails[];
+    one.addEventListener("lr-hide", (event) => event.preventDefault());
+
+    await two.show();
+
+    expect(one.open).to.be.true;
+    expect(two.open).to.be.false;
+  });
+
+  it("returns promises from show()/hide() that settle after the matching after-event", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More">Content</lr-details>`
+    )) as LyraDetails;
+    const events: string[] = [];
+    el.addEventListener("lr-after-show", () => events.push("show"));
+    el.addEventListener("lr-after-hide", () => events.push("hide"));
+
+    const showing = el.show();
+    expect(showing).to.be.instanceOf(Promise);
+    await showing;
+    expect(events).to.deep.equal(["show"]);
+
+    const hiding = el.hide();
+    expect(hiding).to.be.instanceOf(Promise);
+    await hiding;
+    expect(events).to.deep.equal(["show", "hide"]);
+  });
+
+  it("exposes header/icon parts and switches between custom expand/collapse icon slots", async () => {
+    const el = (await fixture(html`<lr-details summary="More">
+      <span slot="expand-icon">plus</span>
+      <span slot="collapse-icon">minus</span>
+      Content
+    </lr-details>`)) as LyraDetails;
+    expect(el.shadowRoot!.querySelector('[part="header"]')).to.exist;
+    const icon = el.shadowRoot!.querySelector('[part~="icon"]') as HTMLElement;
+    expect(icon).to.exist;
+    expect(icon.part.contains("summary-icon")).to.be.true;
+    expect(el.shadowRoot!.querySelector('slot[name="expand-icon"]')).to.exist;
+
+    await el.show();
+    expect(el.shadowRoot!.querySelector('slot[name="collapse-icon"]')).to.exist;
+  });
+
+  it("publishes the animating custom state only while a transition is settling", async () => {
+    const el = (await fixture(html`<lr-details
+      summary="Animation state"
+      style="--show-duration: 40ms"
+    >Content</lr-details>`)) as LyraDetails;
+
+    const showing = el.show();
+    await el.updateComplete;
+    expect(el.matches(":state(animating)")).to.be.true;
+    await showing;
+    expect(el.matches(":state(animating)")).to.be.false;
+  });
+
+  it("places the icon at logical start and consumes the upstream --spacing hook", async () => {
+    const el = (await fixture(html`<lr-details
+      summary="More"
+      icon-placement="start"
+      style="--spacing: 13px"
+    >Content</lr-details>`)) as LyraDetails;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const icon = el.shadowRoot!.querySelector('[part~="icon"]') as HTMLElement;
+    const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+    expect(header.firstElementChild).to.equal(
+      el.shadowRoot!.querySelector(".summary-content")
+    );
+    expect(getComputedStyle(icon).order).to.equal("-1");
+    expect(getComputedStyle(summary).paddingInlineStart).to.equal("13px");
+  });
+
+  it("does not toggle when a slotted summary link is activated", async () => {
+    const el = (await fixture(html`<lr-details>
+      <a slot="summary" href="#details-link-target">Read more</a>
+      Content
+    </lr-details>`)) as LyraDetails;
+    const link = el.querySelector("a")!;
+    link.addEventListener("click", (event) => event.preventDefault());
+    link.click();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+
+  it("is accessible with custom icons, grouping, and a populated open panel", async () => {
+    const el = (await fixture(html`<lr-details name="faq" summary="Answer" open>
+      <span slot="expand-icon" aria-hidden="true">+</span>
+      <span slot="collapse-icon" aria-hidden="true">−</span>
+      The answer.
+    </lr-details>`)) as LyraDetails;
+    await expect(el).to.be.accessible();
   });
 });

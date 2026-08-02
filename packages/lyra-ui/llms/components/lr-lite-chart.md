@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/charts/chart/lite-chart.js';` (registers the tag; side-effect import)
 - **Class** `LyraLiteChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/lite-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -65,9 +67,9 @@ passthrough). Not a subclass of `LyraChart`.
   default) is the original formula, unchanged.
 - `pointText?: (label: string, value: number, datasetIndex: number) => string` (attribute: false) —
   overrides the per-bar/per-point native SVG `<title>` text (mirrors `lr-heatmap`'s `cellText`).
-  That one `<title>` supplies both the browser tooltip and the mark's accessible name; the component
-  does not duplicate the same string through `aria-label`. Falls back to the built-in raw-value
-  template when unset.
+  The same text is written to `aria-label`, because WebKit accessibility APIs do not consistently
+  derive an ARIA command name from an SVG `<title>`; the title remains the native browser tooltip.
+  Falls back to the built-in raw-value template when unset.
 - `legendText?: (label: string, datasetIndex: number) => string` (attribute: false) — appends
   formatter-supplied text (e.g. a value or percentage share) after each series' label in the
   built-in legend row, mirroring `pointText`/`tickFormat`'s opt-in-hook convention. Falls back to
@@ -177,7 +179,8 @@ is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolutio
   Being plain SVG, they resolve through native `var()` at paint time, so a theme or color-scheme
   change needs no JS-side redraw pass here.
 - Bar/point elements are real focusable DOM nodes (`role="button"` with one roving `tabindex="0"`);
-  each native SVG `<title>` is the mark's sole accessible name and tooltip. The `<svg>` itself uses
+  each carries the same localized text as an explicit `aria-label` and native SVG `<title>`, giving
+  every engine a command name while retaining the tooltip. The `<svg>` itself uses
   `role="group"`, not `role="img"` — an image role would conflict with genuinely interactive
   descendants (axe's `nested-interactive` rule).
 - Dense transparent hit regions expand toward 24px only while remaining inside the neighboring

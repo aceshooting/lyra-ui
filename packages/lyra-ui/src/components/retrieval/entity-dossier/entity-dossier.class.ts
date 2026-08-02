@@ -112,6 +112,8 @@ export interface LyraEntityDossierEventMap
  * @csspart chunk-inspector - The nested `lr-chunk-inspector`, inside the Supporting chunks tab.
  * @csspart provenance-panel - The nested `lr-provenance-panel`, inside the Provenance tab.
  * @csspart empty - The empty state shown when `entity` is `null`.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   static override styles = [LyraElement.styles, styles];

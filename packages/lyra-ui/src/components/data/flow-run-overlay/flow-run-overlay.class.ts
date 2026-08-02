@@ -41,6 +41,8 @@ interface FlowCanvasLike extends HTMLElement {
  * @cssprop [--lr-flow-run-overlay-status-success-color=var(--lr-color-success)] - Success count-dot color.
  * @cssprop [--lr-flow-run-overlay-status-error-color=var(--lr-color-danger)] - Error count-dot color.
  * @cssprop [--lr-flow-run-overlay-status-denied-color=var(--lr-color-warning)] - Denied count-dot color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraFlowRunOverlay extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];

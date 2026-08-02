@@ -3,53 +3,137 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './format.styles.js';
 import { getRelativeTimeFormat } from '../../../internal/intl-cache.js';
+import { finiteDuration } from '../../../internal/numbers.js';
+import {
+  relativeTimeFormatOptions,
+  type FormatDisplay,
+  type RelativeTimeNumeric,
+} from './format-options.js';
+
+export type {
+  FormatDisplay as RelativeTimeFormat,
+  RelativeTimeNumeric,
+} from './format-options.js';
 
 export type RelativeTimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
+
+const DIVISORS: Record<RelativeTimeUnit, number> = {
+  year: 31_536_000,
+  quarter: 7_884_000,
+  month: 2_628_000,
+  week: 604_800,
+  day: 86_400,
+  hour: 3_600,
+  minute: 60,
+  second: 1,
+};
+const UNITS = Object.keys(DIVISORS) as RelativeTimeUnit[];
 
 /**
  * `<lr-relative-time>` — locale-aware relative time that can refresh automatically.
  *
  * @customElement lr-relative-time
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraRelativeTime extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  @property() date: string | number | Date = '';
+  @property() date: string | number | Date = new Date();
   @property() unit: RelativeTimeUnit | 'auto' = 'auto';
-  @property() numeric: 'always' | 'auto' = 'auto';
+  @property() format: FormatDisplay = 'long';
+  @property() numeric: RelativeTimeNumeric = 'auto';
   @property({ type: Boolean, attribute: 'sync' }) sync = false;
-  private timer?: ReturnType<typeof setInterval>;
+  private timer?: number;
   override connectedCallback(): void { super.connectedCallback(); this.schedule(); }
-  override disconnectedCallback(): void { clearInterval(this.timer); super.disconnectedCallback(); }
+  override disconnectedCallback(): void {
+    if (this.timer !== undefined) window.clearTimeout(this.timer);
+    this.timer = undefined;
+    super.disconnectedCallback();
+  }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('sync') || changed.has('date') || changed.has('locale') || changed.has('unit') || changed.has('numeric')) this.schedule();
+    if (
+      changed.has('sync') ||
+      changed.has('date') ||
+      changed.has('locale') ||
+      changed.has('unit') ||
+      changed.has('format') ||
+      changed.has('numeric')
+    ) this.schedule();
   }
+
   private schedule(): void {
-    clearInterval(this.timer);
-    if (this.sync) this.timer = setInterval(() => this.requestUpdate(), 30_000);
+    if (this.timer !== undefined) window.clearTimeout(this.timer);
+    this.timer = undefined;
+    if (!this.sync || !this.isConnected) return;
+    const state = this.relativeState();
+    if (!state) return;
+
+    // `Math.round()` changes when the decreasing target delta crosses `(value - .5) * unit`.
+    // Wake at that exact boundary instead of polling every 30 seconds, then also account for an
+    // auto-selected unit changing (e.g. 1 day -> 23 hours) before the rounded day value would.
+    const divisor = DIVISORS[state.selected];
+    const roundedBoundary = state.seconds - (state.value - 0.5) * divisor;
+    const candidates = [roundedBoundary];
+    if (state.requestedUnit === 'auto') {
+      const index = UNITS.indexOf(state.selected);
+      const magnitude = Math.abs(state.seconds);
+      if (state.seconds >= 0 && state.selected !== 'second') {
+        candidates.push(magnitude - divisor);
+      } else if (state.seconds < 0 && index > 0) {
+        candidates.push(DIVISORS[UNITS[index - 1]!] - magnitude);
+      }
+    }
+    const secondsUntilChange = Math.min(...candidates.filter((candidate) => candidate > 0));
+    const delay = finiteDuration(secondsUntilChange * 1000, 1000, 20);
+    this.timer = window.setTimeout(() => {
+      this.timer = undefined;
+      this.requestUpdate();
+      this.schedule();
+    }, delay);
   }
-  private relative(): string {
-    const target = this.date instanceof Date ? this.date.getTime() : new Date(this.date).getTime();
-    if (!Number.isFinite(target)) return '';
+
+  private relativeState(): {
+    target: number;
+    seconds: number;
+    requestedUnit: RelativeTimeUnit | 'auto';
+    selected: RelativeTimeUnit;
+    value: number;
+  } | undefined {
+    const source = this.date ?? new Date();
+    const target = source instanceof Date ? source.getTime() : new Date(source).getTime();
+    if (!Number.isFinite(target)) return undefined;
     const seconds = (target - Date.now()) / 1000;
-    // `units` drives "auto" selection order (largest unit first) -- derived from `divisors`' key
-    // order rather than duplicated, so the two can never drift out of sync; `divisors`' insertion
-    // order is already largest-to-smallest, matching the desired selection order exactly.
-    const divisors: Record<RelativeTimeUnit, number> = { year: 31_536_000, quarter: 7_884_000, month: 2_628_000, week: 604_800, day: 86_400, hour: 3_600, minute: 60, second: 1 };
-    const units = Object.keys(divisors) as RelativeTimeUnit[];
-    const requestedUnit = this.unit === 'auto' || units.includes(this.unit as RelativeTimeUnit) ? this.unit : 'auto';
+    const requestedUnit = this.unit === 'auto' || UNITS.includes(this.unit as RelativeTimeUnit) ? this.unit : 'auto';
     const selected =
       requestedUnit === 'auto'
-        ? units.find((candidate) => Math.abs(seconds) >= divisors[candidate]) ?? 'second'
+        ? UNITS.find((candidate) => Math.abs(seconds) >= DIVISORS[candidate]) ?? 'second'
         : requestedUnit;
-    const value = Math.round(seconds / divisors[selected]);
-    const numeric = this.numeric === 'always' ? 'always' : 'auto';
+    return { target, seconds, requestedUnit, selected, value: Math.round(seconds / DIVISORS[selected]) };
+  }
+
+  private relative(): { text: string; target: number } | undefined {
+    const state = this.relativeState();
+    if (!state) return undefined;
+    const options = relativeTimeFormatOptions(this.format, this.numeric);
     try {
-      return getRelativeTimeFormat(this.effectiveLocale || undefined, { numeric }).format(value, selected);
+      return {
+        text: getRelativeTimeFormat(this.effectiveLocale || undefined, options).format(state.value, state.selected),
+        target: state.target,
+      };
     } catch {
-      return getRelativeTimeFormat(undefined, { numeric: 'auto' }).format(value, selected);
+      return {
+        text: getRelativeTimeFormat(undefined, { numeric: 'auto', style: 'long' }).format(state.value, state.selected),
+        target: state.target,
+      };
     }
   }
-  override render(): TemplateResult { return html`${this.relative()}`; }
+
+  override render(): TemplateResult {
+    const relative = this.relative();
+    return relative
+      ? html`<time datetime=${new Date(relative.target).toISOString()}>${relative.text}</time>`
+      : html``;
+  }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-relative-time': LyraRelativeTime; } }

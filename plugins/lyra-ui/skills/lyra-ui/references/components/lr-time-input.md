@@ -5,72 +5,82 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/input/time-input.js';` (registers the tag; side-effect import)
 - **Class** `LyraTimeInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/input/time-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-time-input`
 
-A migration-friendly time alias of `lr-input` — the same subclassing shape as `lr-number-input`,
-with the constructor and `connectedCallback()` setting `type = 'time'`. Its only own API is a
-re-typed `min`/`max` pair (below); every other property, event, slot and part is `lr-input`'s.
+A locale-aware segmented field and column picker mirroring `wa-time-input`. Its wire and submitted
+value is always timezone-free, 24-hour ASCII: `HH:mm`, or `HH:mm:ss` when seconds are visible.
+Locale changes segment order, separators, digits, and day-period labels — never the wire value.
+An incomplete draft remains visible for editing but submits `''` and raises `badInput`.
 
-**Properties:** `size` (`2xs`…`xl`), `appearance`, `pill`, `autofocus`, `placeholder`, `readonly`,
-`label`, `hint`, `errorText`
-(`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
-`autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), and `enterKeyHint` (`enterkeyhint`) — all
-inherited from `lr-input` with identical meaning and identical defaults (`appearance` is
-`'filled-outlined'`, `pill` and `autofocus` are `false`).
-`clearable` (and its `with-clear` spelling), `passwordVisible` (`password-visible`),
-`withoutSpinButtons` (`without-spin-buttons`), and `minlength`/`maxlength`/`pattern` are
-inherited but inert, exactly as on `lr-number-input` — the platform ignores all three length/pattern
-constraints on `type="time"` as well, and there are no spin buttons on a time field to suppress.
-Unlike `lr-number-input`, this component does **not** flip `without-spin-buttons`' default: it stays
-`false`, and there are no `steppers` here.
+**Properties:**
 
-`step` is forwarded verbatim to the native time input, where it means seconds (`step="1"` reveals
-the seconds field, `'any'` disables step validation).
+- `value: string` (also accepts a `Date` or `null` when assigned) — strict `HH:mm`, optional
+  `:ss`/`.sss`; `Date` reads local clock fields without timezone conversion. Invalid strings and
+  `null` normalize to `''`. `valueAsNumber` is milliseconds since midnight (`NaN` while blank),
+  and `valueAsDate` applies the clock fields to today's local date (`null` while blank).
+- `defaultValue`, `name`, `form`, `disabled`, `required`, `customError`, `getForm()`,
+  `checkValidity()`, `reportValidity()`, `setCustomValidity()`, and `resetValidity()` use the shared form-control
+  contract. Reset restores the current declarative `value` default; `readonly` remains focusable
+  and submits but cannot be edited. `resetValidity()` clears only consumer custom validity and
+  restores the current intrinsic time constraints; it leaves the value/default and interaction
+  state unchanged.
+- `min = ''`, `max = ''` accept the same canonical time syntax. `min <= max` is an ordinary
+  closed range; `min > max` is an overnight range (for example `22:00` through `06:00`).
+- `step: number | 'any' = 60` is seconds. A numeric value below 60 reveals seconds; a whole-minute
+  multiple also becomes the minute picker column's stride. `'any'` disables step mismatch.
+- `hourFormat: 'auto' | '12' | '24' = 'auto'` (`hour-format`) overrides the locale's hour cycle.
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`,
+  `size` (shared `2xs`…`xl` ladder and `small`/`medium`/`large` aliases), and `pill = false`.
+- `label = ''`, `hint = ''`, `errorText = ''` (`error-text`), `withLabel = false`
+  (`with-label`), and `withHint = false` (`with-hint`) provide complete form chrome. A host
+  `aria-label` wins for the internal editing surface's accessible name.
+- `open = false`, `placement = 'bottom-start'`, and `distance = 0` control the picker.
+  `show()` / `hide()` return `Promise<void>` and settle after the matching `lr-after-*` event.
+- `withClear = false` (`with-clear`) adds a localized clear action. `withNow = false`
+  (`with-now`) adds a localized Now footer unless the `footer` slot replaces it.
+- `autocomplete = ''` is forwarded to a visually hidden, nameless native time input used only as
+  the browser autofill seam; the FACE host remains the sole submitted control.
 
-`min?: string | number` / `max?: string | number` (attributes `min`/`max`, both defaulting to
-`undefined` — no bound) are re-declared here with a converter that forwards the attribute verbatim
-instead of `lr-input`'s numeric parsing, so they take the native `<input type="time">` literal form:
-`min="09:00"`, or `min="09:00:30"` alongside a seconds-precision `step`. Attribute and property are
-interchangeable (`el.min = '09:00'` needs no cast), removing the attribute clears the bound, and the
-native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow` through
-`checkValidity()`.
+**Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the active segment; `show()` and
+`hide()` control the picker, while its form methods are described above.
 
-**Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
-(`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed), and `lr-clear`
-(inherited, never fired here).
+**Keyboard:** only one segment is in the tab order. Digits fill the active segment and advance when
+no further digit can be accepted; Left/Right moves in locale order and reverses under RTL;
+Up/Down steps, Home/End selects the segment edge, and Backspace/Delete clears the segment.
+Pasting a canonical time replaces the full value as one edit. Alt+ArrowDown opens the picker.
+`readonly` keeps navigation and popup browsing but blocks commits; `disabled` removes the tab stop,
+popup, validation, and form submission.
 
-**Slots:** `label`, `hint`, `error`, `start`, `end`.
+**Events:** native `input` on user edits and native `change` on a complete commit; compatibility
+aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once
+with `lr-focus` / `lr-blur` aliases. `lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
+precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion settlement.
+`lr-invalid` follows a failed validity check.
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `start`, `end`,
-`hint`, `error`, plus the inherited, never-rendered `clear-button` and `password-toggle`.
+**Slots:** `label`, `hint`, `error`, `start`, `end`, `clear-icon`, `expand-icon`, and `footer`.
 
-**Themeable custom properties:** inherited from `lr-input`, identical in meaning —
-`--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
-`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
-`--lr-input-fill`, and `--lr-input-border-color` (all
-but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` tier;
-`--lr-input-control-height` stays undeclared until you pin an exact
-row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
-and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder).
+**CSS parts:** `form-control`, `form-control-input`, `form-control-label label` (same node),
+`base time-input input-wrapper` (same node), `input`, `segment`, `segment-literal`, `start`, `end`,
+`clear-button`, `expand-button`, `expand-icon`, `popup`, `columns`, `column`, `column-item`,
+`column-item-selected`, `now-button`, `hint`, and `error`.
 
-`showPicker()` (inherited) is the supported way to open the browser's own time picker
-programmatically; it is a no-op without user activation, while `disabled`, while `readonly`, and in
-engines that don't implement it, rather than throwing.
+**Custom states:** `blank`, `disabled`, and `open`, plus the shared validity states.
 
-`stepUp(steps = 1)` / `stepDown(steps = 1)` (inherited) do work here — a native time input has an
-allowed value step, so they move the value by `steps` × `step` **seconds** with the platform's own
-`min`/`max` clamping. Like on `lr-input` they are **silent**: `value`, the submitted form value and
-validity all update, but no `input`/`change` is emitted. `step="any"`, `disabled` and `readonly`
-each make them no-ops.
+**Themeable custom properties:** upstream-compatible `--column-item-height`, `--column-width`,
+`--show-duration`, and `--hide-duration`, each with a Lyra design-token fallback.
 
-**Known gotchas:** the same two as `lr-number-input` — the inert clear/password surface, and `type`
-only being re-forced on connect. The native `type="time"` UI (spinners, AM/PM, picker) is the
-browser's own and is not restyled by Lyra.
-
----
+```html
+<lr-time-input label="Start time" value="09:30" with-clear with-now></lr-time-input>
+<lr-time-input label="Precise time" step="15" value="09:30:15"></lr-time-input>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/input/time-input.js';
+</script>
+```

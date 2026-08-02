@@ -91,6 +91,8 @@ export interface LyraCommandPaletteEventMap {
  *   (keyboard-highlighted, `data-active="true"`) command row. Declared as an inline `var()` fallback
  *   (never on `:host`), so setting it on the element or an ancestor recolors only the active row
  *   without hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> {
   static override styles = [LyraElement.styles, styles];

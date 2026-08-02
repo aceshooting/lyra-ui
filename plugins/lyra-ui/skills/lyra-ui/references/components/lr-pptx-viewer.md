@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraPptxViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `@aiden0z/pptx-renderer` — see `llms/peers.md`
 - **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -17,7 +19,8 @@ Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-render
 localized fidelity notice is always visible because animations, equations, embedded objects,
 speaker notes, and several advanced effects are not rendered.
 
-**Properties:** `src`, `name`, and `label` are strings. A host `aria-label` takes precedence over
+**Properties:** `src: string = ''`, `name: string = ''`, and `label: string = ''`. A host
+`aria-label` takes precedence over
 `label` and `name`. `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds`
 (`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
 DOM text.

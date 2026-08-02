@@ -1,4 +1,4 @@
-import { expect, waitUntil, fixture, html } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { toast } from './toaster.js';
 import './toast.js';
 import type { LyraToast } from './toast.js';
@@ -96,14 +96,40 @@ it('reflects the placement property on <lr-toast>', async () => {
   expect(region.getAttribute('placement')).to.equal('bottom-center');
 });
 
-it('exposes namespaced stack sizing custom properties', () => {
-  const cssText = Array.isArray(styles)
-    ? styles.map((style) => style.cssText).join('\n')
-    : (styles as { cssText: string }).cssText;
-  expect(cssText).to.include('--lr-toast-gap');
-  expect(cssText).to.include('--lr-toast-width');
-  expect(cssText).to.not.include('--gap');
-  expect(cssText).to.not.include('--width');
+it('honors the mapped --gap and --width aliases without displacing the Lyra names', async () => {
+  const region = (await fixture(html`
+    <lr-toast style="--gap: 13px; --width: 321px"></lr-toast>
+  `)) as LyraToast;
+  const stack = region.shadowRoot!.querySelector<HTMLElement>('[part="stack"]')!;
+
+  expect(getComputedStyle(stack).gap).to.equal('13px');
+  expect(getComputedStyle(stack).inlineSize).to.equal('321px');
+
+  region.style.setProperty('--lr-toast-gap', '17px');
+  region.style.setProperty('--lr-toast-width', '287px');
+  expect(getComputedStyle(stack).gap).to.equal('17px');
+  expect(getComputedStyle(stack).inlineSize).to.equal('287px');
+});
+
+it('publishes the visible custom state exactly while the stack contains a toast item', async function () {
+  try {
+    document.createElement('div').matches(':state(visible)');
+  } catch {
+    this.skip();
+  }
+
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  expect(region.matches(':state(visible)')).to.equal(false);
+
+  const item = document.createElement('lr-toast-item') as LyraToastItem;
+  item.duration = 0;
+  item.textContent = 'Now visible';
+  region.appendChild(item);
+  await waitUntil(() => region.matches(':state(visible)'));
+
+  item.remove();
+  await aTimeout(0);
+  expect(region.matches(':state(visible)')).to.equal(false);
 });
 
 it('keeps fixed toast placements clear of display cutouts', () => {
@@ -160,7 +186,9 @@ it('is accessible as a bare region with no toasts open', async () => {
 it('is accessible once a toast item is showing inside it', async () => {
   const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
   const item = await region.create('Accessible toast', { duration: 0 });
-  await waitUntil(() => item.hasAttribute('data-visible'));
+  // `data-visible` starts the transition; wait for its completion so axe measures the final
+  // foreground colour instead of WebKit's partially transparent animation frame.
+  await oneEvent(item, 'lr-after-show');
   await expect(region).to.be.accessible();
 });
 

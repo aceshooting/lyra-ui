@@ -34,6 +34,9 @@ export const styles = css`
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
   }
+  .config-slot {
+    display: none;
+  }
   [part='plot'] {
     grid-area: plot;
     position: relative;

@@ -177,7 +177,7 @@ it('emits lr-input on a boolean field toggle', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const checkbox = field(el, 'notify').querySelector('lr-checkbox') as HTMLElement & { checked: boolean };
 
-  setTimeout(() => (checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click());
+  setTimeout(() => (checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click());
   const ev = await oneEvent(el, 'lr-input');
   expect(ev.detail.value.notify).to.be.true;
 });
@@ -319,7 +319,7 @@ it('focuses the first invalid nested or native field during direct and form vali
   expect(el.reportValidity()).to.be.false;
   expect(document.activeElement?.localName).to.equal('lr-tool-param-form');
   expect(el.shadowRoot!.activeElement?.localName).to.equal('lr-checkbox');
-  expect(nestedCheckbox.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect(nestedCheckbox.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base checkbox');
 });
 
 it('treats a required boolean as property presence, so false and true are both valid values', async () => {
@@ -648,7 +648,7 @@ it('contains nested control input/change aliases and emits only the form-level l
   );
 
   const checkbox = field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement;
-  (checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
+  (checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
   await el.updateComplete;
 
   expect(leaked).to.deep.equal({
@@ -846,7 +846,7 @@ it("associates a touched checkbox's error through aria-describedby", async () =>
   field(el, 'confirm').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(checkbox.getAttribute('aria-describedby')).to.include('-err');
-  const base = checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement & {
+  const base = checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement & {
     ariaDescribedByElements?: Element[];
   };
   if ('ariaDescribedByElements' in base) {
@@ -1132,10 +1132,13 @@ it('forwards schema-defined native editing hints to generated text inputs', asyn
   } as ToolParamFormSchema;
   const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const input = field(el, 'email').querySelector('input')!;
-  expect(input.autocomplete).to.equal('email');
+  // Gecko normalizes the `autocomplete` IDL getter to `''` on a detached-form text input even
+  // while the standards-facing content attribute is present. This contract is attribute
+  // forwarding, so assert the wire values the browser actually consumes across engines.
+  expect(input.getAttribute('autocomplete')).to.equal('email');
   expect(input.spellcheck).to.be.false;
-  expect(input.inputMode).to.equal('email');
-  expect(input.enterKeyHint).to.equal('send');
+  expect(input.getAttribute('inputmode')).to.equal('email');
+  expect(input.getAttribute('enterkeyhint')).to.equal('send');
 });
 
 it('suppresses raw composed select/checkbox changes and emits only aggregate lr-input', async () => {

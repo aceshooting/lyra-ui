@@ -533,6 +533,8 @@ export interface LyraTableEventMap<T = unknown> {
  * @cssprop [--lr-table-sticky-offset=0] - Distance a `sticky` column pins from the inline edge.
  *   Measured and set inline per column by the component so multiple sticky columns stack instead
  *   of overlapping; falls back to `0` for the first one, or before the first measurement pass.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -1365,7 +1367,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private onPaginationChange = (event: Event): void => {
     event.stopPropagation();
-    this.emit('lr-page-change', (event as CustomEvent<{ page: number }>).detail);
+    const { page } = (event as CustomEvent<{ page: number; pageSize?: number }>).detail;
+    // Table's established controlled-pagination contract carries only the requested page. The
+    // nested pagination component has a wider `{ page, pageSize }` payload in v8; do not leak that
+    // implementation detail into Table's independently documented event surface.
+    this.emit('lr-page-change', { page });
   };
 
   /** The header cell that currently owns `tabindex="0"`. */

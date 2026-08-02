@@ -45,6 +45,8 @@ export interface LyraApprovalQueueEventMap {
  * @csspart status - The request status badge.
  * @csspart empty - The empty state.
  * @cssprop [--lr-approval-queue-selected-border=var(--lr-color-brand)] - Selected request border.
+ * @status stable
+ * @since 6.2.0
  */
 export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   static override styles = [LyraElement.styles, styles];

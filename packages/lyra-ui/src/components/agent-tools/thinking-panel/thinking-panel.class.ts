@@ -119,6 +119,8 @@ function formatDuration(ms: number): { key: 'durationMilliseconds' | 'durationSe
  * @cssprop [--lr-thinking-panel-max-block-size=var(--lr-size-16rem)] - Cap on how tall the
  *   expanded reasoning transcript grows before `[part="body"]` scrolls internally.
  * @cssprop [--lr-thinking-panel-pending-color=var(--lr-color-brand)] - Live pending-state color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   static override styles = [LyraElement.styles, styles];

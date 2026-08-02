@@ -66,6 +66,8 @@ export interface LyraChatViewportEventMap {
  * @csspart content - The slotted-content wrapper the growth observers watch.
  * @csspart jump-pill - The built-in jump-to-latest button, absent while `follow` is engaged.
  * @csspart unread-divider - The "New messages" separator (slotted mode only).
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   static override styles = [LyraElement.styles, styles];

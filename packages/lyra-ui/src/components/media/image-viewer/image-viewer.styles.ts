@@ -93,7 +93,7 @@ export const styles = css`
       transition: none;
     }
   }
-  /* The embedded zoomable-frame's own [part='content'] sizes to its slotted content's natural
+  /* The embedded pan-zoom's own [part='content'] sizes to its slotted content's natural
      size by default (a max-content track), which leaves percentage sizing on the image below with
      no definite basis to resolve against. Giving it the viewport's own inline size here is what
      lets 'contain'/'width' scale the image to the available frame instead of its raw natural
@@ -113,7 +113,7 @@ export const styles = css`
     block-size: auto;
   }
   :host([fit='contain']) [part='image'] {
-    max-block-size: var(--lr-zoomable-frame-min-block-size, var(--lr-size-10rem));
+    max-block-size: var(--lr-pan-zoom-min-block-size, var(--lr-size-10rem));
     block-size: auto;
     object-fit: contain;
   }

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/token-input/token-input.js';` (registers the tag; side-effect import)
 - **Class** `LyraTokenInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/token-input/token-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -16,7 +18,9 @@
 An editable form-associated token list. Enter, comma, or blur commits a token; Backspace removes
 the last token. `value` is a `string[]` and repeated values are submitted under `name`.
 
-**Properties:** `value`, `label`, `hint`, `errorText` (`error-text`), `placeholder`, `name`,
+**Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
+as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
+(`error-text`), `placeholder`, `name`,
 `required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the internal text
 input), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCorrect: string = ''`
 (attribute `autocorrect`) — all three native text-entry hints are forwarded to both the draft input
@@ -36,16 +40,24 @@ rounds the token row's corners to a full pill by re-assigning `--lr-token-input-
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
 unchanged), and `lr-token-edit`
 (`detail: { value, previousValue, index }` — an existing token was edited in place and committed).
+`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
 token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),
 `token-editor` (the inline text field that replaces a token's text while it is open for editing —
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
 glyph), `input`, `hint`, `error`. `focus()`, `blur()`, and `click()` forward to the internal text
-input. `setCustomValidity(message)` carries a rejection no client-side constraint can express
+input. `getForm()` returns the browser-resolved owning form. `setCustomValidity(message)` carries a
+rejection no client-side constraint can express
 ("that tag is reserved"): a non-empty message raises `customError` and blocks submission, `''`
 restores the control's own computed validity so a `required` control with no tokens goes back to
 `valueMissing`. It survives every token add, removal and edit, and a `form.reset()`.
+
+`defaultValue` is the current reset target. A live `value` write marks the token list dirty, so a
+later default/attribute mutation does not overwrite it; `form.reset()` restores the latest default
+and makes the value pristine again. Session restoration uses repeated entries in a `FormData`
+state, is independent of the current `name`, accepts early delivery, rejects malformed/file state
+to an empty list, and emits no user events.
 
 **`editable` — editing a token in place.** Off by default, in which case the token row renders
 exactly as it does without the feature and stays non-focusable. Turn it on and each token becomes a

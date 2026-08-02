@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/media/animated-image/animated-image.js';` (registers the tag; side-effect import)
 - **Class** `LyraAnimatedImage`, also available unregistered from `@aceshooting/lyra-ui/components/media/animated-image/animated-image.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,7 +23,7 @@ automatically under `prefers-reduced-motion: reduce`.
   before reaching the real `<img src>`.
 - `alt: string = ''` — falls back to the localized `animatedImageDefaultAlt` when empty; an explicit
   `alt=""` does **not** mark the image decorative.
-- `play: boolean = false` — the caller's *intent*. Not reflected.
+- `play: boolean = false` — the caller's *intent* (reflected).
 - `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the *effective*
   state after reduced-motion arbitration: `play && !(respectReducedMotion && <OS prefers reduce>)`.
   Assigning to it is a silent no-op; drive playback via `play`.
@@ -50,7 +52,8 @@ attribute, so slotted content for both stays mounted.
 frozen-frame `<canvas>`, shown in place of `image` while not playing), `control-box` (the
 backgrounded circle around the button; only rendered once loaded and error-free), `play-button`.
 
-**Themeable custom properties:** `--lr-animated-image-control-box-size` (default
+**Themeable custom properties:** upstream `--control-box-size` and `--icon-size` feed
+`--lr-animated-image-control-box-size` (default
 `var(--lr-icon-button-size)`), `--lr-animated-image-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)`), `--lr-animated-image-max-height` (default
 `var(--lr-size-20rem)` — caps the rendered media's block-size, same contract as

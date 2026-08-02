@@ -4,4 +4,14 @@ import './progress-ring.js';
 
 const meta: Meta = { title: 'Feedback/Progress ring', component: 'lr-progress-ring', tags: ['autodocs'] };
 export default meta;
-export const Default: StoryObj = { render: () => html`<lr-progress-ring value="65"></lr-progress-ring>` };
+export const Default: StoryObj = { render: () => html`<lr-progress-ring value="65" label="Upload progress">65%</lr-progress-ring>` };
+
+export const UpstreamThemeHooks: StoryObj = {
+  render: () => html`
+    <lr-progress-ring
+      value="65"
+      label="Upload progress"
+      style="--size:var(--lr-size-3rem);--track-width:var(--lr-border-width-medium);--indicator-width:var(--lr-size-4px);--track-color:var(--lr-color-brand-quiet);--indicator-color:var(--lr-color-success)"
+    >65%</lr-progress-ring>
+  `,
+};

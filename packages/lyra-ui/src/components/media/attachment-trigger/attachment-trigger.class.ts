@@ -162,6 +162,8 @@ export interface LyraAttachmentTriggerEventMap {
  * `triggerLabel` supplies a fallback for the single-capability trigger button's
  * accessible name (i18n) — see that property's own doc for exactly what it
  * does and doesn't affect. A host `aria-label` wins on either trigger shape.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEventMap> {
   static override styles = [LyraElement.styles, styles];

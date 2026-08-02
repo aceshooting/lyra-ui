@@ -78,6 +78,7 @@ export const LYRA_STORYBOOK_THEMES = {
 export const LYRA_THEME_TOKENS = {
   light: {
     '--lr-theme-color-surface-default': '#ffffff',
+    '--lr-theme-color-surface-raised': '#f6f8fa',
     '--lr-theme-color-text-normal': '#1f2328',
     '--lr-theme-color-text-quiet': '#656d76',
     '--lr-theme-color-surface-border': '#d0d7de',
@@ -108,6 +109,7 @@ export const LYRA_THEME_TOKENS = {
   },
   dark: {
     '--lr-theme-color-surface-default': '#0d1117',
+    '--lr-theme-color-surface-raised': '#161b22',
     '--lr-theme-color-text-normal': '#f0f6fc',
     '--lr-theme-color-text-quiet': '#8b949e',
     '--lr-theme-color-surface-border': '#30363d',
@@ -138,6 +140,7 @@ export const LYRA_THEME_TOKENS = {
   },
   'high-contrast': {
     '--lr-theme-color-surface-default': 'Canvas',
+    '--lr-theme-color-surface-raised': 'Canvas',
     '--lr-theme-color-text-normal': 'CanvasText',
     '--lr-theme-color-text-quiet': 'CanvasText',
     '--lr-theme-color-surface-border': 'ButtonText',

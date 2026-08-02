@@ -3,6 +3,7 @@ import type { PropertyValues } from 'lit';
 import './select.js';
 import '../combobox/option.js';
 import type { LyraSelect } from './select.js';
+import type { LyraOption } from '../combobox/option.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './select.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -14,6 +15,64 @@ const basic = () => html`
     <lr-option value="c">Cherry</lr-option>
   </lr-select>
 `;
+
+it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+  const el = (await fixture(html`
+    <lr-select required label="Fruit"><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  const aliases: CustomEvent[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0].target).to.equal(el);
+  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
+  expect(aliases[0].cancelable).to.be.false;
+});
+
+it('emits non-cancelable after-events once the listbox transition settles', async () => {
+  const el = (await fixture(html`
+    <lr-select style="--lr-transition-fast: 1ms linear">
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  const events: CustomEvent[] = [];
+  for (const type of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+    el.addEventListener(type, (event) => events.push(event as CustomEvent));
+  }
+
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(80);
+  el.open = false;
+  await el.updateComplete;
+  await aTimeout(80);
+
+  expect(events.map((event) => event.type)).to.deep.equal([
+    'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide',
+  ]);
+  expect(events.every((event) => !event.cancelable && event.target === el)).to.be.true;
+});
+
+it('drops a stale lr-after-show when closing interrupts the opening transition', async () => {
+  const el = (await fixture(html`
+    <lr-select style="--lr-transition-fast: 40ms linear">
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  const events: string[] = [];
+  for (const type of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+    el.addEventListener(type, () => events.push(type));
+  }
+
+  el.open = true;
+  await el.updateComplete;
+  el.open = false;
+  await el.updateComplete;
+  await aTimeout(100);
+
+  expect(events).to.deep.equal(['lr-show', 'lr-hide', 'lr-after-hide']);
+});
 
 function trigger(el: LyraSelect): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -101,7 +160,7 @@ it('emits input alongside change on selection, matching a native <select>', asyn
   expect(inputFired).to.be.true;
 });
 
-it('emits exactly one native Event pair and typed aliases with the new value', async () => {
+it('emits exactly one native event pair and typed aliases with the new value', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   el.open = true;
   await el.updateComplete;
@@ -117,11 +176,11 @@ it('emits exactly one native Event pair and typed aliases with the new value', a
   await el.updateComplete;
 
   expect(seen.map((s) => s.type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
-  expect(seen[0].detail).to.be.undefined;
+  expect(seen[0].detail).to.equal(0);
   expect(seen[1].detail).to.deep.equal({ value: 'b' });
   expect(seen[2].detail).to.be.undefined;
   expect(seen[3].detail).to.deep.equal({ value: 'b' });
-  expect(seen[0].event.constructor === Event).to.be.true;
+  expect(seen[0].event instanceof InputEvent).to.be.true;
   expect(seen[2].event.constructor === Event).to.be.true;
   expect([seen[0].event, seen[2].event].every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
   expect(seen[1].event instanceof CustomEvent).to.be.true;
@@ -184,8 +243,12 @@ it('routes duplicate-valued rows by occurrence and exposes only the activated oc
     'false',
   ]);
   expect(
-    [...el.querySelectorAll('lr-option')].map((option) => option.hasAttribute('selected')),
+    [...el.querySelectorAll('lr-option')].map((option) => option.selected),
   ).to.deep.equal([false, true, false]);
+  expect(
+    [...el.querySelectorAll('lr-option')].map((option) => option.hasAttribute('selected')),
+    'live selection never changes declarative defaults',
+  ).to.deep.equal([false, false, false]);
 });
 
 it('navigates with ArrowDown and selects the active option with Enter', async () => {
@@ -427,6 +490,96 @@ it('restores the declared default selection on form.reset()', async () => {
   el.value = 'a';
   form.reset();
   expect(el.value).to.equal('b');
+});
+
+it('updates the reset baseline from defaultSelected without changing a dirty live selection', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-select name="fruit">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b" selected>Banana</lr-option>
+      </lr-select>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-select') as LyraSelect;
+  const [apple, banana] = [...el.querySelectorAll('lr-option')] as LyraOption[];
+  await el.updateComplete;
+
+  el.value = 'b';
+  apple.defaultSelected = true;
+  banana.defaultSelected = false;
+  await Promise.all([apple.updateComplete, banana.updateComplete, el.updateComplete]);
+  expect(el.value, 'changing the reset default is event-silent and does not overwrite live state').to.equal('b');
+
+  form.reset();
+  expect(el.value).to.equal('a');
+  expect(apple.selected).to.equal(true);
+  expect(banana.selected).to.equal(false);
+});
+
+it('applies post-mount defaultSelected changes to a pristine live selection', async () => {
+  const el = (await fixture(html`
+    <lr-select><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  const option = el.querySelector('lr-option') as LyraOption;
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+
+  option.defaultSelected = true;
+  await option.updateComplete;
+  await el.updateComplete;
+  expect(el.value).to.equal('a');
+  expect(option.selected).to.equal(true);
+
+  option.defaultSelected = false;
+  await option.updateComplete;
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+  expect(option.selected).to.equal(false);
+});
+
+it('preserves an initial property-only selected write until reset reapplies a later default', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-select name="fruit" multiple>
+        <lr-option value="a" .selected=${true}>Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-select') as LyraSelect;
+  const [, banana] = [...el.querySelectorAll('lr-option')] as LyraOption[];
+  await el.updateComplete;
+  expect(el.value).to.deep.equal(['a']);
+
+  banana!.defaultSelected = true;
+  await banana!.updateComplete;
+  await el.updateComplete;
+  expect(el.value, 'the later reset default must not overwrite dirty live selectedness').to.deep.equal(['a']);
+
+  form.reset();
+  expect(el.value).to.deep.equal(['b']);
+});
+
+it('retains a defaultSelected refresh when the parent detaches during option notification', async () => {
+  const form = (await fixture(html`
+    <form><lr-select name="fruit"><lr-option value="a">Apple</lr-option></lr-select></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-select') as LyraSelect;
+  const option = el.querySelector('lr-option') as LyraOption;
+  await el.updateComplete;
+
+  option.addEventListener('lr-option-change', () => el.remove(), { once: true });
+  option.defaultSelected = true;
+  await option.updateComplete;
+  await Promise.resolve();
+  form.append(el);
+  await el.updateComplete;
+
+  expect(el.value).to.equal('a');
+  el.value = '';
+  form.reset();
+  expect(el.value).to.equal('a');
 });
 
 it('resets to empty via form.reset() when no option was declared selected', async () => {
@@ -720,7 +873,7 @@ it('hides the error and hint parts when empty, shows them once populated', async
   await el.updateComplete;
 
   const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
-  const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const hintPart = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
   expect(getComputedStyle(errorPart).display).to.equal('none');
   expect(getComputedStyle(hintPart).display).to.equal('none');
 
@@ -1160,7 +1313,7 @@ it('contains long form and option content at a 320px allocation', async () => {
   for (const selector of [
     '[part="form-control"]',
     '[part="form-control-label"]',
-    '[part="hint"]',
+    '[part~="hint"]',
     '[part="error"]',
     '[part="option"]',
     '[part="option-label"]',
@@ -1703,7 +1856,7 @@ describe('selected-state theming tokens', () => {
 
 // -- Slotted supporting text and listbox pointer handling -------------------
 
-it('tracks slotted error content through slotchange', async () => {
+it('preserves rendered error behavior while shared slot presence changes', async () => {
   const el = (await fixture(html`
     <lr-select label="Meter">
       <span slot="error">Pick one</span>
@@ -1711,11 +1864,12 @@ it('tracks slotted error content through slotchange', async () => {
     </lr-select>
   `)) as LyraSelect;
   await el.updateComplete;
-  expect((el as unknown as { hasErrorSlot: boolean }).hasErrorSlot).to.be.true;
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(error.hidden).to.be.false;
   el.querySelector('[slot="error"]')!.remove();
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await el.updateComplete;
-  expect((el as unknown as { hasErrorSlot: boolean }).hasErrorSlot).to.be.false;
+  expect(error.hidden).to.be.true;
 });
 
 it('prevents mousedown on an option so the trigger keeps focus, but not on listbox chrome', async () => {
@@ -2196,11 +2350,11 @@ describe('getTag', () => {
 });
 
 describe('placement', () => {
-  it('defaults to bottom-start and reflects', async () => {
+  it('defaults to mapped bottom and reflects', async () => {
     const el = (await fixture(basic())) as LyraSelect;
-    expect(el.placement).to.equal('bottom-start');
+    expect(el.placement).to.equal('bottom');
     await el.updateComplete;
-    expect(el.getAttribute('placement')).to.equal('bottom-start');
+    expect(el.getAttribute('placement')).to.equal('bottom');
   });
 
   it('positions the listbox above the trigger when asked to', async () => {
@@ -2444,7 +2598,7 @@ describe('lr-select setCustomValidity()', () => {
     form.requestSubmit();
     expect(submits, 'a custom error blocks submission').to.equal(0);
 
-    el.setCustomValidity('');
+    el.resetValidity();
     expect(el.validity.customError).to.be.false;
     expect(el.validationMessage).to.equal('');
     form.requestSubmit();
@@ -2563,4 +2717,158 @@ describe('lr-select hover and press feedback', () => {
       }
     });
   }
+});
+
+describe('lr-select mapped Select parity surface', () => {
+  it('exposes defaultValue and a writable selectedOptions snapshot', async () => {
+    const el = (await fixture(html`
+      <lr-select default-value="b">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect & { defaultValue: string | string[]; selectedOptions: LyraOption[] };
+    await el.updateComplete;
+    expect(el.defaultValue).to.equal('b');
+    expect(el.value).to.equal('b');
+    expect(el.selectedOptions.map((option) => option.value)).to.deep.equal(['b']);
+    el.value = 'a';
+    el.formResetCallback();
+    expect(el.value).to.equal('b');
+  });
+
+  it('commits live selectedOptions occurrences silently and keeps returned arrays detached', async () => {
+    const el = (await fixture(html`
+      <lr-select multiple name="fruit">
+        <lr-option value="same">First occurrence</lr-option>
+        <lr-option value="same">Second occurrence</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    const [first, second, banana] = [...el.querySelectorAll('lr-option')] as LyraOption[];
+    const events: string[] = [];
+    el.addEventListener('input', () => events.push('input'));
+    el.addEventListener('change', () => events.push('change'));
+
+    el.selectedOptions = [second, banana];
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['same', 'b']);
+    expect(el.selectedOptions).to.deep.equal([second, banana]);
+    expect([first.selected, second.selected, banana.selected]).to.deep.equal([false, true, true]);
+    expect(events).to.deep.equal([]);
+
+    const snapshot = el.selectedOptions;
+    snapshot.length = 0;
+    expect(el.selectedOptions).to.deep.equal([second, banana]);
+
+    const foreign = document.createElement('lr-option') as LyraOption;
+    foreign.value = 'foreign';
+    first.remove();
+    el.selectedOptions = [foreign, first];
+    await el.updateComplete;
+    expect(el.value).to.deep.equal([]);
+    expect(el.selectedOptions).to.deep.equal([]);
+
+    el.multiple = false;
+    await el.updateComplete;
+    el.selectedOptions = [banana, second];
+    await el.updateComplete;
+    expect(el.value).to.equal('b');
+    expect(el.selectedOptions).to.deep.equal([banana]);
+  });
+
+  it('renders legal removable multi-value tags with every mapped subpart', async () => {
+    const el = (await fixture(html`
+      <lr-select multiple .value=${['a', 'b']}>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect & { selectedOptions: LyraOption[] };
+    await el.updateComplete;
+    const remove = el.shadowRoot!.querySelector('[part~="tag__remove-button"]') as HTMLButtonElement;
+    expect(remove).to.exist;
+    expect(remove.closest('button[part~="trigger"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part~="tag__base"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part~="tag__content"]')).to.exist;
+    remove.click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['b']);
+    expect(el.selectedOptions.map((option) => option.value)).to.deep.equal(['b']);
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.contain(
+      'tag__remove-button',
+    );
+  });
+
+  it('accepts hoist/filled/help-text/prefix/suffix aliases and clear/expand icon slots', async () => {
+    const el = (await fixture(html`
+      <lr-select hoist filled help-text="Alias hint" with-clear value="a">
+        <span slot="prefix">P</span><span slot="suffix">S</span>
+        <span slot="clear-icon">clear</span><span slot="expand-icon">expand</span>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect & { hoist: boolean; filled: boolean; helpText: string };
+    expect(el.hoist).to.be.true;
+    expect(el.filled).to.be.true;
+    const prefix = el.shadowRoot!.querySelector('slot[part="prefix"]') as HTMLSlotElement;
+    const suffix = el.shadowRoot!.querySelector('slot[part="suffix"]') as HTMLSlotElement;
+    expect(prefix.assignedElements()[0]?.textContent).to.equal('P');
+    expect(suffix.assignedElements()[0]?.textContent).to.equal('S');
+    expect(el.shadowRoot!.querySelector('[part~="form-control-help-text"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part~="hint"]')?.textContent).to.contain('Alias hint');
+    const clear = el.shadowRoot!.querySelector('slot[name="clear-icon"]') as HTMLSlotElement;
+    const expand = el.shadowRoot!.querySelector('slot[name="expand-icon"]') as HTMLSlotElement;
+    expect(clear.assignedElements()[0]?.textContent).to.equal('clear');
+    expect(expand.assignedElements()[0]?.textContent).to.equal('expand');
+    await el.show();
+    expect((el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement).style.position).to.equal('fixed');
+  });
+
+  it('forwards autofocus/title and reflects the blank custom state', async () => {
+    const el = (await fixture(html`
+      <lr-select autofocus title="Choose fruit"><lr-option value="a">Apple</lr-option></lr-select>
+    `)) as LyraSelect;
+    const button = trigger(el);
+    expect(button.autofocus).to.be.true;
+    expect(button.title).to.equal('Choose fruit');
+    expect(el.matches(':state(blank)')).to.be.true;
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.matches(':state(blank)')).to.be.false;
+  });
+
+  it('returns promises that settle after matching after-events', async () => {
+    const el = (await fixture(basic())) as LyraSelect & {
+      show(): Promise<void>;
+      hide(): Promise<void>;
+    };
+    const seen: string[] = [];
+    el.addEventListener('lr-show', () => seen.push('show'));
+    el.addEventListener('lr-after-show', () => seen.push('after-show'));
+    await el.show();
+    expect(seen).to.deep.equal(['show', 'after-show']);
+    el.addEventListener('lr-hide', () => seen.push('hide'));
+    el.addEventListener('lr-after-hide', () => seen.push('after-hide'));
+    await el.hide();
+    expect(seen).to.deep.equal(['show', 'after-show', 'hide', 'after-hide']);
+  });
+
+  it('renders a large option set through the delegated listbox path', async () => {
+    const el = document.createElement('lr-select') as LyraSelect;
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < 1000; index++) {
+      const option = document.createElement('lr-option') as LyraOption;
+      option.value = String(index);
+      option.textContent = `Option ${index}`;
+      fragment.append(option);
+    }
+    el.append(fragment);
+    const started = performance.now();
+    document.body.append(el);
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(el.shadowRoot!.querySelectorAll('[part="option"]')).to.have.lengthOf(1000);
+    expect(performance.now() - started).to.be.below(3000);
+    el.remove();
+  });
 });

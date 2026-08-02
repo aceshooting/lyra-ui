@@ -5,7 +5,7 @@ import { css } from 'lit';
 export const styles = css`
   :host { display: inline-block; }
   [part='trigger'] { display: inline-block; }
-  [part='popup'] {
+  [part~='popup'] {
     /* Fixed from the start (not only once JS positions it on open) so the closed popup --
        sized to its full slotted content -- never occupies a box in the host's normal flow.
        Otherwise a closed dropdown/popover inflates its own inline-block host to the popup's
@@ -26,7 +26,7 @@ export const styles = css`
        over-constrained resolution would discard the JS-written left (see the comment above). */
     left: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
-    max-inline-size: min(var(--lr-overlay-max-inline-size, var(--lr-size-20rem)), var(--lr-positioner-available-inline-size, var(--lr-size-20rem)));
+    max-inline-size: min(var(--max-width, var(--lr-overlay-max-inline-size, var(--lr-size-20rem))), var(--lr-positioner-available-inline-size, var(--lr-size-20rem)));
     max-block-size: var(--lr-positioner-available-block-size, var(--lr-size-20rem));
     overflow: auto;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -35,21 +35,22 @@ export const styles = css`
     /* Anchored overlay: a positioner-placed popup floating over page content, not a modal layer. */
     box-shadow: var(--lr-shadow-m);
   }
-  [part='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lr-size-neg-0-25rem)); }
-  [part='popup'] { opacity: 1; transform: translateY(0); transition: opacity var(--lr-transition-fast), transform var(--lr-transition-fast), visibility var(--lr-transition-fast); }
-  [part='content'] { padding: var(--lr-space-m); }
+  [part~='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lr-size-neg-0-25rem)); }
+  [part~='popup'] { opacity: 1; transform: translateY(0); }
+  :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }
+  [part~='content'] { padding: var(--lr-space-m); }
   /* An arrow protrudes past the popup's edge, so the scroll container has to move inwards for it
      -- an overflow: auto popup would clip the arrow away entirely. Scoped to the arrow case so a
      popover without one keeps its previous box model exactly. */
-  :host([arrow]) [part='popup'] { overflow: visible; }
-  :host([arrow]) [part='content'] {
+  :host([arrow]:not([without-arrow])) [part~='popup'] { overflow: visible; }
+  :host([arrow]:not([without-arrow])) [part~='content'] {
     overflow: auto;
     max-block-size: var(--lr-positioner-available-block-size, var(--lr-size-20rem));
   }
   [part~='arrow'] {
     position: absolute;
-    inline-size: calc(2 * var(--lr-overlay-arrow-size, var(--lr-size-0-375rem)));
-    block-size: calc(2 * var(--lr-overlay-arrow-size, var(--lr-size-0-375rem)));
+    inline-size: calc(2 * var(--arrow-size, var(--lr-overlay-arrow-size, var(--lr-size-0-375rem))));
+    block-size: calc(2 * var(--arrow-size, var(--lr-overlay-arrow-size, var(--lr-size-0-375rem))));
     rotate: 45deg;
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -57,27 +58,27 @@ export const styles = css`
        the other two sit under the panel. */
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
   }
-  @media (prefers-reduced-motion: reduce) { [part='popup'] { transition: none !important; } }
 `;
 
 export const tooltipStyles = css`
   :host { display: inline-block; }
-  /* position: fixed from the start, same reasoning as overlay [part='popup'] above -- see its
-     comment. Physical top/left there too, for the same RTL over-constraint reason. */
+  [part='trigger'] { display: inline-block; }
+  /* position: absolute from the start, matching the mapped non-hoisted default. Physical top/left
+     here too, for the same RTL over-constraint reason as the popover above. */
   /* policy-allow(physical-css): same physical property positioner.ts's place() writes; see above. */
-  [part='popup'] { position: fixed; top: 0; left: 0; z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover)); min-inline-size: 0; max-inline-size: min(var(--lr-tooltip-max-inline-size, var(--lr-size-20rem)), var(--lr-positioner-available-inline-size, 100vi)); max-block-size: var(--lr-positioner-available-block-size, 100vb); overflow-x: clip; overflow-y: auto; overflow-wrap: anywhere; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-xs); background: var(--lr-tooltip-background, var(--lr-color-neutral)); color: var(--lr-tooltip-color, var(--lr-color-on-neutral)); font-size: var(--lr-font-size-sm); line-height: var(--lr-line-height-compact); box-shadow: var(--lr-shadow-m); }
-  [part='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; }
-  [part='popup'] { opacity: 1; transition: opacity var(--lr-transition-fast), visibility var(--lr-transition-fast); }
+  [part~='popup'] { position: absolute; top: 0; left: 0; z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover)); min-inline-size: 0; max-inline-size: min(var(--max-width, var(--lr-tooltip-max-inline-size, var(--lr-size-20rem))), var(--lr-positioner-available-inline-size, 100vi)); max-block-size: var(--lr-positioner-available-block-size, 100vb); overflow-x: clip; overflow-y: auto; overflow-wrap: anywhere; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-xs); background: var(--lr-tooltip-background, var(--lr-color-neutral)); color: var(--lr-tooltip-color, var(--lr-color-on-neutral)); font-size: var(--lr-font-size-sm); line-height: var(--lr-line-height-compact); box-shadow: var(--lr-shadow-m); }
+  [part~='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; }
+  [part~='popup'] { opacity: 1; }
+  :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }
   /* A tooltip popup has no inner scroll wrapper to move the overflow onto, so switching it to
      visible for the arrow trades internal scrolling for a visible arrow. Reach for
      <lr-popover> when a floating surface needs both. */
-  :host([arrow]) [part='popup'] { overflow: visible; }
+  :host([arrow]:not([without-arrow])) [part~='popup'] { overflow: visible; }
   [part~='arrow'] {
     position: absolute;
-    inline-size: calc(2 * var(--lr-tooltip-arrow-size, var(--lr-size-0-375rem)));
-    block-size: calc(2 * var(--lr-tooltip-arrow-size, var(--lr-size-0-375rem)));
+    inline-size: calc(2 * var(--arrow-size, var(--lr-tooltip-arrow-size, var(--lr-size-0-375rem))));
+    block-size: calc(2 * var(--arrow-size, var(--lr-tooltip-arrow-size, var(--lr-size-0-375rem))));
     rotate: 45deg;
     background: var(--lr-tooltip-background, var(--lr-color-neutral));
   }
-  @media (prefers-reduced-motion: reduce) { [part='popup'] { transition: none !important; } }
 `;

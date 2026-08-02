@@ -124,6 +124,8 @@ const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> =
  * @csspart cursor - The blinking (or, under reduced motion, static) cursor bar. Only rendered while `streaming` is `true`.
  * @cssprop [--lr-streaming-text-cursor-width=var(--lr-size-0-125rem)] - Width of the `cursor` bar (also its border radius).
  * @cssprop [--lr-streaming-text-cursor-height=var(--lr-size-1em)] - Height of the `cursor` bar.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraStreamingText extends LyraElement {
   static override styles = [LyraElement.styles, styles];

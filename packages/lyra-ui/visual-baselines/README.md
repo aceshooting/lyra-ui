@@ -1,8 +1,9 @@
 # Visual-regression baselines
 
-PNG screenshots that `scripts/visual-regression.mjs` diffs new Storybook captures against. One
-subdirectory per story id, containing `light.png`, `dark.png`, and `rtl.png` — see the harness's
-own header comment for exactly what each of those three axes holds.
+PNG screenshots that `scripts/visual-regression.mjs` diffs new Storybook captures against. Each
+reviewed story id has a subdirectory containing `light.png`, `dark.png`, and `rtl.png` — see the
+harness's own header comment for exactly what each of those three axes holds. A newly enrolled
+story intentionally fails as `new` until its three captures are reviewed and promoted.
 
 ## Reproducibility vs. correctness
 
@@ -19,10 +20,12 @@ webfont swap-in, wall-clock reads, the browser's default timezone, and the defau
 `system-ui`/`ui-monospace` font stacks resolving to whatever substitution the capturing host
 happens to have installed are all pinned (see `../scripts/visual-regression.mjs`'s header
 comment). The font substitution gap alone once cascaded into a 3.6% diff for word-cloud's
-spiral-search layout. A full 62-story x 3-axis run now reproduces 186/186 clean against these
-baselines, which is why the CI step (`.github/workflows/ci.yml`) is wired as a blocking merge gate
-rather than `continue-on-error`. If it starts flaking again with no corresponding source change,
-chase down the new determinism gap rather than reverting to non-blocking.
+spiral-search layout. The configured v8 matrix is 83 stories x 3 axes (249 captures); the story
+list in the harness remains the authority when that count changes. The CI step
+(`.github/workflows/ci.yml`) is wired as a blocking merge gate rather than `continue-on-error`: a
+missing or newly enrolled baseline is also a failure until someone reviews and promotes it. If a
+reviewed baseline starts flaking with no corresponding source change, chase down the new
+determinism gap rather than reverting to non-blocking.
 
 ## Reviewing and promoting baselines
 
@@ -55,9 +58,9 @@ chase down the new determinism gap rather than reverting to non-blocking.
 
 ## Coverage
 
-The harness intentionally does not screenshot all 150+ components in this repo — see the story-id
-list and its header comment in `../scripts/visual-regression.mjs` for the current sample (a
-representative cross-section: form controls, overlays/dialogs, data-viz, viewers, layout
-primitives) and why. To extend coverage, add more `<title>--<name>` story ids from
-`storybook-static/index.json` to that list; each new id automatically gets baselines the next time
-someone runs `--update-snapshots` and reviews them.
+The harness intentionally does not screenshot every component in this repo — see the story-id list
+and its header comment in `../scripts/visual-regression.mjs` for the risk-weighted sample (form
+controls, overlays/dialogs, data-viz, viewers, layout primitives, and the newly stable visible v8
+surfaces) and why. To extend coverage, add more `<title>--<name>` story ids from
+`storybook-static/index.json` to that list; each new id automatically produces a blocking `new`
+result until someone runs `--update-snapshots` and reviews the three images.

@@ -114,6 +114,7 @@ export type LyraMessageKey =
   | 'next'
   | 'paginationLabel'
   | 'paginationPage'
+  | 'paginationJumpToPage'
   | 'branchPickerLabel'
   | 'branchPrevious'
   | 'branchNext'
@@ -353,6 +354,7 @@ export type LyraMessageKey =
   | 'citationWithCustomLabel'
   | 'comboboxOverflow'
   | 'comboboxRequired'
+  | 'comboboxCreate'
   | 'comboboxLabel'
   | 'rename'
   | 'previousMonth'
@@ -364,6 +366,20 @@ export type LyraMessageKey =
   | 'dateInputPastDisabled'
   | 'dateInputFutureDisabled'
   | 'dateInputInvalid'
+  | 'timeInputLabel'
+  | 'timeInputHour'
+  | 'timeInputMinute'
+  | 'timeInputSecond'
+  | 'timeInputDayPeriod'
+  | 'timeInputEmptySegment'
+  | 'timeInputOpen'
+  | 'timeInputPopup'
+  | 'timeInputNow'
+  | 'timeInputInvalid'
+  | 'timeInputMinMessage'
+  | 'timeInputMaxMessage'
+  | 'timeInputRangeMessage'
+  | 'timeInputStepMessage'
   | 'documentPreviewEmpty'
   | 'convertingDocument'
   | 'documentPreviewNotAvailable'
@@ -446,6 +462,19 @@ export type LyraMessageKey =
   | 'temperature'
   | 'play'
   | 'playbackPosition'
+  | 'videoPlayerLabel'
+  | 'videoMute'
+  | 'videoUnmute'
+  | 'videoVolume'
+  | 'videoCaptions'
+  | 'videoCaptionsOff'
+  | 'videoPlaybackSpeed'
+  | 'videoPictureInPicture'
+  | 'videoExitPictureInPicture'
+  | 'videoEnterFullscreen'
+  | 'videoExitFullscreen'
+  | 'videoPlaylistLabel'
+  | 'videoPlaylistUntitled'
   | 'selectValueMissing'
   | 'select'
   | 'sourceListDefaultLabel'
@@ -1322,6 +1351,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   next: 'Next',
   paginationLabel: 'Pagination',
   paginationPage: 'Page',
+  paginationJumpToPage: 'Jump to page {page}',
   branchPickerLabel: 'Response versions',
   branchPrevious: 'Previous version',
   branchNext: 'Next version',
@@ -1562,6 +1592,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   citationWithCustomLabel: 'Citation {index}, {label}',
   comboboxOverflow: '+{n} more — refine your search',
   comboboxRequired: 'Please select an option.',
+  comboboxCreate: 'Create {value}',
   comboboxLabel: 'Combobox',
   rename: 'Rename {title}',
   previousMonth: 'Previous month',
@@ -1573,6 +1604,20 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   dateInputPastDisabled: 'Date cannot be in the past.',
   dateInputFutureDisabled: 'Date cannot be in the future.',
   dateInputInvalid: 'Enter a valid date.',
+  timeInputLabel: 'Time',
+  timeInputHour: 'Hour',
+  timeInputMinute: 'Minute',
+  timeInputSecond: 'Second',
+  timeInputDayPeriod: 'Day period',
+  timeInputEmptySegment: 'Empty',
+  timeInputOpen: 'Open time picker',
+  timeInputPopup: 'Choose a time',
+  timeInputNow: 'Now',
+  timeInputInvalid: 'Enter a complete time.',
+  timeInputMinMessage: 'Time must be at or after {min}.',
+  timeInputMaxMessage: 'Time must be at or before {max}.',
+  timeInputRangeMessage: 'Time must be between {min} and {max} across midnight.',
+  timeInputStepMessage: 'Enter a time matching the required interval.',
   documentPreviewEmpty: 'No {type} to display.',
   convertingDocument: 'Converting document…',
   documentPreviewNotAvailable: 'Preview not available for {label}.',
@@ -1662,6 +1707,19 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   temperature: 'Temperature',
   play: 'Play',
   playbackPosition: 'Playback position',
+  videoPlayerLabel: 'Video player',
+  videoMute: 'Mute',
+  videoUnmute: 'Unmute',
+  videoVolume: 'Volume',
+  videoCaptions: 'Captions',
+  videoCaptionsOff: 'Off',
+  videoPlaybackSpeed: 'Playback speed',
+  videoPictureInPicture: 'Enter picture in picture',
+  videoExitPictureInPicture: 'Exit picture in picture',
+  videoEnterFullscreen: 'Enter fullscreen',
+  videoExitFullscreen: 'Exit fullscreen',
+  videoPlaylistLabel: 'Video playlist',
+  videoPlaylistUntitled: 'Video {position}',
   selectValueMissing: 'Please select an option.',
   select: 'Select',
   sourceListDefaultLabel: 'Sources',

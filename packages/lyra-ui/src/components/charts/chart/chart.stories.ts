@@ -86,7 +86,7 @@ export const FormattedValues: Story = {
 
 /** Narrow-allocation and long-content evidence for charts embedded in panels and dialogs. */
 export const NarrowLongContent: Story = {
-  name: 'Narrow (320px) with long content',
+  name: 'Narrow RTL (320px) with long content',
   render: () => {
     const series: Series[] = [
       { label: 'Revenue from subscriptions and professional services', data: [12, 19, 14, 22] },
@@ -94,10 +94,11 @@ export const NarrowLongContent: Story = {
     return html`
       <div style="inline-size: 320px; max-inline-size: 100%;">
         <lr-chart
+          dir="rtl"
           aria-label="Quarterly revenue from subscriptions and professional services"
           type="bar"
           height="16rem"
-          legend
+          legend-position="start"
           .labels=${['First quarter', 'Second quarter', 'Third quarter', 'Fourth quarter']}
           .datasets=${series}
         ></lr-chart>
@@ -128,6 +129,49 @@ export const ConfigPassthrough: Story = {
       ></lr-chart>
     `;
   },
+};
+
+/** The unnamed slot accepts the documented JSON-only Chart.js configuration script. */
+export const JsonConfigSlot: Story = {
+  name: 'Default JSON config slot',
+  render: () => html`
+    <lr-chart
+      label="Quarterly revenue"
+      description="Revenue for the last four quarters"
+      without-animation
+      style="inline-size: 22rem; max-inline-size: 100%;"
+    >
+      <script type="application/json">
+        {"type":"bar","data":{"labels":["Q1","Q2","Q3","Q4"],"datasets":[{"label":"Revenue","data":[12,19,14,22]}]}}
+      </script>
+    </lr-chart>
+  `,
+};
+
+/** The public simplified controls compose without replacing the raw `config` escape hatch. */
+export const PublicControls: Story = {
+  render: () => html`
+    <lr-chart
+      label="Revenue by quarter"
+      description="Horizontal bars from zero to twenty-five"
+      type="bar"
+      grid="x"
+      index-axis="y"
+      legend-position="end"
+      min="0"
+      max="25"
+      stacked
+      without-animation
+      without-tooltip
+      style="inline-size: 22rem; max-inline-size: 100%;"
+      .plugins=${[{ id: 'story-plugin' }]}
+      .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+      .datasets=${[
+        { label: 'Subscriptions', data: [8, 12, 10, 15] },
+        { label: 'Services', data: [4, 7, 4, 7] },
+      ]}
+    ></lr-chart>
+  `,
 };
 
 /**
@@ -223,6 +267,45 @@ export const ThemedTokens: Story = {
       ></lr-chart>
     `;
   },
+};
+
+/** Every mirrored geometry/color hook is scoped to one chart and backed by Lyra tokens. */
+export const PublicCssHooks: Story = {
+  render: () => html`
+    <lr-chart
+      type="line"
+      area
+      label="Themeable chart hooks"
+      height="16rem"
+      style="
+        inline-size: 22rem;
+        max-inline-size: 100%;
+        --border-color-1: var(--lr-color-brand);
+        --border-color-2: var(--lr-color-success);
+        --border-color-3: var(--lr-color-warning);
+        --border-color-4: var(--lr-color-danger);
+        --border-color-5: var(--lr-color-text);
+        --border-color-6: var(--lr-color-text-quiet);
+        --fill-color-1: var(--lr-color-brand-quiet);
+        --fill-color-2: var(--lr-color-success-quiet);
+        --fill-color-3: var(--lr-color-warning-quiet);
+        --fill-color-4: var(--lr-color-danger-quiet);
+        --fill-color-5: var(--lr-color-surface-raised);
+        --fill-color-6: var(--lr-color-surface);
+        --border-radius: var(--lr-radius);
+        --border-width: var(--lr-border-width-thin);
+        --grid-border-width: var(--lr-border-width-medium);
+        --grid-color: var(--lr-color-border);
+        --line-border-width: var(--lr-border-width-thick);
+        --point-radius: var(--lr-space-xs);
+      "
+      .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+      .datasets=${[
+        { label: 'Revenue', data: [12, 19, 14, 22] },
+        { label: 'Costs', data: [7, 11, 9, 13] },
+      ]}
+    ></lr-chart>
+  `,
 };
 
 /**

@@ -56,12 +56,12 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @csspart svg - The sanitized SVG document, once loaded.
  * @csspart spinner - The loading region.
  * @csspart error - The error region.
- * @csspart frame-viewport - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
- * @csspart frame-content - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
- * @csspart frame-controls - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
- * @csspart frame-zoom-in - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
- * @csspart frame-zoom-out - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
- * @csspart frame-reset - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
+ * @csspart frame-viewport - Forwarded from the internal `<lr-pan-zoom>` when `zoomable`.
+ * @csspart frame-content - Forwarded from the internal `<lr-pan-zoom>` when `zoomable`.
+ * @csspart frame-controls - Forwarded from the internal `<lr-pan-zoom>` when `zoomable`.
+ * @csspart frame-zoom-in - Forwarded from the internal `<lr-pan-zoom>` when `zoomable`.
+ * @csspart frame-zoom-out - Forwarded from the internal `<lr-pan-zoom>` when `zoomable`.
+ * @csspart frame-reset - Forwarded from the internal `<lr-pan-zoom>` when `zoomable`.
  * @csspart highlight-layer - The wrapper around every rendered region highlight.
  * @csspart region-highlight - One region highlight (`data-tone`, `data-active`).
  * @csspart region-highlight-target - Transparent activation geometry around a region highlight,
@@ -77,6 +77,8 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @cssprop [--lr-svg-viewer-highlight-warning-color=var(--lr-color-warning)] - Warning highlight border and hover tint.
  * @cssprop [--lr-svg-viewer-highlight-danger-color=var(--lr-color-danger)] - Danger highlight border and hover tint.
  * @cssprop [--lr-svg-viewer-highlight-neutral-color=var(--lr-color-neutral)] - Neutral highlight border and hover tint.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -90,7 +92,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   /** CSS length that caps the scrollable body. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
-  /** Wraps the rendered content in an internal `<lr-zoomable-frame>`. `false` (the default)
+  /** Wraps the rendered content in an internal `<lr-pan-zoom>`. `false` (the default)
    *  preserves today's exact DOM -- an inline thumbnail (e.g. in a chat stream) must not
    *  unexpectedly grow a focusable zoom-chrome viewport; an inspection surface opts in. */
   @property({ type: Boolean, reflect: true }) zoomable = false;
@@ -171,11 +173,11 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     }
   }
 
-  private stopZoomableFrameEvent(event: Event): void {
+  private stopPanZoomEvent(event: Event): void {
     event.stopPropagation();
   }
 
-  /** Wraps `content` in the internal `<lr-zoomable-frame>` when `zoomable`; otherwise renders it
+  /** Wraps `content` in the internal `<lr-pan-zoom>` when `zoomable`; otherwise renders it
    *  (plus the highlight layer, which needs the same relatively-positioned sibling context either
    *  way) unwrapped, preserving pre-`zoomable` DOM exactly. */
   private renderZoomableWrapper(content: TemplateResult): TemplateResult {
@@ -183,10 +185,10 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     const inner = html`<div class="zoom-content">
       ${content}${this.renderHighlightLayer(regionHighlights, regionHighlights.length === 1)}
     </div>`;
-    const frame = this.zoomable ? html`<lr-zoomable-frame
+    const frame = this.zoomable ? html`<lr-pan-zoom
       exportparts="viewport:frame-viewport, content:frame-content, controls:frame-controls, zoom-in:frame-zoom-in, zoom-out:frame-zoom-out, reset:frame-reset"
-      @lr-zoom-change=${this.stopZoomableFrameEvent}
-    >${inner}</lr-zoomable-frame>` : inner;
+      @lr-zoom-change=${this.stopPanZoomEvent}
+    >${inner}</lr-pan-zoom>` : inner;
     return html`${frame}${this.renderHighlightActions(regionHighlights)}`;
   }
 

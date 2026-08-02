@@ -43,6 +43,17 @@ export const AutoPlaying: Story = {
   `,
 };
 
+export const UpstreamSizingHooks: Story = {
+  name: 'Upstream control sizing hooks',
+  render: () => html`
+    <lr-animated-image
+      src=${SAMPLE_GIF}
+      alt="A Newton's cradle swinging"
+      style="max-inline-size:20rem;--control-box-size:var(--lr-size-3rem);--icon-size:var(--lr-font-size-lg)"
+    ></lr-animated-image>
+  `,
+};
+
 export const RespectReducedMotionOverride: Story = {
   name: 'respect-reduced-motion="false"',
   parameters: {

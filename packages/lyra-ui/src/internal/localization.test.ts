@@ -7,9 +7,12 @@ import {
   subscribeLyraLocale,
   LYRA_DEFAULT_STRINGS,
   resolveLocalizedParts,
+  resolveLyraDirection,
   resolveLyraString,
 } from './localization.js';
 import '../components/data/sparkline/sparkline.js';
+import '../translations/fa.js';
+import '../translations/he.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
 
 it('resolves registered locale messages and per-instance overrides', async () => {
@@ -156,6 +159,44 @@ it('getRegisteredLyraLocales always includes "en" and every registered key, dedu
   expect(result).to.include('x-registry-zz');
   expect(result.filter((l) => l === 'x-registry-aa')).to.have.lengthOf(1);
   expect(result).to.deep.equal([...result].sort());
+});
+
+it('registers the complete Persian and Hebrew catalogs as discoverable locales', () => {
+  const result = getRegisteredLyraLocales();
+  expect(result).to.include('fa');
+  expect(result).to.include('he');
+});
+
+it('falls back from fa-IR and he-IL regional tags to the registered base catalogs', async () => {
+  const persian = await localeHost('fa-IR');
+  const hebrew = await localeHost('he-IL');
+  expect(resolveLyraString(persian, 'close')).to.equal('بستن');
+  expect(resolveLyraString(hebrew, 'close')).to.equal('סגור');
+});
+
+it('selects Persian one/other and Hebrew one/two/other catalog forms through regional tags', async () => {
+  const persian = await localeHost('fa-IR');
+  const hebrew = await localeHost('he-IL');
+  const matches = (host: HTMLElement, count: number) =>
+    resolveLyraString(host, 'viewerSearchMatchCount', undefined, undefined, { count });
+
+  expect(matches(persian, 1)).to.equal('1 تطابق');
+  expect(matches(persian, 2)).to.equal('2 تطابق');
+  expect(matches(hebrew, 1)).to.equal('1 התאמה');
+  expect(matches(hebrew, 2)).to.equal('2 התאמות');
+  expect(matches(hebrew, 3)).to.equal('3 התאמות');
+});
+
+it('inherits explicit RTL direction for Persian and Hebrew without forcing direction from locale', async () => {
+  for (const locale of ['fa-IR', 'he-IL']) {
+    const wrapper = await fixture<HTMLDivElement>(
+      html`<div lang=${locale} dir="rtl"><span></span></div>`,
+    );
+    expect(resolveLyraDirection(wrapper.querySelector('span')!)).to.equal('rtl');
+  }
+
+  const localeOnly = await fixture<HTMLElement>(html`<span lang="he-IL"></span>`);
+  expect(resolveLyraDirection(localeOnly)).to.equal('ltr');
 });
 
 it('subscribeLyraLocaleRegistry fires for a registerLyraLocale call on a locale that is not currently active', () => {

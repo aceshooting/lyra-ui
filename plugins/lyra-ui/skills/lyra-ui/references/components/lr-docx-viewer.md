@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraDocxViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `dompurify`, `mammoth` — see `llms/peers.md`
 - **Themeable via** 10 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -26,9 +28,10 @@ the shared quote-scoping helpers; `highlights` re-resolve by quote after every r
 keyboard actions are exposed only for highlights whose quote resolves in the currently loaded
 document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
-the scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
-ignored. `anchorKinds` is a readonly `['fragment', 'text-quote']` (this
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`). `maxHeight` caps the scrollable document body; invalid CSS `max-height` values,
+declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['fragment',
+'text-quote']` (this
 viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `getHeadingTree()` returns the document-ordered outline as `DocxHeadingItem[]` (`{ id,

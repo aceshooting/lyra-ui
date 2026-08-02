@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/notebook-viewer/notebook-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraNotebookViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/notebook-viewer/notebook-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -34,9 +36,9 @@ accessible label, and matched against a `fragment` anchor's cell id. `outputColl
 40` (attribute `output-collapse-lines`) — a plain-text output longer than this many lines renders
 collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (attribute
 `max-height`) — once set, the notebook scrolls internally past this height; invalid CSS
-`max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
-`['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for the shared
-anchor-target contract).
+`max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly
+LyraAnchorKind[] = ['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for
+the shared anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);

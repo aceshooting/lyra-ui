@@ -72,6 +72,8 @@ export interface StatRow {
  *   `warning` variant.
  * @cssprop [--lr-stat-value-danger-color=var(--lr-color-danger)] - Headline value color for the
  *   `danger` variant.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraStat extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];

@@ -13,6 +13,33 @@ export const Default: Story = {
   render: () => html`<lr-file-input multiple accept=".csv,.xlsx"></lr-file-input>`,
 };
 
+export const FormAssociatedSurface: Story = {
+  render: () => html`
+    <form style="display:grid; gap:var(--lr-space-s); max-inline-size:32rem;">
+      <lr-file-input
+        name="documents"
+        label="Supporting documents"
+        hint="PDF or image files, up to the configured upload limit."
+        accept="application/pdf,image/*"
+        capture="environment"
+        multiple
+        required
+      >
+        <span slot="dropzone">Drop documents here or choose files</span>
+      </lr-file-input>
+      <lr-button type="reset">Reset files</lr-button>
+    </form>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Complete form-associated surface with label/hint chrome, a named `dropzone` slot, required validity, repeated file submission, capture forwarding, reset support, and a writable `validationTarget` for custom validity anchoring.',
+      },
+    },
+  },
+};
+
 export const CustomSlotContent: Story = {
   render: () =>
     html`<lr-file-input multiple accept=".csv,.xlsx" label="Upload spreadsheets">

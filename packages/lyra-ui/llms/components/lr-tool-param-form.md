@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/agent-tools/tool-param-form/tool-param-form.js';` (registers the tag; side-effect import)
 - **Class** `LyraToolParamForm`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-param-form/tool-param-form.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -46,6 +48,11 @@ and makes the form invalid instead of being silently accepted.
   `required`.
 - `name: string = ''` — submission key for optional native `<form>` participation
 - `disabled: boolean = false` (reflected)
+- `customError: string | null = null` (attribute `custom-error`) — reflected consumer validation
+  message
+- `form: HTMLFormElement | null = null` — browser-resolved owner (and an assignable external owner);
+  readonly `labels: NodeList`, `validity: ValidityState`, `validationMessage: string`,
+  `willValidate: boolean`, and `effectiveDisabled: boolean` expose the native FACE state
 
 **Getters:**
 - `effectiveValue: Record<string, unknown>` — `value` with every property missing from it filled in
@@ -59,6 +66,7 @@ and makes the form invalid instead of being silently accepted.
   when the current effective value is safe to submit.
 
 **Methods:**
+- `getForm(): HTMLFormElement | null` — returns the browser-resolved owning form.
 - `checkValidity(): boolean` — synchronously re-snapshots even an in-place-mutated value/schema,
   updates `ElementInternals`, and returns validity without revealing inline errors.
 - `reportValidity(): boolean` — performs the same resynchronization, reveals all current field/root
@@ -87,6 +95,8 @@ and no-detail `focus`/`blur` events for generated native text/number inputs. The
 `<lr-select>`/`<lr-checkbox>` controls already bubble their own focus/blur bridges through the host.
 Their implementation events (`input`, `change`, `lr-change`, select show/hide, and option mutation)
 are contained at the form boundary; consumers receive the single form-level `lr-input` contract.
+`lr-invalid` (no detail) is the bubbling/composed alias emitted when the complete parameter form
+fails a native validity check.
 
 **Slots:** none.
 

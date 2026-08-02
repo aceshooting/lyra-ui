@@ -1,18 +1,7 @@
 import { css } from 'lit';
 
-export const styles = css`
-  :host {
-    /* Rectangular chrome, so unlike <lr-radio>'s circular indicator this re-points the inherited
-       radius knob at the shared control radius -- and swaps it for a pill when the pill property
-       is set. Same one name on both tags, so a consumer overriding it does not have to know which
-       of the two they are looking at. */
-    --lr-radio-radius: var(--lr-form-control-radius);
-    display: inline-flex;
-  }
-  :host([pill]) {
-    --lr-radio-radius: var(--lr-radius-pill);
-  }
-  [part='base'] {
+export const buttonChromeStyles = css`
+  [part~='button'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -37,19 +26,19 @@ export const styles = css`
        out fully rounded. Logical radii, so RTL mirrors without a :dir() rule. */
     border-radius: 0;
   }
-  :host(:first-of-type) [part='base'] {
+  :host(:first-of-type) [part~='button'] {
     border-start-start-radius: var(--lr-radio-radius);
     border-end-start-radius: var(--lr-radio-radius);
   }
-  :host(:last-of-type) [part='base'] {
+  :host(:last-of-type) [part~='button'] {
     border-start-end-radius: var(--lr-radio-radius);
     border-end-end-radius: var(--lr-radio-radius);
   }
-  :host(:not(:first-of-type)) [part='base'] {
+  :host(:not(:first-of-type)) [part~='button'] {
     margin-inline-start: calc(-1 * var(--lr-border-width-thin));
   }
 
-  [part='base']:hover {
+  [part~='button']:hover {
     background: var(--lr-color-brand-quiet);
     border-color: var(--lr-color-brand);
   }
@@ -57,12 +46,12 @@ export const styles = css`
      colour). This rule used to be byte-identical to the :hover above, which is a pressed state only
      on paper -- a segment that looks exactly the same held down as hovered tells the user nothing
      about whether their click landed. */
-  [part='base']:active {
+  [part~='button']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     border-color: var(--lr-color-brand);
   }
-  :host(:focus-visible) [part='base'],
-  [part='base']:focus-visible {
+  :host(:focus-visible) [part~='button'],
+  [part~='button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
     /* The ring must not be painted under the overlapping neighbour's border. */
@@ -76,6 +65,9 @@ export const styles = css`
     background: var(--lr-color-brand);
     border-color: var(--lr-color-brand);
     color: var(--lr-color-on-brand);
+  }
+  [part~='checked'] [part='label'] {
+    color: inherit;
   }
   /* The checked segment keeps its loud brand fill under the pointer -- the quiet tint the unchecked
      rules land on would read as a DESELECTION -- but it still has to move, and the press still has
@@ -93,4 +85,27 @@ export const styles = css`
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
+`;
+
+export const styles = css`
+  :host {
+    /* Rectangular chrome, so unlike <lr-radio>'s circular indicator this re-points the inherited
+       radius knob at the shared control radius -- and swaps it for a pill when the pill property
+       is set. Same one name on both tags, so a consumer overriding it does not have to know which
+       of the two they are looking at. */
+    --lr-radio-radius: var(--lr-form-control-radius);
+    display: inline-flex;
+  }
+  :host([pill]) { --lr-radio-radius: var(--lr-radius-pill); }
+  ${buttonChromeStyles}
+`;
+
+/** The same chrome scoped to WA's `appearance="button"` mode on `<lr-radio>`. */
+export const appearanceStyles = css`
+  :host([appearance='button']) {
+    --lr-radio-radius: var(--lr-form-control-radius);
+    display: inline-flex;
+  }
+  :host([appearance='button'][pill]) { --lr-radio-radius: var(--lr-radius-pill); }
+  ${buttonChromeStyles}
 `;

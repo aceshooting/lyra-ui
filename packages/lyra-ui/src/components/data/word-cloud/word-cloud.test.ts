@@ -1,13 +1,31 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './word-cloud.js';
 import type { LyraWordCloud } from './word-cloud.js';
 import { MAX_FONT_SIZE_PX, MAX_WORDS, MIN_SANE_FONT_SIZE } from './word-cloud-layout.js';
+import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 
 const WORDS = [
   { text: 'alpha', weight: 10 },
   { text: 'beta', weight: 5 },
   { text: 'gamma', weight: 1 },
 ];
+
+it('checks typography tokens after an out-of-band theme invalidation', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`);
+  let refreshes = 0;
+  const originalRefresh = el.refreshTheme;
+  el.refreshTheme = () => {
+    refreshes += 1;
+  };
+  try {
+    el.style.setProperty('--lr-font', 'monospace');
+    invalidateLyraTheme(el);
+    await aTimeout(0);
+    expect(refreshes).to.equal(1);
+  } finally {
+    el.refreshTheme = originalRefresh;
+  }
+});
 
 it('rejects url and declaration-breaking word and legend paint values', async () => {
   const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);

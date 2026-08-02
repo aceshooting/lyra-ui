@@ -50,6 +50,10 @@ export interface PlaceOptions {
   offset?: number;
   /** Distance along the perpendicular axis — Floating UI's cross-axis offset. */
   skidding?: number;
+  /** Shared clipping context for every overflow-aware middleware. A middleware-specific boundary
+   *  below takes precedence when supplied. An empty array intentionally means viewport-only
+   *  clipping because Floating UI still applies its viewport root boundary. */
+  boundary?: PlaceBoundary;
   /** Flip to the opposite side when the requested one does not fit. Default `true`. */
   flip?: boolean;
   /** Placements `flip()` tries, in order, instead of just the opposite side. */
@@ -246,7 +250,7 @@ export function place(
     opts.flip === false
       ? undefined
       : flip({
-          boundary: opts.flipBoundary as Boundary | undefined,
+          boundary: (opts.flipBoundary ?? opts.boundary) as Boundary | undefined,
           fallbackPlacements: opts.flipFallbackPlacements,
           fallbackStrategy:
             opts.flipFallbackStrategy === 'initial-placement'
@@ -259,11 +263,12 @@ export function place(
     opts.shift === false
       ? undefined
       : shift({
-          boundary: opts.shiftBoundary as Boundary | undefined,
+          boundary: (opts.shiftBoundary ?? opts.boundary) as Boundary | undefined,
           padding: opts.shiftPadding ?? padding,
         }),
     opts.arrow ? arrow({ element: opts.arrow, padding: opts.arrowPadding ?? 0 }) : undefined,
     size({
+      boundary: opts.boundary as Boundary | undefined,
       padding,
       apply({ availableWidth, availableHeight, elements }) {
         elements.floating.style.setProperty(
@@ -279,7 +284,7 @@ export function place(
     // Runs last so it overwrites the shared measurement above, and only on the axes it names.
     autoSize
       ? size({
-          boundary: opts.autoSizeBoundary as Boundary | undefined,
+          boundary: (opts.autoSizeBoundary ?? opts.boundary) as Boundary | undefined,
           padding: opts.autoSizePadding ?? 0,
           apply({ availableWidth, availableHeight, elements }) {
             if (autoSize === 'horizontal' || autoSize === 'both') {

@@ -12,15 +12,24 @@ import type { LyraTreeItem } from './tree-item.class.js';
 
 // Data types live in ./tree-item.js (extracted to break a type-only import cycle with
 // tree-item.class.ts); re-exported here so `export *` from tree.js keeps the public paths.
-import type { TreeBadgeTone, TreeBadge, TreeItem } from './tree-types.js';
+import type { TreeBadgeTone, TreeBadge, TreeItem, TreeSelection } from './tree-types.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
-export type { TreeBadgeTone, TreeBadge, TreeItem };
+export type { TreeBadgeTone, TreeBadge, TreeItem, TreeSelection };
 
 export interface LyraTreeEventMap {
   'lr-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;
   'lr-node-select': CustomEvent<{ id: string }>;
   'lr-reorder': CustomEvent<{ id: string; parentId: string | null; fromIndex: number; toIndex: number }>;
+  'lr-selection-change': CustomEvent<{ selection: LyraTreeItem[] }>;
+  'lr-expand': CustomEvent<{ item: LyraTreeItem }>;
+  'lr-after-expand': CustomEvent<{ item: LyraTreeItem }>;
+  'lr-collapse': CustomEvent<{ item: LyraTreeItem }>;
+  'lr-after-collapse': CustomEvent<{ item: LyraTreeItem }>;
+  'lr-lazy-change': CustomEvent<{ item: LyraTreeItem; loading: boolean }>;
+  'lr-lazy-load': CustomEvent<{ item: LyraTreeItem; generation: number }>;
 }
+
+const TREE_SELECTIONS = new Set<TreeSelection>(['single', 'multiple', 'leaf', 'leaf-multiple']);
 
 /**
  * `<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.
@@ -53,9 +62,26 @@ export interface LyraTreeEventMap {
  * @event lr-node-toggle - `detail: { id, expanded }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lr-node-select - `detail: { id }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lr-reorder - `detail: { id, parentId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown moved the focused node within its **own parent's** child list (`parentId` is `null` for a top-level item; the indices are sibling-scoped, not flattened-visible-list positions). Only fired while `reorderable`. Never fires at a subtree boundary, so a reorder can never become a reparent.
- * @csspart base - The tree's root wrapper (role="tree").
+ * @event lr-selection-change - Selection changed. `detail: { selection }`, where `selection` is the current `selectedItems` array.
+ * @event lr-expand - Bubbles from the item whose expansion began. `detail: { item }`.
+ * @event lr-after-expand - Bubbles after an item's expansion motion completes. `detail: { item }`.
+ * @event lr-collapse - Bubbles from the item whose collapse began. `detail: { item }`.
+ * @event lr-after-collapse - Bubbles after an item's collapse motion completes. `detail: { item }`.
+ * @event lr-lazy-change - Bubbles when an item's pending lazy-loading state changes. `detail: { item, loading }`.
+ * @event lr-lazy-load - Bubbles when a lazy item requests children. `detail: { item, generation }`.
+ * @csspart base - Compatibility name for the root wrapper; `tree` is the component-specific alias.
+ * @csspart tree - The tree's root wrapper (`role="tree"`). It is the same node as `base`.
  * @csspart empty - The empty-state message shown when neither child model has any items.
  * @slot - Top-level `<lr-tree-item>` elements, each nesting its own children — the declarative child model. Leave it empty and assign `data` instead for the object model.
+ * @slot expand-icon - Default icon shown by expanded items; an item-level slot takes precedence.
+ * @slot collapse-icon - Default icon shown by collapsed items; an item-level slot takes precedence.
+ * @cssprop [--indent-size=var(--lr-space-l)] - Indentation step for nested items.
+ * @cssprop [--indent-guide-color=var(--lr-color-border)] - Indentation guide color.
+ * @cssprop [--indent-guide-offset=0] - Block-axis inset for indentation guides.
+ * @cssprop [--indent-guide-style=solid] - Indentation guide border style.
+ * @cssprop [--indent-guide-width=0] - Indentation guide width.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTree extends LyraElement<LyraTreeEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -74,6 +100,22 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    */
   @property({ type: Boolean, reflect: true }) reorderable = false;
 
+  private _selection: TreeSelection = 'single';
+  /** Selection behavior. Multiple modes cascade through enabled descendants and expose checkboxes.
+   * @default 'single' */
+  @property()
+  get selection(): TreeSelection {
+    return this._selection;
+  }
+  set selection(value: TreeSelection) {
+    const old = this._selection;
+    const normalized = TREE_SELECTIONS.has(value) ? value : 'single';
+    if (old === normalized) return;
+    this._selection = normalized;
+    this.selectionSyncPending = true;
+    this.requestUpdate('selection', old);
+  }
+
   @state() private activeId: string | null = null;
   /** Whether the tree is being driven by author-written `<lr-tree-item>` children rather than by
    *  `data` (see the class doc's child-model note). Recomputed from the light DOM, never guessed. */
@@ -85,6 +127,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    *  child model -- an identity set is the only reliable way to tell the two apart, since a
    *  generated node and an authored one are the same tag. */
   private readonly generatedNodes = new WeakSet<LyraTreeItem>();
+  private selectionSyncPending = true;
+  private dataSyncPending = false;
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
@@ -101,17 +145,155 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     return node.childItems();
   }
 
+  /** Every item in document order, including descendants of collapsed branches. */
+  private allNodeElements(): LyraTreeItem[] {
+    const result: LyraTreeItem[] = [];
+    const seen = new Set<LyraTreeItem>();
+    const walk = (nodes: LyraTreeItem[]): void => {
+      for (const node of nodes) {
+        if (seen.has(node)) continue;
+        seen.add(node);
+        result.push(node);
+        walk(this.childrenOf(node));
+      }
+    };
+    walk(this.nodeElements);
+    return result;
+  }
+
+  /** The current selected item elements in document order. */
+  get selectedItems(): LyraTreeItem[] {
+    return this.allNodeElements().filter((node) => node.selected);
+  }
+
+  private iconSource(name: 'expand-icon' | 'collapse-icon'): Element | null {
+    return this.querySelector(`:scope > [slot="${name}"]`);
+  }
+
+  private applyTreeContext(): void {
+    const context = {
+      selection: this.selection,
+      expandIcon: this.iconSource('expand-icon'),
+      collapseIcon: this.iconSource('collapse-icon'),
+    };
+    for (const node of this.allNodeElements()) node.setTreeContext(context);
+  }
+
+  private selectableInSingleMode(node: LyraTreeItem): boolean {
+    return !node.isDisabled && (this.selection !== 'leaf' || !node.hasChildren);
+  }
+
+  private normalizeSingleSelection(): void {
+    let kept = false;
+    for (const node of this.allNodeElements()) {
+      const selected = !kept && node.selected && this.selectableInSingleMode(node);
+      node.setSelectionState(selected, false);
+      if (selected) kept = true;
+    }
+  }
+
+  private setBranchSelection(node: LyraTreeItem, selected: boolean, leavesOnly: boolean): void {
+    if (node.isDisabled) return;
+    const children = this.childrenOf(node).filter((child) => !child.isDisabled);
+    if (!leavesOnly || children.length === 0) {
+      // A lazy node with no loaded children is still a branch, not a selectable leaf.
+      node.setSelectionState(leavesOnly && node.hasChildren ? false : selected, false);
+    } else {
+      node.setSelectionState(false, false);
+    }
+    for (const child of children) this.setBranchSelection(child, selected, leavesOnly);
+  }
+
+  private deriveMultipleSelection(
+    node: LyraTreeItem,
+    leavesOnly: boolean,
+  ): 'all' | 'some' | 'none' | 'ignored' {
+    if (node.isDisabled) {
+      node.setSelectionState(false, false);
+      return 'ignored';
+    }
+    const children = this.childrenOf(node).filter((child) => !child.isDisabled);
+    if (children.length === 0) {
+      if (leavesOnly && node.hasChildren) {
+        node.setSelectionState(false, false);
+        return 'none';
+      }
+      node.setSelectionState(node.selected, false);
+      return node.selected ? 'all' : 'none';
+    }
+    const states = children
+      .map((child) => this.deriveMultipleSelection(child, leavesOnly))
+      .filter((state) => state !== 'ignored');
+    if (states.length === 0) {
+      node.setSelectionState(false, false);
+      return 'none';
+    }
+    const all = states.every((state) => state === 'all');
+    const none = states.every((state) => state === 'none');
+    node.setSelectionState(all, !all && !none);
+    return all ? 'all' : none ? 'none' : 'some';
+  }
+
+  private normalizeMultipleSelection(): void {
+    const leavesOnly = this.selection === 'leaf-multiple';
+    // A preselected branch means "select this branch" on initial markup/data reconciliation.
+    // Apply that intent before deriving parent states from descendants.
+    for (const node of this.allNodeElements()) {
+      if (node.selected && this.childrenOf(node).length > 0) {
+        this.setBranchSelection(node, true, leavesOnly);
+      }
+    }
+    for (const root of this.nodeElements) this.deriveMultipleSelection(root, leavesOnly);
+  }
+
+  private normalizeSelection(): void {
+    if (this.selection === 'single' || this.selection === 'leaf') this.normalizeSingleSelection();
+    else this.normalizeMultipleSelection();
+  }
+
+  private selectionSignature(): string {
+    return this.allNodeElements()
+      .map((node) => `${node.nodeId}:${node.selected ? 1 : 0}:${node.indeterminate ? 1 : 0}`)
+      .join('|');
+  }
+
+  private updateSelectionFrom(node: LyraTreeItem): boolean {
+    if (node.isDisabled) return false;
+    const before = this.selectionSignature();
+    if (this.selection === 'single' || this.selection === 'leaf') {
+      if (!this.selectableInSingleMode(node)) return false;
+      for (const candidate of this.allNodeElements()) {
+        candidate.setSelectionState(candidate === node, false);
+      }
+    } else {
+      const select = node.indeterminate || !node.selected;
+      this.setBranchSelection(node, select, this.selection === 'leaf-multiple');
+      for (const root of this.nodeElements) {
+        this.deriveMultipleSelection(root, this.selection === 'leaf-multiple');
+      }
+    }
+    return before !== this.selectionSignature();
+  }
+
   /** Recomputed from the DOM rather than tracked incrementally: children can be added by the parser,
    *  by a framework re-render, or by `syncNodes()` itself, and only the generated-node set is a
    *  reliable discriminator. */
   private refreshAuthoredItems(): void {
-    let authored = false;
-    for (const node of this.nodeElements) {
+    const nodes = this.nodeElements;
+    for (const node of nodes) {
       // A nested item promoted to the top level still carries the `slot` its former parent item
       // assigned it, and this element has only a default slot -- leaving it there would assign the
       // node to nothing at all, so it would silently render nowhere while still counting as an item.
       if (node.hasAttribute('slot')) node.removeAttribute('slot');
-      if (!this.generatedNodes.has(node)) authored = true;
+    }
+    const authored = nodes.some((node) => !this.generatedNodes.has(node));
+    // Once author-written items exist, the data model is genuinely absent rather than merely
+    // ignored by the controller. Keeping generated nodes in the slot would still expose them to
+    // rendering, focus navigation, selection, and assistive technology, interleaving both models.
+    if (authored) {
+      for (const node of nodes) {
+        if (this.generatedNodes.has(node)) node.remove();
+      }
     }
     this.hasAuthoredItems = authored;
   }
@@ -273,11 +455,13 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     // reconciled into the light DOM) for as long as any author-written item is present, so the
     // two models can never interleave into one ambiguous tree.
     this.refreshAuthoredItems();
+    if (changed.has('data') || changed.has('selection')) this.selectionSyncPending = true;
     if (this.hasAuthoredItems) {
       this.resolveActiveFromDom();
       return;
     }
-    if (changed.has('data')) {
+    if (changed.has('data') || this.dataSyncPending) {
+      this.dataSyncPending = false;
       const focused = this.deepFocusedNode();
       const focusedId = focused?.nodeId ?? null;
       this.syncNodes();
@@ -329,21 +513,29 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    *  synchronous read cannot see -- and the active node being removed, which changes nothing
    *  about `hasAuthoredItems` and so would otherwise schedule no update at all. */
   private onChildrenChanged = (): void => {
+    const wasAuthored = this.hasAuthoredItems;
     this.refreshAuthoredItems();
+    if (wasAuthored && !this.hasAuthoredItems) this.dataSyncPending = true;
+    this.selectionSyncPending = true;
     this.requestUpdate();
   };
 
   /** `slotchange` sees an assignment change but not a child that never becomes assigned -- a node
    *  moved here still carrying its old parent item's `slot="children"` is exactly that, and
-   *  `refreshAuthoredItems()` is what un-strands it. A childList observer sees the append itself,
-   *  so the two together cover both. Direct children only (no `subtree`): a nested item's own
-   *  churn is its own parent element's business. */
+   *  `refreshAuthoredItems()` is what un-strands it. Subtree observation also catches nested
+   *  `selected`/`disabled`/`lazy` changes because those affect the tree-owned selection engine;
+   *  each item still owns its own child-slot reconciliation. */
   private childObserver?: MutationObserver;
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.childObserver = new MutationObserver(this.onChildrenChanged);
-    this.childObserver.observe(this, { childList: true });
+    this.childObserver.observe(this, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['selected', 'disabled', 'lazy'],
+    });
   }
 
   override disconnectedCallback(): void {
@@ -406,7 +598,17 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    */
   private onNodeActivate = (e: Event): void => {
     const id = (e as CustomEvent<{ id: string }>).detail.id;
-    if (!this.findItem(this.data, id)?.disabled) this.activeId = id;
+    const node = this.allNodeElements().find((candidate) => candidate.nodeId === id);
+    if (node && !node.isDisabled) this.activeId = id;
+  };
+
+  private onNodeSelect = (event: Event): void => {
+    const id = (event as CustomEvent<{ id: string }>).detail.id;
+    const node = this.allNodeElements().find((candidate) => candidate.nodeId === id);
+    if (!node || node.isDisabled) return;
+    this.activeId = id;
+    if (!this.updateSelectionFrom(node)) return;
+    this.emit('lr-selection-change', { selection: this.selectedItems });
   };
 
   /**
@@ -436,6 +638,12 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    */
   protected override async getUpdateComplete(): Promise<boolean> {
     const result = await super.getUpdateComplete();
+    await cascadeUpdateComplete(this.nodeElements);
+    this.applyTreeContext();
+    if (this.selectionSyncPending) {
+      this.selectionSyncPending = false;
+      this.normalizeSelection();
+    }
     await cascadeUpdateComplete(this.nodeElements);
     if (this.pendingFocusId != null) {
       const id = this.pendingFocusId;
@@ -621,17 +829,19 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   override render(): TemplateResult {
     return html`
       <div
-        part="base"
+        part="base tree"
         role="tree"
         aria-label=${this.label || this.getAttribute('aria-label') || nothing}
         @keydown=${this.onTreeKeyDown}
         @lr-node-toggle=${this.onNodeActivate}
-        @lr-node-select=${this.onNodeActivate}
+        @lr-node-select=${this.onNodeSelect}
       >
         ${this.data.length === 0 && !this.hasAuthoredItems
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
           : nothing}
         <slot @slotchange=${this.onChildrenChanged}></slot>
+        <slot name="expand-icon" hidden @slotchange=${this.onChildrenChanged}></slot>
+        <slot name="collapse-icon" hidden @slotchange=${this.onChildrenChanged}></slot>
       </div>
       ${this.reorderable ? html`<lr-live-region></lr-live-region>` : nothing}
     `;

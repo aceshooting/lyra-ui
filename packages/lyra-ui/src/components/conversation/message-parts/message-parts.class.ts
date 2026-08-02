@@ -73,6 +73,8 @@ export interface LyraMessagePartsEventMap
  * @csspart audio-transcript - An audio part's transcript.
  * @csspart error - An error part.
  * @csspart retry - A retryable error part's action.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -570,6 +570,48 @@ it('renders the shared close icon svg instead of a literal times-entity glyph', 
   expect(button.textContent?.trim()).to.equal('');
 });
 
+it('exports the mapped close-icon and progress-ring part trees', async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="5000">Progress</lr-toast-item>`,
+  )) as LyraToastItem;
+  const expectedParts = [
+    'close-icon',
+    'close-icon__svg',
+    'progress-ring',
+    'progress-ring__base',
+    'progress-ring__indicator',
+    'progress-ring__label',
+    'progress-ring__track',
+  ];
+
+  for (const part of expectedParts) {
+    expect(el.shadowRoot!.querySelector(`[part~="${part}"]`), `${part} should be exported`).to.exist;
+  }
+  expect(el.shadowRoot!.querySelector('[part~="close-icon__svg"]')?.localName).to.equal('svg');
+
+  el.duration = 0;
+});
+
+it('honors the mapped item token aliases at the rendered surface', async () => {
+  const el = (await fixture(html`
+    <lr-toast-item
+      duration="0"
+      style="--accent-width: 7px; --padding: 19px; --show-duration: 23ms linear; --hide-duration: 31ms linear"
+    >
+      Aliased
+    </lr-toast-item>
+  `)) as LyraToastItem;
+  const surface = el.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+  const accent = el.shadowRoot!.querySelector<HTMLElement>('[part="accent"]')!;
+
+  expect(getComputedStyle(accent).inlineSize).to.equal('7px');
+  expect(getComputedStyle(surface).paddingBlockStart).to.equal('19px');
+  expect(getComputedStyle(surface).transitionDuration.split(',')[0]).to.equal('0.023s');
+
+  el.setAttribute('data-hiding', '');
+  expect(getComputedStyle(surface).transitionDuration.split(',')[0]).to.equal('0.031s');
+});
+
 it('uses the configured hide transition duration for lifecycle completion', async () => {
   const el = (await fixture(
     html`<lr-toast-item duration="0">bye</lr-toast-item>`,
@@ -587,8 +629,6 @@ it('exposes distinct namespaced show and hide transition properties', () => {
   expect(styles.cssText).to.include('var(--lr-transition-base');
   expect(styles.cssText).to.include('--lr-toast-show-duration');
   expect(styles.cssText).to.include('--lr-toast-hide-duration');
-  expect(styles.cssText).to.not.include('--show-duration');
-  expect(styles.cssText).to.not.include('--hide-duration');
 });
 
 it('completes a hide on transitionend without waiting for the fallback timeout', async () => {

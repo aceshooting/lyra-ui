@@ -3,6 +3,33 @@ import { join } from 'node:path';
 
 const componentsRoot = join(process.cwd(), 'src', 'components');
 
+// Web Awesome's public data-grid variables intentionally retain their unprefixed spelling so a
+// consumer migration remains a mechanical tag rename. This is a closed, path-scoped compatibility
+// set: the same names anywhere else, or a newly invented nineteenth alias, still fail below. Their
+// declarations must continue to reference Lyra tokens, so the exception cannot smuggle raw design
+// values into a component stylesheet.
+const dataGridCompatibilityProperties = new Set([
+  '--accent-color',
+  '--background-color',
+  '--border-color',
+  '--border-radius',
+  '--border-width',
+  '--cell-padding',
+  '--focus-ring',
+  '--header-background',
+  '--header-row-height',
+  '--header-text-color',
+  '--indent-size',
+  '--max-height',
+  '--row-height',
+  '--row-hover-background',
+  '--selected-background',
+  '--stripe-background',
+  '--text-color',
+  '--transition-duration',
+]);
+const dataGridStyleFile = join(componentsRoot, 'data', 'data-grid', 'data-grid.styles.ts');
+
 function styleFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const file = join(directory, entry.name);
@@ -34,8 +61,13 @@ for (const file of styleFiles(componentsRoot)) {
     }
 
     const custom = customProperty.exec(line)?.[1];
-    if (custom && !/^(?:--lr-|--shiki-)/.test(custom)) {
+    const isDataGridCompatibilityProperty =
+      file === dataGridStyleFile && custom !== undefined && dataGridCompatibilityProperties.has(custom);
+    if (custom && !/^(?:--lr-|--shiki-)/.test(custom) && !isDataGridCompatibilityProperty) {
       findings.push(`${file}:${index + 1}: custom property must use a library or integration prefix (${custom})`);
+    }
+    if (isDataGridCompatibilityProperty && !line.includes('var(--lr-')) {
+      findings.push(`${file}:${index + 1}: data-grid compatibility property must resolve through a --lr-* token (${custom})`);
     }
 
     const property = semanticProperty.exec(line);

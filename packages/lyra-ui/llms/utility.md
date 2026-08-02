@@ -4,6 +4,7 @@ CSV/JSON download button with extensible event-driven formats — either single-
 immediately) or multi-format (click opens a small menu).
 
 **Properties:**
+
 - `rows: Record<string, unknown>[] = []` (attribute: false)
 - `columns: CsvColumn[] = []` (attribute: false) — `{ key, label }`; acts as a field allow-list **and**
   CSV header-label source for **both** export formats when non-empty. Left empty, **both** CSV and
@@ -13,7 +14,7 @@ immediately) or multi-format (click opens a small menu).
 - `filename: string = 'export'`
 - `formats: ExportFormatOption[] = ['csv']` (attribute: false), where `ExportFormatOption` is the
   built-in `ExportFormat = 'csv' | 'json'` or an `ExportFormatDescriptor = { id: string; label:
-  string; description?: string; extension?: string }`. Descriptor labels/descriptions are
+string; description?: string; extension?: string }`. Descriptor labels/descriptions are
   consumer-supplied, already-localized copy. Custom ids are event-only; no custom encoder is bundled
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
@@ -51,21 +52,32 @@ shared-clamp note.
 <script type="module">
   const exp = document.getElementById('exp');
   exp.rows = [{ name: 'Alpha', value: 1 }];
-  exp.columns = [{ key: 'name', label: 'Name' }, { key: 'value', label: 'Value' }];
+  exp.columns = [
+    { key: 'name', label: 'Name' },
+    { key: 'value', label: 'Value' },
+  ];
   exp.formats = ['csv', 'json']; // shows a format-choice menu instead of exporting immediately
   exp.addEventListener('lr-export', (e) => console.log('exporting', e.detail.format));
 
   // Custom formats supply menu copy but remain application-handled.
   exp.formats = [
     'csv',
-    { id: 'xlsx', label: 'Excel workbook', description: 'Preserves spreadsheet data types', extension: 'xlsx' },
+    {
+      id: 'xlsx',
+      label: 'Excel workbook',
+      description: 'Preserves spreadsheet data types',
+      extension: 'xlsx',
+    },
   ];
   exp.addEventListener('lr-export', async (e) => {
     if (e.detail.format !== 'xlsx') return;
     e.preventDefault();
     exp.loading = true;
-    try { await exportWorkbook(exp.rows); }
-    finally { exp.loading = false; }
+    try {
+      await exportWorkbook(exp.rows);
+    } finally {
+      exp.loading = false;
+    }
   });
 </script>
 ```
@@ -73,6 +85,7 @@ shared-clamp note.
 Package-level CSV utilities (used internally, also exported for standalone use — `import {
 escapeCsvField, buildCsv, downloadBlob } from
 '@aceshooting/lyra-ui/components/utility/export-button/csv.js'`):
+
 ```ts
 escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
 buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included
@@ -80,6 +93,7 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
 ```
 
 **Known gotchas:**
+
 - CSV and JSON are the only built-in encoders. To offer XLSX/PDF/etc., pass an
   `ExportFormatDescriptor` and handle its id from `lr-export`; custom formats never trigger a
   download or `lr-export-complete` on their own. A descriptor's optional `extension` is metadata
@@ -103,61 +117,84 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
 
 ## `lr-copy-button`
 
-A standalone icon-only copy-to-clipboard button for a plain text `value` — swaps its icon to a
-checkmark for ~1.5s once the clipboard write resolves, or to a distinct failure glyph if it doesn't.
-Takes no positioning opinion of its own; a consumer wraps/positions the host element (e.g.
-absolutely positioned in the corner of an `lr-textarea` or a read-only output field). Unlike
-`lr-code-block`'s or `lr-json-viewer`'s own built-in copy buttons, this has no code/JSON content
-model to adopt just to reuse the copy affordance.
+A standalone copy-to-clipboard affordance for a plain text `value` or a source element selected by
+`from`. Its built-in icon button swaps to a confirmation or failure glyph once the Clipboard API
+settles; a consumer-provided default-slot trigger can replace that button. The component takes no
+positioning opinion of its own.
 
 **Properties:**
-- `value: string = ''` — the plain text to copy.
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
-  Copy/Copied/Copy-failed accessible name without changing the icon
-- `disabled: boolean = false` (reflected)
-- `feedbackDuration: number = 1500` (attribute `feedback-duration`) — milliseconds before the
-  confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to
-  `1500` rather than leaving the state stuck; a negative one clamps to `0`
 
-**Methods:** `focus(options?)`, `blur()` and `click()` forward to the native button.
+- `value: string = ''` — the plain text to copy.
+- `from: string = ''` — source expression that takes precedence over `value`. `id` copies the
+  element's `textContent`, `id[attribute]` copies an attribute, and `id.property` copies a property.
+- `copyLabel: string = ''` (attribute `copy-label`) — built-in button accessible name and resting
+  tooltip text; empty uses localized `copy`.
+- `successLabel: string = ''` (attribute `success-label`) — confirmation name/tooltip text; empty
+  uses localized `copied`.
+- `errorLabel: string = ''` (attribute `error-label`) — failure name/tooltip text; empty uses
+  localized `copyFailed`.
+- `tooltip: 'full' | 'copy' | 'none' = 'full'` (reflected) — `full` shows the resting tooltip on
+  hover/focus and feedback after activation, `copy` shows feedback only, and `none` disables it.
+- `tooltipPlacement: 'top' | 'right' | 'bottom' | 'left' = 'top'` (attribute
+  `tooltip-placement`, reflected).
+- `hoist: boolean = false` (reflected) — uses fixed tooltip positioning to escape clipped
+  containers.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
+  built-in button name while leaving tooltip/feedback labels unchanged; retained Lyra alias.
+- `disabled: boolean = false` (reflected)
+- `feedbackDuration: number = 1000` (attribute `feedback-duration`) — milliseconds before the
+  confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to
+  `1000` rather than leaving the state stuck; a negative one clamps to `0`.
+
+**Methods:** `focus(options?)`, `blur()` and `click()` forward to the active built-in or custom
+trigger.
 
 **Events:**
-- `lr-copy` (`detail: { text: string }`) — fires on every activation with the current `value`,
-  before the clipboard write is attempted and regardless of its outcome (same convention as
-  `lr-code-block`'s/`lr-json-viewer`'s own copy buttons)
-- `lr-copy-error` (`detail: { text: string; reason: LyraCopyErrorReason; error: unknown }`) — the
-  clipboard write failed. `reason` is `'unsupported'` (no Clipboard API in this context — an
-  insecure origin, or an older browser), `'denied'` (the browser refused: a `NotAllowedError`/
-  `SecurityError`, typically a denied permission or an unfocused document) or `'failed'` (anything
-  else the platform reported). Under `'denied'`/`'failed'` `error` is the platform error itself,
-  unwrapped (a `DOMException` for a real rejection); under `'unsupported'` no write was attempted,
-  so `error` is a component-created `Error` named `ClipboardUnsupportedError`
 
-**Slots:** none.
+- `lr-copy` (`detail: { text: string }`) — fires on every activation with the resolved source text,
+  before the clipboard write and regardless of its outcome. On a source-resolution failure,
+  `text` is empty. This preserves the existing Lyra activation convention.
+- `lr-error` (no detail) — bubbling, composed, non-cancelable notification that source resolution
+  or clipboard writing failed.
+- `lr-copy-error` (`detail: { text: string; reason: LyraCopyErrorReason; error: unknown }`) — the
+  retained detailed Lyra alias. `reason` is `'unsupported'` (no Clipboard API), `'denied'`
+  (`NotAllowedError`/`SecurityError`) or `'failed'` (including a missing/empty source and other
+  platform failures); the error field contains the original platform or component-created error.
+
+**Slots:** default custom trigger, plus `copy-icon`, `success-icon`, and `error-icon` overrides for
+the built-in button. Exactly one named icon is rendered at a time.
 
 **CSS parts:**
-- `base` — the button itself, in every state.
+
+- `base`, `button` — aliases on the built-in button in every state.
 - `base-success` — added to the button's part list while the confirmation shows
-  (`part="base base-success"`), so `::part(base)` rules keep applying alongside it.
-- `base-error` — the same, while the failure state shows (`part="base base-error"`). It only sets
-  `color: var(--lr-color-danger)`, deliberately after the hover rule, so hovering a failed button
-  still lights its background without repainting the failure colour away.
+  (`part="base button base-success"`).
+- `base-error` — the same while the failure state shows (`part="base button base-error"`).
 - `copy-icon`, `success-icon`, `error-icon` — the resting, confirmation and failure glyphs. Exactly
   one is rendered at a time; all three are `aria-hidden`.
 - `feedback` — the visually hidden `role="status"` region that announces the outcome. Empty at rest,
   so nothing is announced before a real outcome.
+- `tooltip__base`, `tooltip__base__popup`, `tooltip__base__arrow`, `tooltip__body` — exported nested
+  tooltip parts.
 
-State lives in the part *name*: style the failure with `::part(base-error)`. `::part(base)[…]` and
-`::part(base) .child` are invalid CSS and silently never match.
+**CSS custom states:** `success` and `error`. The retained `base-success`/`base-error` part names
+remain available for shadow-part styling.
 
-**Themeable custom properties:** shared tokens only — `--lr-icon-button-size` (the minimum hit
-area), `--lr-color-text-quiet`/`--lr-color-text` (resting and hover ink), `--lr-color-danger` (the
-failure ink) and `--lr-opacity-disabled`.
+**Themeable custom properties:** `--success-color` (default `var(--lr-color-success)`) and
+`--error-color` (default `var(--lr-color-danger)`), plus shared hit-area, text, focus, transition,
+and disabled-opacity tokens.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-copy-button value="npm install @aceshooting/lyra-ui"></lr-copy-button>
+<code id="install-command">npm install @aceshooting/lyra-ui</code>
+<lr-copy-button
+  from="install-command"
+  copy-label="Copy install command"
+  success-label="Install command copied"
+  tooltip-placement="right"
+  hoist
+></lr-copy-button>
 ```
 
 Handling the failure path — the button already shows and announces it, so a listener is only needed
@@ -170,6 +207,7 @@ for an application-level fallback:
 
   const button = document.getElementById('copy');
   button.addEventListener('lr-copy', () => trackCopyAttempt()); // your own instrumentation
+  button.addEventListener('lr-error', () => showCopyFallback());
   button.addEventListener('lr-copy-error', (event) => {
     // event.detail.reason is 'unsupported' | 'denied' | 'failed'
     if (event.detail.reason === 'unsupported') selectTextForManualCopy(event.detail.text);
@@ -177,31 +215,40 @@ for an application-level fallback:
 </script>
 ```
 
-`LyraCopyErrorReason` is exported alongside the class for TypeScript consumers:
+The closed-set and error-reason types are exported alongside the class:
 
 ```ts
-import type { LyraCopyErrorReason } from '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js';
+import type {
+  LyraCopyButtonTooltip,
+  LyraCopyButtonTooltipPlacement,
+  LyraCopyErrorReason,
+} from '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js';
 ```
 
 **Known gotchas:**
+
 - **Changed in 8.0.0:** the button used to enter the "Copied" confirmation on activation whether or
   not the clipboard write succeeded. It now waits for `navigator.clipboard.writeText()` to settle: a
   rejection renders the failure glyph instead, announces the localized failure text through the
-  `feedback` region, and emits `lr-copy-error`. `lr-copy` still fires for every activation, so
-  existing wiring keeps working — but code that treated `lr-copy` as proof the text reached the
-  clipboard must now pair it with `lr-copy-error` to tell the two outcomes apart.
+  `feedback` region, and emits `lr-error` plus `lr-copy-error`. `lr-copy` still fires for every
+  activation, so code that treated it as proof the text reached the clipboard must pair it with an
+  error event.
+- An empty `value`, missing `from` target/member, or empty resolved source is an error; no clipboard
+  write is attempted. `from` always wins over `value`, including when it is invalid.
 - `navigator.clipboard` is absent in insecure contexts/older browsers, and some engines throw
   synchronously rather than rejecting. Both arrive at the same failure path (`unsupported` for the
   missing API, `denied`/`failed` for a real rejection) — there is no silent success left.
-- Changing `value`, or disconnecting, clears any in-progress confirmation/failure immediately, and a
-  write that settles *after* that change is discarded: no stale glyph, and no late `lr-copy-error`
-  describing text the button no longer shows.
+- Changing `value`/`from`, or disconnecting, clears any in-progress confirmation/failure
+  immediately. A write that settles after that change is discarded.
+- A custom default-slot trigger supplies its own semantics and accessible name; built-in icon
+  slots, `button`/`base` parts, and `aria-label` forwarding apply only to the built-in button.
 - The failure is signalled on four channels — a different glyph, a different accessible name, the
   live-region announcement, and only then colour — so it survives a monochrome or high-contrast
   rendering.
 - Copy affordance strings are localizable: `copy` (`'Copy'`), `copied` (`'Copied!'`) and
   `copyFailed` (`'Copy failed'`), overridable per instance through `.strings` or app-wide through
-  `registerLyraLocale()` (see `llms/shared.md`).
+  `registerLyraLocale()` (see `llms/shared.md`). Explicit `*-label` properties take precedence.
+- Native `dir`/`lang` remain inherited global attributes. The component is not form-associated.
 
 ---
 
@@ -225,9 +272,13 @@ Lifecycle-managed wrapper around the native `IntersectionObserver`. It observes 
 in the default slot and emits a composed event, while adding no layout of its own.
 
 **Properties:** `disabled: boolean = false` (reflected), `rootMargin: string = '0px'` (attribute
-`root-margin`), `threshold: number | number[] = 0`, and `root: Element | null = null`.
+`root-margin`), `threshold: number | number[] | string = '0'` (the mapped attribute form accepts
+space-separated values), `root: Element | string | null = null` (an element or mapped element ID),
+`intersectClass: string = ''` (attribute `intersect-class`, toggled on each target), and `once:
+boolean = false` (reflected; unobserves a target after its first intersection).
 
-**Events:** `lr-intersection` with `{ entries: IntersectionObserverEntry[] }` in `detail`.
+**Events:** mapped `lr-intersect` once per entry with `{ entry }`, plus the existing batch alias
+`lr-intersection` with `{ entries: IntersectionObserverEntry[] }`.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 
@@ -239,11 +290,17 @@ Lifecycle-managed wrapper around the native `MutationObserver`. All element chil
 slot are observed and their mutation records are emitted as a composed event; the wrapper itself
 adds no layout.
 
-**Properties:** `disabled: boolean = false` (reflected), `childList: boolean = true` (attribute
-`child-list`), `observeAttributes: boolean = false` (attribute `attributes`), `characterData: boolean = false` (attribute
-`character-data`), `subtree: boolean = true`, and `attributeFilter: string[] = []`.
+**Properties:** `disabled: boolean = false` (reflected), `childList: boolean = false` (attribute
+`child-list`; **changed in 8.0.0** from Lyra's former `true` default, so opt in explicitly when
+needed; reflected), `attr: string | null = null` (reflected; `*` observes every attribute; otherwise a
+space-separated filter), `attrOldValue: boolean = false` (`attr-old-value`), `charData: boolean =
+false` (`char-data`), and `charDataOldValue: boolean = false` (`char-data-old-value`); all four
+mapped attributes reflect. Lyra's
+existing aliases remain: `observeAttributes` (`attributes`), `characterData` (`character-data`),
+`subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`.
 
-**Events:** `lr-mutation` with `{ records: MutationRecord[] }` in `detail`.
+**Events:** `lr-mutation`; `detail.records` and mapped `detail.mutationList` reference the same
+`MutationRecord[]` batch.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 
@@ -260,6 +317,7 @@ renders as a leaf `Circular reference` marker (`data-type="circular"`) instead o
 stack overflow on cyclic `data`.
 
 **Properties:**
+
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)
 - `collapsedDepth?: number` (attribute `collapsed-depth`) — nodes at or beyond this nesting depth
   (root = `0`) start collapsed; omitted/`undefined` means nothing auto-collapses
@@ -282,7 +340,7 @@ matches and the cursor.
 
 **Events:** `lr-copy` (`detail: { text: string }`) — fired by the top-level copy button or a
 per-node one. Fires even when `navigator.clipboard` is unavailable or the write silently failed
-(a rejected `writeText()` is swallowed), so a consumer can still observe copy *intent* — the event
+(a rejected `writeText()` is swallowed), so a consumer can still observe copy _intent_ — the event
 is not a confirmation that the OS clipboard was actually reached. Copying a circular `data` value
 serializes safely, substituting the same `Circular reference` marker the tree view renders, instead
 of throwing. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — fired whenever the
@@ -336,14 +394,18 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
 ```html
 <lr-json-viewer copyable max-height="24rem"></lr-json-viewer>
 <script type="module">
-  document.querySelector('lr-json-viewer').data = { hello: 'world', items: [1, 2, 3] };
+  document.querySelector('lr-json-viewer').data = {
+    hello: 'world',
+    items: [1, 2, 3],
+  };
 </script>
 ```
 
 **Known gotchas:**
+
 - `data` is property-only (`attribute: false`) — it must be set via `.data = ...` or a lit-html `.data=${...}`
   binding, never as a plain HTML attribute.
-- Search highlighting auto-expands only the *ancestors* of a match, not the whole tree — a
+- Search highlighting auto-expands only the _ancestors_ of a match, not the whole tree — a
   non-matching sibling subtree elsewhere stays collapsed (or expanded) exactly as it already was.
 - An explicit per-node expand/collapse (from clicking a node's `toggle` button) overrides
   `collapsedDepth` and declarative search-driven auto-expansion for that path. Imperative
@@ -372,13 +434,13 @@ streaming state).
 Streaming UIs (token-by-token chat responses, progress ticks, etc.) naturally produce far more
 candidate announcements than a screen-reader user can usefully absorb — reading every incremental
 chunk aloud is spam, not information. `Announcer` collapses a burst of `announce()` calls arriving
-within `throttleMs` of the *first* call in that burst down to a single trailing-edge flush of the
+within `throttleMs` of the _first_ call in that burst down to a single trailing-edge flush of the
 latest text: superseded intermediate text is dropped outright, never queued or concatenated.
 
 - `new Announcer(options: AnnouncerOptions)` where
   `AnnouncerOptions = { throttleMs?: number /* = 500 */; onFlush: (text: string) => void }`.
 - `announce(text: string, options?: AnnounceOptions)` where `AnnounceOptions = { force?: boolean }` —
-  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the *first*
+  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the _first_
   call of a burst schedules the flush timer, so the deadline stays anchored to that first call
   rather than being pushed back by every subsequent call. `{ force: true }` bypasses any
   in-progress window and flushes immediately, so a terminal message (e.g. "response complete") is
@@ -397,6 +459,7 @@ every call verbatim, by composing an internal `Announcer`. A consumer typically 
 keeps a reference to call `announce()` from application code or a parent component.
 
 **Properties:**
+
 - `mode: 'polite' | 'assertive' = 'polite'` (reflected) — `'polite'` renders `role="status"` +
   `aria-live="polite"` (waits for the user to be idle); `'assertive'` renders `role="alert"` +
   `aria-live="assertive"` (interrupts)
@@ -433,8 +496,9 @@ window and flushes immediately.
 A parent Lit component would instead hold the reference via `@query('lr-live-region')`.
 
 **Known gotchas:**
+
 - Re-announcing text identical to what was last written is special-cased: screen readers announce a
-  live region only on text-content *change*, so the component clears `textContent` first and
+  live region only on text-content _change_, so the component clears `textContent` first and
   re-sets it on the next animation frame (not the same tick, which can coalesce into nothing ever
   appearing to change) to give assistive tech a real empty-to-populated transition to observe. The
   frame is scheduled and canceled through the region's own document window, including after the
@@ -461,6 +525,7 @@ scheduled-interval countdown — this mirrors its internal `<lr-live-region>` co
 accessible phase-transition announcements.
 
 **Properties:**
+
 - `nextInMs?: number` (attribute `next-in-ms`) — milliseconds until the next scheduled action, as of
   whenever this was last set; setting it (re)starts the countdown from "now." Unset (the default)
   shows no countdown.
@@ -501,7 +566,7 @@ repainting every other component that reuses the same shared success token. Plus
 
 Internally, a 1-second ticker re-derives the remaining time from a captured target timestamp (rather
 than a naive per-tick decrement), so the countdown stays accurate even if the tab was backgrounded
-and timers were throttled. Assigning a *changed* `nextInMs` value starts a fresh deadline; assigning
+and timers were throttled. Assigning a _changed_ `nextInMs` value starts a fresh deadline; assigning
 the same value is a normal Lit no-op, so use `restart()` for a new cycle with the same delay.
 Pausing/resuming, toggling `active`, disconnecting/reconnecting, or toggling either after the due
 event stops/starts only an unconsumed ticker: a consumed deadline never replays until `nextInMs`
@@ -509,6 +574,7 @@ changes or `restart()` is called. Phase transitions ("Paused.", "Resumed.", "Ref
 announced via an internal `<lr-live-region>` in polite mode.
 
 **Known gotchas:**
+
 - `restart()` is the explicit reset/extend path when the configured delay value itself has not
   changed.
 - `active="false"` and `paused` both stop the ticker independently, but only `paused` fires
@@ -531,6 +597,7 @@ option share one tree scope. A string `aria-activedescendant` cannot resolve fro
 the document into an option in this component's shadow root.
 
 **Properties:**
+
 - `anchor?: HTMLElement` (attribute: false) — the element to position the popup relative to. A
   plain `<textarea>` or single-line text `<input type="text"|"search">` gets caret-precise
   positioning; any other element anchors the whole popup under that element's own box.
@@ -556,6 +623,7 @@ the document into an option in this component's shadow root.
   `activeDescendantId`, it cannot form a cross-shadow string IDREF from a host input.
 
 **Methods:**
+
 - `handleKeyDown(e: KeyboardEvent): boolean` — the host's own text-control `keydown` handler calls
   this while the popover is open. Handles `ArrowDown`/`ArrowUp` (moves the highlight) and
   `Enter`/`Tab` (commits the highlighted row) — both pairs return `false` with no
@@ -610,8 +678,7 @@ available space. See `lr-tour` for the shared-clamp note.
 
   textarea.addEventListener('keydown', (e) => {
     if (popover.open && popover.handleKeyDown(e)) {
-      if (!popover.syncActiveDescendant(textarea) &&
-          (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      if (!popover.syncActiveDescendant(textarea) && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
         void popover.focusActiveOption();
       }
       return;
@@ -620,7 +687,12 @@ available space. See `lr-tour` for the shared-clamp note.
   textarea.addEventListener('input', () => {
     popover.anchor = textarea;
     popover.items = [
-      { id: 'ada', label: 'Ada Lovelace', description: 'Engineering', icon: '👩‍💻' },
+      {
+        id: 'ada',
+        label: 'Ada Lovelace',
+        description: 'Engineering',
+        icon: '👩‍💻',
+      },
       { id: 'grace', label: 'Grace Hopper', description: 'Engineering' },
     ];
     popover.query = 'a'; // detected since the trigger character
@@ -649,6 +721,7 @@ automatically only on an `anchor` or `query` change while open (a keystroke move
 fresh `query` is the proxy for "the caret may have moved").
 
 **Known gotchas:**
+
 - a host-level `aria-label` attribute on `<lr-mention-popover>` now takes priority over `label`
   (and its localized default) when resolving `[part="listbox"]`'s accessible name — previously it
   was silently ignored. Matches the same fallback on `<lr-combobox>`/`<lr-table>`.
@@ -672,7 +745,7 @@ fresh `query` is the proxy for "the caret may have moved").
   active option.
 - There's no persisted "selection" the way `<lr-combobox>`'s own listbox has one — a mention is
   either committed (closing the popover) or dismissed with nothing chosen. `aria-selected="true"`
-  here marks whichever row is currently *active* (what Enter/Tab would commit right now, per the
+  here marks whichever row is currently _active_ (what Enter/Tab would commit right now, per the
   WAI-ARIA combobox-with-list-autocomplete pattern), not a separate persisted value.
 
 ---
@@ -686,6 +759,7 @@ string the consumer already unified-diffed; it has no two-string-compare entry p
 First-party invention (no Web Awesome equivalent).
 
 **Properties:**
+
 - `oldText: string = ''` (attribute: false) — the "before" text. Default `''` renders an
   all-additions diff of `newText`.
 - `newText: string = ''` (attribute: false) — the "after" text. Default `''` renders an
@@ -746,6 +820,7 @@ same line-diff function this component's own `render()`/copy handler call, expos
 consumer can compute or unit-test the same alignment without instantiating the element at all.
 
 **Known gotchas:**
+
 - line splitting normalizes LF, CRLF, and lone CR endings before alignment and syntax-token indexing,
   so files that differ only by line-ending convention do not appear wholly changed.
 - alignment uses Hirschberg longest-common-subsequence matching: O(n·m) time with linear working
@@ -775,32 +850,51 @@ and every byte they return is capped, sanitized, and rendered only if the whole 
 Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
 
 **Properties:**
-- `name: string = ''` — a built-in glyph: `add`, `check`, `close`, `search`, `menu`,
+
+- `name: string = ''` (reflected once set) — a built-in glyph: `add`, `check`, `close`, `search`, `menu`,
   `chevron-left`, `chevron-right`, `chevron-down`, `calendar`, `command`, `trash`. An unknown name
   renders nothing (no error, no fallback glyph). With a registered `library`, this is instead the
-  name handed to that library's resolver.
+  name handed to that library's resolver. The setter accepts `undefined` to clear the name; reads
+  remain the canonical non-nullable `''`.
 - `path: string = ''` — raw SVG path data for a glyph the built-in set doesn't cover. Takes
   precedence over `name`.
 - `label: string = ''` — accessible name. Left empty (the default) the SVG is `aria-hidden="true"`,
   which is what you want whenever adjacent text already names the control. A host `aria-label` wins
   over it, and either one is applied to a fetched icon too.
-- `library: string = ''` (reflected) — name of a library registered with `registerIconLibrary()`.
-  Empty (the default) means the built-in glyph set. An **unregistered** name also falls back to the
+- `library: string = 'default'` (reflected) — name of a library registered with `registerIconLibrary()`.
+  `default` means the built-in glyph set. An **unregistered** name also falls back to the
   built-in set instead of erroring, which is what lets registration happen after first render.
+- `family: string = ''` and `variant: string = ''` (reflected once set) — forwarded with `name` to
+  a registered library resolver. Their vocabulary belongs to that library; for example, an icon
+  host might distinguish `classic`/`sharp` families and `regular`/`solid` variants.
 - `src: string = ''` — URL of a single SVG document to fetch. It applies only when no registered
   library owns the icon: no `library` set, an unregistered one, or an empty `name`. Once a
   registered library does own the name it decides alone — a resolver that returns `''` or throws
-  does **not** fall back to `src`.
-- `rotate?: number` (reflected) — clockwise rotation in degrees, applied to the icon box. Unset (the
-  default) there is no `transform` at all, so an ordinary icon never becomes a containing block; a
+  does **not** fall back to `src`. Assigning `undefined` aborts and clears any pending remote load,
+  removes the source, and reads back as `''`.
+- `rotate: number = 0` (reflected once changed) — clockwise rotation in degrees, applied to the icon box. At zero
+  there is no `transform` at all, so an ordinary icon never becomes a containing block; a
   non-finite value leaves the icon unrotated.
-- `flip?: 'horizontal' | 'vertical' | 'both'` (reflected, type `LyraIconFlip`) — mirrors the icon
-  about the vertical, horizontal, or both axes. Unset by default.
-- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon *box* to
+- `flip?: 'x' | 'y' | 'both' | 'horizontal' | 'vertical'` (reflected, type `LyraIconFlip`) — mirrors
+  the icon about the vertical, horizontal, or both axes. `horizontal`/`vertical` are retained Lyra
+  aliases for the mirrored `x`/`y` vocabulary. Unset by default.
+- `canvas?: 'fixed' | 'auto' | 'square' | 'roomy'` (reflected, type `LyraIconCanvas`) — sizes the
+  layout box. Unset behaves as `fixed` (1.25em × 1em); `auto` follows the SVG's intrinsic width at
+  1em high; `square` is 1.25em × 1.25em; `roomy` is 1.5em × 1.5em. All scale with `font-size`.
+- `autoWidth: boolean = false` (attribute `auto-width`, reflected, deprecated) — compatibility
+  alias for `canvas="auto"`; an explicit `canvas` wins.
+- `swapOpacity: boolean = false` (attribute `swap-opacity`, reflected) — swaps the primary and
+  secondary opacity hooks on SVGs that carry `.fa-primary`/`.fa-secondary` duotone layers.
+- `animation?: LyraIconAnimation` (reflected) — one of `beat`, `fade`, `beat-fade`, `bounce`,
+  `flip`, `flip-360`, `shake`, `spin`, `spin-pulse`, `spin-reverse`, `spin-snap`, `spin-snap-4`,
+  `spin-snap-8`, `buzz`, `wag`, `float`, `swing`, or `jello`. Every treatment stops under
+  `prefers-reduced-motion: reduce`.
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon _box_ to
   `--lr-icon-fixed-width` while the glyph keeps `--lr-icon-size` and centres inside it, so a column
   of differently-shaped icons lines its labels up.
 
 **Events:**
+
 - `lr-load` (`detail: { src: string }`) — a remote icon finished loading and is in the DOM. Also
   fires for a valid-but-empty document, which is not a failure. Never fires for a built-in glyph.
 - `lr-error` (`detail: { src: string; error: unknown }`) — a remote icon could not be resolved,
@@ -816,7 +910,9 @@ mirrored live while connected; observation stops on detach and a reconnect synch
 source tree.
 
 **CSS parts:**
+
 - `svg` — the rendered SVG, whether built-in or fetched.
+- `use` — every `<use>` in the rendered SVG.
 - `error` — the visually hidden `role="alert"` shown when a remote icon fails. It carries a
   localized message (`iconLoadError`, `iconTooLarge`, or `iconSanitizerMissing`), never the raw
   platform error, and re-localizes when the locale changes.
@@ -824,14 +920,30 @@ source tree.
   document.
 
 **Themeable custom properties:**
-- `--lr-icon-size` (default `--lr-size-1-25rem`) — sets both dimensions of the glyph. Stroke color
-  is `currentColor` and the host is `color: inherit`, so color comes from the surrounding text with
-  no configuration.
-- `--lr-icon-fixed-width` (default `--lr-size-1-5rem`) — inline size of the box while `fixed-width`
+
+- `--lr-icon-size` (unset by default) — when supplied, overrides both canvas dimensions. Without
+  it, the selected `canvas` uses the font-relative sizes above. Stroke color is `currentColor` and
+  the host is `color: inherit`, so color comes from surrounding text with no configuration.
+- `--lr-icon-fixed-width` (default `--lr-size-1-5em`) — inline size of the box while `fixed-width`
   is set.
 - `--lr-icon-rotate` (default `0deg`), `--lr-icon-flip-x` and `--lr-icon-flip-y` (default `1` each) —
   the transform inputs. `--lr-icon-rotate` is written inline from the `rotate` property and the flip
   factors are set to `-1` by `flip`, so set those properties rather than these tokens.
+- Shared animation controls: `--animation-delay` (default `0s`), `--animation-direction` (default
+  `normal`), `--animation-duration` (default `--lr-duration-icon`, 1s),
+  `--animation-iteration-count` (default `infinite`), and `--animation-timing` (default
+  `--lr-easing-emphasized`).
+- Animation-specific controls: `--beat-scale`; `--fade-opacity`; `--beat-fade-opacity` and
+  `--beat-fade-scale`; `--bounce-height`, `--bounce-jump-scale-x`, `--bounce-jump-scale-y`,
+  `--bounce-land-scale-x`, `--bounce-land-scale-y`, `--bounce-rebound`,
+  `--bounce-start-scale-x`, `--bounce-start-scale-y`, and `--bounce-anticipation`; `--flip-angle`,
+  `--flip-x`, `--flip-y`, `--flip-z`, `--flip-anticipation-scale`, and `--flip-overshoot`;
+  `--buzz-distance`; `--wag-angle`; `--swing-angle`; `--jello-scale-x` and `--jello-scale-y`; and
+  `--float-height`, `--float-drift`, `--float-tilt`, `--float-squash-x`, `--float-squash-y`,
+  `--float-stretch-x`, and `--float-stretch-y`.
+- Duotone controls: `--primary-color`/`--secondary-color` (default `currentColor`) and
+  `--primary-opacity`/`--secondary-opacity` (defaults `1`/`0.4`). `swap-opacity` exchanges which
+  opacity each layer receives without exchanging its color.
 
 **Optional peer deps:** `dompurify` — needed **only** for `library`/`src` fetching, never for the
 built-in glyphs. It is imported lazily on the first remote load; if it can't be loaded the icon
@@ -854,8 +966,9 @@ import {
 } from '@aceshooting/lyra-ui/components/utility/icon/icon-library.js';
 
 registerIconLibrary('material', {
-  // Called synchronously with the icon's `name`; must return a URL string, never a promise.
-  resolver: (name) => `https://cdn.example.com/material/${name}.svg`,
+  // May return a URL directly or resolve one asynchronously. All three reflected lookup fields
+  // are provided, so a library decides their vocabulary and URL layout.
+  resolver: async (name, family, variant) => `https://cdn.example.com/material/${family}/${variant}/${name}.svg`,
   // Optional. Runs on the already-sanitized, component-owned <svg> before it is rendered —
   // recolouring, adding a viewBox, stripping a hardcoded width/height. It must not reintroduce
   // markup from an untrusted source, and a throwing mutator fails the load.
@@ -866,35 +979,44 @@ registerIconLibrary('material', {
   },
 });
 
-getIconLibrary('material')?.resolver('star'); // 'https://cdn.example.com/material/star.svg'
+await getIconLibrary('material')?.resolver('star', 'classic', 'solid');
 unregisterIconLibrary('material'); // icons using it revert to the built-in glyph set
 ```
 
 ```html
-<lr-icon library="material" name="star" label="Favourite"></lr-icon>
+<lr-icon library="material" family="classic" variant="solid" name="star" label="Favourite"></lr-icon>
 <lr-icon library="material" name="delete" fixed-width></lr-icon>
+<lr-icon name="search" canvas="square" animation="beat"></lr-icon>
 ```
 
-Types: `LyraIconLibraryResolver = (name: string) => string`, `LyraIconLibraryMutator = (svg:
-SVGElement) => void`, and `LyraIconLibraryOptions = { resolver; mutator? }` are exported from the
-same module.
+Types: `LyraIconLibraryResolver = (name: string, family: string, variant: string) => string |
+Promise<string>`, `LyraIconLibraryMutator = (svg: SVGElement) => void`, and
+`LyraIconLibraryOptions = { resolver; mutator? }` are exported from the same module.
 
 **Known gotchas:**
+
 - Registration order doesn't matter. `registerIconLibrary()` re-resolves every currently rendered
   `<lr-icon>` using that name, so icons can be on the page first; re-registering the same name with
   a different resolver re-resolves them again, and `unregisterIconLibrary()` reverts them to the
   built-in glyph. While a remote icon resolves, nothing is drawn — the box already holds its size,
   and a placeholder glyph would be a flash of the wrong icon.
-- A resolver returning an empty string (an unknown name) leaves the built-in render in place and
-  fetches nothing. A resolver that *throws* is a failure: localized alert plus `lr-error`.
+- A resolver returning an empty string (an unknown name) restores the built-in render and fetches
+  nothing. A resolver that throws or rejects is a failure: localized alert plus `lr-error`.
+  Resolver promises are generation-guarded: if `name`, `family`, `variant`, or `library` changes
+  while one is pending, its stale URL is never fetched.
 - Remote loading is fail-closed by construction: the URL must pass the shared fetch allowlist
   (`http:`, `https:`, `blob:`, `data:`, and relative URLs — a `javascript:` URL is never fetched),
   the response is capped at 1 MiB before any parser sees it, and DOMPurify's SVG profile runs
   unconditionally, sanitizing straight to DOM nodes rather than to a re-parsed string. A response
   that isn't an SVG document is rejected, and its text never reaches the DOM.
+- Matching requests share a bounded cache of canonical sanitized SVG nodes. Concurrent icons issue
+  one fetch, a disconnected subscriber does not abort work another icon still needs, and retryable
+  failures are evicted. The canonical node is never rendered or mutated: each icon deep-clones it,
+  then invokes that library's trusted mutator on the private clone. This keeps one library's
+  recoloring from poisoning another library, a direct `src`, or a later cache hit.
 - A superseded load can never paint over a newer one, and a detached icon holds no half-finished
-  remote state — reconnecting re-resolves from scratch.
-- `rotate`/`flip` are physical, not direction-relative: `flip="horizontal"` produces the same
+  remote state. Reconnecting re-resolves the library and can reuse a retained sanitized resource.
+- `rotate`/`flip` are physical, not direction-relative: `flip="x"` produces the same
   mirrored artwork in LTR and RTL. A glyph that must follow reading direction is mirrored by the
   wrapping part of the component that owns it; a second, direction-driven flip here would silently
   cancel that one out.
@@ -928,12 +1050,13 @@ expose the text. Use the `:focus-within` escape hatch rather than overriding the
 A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host
 `aria-label` is forwarded to that inner semantic owner.
 
-**Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected).
+**Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) and
+`vertical: boolean = false` (reflected Shoelace-compatible shorthand).
 
 **Events:** none. **Slots:** none. **CSS parts:** `base`.
 
-**Themeable custom properties:** shared tokens only — `--lr-color-border` (rule color),
-`--lr-border-width-thin` (thickness).
+**Themeable custom properties:** `--color` (falls back to `--lr-color-border`), `--width` (falls
+back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied on the cross axis).
 
 The host is `display: block` when horizontal and `display: inline-block; block-size: 100%` when
 vertical, so a vertical divider fills its flex/grid row's height with no extra CSS — but it needs a
@@ -958,21 +1081,27 @@ Malformed runtime options fall back to a safe option set without discarding an o
 effective locale. Only a malformed locale itself falls back to the runtime default.
 
 **Properties:**
+
 - `value: number = 0`
-- `currency: string = ''` — an ISO 4217 code (`'EUR'`, `'JPY'`). Non-empty switches the formatter to
-  `style: 'currency'`; empty leaves it at `Intl`'s default decimal style
+- `type: 'currency' | 'decimal' | 'percent' = 'decimal'`
+- `currency: string = 'USD'` and `currencyDisplay: 'symbol' | 'narrowSymbol' | 'code' | 'name' =
+'symbol'` (`currency-display`); used only by currency formatting
+- `withoutGrouping: boolean = false` (`without-grouping`) and `noGrouping: boolean = false`
+  (`no-grouping`) — Web Awesome/Shoelace aliases; either disables grouping separators
 - `notation: 'standard' | 'compact' | 'scientific' | 'engineering' = 'standard'`
+- `minimumIntegerDigits?: number` (attribute `minimum-integer-digits`)
 - `minimumFractionDigits?: number` (attribute `minimum-fraction-digits`)
 - `maximumFractionDigits?: number` (attribute `maximum-fraction-digits`)
+- `minimumSignificantDigits?: number` / `maximumSignificantDigits?: number` (matching kebab-case
+  attributes)
 
 **Slots:** default — fallback content, rendered only when `value` is not finite (`NaN`/`Infinity`,
 e.g. a malformed attribute) or the formatted string is empty.
 
-Both fraction-digit properties are normalized to finite integers clamped to `Intl`'s own accepted
-`[0, 100]`, and swapped if clamping left `minimum > maximum` — either would otherwise throw a
-`RangeError` and crash the render. Leaving one `undefined` passes nothing for it, so `Intl`'s own
-notation-driven defaults still apply; there is no forced default pair. No `percent`/`unit` style and
-no `signDisplay`/`currencyDisplay`/grouping knob — compose `Intl.NumberFormat` directly for those.
+All digit properties are finite-integer guarded before `Intl` construction: integer/significant
+digits clamp to `[1, 21]`, fractions to `[0, 100]`, and crossed minimum/maximum pairs are ordered.
+Leaving one `undefined` preserves `Intl`'s own defaults. Closed-set values assigned through untyped
+JavaScript fall back to their documented defaults.
 
 ## `lr-format-date`
 
@@ -980,42 +1109,49 @@ no `signDisplay`/`currencyDisplay`/grouping knob — compose `Intl.NumberFormat`
 resolution and `Intl`-instance caching are as described under `lr-format-number` above.
 
 **Properties:**
-- `date: string | number | Date = ''` — a `Date`, or anything the `Date` constructor accepts
-- `year: Intl.DateTimeFormatOptions['year'] = 'numeric'`, `month: … = 'long'`, `day: … = 'numeric'`
-  — the granular option set
+
+- `date: string | number | Date = new Date()` — unset means the construction-time current instant.
+  **Changed in 8.0.0:** the former empty-string default rendered fallback content
+- optional granular fields: `weekday`, `era`, `year`, `month`, `day`, `hour`, `minute`, `second`,
+  and `timeZoneName` (attribute `time-zone-name`), each restricted to its corresponding published
+  `Intl.DateTimeFormat` literal set
 - `dateStyle?: 'full'|'long'|'medium'|'short'` (attribute `date-style`), `timeStyle?: …`
   (attribute `time-style`) — the preset-style set
 - `timeZone?: string` (attribute `time-zone`) — an IANA zone name, forwarded through **both** option
   sets
+- `hourFormat: 'auto' | '12' | '24' = 'auto'` (`hour-format`) — maps to `hour12` when explicit
 
 Setting either `dateStyle` or `timeStyle` switches the component to the preset-style set and the
-granular `year`/`month`/`day` are then ignored entirely (`Intl` throws when the two are mixed); leave
-both unset to use the granular set. An unparseable `date` renders the default slot. An invalid
+granular fields are then ignored entirely (`Intl` throws when the two are mixed); leave both unset
+to use the granular set. An unparseable `date` renders the default slot. An invalid
 `timeZone` throws a `RangeError` inside `Intl`, which is caught and retried once without the zone —
-so the output falls back to the browser's local zone instead of failing to render.
+so the output falls back to the browser's local zone instead of failing to render. Valid output is
+wrapped in semantic `<time datetime="…">`.
 
 **Slots:** default — fallback content for an invalid/unparseable `date`.
 
 ## `lr-format-bytes`
 
-Byte-size output via `Intl.NumberFormat`'s `style: 'unit'` (`unitDisplay: 'short'`), so the unit
-name is localized too. Text-only host — no CSS parts, events, or own tokens; locale resolution and
+Byte/bit output via `Intl.NumberFormat`'s `style: 'unit'`, so the unit name is localized too.
+Text-only host — no CSS parts, events, or own tokens; locale resolution and
 `Intl`-instance caching are as described under `lr-format-number` above.
 
 **Properties:**
-- `value: number = 0` — a byte count
-- `unitStep: number = 1024` (attribute `unit-step`) — set `1000` for SI (kB/MB) instead of binary
+
+- `value: number = 0`
+- `unit: 'byte' | 'bit' = 'byte'`
+- `display: 'long' | 'short' | 'narrow' = 'short'` — forwarded as `unitDisplay`
+- `unitStep: number = 1000` (attribute `unit-step`) — mapped decimal scaling. **Changed in 8.0.0:**
+  the former Lyra default was `1024`; it remains an opt-in extension
 - `decimals: number = 1` — maximum fraction digits on the scaled amount
 
 **Slots:** default — fallback content, rendered only when `value` is not finite.
 
-The unit ladder is fixed at `byte`, `kilobyte`, `megabyte`, `gigabyte`, `terabyte`, `petabyte` and
-saturates at the top; the index is `floor(log|value| / log(unitStep))`, and `0` always formats as
-bytes. Magnitudes below one byte, including negative values, stay in the `byte` unit rather than
-forming a negative unit index. `unitStep` is normalized to a finite number `> 1` (a step of exactly `1` would divide by
-`log(1) === 0`) falling back to `1024`; `decimals` is clamped to `[0, 10]` — an out-of-range value
-would otherwise throw a `RangeError` from `maximumFractionDigits`. Note that `unitStep: 1024` still
-prints the SI-named `kB`/`MB` units, not `KiB`/`MiB` — `Intl` has no binary unit names.
+The selected ladder is `byte`/`kilobyte`… or `bit`/`kilobit`… through peta and saturates at the
+top; the index is `floor(log|value| / log(unitStep))`, and zero stays in the base unit. Magnitudes
+below one remain at index zero. `unitStep` is normalized to a finite number `> 1`, falling back to
+`1000`; `decimals` clamps to `[0, 10]`. Setting `unitStep="1024"` still prints SI-named `kB`/`MB`
+units, not `KiB`/`MiB`, because `Intl` exposes no binary unit names.
 
 ## `lr-relative-time`
 
@@ -1024,18 +1160,20 @@ Text-only host — no CSS parts, events, or own tokens; locale resolution and `I
 are as described under `lr-format-number` above.
 
 **Properties:**
-- `date: string | number | Date = ''` — the target instant; past values format as "ago"
+
+- `date: string | number | Date = new Date()` — the target instant; unset means now. **Changed in
+  8.0.0:** the former empty-string default rendered no content
 - `unit: 'second'|'minute'|'hour'|'day'|'week'|'month'|'quarter'|'year'|'auto' = 'auto'` — `'auto'`
   picks the largest unit whose own length fits inside the elapsed time, then rounds; naming a unit
   forces it (so a 90-minute delta with `unit="day"` rounds to "today"/0 days)
 - `numeric: 'always' | 'auto' = 'auto'` — `Intl`'s own option: `'auto'` allows "yesterday"/"tomorrow"
   in place of "1 day ago"/"in 1 day"; `'always'` keeps the numeric phrasing
-- `sync: boolean = false` — re-renders on a fixed 30-second interval so the text stays current. The
-  interval is cleared on disconnect and restarted whenever `date`/`unit`/`numeric`/`locale` changes.
-  Not adaptive: a "3 seconds ago" readout still only updates every 30 s
+- `format: 'long' | 'short' | 'narrow' = 'long'` — forwarded as relative-time `style`
+- `sync: boolean = false` — schedules one timeout at the next rounded-value or auto-unit boundary,
+  rather than fixed polling; it is cleared on disconnect and recalculated when inputs change
 
-**Slots:** none — an unparseable `date` renders the empty string, with no fallback-content hook
-(unlike the three `lr-format-*` components above).
+Valid output is semantic `<time datetime="…">`. **Slots:** none — an unparseable `date` renders the
+empty string, with no fallback-content hook (unlike the three `lr-format-*` components above).
 
 ## `lr-known-date`
 
@@ -1045,14 +1183,22 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
 8601 (`YYYY-MM-DD`), or `''` while any field is blank or the combination isn't a real calendar date.
 
 **Properties:**
+
 - `value: string` — canonical `YYYY-MM-DD` or `''`. Assignment goes through a strict-ISO gate:
   a non-zero-padded (`"2007-3-27"`) or calendar-invalid (`"2007-02-30"`) literal sanitizes to `''`
   and clears all three fields. Programmatic assignment never emits `input`/`change`
 - `valueAsDate: Date | null` — the same value as a local-midnight `Date`; settable (assigning
   `null` clears)
+- `parts: DateParts` — the live raw `{ day, month, year }` strings. Assigning a complete valid set
+  synchronizes the canonical `value`; assigning an incomplete or impossible set clears `value`
+- `valueInput: HTMLInputElement` — hidden native `type="date"` mirror kept synchronized with
+  `value`, `min`, `max`, `required`, `disabled`, and `readonly` for integrations that inspect native
+  date constraints
 - `min: string = ''`, `max: string = ''` — inclusive `YYYY-MM-DD` bounds, surfaced as
   `rangeUnderflow`/`rangeOverflow`
 - `readonly: boolean = false` (reflected) — also suspends all validity flags
+- `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected) — field fill and
+  border treatment; `pill: boolean = false` (reflected) rounds every field fully
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — control density on the library's
   shared six-step ladder, scaling each field's height floor, padding, font size and corner radius
   together so a birthdate field lines up with the `lr-input`/`lr-date-input` beside it at the same
@@ -1063,32 +1209,53 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
 - `locale: string = ''` — BCP-47 override for field order and per-field label sampling only
   (redeclared non-reflecting over the base `locale`, like `lr-date-input`)
 - `autocomplete: string = ''` — the special value `'bday'` expands to
-  `bday-day`/`bday-month`/`bday-year` across the three fields; any other non-empty value is
-  forwarded verbatim to all three
+  `bday-day`/`bday-month`/`bday-year` across the three fields; `'on'` and `'off'` apply to all three,
+  while any other non-empty field-specific token is forwarded only to the year field
+- `withLabel: boolean = false` (`with-label`) and `withHint: boolean = false` (`with-hint`) — SSR
+  slot-presence hints. Normal client rendering detects slotted label/hint content automatically
 - `dayLabel: string = 'Day'` (`day-label`), `monthLabel: string = 'Month'` (`month-label`),
   `yearLabel: string = 'Year'` (`year-label`) — visible **and** accessible per-field labels; each
   routes through `localize()` only while left at its literal default
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — applied to `[part="fieldset"]`,
   which owns the group role, overriding the `<legend>`-derived name
+- The shared form surface adds `defaultValue`, `customError` (`custom-error`), `getForm()`,
+  `checkValidity()`, `reportValidity()`, and `setCustomValidity(message)`.
 
-**Methods:** `focus(options?)` focuses the first field in locale order; `blur()` blurs whichever
-field currently has focus.
+For mapped JavaScript/TypeScript compatibility, assigning `null` to `name` clears it to the
+canonical `''` read value and removes the `name` attribute. The getter remains non-nullable.
 
-**Events:** `input` (every keystroke), `change` (a field blur where the composite value newly
-transitioned), plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
+**Methods:** `focus(options?)` focuses the first empty field in locale order (or the first field when
+all are filled); `blur()` blurs whichever field currently has focus; `resetValidity()` clears a
+consumer-supplied custom error and republishes intrinsic constraints;
+`formStateRestoreCallback(state)` restores a string state and clears for other shapes.
+
+**Events:** native bubbling/composed `InputEvent` `input` (every keystroke) and native
+bubbling/composed `Event` `change` (a field blur where the composite value newly transitioned),
+plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
 leaves all three fields, not per field-to-field Tab; each entry into the control likewise produces
 exactly one public `focus`, with the private trusted focus suppressed). `input`/`change` detail is
 `{ value, day, month, year, field }` — `value` is the canonical ISO date or `''`, `day`/`month`/`year`
 are the live raw typed text, and `field` is `'day' | 'month' | 'year'`, whichever was last edited.
+`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 
 **Slots:** `label`, `hint`, `error` (each rendered alongside its matching property).
 
-**CSS parts:** `form-control` (outer wrapper), `fieldset` (the `<fieldset>` grouping the fields —
+**CSS parts:** `base`, `known-date`, and `form-control` are aliases on the same outer wrapper;
+`fieldset` (the `<fieldset>` grouping the fields —
 carries `aria-label` when `accessibleLabel` is set), `legend` (the `<legend>`; hidden when there is
-no label, and grows a `*` suffix while `required`), `fields` (the flex row), `field` (one field
-block, repeated three times, `data-field="day"|"month"|"year"`), `field-input` (the native
+no label, and grows a `*` suffix while `required`), `form-control-label` (`label` is its deprecated
+compatibility alias), `fields` / `form-control-input` (aliases on the flex row), `field` (one field
+block, repeated three times, `data-field="day"|"month"|"year"`) plus its matching `field-day`,
+`field-month`, or `field-year` token, `field-input` (the native
 `<input type="text" inputmode="numeric">` inside it, same `data-field` marker), `field-label` (the
 small per-field text label), `hint`, `error` (`role="alert"`).
+
+The `label` part alias was deprecated in 8.0.0 in favor of the shared form vocabulary
+`form-control-label`. Both names remain on the same node during the compatibility window; use
+`::part(form-control-label)` in new CSS. The alias will not be removed before 10.0.0.
+
+**CSS states:** `:state(blank)` while the composite value is empty/incomplete;
+`:state(disabled)` for direct or fieldset-cascaded disablement.
 
 **Themeable custom properties:** `--lr-known-date-field-padding-block`,
 `--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size` and
@@ -1125,7 +1292,8 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
   outer-tree rule.
 
 **Known gotchas:**
-- Field *order* is derived from the locale by formatting a probe date (Jan 2 2026) with
+
+- Field _order_ is derived from the locale by formatting a probe date (Jan 2 2026) with
   `Intl.DateTimeFormat` and reading back the part order — not from `Date.parse()`'s mm/dd/yyyy bias.
   It falls back to `month, day, year` only when that sampling fails.
 - Auto-advance (typing a field's last digit moves to the next) and backspace-into-the-previous-field
@@ -1134,12 +1302,12 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 - Each `<input>` keeps exactly the digits that were typed — never zero-padded, range-clamped, or
   reverted to a previous value; only the composite `value` is normalized to zero-padded ISO.
 - Non-digit characters are stripped in the `input` handler before they reach field state (the
-  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals *are*
+  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals _are_
   accepted and transliterated to ASCII, not rejected: Arabic-Indic (`٠`–`٩`) and Extended
   Arabic-Indic/Persian (`۰`–`۹`) digits are mapped unconditionally, and the digits of
   `effectiveLocale`'s own numbering system are added on top via `Intl.NumberFormat`, so typing
   `٢٠٢٦` into the year field commits `2026`.
-- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the *physical* key meaning
+- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the _physical_ key meaning
   "next field" flips under an inherited `dir="rtl"`; the locale-derived field order itself does not.
 - A blank composite is `valueMissing` only when **all three** fields are blank; a partially typed
   required date reports `badInput` instead.
@@ -1158,6 +1326,7 @@ candidates. Selection is applied by setting `hidden` + `aria-hidden` directly on
 children; nothing is moved or cloned.
 
 **Properties:**
+
 - `items: number = 1` — how many children are shown **simultaneously**; a count, not the pool.
   Normalized to a finite integer clamped to `[1, poolSize]`
 - `mode: 'unique' | 'random' | 'sequence' = 'unique'` — `'random'` re-rolls freely (repeats
@@ -1170,7 +1339,7 @@ children; nothing is moved or cloned.
   toggles this state; a programmatic assignment remains silent.
 - `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — clamped to a 1000 ms floor
 
-**Methods:** `randomize(): HTMLElement[]` — re-selects using the current `mode`, applies
+**Methods:** `randomize(): Element[]` — re-selects using the current `mode`, applies
 `hidden`/`aria-hidden`, emits `lr-content-change`, and returns the elements now shown. Does **not**
 reset or restart the autoplay timer.
 
@@ -1186,12 +1355,15 @@ on (a self-rotating region announcing on every tick would be spam). A host `aria
 forwarded onto it. `pause-button` — the localized autoplay pause/resume action, rendered only while
 `autoplay` is enabled and exposed as a toggle with `aria-pressed`.
 
-**Themeable custom properties:** `--lr-random-content-animation-duration` (default `300ms`),
-`--lr-random-content-animation-easing` (default `ease`),
-`--lr-random-content-animation-translate` (default `--lr-size-0-5em` — travel distance for the four
-directional `fade-*` effects).
+**Themeable custom properties:** Web Awesome aliases `--animation-duration` (default `300ms`),
+`--animation-easing` (default `ease`), and `--animation-translate` (default
+`--lr-size-0-5em` — travel distance for the four directional `fade-*` effects) feed the mapped
+`--lr-animation-duration`, `--lr-animation-easing`, and `--lr-animation-translate` names. Existing
+`--lr-random-content-animation-duration`, `--lr-random-content-animation-easing`, and
+`--lr-random-content-animation-translate` names remain fallbacks.
 
 **Known gotchas:**
+
 - There is no next/previous/shuffle action; the only built-in control is the autoplay pause/resume
   button. Selection changes via autoplay or `randomize()`.
 - Autoplay is suppressed entirely under `prefers-reduced-motion: reduce`, and whenever the eligible
@@ -1215,6 +1387,7 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 `activeIndex` and `open` are self-managed.
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — no separate `show()`/`hide()`; set this or call
   `start()`/`end()`
 - `steps: TourStep[] = []` (attribute: false) — empty renders nothing
@@ -1288,6 +1461,7 @@ retuning `--lr-theme-popover-viewport-clamp` once at `:root` narrows or widens a
 rather than per component.
 
 **Known gotchas:**
+
 - By default the spotlighted target is **non-interactive**: it stays visible and announceable (not
   `inert`, not `aria-hidden`) but every pointer event over the viewport is captured by the backdrop.
   A default step uses a modal overlay and traps focus in the panel. Set `step.interactiveTarget` to

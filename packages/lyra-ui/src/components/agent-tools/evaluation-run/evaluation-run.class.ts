@@ -154,6 +154,8 @@ function isTerminal(kind: AgentStatusKind): boolean {
  * @csspart tool-trace - The nested `<lr-tool-timeline>` for an example's tool calls.
  * @csspart empty - The empty-state message shown when `examples` is empty.
  * @csspart live-region - The internal status-announcement live region.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   static override styles = [LyraElement.styles, styles];

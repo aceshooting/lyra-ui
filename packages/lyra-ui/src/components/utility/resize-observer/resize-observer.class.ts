@@ -19,6 +19,8 @@ export interface LyraResizeObserverEventMap {
  * @slot - Elements to observe.
  * @event lr-resize - Observed elements changed size.
  * @csspart base - The non-layout wrapper around the observed slot.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> {
   static override styles = [LyraElement.styles, styles];

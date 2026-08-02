@@ -5,51 +5,76 @@
 - **Import** `import '@aceshooting/lyra-ui/components/data/sparkline/sparkline.js';` (registers the tag; side-effect import)
 - **Class** `LyraSparkline`, also available unregistered from `@aceshooting/lyra-ui/components/data/sparkline/sparkline.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecated part** `base` since `8.0.0`; use part `::part(sparkline)`; removal not before `10.0.0` — The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window.
 - **Optional peers** none
-- **Themeable via** 3 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-sparkline`
 
-Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`).
+Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`). Its default allocation is one
+`em` tall at a `4 / 1` aspect ratio, so it can sit directly in text; authored block size changes
+both dimensions through the aspect ratio.
 
 **Properties:**
-- `values: number[] = []`
-- `type: 'line' | 'bar' | 'area' = 'line'`
+- `appearance: 'gradient'|'line'|'solid' = 'solid'` (reflected) — `solid` fills the area below the
+  stroke, `gradient` fades that fill toward the baseline, and `line` renders only the stroke
+- `curve: 'linear'|'natural'|'step' = 'linear'` (reflected) — straight segments, smooth cubic
+  interpolation, or horizontal/vertical steps
+- `data: string = ''` — space-separated finite numbers such as `"5 4 4 3 4 2 3"`; at least two
+  finite values are required. Invalid/non-finite tokens are dropped, and a remaining series shorter
+  than two values renders the named empty wrapper without an invalid SVG path
+- `label: string = ''` — accessible name applied verbatim to the SVG
+- `trend?: 'positive'|'negative'|'neutral'` (reflected) — selects semantic Lyra-token defaults for
+  the line and fill. The public color custom properties below always override it
+
+**Additive Lyra extensions:**
+- `values: number[] = []` — programmatic data source used while `data` is empty
+- `type?: 'line'|'bar'|'area'` — `bar` renders bounded rectangles; `line`/`area` retain the older
+  explicit unfilled/filled modes. Omit it for the mirrored `appearance` surface
 - `min?: number` (defaults to data minimum)
 - `max?: number` (defaults to data maximum)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
-  generated summary on the internal SVG
+  generated summary for the additive `values` path; `label` takes precedence when both are set
 
 **Events:** none.
 
 **Slots:** none.
 
-**CSS parts:** `line`, `area`, `bar`
+**CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
+area path for solid/gradient appearance, `line` is the stroke path. Additive aliases are `area` on
+the same fill path and `bar` on each extension-mode rectangle.
 
-**Themeable custom properties:** `--lr-color-brand` (pure CSS cascade, no JS/`getComputedStyle`
-bridging needed), `--lr-sparkline-stroke-width` (default `1.5` — stroke width of the line/area
-path), and `--lr-sparkline-area-opacity` (default `0.15` — fill opacity of the area under the
-line, `type="area"` only).
+**Themeable custom properties:** `--fill-color` (area/gradient stop color), `--line-color` (stroke
+color), and `--line-width` (stroke width). Each reads through the live CSS cascade; line/fill
+default to the selected `trend`'s semantic Lyra tokens and `--line-width` falls back through the
+compatibility `--lr-sparkline-stroke-width` to `--lr-border-width-medium`. No canvas bridge or
+manual refresh is needed.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-sparkline type="area"></lr-sparkline>
-<script>
-  document.querySelector('lr-sparkline').values = [3, 5, 4, 8, 6, 9, 7];
-</script>
+<lr-sparkline
+  appearance="gradient"
+  curve="natural"
+  trend="positive"
+  data="3 5 4 8 6 9 7"
+  label="Revenue over the last seven days"
+></lr-sparkline>
 ```
 
 **Known gotchas:**
-- The semantic `role="img"` and accessible name live on the SVG that owns the graphic. The generated
-  summary is localized, formats the last value with `effectiveLocale`, and can be replaced through
-  `accessibleLabel`/host `aria-label`. It remains a concise summary rather than a tabular fallback.
+- The semantic `role="img"` and accessible name live on the SVG that owns the graphic. `label` is
+  applied exactly. The additive `values` path retains its localized, effective-locale summary when
+  neither naming property is present; a `data` chart without a label is left presentational rather
+  than inventing spoken application data.
 - flat data (every value equal, so the auto-computed range spans zero) now renders a centered
   midline/mid-height bars instead of collapsing every point to the bottom edge, and a single-value
-  series renders a visible flat line (a zero-length path was previously invisible). **Every** `type`
+  additive `values` series renders a visible flat line. Mirrored `data` deliberately requires two
+  values. **Every** rendering mode
   (`line`/`area`/`bar`) decimates a `values` array past 500 points down to at most 500 plotted
   samples — evenly sampled by index, always keeping the first and last value exactly, not
   aggregated/averaged. `type="bar"` caps at 500 rendered `<rect>`s directly; `line`/`area` cap the
@@ -57,5 +82,7 @@ line, `type="area"` only).
   grows unbounded, even though the element count stays at one `<path>`). Auto `min`/`max` is still
   scanned from the *full* pre-decimation `values` array, so a real extreme value that decimation
   happens to drop can't silently narrow the rendered scale.
+- Point order mirrors under RTL while the numeric sample order remains unchanged. There are no
+  animations, so reduced-motion mode needs no alternate timing branch.
 
 ---

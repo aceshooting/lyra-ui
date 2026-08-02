@@ -355,15 +355,25 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
 
 ## `lr-file-input`
 
-A drag-drop + click-to-browse file dropzone. Emits raw `File[]` only — no client-side CSV/XLSX/etc.
-parsing (that's left entirely to the host).
+A form-associated drag-drop + click-to-browse file dropzone. It stores and renders raw `File[]`;
+no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the host).
 
 **Properties:**
 - `multiple: boolean = false` (reflected)
 - `disabled: boolean = false` (reflected)
+- `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
+  synchronize rendering, validity, and form submission
+- `fileCount: number` and `dragging: boolean` (read-only)
+- `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
+  `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
+  `File`; `multiple` submits repeated entries under `name`
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message;
+  a non-empty value blocks submission until cleared with `setCustomValidity('')` or
+  `resetValidity()`
 - `accept: string = ''` — a native-`accept`-style string (`.csv,.xlsx`, `text/csv`, `image/*`, or any
   comma-separated mix); now enforced on **both** the native picker dialog and the drag-drop path, see
   gotchas
+- `capture: '' | 'user' | 'environment' = ''` — forwarded to the native file picker
 - `allowedMimeTypes: string[] = []` (attribute: false) — exact MIME-string allowlist
 - `forbiddenMimeTypes: string[] = []` (attribute: false) — exact MIME-string denylist, checked
   **before** (and takes precedence over) `allowedMimeTypes`
@@ -374,7 +384,14 @@ parsing (that's left entirely to the host).
   constrained spaces (a toolbar, a table cell) — the same convention as `lr-empty`'s `compact`. The
   dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
   `--lr-space-l` dropzone.
-- `label: string = 'Drop files here or click to browse'`
+- `label: string = ''` and `hint: string = ''`; an empty `label` leaves the localized dropzone
+  instruction (`fileInputDefaultLabel`) as the visible fallback
+- `withLabel: boolean = false` and `withHint: boolean = false` (attributes `with-label` and
+  `with-hint`) — SSR slot-presence hints
+- `size: LyraSize = 'm'` (reflected) and `validators: unknown[] = []` (attribute: false)
+- `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
+  first render. Assign another shadow descendant to override where native constraint-validation UI
+  is anchored; assign `undefined` to restore the default focusable base
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
   dropzone/button accessible name without changing visible copy
 - `acceptedMessage: string = '{count} file(s) added.'` (attribute `accepted-message`) — live-region
@@ -382,16 +399,21 @@ parsing (that's left entirely to the host).
 - `rejectedMessage: string = '{count} file(s) rejected.'` (attribute `rejected-message`) — live-region
   message after rejected files; `{count}` is replaced with the rejected count
 
-**Methods:** `openPicker()` programmatically opens the native file dialog; `focus(options?)`
-forwards to the interactive dropzone.
+**Methods:** `openPicker()` programmatically opens the native file dialog; `focus(options?)`,
+`blur()`, and `click()` forward to the interactive dropzone. Standard FACE methods are
+`getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
+`resetValidity()`; reset clears only consumer custom validity and restores current intrinsic
+`required` validity.
 
-**Events:** `lr-files` (`detail: { files: File[], rejected: RejectedFile[] }`, fired on both drop
+**Events:** a user selection or removal emits native bubbling/composed `input`, then `change`;
+programmatic `files` writes are silent. `lr-files` (`detail: { files: File[], rejected: RejectedFile[] }`, fired on both drop
 and manual file-picker selection) — `RejectedFile = { file: File; reason: 'type' | 'count' | 'size' | 'directory'
 }`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
 input (`multiple` unset) receives more than one file (in which case *all* files are rejected, none
 accepted), `'size'` from `maxFileSize`, or `'directory'` for a dropped folder. `focus`/`blur` fire
 when the semantic dropzone (the actual keyboard-focusable element, not the hidden native `<input>`)
 gains/loses focus.
+`lr-invalid` is the bubbling/composed alias of native invalidity.
 
 Each rejected file also renders as its own line in the visible `[part="rejection"]` alert, naming
 the file and the reason via one of four locale keys: `fileInputRejectedType` (default
@@ -402,25 +424,32 @@ file can be selected at a time.'`), and — for `'directory'` — the pre-existi
 `{filename}` placeholder). The filename is interpolated as caller-supplied data, never localized
 itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
-**Slots:** default slot — custom dropzone content, overrides the `label` attribute text when
-provided. The semantic button's accessible name comes from `accessibleLabel`/host `aria-label`,
+**Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
+content; `label` and `hint` supply form chrome. The semantic button's accessible name comes from
+`accessibleLabel`/host `aria-label`,
 then `label`, so icon-only slot content still announces correctly. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
 controls keep their own activation and do not also open the picker; clicking non-interactive custom
 content still activates the dropzone.
 
-**CSS parts:** `base` (the native dropzone button, visually behind but semantically beside the
-slotted content), `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
+**CSS parts:** `file-input`, `form-control-label`, `label`, `hint`, `dropzone`, `dropzone-icon`,
+`dropzone-text`, `base` (the native dropzone button, visually behind but semantically beside the
+slotted content), `input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
+`file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden `role="status" aria-live="polite"`
 element carrying the drag accept/reject announcement and the aggregate accepted/rejected count),
 `rejection` (a **visible** `role="alert"` region, rendered only while a rejection exists, listing
 each currently-rejected file next to a per-reason message — in addition to, never in place of, the
 sr-only `status` summary above)
 
+**CSS custom states:** `blank` and `dragging`, plus the shared validity states `required`,
+`optional`, `valid`, `invalid`, `user-valid`, and `user-invalid`.
+
 **Themeable custom properties:** `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
 `[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default
 `var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
 `--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
-`compact`. All three apply only while `compact` is set, so they are the way to tune a dense dropzone
+`compact`. `--lr-file-input-font-size` (default `var(--lr-form-control-font-size)`) controls the
+dropzone text size. The three compact properties apply only while `compact` is set, so they are the way to tune a dense dropzone
 without re-pointing shared spacing tokens for everything else on the page. The drag accept/reject
 highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
 `--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
@@ -463,9 +492,9 @@ an extension-only `accept` list.
 - Paste-from-clipboard **is** supported and on by default: a `paste` event on the dropzone reads
   `e.clipboardData.files` and routes it through the same accept/reject classification as a drop.
   Set `paste="false"` (or `.paste = false`) to opt out.
-- Dragged folders **are** detected via `webkitGetAsEntry()` and reported as
-  `rejected[].reason === 'directory'` (paired with a synthetic zero-byte `File` carrying the folder
-  name), not silently accepted as a phantom file.
+- Dragged folders are traversed recursively in `multiple` mode and every nested file is added. In
+  single-file mode a folder is reported as `rejected[].reason === 'directory'` (paired with a
+  synthetic zero-byte `File` carrying the folder name).
 - `maxFileSize` fails safe rather than open: `0` (the default) or `Infinity` mean "no limit", but a
   `NaN`/negative value — an unparsable `max-file-size` attribute, or a config that hasn't loaded
   yet — falls back to a 25 MB cap (exported as `DEFAULT_MAX_FILE_SIZE_BYTES`) instead of disabling
@@ -490,19 +519,28 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
   and its range handle
 - `beforeLabel`/`afterLabel` — fallback text for empty named slots
 
-**Events:** `lr-position-change` (`detail: { position }`), plus composed `focus` and `blur` events
-from the internal range handle.
+**Events:** `lr-position-change` (`detail: { position }`) on every native range input update;
+native bubbling/composed `change` when that range gesture commits; plus composed `focus` and
+`blur` events from the internal range input.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
 
-**Slots:** `before`, `after`.
+**Slots:** `before`, `after`, and `handle` (decorative content inside the visible drag handle).
 
-**CSS parts:** `base`, `before`, `after`, `divider`, and `handle`.
+**CSS parts:** `base` and `comparison` are aliases on the same comparison viewport; `before`,
+`after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native
+range input).
+
+**CSS custom properties:** `--divider-width` (default `var(--lr-size-1px)`) controls the dividing
+line's thickness; `--handle-size` (default `var(--lr-icon-button-size)`) sizes the visible handle in
+both axes. The `dragging` CSS custom state is present only while a pointer gesture is active and is
+cleared on pointer cancellation, blur, or disconnect.
 
 ```html
 <lr-image-comparer aria-label="Before and after">
   <img slot="before" alt="Before" src="before.png">
   <img slot="after" alt="After" src="after.png">
+  <span slot="handle" aria-hidden="true">↔</span>
 </lr-image-comparer>
 ```
 
@@ -510,47 +548,107 @@ from the internal range handle.
 
 ## `lr-zoomable-frame`
 
-Scrollable inspection frame with bounded zoom controls and keyboard shortcuts. Scrolling provides
-panning when zoomed content exceeds the viewport.
+Sandboxed iframe preview that mirrors Web Awesome's zoomable-frame contract. It scales a real
+`<iframe>` through discrete controls without changing the document's own viewport, and fills its
+allocated inline size with a 16:9 aspect ratio by default (override `aspect-ratio` on the host).
 
 **Properties:**
-- `zoom: number = 1` (attribute `zoom`, reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`,
-  and `zoomStep: number = 0.25` — bounded zoom configuration
-- `src: string = ''` and `alt: string = ''` — optional image source; otherwise the default slot is
-  rendered
-- `accessibleLabel: string | null` (attribute `aria-label`) — host-level accessible name
+- `src: string = ''` — iframe URL. Relative, `http:`, `https:`, `blob:`, and exact `about:blank`
+  values are accepted; active `data:`/`javascript:` and non-embeddable schemes are omitted.
+- `srcdoc: string = ''` — inline iframe document. A present `srcdoc` wins over `src`, including an
+  explicitly empty `srcdoc` attribute.
+- `allowfullscreen: boolean = false`, `loading: 'eager' | 'lazy' = 'eager'`,
+  `referrerpolicy: string = ''`, and `sandbox: string = 'allow-same-origin'` forward the native
+  iframe controls after validation. Invalid loading becomes `eager`; an invalid non-empty referrer
+  policy becomes `no-referrer`.
+- `zoom: number = 1` (reflected) — current scale. Finite programmatic values do not have to occur
+  in `zoomLevels`; unsafe/non-finite layout values render as a finite positive fallback.
+- `zoomLevels: string = '25% 50% 75% 100% 125% 150% 175% 200%'` (attribute `zoom-levels`) —
+  decimal/percentage stops used by the controls, parsed, deduplicated, and sorted.
+- `withoutControls: boolean = false`, `withoutInteraction: boolean = false`, and
+  `withThemeSync: boolean = false` (reflected attributes `without-controls`,
+  `without-interaction`, `with-theme-sync`) — respectively remove the toolbar, remove pointer and
+  sequential-keyboard iframe interaction, and opt into best-effort same-origin theme sync.
+- `accessibleLabel: string | null` (attribute `aria-label`) — forwarded to the actual iframe
+  `title`; otherwise the localized zoomable-frame label names it.
+- readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
+  `contentDocument: Document | null`. Both content accessors return `null` while detached;
+  `contentDocument` also returns `null` across an origin boundary.
 
-**Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update the zoom and emit
-`lr-zoom-change` (`detail: { zoom }`). `resetView()` calls `resetZoom()` **and** scrolls the
-viewport back to the origin — `resetZoom()` deliberately preserves the current pan/scroll offset
-(it backs the built-in reset button and the `0` shortcut), `resetView()` is the stronger reset for
-a caller swapping in entirely new content (`<lr-lightbox>` calls it on every navigation). The
-viewport accepts `+`/`=` (zoom in), `-`/`_` (zoom out), and `0` (reset zoom) while focused.
+**Methods:** `zoomIn()` selects the nearest configured level above the current value;
+`zoomOut()` selects the nearest below it. The toolbar also accepts `+`/`=` and `-`/`_` while one
+of its controls has focus.
 
-**Slots:** default slot — content to inspect; ignored while `src` is set (an `<img>` renders
-instead).
+**Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs.
+
+**Events:** native `load` and `error`, relayed exactly once from the current iframe generation as
+non-bubbling, non-composed `Event` instances. Navigation/source-policy changes replace the iframe,
+so a late event from an earlier document is ignored; detached frames do not notify.
+
+**CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`.
+
+**CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
+property and applied to the internal iframe scale.
+
+**Security and theme sync:** the iframe always keeps a `sandbox` attribute. The secure Lyra default
+allows same-origin access but not scripts, forms, popups, downloads, or top navigation. Supplied
+sandbox tokens are allowlisted; if both `allow-scripts` and `allow-same-origin` are requested, the
+latter is dropped so framed script cannot escape a same-origin sandbox. `with-theme-sync` never
+widens those permissions: when the document is accessible it copies only Lyra theme-selector
+classes, theme attributes, computed `--lr-theme-*` inputs, and `color-scheme`; cross-origin
+documents remain untouched. Changing a watched host-page theme attribute syncs again.
+
+```js
+import '@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js';
+```
+
+```html
+<lr-zoomable-frame
+  aria-label="Component preview"
+  srcdoc="<!doctype html><html><body><h1>Preview</h1></body></html>"
+  zoom="0.75"
+  with-theme-sync
+></lr-zoomable-frame>
+```
+
+---
+
+## `lr-pan-zoom`
+
+Scrollable inspection surface for slotted DOM or one image, with bounded zoom and native-scroll
+panning. This is the compatibility destination for Lyra's former `lr-zoomable-frame` behavior:
+existing consumers that inspect DOM/images should rename the tag to `lr-pan-zoom` (and the class
+import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe component above.
+
+**Properties:**
+- `zoom: number = 1` (reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`, and
+  `zoomStep: number = 0.25` — bounded, finite zoom configuration
+- `src: string = ''` and `alt: string = ''` — optional safe image source; otherwise the default
+  slot renders
+- `accessibleLabel: string | null` (attribute `aria-label`) — names the region and its focusable
+  viewport
+
+**Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
+(`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
+origin. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys from a slotted editor.
+
+**Slots:** default — inspected content, ignored while `src` renders an image.
 
 **Events:** `lr-zoom-change` (`detail: { zoom }`).
 
 **CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`.
 
-**Themeable custom properties:** `--lr-zoomable-frame-min-block-size` (default
-`var(--lr-size-10rem)` — the scrollable viewport's minimum block size).
-`--lr-zoomable-frame-zoom` is a read-only hook, not a knob: the component writes the resolved
-zoom factor inline on `[part="content"]`, which `transform: scale()` consumes — setting it from
-outside is overwritten on the next render.
+**Themeable custom properties:** `--lr-pan-zoom-min-block-size` (default `var(--lr-size-10rem)`)
+and the read-only `--lr-pan-zoom-zoom`. The former `--lr-zoomable-frame-min-block-size` and
+`--lr-zoomable-frame-zoom` names remain temporary fallbacks during the tag migration.
 
-```html
-<lr-zoomable-frame src="map-preview.png" alt="Map preview" aria-label="Map preview"></lr-zoomable-frame>
+```js
+import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
 ```
 
-**Known gotchas:**
-- `zoom`/`minZoom`/`maxZoom`/`zoomStep` are all normalized before any zoom math: `minZoom` falls
-  back to `0.5`, `maxZoom` to `4` (and is floored at the effective `minZoom`), `zoomStep` to
-  `0.25`, each clamped into `[0.01, 1000]`, so a `NaN`/zero/negative attribute can't stall or
-  reverse `zoomIn()`/`zoomOut()`.
-- every zoom is snapped to a multiple of `zoomStep` and rounded to 2 decimals, so `zoom` will not
-  always equal the exact value you assigned.
+```html
+<lr-pan-zoom src="map-preview.png" alt="Map preview" aria-label="Map preview"></lr-pan-zoom>
+```
 
 ---
 
@@ -916,12 +1014,14 @@ set takes over from the next. Mirrors `wa-avatar` / `sl-avatar` (`image`, `initi
 **Properties:**
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no glyph and no
   image is set, or the image fails to load and no `icon` slot content is provided.
-- `image?: string` — image URL; takes priority over the `icon` slot and `initials` when set and
+- `image: string = ''` — image URL; takes priority over the `icon` slot and `initials` when set and
   loads successfully (but never over default-slotted glyph content), falling back to them on a load
   error. **Renamed from `src` in 8.0.0** to match `wa-avatar`: a mechanical `wa-` → `lr-` rename
   used to leave the property unset, so a migrated avatar silently dropped its photo and rendered
   initials instead.
-- `alt: string = ''` — image alt text; set alongside `image` for accessibility, and also the source
+- `label: string = ''` — upstream-compatible accessible description. A host `aria-label` wins,
+  followed by `label`, then the older `alt` compatibility property.
+- `alt: string = ''` — compatibility image alt text; set alongside `image` for accessibility, and also the source
   of the accessible name for the glyph and initials cases (the glyph is `aria-hidden`, and the
   initials text is hidden from AT once `alt` supplies a name, so `[part="base"]` carries
   `role="img"` + that name instead).
@@ -971,7 +1071,8 @@ icon-slot content), `image` (the `<img>`, only rendered while `image` is set, ha
 default-slot glyph is provided), `initials` (the initials text, only rendered once every glyph and
 image tier ahead of it in the priority order has been ruled out).
 
-**Themeable custom properties:** `--lr-avatar-size` (default `var(--lr-size-2rem)`, stepped across
+**Themeable custom properties:** `--size` is the upstream-compatible diameter and falls back to
+`--lr-avatar-size` (default `var(--lr-size-2rem)`, stepped across
 the ladder from `var(--lr-size-1rem)` at `2xs` to `var(--lr-size-3rem)` at `xl` — every spelling of
 a tier selects the same declarations), `--lr-avatar-bg` (default `var(--lr-color-border)`, swapped
 per non-neutral `variant` to that variant's `-quiet` fill; there is no `--lr-color-surface-alt`
@@ -1031,7 +1132,7 @@ automatically under `prefers-reduced-motion: reduce`.
   before reaching the real `<img src>`.
 - `alt: string = ''` — falls back to the localized `animatedImageDefaultAlt` when empty; an explicit
   `alt=""` does **not** mark the image decorative.
-- `play: boolean = false` — the caller's *intent*. Not reflected.
+- `play: boolean = false` — the caller's *intent* (reflected).
 - `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the *effective*
   state after reduced-motion arbitration: `play && !(respectReducedMotion && <OS prefers reduce>)`.
   Assigning to it is a silent no-op; drive playback via `play`.
@@ -1060,7 +1161,8 @@ attribute, so slotted content for both stays mounted.
 frozen-frame `<canvas>`, shown in place of `image` while not playing), `control-box` (the
 backgrounded circle around the button; only rendered once loaded and error-free), `play-button`.
 
-**Themeable custom properties:** `--lr-animated-image-control-box-size` (default
+**Themeable custom properties:** upstream `--control-box-size` and `--icon-size` feed
+`--lr-animated-image-control-box-size` (default
 `var(--lr-icon-button-size)`), `--lr-animated-image-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)`), `--lr-animated-image-max-height` (default
 `var(--lr-size-20rem)` — caps the rendered media's block-size, same contract as
@@ -1087,17 +1189,20 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 Declaratively animates one slotted element through the native Web Animations API.
 
 **Properties:**
-- `name: LyraAnimationPreset = 'none'` — `'none' | 'fade-in' | 'fade-out' | 'zoom-in' | 'zoom-out' |
-  'slide-in-start' | 'slide-in-end' | 'slide-out-start' | 'slide-out-end' | 'slide-in-up' |
-  'slide-in-down' | 'bounce' | 'pulse' | 'spin' | 'shake'`. The four `-start`/`-end` slide presets
-  are logical: "start" is physically left under `ltr`, right under `rtl`.
+- `name: string = 'none'` — accepts any animation registry name. The built-in names are `'none' |
+  'fade-in' | 'fade-out' | 'zoom-in' | 'zoom-out' | 'slide-in-start' | 'slide-in-end' |
+  'slide-out-start' | 'slide-out-end' | 'slide-in-up' | 'slide-in-down' | 'bounce' | 'pulse' |
+  'spin' | 'shake'`; `LyraAnimationPreset` remains the exported convenience type for that built-in
+  subset. Other strings resolve through the registry key `animation.<name>`. The four built-in
+  `-start`/`-end` slide presets are logical: "start" is physically left under `ltr`, right under
+  `rtl`.
 - `keyframes?: Keyframe[]` (attribute: false) — raw WAAPI keyframes; always wins over `name`.
 - `play: boolean = false` (reflected) — playback intent.
 - `delay: number = 0`, `duration: number = 1000`, `endDelay: number = 0` (attribute `end-delay`),
   `easing: string = 'linear'`, `fill: FillMode = 'auto'`, `direction: PlaybackDirection = 'normal'`,
   `iterations: number = Infinity`, `iterationStart: number = 0` (attribute `iteration-start`),
   `playbackRate: number = 1` (attribute `playback-rate`) — straight WAAPI timing. `direction` is
-  the WAAPI `PlaybackDirection`, unrelated to text direction.
+  the WAAPI `PlaybackDirection`, unrelated to text direction; `iterations` is always numeric.
 - `timingPreset: LyraAnimationTimingPreset = 'custom'` (attribute `timing-preset`, reflected) —
   `'custom' | 'fast' | 'base' | 'ambient'`. Anything other than `'custom'` derives `duration` and
   `easing` from the matching `--lr-transition-*` token (read off computed style and decomposed into
@@ -1112,8 +1217,8 @@ Declaratively animates one slotted element through the native Web Animations API
   when unset the observer disconnects after the first trigger. `root: Element | null = null` and
   `threshold: number | number[] = 0` (both attribute: false) plus `rootMargin: string = '0px'`
   (attribute `root-margin`) configure that observer.
-- `currentTime: number` — the underlying `Animation.currentTime` (`0` when no animation exists);
-  writable, forwarded to the animation when one exists. Non-finite assignments are ignored.
+- `currentTime: CSSNumberish` — the underlying `Animation.currentTime` (`0` when no animation
+  exists); writable and forwarded when one exists. Non-finite numeric assignments are ignored.
 
 **Methods:** `start()` (sugar for `play = true` — named `start` because `play` is already a
 property), `pause()` (`play = false`), `finish()`, `cancel()`.
@@ -1132,6 +1237,41 @@ for the slide presets), `--lr-animation-zoom-scale` (default `0.5` — start/end
 `zoom-in`/`zoom-out`), `--lr-animation-bounce-height` (default `25%` — peak lift of `bounce`),
 `--lr-animation-shake-distance` (default `4%` — horizontal travel of `shake`).
 
+**Animation registry:** every named preset resolves the public registry key
+`animation.<name>` before using its built-in keyframes. A per-element `setAnimation()` registration
+wins over `setDefaultAnimation()`; a keyframes-only registration retains this component's
+property- or token-derived timing, and `rtlKeyframes` is selected from the live inherited text
+direction. Both setters return an idempotent cleanup. Passing `null` disables interpolation but
+still emits `lr-start` then `lr-finish`, so code sequencing work from the lifecycle does not stall.
+Direct `keyframes` property input remains the strongest, instance-local override and does not use a
+registry name. Register an override before the first render when creating an animation
+programmatically. For an already-rendered `<lr-animation>`, the override is selected on its next
+normal rebuild (a keyframe/timing/direction change or reconnect); the registry never mutates a
+native timeline that is already running.
+
+```js
+import '@aceshooting/lyra-ui/components/media/animation/animation.js';
+import { setAnimation } from '@aceshooting/lyra-ui/utilities/animation-registry.js';
+
+const animation = document.createElement('lr-animation');
+animation.name = 'slide-in-start';
+animation.iterations = 1;
+animation.innerHTML = '<span>Registry-controlled content</span>';
+const release = setAnimation(animation, 'animation.slide-in-start', {
+  keyframes: [
+    { transform: 'translateX(calc(-1 * var(--lr-size-2rem)))' },
+    { transform: 'translateX(0)' },
+  ],
+  rtlKeyframes: [
+    { transform: 'translateX(var(--lr-size-2rem))' },
+    { transform: 'translateX(0)' },
+  ],
+});
+document.body.append(animation);
+animation.start();
+// release() restores the previous registration.
+```
+
 **Optional peer deps:** none.
 
 **Known gotchas:**
@@ -1139,8 +1279,8 @@ for the slide presets), `--lr-animation-zoom-scale` (default `0.5` — start/end
   preset plays forever unless you set `iterations="1"`.
 - changing any timing/keyframe property rebuilds the animation from scratch; the rebuild's internal
   `cancel()` is deliberately silent (no `lr-cancel`), only the public `cancel()` emits.
-- the slide presets read the inherited text direction only when the animation is (re)built — an
-  animation already mid-flight is not re-mirrored if an ancestor `dir` flips.
+- the slide presets re-resolve when an inherited text-direction change is observed. The old native
+  animation is replaced rather than mirrored in place, so its timeline restarts from the new edge.
 - reduced-motion handling is entirely in JS; the shared shadow-DOM reduced-motion CSS block can't
   reach light-DOM slotted content driven by `Element.animate()`.
 
@@ -1219,7 +1359,7 @@ avatar circles themselves.
 ## `lr-lightbox`
 
 A modal, full-screen image viewer with prev/next navigation, captions, and pan/zoom delegated to one
-stable embedded `<lr-zoomable-frame>`. It renders its own dialog panel (not a nested `<lr-dialog>`)
+stable embedded `<lr-pan-zoom>`. It renders its own dialog panel (not a nested `<lr-dialog>`)
 but shares the same overlay infrastructure as `<lr-dialog>`/`<lr-command-palette>` — stacking, focus
 trap, Escape/backdrop dismissal, scroll lock, and focus return.
 
@@ -1235,7 +1375,7 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
   The independent `[part="live-region"]` announcement remains active when the counter is hidden.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/
-  `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-zoomable-frame>`, which does the
+  `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-pan-zoom>`, which does the
   normalizing.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the panel's accessible name,
   overriding the localized `lightboxLabel`.
@@ -1260,7 +1400,7 @@ padded safe area rather than shrink-wrapping), `toolbar`, `counter` (visible loc
 Total"), `live-region` (visually-hidden `role="status"` that announces position on *every* `index`
 change, including consumer-driven ones), `actions` (wrapper, `hidden` when nothing is slotted),
 `close-button` (always rendered — unlike `<lr-dialog>`'s opt-in `closable`), `stage`, `frame` (the
-embedded `<lr-zoomable-frame>`; its internal parts are not re-exported), `previous-button`,
+embedded `<lr-pan-zoom>`; its internal parts are not re-exported), `previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its
 `id` is the panel's `aria-describedby` target).
 
@@ -1288,13 +1428,25 @@ photo content.
 ## `lr-qr-code`
 
 Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`,
-`label`, `size`, `radius`, and `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`). The canvas
-owns `role="img"`; its accessible name uses host `aria-label`, then `label`, then `value`. Empty
-values render an empty state.
-**CSS parts:** `base`, `canvas`, `empty`, `loading`, and `error`. **CSS custom properties:**
+`label`, `size` (clamped to `1`–`2048` CSS px), `radius` (clamped to `0`–`0.5`), and
+`errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`, default `H`); `fill` and `background` are
+mapped color aliases that take precedence over the equivalent CSS custom properties. `image` accepts
+a safe media URL for a centered overlay, `imageBackground` (`image-background`) paints its coverage
+box, `imageCoverage` (`image-coverage`, default `0.5`) controls that box as a fraction of the canvas
+side, and `imagePadding` (`image-padding`, default `0`) pads the image within it. Image geometry is
+finite-number guarded and clamped; supplying a valid image forces error correction to `H` so the
+covered modules remain recoverable. Unsafe image URLs are ignored and a failed image load leaves the
+base QR symbol intact.
+
+The canvas owns `role="img"`; its accessible name uses host `aria-label`, then `label`, then `value`.
+Empty values render an empty state. `generate(): Promise<void>` explicitly re-encodes the current
+value. `refreshTheme(): void` redraws cached modules for consumer-owned token changes; ordinary
+ancestor theme and color-scheme changes redraw automatically. Async peer and image results are
+generation-guarded, including across disconnect/reconnect.
+**CSS parts:** `base` and `qr-code` are aliases on the same outer wrapper; `canvas`, `empty`,
+`loading`, and `error`. **CSS custom properties:**
 `--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme
-changes redraw automatically. Call `refreshTheme()` only for consumer-owned token changes that
-aren't represented by those signals.
+changes redraw automatically. The mapped `fill`/`background` properties win when non-empty.
 
 ## `lr-image-viewer`
 
@@ -1307,13 +1459,13 @@ with `anchorKinds: ['region']` only — no text selection is bound.
 'actual' = 'contain'` (reflected), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
 `min-zoom`), `maxZoom: number = 4` (attribute `max-zoom`), `zoomStep: number = 0.25` (attribute
 `zoom-step`) — `minZoom`/`maxZoom`/`zoomStep` are pure pass-throughs to the embedded
-`<lr-zoomable-frame>` as its own `.minZoom`/`.maxZoom`/`.zoomStep`, which does the actual
+`<lr-pan-zoom>` as its own `.minZoom`/`.maxZoom`/`.zoomStep`, which does the actual
 clamping/normalizing; same names/defaults as `<lr-lightbox>`'s identical trio, both wrapping the
 same pan/zoom surface — `rotation: 0 | 90 | 180 | 270 = 0`
 (reflected), and `annotatable: boolean = false` (reflected).
 
 **Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust
-the embedded zoomable-frame's zoom.
+the embedded pan-zoom surface's zoom.
 
 **Events:** `lr-load` (`detail: { naturalWidth, naturalHeight }`), `lr-zoom-change` (`detail: {
 zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detail: { fit }`),
@@ -1322,7 +1474,7 @@ zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detai
 }`).
 
 **CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
-embedded `lr-zoomable-frame`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
+embedded `lr-pan-zoom`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
 `data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
 
 While `annotatable`, `image-wrapper` is a named `role="group"` with the localized annotation hint.
@@ -1390,9 +1542,8 @@ error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and 
 `lr-rate-change` (`detail: { rate }`), `lr-cue-change` (`detail: { id }`, `id` is `null` when no
 cue is active), `lr-highlight-activate` (`detail: { id }`), `lr-anchor-result` (`detail: {
 found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), and
-`lr-render-error` (`detail: { error }`).
-
-The native `ended`, `error`, `loadedmetadata`, `pause`, `play`, `timeupdate`, and `volumechange`
+`lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
+`play`, `timeupdate`, and `volumechange`
 events are also relayed exactly once from the host as native `Event` instances. Like the original
 media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
 `lr-*` notifications above remain unchanged.
@@ -1444,3 +1595,134 @@ and `--lr-av-player-cue-active-match-color` (default `var(--lr-color-warning)`) 
 the `cue-active-match` row, leaving the other matches' dashed outline on the shared warning token.
 Both are inline `var()` fallbacks at the point of use rather than `:host` declarations, so either
 can be set on the element or on any ancestor.
+
+## `lr-video`
+
+An inline native video player with custom controls, safe declarative sources/tracks, selectable
+captions, and bounded WebVTT thumbnail previews. It mirrors the public Web Awesome Video API under
+the `lr-` prefix. Import the granular registration entry with
+`import '@aceshooting/lyra-ui/components/media/video/video.js'`.
+
+**Properties:** `autoplay: boolean = false`, `autoplayMuted: boolean = false` (attribute
+`autoplay-muted`), `autoplayOnVisible: boolean = false` (attribute `autoplay-on-visible`),
+`controls: 'none' | 'standard' | 'full' = 'standard'`, `currentTime: number = 0` (attribute
+`current-time`), `duration: number = 0` (live/read-only in normal use), `iconLibrary: string =
+'system'` (attribute `icon-library`), `loop: boolean = false`, `muted: boolean = false`, `playing:
+boolean = false` (live/read-only in normal use), `poster: string = ''`, `preload: 'auto' |
+'metadata' | 'none' = 'metadata'`, `src: string = ''`, `thumbnails: string = ''`, `title: string =
+''`, and `volume: number = 1`. The private native `<video>` always carries `playsinline`; native
+browser controls stay disabled because the selected Lyra preset owns the control surface.
+`autoplayOnVisible` does not start a video merely because it is visible: it pauses a currently
+playing video when it leaves view and resumes only that visibility-owned pause when it returns.
+
+`controls="standard"` renders play/pause, timeline and elapsed/duration labels, volume/mute,
+available captions, and capability-gated fullscreen. `controls="full"` adds playback rate and
+capability-gated picture in picture. `controls="none"` removes the control bar but leaves the
+poster and active caption overlays available. Fullscreen/PiP/caption affordances are feature-gated
+instead of browser-name-gated.
+
+**Methods:** `getState(): VideoState` returns a fresh synchronous
+`{ playing, currentTime, duration, volume, muted, playbackRate }` snapshot;
+`LyraVideoState` remains an equivalent Lyra-prefixed type alias;
+`getVideoElement(): HTMLVideoElement | undefined` returns the private native element after mount;
+`play(): Promise<void>` returns the exact native promise and preserves its rejection; `pause()`,
+`togglePlay()`, `toggleMute()`, `seek(time)`, `setPlaybackRate(rate)`, and `setVolume(volume)` proxy
+finite, clamped media state; `requestFullscreen()` and `exitFullscreen()` preserve the platform
+promise/rejection and reject with `NotSupportedError` when the capability is absent. `load()` is a
+Lyra extension that re-clones current light-DOM sources/tracks and restarts native resource
+selection under a fresh event generation.
+
+**Events:** native `ended`, `error`, `loadedmetadata`, `pause`, `play`, `timeupdate`, and
+`volumechange`, relayed exactly once from the host as native `Event` instances. They remain
+non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline also dispatches an
+immediate host `timeupdate`, before a browser's eventual native seek notification.
+
+**Slots:** the default slot accepts direct `<source>` and `<track>` children;
+`controls-after-play`, `controls-start`, `exit-fullscreen-icon`, `fullscreen-icon`, `mute-icon`,
+`pause-icon`, `play-icon`, `poster-icon`, and `volume-icon` customize the control surface. Consumer
+source/track nodes remain in light DOM: the component inserts fresh private clones containing only
+safe URL, source (`type`, `media`), and track (`kind`, `srclang`, `label`, `default`) attributes.
+
+**CSS parts:** `base` and `video-wrapper` (aliases on the same root node), `caption`,
+`caption-overlay`, `controls`, `controls-overlay`, `poster-overlay`, `poster-play-button`,
+`progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
+`video`, and `video-title-overlay`.
+
+**Themeable custom properties:** `--controls-background` (default
+`var(--lr-color-overlay-strong)`), `--controls-color` (default `var(--lr-color-text)`), and
+`--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
+kept for mechanical Web Awesome migration.
+
+**Thumbnail security and lifecycle:** `thumbnails` is validated before `fetch()`, read through a
+256 KiB byte ceiling, and parsed up to 2,000 cues. Cue image URLs are resolved relative to the VTT
+file and validated again before reaching `<img>`; `#xywh=x,y,width,height` sprite fragments are
+supported. A generation token is checked after every await, and changing `thumbnails` or
+disconnecting prevents an older response from painting over newer state. Invalid, oversized,
+failed, or empty thumbnail files fail closed to no preview; no caught remote error text is shown.
+
+```html
+<lr-video controls="full" poster="/posters/demo.jpg" title="Product demo">
+  <source src="/video/demo.webm" type="video/webm">
+  <source src="/video/demo.mp4" type="video/mp4">
+  <track src="/captions/demo-en.vtt" kind="captions" srclang="en" label="English" default>
+</lr-video>
+```
+
+## `lr-video-playlist`
+
+A direct-child `<lr-video>` playlist with a visible current-video stage and keyboard-navigable item
+list. It mirrors the public Web Awesome Video Playlist API under the `lr-` prefix. Import the
+granular registration entry with
+`import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js'`.
+
+**Properties:** `controls: 'none' | 'standard' | 'full' = 'full'` (reflected and forwarded to every
+direct child), and `iconLibrary: string = 'system'` (attribute `icon-library`, non-reflected and
+forwarded). Lyra additionally provides `autoAdvance: boolean = true` (attribute `auto-advance`;
+`auto-advance="false"` disables completion-driven navigation) and `repeat: 'none' | 'one' | 'all' =
+'none'`. Keeping `autoAdvance` true preserves the mirrored behavior in which an ended video starts
+the next one. `repeat="one"` restarts the current video; `repeat="all"` wraps the final video to the
+first.
+
+**Methods:** `goTo(index)` selects a finite integer direct-child index; invalid, fractional, and
+disabled indexes are inert. Calling it for the current index still emits `lr-video-change`, matching
+the mirrored contract. `next()` and `previous()` select the next or previous enabled child when one
+exists.
+
+**Events:** `lr-video-change`, bubbling and composed but non-cancelable, with exact detail
+`{ previousIndex, currentIndex, video }`. `video` is a fresh frozen plain-data snapshot with exact
+shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains frozen
+`{ src, type, media }` records for the child's direct `src` and `<source>` declarations; `tracks`
+contains frozen `{ src, kind, srclang, label, default }` records. Consumer mutation cannot alter a
+child or a later event snapshot.
+
+**Slot:** the default slot accepts direct `<lr-video>` children. Nested videos and other elements
+are not playlist items.
+
+**CSS parts:** `base` and `video-playlist` (aliases on the same root node), `playlist`,
+`playlist-duration`, `playlist-item`, `playlist-thumbnail`, and `playlist-title`.
+
+Only the active child is visible and loaded. Before another child is activated, the outgoing native
+player is synchronously paused, stripped of its private source/track clones, and reloaded into an
+empty selection state. The incoming child then safely re-clones its own light-DOM declarations.
+Valid user volume, mute, playback-rate, and selected-caption preferences carry across that boundary;
+current time does not. Events and rejected play promises from a superseded activation cannot affect
+the current child. Removing or reordering duplicate-metadata children is identity-safe, and
+disconnecting pauses/unloads every child before a later reconnect creates one fresh listener
+generation.
+
+The playlist buttons use one roving tab stop, skip disabled children, support Up/Down, Home/End, and
+mirrored Left/Right navigation, and expose the selected item with `aria-current`. At narrow
+allocations the sidebar moves below the video through a container query; long titles ellipsize
+without widening the host.
+
+```html
+<lr-video-playlist controls="full" repeat="all">
+  <lr-video title="Introduction" poster="/posters/introduction.jpg">
+    <source src="/video/introduction.mp4" type="video/mp4">
+  </lr-video>
+  <lr-video title="Advanced workflow" poster="/posters/advanced.jpg">
+    <source src="/video/advanced.mp4" type="video/mp4">
+    <track src="/captions/advanced-en.vtt" kind="captions" srclang="en" label="English" default>
+  </lr-video>
+</lr-video-playlist>
+```

@@ -32,6 +32,8 @@ class LyraContactViewerBase extends LyraElement<LyraContactViewerEventMap> {}
  * @csspart spinner - The loading region.
  * @csspart error - The error region.
  * @cssprop [--lr-contact-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

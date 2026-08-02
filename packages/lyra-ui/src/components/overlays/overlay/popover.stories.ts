@@ -12,10 +12,34 @@ type Story = StoryObj;
 // regression harness and anyone opening the story sees the actual popover surface rather than a
 // bare closed trigger -- the same `.open` pattern lr-dialog and lr-drawer use.
 export const Default: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'The mapped defaults are `placement="top"`, `distance="8"`, with the arrow visible.',
+      },
+    },
+  },
   render: (_args, context) =>
     html`<lr-popover .open=${context.viewMode !== 'docs'}
       ><button slot="trigger">Open details</button><p>Floating content.</p></lr-popover
     >`,
+};
+
+export const WithoutArrow: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`without-arrow` suppresses the mapped default arrow. `arrow="false"` is also parsed correctly by the true-default boolean converter.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-popover .open=${context.viewMode !== 'docs'} without-arrow>
+      <button slot="trigger">Open plain surface</button>
+      <p>No arrow is rendered.</p>
+    </lr-popover>
+  `,
 };
 
 /** Lyra buttons preserve the trigger relationship across their own shadow boundary: the

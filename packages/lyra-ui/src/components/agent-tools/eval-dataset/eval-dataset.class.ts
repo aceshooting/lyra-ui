@@ -94,6 +94,8 @@ export interface LyraEvalDatasetEventMap {
  * @csspart tag-filter - The tag-filter chip group's wrapper. Only rendered while `examples`
  *   carries at least one tag.
  * @csspart grid - The internal `<lr-table>`.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   static override styles = [LyraElement.styles, styles];

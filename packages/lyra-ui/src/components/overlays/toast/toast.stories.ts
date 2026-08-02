@@ -58,6 +58,24 @@ export const Sizes: Story = {
   `,
 };
 
+export const AliasSizes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`toast()` and `LyraToast.create()` accept `small`, `medium`, and `large`; the created item normalizes them to canonical `s`, `m`, and `l` reads.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; gap:var(--lr-space-s);">
+      ${(['small', 'medium', 'large'] as const).map(
+        (size) => html`<button @click=${() => toast({ message: `Size alias "${size}"`, size, duration: 0 })}>${size}</button>`,
+      )}
+    </div>
+  `,
+};
+
 export const WithIcon: Story = {
   render: () => html`
     <div style="display:flex; gap:1rem;">
@@ -93,5 +111,24 @@ export const Placements: Story = {
           html`<button @click=${() => toast({ message: placement, placement })}>${placement}</button>`,
       )}
     </div>
+  `,
+};
+
+export const MappedStylingHooks: Story = {
+  render: () => html`
+    <style>
+      .mapped-toast {
+        --gap: var(--lr-space-l);
+        --width: var(--lr-size-20rem);
+      }
+      .mapped-toast:state(visible)::part(stack) {
+        outline: var(--lr-border-width-thin) solid var(--lr-color-brand);
+        outline-offset: var(--lr-focus-ring-offset);
+      }
+    </style>
+    <lr-toast class="mapped-toast" placement="top-center">
+      <lr-toast-item duration="0">The region now matches :state(visible).</lr-toast-item>
+      <lr-toast-item duration="0" variant="success">The mapped gap and width aliases style this stack.</lr-toast-item>
+    </lr-toast>
   `,
 };

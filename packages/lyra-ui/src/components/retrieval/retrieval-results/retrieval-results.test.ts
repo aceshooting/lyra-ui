@@ -48,7 +48,7 @@ function flatRows(el: LyraRetrievalResults): Element[] {
 // a bare `.click()` on the custom element itself fires a `click` event at the host, which nothing
 // inside its shadow root is listening for (see `checkbox.test.ts`'s own tests for the same idiom).
 function clickCheckbox(checkbox: LyraCheckbox): void {
-  (checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
+  (checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
 }
 
 it('defaults to empty chunks/selectedIds, selectable, dedupe, sort="score", grouping="none", presentation="expanded", virtualizeAt=50, loading=false, hasMore=false, error=""', async () => {

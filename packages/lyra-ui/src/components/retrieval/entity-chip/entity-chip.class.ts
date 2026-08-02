@@ -36,6 +36,8 @@ function isRealPreviewNode(n: Node): boolean {
  * lets a host theme per type from CSS, e.g. `lr-entity-chip[type='person'] { --lr-entity-chip-color: ... }`.
  * @cssprop [--lr-entity-chip-bg=var(--lr-color-brand-quiet)] - Background color.
  * @cssprop [--lr-entity-chip-border=transparent] - Border color of the chip.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   static override styles = [LyraElement.styles, styles];

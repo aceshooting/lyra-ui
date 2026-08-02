@@ -66,6 +66,8 @@ export interface LyraArtifactPanelEventMap {
  * @cssprop [--lr-artifact-panel-view-active-color=var(--lr-color-brand)] - Text color of the pressed
  *   (active) preview/code toggle button. Restyling the pressed state otherwise requires overriding
  *   the library-wide brand tokens, since `::part(view-button)[aria-pressed]` is invalid CSS.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   static override styles = [LyraElement.styles, styles];

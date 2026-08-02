@@ -102,7 +102,7 @@ describe("custom filters", () => {
           render: (context) => html`
             <lr-checkbox
               aria-label=${context.label}
-              ?checked=${context.value === true}
+              .checked=${context.value === true}
               ?disabled=${context.disabled}
               ?required=${context.required}
               .errorText=${context.errorText}

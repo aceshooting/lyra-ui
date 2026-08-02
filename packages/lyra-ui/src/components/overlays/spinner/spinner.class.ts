@@ -11,14 +11,21 @@ export type SpinnerLabelPlacement = 'none' | 'after';
  * @customElement lr-spinner
  * @slot - Optional label. `label-placement="after"` renders it and uses its text as the status
  * name; `none` hides it from both rendering and the accessibility tree.
- * @csspart base - The wrapper.
- * @csspart spinner - The animated indicator.
+ * @csspart base - Compatibility name for the outer wrapper; use `spinner`.
+ * @csspart spinner - The outer wrapper. It is the same node as `base`.
+ * @csspart spinner-indicator - The animated indicator inside the wrapper.
  * @csspart label - The accessible/visible label wrapper.
  * @cssprop [--lr-spinner-size=var(--lr-size-1-25rem)] - Outer diameter of the indicator.
  * @cssprop [--lr-spinner-track-width=var(--lr-border-width-medium)] - Thickness of the ring track.
  * @cssprop [--lr-spinner-duration=var(--lr-transition-ambient)] - Duration/easing of one
  * rotation. Not read under
  *   `prefers-reduced-motion: reduce`, where the animation is disabled entirely.
+ * @cssprop [--track-width=var(--lr-spinner-track-width)] - Upstream-compatible track width.
+ * @cssprop [--track-color=var(--lr-color-brand-quiet)] - Upstream-compatible track color.
+ * @cssprop [--indicator-color=var(--lr-color-brand)] - Upstream-compatible indicator color.
+ * @cssprop [--speed=var(--lr-spinner-duration)] - Upstream-compatible rotation duration.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSpinner extends LyraElement {
   static override styles = [LyraElement.styles, styles];
@@ -56,8 +63,8 @@ export class LyraSpinner extends LyraElement {
       this.accessibleLabel ||
       (this.labelPlacement === 'after' ? this.visibleLabelText : '') ||
       this.localize('loading');
-    return html`<span part="base" role="status" aria-label=${label}>
-      <span part="spinner" aria-hidden="true"></span>
+    return html`<span part="base spinner" role="status" aria-label=${label}>
+      <span part="spinner-indicator" aria-hidden="true"></span>
       <span part="label" ?hidden=${this.labelPlacement === 'none'}><slot @slotchange=${() => this.requestUpdate()}></slot></span>
     </span>`;
   }

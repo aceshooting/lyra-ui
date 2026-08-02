@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/media/avatar/avatar.js';` (registers the tag; side-effect import)
 - **Class** `LyraAvatar`, also available unregistered from `@aceshooting/lyra-ui/components/media/avatar/avatar.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,12 +25,14 @@ set takes over from the next. Mirrors `wa-avatar` / `sl-avatar` (`image`, `initi
 **Properties:**
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no glyph and no
   image is set, or the image fails to load and no `icon` slot content is provided.
-- `image?: string` — image URL; takes priority over the `icon` slot and `initials` when set and
+- `image: string = ''` — image URL; takes priority over the `icon` slot and `initials` when set and
   loads successfully (but never over default-slotted glyph content), falling back to them on a load
   error. **Renamed from `src` in 8.0.0** to match `wa-avatar`: a mechanical `wa-` → `lr-` rename
   used to leave the property unset, so a migrated avatar silently dropped its photo and rendered
   initials instead.
-- `alt: string = ''` — image alt text; set alongside `image` for accessibility, and also the source
+- `label: string = ''` — upstream-compatible accessible description. A host `aria-label` wins,
+  followed by `label`, then the older `alt` compatibility property.
+- `alt: string = ''` — compatibility image alt text; set alongside `image` for accessibility, and also the source
   of the accessible name for the glyph and initials cases (the glyph is `aria-hidden`, and the
   initials text is hidden from AT once `alt` supplies a name, so `[part="base"]` carries
   `role="img"` + that name instead).
@@ -78,7 +82,8 @@ icon-slot content), `image` (the `<img>`, only rendered while `image` is set, ha
 default-slot glyph is provided), `initials` (the initials text, only rendered once every glyph and
 image tier ahead of it in the priority order has been ruled out).
 
-**Themeable custom properties:** `--lr-avatar-size` (default `var(--lr-size-2rem)`, stepped across
+**Themeable custom properties:** `--size` is the upstream-compatible diameter and falls back to
+`--lr-avatar-size` (default `var(--lr-size-2rem)`, stepped across
 the ladder from `var(--lr-size-1rem)` at `2xs` to `var(--lr-size-3rem)` at `xl` — every spelling of
 a tier selects the same declarations), `--lr-avatar-bg` (default `var(--lr-color-border)`, swapped
 per non-neutral `variant` to that variant's `-quiet` fill; there is no `--lr-color-surface-alt`

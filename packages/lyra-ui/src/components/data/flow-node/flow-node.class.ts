@@ -55,6 +55,8 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  * @cssprop [--lr-flow-node-status-success-color=var(--lr-color-success)] - Success status-dot color.
  * @cssprop [--lr-flow-node-status-error-color=var(--lr-color-danger)] - Error status-dot color.
  * @cssprop [--lr-flow-node-status-denied-color=var(--lr-color-warning)] - Denied status-dot color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraFlowNode extends LyraElement {
   static override styles = [LyraElement.styles, styles];

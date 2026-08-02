@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/select/select.js';` (registers the tag; side-effect import)
 - **Class** `LyraSelect`, also available unregistered from `@aceshooting/lyra-ui/components/forms/select/select.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 19 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 30 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,13 +30,11 @@ There is no typing-to-filter and no `filter`/`source`/`empty-text`/`max-render` 
 `multiple`, `max-options-visible`, `with-clear`, `getTag`, `placement`, `appearance`, and `pill`.
 
 **Multi-select (`multiple`, new in 8.0.0, default `false`).** Setting it re-shapes `value` from a
-`string` into a `string[]` and renders one chip per selection inside the trigger — a `[part="tags"]`
-row holding one `[part="tag"]` each. Because the trigger is a real `<button>`, the chips are
-deliberately non-interactive: a nested remove button would be invalid interactive-content nesting
-and unreachable by keyboard or assistive tech anyway, since the outer button intercepts every
-click/Enter/Space first. Removal has three affordances instead — pick a selected row again to
-toggle it off, press Backspace or Delete on the focused trigger to drop the most recent selection,
-or use the `with-clear` button to drop all of them at once. Turning `multiple` back off collapses
+`string` into a `string[]` and renders one chip per selection. The `[part="tags"]` row is a sibling
+overlaid on the real trigger, so every built-in tag remove button is valid independently-focusable
+interactive content rather than a button nested inside another button. Picking a selected row,
+Backspace/Delete on the focused trigger, and the `with-clear` action remain equivalent removal
+paths. Turning `multiple` back off collapses
 the selection to its first entry, so the single-mode string and the submitted entry can never
 disagree with what the trigger shows.
 
@@ -80,14 +80,17 @@ exactly like the multi-option case, until the trigger is actually activated.
   `plain` drops both; `accent` paints the loud brand fill with on-brand text (the placeholder,
   expand icon, adornments and chips all ride that on-brand color rather than the quiet-text
   tokens). Every value keeps the same box, border width and radius, and each restates its own
-  `:hover` feedback. Note the default differs from `<lr-input>`/`<lr-textarea>`, which default to
-  `filled-outlined`
+  `:hover` feedback. `lr-input` and `lr-textarea` use the same mapped `outlined` default.
 - `pill: boolean = false` (reflected) — fully-rounded trigger corners. It only re-assigns
   `--lr-select-radius` to `--lr-radius-pill`, so a consumer's own `--lr-select-radius` (inline or
   from an outer-tree rule) still wins over it
-- `placement: Placement = 'bottom-start'` (reflected) — preferred listbox placement, from the
+- `placement: Placement = 'bottom'` (reflected) — preferred listbox placement, from the
   Floating UI vocabulary (`'top'`, `'bottom-end'`, …). `flip`/`shift` may still move the popup to
   keep it in view, and the `left`/`right` component is swapped under RTL
+- `hoist: boolean = false` (reflected) — switches Floating UI from its mapped absolute strategy to
+  fixed positioning, escaping clipping containers
+- `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
+- `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
   above. Flipping it re-shapes `value` and the submitted form entry, so it is normally set once
   declaratively
@@ -101,40 +104,59 @@ exactly like the multi-option case, until the trigger is actually activated.
   the chips — so pressing it clears the selection without opening the listbox
 - `clearable: boolean = false` — Shoelace's spelling of `withClear`; either one renders the same
   button. Present so a mechanical `sl-select` → `lr-select` rename keeps the clear control
+- `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins if both
+  are present. `withLabel`/`withHint` (`with-label`/`with-hint`) are SSR slot-presence hints
 - `getTag?: LyraSelectTagRenderer` (attribute: false) — `(option: LyraOption, index: number) =>
   unknown`, exported under that name from the component's own module, renders one
   selected option's chip in `multiple` mode. Whatever it returns replaces the whole built-in
   `[part="tag"]` element, so re-declare `part="tag"` on your own root node to keep the default
   styling hooks. A returned **string renders as text, never as markup** (it lands in an ordinary
-  Lit child position), and the same non-interactive-content constraint applies to whatever you
-  return. Overflow past `max-options-visible` still collapses into the built-in "+N" chip
+  Lit child position). A custom tag replaces the built-in remove control too, so it owns any custom
+  removal affordance. Overflow past `max-options-visible` still collapses into the built-in "+N" chip
 - `autoCommitSingleOption: boolean = false` (attribute `auto-commit-single-option`) — opts in to the
   single-option auto-commit behavior described above
 - `value: string | string[]` — a getter/setter: a plain `string` in single mode (empty when nothing
   is selected), a `string[]` in `multiple` mode
+- `defaultValue: string | string[]` (attribute `default-value` accepts the single string form) —
+  reset selection; changing it updates the live value only while the control is pristine
+- `selectedOptions: LyraOption[]` — a writable, fresh snapshot of the live selected occurrences.
+  Assigning live child options commits their exact occurrences through the same event-silent path
+  as `value`; foreign/detached options are ignored, and single mode keeps only the first. Mutating
+  an array returned by the getter never mutates the control
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
+`show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once
+the matching transition settles. `getForm()` returns the browser-resolved form owner, including an
+external owner selected by `form`.
 `setCustomValidity(message)` carries a rejection no client-side constraint can express ("that option
 is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
 blocks submission; `''` clears it and restores the control's own computed validity, so a `required`
 select with nothing chosen goes back to `valueMissing` rather than to valid. The message survives
 every selection change and a `form.reset()` — like a native control, only another
-`setCustomValidity('')` clears it — and is used verbatim, never localized.
+`setCustomValidity('')` or `resetValidity()` clears it — and is used verbatim, never localized.
+`resetValidity()` changes only that consumer error layer: it restores the current intrinsic
+required/selection validity without changing the selection/default or clearing prior interaction
+state.
 
-**Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
-selection change — a native `<select>` doesn't meaningfully distinguish the two either), and
-`lr-change` (a prefixed compatibility alias fired after both, mirroring `<lr-checkbox>`'s
-`lr-change`). All three carry `detail: { value: string | string[] }` — the new committed selection,
-a string in single mode and a `string[]` in `multiple` mode — and fire only on a real change, never
-on a programmatic `value` write, `form.reset()`, or session-state restoration. Plus
-`lr-clear` (no detail; emitted by the `with-clear` button *after* its `input`/`change`/`lr-change`
-trio, and never when there was nothing to clear, so it never announces a no-op),
+**Events:** each real selection change emits, in order, a native `InputEvent` named `input`,
+`lr-input`, a native `Event` named `change`, then `lr-change`. The native events carry no detail;
+read `event.target.value`. Both
+prefixed aliases carry `detail: { value: string | string[] }` — the new committed selection, a string
+in single mode and a `string[]` in `multiple` mode. The complete sequence is silent for a
+programmatic `value` write, `form.reset()`, or session-state restoration. Plus
+`lr-clear` (no detail; emitted by the `with-clear` button *after* its
+`input`/`lr-input`/`change`/`lr-change` run, and never when there was nothing to clear, so it never
+announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
-trigger.
+trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
+its unprefixed counterpart. `lr-after-show` and `lr-after-hide` fire after the corresponding
+listbox transition has settled; an interrupted transition drops its stale after-event.
+`lr-invalid` (no detail) fires when a validity check finds the control invalid.
 
-**Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
-attribute when provided), `start` (non-interactive adornment before the selected-value label), and
-`end` (non-interactive adornment after the label and before the expand icon). The adornments live
+**Slots:** default (`<lr-option>` children), `label`, `hint`, `help-text` (alias), `error` (overrides
+the `errorText` attribute when provided), `start`/`prefix` (aliases before the selected-value label),
+`end`/`suffix` (aliases after the label), plus `clear-icon` and `expand-icon`. The adornments live
 inside the native trigger `<button>`, so never place links, buttons, inputs, or other interactive
 content in either slot.
 
@@ -142,9 +164,10 @@ When hint/error content is present, the trigger's `aria-describedby` references 
 IDs for both messages (error first, then hint), so the visible supporting text is part of the
 control's accessible description.
 
-**CSS parts:** `form-control`, `form-control-label`, `trigger`, `start`, `end`, `tags` (the
-`multiple`-mode chip row inside the trigger), `tag` (one selected-value chip), `tag-label` (a chip's
-ellipsis-safe label), `tag-overflow` (the "+N" chip standing in for the selections past
+**CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
+`trigger`, `display-input`, `start`, `prefix`, `end`, `suffix`, `tags` (the legal sibling
+`multiple`-mode chip row), `tag`/`tag__base` (one selected-value chip), `tag-label`/`tag__content`,
+`tag__remove-button`/`tag__remove-button__base`, and `tag-overflow` (the "+N" chip standing in for the selections past
 `max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
 chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
 is encoded in the part name instead), `clear-button` (the `with-clear` button, present only while
@@ -153,7 +176,8 @@ there is a selection to clear), `listbox`,
 the previous one's — a presentational `<div>`, not a `role="group"`; options with an empty `group`
 get no heading),
 `option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
-`option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
+`option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
+`hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
 `--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
@@ -167,6 +191,8 @@ radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` re-
 (default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
 `var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius they are declared once on
 `:host` and do **not** vary by `size` tier.
+Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
+`--hide-duration` cap one tag and independently retime the two popup directions.
 
 `--lr-select-trigger-min-height` is live at **every** tier, the default `m` included, where it is
 `2.5rem` — byte-identical to `lr-input`'s and `lr-combobox`'s own `m` floor, so the three controls
@@ -234,10 +260,11 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 - No typing-to-filter, but a printable keypress still jumps to (while open) or directly selects
   (while closed) the next non-disabled option whose label starts with what's been typed, matching a
   native `<select>`'s own type-ahead; the buffer resets ~500ms after the last keystroke.
-- Declaratively-selected options (`<lr-option value="b" selected>`) seed the initial selection
-  (mirroring native `<select><option selected>`) both the first time options are collected and for
-  any later-slotted batch — only that very first pass' declared selection becomes the
-  `form.reset()` default, the same rule `lr-combobox` follows.
+- `<lr-option value="b" selected>` sets that option's `defaultSelected`, seeds the live selection,
+  and supplies the `form.reset()` baseline, mirroring native `<select><option selected>`. Later
+  `defaultSelected`/attribute changes update that reset baseline without clobbering a dirty live
+  selection; user picks and direct `option.selected` writes remain live-only and never rewrite the
+  attribute/default.
 - `aria-required` on the trigger reflects `required` immediately; `aria-invalid` only reflects once
   the trigger has been blurred (touched) at least once, mirroring `lr-combobox`'s own input.
   Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup.

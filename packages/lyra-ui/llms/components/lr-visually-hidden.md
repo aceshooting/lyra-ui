@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/visually-hidden/visually-hidden.js';` (registers the tag; side-effect import)
 - **Class** `LyraVisuallyHidden`, also available unregistered from `@aceshooting/lyra-ui/components/utility/visually-hidden/visually-hidden.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** nothing component-specific — inherits only the shared surface
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

@@ -7,7 +7,7 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lr-mutation-observer attributes child-list @lr-mutation=${(event: CustomEvent) => console.log(event.detail.records)}>
+  render: () => html`<lr-mutation-observer attr="*" child-list @lr-mutation=${(event: CustomEvent) => console.log(event.detail.mutationList)}>
     <div contenteditable="true" style="padding: var(--lr-space-l); border: var(--lr-border-width-thin) solid var(--lr-color-border);">Edit this content</div>
   </lr-mutation-observer>`,
 };

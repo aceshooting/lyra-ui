@@ -7,7 +7,7 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lr-intersection-observer @lr-intersection=${(event: CustomEvent) => console.log(event.detail.entries)}>
+  render: () => html`<lr-intersection-observer threshold="0 0.5 1" intersect-class="is-visible" @lr-intersect=${(event: CustomEvent) => console.log(event.detail.entry)}>
     <div style="min-block-size: 8rem; border: var(--lr-border-width-thin) solid var(--lr-color-border);">Observed element</div>
   </lr-intersection-observer>`,
 };

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/agent-tools/terminal/terminal.js';` (registers the tag; side-effect import)
 - **Class** `LyraTerminal`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/terminal/terminal.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -22,8 +24,8 @@ codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boo
 (reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: LyraHighlight[] = []` (attribute:
-false), and `activeHighlightId: string | null = null` (attribute: false). `anchorKinds` is a readonly
-`['line-range']` — a scrollback buffer addresses positions by line number, so `line-range` is the
+false), and `activeHighlightId: string | null = null` (attribute: false). `anchorKinds:
+LyraAnchor['kind'][] = ['line-range']` is readonly — a scrollback buffer addresses positions by line number, so `line-range` is the
 only kind `scrollToAnchor()` resolves; `page`/`text-quote`/`region` belong to the paginated document
 viewers, not here. `<lr-terminal>` is not registered in the document-renderer registry, so this field
 is a plain readonly property rather than the `DocumentAnchorTarget` mixin's `override readonly` one.

@@ -14,7 +14,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A numeric range control (e.g. an LLM "temperature" setting), form-associated via `FormAssociated`. Mirrors native `<input type="range">`: `value` is the form-submitted string, `valueAsNumber` is the ergonomic numeric accessor kept in sync with it.',
+          'A form-associated numeric slider. `value`, `defaultValue`, and `valueAsNumber` are numbers; range mode submits two same-name entries and pushes the sibling handle when crossed.',
       },
     },
   },
@@ -23,7 +23,7 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lr-slider aria-label="Volume" style="max-inline-size: 20rem;"></lr-slider>`,
+  render: () => html`<lr-slider label="Volume" style="max-inline-size: 20rem;"></lr-slider>`,
 };
 
 export const Temperature: Story = {
@@ -36,7 +36,9 @@ export const Temperature: Story = {
       step="0.1"
       value="0.7"
       style="max-inline-size: 20rem;"
-    ></lr-slider>
+    >
+      <span slot="reference">Deterministic — Creative</span>
+    </lr-slider>
   `,
 };
 
@@ -52,6 +54,7 @@ export const HumanReadableValueText: Story = {
   },
   render: () => html`
     <lr-slider
+      show-value
       label="Temperature level"
       min="0"
       max="2"
@@ -63,16 +66,22 @@ export const HumanReadableValueText: Story = {
 };
 
 export const WithoutValueReadout: Story = {
-  name: 'Without the value readout (show-value off)',
+  name: 'Without the value readout (default)',
   render: () => html`
     <lr-slider
       label="Opacity"
       min="0"
       max="100"
       value="60"
-      .showValue=${false}
       style="max-inline-size: 20rem;"
     ></lr-slider>
+  `,
+};
+
+export const WithValueReadout: Story = {
+  name: 'With the value readout (show-value on)',
+  render: () => html`
+    <lr-slider label="Opacity" min="0" max="100" value="60" show-value style="max-inline-size: 20rem;"></lr-slider>
   `,
 };
 
@@ -151,20 +160,21 @@ export const Range: Story = {
     docs: {
       description: {
         story:
-          'Two independently focusable handles selecting the span between `min-value` and `max-value`. Each handle is its own `role="slider"` with a localized start/end name, and reports the sub-range its sibling leaves reachable. The handles may meet (a zero-width selection) but never cross. A range slider does not submit a value — read `minValue`/`maxValue` or the `lr-change` detail.',
+          'Two independently focusable handles selecting the span between `min-value` and `max-value`. Crossing pushes the sibling. A `name` submits two same-name entries in lower/upper order; use `FormData#getAll()`.',
       },
     },
   },
   render: () => html`
     <lr-slider
       range
+      name="price"
       label="Price range"
       min="0"
       max="1000"
       step="50"
       min-value="200"
       max-value="800"
-      hint="Both ends move independently; they can meet but never cross."
+      hint="Both ends move independently; crossing pushes the other end."
       style="max-inline-size: 20rem;"
     ></lr-slider>
   `,
@@ -184,6 +194,9 @@ export const WithMarkersAndTooltip: Story = {
     <lr-slider
       with-markers
       with-tooltip
+      tooltip-placement="bottom"
+      tooltip-distance="12"
+      indicator-offset="5"
       label="Quality"
       min="0"
       max="10"

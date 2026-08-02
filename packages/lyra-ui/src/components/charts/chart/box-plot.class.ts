@@ -90,6 +90,8 @@ function loadBoxPlotPlugin(): Promise<OptionalPeerApi | null> {
  * @csspart error - `role="alert"` message shown instead of the canvas when the optional box-plot
  *   peer dependency fails to load.
  * @slot data-table - An optional consumer-provided accessible table alternative.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraBoxPlot extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];

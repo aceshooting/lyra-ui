@@ -225,6 +225,8 @@ function isSet(value: FilterBarFieldValue): boolean {
  * @csspart active-filters - The `role="group"` wrapper around the active-filter chip row, only rendered while any filter is set.
  * @csspart chips - The `<lr-chip-group>` inside `active-filters`.
  * @csspart chip - One active-filter `<lr-chip>`.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/icon/icon.js';` (registers the tag; side-effect import)
 - **Class** `LyraIcon`, also available unregistered from `@aceshooting/lyra-ui/components/utility/icon/icon.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecated property** `autoWidth` / `auto-width` since `8.0.0`; use property `canvas="auto"`; removal not before `10.0.0` — autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing.
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 3 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 45 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,32 +22,51 @@ and every byte they return is capped, sanitized, and rendered only if the whole 
 Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
 
 **Properties:**
-- `name: string = ''` — a built-in glyph: `add`, `check`, `close`, `search`, `menu`,
+
+- `name: string = ''` (reflected once set) — a built-in glyph: `add`, `check`, `close`, `search`, `menu`,
   `chevron-left`, `chevron-right`, `chevron-down`, `calendar`, `command`, `trash`. An unknown name
   renders nothing (no error, no fallback glyph). With a registered `library`, this is instead the
-  name handed to that library's resolver.
+  name handed to that library's resolver. The setter accepts `undefined` to clear the name; reads
+  remain the canonical non-nullable `''`.
 - `path: string = ''` — raw SVG path data for a glyph the built-in set doesn't cover. Takes
   precedence over `name`.
 - `label: string = ''` — accessible name. Left empty (the default) the SVG is `aria-hidden="true"`,
   which is what you want whenever adjacent text already names the control. A host `aria-label` wins
   over it, and either one is applied to a fetched icon too.
-- `library: string = ''` (reflected) — name of a library registered with `registerIconLibrary()`.
-  Empty (the default) means the built-in glyph set. An **unregistered** name also falls back to the
+- `library: string = 'default'` (reflected) — name of a library registered with `registerIconLibrary()`.
+  `default` means the built-in glyph set. An **unregistered** name also falls back to the
   built-in set instead of erroring, which is what lets registration happen after first render.
+- `family: string = ''` and `variant: string = ''` (reflected once set) — forwarded with `name` to
+  a registered library resolver. Their vocabulary belongs to that library; for example, an icon
+  host might distinguish `classic`/`sharp` families and `regular`/`solid` variants.
 - `src: string = ''` — URL of a single SVG document to fetch. It applies only when no registered
   library owns the icon: no `library` set, an unregistered one, or an empty `name`. Once a
   registered library does own the name it decides alone — a resolver that returns `''` or throws
-  does **not** fall back to `src`.
-- `rotate?: number` (reflected) — clockwise rotation in degrees, applied to the icon box. Unset (the
-  default) there is no `transform` at all, so an ordinary icon never becomes a containing block; a
+  does **not** fall back to `src`. Assigning `undefined` aborts and clears any pending remote load,
+  removes the source, and reads back as `''`.
+- `rotate: number = 0` (reflected once changed) — clockwise rotation in degrees, applied to the icon box. At zero
+  there is no `transform` at all, so an ordinary icon never becomes a containing block; a
   non-finite value leaves the icon unrotated.
-- `flip?: 'horizontal' | 'vertical' | 'both'` (reflected, type `LyraIconFlip`) — mirrors the icon
-  about the vertical, horizontal, or both axes. Unset by default.
-- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon *box* to
+- `flip?: 'x' | 'y' | 'both' | 'horizontal' | 'vertical'` (reflected, type `LyraIconFlip`) — mirrors
+  the icon about the vertical, horizontal, or both axes. `horizontal`/`vertical` are retained Lyra
+  aliases for the mirrored `x`/`y` vocabulary. Unset by default.
+- `canvas?: 'fixed' | 'auto' | 'square' | 'roomy'` (reflected, type `LyraIconCanvas`) — sizes the
+  layout box. Unset behaves as `fixed` (1.25em × 1em); `auto` follows the SVG's intrinsic width at
+  1em high; `square` is 1.25em × 1.25em; `roomy` is 1.5em × 1.5em. All scale with `font-size`.
+- `autoWidth: boolean = false` (attribute `auto-width`, reflected, deprecated) — compatibility
+  alias for `canvas="auto"`; an explicit `canvas` wins.
+- `swapOpacity: boolean = false` (attribute `swap-opacity`, reflected) — swaps the primary and
+  secondary opacity hooks on SVGs that carry `.fa-primary`/`.fa-secondary` duotone layers.
+- `animation?: LyraIconAnimation` (reflected) — one of `beat`, `fade`, `beat-fade`, `bounce`,
+  `flip`, `flip-360`, `shake`, `spin`, `spin-pulse`, `spin-reverse`, `spin-snap`, `spin-snap-4`,
+  `spin-snap-8`, `buzz`, `wag`, `float`, `swing`, or `jello`. Every treatment stops under
+  `prefers-reduced-motion: reduce`.
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon _box_ to
   `--lr-icon-fixed-width` while the glyph keeps `--lr-icon-size` and centres inside it, so a column
   of differently-shaped icons lines its labels up.
 
 **Events:**
+
 - `lr-load` (`detail: { src: string }`) — a remote icon finished loading and is in the DOM. Also
   fires for a valid-but-empty document, which is not a failure. Never fires for a built-in glyph.
 - `lr-error` (`detail: { src: string; error: unknown }`) — a remote icon could not be resolved,
@@ -61,7 +82,9 @@ mirrored live while connected; observation stops on detach and a reconnect synch
 source tree.
 
 **CSS parts:**
+
 - `svg` — the rendered SVG, whether built-in or fetched.
+- `use` — every `<use>` in the rendered SVG.
 - `error` — the visually hidden `role="alert"` shown when a remote icon fails. It carries a
   localized message (`iconLoadError`, `iconTooLarge`, or `iconSanitizerMissing`), never the raw
   platform error, and re-localizes when the locale changes.
@@ -69,14 +92,30 @@ source tree.
   document.
 
 **Themeable custom properties:**
-- `--lr-icon-size` (default `--lr-size-1-25rem`) — sets both dimensions of the glyph. Stroke color
-  is `currentColor` and the host is `color: inherit`, so color comes from the surrounding text with
-  no configuration.
-- `--lr-icon-fixed-width` (default `--lr-size-1-5rem`) — inline size of the box while `fixed-width`
+
+- `--lr-icon-size` (unset by default) — when supplied, overrides both canvas dimensions. Without
+  it, the selected `canvas` uses the font-relative sizes above. Stroke color is `currentColor` and
+  the host is `color: inherit`, so color comes from surrounding text with no configuration.
+- `--lr-icon-fixed-width` (default `--lr-size-1-5em`) — inline size of the box while `fixed-width`
   is set.
 - `--lr-icon-rotate` (default `0deg`), `--lr-icon-flip-x` and `--lr-icon-flip-y` (default `1` each) —
   the transform inputs. `--lr-icon-rotate` is written inline from the `rotate` property and the flip
   factors are set to `-1` by `flip`, so set those properties rather than these tokens.
+- Shared animation controls: `--animation-delay` (default `0s`), `--animation-direction` (default
+  `normal`), `--animation-duration` (default `--lr-duration-icon`, 1s),
+  `--animation-iteration-count` (default `infinite`), and `--animation-timing` (default
+  `--lr-easing-emphasized`).
+- Animation-specific controls: `--beat-scale`; `--fade-opacity`; `--beat-fade-opacity` and
+  `--beat-fade-scale`; `--bounce-height`, `--bounce-jump-scale-x`, `--bounce-jump-scale-y`,
+  `--bounce-land-scale-x`, `--bounce-land-scale-y`, `--bounce-rebound`,
+  `--bounce-start-scale-x`, `--bounce-start-scale-y`, and `--bounce-anticipation`; `--flip-angle`,
+  `--flip-x`, `--flip-y`, `--flip-z`, `--flip-anticipation-scale`, and `--flip-overshoot`;
+  `--buzz-distance`; `--wag-angle`; `--swing-angle`; `--jello-scale-x` and `--jello-scale-y`; and
+  `--float-height`, `--float-drift`, `--float-tilt`, `--float-squash-x`, `--float-squash-y`,
+  `--float-stretch-x`, and `--float-stretch-y`.
+- Duotone controls: `--primary-color`/`--secondary-color` (default `currentColor`) and
+  `--primary-opacity`/`--secondary-opacity` (defaults `1`/`0.4`). `swap-opacity` exchanges which
+  opacity each layer receives without exchanging its color.
 
 **Optional peer deps:** `dompurify` — needed **only** for `library`/`src` fetching, never for the
 built-in glyphs. It is imported lazily on the first remote load; if it can't be loaded the icon
@@ -99,8 +138,9 @@ import {
 } from '@aceshooting/lyra-ui/components/utility/icon/icon-library.js';
 
 registerIconLibrary('material', {
-  // Called synchronously with the icon's `name`; must return a URL string, never a promise.
-  resolver: (name) => `https://cdn.example.com/material/${name}.svg`,
+  // May return a URL directly or resolve one asynchronously. All three reflected lookup fields
+  // are provided, so a library decides their vocabulary and URL layout.
+  resolver: async (name, family, variant) => `https://cdn.example.com/material/${family}/${variant}/${name}.svg`,
   // Optional. Runs on the already-sanitized, component-owned <svg> before it is rendered —
   // recolouring, adding a viewBox, stripping a hardcoded width/height. It must not reintroduce
   // markup from an untrusted source, and a throwing mutator fails the load.
@@ -111,35 +151,44 @@ registerIconLibrary('material', {
   },
 });
 
-getIconLibrary('material')?.resolver('star'); // 'https://cdn.example.com/material/star.svg'
+await getIconLibrary('material')?.resolver('star', 'classic', 'solid');
 unregisterIconLibrary('material'); // icons using it revert to the built-in glyph set
 ```
 
 ```html
-<lr-icon library="material" name="star" label="Favourite"></lr-icon>
+<lr-icon library="material" family="classic" variant="solid" name="star" label="Favourite"></lr-icon>
 <lr-icon library="material" name="delete" fixed-width></lr-icon>
+<lr-icon name="search" canvas="square" animation="beat"></lr-icon>
 ```
 
-Types: `LyraIconLibraryResolver = (name: string) => string`, `LyraIconLibraryMutator = (svg:
-SVGElement) => void`, and `LyraIconLibraryOptions = { resolver; mutator? }` are exported from the
-same module.
+Types: `LyraIconLibraryResolver = (name: string, family: string, variant: string) => string |
+Promise<string>`, `LyraIconLibraryMutator = (svg: SVGElement) => void`, and
+`LyraIconLibraryOptions = { resolver; mutator? }` are exported from the same module.
 
 **Known gotchas:**
+
 - Registration order doesn't matter. `registerIconLibrary()` re-resolves every currently rendered
   `<lr-icon>` using that name, so icons can be on the page first; re-registering the same name with
   a different resolver re-resolves them again, and `unregisterIconLibrary()` reverts them to the
   built-in glyph. While a remote icon resolves, nothing is drawn — the box already holds its size,
   and a placeholder glyph would be a flash of the wrong icon.
-- A resolver returning an empty string (an unknown name) leaves the built-in render in place and
-  fetches nothing. A resolver that *throws* is a failure: localized alert plus `lr-error`.
+- A resolver returning an empty string (an unknown name) restores the built-in render and fetches
+  nothing. A resolver that throws or rejects is a failure: localized alert plus `lr-error`.
+  Resolver promises are generation-guarded: if `name`, `family`, `variant`, or `library` changes
+  while one is pending, its stale URL is never fetched.
 - Remote loading is fail-closed by construction: the URL must pass the shared fetch allowlist
   (`http:`, `https:`, `blob:`, `data:`, and relative URLs — a `javascript:` URL is never fetched),
   the response is capped at 1 MiB before any parser sees it, and DOMPurify's SVG profile runs
   unconditionally, sanitizing straight to DOM nodes rather than to a re-parsed string. A response
   that isn't an SVG document is rejected, and its text never reaches the DOM.
+- Matching requests share a bounded cache of canonical sanitized SVG nodes. Concurrent icons issue
+  one fetch, a disconnected subscriber does not abort work another icon still needs, and retryable
+  failures are evicted. The canonical node is never rendered or mutated: each icon deep-clones it,
+  then invokes that library's trusted mutator on the private clone. This keeps one library's
+  recoloring from poisoning another library, a direct `src`, or a later cache hit.
 - A superseded load can never paint over a newer one, and a detached icon holds no half-finished
-  remote state — reconnecting re-resolves from scratch.
-- `rotate`/`flip` are physical, not direction-relative: `flip="horizontal"` produces the same
+  remote state. Reconnecting re-resolves the library and can reuse a retained sanitized resource.
+- `rotate`/`flip` are physical, not direction-relative: `flip="x"` produces the same
   mirrored artwork in LTR and RTL. A glyph that must follow reading direction is mirrored by the
   wrapping part of the component that owns it; a second, direction-driven flip here would silently
   cancel that one out.

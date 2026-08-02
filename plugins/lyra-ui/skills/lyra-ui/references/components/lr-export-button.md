@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/export-button/export-button.js';` (registers the tag; side-effect import)
 - **Class** `LyraExportButton`, also available unregistered from `@aceshooting/lyra-ui/components/utility/export-button/export-button.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -17,6 +19,7 @@ CSV/JSON download button with extensible event-driven formats — either single-
 immediately) or multi-format (click opens a small menu).
 
 **Properties:**
+
 - `rows: Record<string, unknown>[] = []` (attribute: false)
 - `columns: CsvColumn[] = []` (attribute: false) — `{ key, label }`; acts as a field allow-list **and**
   CSV header-label source for **both** export formats when non-empty. Left empty, **both** CSV and
@@ -26,7 +29,7 @@ immediately) or multi-format (click opens a small menu).
 - `filename: string = 'export'`
 - `formats: ExportFormatOption[] = ['csv']` (attribute: false), where `ExportFormatOption` is the
   built-in `ExportFormat = 'csv' | 'json'` or an `ExportFormatDescriptor = { id: string; label:
-  string; description?: string; extension?: string }`. Descriptor labels/descriptions are
+string; description?: string; extension?: string }`. Descriptor labels/descriptions are
   consumer-supplied, already-localized copy. Custom ids are event-only; no custom encoder is bundled
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
@@ -64,21 +67,32 @@ shared-clamp note.
 <script type="module">
   const exp = document.getElementById('exp');
   exp.rows = [{ name: 'Alpha', value: 1 }];
-  exp.columns = [{ key: 'name', label: 'Name' }, { key: 'value', label: 'Value' }];
+  exp.columns = [
+    { key: 'name', label: 'Name' },
+    { key: 'value', label: 'Value' },
+  ];
   exp.formats = ['csv', 'json']; // shows a format-choice menu instead of exporting immediately
   exp.addEventListener('lr-export', (e) => console.log('exporting', e.detail.format));
 
   // Custom formats supply menu copy but remain application-handled.
   exp.formats = [
     'csv',
-    { id: 'xlsx', label: 'Excel workbook', description: 'Preserves spreadsheet data types', extension: 'xlsx' },
+    {
+      id: 'xlsx',
+      label: 'Excel workbook',
+      description: 'Preserves spreadsheet data types',
+      extension: 'xlsx',
+    },
   ];
   exp.addEventListener('lr-export', async (e) => {
     if (e.detail.format !== 'xlsx') return;
     e.preventDefault();
     exp.loading = true;
-    try { await exportWorkbook(exp.rows); }
-    finally { exp.loading = false; }
+    try {
+      await exportWorkbook(exp.rows);
+    } finally {
+      exp.loading = false;
+    }
   });
 </script>
 ```
@@ -86,6 +100,7 @@ shared-clamp note.
 Package-level CSV utilities (used internally, also exported for standalone use — `import {
 escapeCsvField, buildCsv, downloadBlob } from
 '@aceshooting/lyra-ui/components/utility/export-button/csv.js'`):
+
 ```ts
 escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
 buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included
@@ -93,6 +108,7 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
 ```
 
 **Known gotchas:**
+
 - CSV and JSON are the only built-in encoders. To offer XLSX/PDF/etc., pass an
   `ExportFormatDescriptor` and handle its id from `lr-export`; custom formats never trigger a
   download or `lr-export-complete` on their own. A descriptor's optional `extension` is metadata

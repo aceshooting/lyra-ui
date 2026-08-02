@@ -85,6 +85,8 @@ export interface LyraCommitCardEventMap {
  * @csspart actions - The `actions` slot wrapper.
  * @cssprop [--lr-commit-card-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
  *   `compact`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   static override styles = [LyraElement.styles, styles];

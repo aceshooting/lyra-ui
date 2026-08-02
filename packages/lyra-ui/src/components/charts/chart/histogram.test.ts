@@ -59,7 +59,8 @@ it('is accessible', async () => {
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Response-time distribution');
-  expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(2);
+  expect(el.shadowRoot!.querySelectorAll('[part="legend"][role="group"]')).to.have.length(1);
   await expect(el).to.be.accessible();
 });
 

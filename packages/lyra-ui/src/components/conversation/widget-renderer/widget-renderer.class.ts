@@ -51,14 +51,21 @@ export interface LyraWidgetRendererEventMap {
  * streamed `tree` update. Built-in `row`/`col`/`text` structural nodes render through ordinary
  * nested `html` templates instead.
  *
+ * A versioned `document` may supply both the root tree and controlled binding state. An allowlisted
+ * prop value shaped as `{ $bind: '/json/pointer', fallback?: primitive }` reads from `state` (or
+ * `document.state`); a registry `bindings` entry names the control event that requests a change.
+ * The renderer reports that request through `lr-widget-state-change` and never mutates caller state.
+ *
  * @customElement lr-widget-renderer
  * @event lr-widget-action - `detail: { actionId, payload }` — the single bubbling action channel.
  * @event lr-render-error - `detail: { error }` — the root value was structurally unusable.
- * @event lr-widget-state-change - A bound control requested a controlled state update.
+ * @event lr-widget-state-change - A bound control requested a controlled state update. `detail: { path, value, nodeId, prop }`; the caller must apply the next `state` value.
  * @csspart base - The root wrapper (`display: contents` — adds no layout box of its own).
  * @csspart row - A built-in `row` node.
  * @csspart col - A built-in `col` node.
  * @csspart text - A built-in `text` node.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -359,6 +359,104 @@ it('preserves focus already inside a newly-modal panel and supports a preferred 
   outside.remove();
 });
 
+it('keeps the legacy initial-focus path unchanged when no focus hook is supplied', () => {
+  const overlay = createOverlay(document, 'legacy-initial-focus');
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+    modal: false,
+  });
+
+  handle.focusInitial();
+
+  expect(deepActiveElement(document)?.textContent).to.equal('legacy-initial-focus first');
+  handle.deactivate({ restoreFocus: false });
+});
+
+it('runs the initial-focus hook once and honors both its allow and veto decisions', () => {
+  const outside = document.createElement('button');
+  outside.dataset.overlayBackground = '';
+  outside.id = 'initial-focus-hook-outside';
+  document.body.append(outside);
+
+  const allowed = createOverlay(document, 'allowed-initial-focus');
+  let allowCalls = 0;
+  outside.focus();
+  const allowedHandle = activateOverlay({
+    host: allowed.host,
+    panel: () => allowed.panel,
+    onEscape: () => undefined,
+    modal: false,
+    beforeInitialFocus: () => {
+      allowCalls++;
+      return true;
+    },
+  });
+  allowedHandle.focusInitial();
+  allowedHandle.focusInitial();
+  expect(allowCalls).to.equal(1);
+  expect(deepActiveElement(document)?.textContent).to.equal('allowed-initial-focus first');
+  allowedHandle.deactivate({ restoreFocus: false });
+
+  const vetoed = createOverlay(document, 'vetoed-initial-focus');
+  let vetoCalls = 0;
+  outside.focus();
+  const vetoedHandle = activateOverlay({
+    host: vetoed.host,
+    panel: () => vetoed.panel,
+    onEscape: () => undefined,
+    modal: false,
+    beforeInitialFocus: () => {
+      vetoCalls++;
+      return false;
+    },
+  });
+  vetoedHandle.focusInitial();
+  vetoedHandle.focusInitial();
+  expect(vetoCalls).to.equal(1);
+  expect((deepActiveElement(document) as HTMLElement | null)?.id).to.equal('initial-focus-hook-outside');
+  vetoedHandle.deactivate({ restoreFocus: false });
+  outside.remove();
+});
+
+it('defers the one-shot initial-focus hook until a hidden panel renders', async () => {
+  const outside = document.createElement('button');
+  outside.dataset.overlayBackground = '';
+  document.body.append(outside);
+  outside.focus();
+  const ancestor = document.createElement('div');
+  ancestor.dataset.overlayBackground = '';
+  ancestor.style.display = 'none';
+  const overlay = createOverlay(document, 'deferred-initial-focus');
+  ancestor.append(overlay.host);
+  document.body.append(ancestor);
+  let hookCalls = 0;
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+    modal: false,
+    suspendWhenUnrendered: true,
+    beforeInitialFocus: () => {
+      hookCalls++;
+      return true;
+    },
+  });
+
+  handle.focusInitial();
+  expect(hookCalls).to.equal(0);
+  ancestor.style.display = '';
+  await waitForCondition(
+    () => hookCalls === 1 && deepActiveElement(document)?.textContent === 'deferred-initial-focus first',
+    'the rendered panel to run its initial-focus hook',
+  );
+
+  handle.deactivate({ restoreFocus: false });
+  ancestor.remove();
+  outside.remove();
+});
+
 it('rebases an upper overlay return target when a lower overlay disappears', () => {
   const trigger = document.createElement('button');
   trigger.dataset.overlayBackground = '';

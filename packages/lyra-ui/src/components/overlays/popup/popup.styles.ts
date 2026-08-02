@@ -11,15 +11,23 @@ export const styles = css`
     /* Positioned by internal/positioner.ts, which writes position/left/top itself. The element
        must still be laid out (not display:none) while inactive is expressed by hiding it, or the
        first measurement would read a zero rect. */
-    position: fixed;
+    position: absolute;
     inset-block-start: 0;
     inset-inline-start: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
     max-inline-size: var(--lr-positioner-available-inline-size, none);
     max-block-size: var(--lr-positioner-available-block-size, none);
+    visibility: visible;
+    opacity: 1;
+    transition-property: opacity, visibility;
+    transition-duration: var(--show-duration, var(--lr-duration-fast));
+    transition-timing-function: var(--lr-easing-standard);
   }
   [part~='popup']:not([data-active]) {
-    display: none;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition-duration: var(--hide-duration, var(--lr-duration-fast));
   }
 
   [part~='hover-bridge'] {
@@ -43,13 +51,18 @@ export const styles = css`
 
   [part~='arrow'] {
     position: absolute;
-    inline-size: calc(2 * var(--lr-popup-arrow-size, var(--lr-size-0-375rem)));
-    block-size: calc(2 * var(--lr-popup-arrow-size, var(--lr-size-0-375rem)));
+    inline-size: calc(2 * var(--arrow-size, var(--lr-popup-arrow-size, var(--lr-size-0-375rem))));
+    block-size: calc(2 * var(--arrow-size, var(--lr-popup-arrow-size, var(--lr-size-0-375rem))));
     rotate: 45deg;
-    background: var(--lr-color-surface-raised);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    background: var(--arrow-color, var(--lr-color-surface-raised));
+    border: var(--popup-border-width, var(--lr-border-width-thin)) solid var(--lr-color-border);
     /* Only the two outward-facing edges of the rotated square should read as the popup's border;
        the other two sit under the panel. */
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part~='popup'] {
+      transition: none !important;
+    }
   }
 `;

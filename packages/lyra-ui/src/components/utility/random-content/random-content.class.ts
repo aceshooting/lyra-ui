@@ -47,9 +47,17 @@ export interface LyraRandomContentEventMap {
  * array of elements now shown, in display order. Not emitted when the eligible pool is empty.
  * @csspart base - The wrapping element around the default slot.
  * @csspart pause-button - The autoplay pause/resume action.
+ * @cssprop [--lr-animation-duration=300ms] - Mapped duration of the entrance animation.
+ * @cssprop [--lr-animation-easing=ease] - Mapped easing function for the entrance animation.
+ * @cssprop [--lr-animation-translate=var(--lr-size-0-5em)] - Mapped travel distance for directional animations.
+ * @cssprop [--animation-duration=300ms] - Web Awesome duration alias.
+ * @cssprop [--animation-easing=ease] - Web Awesome easing alias.
+ * @cssprop [--animation-translate=var(--lr-size-0-5em)] - Web Awesome travel-distance alias.
  * @cssprop [--lr-random-content-animation-duration=300ms] - Duration of the entrance animation.
  * @cssprop [--lr-random-content-animation-easing=ease] - Easing function for the entrance animation.
  * @cssprop [--lr-random-content-animation-translate=var(--lr-size-0-5em)] - Translation distance for directional animations.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -72,7 +80,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   @property({ type: Number }) items = 1;
 
   /** Selection algorithm — see `randomize()`. */
-  @property() mode: LyraRandomContentMode = 'unique';
+  @property({ reflect: true }) mode: LyraRandomContentMode = 'unique';
 
   @query('slot') private slotEl?: HTMLSlotElement;
 
@@ -219,11 +227,11 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     switch (this.mode) {
       case 'sequence':
         return this.selectSequence(pool, count);
-      case 'unique':
-        return this.selectUnique(pool, count);
       case 'random':
-      default:
         return this.shuffledPick(pool, count);
+      case 'unique':
+      default:
+        return this.selectUnique(pool, count);
     }
   }
 
@@ -390,7 +398,9 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
    * `hidden`/`aria-hidden`, emits `lr-content-change`, and returns the
    * elements now shown. Does not reset or restart the autoplay timer.
    */
-  randomize = (): HTMLElement[] => this.reselect();
+  randomize(): Element[] {
+    return this.reselect();
+  }
 
   private stopAutoplay(): void {
     if (this.timer !== undefined) window.clearInterval(this.timer);

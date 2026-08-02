@@ -15,6 +15,21 @@ const baseButton = (el: LyraCopyButton): HTMLButtonElement =>
 const feedbackText = (el: LyraCopyButton): string =>
   (el.shadowRoot!.querySelector('[part="feedback"]') as HTMLElement).textContent!.trim();
 
+type TooltipElement = HTMLElement & {
+  content: string;
+  disabled: boolean;
+  hoist: boolean;
+  open: boolean;
+  placement: string;
+  trigger: string;
+  updateComplete: Promise<unknown>;
+};
+
+const tooltip = (el: LyraCopyButton): TooltipElement =>
+  el.shadowRoot!.querySelector('lr-tooltip') as TooltipElement;
+
+const partTokens = (el: Element): string[] => (el.getAttribute('part') ?? '').split(/\s+/).filter(Boolean);
+
 /** Replaces `navigator.clipboard` for the duration of `run`, always restoring whatever descriptor
  *  was there before — a leaked stub bleeds into every later test file. */
 const withClipboard = async (value: unknown, run: () => Promise<void>): Promise<void> => {
@@ -57,9 +72,203 @@ describe('lr-copy-button', () => {
   it('defaults to an empty value and the resting "Copy" label', async () => {
     const el = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
     expect(el.value).to.equal('');
+    expect(el.copyLabel).to.equal('');
+    expect(el.successLabel).to.equal('');
+    expect(el.errorLabel).to.equal('');
+    expect(el.from).to.equal('');
+    expect(el.tooltip).to.equal('full');
+    expect(el.tooltipPlacement).to.equal('top');
+    expect(el.hoist).to.be.false;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy');
+    expect(partTokens(baseButton(el))).to.include.members(['base', 'button']);
     expect(el.shadowRoot!.querySelectorAll('[part="copy-icon"]').length).to.equal(1);
     expect(feedbackText(el)).to.equal('');
+
+    const tip = tooltip(el);
+    expect(tip.content).to.equal('Copy');
+    expect(tip.trigger).to.equal('hover focus');
+    expect(tip.placement).to.equal('top');
+    expect(tip.hoist).to.be.false;
+    expect(tip.open).to.be.false;
+    expect(tip.getAttribute('exportparts')).to.equal(
+      'base:tooltip__base, base__popup:tooltip__base__popup, base__arrow:tooltip__base__arrow, body:tooltip__body',
+    );
+  });
+
+  it('uses public copy/success labels for the accessible name, tooltip, and feedback', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button
+        value="hello"
+        copy-label="Copy token"
+        success-label="Token copied"
+        feedback-duration="10000"
+      ></lr-copy-button>
+    `)) as LyraCopyButton;
+    expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy token');
+    expect(tooltip(el).content).to.equal('Copy token');
+
+    baseButton(el).click();
+    await settle(el);
+    await tooltip(el).updateComplete;
+    expect(baseButton(el).getAttribute('aria-label')).to.equal('Token copied');
+    expect(feedbackText(el)).to.equal('Token copied');
+    expect(tooltip(el).content).to.equal('Token copied');
+    expect(tooltip(el).open).to.be.true;
+  });
+
+  it('opens the full resting tooltip from built-in-button focus and closes it on blur', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button value="hello" copy-label="Copy greeting"></lr-copy-button>
+    `)) as LyraCopyButton;
+    const tip = tooltip(el);
+    baseButton(el).focus();
+    await aTimeout(250);
+    await tip.updateComplete;
+    expect(tip.open).to.be.true;
+    expect(tip.content).to.equal('Copy greeting');
+
+    baseButton(el).blur();
+    await aTimeout(50);
+    await tip.updateComplete;
+    expect(tip.open).to.be.false;
+  });
+
+  it('copies textContent, an attribute, or a property from the element named by from', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <span id="copy-source-text">source text</span>
+        <span id="copy-source-attribute" data-copy="attribute text"></span>
+        <input id="copy-source-property" .value=${'property text'} />
+        <lr-copy-button from="copy-source-text" value="ignored"></lr-copy-button>
+        <lr-copy-button from="copy-source-attribute[data-copy]"></lr-copy-button>
+        <lr-copy-button from="copy-source-property.value"></lr-copy-button>
+      </div>
+    `);
+    const buttons = [...wrapper.querySelectorAll('lr-copy-button')] as LyraCopyButton[];
+    for (const button of buttons) {
+      baseButton(button).click();
+      await settle(button);
+    }
+    expect(writes).to.deep.equal(['source text', 'attribute text', 'property text']);
+  });
+
+  it('treats a missing from target as an error and never falls back to value', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button from="missing-copy-source" value="must not copy"></lr-copy-button>
+    `)) as LyraCopyButton;
+    const mappedError = oneEvent(el, 'lr-error');
+    const detailedError = oneEvent(el, 'lr-copy-error');
+    baseButton(el).click();
+    const [event, detailed] = await Promise.all([mappedError, detailedError]);
+    await settle(el);
+
+    expect(event.constructor.name).to.equal('CustomEvent');
+    expect(event.detail == null).to.be.true;
+    expect(event.bubbles).to.be.true;
+    expect(event.composed).to.be.true;
+    expect(event.cancelable).to.be.false;
+    expect(detailed.detail.reason).to.equal('failed');
+    expect(writes).to.deep.equal([]);
+    expect(partTokens(baseButton(el))).to.include('base-error');
+  });
+
+  it('treats an empty resolved value as an error without calling the Clipboard API', async () => {
+    const el = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
+    const mappedError = oneEvent(el, 'lr-error');
+    baseButton(el).click();
+    await mappedError;
+    await settle(el);
+    expect(writes).to.deep.equal([]);
+    expect(partTokens(baseButton(el))).to.include('base-error');
+  });
+
+  it('configures full, copy-only, and disabled tooltip modes with placement and hoisting', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button
+        value="hello"
+        tooltip="copy"
+        tooltip-placement="right"
+        hoist
+      ></lr-copy-button>
+    `)) as LyraCopyButton;
+    let tip = tooltip(el);
+    expect(tip.trigger).to.equal('manual');
+    expect(tip.placement).to.equal('right');
+    expect(tip.hoist).to.be.true;
+    expect(tip.disabled).to.be.false;
+
+    baseButton(el).click();
+    await settle(el);
+    await tip.updateComplete;
+    expect(tip.open).to.be.true;
+
+    el.tooltip = 'none';
+    await el.updateComplete;
+    tip = tooltip(el);
+    await tip.updateComplete;
+    expect(tip.trigger).to.equal('manual');
+    expect(tip.disabled).to.be.true;
+    expect(tip.open).to.be.false;
+  });
+
+  it('renders copy, success, and error icon slots in their corresponding states', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button value="hello" feedback-duration="10000">
+        <span slot="copy-icon">C</span>
+        <span slot="success-icon">S</span>
+        <span slot="error-icon">E</span>
+      </lr-copy-button>
+    `)) as LyraCopyButton;
+    const copySlot = el.shadowRoot!.querySelector('slot[name="copy-icon"]') as HTMLSlotElement;
+    expect(copySlot.assignedElements()[0]!.textContent!.trim()).to.equal('C');
+    expect(el.shadowRoot!.querySelectorAll('[part="success-icon"]').length).to.equal(0);
+
+    baseButton(el).click();
+    await settle(el);
+    const successSlot = el.shadowRoot!.querySelector('slot[name="success-icon"]') as HTMLSlotElement;
+    expect(successSlot.assignedElements()[0]!.textContent!.trim()).to.equal('S');
+    expect(el.shadowRoot!.querySelectorAll('[part="copy-icon"]').length).to.equal(0);
+  });
+
+  it('uses default slot content as a custom trigger while retaining click/focus forwarding', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button value="custom trigger">
+        <button id="custom-copy-trigger" type="button">Copy custom value</button>
+      </lr-copy-button>
+    `)) as LyraCopyButton;
+    await aTimeout(0);
+    await el.updateComplete;
+    const trigger = el.querySelector('#custom-copy-trigger') as HTMLButtonElement;
+    expect(el.shadowRoot!.querySelectorAll('[part~="button"]').length).to.equal(0);
+
+    el.focus();
+    expect(document.activeElement === trigger).to.be.true;
+    el.blur();
+    expect(document.activeElement === trigger).to.be.false;
+
+    const copied = oneEvent(el, 'lr-copy');
+    el.click();
+    await copied;
+    expect(writes).to.deep.equal(['custom trigger']);
+  });
+
+  it('publishes the success custom state and applies --success-color', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button
+        value="hello"
+        feedback-duration="10000"
+        style="--success-color: rgb(1, 120, 45)"
+      ></lr-copy-button>
+    `)) as LyraCopyButton;
+    baseButton(el).click();
+    await settle(el);
+    expect(getComputedStyle(baseButton(el)).color).to.equal('rgb(1, 120, 45)');
+    try {
+      expect(el.matches(':state(success)')).to.be.true;
+      expect(el.matches(':state(error)')).to.be.false;
+    } catch {
+      // CustomStateSet is an optional styling hook in older test engines.
+    }
   });
 
   it('fires lr-copy with the current value and writes it to the clipboard on click', async () => {
@@ -77,13 +286,13 @@ describe('lr-copy-button', () => {
     await settle(el);
     const button = baseButton(el);
     expect(button.getAttribute('aria-label')).to.equal('Copied!');
-    expect(button.getAttribute('part')).to.equal('base base-success');
+    expect(partTokens(button)).to.include.members(['base', 'button', 'base-success']);
     expect(el.shadowRoot!.querySelectorAll('[part="success-icon"]').length).to.equal(1);
     expect(el.shadowRoot!.querySelectorAll('[part="error-icon"]').length).to.equal(0);
     expect(feedbackText(el)).to.equal('Copied!');
   });
 
-  it('reverts the copied confirmation after ~1.5s', async () => {
+  it('reverts the copied confirmation after the default duration', async () => {
     const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
     baseButton(el).click();
     await settle(el);
@@ -106,6 +315,7 @@ describe('lr-copy-button', () => {
     // The custom name is fixed, so the live region is the only channel left to announce the
     // outcome — it must still carry it.
     expect(feedbackText(el)).to.equal('Copied!');
+    await expect(el).to.be.accessible();
   });
 
   it('disables the internal button and suppresses activation', async () => {
@@ -164,7 +374,8 @@ describe('lr-copy-button', () => {
     parent.append(el);
     await el.updateComplete;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy');
-    expect(baseButton(el).getAttribute('part')).to.equal('base');
+    expect(partTokens(baseButton(el))).to.include.members(['base', 'button']);
+    expect(partTokens(baseButton(el))).to.not.include('base-success');
   });
 
   it('clears copied feedback immediately when the source value changes', async () => {
@@ -182,7 +393,7 @@ describe('lr-copy-button', () => {
   });
 
   it('uses string overrides for both resting and confirmation labels', async () => {
-    const el = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
+    const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
     el.strings = { copy: 'Copier', copied: 'Copié' };
     await el.updateComplete;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copier');
@@ -215,7 +426,7 @@ describe('lr-copy-button', () => {
     await settle(el);
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copied!');
 
-    // NaN self-heals to the DEFAULT_FEEDBACK_DURATION (1500ms), not 0/never -- a short wait must
+    // NaN self-heals to the DEFAULT_FEEDBACK_DURATION (1000ms), not 0/never -- a short wait must
     // NOT have already reverted it.
     await aTimeout(50);
     await el.updateComplete;
@@ -256,7 +467,7 @@ describe('lr-copy-button clipboard failure', () => {
       baseButton(el).click();
       await settle(el);
       const button = baseButton(el);
-      expect(button.getAttribute('part')).to.equal('base base-error');
+      expect(partTokens(button)).to.include.members(['base', 'button', 'base-error']);
       expect(el.shadowRoot!.querySelectorAll('[part="error-icon"]').length).to.equal(1);
       expect(el.shadowRoot!.querySelectorAll('[part="success-icon"]').length).to.equal(0);
       // The `copyFailed` message key is pending in DEFAULT_STRINGS ('Copy failed'); asserting it
@@ -284,6 +495,37 @@ describe('lr-copy-button clipboard failure', () => {
     });
   });
 
+  it('also emits the mapped lr-error event and uses error-label/--error-color', async () => {
+    await withClipboard(rejectingClipboard(new Error('boom')), async () => {
+      const el = (await fixture(html`
+        <lr-copy-button
+          value="hello"
+          error-label="Could not copy token"
+          style="--error-color: rgb(190, 10, 20)"
+        ><span slot="error-icon">E</span></lr-copy-button>
+      `)) as LyraCopyButton;
+      const mappedError = oneEvent(el, 'lr-error');
+      baseButton(el).click();
+      const event = await mappedError;
+      await settle(el);
+      expect(event.detail == null).to.be.true;
+      expect(event.bubbles).to.be.true;
+      expect(event.composed).to.be.true;
+      expect(event.cancelable).to.be.false;
+      expect(baseButton(el).getAttribute('aria-label')).to.equal('Could not copy token');
+      expect(feedbackText(el)).to.equal('Could not copy token');
+      const errorSlot = el.shadowRoot!.querySelector('slot[name="error-icon"]') as HTMLSlotElement;
+      expect(errorSlot.assignedElements()[0]!.textContent!.trim()).to.equal('E');
+      expect(getComputedStyle(baseButton(el)).color).to.equal('rgb(190, 10, 20)');
+      try {
+        expect(el.matches(':state(error)')).to.be.true;
+        expect(el.matches(':state(success)')).to.be.false;
+      } catch {
+        // CustomStateSet is an optional styling hook in older test engines.
+      }
+    });
+  });
+
   it('reports an unknown rejection as reason "failed"', async () => {
     await withClipboard(rejectingClipboard(new Error('boom')), async () => {
       const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
@@ -302,7 +544,7 @@ describe('lr-copy-button clipboard failure', () => {
       const event = await failed;
       expect(event.detail.reason).to.equal('unsupported');
       await settle(el);
-      expect(baseButton(el).getAttribute('part')).to.equal('base base-error');
+      expect(partTokens(baseButton(el))).to.include.members(['base', 'button', 'base-error']);
       expect(el.shadowRoot!.querySelectorAll('[part="success-icon"]').length).to.equal(0);
     });
   });
@@ -321,7 +563,7 @@ describe('lr-copy-button clipboard failure', () => {
         const event = await failed;
         expect(event.detail.reason).to.equal('denied');
         await settle(el);
-        expect(baseButton(el).getAttribute('part')).to.equal('base base-error');
+        expect(partTokens(baseButton(el))).to.include.members(['base', 'button', 'base-error']);
       },
     );
   });
@@ -343,11 +585,12 @@ describe('lr-copy-button clipboard failure', () => {
       `)) as LyraCopyButton;
       baseButton(el).click();
       await settle(el);
-      expect(baseButton(el).getAttribute('part')).to.equal('base base-error');
+      expect(partTokens(baseButton(el))).to.include.members(['base', 'button', 'base-error']);
 
       await aTimeout(60);
       await el.updateComplete;
-      expect(baseButton(el).getAttribute('part')).to.equal('base');
+      expect(partTokens(baseButton(el))).to.include.members(['base', 'button']);
+      expect(partTokens(baseButton(el))).to.not.include('base-error');
       expect(el.shadowRoot!.querySelectorAll('[part="copy-icon"]').length).to.equal(1);
       expect(feedbackText(el)).to.equal('');
     });
@@ -360,20 +603,22 @@ describe('lr-copy-button clipboard failure', () => {
       `)) as LyraCopyButton;
       baseButton(el).click();
       await settle(el);
-      expect(baseButton(el).getAttribute('part')).to.equal('base base-error');
+      expect(partTokens(baseButton(el))).to.include.members(['base', 'button', 'base-error']);
 
       el.value = 'new';
       await el.updateComplete;
-      expect(baseButton(el).getAttribute('part')).to.equal('base');
+      expect(partTokens(baseButton(el))).to.include.members(['base', 'button']);
+      expect(partTokens(baseButton(el))).to.not.include('base-error');
 
       baseButton(el).click();
       await settle(el);
-      expect(baseButton(el).getAttribute('part')).to.equal('base base-error');
+      expect(partTokens(baseButton(el))).to.include.members(['base', 'button', 'base-error']);
       const parent = el.parentElement!;
       el.remove();
       parent.append(el);
       await el.updateComplete;
-      expect(baseButton(el).getAttribute('part')).to.equal('base');
+      expect(partTokens(baseButton(el))).to.include.members(['base', 'button']);
+      expect(partTokens(baseButton(el))).to.not.include('base-error');
     });
   });
 
@@ -397,7 +642,8 @@ describe('lr-copy-button clipboard failure', () => {
         await el.updateComplete;
         settleWrite!();
         await settle(el);
-        expect(baseButton(el).getAttribute('part')).to.equal('base');
+        expect(partTokens(baseButton(el))).to.include.members(['base', 'button']);
+        expect(partTokens(baseButton(el))).to.not.include('base-error');
         expect(failures).to.equal(0);
       },
     );

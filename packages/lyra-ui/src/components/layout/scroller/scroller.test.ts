@@ -4,6 +4,82 @@ import type { LyraScroller } from "./scroller.class.js";
 import { styles } from "./scroller.styles.js";
 
 describe("<lr-scroller>", () => {
+  it("defaults the upstream without-* flags to false", async () => {
+    const el = await fixture<LyraScroller>(
+      html`<lr-scroller label="Items"><span>Content</span></lr-scroller>`
+    );
+    expect(el.orientation).to.equal("horizontal");
+    expect(el.withoutScrollbar).to.be.false;
+    expect(el.withoutShadow).to.be.false;
+    expect(el.hideScrollbar).to.be.false;
+  });
+
+  it("renders logical start/end shadow parts only where more content exists", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller label="Items" style="inline-size: 100px;">
+        <div style="inline-size: 500px;">wide content</div>
+      </lr-scroller>
+    `);
+    const start = el.shadowRoot!.querySelector('[part="start-shadow"]') as HTMLElement;
+    const end = el.shadowRoot!.querySelector('[part="end-shadow"]') as HTMLElement;
+    await waitUntil(() => start.hidden && !end.hidden, "edge shadows did not settle");
+    expect(start.getAttribute("aria-hidden")).to.equal("true");
+    expect(end.getAttribute("aria-hidden")).to.equal("true");
+
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    Object.defineProperty(viewport, "scrollLeft", {
+      configurable: true,
+      value: 20,
+      writable: true,
+    });
+    viewport.dispatchEvent(new Event("scroll"));
+    await el.updateComplete;
+    expect(start.hidden).to.be.false;
+    expect(end.hidden).to.be.false;
+  });
+
+  it("without-shadow removes both cues without disabling native scrolling", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller without-shadow label="Items" style="inline-size: 100px;">
+        <div style="inline-size: 500px;">wide content</div>
+      </lr-scroller>
+    `);
+    const shadows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part$="shadow"]')];
+    expect(shadows).to.have.length(2);
+    expect(shadows.every((shadow) => shadow.hidden)).to.be.true;
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="viewport"]')!).overflowX).to.equal(
+      "auto"
+    );
+  });
+
+  it("accepts without-scrollbar alongside the legacy hide-scrollbar alias", async () => {
+    for (const attribute of ["without-scrollbar", "hide-scrollbar"]) {
+      const el = await fixture<LyraScroller>(
+        attribute === "without-scrollbar"
+          ? html`<lr-scroller label="Items" without-scrollbar><span>Content</span></lr-scroller>`
+          : html`<lr-scroller label="Items" hide-scrollbar><span>Content</span></lr-scroller>`
+      );
+      const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+      expect(getComputedStyle(viewport).scrollbarWidth).to.equal("none");
+    }
+  });
+
+  it("consumes --shadow-size and --shadow-color on the rendered cue", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller
+        label="Items"
+        style="inline-size: 100px; --shadow-size: 17px; --shadow-color: rgb(1, 2, 3)"
+      >
+        <div style="inline-size: 500px;">wide content</div>
+      </lr-scroller>
+    `);
+    const end = el.shadowRoot!.querySelector('[part="end-shadow"]') as HTMLElement;
+    await waitUntil(() => !end.hidden, "end shadow did not appear");
+    const computed = getComputedStyle(end);
+    expect(computed.width).to.equal("17px");
+    expect(computed.backgroundImage).to.include("rgb(1, 2, 3)");
+  });
+
   it("reports scroll edges correctly at rest under RTL (CSSOM negative-scrollLeft convention)", async () => {
     const el = await fixture<LyraScroller>(html`
       <lr-scroller controls dir="rtl" style="inline-size: 100px;">

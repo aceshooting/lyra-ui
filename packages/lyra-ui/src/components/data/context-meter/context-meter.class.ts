@@ -65,6 +65,8 @@ function formatCount(n: number, locale: string): string {
  * @csspart segment-list - The visually-hidden list exposing the segment breakdown.
  * @csspart segment-item - One visually-hidden segment label/count pair.
  * @cssprop [--lr-context-meter-segment-color] - Per-segment color. Set inline on `[part="segment"]` by the component itself whenever that segment supplies a `color`; unset (and the token unread) otherwise, leaving the `data-tone` palette in charge.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraContextMeter extends LyraElement {
   static override styles = [LyraElement.styles, srOnly, styles];

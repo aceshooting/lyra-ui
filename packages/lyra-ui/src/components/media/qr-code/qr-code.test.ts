@@ -12,6 +12,9 @@ interface FakeQrCodeApi {
   create: (value: string, options: { errorCorrectionLevel: string }) => { modules: FakeModules };
 }
 
+const RED_IMAGE_DATA =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="10" height="10"%3E%3Crect width="10" height="10" fill="%23ff0000"/%3E%3C/svg%3E';
+
 /** A trivial 1×1-module symbol whose single dark module always spans the exact geometric center
  *  of the rendered canvas, regardless of `size` -- convenient for pixel sampling in tests without
  *  hand-computing quiet-zone offsets. */
@@ -40,6 +43,12 @@ describe('lr-qr-code', () => {
     expect(el.size).to.equal(128);
     expect(el.radius).to.equal(0);
     expect(el.errorCorrection).to.equal('H');
+    expect(el.fill).to.equal('');
+    expect(el.background).to.equal('');
+    expect(el.image).to.equal(null);
+    expect(el.imageBackground).to.equal(null);
+    expect(el.imageCoverage).to.equal(null);
+    expect(el.imagePadding).to.equal(null);
   });
 
   it('renders the empty state and never loads the optional peer when value is empty', async () => {
@@ -402,6 +411,81 @@ describe('lr-qr-code', () => {
     // Top-left corner is always inside the quiet zone (background).
     const bgPixel = ctx.getImageData(1, 1, 1, 1).data;
     expect([...bgPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
+  });
+
+  it('supports the mapped fill/background property aliases', async () => {
+    const el = (await fixture(html`
+      <lr-qr-code size="90" fill="#ff0000" background="#00ff00"></lr-qr-code>
+    `)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const center = Math.round(canvas.width / 2);
+    expect([...ctx.getImageData(center, center, 1, 1).data.slice(0, 3)]).to.deep.equal([255, 0, 0]);
+    expect([...ctx.getImageData(1, 1, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 255, 0]);
+  });
+
+  it('safely draws a centered embedded image with background, coverage, and padding', async () => {
+    let correction = '';
+    const el = (await fixture(html`
+      <lr-qr-code
+        size="100"
+        image=${RED_IMAGE_DATA}
+        image-background="#0000ff"
+        image-coverage="0.5"
+        image-padding="5"
+        error-correction="L"
+        style="--lr-qr-code-fill:#000; --lr-qr-code-background:#fff"
+      ></lr-qr-code>
+    `)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi((_value, options) => {
+        correction = options.errorCorrectionLevel;
+        return { modules: fakeModules(true) };
+      }),
+    );
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    await waitUntil(
+      () => Boolean((el as unknown as { loadState?: { image?: HTMLImageElement } }).loadState?.image),
+    );
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const center = Math.round(50 * dpr);
+    const padded = Math.round(27 * dpr);
+    expect([...ctx.getImageData(center, center, 1, 1).data.slice(0, 3)]).to.deep.equal([255, 0, 0]);
+    expect([...ctx.getImageData(padded, center, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 0, 255]);
+    expect(correction).to.equal('H');
+  });
+
+  it('rejects an unsafe embedded-image URL without preventing the QR symbol from rendering', async () => {
+    const el = (await fixture(html`
+      <lr-qr-code image="javascript:alert(1)"></lr-qr-code>
+    `)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    await aTimeout(20);
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect((el as unknown as { loadState: { image?: HTMLImageElement } }).loadState.image).to.equal(undefined);
+  });
+
+  it('normalizes non-finite/out-of-range embedded-image geometry before drawing', async () => {
+    const el = (await fixture(html`<lr-qr-code image=${RED_IMAGE_DATA}></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    el.imageCoverage = Number.POSITIVE_INFINITY;
+    el.imagePadding = -100;
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    await waitUntil(
+      () => Boolean((el as unknown as { loadState?: { image?: HTMLImageElement } }).loadState?.image),
+    );
+    expect(() => (el as unknown as { draw(): void }).draw()).to.not.throw();
   });
 
   it('falls back to the default fill/background hex when the CSS custom property resolves empty', async () => {

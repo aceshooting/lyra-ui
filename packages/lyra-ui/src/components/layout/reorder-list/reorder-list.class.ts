@@ -52,6 +52,8 @@ export interface LyraReorderListEventMap {
  * existed.
  * @csspart base - The list's root wrapper (`role="list"`).
  * @cssprop [--lr-reorder-list-gap=var(--lr-space-2xs)] - Gap between rows.
+ * @status stable
+ * @since 6.0.0
  */
 export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   static override styles = [LyraElement.styles, styles];

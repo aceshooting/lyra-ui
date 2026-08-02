@@ -161,7 +161,7 @@ it('maintains one roving toolbar stop and moves it from the directly focused act
   >;
   await Promise.all(actions.map((action) => action.updateComplete));
   const controls = actions.map(
-    (action) => action.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement,
+    (action) => action.shadowRoot!.querySelector('[part~="base"]') as HTMLButtonElement,
   );
   expect(controls.map((control) => control.tabIndex)).to.deep.equal([0, -1, -1, -1]);
 
@@ -172,7 +172,7 @@ it('maintains one roving toolbar stop and moves it from the directly focused act
   );
   await aTimeout(0);
   expect(controls.map((control) => control.tabIndex)).to.deep.equal([-1, -1, -1, 0]);
-  expect(actions[3]!.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect(actions[3]!.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base button');
 });
 
 it('restarts positioning after a disconnect/reconnect while open', async () => {

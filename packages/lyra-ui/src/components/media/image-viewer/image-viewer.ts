@@ -3,7 +3,7 @@ import { html } from 'lit';
 import { LyraImageViewer } from './image-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 import { registerDocumentRenderer, type DocumentFile, type DocumentRendererDefinition } from '../../viewers/document-viewer/registry.js';
-import '../zoomable-frame/zoomable-frame.js';
+import '../pan-zoom/pan-zoom.js';
 import '../../utility/live-region/live-region.js';
 
 defineElement('image-viewer', LyraImageViewer);

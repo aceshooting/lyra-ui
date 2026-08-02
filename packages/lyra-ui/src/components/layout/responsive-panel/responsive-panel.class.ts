@@ -128,6 +128,8 @@ export function resolveEffectiveMode(
  *   presentation's scrim color, applied to `[part="backdrop"]`.
  * @cssprop [--lr-responsive-panel-sheet-max-block-size=85dvh] - Maximum height of the
  *   `variant="bottom-sheet"` overlay panel (falls back to `85vh` where `dvh` is unsupported).
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/media/av-player/av-player.js';` (registers the tag; side-effect import)
 - **Class** `LyraAvPlayer`, also available unregistered from `@aceshooting/lyra-ui/components/media/av-player/av-player.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -47,7 +49,11 @@ error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and 
 `lr-rate-change` (`detail: { rate }`), `lr-cue-change` (`detail: { id }`, `id` is `null` when no
 cue is active), `lr-highlight-activate` (`detail: { id }`), `lr-anchor-result` (`detail: {
 found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), and
-`lr-render-error` (`detail: { error }`).
+`lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
+`play`, `timeupdate`, and `volumechange`
+events are also relayed exactly once from the host as native `Event` instances. Like the original
+media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
+`lr-*` notifications above remain unchanged.
 
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
 `timeline` (click-to-seek and arrow-key seeking), `timeline-marker` (one per `time-range` highlight;

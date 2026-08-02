@@ -5,33 +5,93 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/overlay/dropdown.js';` (registers the tag; side-effect import)
 - **Class** `LyraDropdown`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/overlay/dropdown.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-dropdown`
 
-A menu-role popover for consumer-supplied action content. Compose `lr-menu` when full roving
-menu-item behavior is needed.
+The complete mapped action-menu component. The public element remains a Popover-style trigger plus
+positioned popup; inside that popup it owns the same contained interaction engine as `lr-menu`, so
+direct `lr-dropdown-item`/`lr-menu-item` children get roving focus, disabled skipping, type-ahead,
+nested submenu keyboard/pointer intent, and focus return without a second public popup. A
+consumer-supplied `lr-menu` in the default slot becomes that contained engine instead of being
+wrapped in another menu. This supports both Web Awesome's direct-item shape and Shoelace's
+consumer-menu shape.
 
-**Properties:** `open`, `placement` (default `bottom-start`), `distance` (default `4`), `skidding`
-(default `0`), `for`, `arrow` (default `false`), `arrow-placement` (default `anchor`),
-`arrow-padding` (default `0`), `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
-`popupRole` is seeded to `'menu'` in the constructor — that is the only difference from `lr-popover`,
-whose whole surface (including `show()`, `hide()`, `showAt()` and the arrow/skidding/`for` knobs
-added in 8.0.0) is inherited unchanged. Its trigger therefore uses the same public-host
-`aria-controls` target and Lyra-button element-reference forwarding described above, and its popup's
-accessible name falls back to the localized "Menu" rather than "Popover".
+**Direct mapped items.** `<lr-dropdown-item>` is the Web Awesome-compatible name for the same row
+implementation as `<lr-menu-item>`. Direct mapped items receive this dropdown's `size` and use its
+contained roving-focus, type-ahead, disabled-skipping, selection, and submenu controller; a
+consumer-supplied `<lr-menu>` uses that controller directly. This preserves both Web Awesome's
+direct-item composition and Shoelace's consumer-menu composition. The canonical item properties,
+methods, events, slots, parts, and theme variables are documented in the layout-family
+`lr-menu` / `lr-menu-item` section.
 
-**Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` —
-inherited from `lr-popover` with identical timing and veto rules; none fires for the initial render.
-The two `lr-after-*` events are new in 8.0.0, and the two pre-events became cancelable and
-before-the-fact in 8.0.0 — see `lr-popover` above.
+**Properties:**
+- `open: boolean = false` (reflected), `placement: Placement = 'bottom-start'`,
+  `distance: number = 0`, `skidding: number = 0`, and `for: string = ''` — the same positioning
+  vocabulary as `lr-popover`, except the mapped dropdown sits flush against its trigger by default.
+  An explicit distance still wins, and generic `lr-popover` keeps its own default of `8`.
+- `size: LyraSize = 'm'` (reflected) — propagated to directly owned mapped items. Accepts the
+  six-step Lyra ladder and `small`/`medium`/`large` aliases.
+- `disabled: boolean = false` (reflected) — prevents pointer/keyboard/programmatic opening and
+  dismisses an already-open dropdown when enabled.
+- `stayOpenOnSelect: boolean = false` (attribute `stay-open-on-select`, reflected) — suppresses the
+  default selection close for direct and nested selections.
+- `hoist: boolean = false` (reflected) — uses viewport-fixed positioning; otherwise the popup uses
+  the containing-block (`absolute`) strategy.
+- `sync?: 'width'|'height'|'both'` (reflected) — copies the trigger dimension(s) onto the popup.
+- `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
+  light-dismiss handling.
+- `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, `accessibleLabel`
+  (`aria-label`) and `popupRole` are retained from `lr-popover` for existing Lyra consumers; the
+  popup role defaults to `menu` and its accessible-name fallback is the localized "Menu".
 
-**Slots:** `trigger`, default menu content. **CSS parts:** `trigger`, `popup`, `content`, and
-`arrow` (rendered only when `arrow` is set, carrying the resolved side as a second part token).
-**Themeable custom properties:** `--lr-overlay-max-inline-size` (default `--lr-size-20rem` —
-maximum inline size of the popup) and `--lr-overlay-arrow-size` (default `--lr-size-0-375rem` —
-half the arrow square's width).
+**Methods:** `show(): Promise<void>` and
+`hide(options?: { focusTrigger?: boolean }): Promise<void>` use the same cancelable before-events,
+after-events, focus return, and settlement rules as `lr-popover`. `reposition(): void` immediately
+recomputes placement after an imperative anchor/layout change. `showAt()` remains available for
+Lyra's virtual-anchor compatibility surface.
+
+**Events:** `lr-select` is the single mapped selection path: cancelable, bubbling/composed, with
+`detail: { item }` carrying the activated element. Preventing it keeps the complete submenu chain
+open; `stay-open-on-select` applies the same default suppression declaratively. Nested selection is
+not translated or re-emitted at each level, so a listener on `lr-dropdown` receives exactly one
+event. `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), and `lr-after-hide` retain
+the Popover lifecycle; none fires for initial open markup.
+
+Dropdown motion resolves `dropdown.show` / `dropdown.hide` through the public animation registry;
+it retains the dropdown's `--show-duration` / `--hide-duration` defaults when an override supplies
+only keyframes. Passing `null` disables motion without skipping the after-event or promise.
+
+**Slots:** `trigger`; default (`lr-dropdown-item`/`lr-menu-item` rows, or one consumer-supplied
+`lr-menu`). **CSS parts:** `trigger`; `popup dialog popup__popup base base__popup panel` (all six
+tokens on the positioned popup, preserving the popover, Web Awesome and Shoelace wrapper names on
+the same node); `menu` (the contained controller); `content body`; and the retained optional
+`arrow popup__arrow` token set.
+
+**Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
+`var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
+`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks.
+
+```html
+<lr-dropdown aria-label="File actions" size="small">
+  <button slot="trigger">Actions</button>
+  <lr-dropdown-item value="rename"><span slot="details">⌘R</span>Rename</lr-dropdown-item>
+  <lr-dropdown-item>
+    Share
+    <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+    <lr-dropdown-item slot="submenu" value="link">Copy link</lr-dropdown-item>
+  </lr-dropdown-item>
+  <lr-dropdown-item value="delete" variant="danger">Delete</lr-dropdown-item>
+</lr-dropdown>
+<script type="module">
+  document.querySelector('lr-dropdown').addEventListener('lr-select', (event) => {
+    console.log(event.detail.item.value);
+  });
+</script>
+```

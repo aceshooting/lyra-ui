@@ -27,7 +27,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 275 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 283 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -88,6 +88,23 @@ import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
 import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
 ```
 
+The new v8 application-shell and media surfaces have the same granular shape:
+
+```js
+import '@aceshooting/lyra-ui/components/layout/page/page.js';
+import '@aceshooting/lyra-ui/components/media/video/video.js';
+import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
+```
+
+Imports for behavior preserved under a new compatibility tag are explicit too:
+
+```js
+import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
+import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
+import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';
+import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
+```
+
 These component entry points register their tags. For a class-only import (for subclassing or
 type-directed composition), use the matching `.class.js` entry, such as
 `@aceshooting/lyra-ui/components/overlays/empty/empty.class.js`; class-only entries do not touch the
@@ -122,7 +139,7 @@ down to the two elements you actually render.
 import '@aceshooting/lyra-ui';
 ```
 
-This registers every component **except** the 15 tags gated behind an optional peer dependency:
+This registers every component **except** the 15 inventory-designated optional-peer-family tags:
 `<lr-chart>` and its 8 typed subclasses, `<lr-box-plot>`, `<lr-histogram>`, `<lr-map>`,
 `<lr-graph>`, `<lr-knowledge-graph-explorer>`, and `<lr-geojson-view>` (see Install above). Those
 always require their own explicit subpath import, even when pulling the rest of the library in bulk:
@@ -142,10 +159,85 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 
 Passing a pre-resolved `src` does not require that entry.
 
+### Optional autoloader and CDN entry
+
+Applications that receive arbitrary Lyra markup can opt into the inventory-driven autoloader
+instead of importing the root barrel. The manual entry is side-effect-free and loads only known
+tags already present below the supplied root:
+
+```ts
+import {
+  discover,
+  start,
+  stop,
+} from '@aceshooting/lyra-ui/autoloader.js';
+import { allDefined } from '@aceshooting/lyra-ui/utilities/defined.js';
+
+await discover(document); // one scan
+await start(document);    // initial scan, then watch dynamic/Turbo-style replacements
+await allDefined(document);
+stop();
+```
+
+`discover()` and `start()` traverse caller-owned open shadow roots and honor scoped custom-element
+registries. While a discovered element is importing and completing its first update, the loader
+owns a `data-lr-autoload-pending` marker on it; `AUTOLOADER_PENDING_ATTRIBUTE` exports that exact
+name for application FOUCE rules. Set `{ events: true }` to receive bubbling/composed
+`lr-autoload-preload`, `lr-autoload-loaded`, and `lr-autoload-error` events. A rejected import is
+reported, its marker is cleared, and a later discovery can retry it.
+
+Optional-peer tags are skipped by default. Opt in only after installing every peer named by that
+tag's package metadata:
+
+```ts
+await start(document, {
+  optionalPeers: ['dompurify', 'postal-mime'],
+  events: true,
+});
+```
+
+Use `optionalPeers: 'all'` only when the complete optional-peer set is installed. The separate
+side-effect entry auto-starts for direct-browser/CDN use and reads the same policy from its own
+script element:
+
+```html
+<script
+  type="module"
+  src="https://esm.sh/@aceshooting/lyra-ui/autoloader-cdn.js"
+  data-lyra-autoloader
+  data-lyra-optional-peers="dompurify,postal-mime"
+  data-lyra-autoload-events
+></script>
+```
+
+Both autoloader entries are safe to import in Node: without a browser document they resolve inertly
+and create no DOM globals. `allDefined()` waits for currently rendered, inventory-known tags and
+their first updates, including tags produced by those updates; unknown `lr-*` names are ignored.
+It does not load anything itself, so call it after explicit imports, `discover()`, or `start()`.
+
+### External modal interop
+
+When a third-party modal opens above an active Lyra dialog or drawer, suspend Lyra's document-level
+modal ownership for that connected external root:
+
+```ts
+import { suspendLyraModalsFor } from '@aceshooting/lyra-ui/utilities/overlay-manager.js';
+
+const externalModal = document.querySelector<HTMLElement>('#vendor-modal')!;
+const release = suspendLyraModalsFor(externalModal);
+// Call when the third-party modal closes. Calling it twice is safe.
+release();
+```
+
+The handle is document-scoped and nestable. While at least one handle is active, Lyra yields Escape
+and Tab routing and leaves only the external modal paths non-inert, without discarding its own stack
+or focus-return targets. Disconnecting the external root or adopting it into another document
+releases the suspension automatically.
+
 Imperative toast (a drop-in for `react-hot-toast`):
 
 ```js
-import { toast } from '@aceshooting/lyra-ui';
+import { toast } from '@aceshooting/lyra-ui/components/overlays/toast/toaster.js';
 toast({ message: 'Saved', variant: 'success' });
 ```
 
@@ -161,12 +253,13 @@ assistants, split so a lookup costs a few hundred tokens instead of the whole ca
 | Library-wide behavior (imports, events, forms, theming, i18n, TypeScript, frameworks, SSR, AI types) | [`llms/shared.md`](./llms/shared.md) |
 | Design tokens | [`llms/tokens.md`](./llms/tokens.md) |
 | Which optional peer a component needs | [`llms/peers.md`](./llms/peers.md) |
-| `wa-*`/`sl-*` → `lr-*` renames | [`llms/migration.md`](./llms/migration.md) |
+| `wa-*`/`sl-*` migration classifications and safe codemod rules | [`llms/migration.md`](./llms/migration.md) |
 | Everything, concatenated (large) | [`llms-full.txt`](./llms-full.txt) |
 
-[`llms.txt`](./llms.txt) is the short entry index over all of the above. Everything under `llms/` is
-generated from the authored family sources by `pnpm run llms` and verified in CI, so it cannot drift
-from `custom-elements.json`.
+[`llms.txt`](./llms.txt) is the short entry index over all of the above. Family files, this shared
+guide, and the introductory sources are authored; `pnpm run llms` combines them with the generated
+index, per-component pages, tokens, peers, and migration reference. CI freshness-checks the derived
+artifacts against `custom-elements.json` and the authored sources.
 
 **Claude Code users:** this repo is also a plugin marketplace — installing the `lyra-ui` plugin gives
 Claude the same reference as a skill, plus `/lyra-ui:migrate-from-wa`,
@@ -177,12 +270,13 @@ contributor guide for agents working *on* lyra-ui, not the same document as the 
 
 ## Upgrading from 7.x
 
-8.0.0 removes accidents rather than adding surface: property names that meant two different things,
-colors that were only ever solved for light mode, and mirrored attributes whose polarity or default
-had drifted from the upstream they claim to mirror. Almost every break below is a find-and-replace,
-and where a default flips it flips to the upstream one — an attribute renamed into its own negation
-is the most expensive mistake available here, because the renamed markup parses cleanly and every
-instance that doesn't carry it silently adopts the opposite behavior.
+8.0.0 removes naming and default accidents, completes mapped public contracts, and adds new platform
+surface for SSR, framework typing, guarded loading, and opt-in styles. Existing Lyra-original
+behavior displaced by a mapped contract moves to a truthful compatibility tag instead of
+disappearing. Almost every intentional break below is a find-and-replace, and where a default flips
+it flips to the mapped public contract — an attribute renamed into its own negation is the most
+expensive mistake available here, because the renamed markup parses cleanly and every instance that
+doesn't carry it silently adopts the opposite behavior.
 
 ### Tag renames
 
@@ -193,6 +287,53 @@ instance that doesn't carry it silently adopts the opposite behavior.
 
 Neither old name is registered as an alias. A tag that silently keeps working under its old name is
 how a rename looks finished while half of it is inert.
+
+### Component contract moves and default changes
+
+Two existing tags now carry the mapped contract their names promise. Rename the old behavior when
+that is what the application needs:
+
+| 7.x behavior | 8.0.0 destination | What the old tag means now |
+|---|---|---|
+| Browser-native `<lr-time-input>` | `<lr-native-time-input>` | `<lr-time-input>` is the locale-aware segmented field and popup. |
+| Slotted/image `<lr-zoomable-frame>` pan and zoom | `<lr-pan-zoom>` | `<lr-zoomable-frame>` is a sandboxed iframe preview with discrete zoom controls. |
+
+The following changes do not require a tag rename, but code that relied on the former default or
+exact TypeScript/event shape needs an explicit update:
+
+- `<lr-select>.value` is typed `string | string[]`; `multiple` opts into the array-valued runtime
+  mode. Narrow the value after checking `multiple` rather than assuming a string.
+- A bare `<lr-button>` now uses `appearance="accent"`. Write `appearance="filled"` to preserve the
+  former visual tier.
+- `<lr-input type="password">` no longer adds a reveal button unless `password-toggle` is present,
+  and `<lr-input type="number">` leaves native spin buttons visible unless `without-spin-buttons`
+  (or `no-spin-buttons`) is present.
+- `<lr-pagination>` now defaults `page-size` to `10`, not `20`; its page-change detail also includes
+  `pageSize`, and the cancelable `lr-before-page-change` precedes it.
+- `<lr-skeleton>` defaults to `effect="none"`, not `pulse`; `<lr-mutation-observer>` defaults
+  `child-list` to false, not true.
+- `<lr-format-date>` and `<lr-relative-time>` default an unset date to the construction-time current
+  instant. `<lr-format-bytes>` uses decimal `unit-step="1000"`; write `1024` to retain the former
+  scaling.
+- `<lr-popover>` emits cancelable `lr-show`/`lr-hide` before state changes and settles the new
+  after-events after motion. `<lr-tooltip>` replaces `delay` with independent `show-delay` and
+  `hide-delay`.
+- Slider input/change details now include the active thumb and full value/range context. Readers of
+  `detail.value` continue to work; exact one-key object assertions must accept the wider shape.
+
+The component-family reference documents every aligned default beside the affected property. The
+contract-aware migration report identifies upstream-origin rewrites; the separate `lyra-v7`
+profile described below makes the former popup/popover/tooltip defaults explicit.
+
+The exact registration imports for the new and moved surfaces are:
+
+```js
+import '@aceshooting/lyra-ui/components/layout/page/page.js';
+import '@aceshooting/lyra-ui/components/media/video/video.js';
+import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
+import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
+import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
+```
 
 ### Attribute and property renames
 
@@ -214,6 +355,23 @@ when the attribute is *absent*, so grep for the tag as well as for the old attri
 `<lr-combobox>`'s `with-clear` is no longer marked deprecated. Both upstream spellings of the clear
 button — `with-clear` and `clearable` — are now first-class on `<lr-input>`, `<lr-select>` and
 `<lr-combobox>` alike, so there is nothing to rewrite in either direction.
+
+### Security-preserving differences
+
+Some upstream behavior is intentionally not made automatic:
+
+- `<lr-include>` sanitizes every fetched or same-page fragment, has no script-executing mode, and
+  defaults `mode` to `same-origin` instead of `cors`. A migration that depends on cross-origin or
+  script execution remains unchanged with a location-aware warning.
+- Link-like Lyra controls derive `rel="noopener noreferrer"` whenever `target` is set; they do not
+  expose an independently settable `rel`. A caller-authored `rel` therefore requires manual review
+  instead of a silent rewrite.
+- `<lr-zoomable-frame>` rejects active/non-embeddable URL schemes, always renders a sandbox, and
+  will not combine `allow-scripts` with `allow-same-origin`. `<lr-video>` validates media and
+  thumbnail URLs and byte-caps remote thumbnail VTT input.
+
+These are deliberate fail-closed contracts. The migration report records them instead of emitting
+markup that appears converted while weakening the application's security boundary.
 
 ### One styling vocabulary
 
@@ -282,12 +440,16 @@ registerLyraLocale('en', { toolCount: '{count} tool', toolCountPlural: '{count} 
 registerLyraLocale('en', { toolCount: { one: '{count} tool', other: '{count} tools' } });
 ```
 
-Eight translation catalogs now ship as side-effect-only modules, so a common locale no longer needs a
+Ten translation catalogs now ship as side-effect-only modules, so a common locale no longer needs a
 hand-written catalog at all:
 
 ```js
-import '@aceshooting/lyra-ui/translations/fr.js'; // also ar, de, es, ja, pt-BR, ru, zh-CN
+import '@aceshooting/lyra-ui/translations/fr.js'; // also ar, de, es, fa, he, ja, pt-BR, ru, zh-CN
 ```
+
+`fa` and `he` are complete RTL catalogs. Locale lookup applies the normal regional fallback, so
+`fa-IR` resolves through `fa` and `he-IL` through `he`; set `dir="rtl"` on the document or an
+ancestor so layout and directional keyboard behavior follow the chosen language.
 
 ### Packaging
 
@@ -302,10 +464,12 @@ import '@aceshooting/lyra-ui/translations/fr.js'; // also ar, de, es, ja, pt-BR,
 
 ## Migrating from Web Awesome or Shoelace
 
-For a component marked with a `wa-*` counterpart in the "Mirrors" column, Lyra keeps the documented
-public vocabulary where practical: attributes, slots, events, CSS parts, and custom properties use
-the same names under the `lr-` prefix. This makes many migrations a predictable import and tag-name
-change, while the component notes remain authoritative for intentional differences.
+The "Mirrors" column records a design/API relationship, not blanket permission to rename a tag.
+Every pinned Web Awesome and Shoelace component has a machine-readable migration classification:
+`exact`, `rewritten`, `warning-required`, `conceptual-only`, or `unsupported`. Only `exact` and fully
+specified `rewritten` mappings are changed automatically. The other three remain untouched and are
+reported with their source location, so an incomplete migration cannot leave inert public members
+behind while appearing to have succeeded.
 
 Where the two upstreams disagree on a name for the same thing, Lyra accepts both spellings rather
 than forcing a rewrite. The clear button is the clearest case: Web Awesome spells it `with-clear`,
@@ -313,45 +477,86 @@ Shoelace spells it `clearable`, and `<lr-input>`, `<lr-select>` and `<lr-combobo
 Neither spelling is deprecated, and neither needs rewriting in either direction — whichever one your
 markup already carries keeps working.
 
-```
-<wa-combobox value="x" multiple with-clear>  →  <lr-combobox value="x" multiple with-clear>
-<wa-date-input value="2026-07-15">           →  <lr-date-input value="2026-07-15">
+The same compatibility rule applies when the upstreams disagree on a property's write type.
+`lr-input.autocorrect` and `lr-textarea.autocorrect` always read as booleans, matching Web Awesome.
+Input also accepts Shoelace's `'off'`/`'on'` property writes; Textarea accepts its wider string
+surface, normalizing `'off'`/`'false'` to `false` and other strings to `true`. Both render the native
+attribute canonically as `autocorrect="off"` or `autocorrect="on"`.
+
+`lr-option` likewise keeps live/default selection separate: the `selected` attribute initializes
+`defaultSelected` and the parent control's reset default (property writes intentionally do not
+reflect), while `selected` is property-only live state. Selecting an option at runtime never
+rewrites the declarative default.
+
+```html
+<sl-button-group label="Actions">       →  <lr-button-group label="Actions">
+<sl-resize-observer @sl-resize="sync">  →  <lr-resize-observer @lr-resize="sync">
 ```
 
-**Automating the rename.** This repo ships a small codemod that performs the mechanical part of
-either migration: [`scripts/migrate-wa.mjs`](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/migrate-wa.mjs)
-(run from a checkout of this repository — it isn't published as part of the npm package) rewrites
-`wa-*`/`sl-*` tag usages and `@shoelace-style/shoelace`/`@awesome.me/webawesome` import specifiers
-to their `lr-*`/`@aceshooting/lyra-ui` equivalents across a target directory, file, or glob,
-reading the very tables on this page so the rename can't drift out of sync with them:
+**Automating the safe subset.** This repo ships a contract-aware codemod:
+[`scripts/migrate-wa.mjs`](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/migrate-wa.mjs)
+(run from a checkout of this repository — it isn't published as part of the npm package). It reads
+the checked-in component inventory, applies only contract-recorded tag/member/default/registration-import
+rewrites, and can write a stable JSON report for CI or human review:
 
 ```bash
-node packages/lyra-ui/scripts/migrate-wa.mjs --dry-run path/to/your/src   # preview only
-node packages/lyra-ui/scripts/migrate-wa.mjs path/to/your/src             # apply
+node packages/lyra-ui/scripts/migrate-wa.mjs --dry-run --report=migration.json path/to/your/src
+node packages/lyra-ui/scripts/migrate-wa.mjs path/to/your/src
 ```
 
-It only rewrites a tag or import that this page documents a `lr-*`/`@aceshooting/lyra-ui`
-equivalent for — a component's `— (extra)` row (no Web Awesome/Shoelace counterpart) and any
-`wa-*`/`sl-*` text that isn't an actual tag usage (comments, unrelated identifiers) are left alone.
-It does not rewrite attribute names or deep import subpaths
-(`.../dist/components/button/button.js`, since Lyra's own subpath layout doesn't mirror Shoelace's
-or Web Awesome's) — those are flagged instead, and still need the component notes below.
+The report records file, line, column, migration origin, tag/member, action, target, and warning code.
+Supported side-effect component deep imports are routed through the target's inventory registration
+module. Imports with bindings, unknown subpaths, dynamic values, aliased component values that use a
+rewritten member, unsafe security/default changes, conceptual mappings, and unsupported components
+remain unchanged with an actionable warning. An aliased member blocks that mapping across the whole
+scanned target set so the codemod never rewrites its registration import while leaving an old member
+behind. A second run is byte-idempotent. Comments, prose, unrelated identifiers/packages, and
+partial strings are not treated as component uses.
+
+**Preserving Lyra 7 overlay defaults.** This is a separate, opt-in profile; the default command
+above continues to scan only Web Awesome and Shoelace uses. Run it first in dry-run mode:
+
+```bash
+node packages/lyra-ui/scripts/migrate-wa.mjs --origin=lyra-v7 --dry-run \
+  --report=lyra-v7-migration.json path/to/your/src
+```
+
+The profile never renames an `lr-*` tag or import. It inserts attributes only when absent:
+
+| Component | Lyra 7 behavior made explicit |
+|---|---|
+| `<lr-popup>` | `strategy="fixed"`, `placement="bottom-start"`, `distance="4"`, `flip`, `shift` |
+| `<lr-popover>` | `placement="bottom-start"`, `distance="4"`, `without-arrow` |
+| `<lr-tooltip>` | `distance="6"`, `without-arrow` |
+
+Boolean `true` is emitted as canonical attribute presence; the positive inverse
+`without-arrow` is used instead of serializing `arrow="false"`. Existing explicit values are
+untouched. An opaque framework attribute spread or DOM alias blocks that component profile across
+the scanned target set with a location-aware warning, so the tool cannot silently insert a default
+beside a value it cannot see. Review or expand the dynamic value, rerun, then apply without
+`--dry-run`; a final run should report no changes.
+
+The inventory does not treat `dir` or `lang` as component-member drift: both are platform-global
+HTML passthrough attributes. It likewise excludes Web Awesome's `did-ssr` hydration marker, which is
+upstream runtime bookkeeping rather than an authored member to copy onto a Lyra component.
 
 Shoelace is now a historical predecessor to Web Awesome, but its component vocabulary remains
-familiar to many teams. Lyra provides a conceptual migration path rather than claiming a drop-in
-`sl-*` replacement:
+familiar to many teams. The table below is a porting guide, not an automatic-rename allowlist; the
+inventory classification and codemod report decide which individual uses are mechanically safe:
 
 | Shoelace | Lyra | Migration note |
 |---|---|---|
 | `<sl-button>` | `<lr-button>` | Check `variant`, `appearance`, and loading behavior. |
-| `<sl-input>` / `<sl-textarea>` | `<lr-input>` / `<lr-textarea>` | Preserve the native editing and form contract; review label/error markup. |
-| `<sl-select>` / `<sl-option>` | `<lr-select>` / `<lr-option>` | Review option and value events. |
+| `<sl-input>` / `<sl-textarea>` | `<lr-input>` / `<lr-textarea>` | String `autocorrect` property writes remain accepted but read back as booleans; preserve the native editing/form contract and review label/error markup. |
+| `<sl-select>` / `<sl-option>` | `<lr-select>` / `<lr-option>` | `defaultSelected`/the `selected` attribute is the reset default; live `selected` is property-only. Review option and value events. |
 | `<sl-dialog>` / `<sl-drawer>` | `<lr-dialog>` / `<lr-drawer>` | Review close reasons, focus behavior, and slots. |
-| `<sl-card>` / `<sl-badge>` / `<sl-alert>` | `<lr-card>` / `<lr-badge>` / `<lr-callout>` | Review appearance tokens and dismiss events. |
+| `<sl-card>` / `<sl-badge>` | `<lr-card>` / `<lr-badge>` | Review appearance tokens and dismiss events. |
+| `<sl-alert>` | `<lr-alert>` | Closed by default, with the same properties, slots, lifecycle, parts, and identity-preserving `toast()` contract under the `lr-` prefix. |
 | `<sl-spinner>` / `<sl-progress-bar>` | `<lr-spinner>` / `<lr-progress-bar>` | Built-in status copy is localized through Lyra's runtime. |
 
-For either migration, update the package import, replace the custom-element prefix, run the
-component's accessibility story, and check its API notes for behavior that cannot be inferred from
+For either migration, start with the codemod report. Update a package import or custom-element prefix
+only for an automatic row, or after completing the manual port named by a warning; then run the
+component's accessibility story and check its API notes for behavior that cannot be inferred from
 the tag name alone. Lyra's own `--lr-theme-*` variables are the only theme inputs it reads. For a
 staged Web Awesome migration, map existing values explicitly in application CSS; Lyra does not read
 competitor token variables itself.
@@ -398,10 +603,39 @@ Applications can override any `--lr-theme-*` input directly:
 
 `theme.css` declares `@layer lr-base, lr-theme, lr-utilities, lr-overrides` and puts its own tokens
 in `lr-theme`, so an *unlayered* rule of yours — like the `:root` block above — wins over every Lyra
-declaration regardless of specificity or which stylesheet the bundler emitted first. The three other
-layer names are there so an application can opt its own layers into a defined position rather than
-inventing one. See [`llms/tokens.md`](./llms/tokens.md) for the complete shared token list.
+declaration regardless of specificity or which stylesheet the bundler emitted first. The optional
+`native.css` and `utilities.css` assets use `lr-base` and `lr-utilities`; `lr-overrides` remains
+available for application rules. See [`llms/tokens.md`](./llms/tokens.md) for the complete shared token list.
 Component-specific `--lr-*` custom properties remain available for local overrides.
+
+Canvas components automatically repaint after observable theme attributes, stylesheet/link nodes,
+CSSOM changes, adopted stylesheets, and relevant media-query changes. If an application theme engine
+changes computed tokens through another mechanism, invalidate the owning browser realm explicitly:
+
+```ts
+import { invalidateLyraTheme } from '@aceshooting/lyra-ui/utilities/theme.js';
+
+invalidateLyraTheme();           // global document realm
+invalidateLyraTheme(shadowRoot); // realm owning this root, element, or document
+```
+
+The optional argument selects a realm, not a subtree. Calls are safe during SSR and coalesce into
+each connected canvas consumer's normal redraw schedule.
+
+**Optional light-DOM styles.** Import either bundle independently when an application wants Lyra's
+token vocabulary outside component shadow roots:
+
+```css
+@import '@aceshooting/lyra-ui/native.css';
+@import '@aceshooting/lyra-ui/utilities.css';
+```
+
+`native.css` styles only native descendants of an explicit `.lr-native` scope; it has no root reset
+and does not style the scope marker itself. `utilities.css` provides exact, low-specificity `lr-*`
+classes for layout, logical sizing, gap/alignment/wrap, prose/text, accessible hiding, FOUCE, and
+`<lr-page>` mobile/desktop allocation helpers. Both are layered, tokenized, RTL-safe, and optional.
+See [`llms/shared.md`](./llms/shared.md#optional-native-styles-and-css-utilities) for the complete
+class inventory and override hooks.
 
 **Frontend quality guarantees.** Every component is designed as a native custom element and tested
 for the contract that applies to its shape: semantic roles and accessible names inside shadow DOM,
@@ -445,34 +679,75 @@ localization layer. The same runtime also covers accessible names, descriptions,
 live-region announcements, empty states, status labels, and action buttons; use `.strings` for a
 component-specific override when needed.
 
-**RTL.** Set `dir="rtl"` on `<html>` or any ancestor (or just a `lang` whose default direction is
-RTL, e.g. `ar`/`he`/`fa`) — every component mirrors its layout automatically via CSS logical
-properties and swaps directional keyboard navigation (e.g. the arrow keys in a date grid or a
-roving-tabindex list) to match. This covers Arabic, Hebrew, Persian, Urdu, and other RTL locales
-through inherited direction; no per-component RTL flag or opt-in is needed. Components do not force
-their own `dir`, so they remain composable inside mixed-direction layouts.
+**RTL.** Set `dir="rtl"` on `<html>` or any ancestor — every component mirrors its layout
+automatically via CSS logical properties and swaps directional keyboard navigation (e.g. the arrow
+keys in a date grid or a roving-tabindex list) to match. `lang`/`locale` select translations and
+`Intl` data but do not silently change writing direction; pair `lang="ar"`, `lang="he"`, or
+`lang="fa"` with `dir="rtl"`. Components do not force their own `dir`, so they remain composable
+inside mixed-direction layouts.
+
+## Component status, versioning, and deprecation
+
+Every component carries an explicit `stable` or `experimental` status plus the earliest published
+`since` version in the manifest and generated reference. Stable components are production-ready.
+Experimental components remain open to design review, but once published their public APIs receive
+the same semver protection as stable components; experimental is not permission for a silent minor
+release break.
+
+Deprecation is separate metadata. A deprecated component or member names its replacement,
+deprecation version, rationale, and earliest removal version. If deprecated in major version M, it
+remains available for the complete M+1 line and cannot be removed before M+2. See
+[`llms/shared.md`](./llms/shared.md#component-status-versioning-and-deprecation) for the full policy.
 
 ## SSR & Declarative Shadow DOM
 
-Every Lyra component is a standard Lit 3 custom element (`extends LitElement` via the shared
-`LyraElement` base), so it follows Lit's own server-rendering story rather than needing anything
-library-specific: [`@lit-labs/ssr`](https://www.npmjs.com/package/@lit-labs/ssr) can render a Lyra
-component to a Declarative Shadow DOM (DSD) `<template shadowrootmode="open">` on the server, so the
-resulting markup paints before any JS runs. A spot check rendering `<lr-button>` through
-`@lit-labs/ssr`'s `render()` confirms this in practice — the output is a well-formed DSD template
-containing the component's token CSS and internal `<button>` markup, and the constructor's
-`ElementInternals`-based `attachInternals()` call (used for native form association) does not throw
-under `@lit-labs/ssr-dom-shim`'s server DOM shim.
+Lyra's root barrel and every granular registration module are server-safe under Node 20+. The
+`@aceshooting/lyra-ui/ssr-loader.js` entry installs Lit's hydration hook before registering Lyra and
+exports the machine-readable `LYRA_SSR_SUPPORT_MATRIX`. It has two explicit tiers:
 
-That said, **lyra-ui has not been systematically tested or tuned for SSR** across its full component catalog:
-no CI job renders the library under `@lit-labs/ssr`, no component has been verified to hydrate
-correctly on the client afterward, and components that reach for browser-only APIs early
-(`ResizeObserver`/`IntersectionObserver`, Floating UI positioning in the popover/tooltip/dropdown
-family, `matchMedia` listeners, canvas-based rendering in `<lr-heatmap>`/the chart family) have not
-been checked for graceful server-side behavior. Treat SSR/DSD as "should work in principle, unverified
-at scale" rather than a tested, supported deployment target — a meta-framework's own web-component SSR
-integration (or a custom `@lit-labs/ssr` server) is still the right place to start, and an issue report
-with the specific component and framework is welcome if something breaks.
+- `render-and-hydrate` components emit Declarative Shadow DOM (DSD) and reuse that shadow root and
+  its nodes during browser hydration.
+- `client-render` components preserve the host, serializable attributes, and light DOM in the
+  server response, then create their shadow DOM when the browser upgrades them. This tier covers
+  components whose initial render needs light-DOM traversal, layout, canvas, observers, or media
+  APIs that Lit's intentionally small server DOM does not emulate.
+
+Configure Lit's server renderer with Lyra's fallback before `LitElementRenderer`:
+
+```ts
+import {
+  lyraSsrElementRenderers,
+  LYRA_SSR_SUPPORT_MATRIX,
+} from '@aceshooting/lyra-ui/ssr-loader.js';
+import { render, LitElementRenderer } from '@lit-labs/ssr';
+import { collectResult } from '@lit-labs/ssr/lib/render-result.js';
+import { html } from 'lit';
+
+const result = render(html`<lr-page><main>Dashboard</main></lr-page>`, {
+  elementRenderers: lyraSsrElementRenderers(LitElementRenderer),
+});
+const markup = await collectResult(result);
+```
+
+On the client, make the loader the first import that can reach Lit; it installs
+`@lit-labs/ssr-client/lit-element-hydrate-support.js` before loading component definitions:
+
+```ts
+import {
+  diagnoseLyraHydration,
+  getLyraSsrMode,
+} from '@aceshooting/lyra-ui/ssr-loader.js';
+
+const diagnostics = await diagnoseLyraHydration(document);
+```
+
+Root-excluded optional-peer families still use their granular registration import after the loader;
+the loader does not make optional peers eager. Property bindings cannot be serialized by a fallback
+renderer, so express initial fallback state as attributes/light DOM or assign properties on the
+client. Layout measurement, observers, canvas, and media playback start after hydration; remote
+content remains client-only. CI renders every inventory tag, verifies both tiers, and crawls a real
+Chromium DSD response (including `lr-page`) with strict hydration warnings/errors and DOM-identity
+checks. The exported matrix is the authoritative per-tag list as components evolve.
 
 ## Framework integration (React, Vue, Angular, Svelte)
 
@@ -549,7 +824,7 @@ import manifest from '@aceshooting/lyra-ui/custom-elements.json' with { type: 'j
 
 ## Components
 
-The catalog below lists all 275 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 283 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -557,7 +832,7 @@ API details.
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
-| `<lr-combobox>` + `<lr-option>` | `wa-combobox` / `wa-option` / `sl-option` | Filterable single/multi select, form-associated; `xs`–`xl` sizing; async rich rows and retained selection payloads via `source`/`selectedRows`; virtual scrolling with `max-render` |
+| `<lr-combobox>` + `<lr-option>` | `wa-combobox` / `wa-option` / `sl-option` | Filterable single/multi select, form-associated; options separate live `selected` from attribute-backed/reset `defaultSelected`; `xs`–`xl` sizing; async rich rows and retained selection payloads via `source`/`selectedRows`; virtual scrolling with `max-render` |
 | `<lr-select>` | `wa-select` / `sl-select` | Closed-list single-select, button trigger (not a text input, no filtering); form-associated, shares `<lr-option>` with `lr-combobox` |
 | `<lr-date-picker>` | `wa-date-picker` | Inline calendar, single + range |
 | `<lr-date-input>` | `wa-date-input` | Date field + calendar popover, form-associated |
@@ -566,12 +841,13 @@ API details.
 | `<lr-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
 | `<lr-textarea>` | `wa-textarea` / `sl-textarea` | Form-associated multiline field with label/hint/error chrome, auto-resize, native editing passthrough, and caret APIs |
 | `<lr-input>` | `wa-input` / `sl-input` | Form-associated single-line field (`text`/`password`/`email`/`number`) with label/hint/error chrome and a built-in password-visibility toggle |
-| `<lr-number-input>` + `<lr-time-input>` | `wa-number-input` / `wa-time-input` | Native number/time aliases retaining Lyra form and event contracts |
+| `<lr-number-input>` + `<lr-time-input>` | `wa-number-input` / `wa-time-input` | Numeric input and locale-aware segmented time input |
+| `<lr-native-time-input>` | — (extra) | Preserved browser-native time field for Lyra 7 compatibility |
 | `<lr-color-picker>` | `wa-color-picker` / `sl-color-picker` | Form-associated native color picker with label/hint chrome |
 | `<lr-checkbox-group>` | `wa-checkbox-group` | Form-associated group of checkboxes with array values and group validation |
 | `<lr-token-input>` | — (extra) | Editable, removable form-associated token list |
 | `<lr-icon>` + `<lr-icon-button>` | `wa-icon` / `sl-icon` / `sl-icon-button` | Dependency-free SVG icons and accessible icon-only actions |
-| `<lr-button>` | `wa-button` / `sl-button` | Generic action-button primitive (`variant`/`appearance`/`size`/`loading`), owns `type="submit"`/`"reset"` via the closest ancestor `<form>` |
+| `<lr-button>` | `wa-button` / `sl-button` | Generic action-button primitive (`variant`/`appearance`/`size`/`loading`), owns `type="submit"`/`"reset"` via its browser-resolved form owner, including an external owner named by `form` |
 | `<lr-radio>` + `<lr-radio-group>` | `wa-radio` / `wa-radio-group` / `sl-radio` / `sl-radio-group` | Form-associated single-choice controls with roving arrow-key navigation and group validation |
 | `<lr-radio-button>` | `sl-radio-button` | The same single-choice control rendered as a button; a `LyraRadio` subclass, so a `<lr-radio-group>` accepts either tag and consecutive siblings collapse into one segmented control |
 | `<lr-otp-input>` | `wa-otp-input` | Form-associated one-time-code field — presentational segments over one real input, so paste, SMS autofill and mobile keyboards work natively and the control stays one tab stop |
@@ -606,16 +882,19 @@ API details.
 | `<lr-intersection-observer>` | `wa-intersection-observer` | Lifecycle-managed IntersectionObserver for slotted elements |
 | `<lr-mutation-observer>` | `wa-mutation-observer` / `sl-mutation-observer` | Lifecycle-managed MutationObserver for slotted elements |
 | `<lr-stat>` | — (extra) | KPI/stat card with trend pill and an optional breakdown row list; either can carry an `exactValue` shown as a hover/focus tooltip alongside the rounded/formatted display value |
-| `<lr-table>` | `wa-data-grid` | Sort/select-aware data table with optional controlled filtering, client/server-friendly pagination, loading state, consumer-owned inline editing, expandable rows, sticky columns, and responsive `priority` columns |
+| `<lr-data-grid>` | `wa-data-grid` | Virtualized client/server data grid with sorting, filtering, grouping, selection, column controls, tree/detail rows, paging, CSV export, and the complete experimental 3.11 public surface |
+| `<lr-table>` | — (extra) | Sort/select-aware data table with optional controlled filtering, client/server-friendly pagination, loading state, consumer-owned inline editing, expandable rows, sticky columns, and responsive `priority` columns |
 | `<lr-pagination>` | `wa-pagination` | Controlled previous/next and validated page-jump navigation with a localized range summary, loading/empty states, RTL icons, and container-responsive stacking |
 | `<lr-gauge>` | — (extra) | Radial, full-circle ring, or linear meter with a per-instance fill token |
 | `<lr-export-button>` | — (extra) | Injection-safe CSV/JSON downloads plus event-handled custom format descriptors and controlled busy state |
 | `<lr-copy-button>` | `wa-copy-button` / `sl-copy-button` | Standalone icon-only copy-to-clipboard button for a plain text value, no positioning opinion |
-| `<lr-split>` | `wa-split-panel` / `sl-split-panel` | Resizable panel layout; one pane can opt into responsive `collapse` (`"start"`/`"end"`) to a fixed-width rail, then a floating overlay card, as the split's container narrows |
+| `<lr-split>` | — (extra) | Resizable multi-panel layout; one pane can opt into responsive `collapse` (`"start"`/`"end"`) to a fixed-width rail, then a floating overlay card, as the split's container narrows |
+| `<lr-split-panel>` | `wa-split-panel` / `sl-split-panel` | Exact two-pane split contract with named `start`/`end` content, percent/pixel positioning, primary-pane sizing, snapping, constraints, and an accessible divider |
 | `<lr-widget>` | — (extra) | Card shell with collapsible header, fullscreen, and customizable chrome |
 | `<lr-word-cloud>` | — (extra) | Zero-dependency SVG word/tag cloud, spiral-placed by weight |
 | `<lr-badge>` + `<lr-tag>` | `wa-badge` / `wa-tag` / `sl-badge` / `sl-tag` | Compact semantic status labels |
-| `<lr-callout>` | `wa-callout` / `sl-alert` | Dismissible inline status, warning, and error message surface |
+| `<lr-alert>` | `sl-alert` | Closed-by-default inline alert with timed dismissal, countdown, and identity-preserving toast promotion |
+| `<lr-callout>` | `wa-callout` | Dismissible inline status, warning, and error message surface |
 | `<lr-divider>` | `wa-divider` / `sl-divider` | Horizontal or vertical semantic separator |
 | `<lr-rating>` | `wa-rating` / `sl-rating` | Keyboard-accessible star rating slider |
 
@@ -796,6 +1075,7 @@ each one-liner below.
 | `<lr-virtual-list>` | — (extra) | Generic windowed/virtualized list host — renders only the viewport's rows as real DOM, for a multi-thousand-row history sidebar |
 | `<lr-thread-list>` | — (extra) | Conversation sidebar — grouped, searchable chat-session list with pin/archive/delete/rename affordances; data mode renders `<lr-conversation-item>` rows through an internal `<lr-virtual-list>`, slotted mode renders host-supplied items as-is |
 | `<lr-app-rail>` + `<lr-app-rail-item>` | — (extra) | Responsive navigation rail: `full` ↔ `icon-only` ↔ `mobile` overlay, tracked off live viewport-width breakpoints; the item provides an accessible icon/label link or button |
+| `<lr-page>` | `wa-page` | Responsive application shell with header, navigation, aside, main, footer, and mobile navigation state under one page-level layout contract |
 | `<lr-responsive-panel>` | — (extra) | The same slotted content docked inline in normal layout flow (desktop) or as a fullscreen/bottom-sheet overlay (mobile) |
 | `<lr-dock-panel>` | — (extra) | Single panel docked to one edge of its container, drag/keyboard-resizable and collapsible — the single-edge counterpart to `<lr-split>`'s multi-sibling-panel case |
 | `<lr-model-select>` | — (extra) | Provider/model picker: closed dropdown over a fixed `catalog`, or a filterable free-text combobox when there isn't one (or `allow-custom` is set) |
@@ -815,7 +1095,8 @@ each one-liner below.
 | `<lr-control-group>` | — (extra) | Responsive layout wrapper for a row of mixed form controls and action buttons, centered rather than stretched (unlike `<lr-button-group>`) |
 | `<lr-reorder-list>` + `<lr-reorder-item>` | — (extra) | Generic flat-list reorder primitive: per-row move-up/move-down buttons plus a Ctrl/Cmd+Arrow keyboard shortcut, emitting the full new order on every move |
 | `<lr-image-comparer>` | `wa-comparison` / `sl-image-comparer` | Before/after slotted surfaces with a keyboard-accessible range divider |
-| `<lr-zoomable-frame>` | `wa-zoomable-frame` | Bounded zoom and scrollable panning for slotted content or an image source |
+| `<lr-pan-zoom>` | — (extra) | Bounded zoom and scrollable panning for slotted content or an image source, preserving Lyra 7's former zoomable-frame behavior |
+| `<lr-zoomable-frame>` | `wa-zoomable-frame` | Sandboxed iframe preview with safe URL forwarding, discrete zoom levels, optional controls/interaction, and same-origin theme synchronization |
 | `<lr-tab-group>` + `<lr-tab>` + `<lr-tab-panel>` | `wa-tab-group` / `wa-tab` / `wa-tab-panel` / `sl-tab-group` / `sl-tab` / `sl-tab-panel` | Tab strip with `placement` (logical `start`/`end` turn it vertical) and `activation="auto"`/`"manual"`; accepts the upstream `<lr-tab>`/`<lr-tab-panel>` child pairs or this library's own `slot`/`label` panel-attribute shape |
 | `<lr-checkbox>` | `wa-checkbox` / `sl-checkbox` | Boolean form control, `role="checkbox"` with a visual/`indeterminate` mixed state |
 | `<lr-switch>` | `wa-switch` / `sl-switch` | Boolean toggle-switch form control, `role="switch"` on/off semantics |
@@ -838,6 +1119,8 @@ each one-liner below.
 | `<lr-pdf-viewer>` | — (extra) | Optional-PDF.js renderer with pagination, zoom, selectable text, and virtualized page canvases |
 | `<lr-page-rail>` | — (extra) | Virtualized vertical thumbnail rail for page-addressed documents with per-page highlight heat markers — **wired** mode tracks a live `PageThumbnailSource` (e.g. `lr-pdf-viewer`) or **mediated** mode binds `page-count`/`page` directly |
 | `<lr-av-player>` | — (extra) | Audio/video player on a native `<audio>`/`<video>` element with a cue transcript synced to `currentTime`, `time-range` anchor/highlight support, an optional dependency-free waveform, and playback-rate control; virtualizes its transcript through `<lr-virtual-list>` |
+| `<lr-video>` | `wa-video` | Native-video-backed player with standard/full/none control presets, slotted control icons, visibility-aware autoplay, captions, fullscreen, and capped thumbnail-VTT previews |
+| `<lr-video-playlist>` | `wa-video-playlist` | Direct-child video playlist with full/standard/none control forwarding, previous/next/index navigation, immutable selected-video metadata, safe one-player-at-a-time switching, automatic advancement, and explicit repeat modes |
 | `<lr-notebook-viewer>` | — (extra) | Read-only Jupyter notebook (nbformat 4.x) renderer composing existing components per cell — Markdown cells through `<lr-markdown>`, code cells through `<lr-code-block>`, rich outputs preferring image/HTML/JSON/plain-text in order; optional-DOMPurify sanitizes raw HTML/SVG output |
 | `<lr-spreadsheet-viewer>` | — (extra) | Optional-SheetJS `.xlsx`/`.xls` workbook viewer with sheet tabs and virtualized rows |
 | `<lr-csv-viewer>` | — (extra) | Optional-PapaParse CSV viewer with quoted-field support and virtualized rows |
@@ -940,7 +1223,7 @@ Run from the repo root (this package is part of a pnpm workspace):
 ```bash
 pnpm install
 pnpm test        # @web/test-runner + Playwright (Chromium) + axe a11y
-pnpm lint        # tsc --noEmit
+pnpm lint        # contract-policy + tsc --noEmit + public type-surface tests
 pnpm build       # tsc → dist/ (ESM + .d.ts)
 pnpm manifest    # custom-elements.json
 pnpm docs        # Storybook docs site, demos this package + lyra-flags together

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.js';` (registers the tag; side-effect import)
 - **Class** `LyraConversationItem`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -48,6 +50,9 @@ First-party invention (no Web Awesome equivalent).
 - `autoCorrect: string = ''` (attribute `autocorrect`) — forwarded to the in-place rename `<input>`
   (Safari/WebKit-specific); empty omits the attribute. Named `autoCorrect` to avoid
   `HTMLElement.autocorrect`'s incompatible DOM typing.
+
+**Methods:** `click()` activates the selectable row like its internal button; while an inline rename
+is active, it forwards to the title input instead and does not re-select the conversation.
 
 **Events:** `lr-select` (no detail payload — identify the row via the platform `id` attribute on the
 event's `target`/`currentTarget`, the same convention `<lr-attachment-chip>` uses; fires on a click on

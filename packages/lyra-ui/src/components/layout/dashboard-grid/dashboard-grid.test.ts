@@ -1519,11 +1519,15 @@ it("does not start a cell drag from a pointerdown on an interactive control insi
   // "don't drag when the user grabbed a control" guard could never fire, and every button/input
   // click inside a dashboard cell started a drag instead of activating the control.
   const el = (await fixture(html`
-    <lr-dashboard-grid cells-draggable row-height="50" gap="8">
+    <lr-dashboard-grid
+      cells-draggable
+      row-height="50"
+      gap="8"
+      .layout=${[{ id: "a", x: 0, y: 2, w: 1, h: 1 }]}
+    >
       <div cell-id="a"><button type="button">Refresh</button></div>
     </lr-dashboard-grid>
   `)) as LyraDashboardGrid;
-  el.layout = [{ id: "a", x: 0, y: 2, w: 1, h: 1 }];
   await el.updateComplete;
 
   const wrapper = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;

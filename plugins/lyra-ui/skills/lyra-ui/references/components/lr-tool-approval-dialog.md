@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';` (registers the tag; side-effect import)
 - **Class** `LyraToolApprovalDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 22 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -81,7 +83,9 @@ rendered before the built-in Deny/Edit/Approve buttons.
 `deny-button-spinner`, `approve-button-base`, `approve-button-label`, `approve-button-start`,
 `approve-button-end`, `approve-button-spinner` (`deny-button`/`approve-button` are each an
 `<lr-button>` host; these five per-button parts are re-exported from its own `lr-button` parts via
-`exportparts`; `edit-button` stays a plain `<button>`, unaffected by this).
+`exportparts`. Each `*-button-base` route accepts the button's same-node `base` and `button`
+wrapper aliases, so either name survives the nested shadow boundary; `edit-button` stays a plain
+`<button>`, unaffected by this).
 
 **Themeable custom properties:** `--lr-tool-approval-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token `<lr-dialog>` and

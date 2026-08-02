@@ -50,6 +50,8 @@ export interface LyraStackTraceEventMap {
  *   verbatim raw fallback.
  * @cssprop [--lr-stack-trace-internal-frame-color=var(--lr-color-text-quiet)] - Internal frame foreground.
  * @cssprop [--lr-stack-trace-interactive-color=var(--lr-color-brand)] - Interactive frame/toggle accent.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   static override styles = [LyraElement.styles, styles];

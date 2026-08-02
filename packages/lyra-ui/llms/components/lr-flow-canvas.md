@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.js';` (registers the tag; side-effect import)
 - **Class** `LyraFlowCanvas`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecated css-property** `--lr-flow-canvas-node-current-outline-color` since `7.0.0`; use css-property `--lr-flow-canvas-node-selected-outline-color`; removal not before `9.0.0` — The selected spelling matches the component's selection vocabulary; current remains a compatibility fallback for existing themes.
 - **Optional peers** none
 - **Themeable via** 15 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

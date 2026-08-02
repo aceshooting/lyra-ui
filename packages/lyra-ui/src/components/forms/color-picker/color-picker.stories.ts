@@ -28,6 +28,36 @@ export const Open: StoryObj = {
   `,
 };
 
+/** `inline` removes the popup trigger and keeps the complete picker panel in normal flow.
+ * `no-format-toggle` is the Shoelace spelling of `without-format-toggle`; `default-value` supplies
+ * the reset value. */
+export const InlineCompatibility: StoryObj = {
+  name: 'Inline and compatibility aliases',
+  render: () => html`
+    <lr-color-picker
+      inline
+      with-label
+      with-hint
+      no-format-toggle
+      default-value=${ACCENT}
+      swatches=${[ACCENT, SUCCESS, DANGER].join('; ')}
+      style="--grid-width: 20rem; --slider-height: 0.875rem;"
+    >
+      <span slot="label">Inline accent colour</span>
+      <span slot="hint">Uses the upstream geometry aliases and reset-default spelling.</span>
+    </lr-color-picker>
+  `,
+};
+
+/** `hoist` switches the popup to fixed positioning so it can escape a clipping ancestor. */
+export const Hoisted: StoryObj = {
+  render: () => html`
+    <div style="overflow:auto; block-size:10rem; padding-block:4rem;">
+      <lr-color-picker label="Hoisted colour" value=${ACCENT} hoist open></lr-color-picker>
+    </div>
+  `,
+};
+
 /** `format` decides how `value` is serialized; input is parsed permissively regardless. */
 export const Formats: StoryObj = {
   render: () => {

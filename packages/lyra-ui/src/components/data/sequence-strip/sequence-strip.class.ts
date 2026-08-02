@@ -52,6 +52,8 @@ export interface SequenceStripCategory {
  * @cssprop [--lr-sequence-strip-marker-color=var(--lr-color-text)] - Color of the bottom marker on a `marker: true` cell, and of the marker legend row's bar.
  * @cssprop [--lr-sequence-strip-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch (category and marker rows alike).
  * @cssprop [--lr-sequence-strip-legend-marker-bg=var(--lr-color-surface-raised)] - Neutral chip background behind the marker legend row's bar; it stands in for "any cell", so it deliberately matches no category color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSequenceStrip extends LyraElement {
   static override styles = [LyraElement.styles, styles];

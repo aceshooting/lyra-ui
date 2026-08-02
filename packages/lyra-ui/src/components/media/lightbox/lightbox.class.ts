@@ -7,14 +7,14 @@ import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './lightbox.styles.js';
-import '../zoomable-frame/zoomable-frame.class.js';
-import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.js';
+import '../pan-zoom/pan-zoom.class.js';
+import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 
 /** One image in the set `<lr-lightbox>` browses. `alt`/`caption` are caller-supplied data
  *  (like a filename), not routed through `localize()` -- only the component's own chrome
  *  strings are. */
 export interface LyraLightboxImage {
-  /** Full-resolution URL. Passed straight through to the embedded `<lr-zoomable-frame>`'s own
+  /** Full-resolution URL. Passed straight through to the embedded `<lr-pan-zoom>`'s own
    *  `src`, which already runs it through `safeMediaSrc()` -- no separate validation needed here. */
   src: string;
   /** Accessible alt text. Defaults to `''` (decorative) when omitted; consumers should supply
@@ -61,7 +61,7 @@ export type LyraLightboxCloseReason =
 export interface LyraLightboxEventMap {
   'lr-lightbox-close': CustomEvent<LyraLightboxCloseReason>;
   'lr-index-change': CustomEvent<{ index: number }>;
-  /** Not emitted by `LyraLightbox` itself -- the embedded `<lr-zoomable-frame>` already
+  /** Not emitted by `LyraLightbox` itself -- the embedded `<lr-pan-zoom>` already
    *  dispatches this via a composed, bubbling `emit()` call, which continues through this
    *  element's own shadow boundary with no re-dispatch needed. Listed here purely for
    *  discoverability. */
@@ -96,12 +96,12 @@ function ownsNavigationKey(event: KeyboardEvent): boolean {
  * stacking, focus trapping, Escape/backdrop dismissal, scroll lock, and focus return with every
  * other overlay in the same document, the same way `<lr-dialog>`/`<lr-command-palette>`/
  * `<lr-widget>` (fullscreen mode)/`<lr-app-rail>` (mobile mode)/`<lr-responsive-panel>`
- * already do. Per-image pan/zoom is delegated to one stable embedded `<lr-zoomable-frame>`
+ * already do. Per-image pan/zoom is delegated to one stable embedded `<lr-pan-zoom>`
  * instance (its `src`/`alt` swapped per navigation) rather than reimplementing pan/zoom --
  * composing a small sibling leaf component directly in the render template, the same way
  * `<lr-tool-select-dialog>` composes `<lr-checkbox>`/`<lr-switch>`.
  *
- * Zoom/pan reset on navigation is imperative (`LyraZoomableFrame.resetView()`, called from
+ * Zoom/pan reset on navigation is imperative (`LyraPanZoom.resetView()`, called from
  * `updated()`) rather than a Lit property binding -- a binding whose value never changes across
  * renders (e.g. `.zoom=${1}`) would only apply once, silently failing to reset on the *second*
  * navigation once the user has interactively zoomed. Recreating the frame element on every
@@ -144,9 +144,9 @@ function ownsNavigationKey(event: KeyboardEvent): boolean {
  * @csspart actions - Wrapper around the `actions` slot; `hidden` when nothing is slotted.
  * @csspart close-button - The close button. Always rendered -- unlike `<lr-dialog>`'s opt-in
  *   `closable`, a full-screen lightbox has no other built-in chrome, so this is not optional.
- * @csspart stage - Houses the embedded `<lr-zoomable-frame>` plus the floating
+ * @csspart stage - Houses the embedded `<lr-pan-zoom>` plus the floating
  *   `previous-button`/`next-button`.
- * @csspart frame - The embedded `<lr-zoomable-frame>` element itself. Its own internal parts
+ * @csspart frame - The embedded `<lr-pan-zoom>` element itself. Its own internal parts
  *   are not re-exported via `exportparts` -- there is no precedent for `exportparts` anywhere in
  *   this codebase.
  * @csspart previous-button - Floating, absolutely positioned inside `stage`. Rendered only when
@@ -159,6 +159,8 @@ function ownsNavigationKey(event: KeyboardEvent): boolean {
  * @cssprop --lr-lightbox-overlay-color - The backdrop scrim color.
  * @cssprop --lr-lightbox-control-bg - Background for every floating/toolbar icon button.
  * @cssprop --lr-lightbox-control-color - Icon/text color paired with `--lr-lightbox-control-bg`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   static override styles = [LyraElement.styles, srOnly, styles];
@@ -191,28 +193,28 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    *  can still turn this off with `show-counter="false"`. */
   @property({ attribute: 'show-counter', converter: showCounterConverter }) showCounter = true;
 
-  /** Passed through to the embedded `<lr-zoomable-frame>` as `.minZoom`. Same default as
-   *  `<lr-zoomable-frame>` itself. */
-  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeMinZoom
+  /** Passed through to the embedded `<lr-pan-zoom>` as `.minZoom`. Same default as
+   *  `<lr-pan-zoom>` itself. */
+  // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeMinZoom
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
 
-  /** Passed through to the embedded `<lr-zoomable-frame>` as `.maxZoom`. */
-  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeMaxZoom
+  /** Passed through to the embedded `<lr-pan-zoom>` as `.maxZoom`. */
+  // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeMaxZoom
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
 
-  /** Passed through to the embedded `<lr-zoomable-frame>` as `.zoomStep`. */
-  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeZoomStep
+  /** Passed through to the embedded `<lr-pan-zoom>` as `.zoomStep`. */
+  // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeZoomStep
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
 
   /** Host-level `aria-label` override for the panel's accessible name -- wins over the
-   *  localized `lightboxLabel` default. Exactly `<lr-zoomable-frame>`'s own `accessibleLabel`
+   *  localized `lightboxLabel` default. Exactly `<lr-pan-zoom>`'s own `accessibleLabel`
    *  pattern (no other label source to arbitrate against here). */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private hasActionsSlot = false;
   @state() private liveText = '';
 
-  @query('lr-zoomable-frame') private frameEl?: LyraZoomableFrame;
+  @query('lr-pan-zoom') private frameEl?: LyraPanZoom;
 
   private overlay?: OverlayHandle;
   private readonly captionId = nextId('lightbox-caption');
@@ -395,7 +397,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   // RTL-aware, exactly mirroring <lr-carousel>'s onViewportKeyDown. Attached on part="panel"
   // itself so it sees keydowns bubbling from anywhere inside, including from within the embedded
-  // <lr-zoomable-frame>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
+  // <lr-pan-zoom>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
   // shortcuts, which don't intercept Arrow/Home/End.
   private onPanelKeyDown = (event: KeyboardEvent): void => {
     if (ownsNavigationKey(event)) return;
@@ -469,7 +471,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
                 </button>
               `
             : nothing}
-          <lr-zoomable-frame
+          <lr-pan-zoom
             part="frame"
             src=${image?.src ?? ''}
             alt=${image?.alt ?? ''}
@@ -477,7 +479,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
             .maxZoom=${this.maxZoom}
             .zoomStep=${this.zoomStep}
             .accessibleLabel=${positionText || null}
-          ></lr-zoomable-frame>
+          ></lr-pan-zoom>
           ${count > 1
             ? html`
                 <button

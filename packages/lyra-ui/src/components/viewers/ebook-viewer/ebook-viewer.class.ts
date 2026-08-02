@@ -119,6 +119,8 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * @csspart mount - The stable element epub.js renders into.
  * @csspart error - The error message region.
  * @csspart announcer - The visually-hidden `role="status"` region search results announce through.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

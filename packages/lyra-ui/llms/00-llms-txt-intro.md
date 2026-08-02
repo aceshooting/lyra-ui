@@ -20,12 +20,14 @@ current element count and complete tag list.
 - [llms/components/&lt;tag&gt;.md](./llms/components/): the full API of one component (properties,
   events, slots, CSS parts, themeable custom properties, usage snippet, gotchas). The path is
   derived from the tag name, so no search is needed: `llms/components/lr-table.md`.
-- [llms/shared.md](./llms/shared.md): library-wide behavior — importing/registration, the event
-  contract, form association, theming, localization, RTL, TypeScript, framework integration, SSR,
-  the `@aceshooting/lyra-ui/ai` data types, and testing.
-- [llms/tokens.md](./llms/tokens.md): every design token and its `--lr-theme-*` input.
+- [llms/shared.md](./llms/shared.md): library-wide behavior — status/deprecation, importing and the
+  guarded autoloader, events, forms, theming/native styles, localization/RTL, TypeScript/frameworks,
+  SSR, shared utilities, the `@aceshooting/lyra-ui/ai` data types, and testing.
+- [llms/tokens.md](./llms/tokens.md): every design token, including its theme input and fallback or
+  its derived value, as applicable.
 - [llms/peers.md](./llms/peers.md): which optional peer dependency each component needs.
-- [llms/migration.md](./llms/migration.md): `wa-*`/`sl-*` → `lr-*` rename tables.
+- [llms/migration.md](./llms/migration.md): every pinned `wa-*`/`sl-*` mapping's
+  exact/rewritten/warning/conceptual/unsupported decision and safe codemod rules.
 - [llms-full.txt](./llms-full.txt): all of the above component sections in one file.
 - [README.md](./README.md): install, catalog, theming, accessibility, and package-level commands.
 - [Live docs site](https://aceshooting.github.io/lyra-ui/): interactive examples per component —
@@ -42,6 +44,7 @@ codemods) from the marketplace at <https://github.com/aceshooting/lyra-ui>.
 - Public events are `lr-`-prefixed `CustomEvent`s, bubbling and composed, payload on `event.detail`.
 - Form controls are form-associated: they participate in native `<form>` submission and validation.
 - Every built-in string is localizable via `registerLyraLocale()` or a per-instance `.strings`.
+- Locale selection does not set writing direction; inherit an explicit `dir="rtl"` for RTL layout.
 
 ## When no component fits, file it
 

@@ -78,7 +78,7 @@ it("forwards menu trigger semantics to lr-button's focused native control", asyn
   const triggerButton = el.querySelector("lr-button") as LyraButton;
   await triggerButton.updateComplete;
   const focusedControl = triggerButton.shadowRoot!.querySelector(
-    'button[part="base"]'
+    'button[part~="base"]'
   ) as HTMLButtonElement;
 
   expect(triggerButton.getAttribute("aria-haspopup")).to.equal("menu");
@@ -119,7 +119,7 @@ it("forwards menu trigger semantics to lr-icon-button's focused native control",
   const triggerButton = el.querySelector("lr-icon-button") as LyraIconButton;
   await triggerButton.updateComplete;
   const focusedControl = triggerButton.shadowRoot!.querySelector(
-    'button[part="button"]'
+    'button[part~="button"]'
   ) as HTMLButtonElement;
 
   expect(triggerButton.getAttribute("aria-haspopup")).to.equal("menu");
@@ -330,6 +330,25 @@ it("clicking an item fires the consolidated lr-menu-select and closes the menu",
   expect(el.open).to.be.false;
 });
 
+it('emits one cancelable lr-select with the complete item and honors preventDefault', async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  let receivedValue = '';
+  let count = 0;
+  el.addEventListener('lr-select', (event) => {
+    receivedValue = event.detail.item.value;
+    count += 1;
+    event.preventDefault();
+  });
+
+  items(el)[0]!.select();
+  await el.updateComplete;
+  expect(receivedValue).to.equal('rename');
+  expect(count).to.equal(1);
+  expect(el.open).to.equal(true);
+});
+
 it("never leaks the item's own lr-menu-item-select past the menu alongside the consolidated lr-menu-select", async () => {
   const el = (await fixture(basic())) as LyraMenu;
   trigger(el).click();
@@ -345,7 +364,7 @@ it("never leaks the item's own lr-menu-item-select past the menu alongside the c
   await el.updateComplete;
   expect(
     events.length,
-    "the item's own lr-menu-item-select must never reach a listener on <lr-menu> -- only the consolidated lr-menu-select is the documented contract"
+    "the item's own lr-menu-item-select must never leak past <lr-menu> alongside its public selection events"
   ).to.equal(0);
 });
 
@@ -2173,4 +2192,3 @@ describe("nested submenus", () => {
     await expect(el).to.be.accessible();
   });
 });
-

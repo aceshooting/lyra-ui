@@ -1,42 +1,65 @@
 ## `lr-sparkline`
 
-Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`).
+Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`). Its default allocation is one
+`em` tall at a `4 / 1` aspect ratio, so it can sit directly in text; authored block size changes
+both dimensions through the aspect ratio.
 
 **Properties:**
-- `values: number[] = []`
-- `type: 'line' | 'bar' | 'area' = 'line'`
+- `appearance: 'gradient'|'line'|'solid' = 'solid'` (reflected) — `solid` fills the area below the
+  stroke, `gradient` fades that fill toward the baseline, and `line` renders only the stroke
+- `curve: 'linear'|'natural'|'step' = 'linear'` (reflected) — straight segments, smooth cubic
+  interpolation, or horizontal/vertical steps
+- `data: string = ''` — space-separated finite numbers such as `"5 4 4 3 4 2 3"`; at least two
+  finite values are required. Invalid/non-finite tokens are dropped, and a remaining series shorter
+  than two values renders the named empty wrapper without an invalid SVG path
+- `label: string = ''` — accessible name applied verbatim to the SVG
+- `trend?: 'positive'|'negative'|'neutral'` (reflected) — selects semantic Lyra-token defaults for
+  the line and fill. The public color custom properties below always override it
+
+**Additive Lyra extensions:**
+- `values: number[] = []` — programmatic data source used while `data` is empty
+- `type?: 'line'|'bar'|'area'` — `bar` renders bounded rectangles; `line`/`area` retain the older
+  explicit unfilled/filled modes. Omit it for the mirrored `appearance` surface
 - `min?: number` (defaults to data minimum)
 - `max?: number` (defaults to data maximum)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
-  generated summary on the internal SVG
+  generated summary for the additive `values` path; `label` takes precedence when both are set
 
 **Events:** none.
 
 **Slots:** none.
 
-**CSS parts:** `line`, `area`, `bar`
+**CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
+area path for solid/gradient appearance, `line` is the stroke path. Additive aliases are `area` on
+the same fill path and `bar` on each extension-mode rectangle.
 
-**Themeable custom properties:** `--lr-color-brand` (pure CSS cascade, no JS/`getComputedStyle`
-bridging needed), `--lr-sparkline-stroke-width` (default `1.5` — stroke width of the line/area
-path), and `--lr-sparkline-area-opacity` (default `0.15` — fill opacity of the area under the
-line, `type="area"` only).
+**Themeable custom properties:** `--fill-color` (area/gradient stop color), `--line-color` (stroke
+color), and `--line-width` (stroke width). Each reads through the live CSS cascade; line/fill
+default to the selected `trend`'s semantic Lyra tokens and `--line-width` falls back through the
+compatibility `--lr-sparkline-stroke-width` to `--lr-border-width-medium`. No canvas bridge or
+manual refresh is needed.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-sparkline type="area"></lr-sparkline>
-<script>
-  document.querySelector('lr-sparkline').values = [3, 5, 4, 8, 6, 9, 7];
-</script>
+<lr-sparkline
+  appearance="gradient"
+  curve="natural"
+  trend="positive"
+  data="3 5 4 8 6 9 7"
+  label="Revenue over the last seven days"
+></lr-sparkline>
 ```
 
 **Known gotchas:**
-- The semantic `role="img"` and accessible name live on the SVG that owns the graphic. The generated
-  summary is localized, formats the last value with `effectiveLocale`, and can be replaced through
-  `accessibleLabel`/host `aria-label`. It remains a concise summary rather than a tabular fallback.
+- The semantic `role="img"` and accessible name live on the SVG that owns the graphic. `label` is
+  applied exactly. The additive `values` path retains its localized, effective-locale summary when
+  neither naming property is present; a `data` chart without a label is left presentational rather
+  than inventing spoken application data.
 - flat data (every value equal, so the auto-computed range spans zero) now renders a centered
   midline/mid-height bars instead of collapsing every point to the bottom edge, and a single-value
-  series renders a visible flat line (a zero-length path was previously invisible). **Every** `type`
+  additive `values` series renders a visible flat line. Mirrored `data` deliberately requires two
+  values. **Every** rendering mode
   (`line`/`area`/`bar`) decimates a `values` array past 500 points down to at most 500 plotted
   samples — evenly sampled by index, always keeping the first and last value exactly, not
   aggregated/averaged. `type="bar"` caps at 500 rendered `<rect>`s directly; `line`/`area` cap the
@@ -44,6 +67,8 @@ line, `type="area"` only).
   grows unbounded, even though the element count stays at one `<path>`). Auto `min`/`max` is still
   scanned from the *full* pre-decimation `values` array, so a real extreme value that decimation
   happens to drop can't silently narrow the rendered scale.
+- Point order mirrors under RTL while the numeric sample order remains unchanged. There are no
+  animations, so reduced-motion mode needs no alternate timing branch.
 
 ---
 
@@ -156,6 +181,179 @@ its own value tint.
   language (e.g. "increased 4.2%, good" / "decreased 2%, bad" / "unchanged"), so a screen reader
   landing on the pill (rather than being live-notified of a change) gets the full meaning, not just
   an `aria-hidden` arrow glyph.
+
+---
+
+## `lr-data-grid`
+
+Virtualized client/server data grid with multi-sort, column filters, global search, grouping,
+trees, row details, paging, pinning, resizing, reordering, selection, copy, and CSV export. Import
+the granular registration module when the root bundle is not already loaded:
+
+```js
+import '@aceshooting/lyra-ui/components/data/data-grid/data-grid.js';
+```
+
+Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
+Arrays are shallow-reactive, so reassign `data`, `columns`, and controlled state arrays after
+mutation.
+
+**Properties:**
+
+- `appearance: 'outlined' | 'plain' = 'outlined'` (`appearance`, reflected).
+- `childRows: string | ((row) => Row[] | undefined) | null = null` (`child-rows`) — dot path or
+  callback for nested rows. Tree sorting stays within each parent and paging keeps a subtree with
+  its top-level parent.
+- `columnOrder: string[] = []` (JS-only) — empty preserves declaration order.
+- `columns: DataGridColumn<Row>[] = []` (JS-only).
+- `data: Row[] = []` (JS-only) — client rows, or the currently loaded server page.
+- `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
+  enables server behavior.
+- `expandedKeys: Array<string | number> = []` (JS-only).
+- `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
+- `filteredCount: number` (read-only, JS-only) — matching client rows before paging.
+- `filterFromLeafRows: boolean = false` (`filter-from-leaf-rows`) — retains ancestors of matching
+  tree descendants.
+- `filters: Array<{ id: string; value: unknown }> = []` (JS-only).
+- `groupBy: string | string[] | null = null` (`group-by`) — a string accepts comma- or
+  whitespace-separated column ids/fields.
+- `label: string | null = null` (`label`).
+- `loading: boolean = false` (`loading`, reflected).
+- `maxMultiSort: number = 0` (`max-multi-sort`) — zero means unlimited; the oldest sort is dropped
+  when a positive limit is reached.
+- `page: number = 0` (`page`, reflected) — zero-based.
+- `pageCount: number` (read-only, JS-only).
+- `pageSize: number = 20` (`page-size`).
+- `pageSizeOptions: number[] = [10, 20, 50, 100]` (JS-only).
+- `paginate: boolean = false` (`paginate`, reflected).
+- `pinnable: boolean = false` (`pinnable`, reflected).
+- `reorderable: boolean = false` (`reorderable`, reflected).
+- `resizable: boolean = false` (`resizable`, reflected).
+- `rowClass: ((row) => string | null | undefined) | null = null` (JS-only).
+- `rowDetail: ((row) => string | TemplateResult | Node) | null = null` (JS-only).
+- `rowKey: string | null = null` (`row-key`) — dot path for stable selection/expansion identity.
+- `searchFn: ((value, term, row) => boolean) | null = null` (JS-only).
+- `searchTerm: string = ''` (JS-only).
+- `selectable: '' | 'single' | 'multiple' | 'none' = 'none'` (`selectable`, reflected) — a bare
+  `selectable` attribute means `multiple`.
+- `selectableRows: ((row) => boolean) | null = null` (JS-only).
+- `selectedKeys: Array<string | number> = []` (JS-only).
+- `selectedRows: Row[]` (read-only, JS-only).
+- `server: boolean = false` (`server`, reflected).
+- `size: 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (`size`, reflected).
+- `sort: Array<{ id: string; desc: boolean }> = []` (JS-only).
+- `sortDescFirst: boolean = false` (`sort-desc-first`).
+- `striped: boolean = false` (`striped`, reflected).
+- `total: number = -1` (`total`) — server total; `-1` derives from loaded/matching rows.
+- `withColumnMenu: boolean = false` (`with-column-menu`, reflected).
+- `withColumnsMenu: boolean = false` (`with-columns-menu`, reflected).
+- `withoutSortRemoval: boolean = false` (`without-sort-removal`, reflected).
+- `withSearch: boolean = false` (`with-search`, reflected).
+
+`DataGridColumn<Row>` accepts `id`, dot-path `field`, `label`, `align`, numeric `width` /
+`minWidth` / `maxWidth`, `flex`, `formatter(value, row)`, computed `value(row)`, `sortable`,
+`sortFn`, `comparator`, `sortDescFirst`, `sortUndefined`, `searchable`, `filterable`, `filterType`,
+`filterFn`, `hidden`, `hideable`, `resizable`, `movable`, `pinnable`, `pinned`, `footer`,
+`aggregation`, and `aggregatedFormatter`. A column with neither `field` nor `value` is an action
+column: its formatter receives `undefined`, and it is not sorted or searched by default.
+
+Built-in sort algorithms are `alphanumeric`, `alphanumericCaseSensitive`, `text`,
+`textCaseSensitive`, `datetime`, and `basic`; `comparator` takes precedence. Built-in filter types
+are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `includes-all`;
+`filterFn` takes precedence in client mode. Group aggregations are `sum`, `min`, `max`, `mean`,
+`median`, `count`, `unique`, `uniqueCount`, `extent`, or a callback.
+
+**Methods:**
+
+- `autoSizeColumn(columnId)`, `autoSizeColumns()`, and `sizeColumnsToFit()` manage measured widths.
+- `collapseAllRows()`, `collapseRow(key)`, `expandAllRows()`, and `expandRow(key)` update expansion
+  without emitting the user-only row events.
+- `copySelectedRows(options?)` copies selected rows (or all processed rows when selection is empty)
+  as TSV by default and returns the copied row count. Its options include `columnIds`,
+  `includeHeaders`, `format: 'tsv' | 'csv'`, and `escapeFormulas`.
+- `exportDataAsCsv(options?)` downloads CSV; `getDataAsCsv(options?)` returns it. Options include
+  `delimiter`, `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The additive
+  `DataGridCsvOptions.columns` and `DataGridExportOptions.filename` spellings remain deprecated
+  runtime aliases. Formula escaping is on by default for string cells beginning with `=`, `+`,
+  `-`, or `@`; numeric values remain numeric.
+- `focus(options?)` focuses the current roving header/cell stop.
+- `getColumnFacets(columnId)` returns `{ uniqueValues: Map, minMax? }`, computed after every other
+  filter but before the named column's own filter. Server mode returns an empty map.
+- `getColumnPin(columnId)`, `pinColumn(columnId, side: 'left' | 'right' | false)`, and
+  `toggleColumn(columnId, visible)` read or change column state without emitting the corresponding
+  user-only events. Pass `false` to unpin.
+- `getProcessedRows()` returns matching sorted rows before paging; `getVisibleRows()` returns the
+  current page.
+- `getState()`, `setState(state)`, `resetState()`, and `resetColumns()` serialize or restore view
+  state. Unknown column ids are ignored. `resetState()` intentionally preserves selection, the
+  current page, and page size.
+- `handleColumnsChange()`, `handlePageChange()`, and `handleSearchTermChange()` are public handler
+  seams used by the built-in controls.
+- `reload()` forces the current server request.
+- `scrollToIndex(index, options?)` scrolls a virtual row with `align: 'start' | 'center' | 'end'`.
+
+**Server mode:** `dataSource` receives `{ sort, filters, search, page, pageSize, signal }`. A newer
+request aborts and supersedes the previous one; rejected requests keep prior rows and emit
+`lr-data-error`. Filter/search requests use `filterDebounce`; sorting and paging load immediately.
+For event-driven loading, set `server`, listen to `lr-data-request`, and assign `data`, `total`, and
+`loading` yourself. Both server forms expose a `request` compatibility event carrying the same
+detail.
+
+**Keyboard:** headers and cells share one roving grid stop; the scrollable `body` is separately
+focusable so keyboard users can pan overflowing content. Arrow keys traverse cells, Home/End
+traverse a row, Ctrl+Home / Ctrl+End reach grid ends, PageUp/PageDown move a page, Enter
+sorts/activates, Space selects, Shift+Arrow reorders a header, Alt+Arrow resizes it, Ctrl+A selects
+the current page, Ctrl+C copies, and Shift+F10 requests a cell context menu. Inline-direction
+movement swaps under RTL. Keyboard events from an interactive formatter descendant remain owned by
+that descendant.
+
+**Events:** `request`; `lr-cell-click`; cancelable `lr-cell-contextmenu` (canceling it suppresses the
+native menu); `lr-column-move`; `lr-column-pin`; `lr-column-resize` (`detail.finished` distinguishes
+live and committed resize); `lr-column-visibility-change`; `lr-data-error`; `lr-data-request`;
+`lr-filter-change`; `lr-page-change`; `lr-row-collapse`; `lr-row-expand`; `lr-row-select`;
+`lr-sort-change`. Every library event bubbles and is composed; only `lr-cell-contextmenu` is
+cancelable.
+
+**Slots:** `empty`, `loading`, `no-results`.
+
+**CSS parts:** `body`, `cell`, `column-menu`, `column-menu-button`, `columns-menu`, `data-grid`,
+`drag-ghost`, `ellipsis`, `empty`, `expand-button`, `filter-button`, `filter-panel`, `first-button`,
+`footer`, `footer-cell`, `footer-row`, `group-count`, `group-row`, `group-value`, `header`,
+`header-cell`, `last-button`, `live-region`, `loading-overlay`, `next-button`, `no-results`, `page`,
+`page-current`, `page-size`, `pager`, `pager-button`, `pin-indicator`, `previous-button`,
+`resize-handle`, `row`, `row-detail`, `search`, `select-all-checkbox`, `sort-indicator`,
+`sort-number`, `table`, `toolbar`.
+
+**Themeable custom properties:** `--accent-color`, `--background-color`, `--border-color`,
+`--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
+`--header-row-height`, `--header-text-color`, `--indent-size`, `--max-height`, `--row-height`,
+`--row-hover-background`, `--selected-background`, `--stripe-background`, `--text-color`,
+`--transition-duration`. Defaults resolve through Lyra design tokens. Set `--max-height: none` to
+render every row instead of a virtual window.
+
+```html
+<lr-data-grid
+  label="Engineering roster"
+  row-key="id"
+  selectable
+  with-search
+  paginate
+  page-size="20"
+></lr-data-grid>
+<script type="module">
+  const grid = document.querySelector('lr-data-grid');
+  grid.columns = [
+    { field: 'name', label: 'Name', filterable: true },
+    { field: 'score', label: 'Score', align: 'end' }
+  ];
+  grid.data = [{ id: 1, name: 'Ada', score: 97 }];
+</script>
+```
+
+**Known gotchas:** selection and expansion are only stable across sort/filter/server page changes
+when `rowKey` names a unique string/number field. CSV/copy uses a formatter only when it returns a
+string; templates and Nodes fall back to the raw value. Server export/copy includes currently loaded
+rows because the browser does not possess unloaded pages.
 
 ---
 
@@ -551,24 +749,31 @@ a compact layout that swaps the list for a validated numeric page jump, and a po
 after the host applies a requested page. The component owns no data fetching and never mutates
 `page`.
 
-**Renamed in 8.0.0 — both are breaking:**
+**8.0.0 migration — these changes are breaking:**
 - `total-items` is now `total` (property `totalItems` → `total`). The old attribute no longer binds
   to anything: a pager left on `total-items` keeps `total` at its `0` default and silently renders
   the empty state with every control disabled.
 - `hide-summary` is now `with-summary`, which **inverts the default**. The summary used to render
   unless you opted out; it is now hidden unless you opt in. Drop `hide-summary` wherever it appears,
   and add `with-summary` to every pager that was relying on the old show-by-default behavior.
+- `pageSize` now defaults to `10` instead of `20`, matching the mirrored pagination contract. Keep
+  `page-size="20"` explicitly wherever the old twenty-item window is part of the data request.
+- `lr-page-change.detail` now includes `pageSize` as well as `page`, and the new cancelable
+  `lr-before-page-change` fires first. Existing readers of `detail.page` keep working; code that
+  asserted the exact one-key detail object must accept `{ page, pageSize }`.
 
 **Properties and getters:**
 - `page: number = 1` (reflected) — the currently applied page. Runtime values are presented within
   the valid `1..pageCount` range, but the public property itself remains controlled and is not
   rewritten by the component
-- `pageSize: number = 20` (attribute `page-size`) — items per page; finite values are truncated to
+- `pageSize: number = 10` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
 - `total: number = 0` (attribute `total`) — total item count; finite values are truncated
   to a non-negative integer for display and page-count calculations
 - `pageCount: number` (readonly getter) — `ceil(total / pageSize)` after the normalization
   above, or `0` when either normalized input is zero
+- `totalPages: number` (readonly getter) — upstream-compatible alias of `pageCount`, with the same
+  normalized result
 - `disabled: boolean = false` (reflected)
 - `loading: boolean = false` (reflected) — disables all controls and sets `aria-busy="true"` on the
   internal navigation landmark
@@ -590,10 +795,15 @@ after the host applies a requested page. The component owns no data fetching and
   the end of the numbered list. Same normalization, fallback `1`
 - `withEdges: boolean = false` (attribute `with-edges`, reflected) — adds first-page and last-page
   buttons outside previous/next, each drawn with a doubled chevron
+- `withoutNav: boolean = false` (attribute `without-nav`, reflected) — omits previous/next while
+  retaining numbered pages and any `with-edges` first/last controls
+- `hideSinglePage: boolean = false` (attribute `hide-single-page`, reflected) — renders nothing when
+  the normalized data set has zero or one page
 - `hrefTemplate: string | ((page: number) => string) = ''` (attribute `href-template`) — renders
-  each numbered page as an `<a>` instead of a `<button>`, so the pager works before hydration and
-  for crawlers. A string uses `{page}` as the placeholder (`/products?page={page}`); a function
-  receives the page number and returns the URL and can only be assigned from JavaScript
+  every standard-layout navigation target—numbered pages, interactive ellipses, previous/next, and
+  first/last—as an `<a>` instead of a `<button>`, so the whole pager works before hydration and for
+  crawlers. A string uses `{page}` as the placeholder (`/products?page={page}`); a function receives
+  the page number and returns the URL and can only be assigned from JavaScript
 - `appearance: 'accent'|'filled'|'outlined'|'filled-outlined'|'plain' = 'outlined'` (reflected) —
   the resting fill and border of the first/previous/next/last buttons and the numbered pages (not the
   compact page-jump input), applied through the two custom properties below. The applied page stays a
@@ -603,7 +813,8 @@ after the host applies a requested page. The component owns no data fetching and
   selects the localized singular `item` or plural `items` key
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible-name override
   forwarded to the internal `<nav>` landmark; takes precedence over `label`
-- `label: string = 'Pagination'` — fallback accessible name for the internal `<nav>` landmark
+- `label: string = ''` — explicit fallback accessible name for the internal `<nav>` landmark;
+  empty uses the localized `paginationLabel` message
 - `pageLabel: string = 'Page'` (attribute `page-label`) — accessible name for the page-jump input
 - `previousLabel: string = 'Previous'` (attribute `previous-label`), `nextLabel: string = 'Next'`
   (attribute `next-label`) — accessible names for the icon-only directional buttons
@@ -614,37 +825,52 @@ after the host applies a requested page. The component owns no data fetching and
 Built-in property defaults resolve through the locale registry. A property value customized away
 from its built-in default is treated as an explicit per-instance wording override.
 
-**Events:** `lr-page-change` (`detail: { page: number }`, bubbles and composes, non-cancelable) —
-emitted for a valid, different requested page, from a numbered page button, previous/next,
-first/last, or the compact page-jump input. The host applies `event.detail.page` back to `page`
-after routing, fetching, or any other policy decision.
-`focus` and `blur` are re-dispatched as bubbling, composed host events from whichever internal
-control the user reached — a page button or link, previous/next, first/last, or the page input —
-because the internal originals do not cross the shadow boundary.
+**Events:** `lr-before-page-change` (`detail: { page: number, pageSize: number }`, bubbles and
+composes, cancelable) fires first for any valid, different requested page. Preventing it suppresses
+the request and restores the compact field to the controlled page. If accepted,
+`lr-page-change` follows with the same detail (bubbles and composes, non-cancelable), from a numbered
+page, interactive ellipsis, previous/next, first/last, or the compact page-jump input. The host
+applies `event.detail.page` back to `page` after routing, fetching, or any other policy decision.
+When that requested value is applied, focus follows the new `[part="page-current"]` control; the
+compact layout returns focus to its page field instead. This keeps keyboard orientation intact even
+when a next/previous, edge, or ellipsis control is replaced by the newly rendered page window. If
+the application applies the controlled page asynchronously and the user has moved focus outside
+the pagination component in the meantime, it leaves that newer focus destination alone.
+`focus` and `blur` are re-dispatched as exactly one bubbling, composed native `FocusEvent` from
+whichever internal control the user reached — a page button or link, previous/next, first/last, or
+the page input. The shadow-origin event is stopped, and the host event preserves its native focus
+payload, including `relatedTarget`.
 
 **Methods:** `focus(options?)`, `blur()` and `click()` all target the page-jump input, which only
 exists in `format="compact"`; in the default `standard` layout there is no such input and the three
 are no-ops. `click()` additionally does nothing while the controls are disabled.
 
-**Slots:** none.
+**Slots:** `first-icon`, `previous-icon`, `next-icon`, and `last-icon` replace the corresponding
+directional glyph while leaving its localized accessible name on the owning control.
 
-**CSS parts:** `base`, `summary`, `controls`, `pages`, `page`, `page-current`, `ellipsis`,
-`first-button`, `first-icon`, `previous-button`, `previous-icon`, `page-field`, `page-input`,
+**CSS parts:** `base` and `pagination` are aliases on the same navigation wrapper; `summary`,
+`controls`, `pages`, `button`, `page`, `page-current`, `ellipsis`,
+`first-button`, `first-icon`, `previous-button`, `previous-icon`, `page-field`, `label`, `page-input`,
 `page-count`, `next-button`, `next-icon`, `last-button`, `last-icon`, `live-region`.
 
 `pages` is the `role="list"` wrapper, `page` one numbered control inside it (a `<button>`, or an
-`<a>` under `href-template`), and `ellipsis` a non-interactive `aria-hidden` marker standing in for
-a skipped run of pages. The applied page's control carries a second part token, so
+`<a>` under `href-template`), and `ellipsis` an accessible interactive control that jumps several
+pages into its skipped run. `button` is shared by every page, ellipsis, and navigation control;
+`label` aliases the compact `page-field` wrapper. The applied page's control carries a second part token, so
 `::part(page-current)` selects it and `::part(page)` still selects every page including the current
 one — the state lives in the part name because `::part(page)[aria-current='page']` is invalid CSS
 and would silently never match. `first-button`/`first-icon` and `last-button`/`last-icon` exist only
 while `with-edges` is set.
 
+**CSS custom states:** `disabled` matches when the public `disabled` property is true. The state
+does not match for the separate `loading` or empty-data conditions, even though those conditions
+also make the rendered controls inert.
+
 **Themeable custom properties:** `--lr-pagination-control-size` and
 `--lr-pagination-font-size` (both default from `size`), `--lr-pagination-control-bg` (default
 `var(--lr-color-surface)`) and `--lr-pagination-control-border-color` (default
 `var(--lr-color-border)`) — the resting fill and border shared by the first/previous/next/last
-buttons and the numbered pages, which is what `appearance` re-points: `filled` → `var(--lr-color-surface-raised)` + `transparent`,
+buttons, interactive ellipses, and numbered pages, which is what `appearance` re-points: `filled` → `var(--lr-color-surface-raised)` + `transparent`,
 `filled-outlined` → `var(--lr-color-surface-raised)` + `var(--lr-color-border)`, `plain` →
 `transparent` + `transparent`, `accent` → `var(--lr-color-brand-quiet)` +
 `var(--lr-color-brand)`; set either property yourself to theme past the five presets —
@@ -665,7 +891,7 @@ CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-
 <script>
   const pagination = document.querySelector('lr-pagination');
   pagination.addEventListener('lr-page-change', async (event) => {
-    await loadPage(event.detail.page);
+    await loadPage(event.detail.page, event.detail.pageSize);
     pagination.page = event.detail.page;
   });
 </script>
@@ -693,6 +919,8 @@ pagination.hrefTemplate = (page) =>
 - user activation only emits an intent. Until the host applies a new `page`, the numeric input
   returns to the currently controlled value; assigning the page triggers the localized
   `role="status"` announcement
+- cancel `lr-before-page-change` for a policy veto; preventing `lr-page-change` has no effect because
+  that second event is the accepted, non-cancelable controlled intent
 - the jump input accepts only whole pages in `1..pageCount`; empty, fractional, and out-of-range
   drafts expose `aria-invalid="true"` and emit nothing
 - zero items, zero page size, `disabled`, and `loading` all disable the navigation controls. The
@@ -702,10 +930,9 @@ pagination.hrefTemplate = (page) =>
   component's own inline size, not the viewport. The control group and the page list wrap onto
   further rows at any width rather than overflowing. Previous/next and first/last icons all mirror
   under RTL
-- link mode moves navigation out of your handler. A numbered page rendered from `href-template` is a
-  plain anchor with no click handler: activating it navigates and emits **no** `lr-page-change`.
-  Previous/next and first/last stay buttons and keep emitting it, so a link-mode pager still needs
-  its `lr-page-change` listener for those
+- link mode moves standard-layout navigation out of your handler. Numbered pages, ellipses,
+  previous/next, and first/last are plain anchors with no click handler: activating any of them
+  navigates and emits neither pagination event
 - `href-template` is interpolated, not encoded. `{page}` is replaced with `String(page)` — always a
   plain integer, never the localized digits shown in the label — and the rest of the template is
   placed in the `href` verbatim: it is neither URL-encoded nor otherwise escaped. The only check
@@ -714,16 +941,20 @@ pagination.hrefTemplate = (page) =>
   that page instead of being rendered. Treat the template as trusted application input and encode
   any dynamic segment yourself before it reaches the template — a function template is the
   straightforward place to do that
-- the current page never gets an `href` (nor does any page while `disabled` or `loading` — those
-  anchors carry `aria-disabled="true"` instead). An anchor without `href` is not focusable, so in
-  link mode the current page is skipped by Tab, while in the default button layout it stays a
-  focusable button that does nothing when activated
+- the current page never gets an `href`, but while enabled it carries `tabindex="0"` so the applied
+  location remains a keyboard stop. While `disabled` or `loading`, every anchor loses both `href`
+  and the current page's explicit tabindex and carries `aria-disabled="true"`, leaving the inert
+  pager with no tab stops
+- an `hrefTemplate` function runs only for active targets inside `1..pageCount`. Current, spent,
+  disabled, loading, and empty-state controls stay rendered as configured anchors without `href`,
+  but do not call the function with a destination the user cannot activate
 - `href-template` has no effect under `format="compact"`: there is no numbered list to render as
   links, only the page-jump input
 - the numbered list keeps a constant slot count as the reader pages through, so the control does not
   jitter: `siblingCount`/`boundaryCount` fix the budget, every page renders when the page count fits
   inside it, and otherwise a side that turns out to need no gap hands its slot back as one more page
-  number. Both counts are clamped to `25` and the render-every-page budget is capped at 101 slots, so
+  number. A gap is a named jump control, not decorative text; repeated activation advances through
+  a large skipped run. Both counts are clamped to `25` and the render-every-page budget is capped at 101 slots, so
   however large you set them the list never renders more than 103 slots
 - `appearance` does not reach the compact page-jump input — `[part="page-input"]` always draws with
   the shared surface and border tokens. Style `::part(page-input)` directly when a non-default
@@ -1284,11 +1515,9 @@ with the stale markup sitting inert in the light DOM — no error anywhere.
 A tree containing any author-written `<lr-tree-item>` child is read purely as the declarative model
 and `data` is ignored. The empty state renders only when neither model has any items.
 
-Deliberately **not** mirrored, because there is no lyra equivalent to rename to: lazy loading
-(`lazy`, `sl-lazy-load`, `sl-lazy-change`), checkbox multi-select (`sl-tree`'s
-`selection="multiple"` and its `checkbox` part), the `expand-icon`/`collapse-icon` slots, and the
-`sl-expand`/`sl-collapse`/`sl-after-expand`/`sl-after-collapse` quartet — `lr-node-toggle` carries
-the same information in one event with an `expanded` flag.
+Both child models use the same selection, roving-focus, checkbox-cascade, icon, and lazy-loading
+engine. The upstream lifecycle names are normalized to the library-wide `lr-` prefix;
+`lr-node-toggle` and `lr-node-select` remain as additive Lyra notifications.
 
 ### `lr-tree`
 
@@ -1301,13 +1530,17 @@ deeply-nested node's own shadow root still reaches it).
 **Properties:**
 - `data: TreeItem[] = []` (attribute: false) — the object child model; ignored while any
   author-written `<lr-tree-item>` child is present. `TreeItem { id: string; label: string; children?:
-  TreeItem[]; selected?: boolean; disabled?: boolean; badge?: string | number; badges?: TreeBadge[];
+  TreeItem[]; selected?: boolean; disabled?: boolean; lazy?: boolean; badge?: string | number; badges?: TreeBadge[];
   icon?: unknown; description?: string; accessibleLabel?: string }`. `TreeBadge` is `{ text:
   string; tone?: TreeBadgeTone; label?: string }`, where `TreeBadgeTone` is
   `'neutral'|'brand'|'success'|'warning'|'danger'`. The legacy singular `badge` renders first;
   `badges` adds tone-mapped chips after it and each chip's accessible name uses `label ?? text`.
   `icon` renders as a decorative leading visual, `description` as secondary visible row text, and
   `accessibleLabel` names the `role="treeitem"` host without changing its visible label
+- `selection: 'single'|'multiple'|'leaf'|'leaf-multiple' = 'single'` — self-managed selection for
+  both child models. `single` selects one item; `leaf` selects one loaded leaf; `multiple` displays
+  checkboxes and cascades through enabled descendants; `leaf-multiple` applies that cascade only
+  to leaves. Partially-selected branches expose `indeterminate`
 - `label: string = ''` — accessible name for the tree; `role="tree"` lives on an internal
   `[part="base"]` element. The component forwards a host `aria-label` to that semantic element when
   `label` is empty; `label` takes precedence when both are set. External `aria-labelledby` idrefs
@@ -1315,6 +1548,9 @@ deeply-nested node's own shadow root still reaches it).
 - `reorderable: boolean = false` (reflected) — opts into keyboard reordering. Unset, no `lr-reorder`
   is ever emitted, Ctrl/Cmd+Arrow behaves exactly like a plain Arrow press, and the internal live
   region is not rendered at all.
+
+**Read-only getter:** `selectedItems: LyraTreeItem[]` returns selected item elements in document
+order, including derived fully-selected parents in either multiple mode.
 
 **Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous *visible* node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
@@ -1330,7 +1566,8 @@ enabled descendants are never left visibly stranded outside this navigation walk
 **Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
 cycle).
 
-**Events:** `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
+**Events:** `lr-selection-change` (`detail: { selection }`, where `selection` is the current
+`selectedItems` array) and `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
 Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
 component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
 moved node. `parentId` is `null` for a top-level item, and `fromIndex`/`toIndex` are **sibling-scoped
@@ -1339,21 +1576,22 @@ and never fires at a subtree boundary, so a reorder can never become a reparent:
 the last child of a subtree is ambiguous (the visually next row is a top-level uncle, so "move down"
 could mean either "swap with the next sibling" — there is none — or "reparent up a level"), and
 reparenting is a structural edit with no keyboard affordance distinguishing the two. Such a request
-is simply not made: no event, no announcement, focus stays put. Otherwise this element dispatches
-nothing directly (see `lr-tree-item` below — those bubble up and are also observed internally to keep
-the roving `activeId` in sync with clicks).
+is simply not made: no event, no announcement, focus stays put. Item events listed below bubble
+through the tree as well.
 
 **Slots:** default — top-level `<lr-tree-item>` elements, each nesting its own children (the
 declarative model). Leave it empty and assign `data` for the object model; the same slot then holds
-the items `<lr-tree>` generates.
+the items `<lr-tree>` generates. `expand-icon` and `collapse-icon` provide tree-wide disclosure
+icons; an item-level slot with the same name takes precedence.
 
-**CSS parts:** `base`, `empty` (the empty-state message, shown when neither child model has any
-items)
+**CSS parts:** `base` and `tree` are aliases on the same `role="tree"` root; `empty` is the
+empty-state message shown when neither child model has any items.
 
 **Themeable custom properties:** shared tokens `--lr-space-xs`/`-s`, `--lr-color-brand-quiet`,
 `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-text`, `--lr-radius`,
 `--lr-focus-ring-*` (row `:focus-visible` ring, driven by `:host(:focus-visible)` since the host
-itself is the focusable `role="treeitem"`).
+itself is the focusable `role="treeitem"`), plus `--indent-size`, `--indent-guide-color`,
+`--indent-guide-offset`, `--indent-guide-style`, and `--indent-guide-width`.
 
 **Optional peer deps:** none.
 
@@ -1366,19 +1604,22 @@ so this node's own nested children (whether rendered in its own shadow root or p
 light DOM, as further `role="group"` content) are genuine DOM descendants of the treeitem, matching
 the WAI-ARIA treeitem pattern's containment expectation.
 
-**Properties — declarative model** (write these as attributes; each is ignored once an `item` object
-is assigned, because that object already carries the same information):
+**Properties — declarative model** (write these as attributes; `item` data seeds the matching state
+when assigned):
 - `label: string = ''` — the row's label, used only when nothing is slotted into the default slot
 - `disabled: boolean = false` (reflected) — removes the item from roving focus and blocks
   select/toggle activation
 - `selected: boolean = false` (reflected) — renders the selected state and is exposed as
   `aria-selected`
+- `lazy: boolean = false` (reflected) — defers expansion, renders the spinner, and emits
+  `lr-lazy-load` until children arrive or `lazy` is cleared
 
 **Properties — data model:**
 - `item: TreeItem` (attribute: false) — the whole subtree as one object, normally assigned by
-  `<lr-tree>` from its `data`. An assigned `item` **wins**: `label`/`disabled`/`selected` and any
-  light-DOM children are ignored. `item.selected` is tri-state — `undefined` means "this tree does
-  not express selection" and leaves `aria-selected` off the host entirely
+  `<lr-tree>` from its `data`. An assigned `item` **wins** for label/disabled/children and seeds
+  `selected`/`lazy`; a refreshed object identity re-seeds those values. Light-DOM children are
+  ignored while `item` is assigned. Outside an owning tree, an omitted `item.selected` leaves
+  `aria-selected` off the host; an owning tree always publishes explicit true/false state
 - `ancestry: TreeItem[] = []` (attribute: false) — the ancestor object identities used to stop a
   cyclic `TreeItem` graph before it recurses; pushed down by the parent item
 
@@ -1392,6 +1633,9 @@ is assigned, because that object already carries the same information):
   `aria-posinset` values among its siblings, pushed down from `<lr-tree>`; normally set internally,
   not by consumers. `setSize` passes `-1` through unchanged (ARIA's "set size unknown" sentinel) and
   clamps everything else to a finite integer `>= 1`
+- `loading: boolean` (read-only) — a lazy expansion is waiting for children
+- `indeterminate: boolean` (read-only) — an enabled branch has some but not all selectable
+  descendants selected
 
 **Read-only getters** — each answers for whichever child model is in use, which is what lets
 `<lr-tree>` drive both with one implementation:
@@ -1409,23 +1653,34 @@ is assigned, because that object already carries the same information):
   past a nesting depth of 64, which is what stops a runaway recursion; a `TreeItem` graph that
   contains itself is caught earlier by `ancestry`
 
-**Methods:** `expand()`, `collapse()` (each a no-op if already in that state, disabled, or a leaf),
+**Methods:** `expand()`, `collapse()` (each a no-op if already in that state, disabled, loading, or a leaf),
 `select()` (fires `lr-node-select`; a no-op while disabled). `childItems(): LyraTreeItem[]` returns
 this node's **direct** child `<lr-tree-item>` elements — from its own shadow root in the data model,
 from its own light-DOM children in the declarative one. A grandchild is not included; it lives under
-its own parent.
+its own parent. `getChildrenItems({ includeDisabled = true } = {})` is the upstream-compatible
+public spelling over the same direct-child list.
 
 **Events:** `lr-node-toggle` (`detail: { id, expanded }`, fired by `expand()`/`collapse()` — via
 the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { id }`, fired by `select()`
 — via clicking anywhere in the row or Enter/Space) — dispatched from `lr-tree-item`,
-bubble/compose up
-through `lr-tree`'s light DOM.
+bubble/compose up through `lr-tree`'s light DOM. `lr-expand`/`lr-collapse` fire when a transition
+begins; `lr-after-expand`/`lr-after-collapse` fire after the matching themeable duration. Rapid
+opposite transitions and disconnects invalidate stale after-events. `lr-lazy-load` requests data
+with `detail: { item, generation }`; `lr-lazy-change` reports `detail: { item, loading }` when the
+pending state starts or ends. Disabling or disconnecting an item invalidates the pending generation.
 
 **Slots:** default — the row's label content in the declarative model. `children` — where nested
 `<lr-tree-item>` children are projected; **assigned by the component**, so write the nested items in
-the default slot and never set `slot="children"` yourself. Neither slot is used in the data model.
+the default slot and never set `slot="children"` yourself. `expand-icon` and `collapse-icon`
+override the owning tree's corresponding icon for one item. The label/children slots are unused in
+the data model.
 
-**CSS parts:** `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`. `badge`
+**CSS parts:** `base` and `tree-item` are aliases on the same outer wrapper around the row and child
+group; `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`, `item`,
+`item--disabled`, `item--expanded`, `item--indeterminate`, `item--selected`, `indentation`,
+`expand-button`, `spinner`, `spinner__base`, `children`, `checkbox`, `checkbox__base`,
+`checkbox__control`, `checkbox__control--checked`, `checkbox__control--indeterminate`,
+`checkbox__checked-icon`, `checkbox__indeterminate-icon`, and `checkbox__label`. `badge`
 is applied to the legacy singular `item.badge` and to every `item.badges` chip; additive chips carry
 `data-tone="neutral|brand|success|warning|danger"`. `icon` is `aria-hidden="true"`; `content`
 groups the primary label and optional wrapping secondary description while preserving one
@@ -1434,6 +1689,7 @@ the declarative model has no icon/description/badge inputs, so a row written as 
 `row`/`toggle`/`content`/`label` (and `group` while expanded) and nothing else.
 
 **Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for indentation);
+`--show-duration`/`--hide-duration` (both default through `--lr-duration-base`);
 `--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row; and paired
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each
@@ -2109,8 +2365,9 @@ parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.
 
-**Properties:** `value`, `label`, `labels`, `name`, `disabled`, `effectiveDisabled`, `nodeTypeOptions`,
-`relationshipTypeOptions`, `hopLimit`, `savedQueries`, `errors`, `form`, `validity`,
+**Properties:** `value`, `customError` (`custom-error`), `label`, `labels`, `name`, `disabled`,
+`effectiveDisabled`, `nodeTypeOptions`,
+`relationshipTypeOptions`, `hopLimit`, `savedQueries`, `errors`, `form`, `getForm`, `validity`,
 `validationMessage`, `willValidate`, `checkValidity`, `reportValidity`, `setCustomValidity`,
 `formDisabledCallback`, `formResetCallback`, `formStateRestoreCallback`.
 
@@ -2125,7 +2382,8 @@ field edit) and `form.reset()`, exactly like a native control, where only anothe
 localized, and it is whole-control state: it does not land in `errors`, which is keyed by the
 csspart of the field a message belongs to.
 
-**Events:** `lr-input`, `lr-validity-change`,
+**Events:** `lr-input`, `lr-validity-change`, `lr-invalid` (no detail; one bubbling/composed alias
+when the complete builder fails a native validity check),
 `lr-query-run`, `lr-query-save`, `lr-query-load`, `lr-query-delete`. **Slots:** `actions`. **CSS
 parts:** `base`, `label`, `hint`, `error` (the three form-control chrome parts every
 form-associated control in this library exposes — see `lr-select`), `path-fields`, `start-input`,

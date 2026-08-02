@@ -17,19 +17,44 @@ export const styles = css`
     display: none;
   }
   [part="base"] {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-xs);
     color: var(--lr-color-text);
     text-decoration: none;
     border-radius: var(--lr-radius);
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  a[part="base"]:hover {
+  button[part="base"] {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+  [part~="start"],
+  [part~="end"] {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+  }
+  [part~="start"][hidden],
+  [part~="end"][hidden] {
+    display: none;
+  }
+  [part="label"] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+  :where(a, button)[part="base"]:hover {
     text-decoration: underline;
   }
   /* A link has no fill of its own to deepen, so the pressed state paints one. Mixing from
      transparent yields --lr-color-mix-partner at --lr-color-mix-active alpha, which tints whatever
      surface the trail happens to sit on rather than assuming --lr-color-surface is behind it. */
-  a[part="base"]:active {
+  :where(a, button)[part="base"]:active {
     text-decoration: underline;
     background: color-mix(
       in oklab,

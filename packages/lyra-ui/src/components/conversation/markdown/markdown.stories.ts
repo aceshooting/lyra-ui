@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './markdown.js';
+import type { LyraMarkdown } from './markdown.js';
 
 const meta: Meta = {
   title: 'Markdown',
@@ -53,6 +54,57 @@ const codeSample =
 
 export const CodeBlocks: Story = {
   render: () => html`<lr-markdown .content=${codeSample}></lr-markdown>`,
+};
+
+export const LeadingTabWidth: Story = {
+  name: 'Leading tab width',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`tab-size="2"` expands a leading tab to two spaces before parsing, so this line remains ordinary paragraph text instead of becoming a four-space indented code block.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-markdown tab-size="2" .content=${'Intro\n\n\tA tab-indented paragraph'}></lr-markdown>
+  `,
+};
+
+export const SharedParserRefresh: Story = {
+  name: 'Shared parser refresh',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The button temporarily configures the shared `marked` parser, calls the public `renderMarkdown()` refresh method, and restores the shared defaults immediately afterward.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; flex-direction:column; align-items:start; gap:var(--lr-space-s);">
+      <button
+        type="button"
+        @click=${(event: Event) => {
+          const markdown = (event.currentTarget as HTMLElement).nextElementSibling as LyraMarkdown;
+          const parser = markdown.marked;
+          if (!parser) return;
+          const originalDefaults = parser.defaults;
+          try {
+            parser.use({
+              hooks: {
+                preprocess: (source: string) => source.replace('CONFIGURED_TOKEN', '**Configured parser**'),
+              },
+            });
+            markdown.renderMarkdown();
+          } finally {
+            parser.defaults = originalDefaults;
+          }
+        }}
+      >Refresh with shared parser</button>
+      <lr-markdown .content=${'CONFIGURED_TOKEN'}></lr-markdown>
+    </div>
+  `,
 };
 
 export const NarrowAllocation: Story = {

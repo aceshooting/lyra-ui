@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/format/format-bytes.js';` (registers the tag; side-effect import)
 - **Class** `LyraFormatBytes`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/format-bytes.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** nothing component-specific — inherits only the shared surface
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -13,21 +15,23 @@
 
 ## `lr-format-bytes`
 
-Byte-size output via `Intl.NumberFormat`'s `style: 'unit'` (`unitDisplay: 'short'`), so the unit
-name is localized too. Text-only host — no CSS parts, events, or own tokens; locale resolution and
+Byte/bit output via `Intl.NumberFormat`'s `style: 'unit'`, so the unit name is localized too.
+Text-only host — no CSS parts, events, or own tokens; locale resolution and
 `Intl`-instance caching are as described under `lr-format-number` above.
 
 **Properties:**
-- `value: number = 0` — a byte count
-- `unitStep: number = 1024` (attribute `unit-step`) — set `1000` for SI (kB/MB) instead of binary
+
+- `value: number = 0`
+- `unit: 'byte' | 'bit' = 'byte'`
+- `display: 'long' | 'short' | 'narrow' = 'short'` — forwarded as `unitDisplay`
+- `unitStep: number = 1000` (attribute `unit-step`) — mapped decimal scaling. **Changed in 8.0.0:**
+  the former Lyra default was `1024`; it remains an opt-in extension
 - `decimals: number = 1` — maximum fraction digits on the scaled amount
 
 **Slots:** default — fallback content, rendered only when `value` is not finite.
 
-The unit ladder is fixed at `byte`, `kilobyte`, `megabyte`, `gigabyte`, `terabyte`, `petabyte` and
-saturates at the top; the index is `floor(log|value| / log(unitStep))`, and `0` always formats as
-bytes. Magnitudes below one byte, including negative values, stay in the `byte` unit rather than
-forming a negative unit index. `unitStep` is normalized to a finite number `> 1` (a step of exactly `1` would divide by
-`log(1) === 0`) falling back to `1024`; `decimals` is clamped to `[0, 10]` — an out-of-range value
-would otherwise throw a `RangeError` from `maximumFractionDigits`. Note that `unitStep: 1024` still
-prints the SI-named `kB`/`MB` units, not `KiB`/`MiB` — `Intl` has no binary unit names.
+The selected ladder is `byte`/`kilobyte`… or `bit`/`kilobit`… through peta and saturates at the
+top; the index is `floor(log|value| / log(unitStep))`, and zero stays in the base unit. Magnitudes
+below one remain at index zero. `unitStep` is normalized to a finite number `> 1`, falling back to
+`1000`; `decimals` clamps to `[0, 10]`. Setting `unitStep="1024"` still prints SI-named `kB`/`MB`
+units, not `KiB`/`MiB`, because `Intl` exposes no binary unit names.

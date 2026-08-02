@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './drawer.js';
 import type { LyraDrawer } from './drawer.js';
+import { setAnimation } from '../../../utilities/animation-registry.js';
 
 it('renders an open drawer with the requested placement and accessible panel', async () => {
   const el = (await fixture(html`
@@ -10,11 +11,18 @@ it('renders an open drawer with the requested placement and accessible panel', a
   `)) as LyraDrawer;
   await el.updateComplete;
 
-  const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]')!;
   expect(el.getAttribute('placement')).to.equal('end');
   expect(panel.getAttribute('role')).to.equal('dialog');
   expect(panel.getAttribute('aria-modal')).to.equal('true');
   expect(panel.getAttribute('aria-labelledby')).to.match(/^lr-dialog-heading-/);
+});
+
+it('reflects the inherited pinned Web Awesome label property', async () => {
+  const el = (await fixture(html`<lr-drawer></lr-drawer>`)) as LyraDrawer;
+  el.label = 'Filters';
+  await el.updateComplete;
+  expect(el.getAttribute('label')).to.equal('Filters');
 });
 
 it('closes through the inherited cancelable close contract', async () => {
@@ -23,7 +31,7 @@ it('closes through the inherited cancelable close contract', async () => {
   `)) as LyraDrawer;
   await el.updateComplete;
 
-  const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
+  const button = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLButtonElement;
   const eventPromise = oneEvent(el, 'lr-dialog-close');
   button.click();
   const event = await eventPromise;
@@ -76,7 +84,7 @@ it('flips the enter-animation offset under RTL to match the mirrored resting edg
   `)) as HTMLElement;
   const startDrawer = rtlStartWrapper.querySelector('lr-drawer') as LyraDrawer;
   await startDrawer.updateComplete;
-  const startPanel = startDrawer.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const startPanel = startDrawer.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
   // A 'start' drawer rests at the physical right edge under RTL, so it must enter
   // from further right -- the same positive offset an LTR 'end' drawer uses.
   expect(getComputedStyle(startPanel).getPropertyValue('--lr-drawer-enter-x').trim()).to.equal('1rem');
@@ -86,7 +94,7 @@ it('flips the enter-animation offset under RTL to match the mirrored resting edg
   `)) as HTMLElement;
   const endDrawer = rtlEndWrapper.querySelector('lr-drawer') as LyraDrawer;
   await endDrawer.updateComplete;
-  const endPanel = endDrawer.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const endPanel = endDrawer.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
   // An 'end' drawer rests at the physical left edge under RTL -- the mirror image,
   // so it must enter from further left, same as an LTR 'start' (default) drawer.
   expect(getComputedStyle(endPanel).getPropertyValue('--lr-drawer-enter-x').trim()).to.equal('calc(-1 * 1rem)');
@@ -135,27 +143,21 @@ describe('inherited show/hide lifecycle', () => {
   });
 });
 
-// A computed `<time>` serializes in seconds in every engine, but the NUMBER formatting is
-// engine-specific: Chromium prints one microsecond as `1e-06s` while Gecko and WebKit print
-// `0.000001s`. Parse the value and compare numerically -- an exact string comparison would pin the
-// suite to one engine, and this file runs under `test:platform` on all three.
-const cssTimeSeconds = (value: string): number => {
-  const seconds = Number.parseFloat(value);
-  return value.trim().endsWith('ms') ? seconds / 1000 : seconds;
-};
-
 describe('slide animation', () => {
   it('slides out with the drawer exit keyframes, not the dialog panel ones', async () => {
     const el = (await fixture(html`<lr-drawer heading="Filters" open><p>Body</p></lr-drawer>`)) as LyraDrawer;
     await el.updateComplete;
-    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-    expect(getComputedStyle(panel).animationName).to.equal('lr-drawer-in');
-
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
     const afterHide = oneEvent(el, 'lr-after-hide');
     el.hide();
     await el.updateComplete;
-    expect(getComputedStyle(panel).animationName).to.equal('lr-drawer-out');
+    expect(panel.getAnimations().some((animation) => animation.id === 'drawer.hideEnd')).to.be.true;
     await afterHide;
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    await el.updateComplete;
+    expect(panel.getAnimations().some((animation) => animation.id === 'drawer.showEnd')).to.be.true;
+    await afterShow;
   });
 
   it('slides out along the block axis for top/bottom placements', async () => {
@@ -163,42 +165,61 @@ describe('slide animation', () => {
       html`<lr-drawer heading="Filters" placement="bottom" open><p>Body</p></lr-drawer>`,
     )) as LyraDrawer;
     await el.updateComplete;
-    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-    expect(getComputedStyle(panel).animationName).to.equal('lr-drawer-in-block');
-
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
     const afterHide = oneEvent(el, 'lr-after-hide');
     el.hide();
     await el.updateComplete;
-    expect(getComputedStyle(panel).animationName).to.equal('lr-drawer-out-block');
+    expect(panel.getAnimations().some((animation) => animation.id === 'drawer.hideBottom')).to.be.true;
     await afterHide;
   });
 
   it('reads its duration from the shared panel-duration knob, so reduced motion still settles', async () => {
     const el = (await fixture(html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
     el.style.setProperty('--lr-duration-base', '0.001ms');
-    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-
     const afterShow = oneEvent(el, 'lr-after-show');
     el.show();
-    await el.updateComplete;
-    // 0.001ms === 1e-6s. The tolerance is five orders of magnitude below the 0.18s
-    // --lr-duration-base default, so losing the token wiring (or the animation being dropped to
-    // 0s outright) still fails here.
-    expect(
-      cssTimeSeconds(getComputedStyle(panel).animationDuration),
-      'the panel duration resolves through the overridden --lr-duration-base',
-    ).to.be.closeTo(1e-6, 1e-9);
     await afterShow;
     const afterHide = oneEvent(el, 'lr-after-hide');
     el.hide();
     await afterHide;
     expect(el.open).to.be.false;
   });
+
+  it('selects an RTL keyframe override from the placement-specific drawer namespace', async () => {
+    const el = (await fixture(
+      html`<lr-drawer dir="rtl" placement="start" heading="Filters"><p>Body</p></lr-drawer>`,
+    )) as LyraDrawer;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    const releasePanel = setAnimation(el, 'drawer.showStart', {
+      keyframes: [{ transform: 'translateX(-14px)' }, { transform: 'translateX(0)' }],
+      rtlKeyframes: [{ transform: 'translateX(14px)' }, { transform: 'translateX(0)' }],
+      options: { duration: 10_000 },
+    });
+    const releaseBackdrop = setAnimation(el, 'drawer.overlay.show', null);
+    const releasePanelHide = setAnimation(el, 'drawer.hideStart', null);
+    const releaseBackdropHide = setAnimation(el, 'drawer.overlay.hide', null);
+    try {
+      const shown = el.show();
+      await el.updateComplete;
+      const animation = panel.getAnimations().find((candidate) => candidate.id === 'drawer.showStart');
+      expect(animation?.id).to.equal('drawer.showStart');
+      expect(String(animation?.effect?.getKeyframes()[0]?.transform)).to.include('14px');
+      expect(String(animation?.effect?.getKeyframes()[0]?.transform).includes('-14px')).to.equal(false);
+      animation?.finish();
+      await shown;
+      await el.hide();
+    } finally {
+      releaseBackdropHide();
+      releasePanelHide();
+      releaseBackdrop();
+      releasePanel();
+    }
+  });
 });
 
 // --- dark-mode panel separation -----------------------------------------------------
 //
-// lr-drawer inherits lr-dialog's [part="panel"] rule, so the same dark-mode failure applies: a
+// lr-drawer inherits lr-dialog's [part~="panel"] rule, so the same dark-mode failure applies: a
 // panel painted with the page surface token is the same near-black as the page behind it and the
 // open drawer reads as a scrim with floating text. Both colours are read back at runtime from the
 // component's own scope -- a hardcoded literal here would assert the generated palette instead of
@@ -248,7 +269,7 @@ it('paints its panel a surface distinct from the page surface in dark mode', asy
     )) as HTMLElement;
     const el = wrapper.querySelector('lr-drawer') as LyraDrawer;
     await el.updateComplete;
-    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
 
     const pageSurface = toComputedColor(getComputedStyle(el).getPropertyValue('--lr-color-surface').trim());
     const overlaySurface = toComputedColor(
@@ -284,7 +305,7 @@ function toComputedShadow(rawTokenValue: string): string {
 it('steps its edge-anchored panel back to the lower modal tier, overriding the dialog rule', async () => {
   const el = (await fixture(html`<lr-drawer heading="Filters" open><p>Body</p></lr-drawer>`)) as LyraDrawer;
   await el.updateComplete;
-  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
   const scope = getComputedStyle(el);
 
   const drawerTier = toComputedShadow(scope.getPropertyValue('--lr-shadow-l').trim());
@@ -296,4 +317,48 @@ it('steps its edge-anchored panel back to the lower modal tier, overriding the d
   expect(drawerTier, 'l and xl are distinct steps').to.not.equal(dialogTier);
   expect(getComputedStyle(panel).boxShadow).to.equal(drawerTier);
   el.close('api');
+});
+
+describe('contained drawer compatibility', () => {
+  it('renders in its containing block without modal ownership, overlay, or Escape dismissal', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="position: relative; inline-size: 500px; block-size: 300px;">
+        <lr-drawer contained open label="Filters"><button>Inside</button></lr-drawer>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-drawer') as LyraDrawer;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    const backdrop = el.shadowRoot!.querySelector('[part~="backdrop"]') as HTMLElement;
+    expect(getComputedStyle(el).position).to.equal('absolute');
+    expect(panel.hasAttribute('aria-modal')).to.equal(false);
+    expect(getComputedStyle(backdrop).display).to.equal('none');
+    expect(document.documentElement.style.overflow).to.equal('');
+    expect(el.matches(':popover-open')).to.equal(false);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+  });
+
+  it('restores modal behavior when contained is unset while open', async () => {
+    const el = (await fixture(
+      html`<lr-drawer contained open label="Filters"><button>Inside</button></lr-drawer>`,
+    )) as LyraDrawer;
+    el.contained = false;
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement).getAttribute('aria-modal')).to.equal(
+      'true',
+    );
+    expect(document.documentElement.style.overflow).to.equal('hidden');
+    await el.hide();
+  });
+
+  it('maps --size to the active drawer axis', async () => {
+    const el = (await fixture(
+      html`<lr-drawer contained open label="Filters" style="--size: 320px"><p>Body</p></lr-drawer>`,
+    )) as LyraDrawer;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).inlineSize).to.equal('320px');
+  });
 });

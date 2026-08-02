@@ -43,6 +43,9 @@ if (
 if (pkg.exports?.['./custom-elements.json'] !== './custom-elements.json') {
   problems.push('package.json must explicitly export ./custom-elements.json.');
 }
+if (pkg.customElements !== 'custom-elements.json') {
+  problems.push('package.json#customElements must be the published custom-elements.json path.');
+}
 for (const [subpath, stem] of [
   ['./custom-elements-jsx', 'custom-elements-jsx'],
   ['./vue', 'vue'],
@@ -52,6 +55,25 @@ for (const [subpath, stem] of [
   if (entry?.types !== `./dist/${stem}.d.ts` || entry?.default !== `./dist/${stem}.js`) {
     problems.push(`${subpath} must expose matching generated type and empty-runtime entries.`);
   }
+}
+
+for (const [peer, range] of [
+  ['react', '>=19 <20'],
+  ['svelte', '>=5 <6'],
+  ['vue', '>=3.5 <4'],
+]) {
+  if (pkg.peerDependencies?.[peer] !== range) {
+    problems.push(`${peer} must be declared as the supported framework declaration peer (${range}).`);
+  }
+  if (pkg.peerDependenciesMeta?.[peer]?.optional !== true) {
+    problems.push(`${peer} must stay optional for consumers that do not import its declaration entry.`);
+  }
+  if (!pkg.devDependencies?.[peer]) {
+    problems.push(`${peer} must be installed as a dev dependency so generated declarations type-check.`);
+  }
+}
+if (!pkg.devDependencies?.['@types/react']) {
+  problems.push('@types/react must be installed so the React declaration entry type-checks.');
 }
 
 const sideEffects = new Set(Array.isArray(pkg.sideEffects) ? pkg.sideEffects : []);

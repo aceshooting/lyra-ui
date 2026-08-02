@@ -65,6 +65,8 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * @csspart value - The value text.
  * @csspart label - The label text.
  * @cssprop [--lr-gauge-fill=var(--lr-color-brand)] - Fill stroke for radial, ring, and linear gauges.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraGauge extends LyraElement {
   static override styles = [LyraElement.styles, styles];

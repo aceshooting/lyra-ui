@@ -4,7 +4,8 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
 **Properties:**
 - `nodes: GraphNode[] = []` (attribute: false) — `GraphNode { id: string; label?: string;
-  accessibleLabel?: string; description?: string; radius?: number; color?: string; type?: string }`;
+  accessibleLabel?: string; description?: string; radius?: number; color?: string; type?: string;
+  expandable?: boolean; communityId?: string }`;
   `accessibleLabel` supplies richer spoken text than the visible label, while `description` renders
   as native SVG `<title>` tooltip text. `radius` is clamped to `[6, 24]` (an unset/non-finite value
   falls back to the midpoint, `15`) so a node can never render invisibly small or absurdly large.
@@ -20,6 +21,10 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   `--lr-node-fill` default; both data-driven color sources are sanitized the same way as
   `GraphNode.color` itself. A typed node with no matching `nodeTypes` entry renders as a plain
   circle with the untyped default fill
+- `hiddenTypes: string[] = []` (attribute: false) — hides nodes whose raw `type` is listed and every
+  incident link from rendering, layout, keyboard navigation, the data-list alternative, and the
+  accessible counts. Hidden positions are retained by id, so showing a type restores its prior
+  layout even when no matching `nodeTypes` entry exists
 - `links: GraphLink[] = []` (attribute: false) — `GraphLink { id?: string; source: string; target:
   string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
   boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
@@ -121,6 +126,9 @@ behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
 `--lr-graph-hull-opacity` (default `0.12`) — hull element opacity (composites fill+stroke as one).
 Under `renderer="canvas"` these five are read from computed style at paint time (there are no
 per-node elements to inherit them), so they must be set on or above the `<lr-graph>` host itself.
+The canvas repaints when inherited theme inputs change (including ancestor class/data attributes,
+adopted stylesheets, and media-query theme transitions); a host does not need to reassign `nodes`
+to make new token values visible.
 
 **Optional peer deps:** `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` (all four required
 together; lazy-`import()`ed once per page). Each loaded module is validated for the named callable
@@ -130,7 +138,9 @@ localized `part="error"` alert. Install with
 
 ```html
 <lr-graph style="display:block;height:500px"></lr-graph>
-<script>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';
+
   const g = document.querySelector('lr-graph');
   g.nodes = [
     { id: 'a', label: 'A', accessibleLabel: 'Source document A', description: 'The source document' },
@@ -209,9 +219,11 @@ of the box with no host styling required); a host typically computes the set fro
 `lr-node-enter`/`lr-link-enter` hover (the complement of the hovered id's neighbor set) and assigns
 it back — `lr-knowledge-graph-explorer`'s own `highlight` property is exactly this composition,
 built-in. Empty (the default) renders every node/link at full opacity, unchanged from today.
-`communities: GraphCommunity[] = []` (attribute:
-false) draws one translucent convex-hull blob per entry behind links/nodes. `focusId: string | null =
-null` (attribute `focus-id`) tracks a persistent focus ring (`[part="focus-halo"]`) around one node;
+`communities: GraphCommunity[] = []` (attribute: false) draws one translucent convex-hull blob per
+entry behind links/nodes. Each entry is `GraphCommunity { id: string; label?: string; memberIds:
+string[]; color?: string }`; membership is the union of `memberIds` and nodes whose `communityId`
+matches the entry id. `focusId: string | null = null` (attribute `focus-id`) tracks a persistent
+focus ring (`[part="focus-halo"]`) around one node;
 `focusNode(id, options?)` and `fit(options?)` are the imperative camera-tween counterparts (pan/zoom
 to a node, or to fit the whole graph), both resolving once the tween settles. `lr-viewport-change`
 (`detail: { k, x, y }`, the live d3-zoom camera transform) fires at most once per animation frame,

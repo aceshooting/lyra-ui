@@ -8,15 +8,16 @@ Every `lr-*` component resolves its styling through this two-layer token system,
 1. **`--lr-theme-*` — the application input layer.** Set these (on `:root`, or any ancestor of a
    subtree) to retheme. This is the only supported theming mechanism; never hardcode a color,
    spacing, or font value that fights it.
-2. **`--lr-*` — the internal layer.** Each reads one `--lr-theme-*` input with a hardcoded
-   fallback, so every component renders correctly with no theme configured at all.
+2. **`--lr-*` — the internal layer.** Direct theme-backed tokens read a `--lr-theme-*` input
+   with a built-in fallback. Other tokens are aliases, computed or environment-backed values,
+   or fixed contract constants. Every component renders correctly with no theme configured.
 
 For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once and put
 `class="lr-light"`/`class="lr-dark"` (or `data-lr-theme="light"`/`"dark"`) on an ancestor.
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 
-## Themeable inputs (277)
+## Direct theme-backed tokens (279)
 
 | Internal token | `--lr-theme-*` input | Fallback |
 |---|---|---|
@@ -218,6 +219,8 @@ override a single element without touching the shared layer.
 | `--lr-duration-fast` | `--lr-theme-duration-fast` | `120ms` |
 | `--lr-duration-base` | `--lr-theme-duration-normal` | `180ms` |
 | `--lr-duration-ambient` | `--lr-theme-duration-slow` | `1.8s` |
+| `--lr-duration-icon` | `--lr-theme-duration-icon` | `1s` |
+| `--lr-otp-input-segment-size` | `--lr-theme-otp-input-segment-size` | `2.5em` |
 | `--lr-easing-standard` | `--lr-theme-easing-standard` | `ease-out` |
 | `--lr-easing-emphasized` | `--lr-theme-easing-emphasized` | `ease-in-out` |
 | `--lr-easing-linear` | `--lr-theme-easing-linear` | `linear` |
@@ -298,9 +301,11 @@ override a single element without touching the shared layer.
 | `--lr-terminal-bg-bright-cyan` | `--lr-theme-terminal-bg-bright-cyan` | `#286f76` |
 | `--lr-terminal-bg-bright-white` | `--lr-theme-terminal-bg-bright-white` | `#696969` |
 
-## Derived tokens (343)
+## Derived and fixed tokens (346)
 
-Computed from the layer above; not directly themeable.
+These do not directly read a `--lr-theme-*` input. Aliases and computed values still follow
+the tokens or environment values they reference; fixed contract constants are intentionally
+not theme inputs.
 
 | Token | Value |
 |---|---|
@@ -522,6 +527,8 @@ Computed from the layer above; not directly themeable.
 | `--lr-duration-fast` | `var(--lr-theme-duration-fast, 120ms)` |
 | `--lr-duration-base` | `var(--lr-theme-duration-normal, 180ms)` |
 | `--lr-duration-ambient` | `var(--lr-theme-duration-slow, 1.8s)` |
+| `--lr-duration-icon` | `var(--lr-theme-duration-icon, 1s)` |
+| `--lr-otp-input-segment-size` | `var(--lr-theme-otp-input-segment-size, 2.5em)` |
 | `--lr-easing-standard` | `var(--lr-theme-easing-standard, ease-out)` |
 | `--lr-easing-emphasized` | `var(--lr-theme-easing-emphasized, ease-in-out)` |
 | `--lr-easing-linear` | `var(--lr-theme-easing-linear, linear)` |
@@ -606,6 +613,7 @@ Computed from the layer above; not directly themeable.
 | `--lr-duration-fast` | `0.001ms` |
 | `--lr-duration-base` | `0.001ms` |
 | `--lr-duration-ambient` | `0.001ms` |
+| `--lr-duration-icon` | `0.001ms` |
 | `--lr-easing-standard` | `linear` |
 | `--lr-easing-emphasized` | `linear` |
 | `--lr-transition-fast` | `0.001ms linear` |

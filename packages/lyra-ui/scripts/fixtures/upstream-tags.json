@@ -179,11 +179,7 @@
       "sl-visually-hidden"
     ]
   },
-  "noCounterpart": {
-    "wa-page": "The required lr-page target is not registered yet, so automatic migration must remain disabled until its full public contract ships.",
-    "wa-video": "The required lr-video target is not registered yet, so automatic migration must remain disabled until its full public contract ships.",
-    "wa-video-playlist": "The required lr-video-playlist target is not registered yet, so automatic migration must remain disabled until its full public contract ships."
-  },
+  "noCounterpart": {},
   "attributeRenames": [
     {
       "component": "lr-dialog",
@@ -196,6 +192,18 @@
       "from": "light-dismiss",
       "to": "light-dismiss",
       "upstream": "wa-drawer"
+    },
+    {
+      "component": "lr-dropdown-item",
+      "from": "submenuOpen",
+      "to": "submenu-open",
+      "upstream": "wa-dropdown-item"
+    },
+    {
+      "component": "lr-carousel",
+      "from": "currentSlide",
+      "to": "current-slide",
+      "upstream": "wa-carousel"
     },
     {
       "component": "lr-pagination",
@@ -238,6 +246,12 @@
       "from": "selected",
       "to": "selected",
       "upstream": "sl-tree-item"
+    },
+    {
+      "component": "lr-slider",
+      "from": "default-value",
+      "to": "value",
+      "upstream": "sl-range"
     }
   ]
 }

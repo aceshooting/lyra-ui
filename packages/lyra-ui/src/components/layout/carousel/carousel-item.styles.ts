@@ -8,5 +8,6 @@ export const styles = css`
 
   [part='base'] {
     min-inline-size: 0;
+    aspect-ratio: var(--aspect-ratio, auto);
   }
 `;

@@ -1,5 +1,6 @@
 export * from './calendar/calendar.js';
 export * from './context-meter/context-meter.js';
+export * from './data-grid/data-grid.js';
 export * from './document-library/document-library.js';
 export * from './env-list/env-list.js';
 export * from './file-tree/file-tree.js';

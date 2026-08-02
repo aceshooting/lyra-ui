@@ -8,11 +8,13 @@ import {
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
-import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
-import { closeIcon, calendarIcon } from '../../../internal/icons.js';
-import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
+import { closeIcon, calendarIcon, chevronIcon } from '../../../internal/icons.js';
+import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import {
   dateTimeFormat,
   parseISO,
@@ -22,13 +24,24 @@ import {
   type WeekdayFormat,
 } from './calendar-core.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './date-input.styles.js';
-import { LyraDatePicker } from './date-picker.class.js';
+import {
+  LyraDatePicker,
+  type DateRange,
+  type LyraDatePickerDayContent,
+  type LyraDatePickerDisabledDates,
+  type LyraDatePickerPageBy,
+} from './date-picker.class.js';
 import './date-picker.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { isImplicitSubmission, submitOnEnter } from '../../../internal/submit-on-enter.js';
+import {
+  dispatchNativeEvent,
+  dispatchNativeInputEvent,
+  relayNativeEvent,
+} from '../../../internal/native-event-relay.js';
 
 /** Determines the locale's day/month/year field order from a real formatted
  *  sample (Jan 2, 2026 -- a date where day/month/year are all numerically
@@ -63,19 +76,103 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
   toAttribute: normalizeWeekdayFormat,
 };
 
+function normalizeDateInputAppearance(value: unknown): LyraDateInputAppearance {
+  return value === 'filled' || value === 'filled-outlined' ? value : 'outlined';
+}
+
+const appearanceConverter: ComplexAttributeConverter<LyraDateInputAppearance> = {
+  fromAttribute: normalizeDateInputAppearance,
+  toAttribute: normalizeDateInputAppearance,
+};
+
+const placements: ReadonlySet<string> = new Set([
+  'top', 'top-start', 'top-end', 'right', 'right-start', 'right-end',
+  'bottom', 'bottom-start', 'bottom-end', 'left', 'left-start', 'left-end',
+]);
+
+function normalizeDateInputPlacement(value: unknown): LyraDateInputPlacement {
+  return typeof value === 'string' && placements.has(value)
+    ? value as LyraDateInputPlacement
+    : 'bottom-start';
+}
+
+const placementConverter: ComplexAttributeConverter<LyraDateInputPlacement> = {
+  fromAttribute: normalizeDateInputPlacement,
+  toAttribute: normalizeDateInputPlacement,
+};
+
+function normalizeDateInputPageBy(value: unknown): LyraDatePickerPageBy {
+  return value === 'single' ? 'single' : 'months';
+}
+
+const pageByConverter: ComplexAttributeConverter<LyraDatePickerPageBy> = {
+  fromAttribute: normalizeDateInputPageBy,
+  toAttribute: normalizeDateInputPageBy,
+};
+
 export type LyraDateInputSelectionDirection = 'forward' | 'backward' | 'none';
+export type LyraDateInputAppearance = Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>;
+export type LyraDateInputPlacement =
+  | 'top' | 'top-start' | 'top-end'
+  | 'right' | 'right-start' | 'right-end'
+  | 'bottom' | 'bottom-start' | 'bottom-end'
+  | 'left' | 'left-start' | 'left-end';
+export type LyraDateInputFirstDayOfWeek =
+  | 'auto' | 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
+export type LyraDateInputValidatorResult = void | boolean | string | ValidityStateFlags;
+/** Result shape accepted from object validators used by the upstream form-control contract. */
+export interface LyraDateInputObjectValidatorResult {
+  message: string;
+  isValid: boolean;
+  invalidKeys: Exclude<keyof ValidityState, 'valid'>[];
+}
+/** Structural compatibility shape for an object validator. The `never` callback input is
+ * intentional: it lets an array typed by another custom-element package remain assignable while
+ * Lyra invokes the callback with this host at runtime. Author new Lyra validators with the
+ * strongly typed function or `validate()` branches of {@linkcode LyraDateInputValidator}. */
+export interface LyraDateInputObjectValidator {
+  /** Host attributes that trigger a fresh validity check when they change. */
+  observedAttributes?: string[];
+  checkValidity: (input: never) => LyraDateInputObjectValidatorResult;
+  message?: string | ((input: never) => string);
+}
+
+const VALIDITY_FLAG_KEYS: ReadonlySet<string> = new Set<keyof ValidityStateFlags>([
+  'badInput',
+  'customError',
+  'patternMismatch',
+  'rangeOverflow',
+  'rangeUnderflow',
+  'stepMismatch',
+  'tooLong',
+  'tooShort',
+  'typeMismatch',
+  'valueMissing',
+]);
+
+function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
+  return typeof value === 'string' && VALIDITY_FLAG_KEYS.has(value);
+}
+
+export type LyraDateInputValidator =
+  | ((value: string, input: LyraDateInput) => LyraDateInputValidatorResult)
+  | { validate(value: string, input: LyraDateInput): LyraDateInputValidatorResult }
+  | LyraDateInputObjectValidator;
 /** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
  *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
 export type LyraDateInputSize = LyraSizeStep;
 
 export interface LyraDateInputEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   'lr-show': CustomEvent<undefined>;
+  'lr-after-show': CustomEvent<undefined>;
   'lr-hide': CustomEvent<undefined>;
+  'lr-after-hide': CustomEvent<undefined>;
   'lr-clear': CustomEvent<undefined>;
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  input: InputEvent;
+  change: Event;
+  blur: FocusEvent;
+  focus: FocusEvent;
 }
 class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
 
@@ -95,19 +192,30 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * tier (mirroring `lr-input`'s own password-toggle button), so only the field's density scales.
  *
  * @customElement lr-date-input
- * @event input - Fired on edits.
- * @event change - Fired on committed date transitions.
- * @event lr-show - The calendar popover opened.
- * @event lr-hide - The calendar popover closed.
+ * @event {InputEvent} input - Fired on edits as a bubbling, composed, non-cancelable native event.
+ * @event {Event} change - Fired on committed date transitions as a bubbling, composed,
+ *   non-cancelable native event.
+ * @event lr-show - Fired before the calendar popover opens; cancelable.
+ * @event lr-after-show - The calendar popover finished opening.
+ * @event lr-hide - Fired before the calendar popover closes; cancelable.
+ * @event lr-after-hide - The calendar popover finished closing.
  * @event lr-clear - The clear button was used.
- * @event blur - Re-dispatched from the internal `<input>`'s own `blur`, bubbling and composed
- *   unlike the native event.
- * @event focus - Re-dispatched from the internal `<input>`'s own `focus`, for the same reason as
- *   `blur`.
+ * @event {FocusEvent} blur - Re-dispatched from the internal `<input>`'s own `blur` as a bubbling,
+ *   composed, non-cancelable event, unlike the native event.
+ * @event {FocusEvent} focus - Re-dispatched from the internal `<input>`'s own `focus` as a
+ *   bubbling, composed, non-cancelable event, unlike the native event.
+ * @event lr-invalid - The date input failed a validity check.
+ * @csspart date-input - The date-input wrapper.
+ * @csspart base - Deprecated alias wrapper for `date-input`.
  * @csspart form-control - The outer form-control wrapper.
  * @csspart form-control-label - The label wrapper.
+ * @csspart label - Deprecated label alias.
+ * @csspart form-control-input - The editable date surface.
  * @csspart input-wrapper - The input and button wrapper.
  * @csspart input - The text input.
+ * @csspart segment - The editable date segment wrapper.
+ * @csspart segment-literal - A literal inside the editable date surface.
+ * @csspart range-separator - The range separator.
  * @csspart start - Wrapper around the `start` adornment slot; `hidden` while nothing is slotted.
  * @csspart end - Wrapper around the `end` adornment slot; `hidden` while nothing is slotted.
  * @csspart clear-button - The clear control.
@@ -134,27 +242,44 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   default, so the row grows to fit its content (floored by `--lr-date-input-control-min-height`).
  *   Set it to pin a fixed height; the calendar toggle keeps its own 24x24 touch target even when
  *   this pins a shorter row.
+ * @cssprop [--show-duration=var(--lr-transition-fast)] - Popup enter-transition duration.
+ * @cssprop [--hide-duration=var(--lr-transition-fast)] - Popup exit-transition duration.
  * @slot label - Custom label content.
- * @slot error - Custom error content.
  * @slot hint - Custom hint content.
  * @slot start - Adornment at the inline-start of the input row, before the text field.
  * @slot end - Adornment after the text field and the built-in clear action, and before the
  *   calendar toggle — so consumer content never sits outboard of the calendar button.
+ * @slot clear-icon - Replaces the clear icon.
+ * @slot expand-icon - Replaces the calendar icon.
+ * @slot previous-icon - Replaces the previous-month icon in the calendar.
+ * @slot next-icon - Replaces the next-month icon in the calendar.
+ * @slot footer - Calendar footer content.
+ * @slot day-YYYY-MM-DD - Content for an individual ISO calendar day.
+ * @slot error - Lyra extension for custom validation markup.
+ * @cssstate blank - Matches while the committed value is empty.
+ * @cssstate disabled - Matches while disabled directly or through an ancestor fieldset.
+ * @cssstate open - Matches while the calendar popover is open.
+ * @cssstate range - Matches while `mode="range"` is active.
+ * @status experimental
+ * @since 4.0.0
  */
 export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
-    mode: { noAccessor: true },
-    min: { noAccessor: true },
-    max: { noAccessor: true },
+    mode: { reflect: true, noAccessor: true },
+    min: { reflect: true, noAccessor: true },
+    max: { reflect: true, noAccessor: true },
     readonly: { type: Boolean, reflect: true, noAccessor: true },
-    disablePast: { type: Boolean, attribute: 'disable-past', noAccessor: true },
-    disableFuture: { type: Boolean, attribute: 'disable-future', noAccessor: true },
+    disablePast: { type: Boolean, attribute: 'disable-past', reflect: true, noAccessor: true },
+    disableFuture: { type: Boolean, attribute: 'disable-future', reflect: true, noAccessor: true },
   };
 
+  @property({ converter: appearanceConverter, reflect: true }) appearance: LyraDateInputAppearance = 'outlined';
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
+  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with
    *  `lr-input`/`lr-select`/`lr-combobox`. `'2xs'` is the tightest tier, for dense
    *  toolbar-embedded fields. The Web Awesome / Shoelace spellings `small`/`medium`/`large` are
@@ -197,10 +322,30 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  forwarding without setting a JS property. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() override locale = '';
-  @property({ converter: monthsConverter }) months: 1 | 2 = 1;
-  @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
-  @property({ attribute: 'weekday-format', converter: weekdayFormatConverter }) weekdayFormat: WeekdayFormat = 'short';
-  @property({ type: Boolean, attribute: 'with-outside-days' }) withOutsideDays = false;
+  @property({ converter: monthsConverter, reflect: true }) months: 1 | 2 = 1;
+  @property({ attribute: 'first-day-of-week', reflect: true }) firstDayOfWeek: LyraDateInputFirstDayOfWeek = 'auto';
+  @property({ attribute: 'weekday-format', converter: weekdayFormatConverter, reflect: true }) weekdayFormat: WeekdayFormat = 'short';
+  @property({ type: Boolean, attribute: 'with-outside-days', reflect: true }) withOutsideDays = false;
+  @property({ type: Boolean, attribute: 'with-week-numbers', reflect: true }) withWeekNumbers = false;
+  @property({ attribute: 'disabled-dates' }) disabledDates: LyraDatePickerDisabledDates = '';
+  @property({ attribute: 'disabled-days-of-week' }) disabledDaysOfWeek = '';
+  /** Optional JavaScript predicate that disables matching calendar dates. */
+  @property({ attribute: false }) isDateDisabled?: (date: Date) => boolean;
+  /** Optional JavaScript renderer for individual calendar-day content. */
+  @property({ attribute: false }) dayContent?: LyraDatePickerDayContent;
+  @property({ type: Number, attribute: 'min-range', reflect: true }) minRange = 0;
+  @property({ type: Number, attribute: 'max-range', reflect: true }) maxRange = 0;
+  @property({ converter: pageByConverter, attribute: 'page-by', reflect: true }) pageBy: LyraDatePickerPageBy = 'months';
+  @property({ reflect: true }) today = '';
+  @property({ type: Number, reflect: true }) distance = 0;
+  @property({ converter: placementConverter, reflect: true }) placement: LyraDateInputPlacement = 'bottom-start';
+  /** Event names that mark the control as user-interacted for `:state(user-*)` styling. */
+  @property({ attribute: false }) assumeInteractionOn: string[] = ['input'];
+  /** Additional JavaScript validators run after the intrinsic date constraints. Accepts a
+   * function, an object with `validate(value, input)`, or the mapped object-validator shape with
+   * `checkValidity(input)` and `{ isValid, message, invalidKeys }` results. Object validators can
+   * list host `observedAttributes` that should trigger live revalidation. */
+  @property({ attribute: false }) validators: LyraDateInputValidator[] = [];
   /** Accessible label for the clear button. Override for a non-English `locale`. */
   @property({ attribute: 'clear-label' }) clearLabel = '';
   /** Accessible label for the calendar-toggle button. Override for a non-English `locale`. */
@@ -211,14 +356,24 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   @property({ attribute: 'dialog-label' }) dialogLabel = 'Choose date';
 
   @query('input[part="input"]') private inputElement?: HTMLInputElement;
+  private validationTargetOverride?: HTMLElement;
   /** Raw text the Enter key already committed, or `null`. Lets `onInputChange()` recognise -- and
    *  ignore -- the native `change` the browser fires for that very same keystroke, which would
    *  otherwise re-commit the identical text and emit a second `input`/`change` pair. */
   private enterCommittedText: string | null = null;
+  /** Whether the internal text field already relayed the native input event for the edit that is
+   *  about to commit. Synthetic test/integration changes can arrive without a preceding input;
+   *  those receive one generated InputEvent so every committed transition keeps the same public
+   *  input/change sequence without duplicating real browser input events. */
+  private inputRelayedSinceCommit = false;
 
   private cleanupFn?: () => void;
-  private popupTrigger?: HTMLElement;
+  private overlayHandle?: OverlayHandle;
   private restorePopupFocusOnClose = false;
+  private transitionToken = 0;
+  private transitionWaiters = new Map<'lr-after-show' | 'lr-after-hide', Set<() => void>>();
+  private interactionListeners = new Map<string, EventListener>();
+  private validatorAttributeObserver?: MutationObserver;
   private inputId = nextId('date-input');
   private popupId = nextId('date-popup');
   // Set on the date input's first `blur`; gates the `data-invalid`
@@ -262,7 +417,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   set mode(next: 'single' | 'range') {
     const old = this._mode;
     this._mode = next === 'range' ? 'range' : 'single';
+    this.internals.setFormValue(this.isIncompleteRangeValue(this.value) ? '' : this.value);
     this.updateValidity();
+    this.syncCustomStates();
     this.requestUpdate('mode', old);
   }
 
@@ -296,7 +453,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const old = this._readonly;
     this._readonly = Boolean(next);
     this.toggleAttribute('readonly', this._readonly);
-    if (this._readonly) this.hide();
+    if (this._readonly) void this.hide();
     this.updateValidity();
     this.requestUpdate('readonly', old);
   }
@@ -307,7 +464,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override set disabled(next: boolean) {
     super.disabled = next;
-    if (next) this.hide();
+    if (next) void this.hide();
+    this.syncCustomStates();
   }
 
   get disablePast(): boolean {
@@ -367,7 +525,56 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override set value(next: string) {
     this.setTypedBadInput(false);
-    super.value = this.normalizeCommittedValue(next ?? '');
+    const normalized = this.normalizeCommittedValue(next ?? '');
+    super.value = normalized;
+    // A first range endpoint is a real live UI value, but it is not yet a complete submitted
+    // range. Native FormData still includes this named control with the empty-string value.
+    this.internals.setFormValue(this.isIncompleteRangeValue(normalized) ? '' : normalized);
+    this.syncCustomStates();
+  }
+
+  get valueAsDate(): Date | null {
+    return this.mode === 'single' ? this.parseStrictISO(this.value) : null;
+  }
+
+  set valueAsDate(next: Date | null) {
+    this.value = next instanceof Date && Number.isFinite(next.getTime()) ? formatISO(next) : '';
+  }
+
+  /** Date-range projection of `value`; writes normalize reversed endpoints and remain event-silent. */
+  get valueAsRange(): DateRange {
+    if (this.mode !== 'range') return { from: null, to: null };
+    const [from = '', to = ''] = this.value.split('/');
+    return { from: this.parseStrictISO(from), to: this.parseStrictISO(to) };
+  }
+
+  set valueAsRange(next: DateRange) {
+    let from = next?.from instanceof Date && Number.isFinite(next.from.getTime()) ? next.from : null;
+    let to = next?.to instanceof Date && Number.isFinite(next.to.getTime()) ? next.to : null;
+    if (from && to && to < from) [from, to] = [to, from];
+    this.value = from ? (to ? `${formatISO(from)}/${formatISO(to)}` : formatISO(from)) : '';
+  }
+
+  /** Native input used as the browser validation bubble's focus anchor. */
+  get validationTarget(): HTMLElement | undefined {
+    return this.validationTargetOverride ?? this.inputElement;
+  }
+
+  set validationTarget(next: HTMLElement | undefined) {
+    const old = this.validationTarget;
+    this.validationTargetOverride = next ?? undefined;
+    this.requestUpdate('validationTarget', old);
+  }
+
+  /** @internal */
+  [VALIDITY_ANCHOR](): HTMLElement | undefined {
+    return this.validationTarget;
+  }
+
+  /** Clear consumer-supplied validity, then recompute intrinsic and configured validators. */
+  override resetValidity(): void {
+    this.setCustomValidity('');
+    this.updateValidity();
   }
 
   private setTypedBadInput(next: boolean): void {
@@ -408,6 +615,75 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     return dates.some((date) => date === null) ? null : (dates as Date[]);
   }
 
+  private configuredDisabledDateKeys(): Set<string> {
+    const values = Array.isArray(this.disabledDates)
+      ? this.disabledDates
+      : String(this.disabledDates || '').split(/[\s,]+/);
+    return new Set(
+      values
+        .map((value) => value instanceof Date ? value : parseISO(String(value)))
+        .filter((value): value is Date => value instanceof Date && Number.isFinite(value.getTime()))
+        .map((value) => formatISO(value)),
+    );
+  }
+
+  private configuredDisabledWeekdays(): Set<number> {
+    const names: Record<string, number> = {
+      sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tues: 2, tuesday: 2,
+      wed: 3, wednesday: 3, thu: 4, thur: 4, thurs: 4, thursday: 4,
+      fri: 5, friday: 5, sat: 6, saturday: 6,
+    };
+    return new Set(
+      String(this.disabledDaysOfWeek || '')
+        .toLowerCase()
+        .split(/[\s,]+/)
+        .filter(Boolean)
+        .map((value) => names[value] ?? (/^[0-6]$/.test(value) ? Number(value) : -1))
+        .filter((value) => value >= 0),
+    );
+  }
+
+  private rangeLength(from: Date, to: Date): number {
+    const fromUtc = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+    const toUtc = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+    return Math.round(Math.abs(toUtc - fromUtc) / 86_400_000) + 1;
+  }
+
+  private validatorResult(): { flags?: ValidityStateFlags; message?: string } {
+    for (const validator of Array.isArray(this.validators) ? this.validators : []) {
+      let result: LyraDateInputValidatorResult;
+      try {
+        if (typeof validator === 'object' && validator !== null && 'checkValidity' in validator) {
+          const checked = validator.checkValidity(this as never);
+          if (checked?.isValid === true) continue;
+          const flags: ValidityStateFlags = {};
+          for (const key of Array.isArray(checked?.invalidKeys) ? checked.invalidKeys : []) {
+            if (isValidityFlagKey(key)) flags[key] = true;
+          }
+          if (!Object.values(flags).some(Boolean)) flags.customError = true;
+          let message = typeof checked?.message === 'string' ? checked.message : '';
+          if (!message && typeof validator.message === 'string') message = validator.message;
+          if (!message && typeof validator.message === 'function') {
+            message = validator.message(this as never);
+          }
+          return { flags, message: message || this.localize('dateInputInvalid') };
+        }
+        result = typeof validator === 'function'
+          ? validator(this.value, this)
+          : validator?.validate(this.value, this);
+      } catch {
+        return { flags: { customError: true }, message: this.localize('dateInputInvalid') };
+      }
+      if (result === undefined || result === true) continue;
+      if (typeof result === 'string') return { flags: { customError: true }, message: result };
+      if (result === false) return { flags: { customError: true }, message: this.localize('dateInputInvalid') };
+      if (result && typeof result === 'object' && Object.values(result).some(Boolean)) {
+        return { flags: result, message: this.localize('dateInputInvalid') };
+      }
+    }
+    return {};
+  }
+
   protected updateValidity(): void {
     if (this.readonly) {
       this[SET_ANCHORED_VALIDITY]({});
@@ -428,8 +704,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       } else {
         const min = this.parseStrictISO(this.min);
         const max = this.parseStrictISO(this.max);
-        const today = this.now();
-        today.setHours(0, 0, 0, 0);
+        const configuredToday = this.parseStrictISO(this.today);
+        const now = configuredToday ?? this.now();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         if (min !== null && dates.some((date) => date < min)) {
           flags.rangeUnderflow = true;
           underflowMessage = this.localize('dateInputMinMessage', undefined, { min: this.min });
@@ -446,11 +723,41 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
           flags.rangeOverflow = true;
           overflowMessage ||= this.localize('dateInputFutureDisabled');
         }
+        const disabledDates = this.configuredDisabledDateKeys();
+        const disabledWeekdays = this.configuredDisabledWeekdays();
+        let configuredDisabled = dates.some(
+          (date) => disabledDates.has(formatISO(date)) || disabledWeekdays.has(date.getDay()),
+        );
+        if (!configuredDisabled && this.isDateDisabled) {
+          try {
+            configuredDisabled = dates.some((date) => Boolean(this.isDateDisabled?.(new Date(date.getTime()))));
+          } catch {
+            configuredDisabled = false;
+          }
+        }
+        if (configuredDisabled) flags.customError = true;
+        if (this.mode === 'range' && dates.length === 2) {
+          const length = this.rangeLength(dates[0]!, dates[1]!);
+          const minimum = finiteCount(this.minRange, 0);
+          const maximum = finiteCount(this.maxRange, 0);
+          if (minimum > 0 && length < minimum) {
+            flags.rangeUnderflow = true;
+            underflowMessage ||= this.localize('dateInputInvalid');
+          }
+          if (maximum > 0 && length > maximum) {
+            flags.rangeOverflow = true;
+            overflowMessage ||= this.localize('dateInputInvalid');
+          }
+        }
       }
     }
 
+    const configured = this.validatorResult();
+    if (configured.flags) Object.assign(flags, configured.flags);
+
     let message = '';
-    if (flags.badInput) message = this.localize('dateInputInvalid');
+    if (configured.message) message = configured.message;
+    else if (flags.badInput || flags.customError) message = this.localize('dateInputInvalid');
     else if (flags.rangeUnderflow) message = underflowMessage;
     else if (flags.rangeOverflow) message = overflowMessage;
     else if (flags.valueMissing) message = this.localize('fieldRequired');
@@ -495,89 +802,232 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     }
     if (changed.has('open')) {
       if (this.open) {
-        if (!this.popupTrigger) {
-          const active = deepActiveElement(this.ownerDocument);
-          this.popupTrigger = active && typeof (active as HTMLElement).focus === 'function' ? (active as HTMLElement) : undefined;
-        }
         this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
       } else {
         this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
-        const active = deepActiveElement(this.ownerDocument);
-        const popup = this.renderRoot.querySelector('[part="popup"]');
-        const restoreFocus = this.restorePopupFocusOnClose || (popup !== null && composedContains(popup, active));
-        const trigger = this.popupTrigger;
-        this.popupTrigger = undefined;
-        this.restorePopupFocusOnClose = false;
-        if (restoreFocus && trigger?.isConnected) trigger.focus();
       }
     }
   }
 
-  /** Open the calendar popover. */
-  show(): void {
-    if (this.open || this.effectiveDisabled || this.readonly) return;
+  /** Open the calendar popover, unless the cancelable `lr-show` request is vetoed. */
+  show(): Promise<void> {
+    if (this.open || this.effectiveDisabled || this.readonly) return Promise.resolve();
+    const request = this.emit('lr-show', undefined, { cancelable: true });
+    if (request.defaultPrevented) return Promise.resolve();
+    this.resolveTransitionWaiters('lr-after-hide');
+    const settled = this.waitForTransition('lr-after-show');
     this.open = true;
-    this.emit('lr-show');
+    void this.settleTransition('lr-after-show');
+    return settled;
   }
-  /** Close the calendar popover. */
-  hide(restoreFocus = false): void {
-    if (!this.open) return;
+  /** Close the calendar popover, unless the cancelable `lr-hide` request is vetoed. */
+  hide(restoreFocus = false): Promise<void> {
+    if (!this.open) return Promise.resolve();
+    const request = this.emit('lr-hide', undefined, { cancelable: true });
+    if (request.defaultPrevented) return Promise.resolve();
+    this.resolveTransitionWaiters('lr-after-show');
+    const settled = this.waitForTransition('lr-after-hide');
     this.restorePopupFocusOnClose ||= restoreFocus;
     this.open = false;
-    this.emit('lr-hide');
+    void this.settleTransition('lr-after-hide');
+    return settled;
   }
   private onDocPointer = (e: PointerEvent): void => {
-    if (!e.composedPath().includes(this)) this.hide();
+    if (!e.composedPath().includes(this)) void this.hide(false);
   };
+
+  private async settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
+    const token = ++this.transitionToken;
+    await this.updateComplete;
+    if (this.transitionToken !== token) return;
+    if (this.isConnected) {
+      const view = this.ownerDocument.defaultView;
+      if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
+      if (this.transitionToken !== token) return;
+      const popup = this.renderRoot.querySelector('[part="popup"]');
+      const animations = popup?.getAnimations({ subtree: true }) ?? [];
+      await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
+      if (this.transitionToken !== token) return;
+    }
+    this.emit(event);
+    this.resolveTransitionWaiters(event);
+  }
+
+  private waitForTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const waiters = this.transitionWaiters.get(event) ?? new Set<() => void>();
+      waiters.add(resolve);
+      this.transitionWaiters.set(event, waiters);
+    });
+  }
+
+  private resolveTransitionWaiters(event: 'lr-after-show' | 'lr-after-hide'): void {
+    const waiters = this.transitionWaiters.get(event);
+    if (!waiters) return;
+    this.transitionWaiters.delete(event);
+    for (const resolve of waiters) resolve();
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.ownerDocument.addEventListener('visibilitychange', this.onVisibilityChange);
+    this.syncInteractionListeners();
+    this.syncValidatorAttributeObserver();
+    this.syncCustomStates();
   }
 
   /** Clear the value. */
   clear(): void {
+    if (!this.value || this.effectiveDisabled || this.readonly) return;
     // Matches how `onInputBlur` already flips this on the first blur -- an
     // explicit user-initiated clear() is itself an interaction, so a
     // required-and-now-empty field must surface its invalid state right
     // away instead of silently looking valid until some later blur.
     this.touched = true;
     this.value = '';
-    this.emit('input');
-    this.emit('change');
     this.emit('lr-clear');
+    this.inputRelayedSinceCommit = false;
+    dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
+    dispatchNativeEvent(this, 'change');
+  }
+
+  private syncInteractionListeners(): void {
+    const requested = new Set(
+      (Array.isArray(this.assumeInteractionOn) ? this.assumeInteractionOn : [])
+        .filter((name): name is string => typeof name === 'string' && name.length > 0),
+    );
+    for (const [name, listener] of this.interactionListeners) {
+      if (requested.has(name)) continue;
+      this.removeEventListener(name, listener);
+      this.interactionListeners.delete(name);
+    }
+    for (const name of requested) {
+      if (this.interactionListeners.has(name)) continue;
+      const listener: EventListener = () => {
+        this.touched = true;
+        this.syncCustomStates();
+      };
+      this.addEventListener(name, listener);
+      this.interactionListeners.set(name, listener);
+    }
+  }
+
+  private syncValidatorAttributeObserver(): void {
+    this.validatorAttributeObserver?.disconnect();
+    this.validatorAttributeObserver = undefined;
+    if (!this.isConnected || typeof MutationObserver === 'undefined') return;
+
+    const attributes = new Set<string>();
+    for (const validator of Array.isArray(this.validators) ? this.validators : []) {
+      if (typeof validator !== 'object' || validator === null || !('checkValidity' in validator)) continue;
+      let observed: unknown;
+      try {
+        observed = validator.observedAttributes;
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(observed)) continue;
+      for (const name of observed) {
+        if (typeof name === 'string' && name.length > 0) attributes.add(name);
+      }
+    }
+    if (attributes.size === 0) return;
+
+    const observer = new MutationObserver(() => {
+      if (!this.isConnected) return;
+      this.updateValidity();
+      this.validityRevision++;
+    });
+    try {
+      observer.observe(this, { attributes: true, attributeFilter: [...attributes] });
+      this.validatorAttributeObserver = observer;
+    } catch {
+      observer.disconnect();
+    }
+  }
+
+  private syncCustomStates(): void {
+    setCustomState(this.internals, 'blank', this.value === '');
+    setCustomState(this.internals, 'disabled', this.effectiveDisabled);
+    setCustomState(this.internals, 'open', this.open);
+    setCustomState(this.internals, 'range', this.mode === 'range');
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
+    this.transitionToken++;
     this.cleanupFn?.();
     this.cleanupFn = undefined;
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.overlayHandle = undefined;
     this.ownerDocument.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
-    this.popupTrigger = undefined;
+    this.validatorAttributeObserver?.disconnect();
+    this.validatorAttributeObserver = undefined;
     this.restorePopupFocusOnClose = false;
+    this.resolveTransitionWaiters('lr-after-show');
+    this.resolveTransitionWaiters('lr-after-hide');
+    for (const [name, listener] of this.interactionListeners) this.removeEventListener(name, listener);
+    this.interactionListeners.clear();
     // One keystroke's worth of transient state; a reconnect starts from a clean slate rather than
     // carrying a token that could swallow the first `change` after it.
     this.enterCommittedText = null;
+    this.inputRelayedSinceCommit = false;
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // stuck `true` across the disconnect, `updated()` never sees it
     // *change*, and `place()` never gets called again to re-bind
     // positioning to the (possibly relocated) anchor.
     this.open = false;
+    super.disconnectedCallback();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('open')) {
+    if (
+      changed.has('disabledDates') || changed.has('disabledDaysOfWeek') ||
+      changed.has('isDateDisabled') || changed.has('minRange') || changed.has('maxRange') ||
+      changed.has('today') || changed.has('validators')
+    ) {
+      this.updateValidity();
+    }
+    if (
+      changed.has('open') ||
+      (this.open && (changed.has('placement') || changed.has('distance')))
+    ) {
       this.cleanupFn?.();
       this.cleanupFn = undefined;
       if (this.open) {
         const anchor = this.renderRoot.querySelector('[part="input-wrapper"]') as HTMLElement | null;
         const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
-        if (anchor && popup) this.cleanupFn = place(anchor, popup);
+        if (anchor && popup) {
+          this.cleanupFn = place(anchor, popup, {
+            placement: normalizeDateInputPlacement(this.placement),
+            offset: finiteNumber(this.distance, 0),
+          });
+        }
       }
     }
+    if (changed.has('open')) {
+      if (this.open) {
+        const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
+        if (popup) {
+          this.overlayHandle = activateOverlay({
+            host: this,
+            panel: () => this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null,
+            onEscape: () => { void this.hide(true); },
+            modal: false,
+            trapFocus: false,
+          });
+        }
+      } else {
+        this.overlayHandle?.deactivate({ restoreFocus: this.restorePopupFocusOnClose });
+        this.overlayHandle = undefined;
+        this.restorePopupFocusOnClose = false;
+      }
+    }
+    if (changed.has('assumeInteractionOn')) this.syncInteractionListeners();
+    if (changed.has('validators')) this.syncValidatorAttributeObserver();
+    this.syncCustomStates();
     if (
       changed.has('touched') ||
       changed.has('required') ||
@@ -588,6 +1038,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       changed.has('readonly') ||
       changed.has('disablePast') ||
       changed.has('disableFuture') ||
+      changed.has('disabledDates') ||
+      changed.has('disabledDaysOfWeek') ||
+      changed.has('minRange') ||
+      changed.has('maxRange') ||
+      changed.has('validators') ||
       changed.has('typedBadInput') ||
       changed.has('validityRevision')
     ) {
@@ -631,6 +1086,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   private onInputChange = (e: Event): void => {
+    // The native `change` originates inside this shadow root. Always stop that source and expose
+    // one host-originating equivalent below only when the raw text commits successfully.
+    e.stopPropagation();
     const raw = (e.target as HTMLInputElement).value;
     // The Enter key already committed this text (see `onInputKey`), and the browser fires its own
     // `change` for that same keystroke -- and again on the following blur, by which point the
@@ -645,9 +1103,19 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.enterCommittedText = null;
     const committed = this.applyTypedText(raw);
     if (committed) {
-      this.emit('input');
-      this.emit('change');
+      if (!this.inputRelayedSinceCommit) {
+        dispatchNativeInputEvent(this, { inputType: 'insertReplacementText' });
+      }
+      this.inputRelayedSinceCommit = false;
+      relayNativeEvent(this, e);
+    } else {
+      this.inputRelayedSinceCommit = false;
     }
+  };
+
+  private onInput = (event: InputEvent): void => {
+    this.inputRelayedSinceCommit = true;
+    relayNativeEvent(this, event);
   };
 
   /** Parses one date, ISO-first (so a calendar-invalid ISO string like
@@ -689,7 +1157,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       }
     }
 
-    return isNaN(Date.parse(raw)) ? null : new Date(Date.parse(raw));
+    const timestamp = Date.parse(raw);
+    return Number.isNaN(timestamp) ? null : new Date(timestamp);
   }
 
   private parseSingleText(raw: string): string | null {
@@ -738,8 +1207,13 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (input && input.value !== this.displayText) {
       const raw = input.value;
       if (this.applyTypedText(raw)) {
-        this.emit('input');
-        this.emit('change');
+        if (!this.inputRelayedSinceCommit) {
+          dispatchNativeInputEvent(this, { inputType: 'insertReplacementText' });
+        }
+        this.inputRelayedSinceCommit = false;
+        dispatchNativeEvent(this, 'change');
+      } else {
+        this.inputRelayedSinceCommit = false;
       }
       // Set after the commit, since `applyTypedText()` clears the token itself.
       this.enterCommittedText = raw;
@@ -747,24 +1221,13 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     submitOnEnter(this, e);
   };
 
-  // Attached to the whole form-control, not just the text input, so Escape
-  // closes the popover from anywhere inside it -- including the nested
-  // picker's own day/nav buttons, which take real DOM focus (roving
-  // tabindex) rather than the input keeping focus throughout.
-  private onFormControlKey = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape' && this.open) {
-      e.preventDefault();
-      this.hide(true);
-    }
-  };
-
-  private onInputBlur = (): void => {
+  private onInputBlur = (event: FocusEvent): void => {
     this.touched = true;
-    this.emit('blur');
+    relayNativeEvent(this, event);
   };
 
-  private onInputFocus = (): void => {
-    this.emit('focus');
+  private onInputFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
   };
 
   /** Activate the internal date text input unless the form control is effectively disabled. */
@@ -829,7 +1292,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       formDisabledCallback: (this: LyraDateInput, disabled: boolean) => void;
     };
     parent.formDisabledCallback.call(this, disabled);
-    if (disabled) this.hide();
+    if (disabled) void this.hide();
+    this.syncCustomStates();
   }
 
   private onHintSlotChange = (e: Event): void => {
@@ -856,18 +1320,17 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   // this listener it bubbles+composes straight through this shadow boundary
   // (LyraElement.emit always dispatches bubbles:true, composed:true) and
   // fires on this host a *second* time, on top of the explicit emit below.
-  private onPickerInput = (e: Event): void => {
-    e.stopPropagation();
+  private onPickerInput = (e: InputEvent): void => {
     const picker = e.target as LyraDatePicker;
     this.value = picker.value;
-    this.emit('input');
+    this.inputRelayedSinceCommit = false;
+    relayNativeEvent(this, e);
   };
 
   private onPickerChange = (e: Event): void => {
-    e.stopPropagation();
     const picker = e.target as LyraDatePicker;
     this.value = picker.value;
-    this.emit('change');
+    relayNativeEvent(this, e);
     // The picker only fires `change` once a selection is finalized (a single
     // pick, or the second click of a range), so this is always the right
     // moment to close, in either mode.
@@ -876,106 +1339,140 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override render(): TemplateResult {
     const hasValue = this.value.length > 0;
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
+    const hasHint = this.withHint || this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
-    const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const hasLabel = this.withLabel || this.hasLabelSlot || this.label.length > 0;
     const invalid = this.touched && !this.internals.validity.valid;
     const describedBy = [hasError ? 'date-input-error' : '', hasHint ? 'date-input-hint' : '']
       .filter(Boolean)
       .join(' ');
+    const dynamicDaySlots = [...new Set(
+      Array.from(this.children)
+        .map((child) => child.getAttribute('slot') ?? '')
+        .filter((name) => /^day-\d{4}-\d{2}-\d{2}$/.test(name)),
+    )];
     return html`
-      <div part="form-control" @keydown=${this.onFormControlKey}>
-        <label part="form-control-label" for=${this.inputId} ?hidden=${!hasLabel}>
-          ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
-        </label>
-        <div part="input-wrapper">
-          <span part="start" ?hidden=${!this.hasStartSlot}>
-            <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
-          </span>
-          <input
-            id=${this.inputId}
-            part="input"
-            type="text"
-            aria-label=${this.accessibleLabel || (hasLabel ? nothing : this.placeholder || this.localize('date'))}
-            aria-describedby=${describedBy || nothing}
-            aria-required=${this.required ? 'true' : 'false'}
-            aria-invalid=${invalid ? 'true' : 'false'}
-            spellcheck=${this.spellcheck}
-            autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.autoCorrect || nothing}
-            autocomplete=${this.autocomplete || nothing}
-            inputmode=${this.inputMode || nothing}
-            enterkeyhint=${this.enterKeyHint || nothing}
-            .value=${this.displayText}
-            placeholder=${this.placeholder}
-            ?required=${this.required}
-            ?disabled=${this.effectiveDisabled}
-            ?readonly=${this.readonly}
-            @change=${this.onInputChange}
-            @keydown=${this.onInputKey}
-            @focus=${this.onInputFocus}
-            @blur=${this.onInputBlur}
-          />
-          ${this.withClear && hasValue
-            ? html`<button
-                part="clear-button"
+      <div part="date-input">
+        <div part="base">
+          <div part="form-control">
+            <label part="form-control-label" for=${this.inputId} ?hidden=${!hasLabel}>
+              <span part="label">${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot></span>
+            </label>
+            <div part="input-wrapper">
+              <span part="start" ?hidden=${!this.hasStartSlot}>
+                <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+              </span>
+              <span part="form-control-input">
+                <span part="segment">
+                  <span part="segment-literal" hidden></span>
+                  <input
+                    id=${this.inputId}
+                    part="input"
+                    type="text"
+                    aria-label=${this.accessibleLabel || (hasLabel ? nothing : this.placeholder || this.localize('date'))}
+                    aria-describedby=${describedBy || nothing}
+                    aria-required=${this.required ? 'true' : 'false'}
+                    aria-invalid=${invalid ? 'true' : 'false'}
+                    spellcheck=${this.spellcheck}
+                    autocapitalize=${this.autocapitalize || nothing}
+                    autocorrect=${this.autoCorrect || nothing}
+                    autocomplete=${this.autocomplete || nothing}
+                    inputmode=${this.inputMode || nothing}
+                    enterkeyhint=${this.enterKeyHint || nothing}
+                    .value=${this.displayText}
+                    placeholder=${this.placeholder}
+                    ?required=${this.required}
+                    ?disabled=${this.effectiveDisabled}
+                    ?readonly=${this.readonly}
+                    @input=${this.onInput}
+                    @change=${this.onInputChange}
+                    @keydown=${this.onInputKey}
+                    @focus=${this.onInputFocus}
+                    @blur=${this.onInputBlur}
+                  />
+                </span>
+                <span part="range-separator" hidden aria-hidden="true">–</span>
+              </span>
+              ${this.withClear && hasValue
+                ? html`<button
+                    part="clear-button"
+                    type="button"
+                    ?disabled=${this.effectiveDisabled || this.readonly}
+                    aria-label=${this.localize('clear', this.clearLabel || undefined)}
+                    @click=${() => this.clear()}
+                  >
+                    <slot name="clear-icon">${closeIcon()}</slot>
+                  </button>`
+                : nothing}
+              <span part="end" ?hidden=${!this.hasEndSlot}>
+                <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+              </span>
+              <button
+                part="expand-button"
                 type="button"
+                aria-label=${this.localize('openCalendar', this.openLabel || undefined)}
+                aria-haspopup="dialog"
+                aria-expanded=${this.open ? 'true' : 'false'}
+                aria-controls=${this.popupId}
                 ?disabled=${this.effectiveDisabled || this.readonly}
-                aria-label=${this.localize('clear', this.clearLabel || undefined)}
-                @click=${() => this.clear()}
+                @click=${() => { void (this.open ? this.hide() : this.show()); }}
               >
-                ${closeIcon()}
-              </button>`
-            : ''}
-          <span part="end" ?hidden=${!this.hasEndSlot}>
-            <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
-          </span>
-          <button
-            part="expand-button"
-            type="button"
-            aria-label=${this.localize('openCalendar', this.openLabel || undefined)}
-            aria-haspopup="dialog"
-            aria-expanded=${this.open ? 'true' : 'false'}
-            aria-controls=${this.popupId}
-            ?disabled=${this.effectiveDisabled || this.readonly}
-            @click=${() => (this.open ? this.hide() : this.show())}
-          >
-            <span part="expand-icon" aria-hidden="true">${calendarIcon()}</span>
-          </button>
-        </div>
-        <div
-          id=${this.popupId}
-          part="popup"
-          role="dialog"
-          aria-label=${this.localize(
-            'chooseDate',
-            this.dialogLabel === 'Choose date' ? undefined : this.dialogLabel,
-          )}
-        >
-          <lr-date-picker
-            part="date-picker"
-            .value=${this.value}
-            .mode=${this.mode}
-            .min=${this.min}
-            .max=${this.max}
-            .months=${normalizeCalendarMonths(this.months)}
-            .locale=${this.effectiveLocale}
-            .disabled=${this.effectiveDisabled}
-            .readonly=${this.readonly}
-            .disablePast=${this.disablePast}
-            .disableFuture=${this.disableFuture}
-            .withOutsideDays=${this.withOutsideDays}
-            first-day-of-week=${this.firstDayOfWeek}
-            .weekdayFormat=${normalizeWeekdayFormat(this.weekdayFormat)}
-            @input=${this.onPickerInput}
-            @change=${this.onPickerChange}
-          ></lr-date-picker>
-        </div>
-        <div id="date-input-error" part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
-        </div>
-        <div id="date-input-hint" part="hint" ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+                <span part="expand-icon" aria-hidden="true"><slot name="expand-icon">${calendarIcon()}</slot></span>
+              </button>
+            </div>
+            <div
+              id=${this.popupId}
+              part="popup"
+              role="dialog"
+              aria-hidden=${this.open ? 'false' : 'true'}
+              aria-label=${this.localize(
+                'chooseDate',
+                this.dialogLabel === 'Choose date' ? undefined : this.dialogLabel,
+              )}
+            >
+              <lr-date-picker
+                part="date-picker"
+                .value=${this.value}
+                .mode=${this.mode}
+                .min=${this.min}
+                .max=${this.max}
+                .months=${normalizeCalendarMonths(this.months)}
+                .size=${this.size}
+                .locale=${this.effectiveLocale}
+                .disabled=${this.effectiveDisabled}
+                .readonly=${this.readonly}
+                .disabledDates=${this.disabledDates}
+                .disabledDaysOfWeek=${this.disabledDaysOfWeek}
+                .isDateDisabled=${this.isDateDisabled}
+                .dayContent=${this.dayContent}
+                .disablePast=${this.disablePast}
+                .disableFuture=${this.disableFuture}
+                .minRange=${finiteCount(this.minRange, 0)}
+                .maxRange=${finiteCount(this.maxRange, 0)}
+                .pageBy=${normalizeDateInputPageBy(this.pageBy)}
+                .today=${this.today}
+                .withOutsideDays=${this.withOutsideDays}
+                .withWeekNumbers=${this.withWeekNumbers}
+                .firstDayOfWeek=${this.firstDayOfWeek}
+                .weekdayFormat=${normalizeWeekdayFormat(this.weekdayFormat)}
+                @input=${this.onPickerInput}
+                @change=${this.onPickerChange}
+                @lr-focus-day=${(event: Event) => event.stopPropagation()}
+                @lr-view-change=${(event: Event) => event.stopPropagation()}
+              >
+                <slot name="previous-icon" slot="previous-icon">${chevronIcon()}</slot>
+                <slot name="next-icon" slot="next-icon">${chevronIcon()}</slot>
+                <slot name="footer" slot="footer"></slot>
+                ${dynamicDaySlots.map((name) => html`<slot name=${name} slot=${name}></slot>`)}
+              </lr-date-picker>
+            </div>
+            <div id="date-input-error" part="error" ?hidden=${!hasError}>
+              ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+            </div>
+            <div id="date-input-hint" part="hint" ?hidden=${!hasHint}>
+              ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+            </div>
+          </div>
         </div>
       </div>
     `;

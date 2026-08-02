@@ -247,6 +247,8 @@ export interface LyraMentionPopoverEventMap {
  * @csspart empty - The "no matches" message, shown when `items`/`query` produce zero rows.
  * @cssprop [--lr-mention-popover-option-active-bg=var(--lr-color-brand-quiet)] - Background of the
  *   hovered or `[data-active]` (keyboard-highlighted) suggestion row.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> {
   static override styles = [LyraElement.styles, styles];

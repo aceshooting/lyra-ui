@@ -1,20 +1,20 @@
-import { html, nothing, type ComplexAttributeConverter, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { syncValidityStates } from '../../../internal/custom-states.js';
+import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './radio.styles.js';
+import { appearanceStyles } from './radio-button.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
-
-const omittedEmptyStringConverter: ComplexAttributeConverter<string> = {
-  fromAttribute: (value) => value ?? '',
-  toAttribute: (value) => value || null,
-};
+import { getFormOwner, installCustomErrorProperty, setFormOwner, type FormOwnerValue } from '../../../internal/form-associated.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 
 export interface LyraRadioEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   input: Event;
   change: Event;
   'lr-input': CustomEvent<{ checked: boolean; value: string }>;
@@ -27,12 +27,16 @@ export interface LyraRadioEventMap {
 
 interface RadioGroupController {
   disabled: boolean;
+  readonly customError?: string | null;
+  setCustomValidity?: (message: string) => void;
   ownsRadio?: (radio: LyraRadio) => boolean;
   radioCheckedChanged?: (radio: LyraRadio) => void;
   reconcileRadio?: (radio: LyraRadio) => boolean;
   releaseRadio?: (radio: LyraRadio) => void;
   selectRadio?: (radio: LyraRadio) => boolean;
 }
+
+export type RadioAppearance = 'default' | 'button';
 
 /**
  * `<lr-radio>` — a form-associated single-choice control. Radios can be used
@@ -58,6 +62,8 @@ interface RadioGroupController {
  * @event blur - The internal radio lost focus.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-invalid - The standalone radio failed a validity check. Aggregate groups emit their
+ *   own alias instead.
  * @cssstate required - Matches while the radio is required, either by its own `required` attribute
  * or by an owning `<lr-radio-group required>`. Style with `lr-radio:state(required)`.
  * @cssstate optional - Matches while it is neither — the complement of `required`.
@@ -70,9 +76,17 @@ interface RadioGroupController {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required radio is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
+ * @cssstate checked - Matches while this option is selected.
+ * @cssstate disabled - Matches while disabled directly, by a group, or by an ancestor fieldset.
  * @csspart base - The interactive radio control.
  * @csspart circle - The circular radio indicator.
+ * @csspart control - WA/Shoelace name for the indicator, or the interactive button in
+ * `appearance="button"`.
+ * @csspart control--checked - Shoelace state alias on the selected indicator.
  * @csspart dot - The selected indicator.
+ * @csspart checked-icon - WA/Shoelace name for the same selected indicator.
+ * @csspart button - Shoelace button-chrome alias in `appearance="button"` mode.
+ * @csspart button--checked - Shoelace selected-button state alias.
  * @csspart label - The default slot wrapper.
  * @cssprop [--lr-radio-label-indent=calc(var(--lr-radio-circle-size) + var(--lr-space-s))] -
  * The inline distance from the control's start edge to the start of the label text, i.e. the
@@ -88,6 +102,9 @@ interface RadioGroupController {
  * `--lr-color-brand` token every other component also reads.
  * @cssprop [--lr-radio-checked-dot-color=var(--lr-color-brand)] - Background of `[part='dot']`
  * while `checked`.
+ * @cssprop [--checked-icon-color=var(--lr-radio-checked-dot-color)] - WA-compatible selected-glyph
+ * color alias.
+ * @cssprop [--checked-icon-scale=1] - WA-compatible selected-glyph scale alias.
  * @cssprop [--lr-radio-circle-size=min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))] -
  * Edge length of `[part='circle']`. Derived from the `size` tier's shared control height so a radio
  * lines up with an `<lr-input>`/`<lr-select>`/`<lr-button>` of the same `size`.
@@ -96,13 +113,24 @@ interface RadioGroupController {
  * @cssprop [--lr-radio-radius=var(--lr-radius-pill)] - Corner radius of the control's own chrome.
  * A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at
  * the shared control radius and swaps it for a pill when `pill` is set.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraRadio extends LyraElement<LyraRadioEventMap> {
-  static override styles = [LyraElement.styles, sizes, styles];
+  static override styles = [LyraElement.styles, sizes, styles, appearanceStyles];
   static formAssociated = true;
 
   static override properties = {
-    checked: { type: Boolean, reflect: true, noAccessor: true },
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
+    checked: { attribute: false, noAccessor: true },
+    defaultChecked: {
+      attribute: 'checked',
+      type: Boolean,
+      reflect: true,
+      useDefault: true,
+      noAccessor: true,
+    },
+    appearance: { reflect: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
     pill: { type: Boolean, reflect: true },
@@ -121,6 +149,9 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
    */
   size: LyraSize = 'm';
 
+  /** WA-compatible visual mode. `button` keeps the same radio semantics and group ownership. */
+  appearance: RadioAppearance = 'default';
+
   /**
    * Rounds the control's own chrome into a pill instead of the shared control radius. A plain
    * `<lr-radio>`'s indicator is a circle at every setting, so this is visible on
@@ -137,6 +168,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   private hasInteracted = false;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   private _checked = false;
   private _disabled = false;
   private _required = false;
@@ -147,27 +180,40 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   private _groupRequired = false;
   private _tabbable = true;
   private groupOwner: RadioGroupController | null = null;
-  // What `form.reset()` restores to — captured once from the declarative
-  // `checked` content attribute at first connect, mirroring
-  // `<lr-checkbox>`'s identical `_defaultChecked`/`_defaultCaptured` pair.
   private _defaultChecked = false;
-  private _defaultCaptured = false;
+  private _checkedDirty = false;
+  private settingDefaultChecked = false;
+  private reflectingDefaultChecked = false;
 
   get checked(): boolean { return this._checked; }
   set checked(value: boolean) {
     const old = this._checked;
     const next = Boolean(value);
     if (old === next) return;
+    if (!this.settingDefaultChecked) this._checkedDirty = true;
     this._checked = next;
     this.syncFormState();
     this.requestUpdate('checked', old);
     if (this.isConnected) this.group()?.radioCheckedChanged?.(this);
+  }
+  /** Reflected current reset default; changing it never overwrites dirty live `checked` state. */
+  get defaultChecked(): boolean { return this._defaultChecked; }
+  set defaultChecked(value: boolean) {
+    if (this.reflectingDefaultChecked) return;
+    const old = this._defaultChecked;
+    this._defaultChecked = Boolean(value);
+    this.reflectingDefaultChecked = true;
+    try { this.toggleAttribute('checked', this._defaultChecked); }
+    finally { this.reflectingDefaultChecked = false; }
+    if (!this._checkedDirty) this.restoreCheckedFromDefault();
+    this.requestUpdate('defaultChecked', old);
   }
   get disabled(): boolean { return this._disabled; }
   set disabled(value: boolean) {
     const old = this._disabled;
     this._disabled = Boolean(value);
     this.toggleAttribute('disabled', this._disabled);
+    this.reflectValidityStates();
     this.requestUpdate('disabled', old);
   }
   get required(): boolean { return this._required; }
@@ -179,7 +225,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.requestUpdate('required', old);
   }
   get name(): string { return this._name; }
-  set name(value: string) {
+  set name(value: string | null) {
     const old = this._name;
     const next = value ?? '';
     if (old === next) {
@@ -209,12 +255,16 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.requestUpdate('value', old);
   }
   get effectiveDisabled(): boolean {
-    return this.disabled || this._fieldsetDisabled || Boolean(this.currentGroup()?.disabled);
+    return this.disabled || this._fieldsetDisabled ||
+      (Boolean(this.currentGroup()) && this._groupDisabled);
   }
   get effectiveRequired(): boolean {
     return this.required || (this.currentGroup() ? this._groupRequired : false);
   }
-  get form(): HTMLFormElement | null { return this.internals.form; }
+  get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
+  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  get labels(): NodeList { return this.internals.labels; }
   get validity(): ValidityState { return this.internals.validity; }
   get validationMessage(): string { return this.internals.validationMessage; }
   get willValidate(): boolean { return this.internals.willValidate; }
@@ -223,6 +273,11 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     super();
     this.internals = this.safeAttachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(
+      this,
+      () => this.currentGroup()?.customError ?? this.validityController.customValidityMessage,
+    );
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     this.syncFormState();
   }
 
@@ -269,37 +324,49 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.hasLabel = Array.from(this.childNodes).some((node) => (node.textContent ?? '').trim().length > 0);
-    if (!this._defaultCaptured) {
-      this._defaultCaptured = true;
-      this._defaultChecked = this.hasAttribute('checked');
-    }
     this.updateValidity();
     this.group();
   }
 
   formResetCallback(): void {
     this.hasInteracted = false;
-    this.checked = this._defaultChecked;
+    this.restoreCheckedFromDefault();
     this.reflectValidityStates();
+  }
+  /** @internal Aggregate groups restore every owned option in one synchronous normalization pass. */
+  resetFromGroup(): void {
+    this.hasInteracted = false;
+    this.restoreCheckedFromDefault();
+  }
+  private restoreCheckedFromDefault(): void {
+    this.settingDefaultChecked = true;
+    try { this.checked = this._defaultChecked; }
+    finally { this.settingDefaultChecked = false; }
+    this._checkedDirty = false;
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,
-    _mode?: 'restore' | 'autocomplete',
+    reason: 'autocomplete' | 'restore',
   ): void {
+    void reason;
+    if (this.currentGroup()) return;
     const old = this._checked;
     this._checked = state === 'checked';
+    this._checkedDirty = true;
     this.syncFormState();
     this.requestUpdate('checked', old);
     if (this.isConnected) this.group()?.radioCheckedChanged?.(this);
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    this.reflectValidityStates();
     this.requestUpdate();
   }
 
   private updateValidity(): void {
+    const owned = Boolean(this.currentGroup());
     this.validityController.setValidity(
-      this.effectiveRequired && !this.checked ? { valueMissing: true } : {},
+      !owned && this.effectiveRequired && !this.checked ? { valueMissing: true } : {},
       this.localize('radioRequired'),
     );
     this.reflectValidityStates();
@@ -314,11 +381,14 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       required: this.effectiveRequired,
       hasInteracted: this.hasInteracted,
     });
+    setCustomState(this.internals, 'checked', this.checked);
+    setCustomState(this.internals, 'disabled', this.effectiveDisabled);
   }
   /** @internal Driven by an owning `<lr-radio-group>`; released when the radio leaves the group's control. */
   setGroupDisabled(value: boolean): void {
     if (this._groupDisabled === value) return;
     this._groupDisabled = value;
+    this.reflectValidityStates();
     this.requestUpdate();
   }
   /** @internal Driven by an owning `<lr-radio-group>`; released when the radio leaves the group's control. */
@@ -338,7 +408,13 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   setGroupOwner(owner: RadioGroupController): void {
     if (this.groupOwner === owner) return;
     this.groupOwner?.releaseRadio?.(this);
+    const standaloneCustomError = this.validityController.customValidityMessage;
     this.groupOwner = owner;
+    if (standaloneCustomError && owner.setCustomValidity) {
+      owner.setCustomValidity(standaloneCustomError);
+      this.validityController.setCustomValidity('');
+    }
+    this.syncFormState();
   }
   /** @internal Releases state imposed by the specified owning `<lr-radio-group>`. */
   releaseGroupOwner(owner: RadioGroupController, authorName: string): void {
@@ -348,6 +424,9 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.setGroupRequired(false);
     this.setGroupDisabled(false);
     this.setGroupTabbable(true);
+    const reflectedCustomError = this.getAttribute('custom-error') ?? '';
+    if (reflectedCustomError) this.validityController.setCustomValidity(reflectedCustomError);
+    this.syncFormState();
   }
 
   /** Whether the radio currently satisfies its constraints — the silent query, so it deliberately
@@ -377,16 +456,25 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
    * group-driven `required` change, re-runs `updateValidity()`) and a form reset, exactly like a
    * native control — only another `setCustomValidity('')` clears it.
    *
-   * This lives on the radio rather than on `<lr-radio-group>` because the group is not itself
-   * form-associated: it designates one member as the group's validity owner and that radio is what
-   * participates in the owning form.
+   * A standalone radio owns this validity. Inside `<lr-radio-group>`, the group is the aggregate
+   * form-associated owner, so this method delegates the consumer error to the group.
    *
    * The message is caller-supplied content, so it is used verbatim and never localized here.
    */
   setCustomValidity(message: string): void {
+    const group = this.currentGroup();
+    if (group?.setCustomValidity) {
+      group.setCustomValidity(message ?? '');
+      return;
+    }
     this.validityController.setCustomValidity(message ?? '');
     this.reflectValidityStates();
     this.requestUpdate();
+  }
+
+  /** Clears consumer-supplied validity on the standalone radio or its owning group. */
+  resetValidity(): void {
+    this.setCustomValidity('');
   }
 
   override click(): void {
@@ -399,7 +487,9 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this[VALIDITY_ANCHOR]()?.blur();
   }
   private syncFormState(): void {
-    this.internals.setFormValue(this.checked ? this.value : null, this.checked ? 'checked' : 'unchecked');
+    const owned = Boolean(this.currentGroup());
+    if (owned) this.internals.setFormValue(null);
+    else this.internals.setFormValue(this.checked ? this.value : null, this.checked ? 'checked' : 'unchecked');
     this.updateValidity();
   }
   private currentGroup(): RadioGroupController | null {
@@ -466,6 +556,31 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   };
 
   override render(): TemplateResult {
+    if (this.appearance === 'button') {
+      const parts = [
+        'base',
+        'button',
+        'control',
+        this.checked ? 'checked button--checked' : '',
+        this.effectiveDisabled ? 'disabled' : '',
+      ].filter(Boolean).join(' ');
+      return html`
+        <span part=${parts} role="radio"
+          tabindex=${this.effectiveDisabled || !this._tabbable ? '-1' : '0'}
+          aria-checked=${this.checked ? 'true' : 'false'}
+          aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
+          aria-required=${this.effectiveRequired ? 'true' : 'false'}
+          aria-label=${this.getAttribute('aria-label') || nothing}
+          @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
+          <span part="label" ?hidden=${!this.hasLabel}><slot @slotchange=${this.onSlotChange}></slot></span>
+        </span>
+      `;
+    }
+    const controlParts = [
+      'circle',
+      'control',
+      this.checked ? 'checked control--checked' : '',
+    ].filter(Boolean).join(' ');
     return html`
       <span part="base" role="radio" tabindex=${this.effectiveDisabled || !this._tabbable ? '-1' : '0'}
         aria-checked=${this.checked ? 'true' : 'false'}
@@ -473,7 +588,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
         aria-required=${this.effectiveRequired ? 'true' : 'false'}
         aria-label=${this.getAttribute('aria-label') || nothing}
         @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
-        <span part="circle">${this.checked ? html`<span part="dot"></span>` : nothing}</span>
+        <span part=${controlParts}>${this.checked ? html`<span part="dot checked-icon"></span>` : nothing}</span>
         <span part="label" ?hidden=${!this.hasLabel}><slot @slotchange=${this.onSlotChange}></slot></span>
       </span>
     `;

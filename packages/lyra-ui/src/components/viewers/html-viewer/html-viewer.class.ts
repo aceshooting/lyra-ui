@@ -36,6 +36,8 @@ class LyraHtmlViewerBase extends LyraElement<LyraHtmlViewerEventMap> {}
  * @csspart error - The error region.
  * @cssprop [--lr-html-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.js';` (registers the tag; side-effect import)
 - **Class** `LyraRubricForm`, also available unregistered from `@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -26,15 +28,18 @@ checkbox-group category route, and `placeholder?` customizes comment input), `va
 {}` (attribute: false), `itemId: string = ''`
 (attribute `item-id`, reflected), `hasNext: boolean = false` (attribute `has-next`), `skippable:
 boolean = false`, and the shared form properties `name` and `disabled`. `errors: Record<string,
-string>` is the current per-key validation-message state.
+string>` is the current per-key validation-message state. `customError: string | null` reflects
+through `custom-error` for a consumer-owned whole-form rejection.
 
 **Slots:** `actions` — extra host controls rendered in the footer beside Submit/Skip.
 
 **Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (`detail: { valid, errors }`,
 fired only on an actual change), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
-(`detail: { itemId }`, `skippable` only).
+(`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed
+alias emitted when the complete rubric fails a native validity check.
 
-**Methods:** `setCustomValidity(message)` sets or clears a form-level error no per-key rule can
+**Methods:** `getForm()` returns the owning form. `setCustomValidity(message)` sets or clears a
+form-level error no per-key rule can
 express ("this item was already annotated by someone else"): a non-empty message raises
 `customError` and blocks submission, `''` restores the rubric's own computed validity — unanswered
 required keys, and any key with an unsupported `type`, still hold it invalid. It is independent of

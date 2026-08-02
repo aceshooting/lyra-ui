@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/color-picker/color-picker.js';` (registers the tag; side-effect import)
 - **Class** `LyraColorPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/color-picker/color-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 43 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -24,8 +26,10 @@ picker built from the pieces above. Two consequences for existing code:
 - **`::part(input)` now names the panel's text field, not the swatch.** The swatch is
   `::part(trigger)`. A stylesheet that targeted `input` to size or tint the visible control has to
   move to `trigger`.
-- The visible control is a `<button>` (`[part="trigger"]`), so `focus()`/`blur()`/`click()` target
-  it, and there is no native colour input in the shadow tree to reach for.
+- In popup mode the visible control is a `<button>` (`[part="trigger"]`): `focus()` targets it and
+  `click()` activates it, toggling the popup. There is no native colour input in the shadow tree to
+  reach for. Inline mode has no trigger; `focus()` targets the grid handle and `click()` activates
+  the editable value field. In either mode `blur()` blurs whichever internal control is active.
 
 `value` is always serialized in the active `format` (`hex` by default), so reading it back after any
 interaction gives a canonical string in exactly one syntax; switching `format`, `opacity` or
@@ -33,13 +37,23 @@ interaction gives a canonical string in exactly one syntax; switching `format`, 
 permissive than output: hex (3/4/6/8 digit), `rgb()`/`rgba()`, `hsl()`/`hsla()`, `hsv()`/`hsva()`,
 CSS colour names, and any other colour syntax the browser itself parses are all accepted. A value
 that is not a colour at all is **kept verbatim** rather than silently replaced, so a consumer's own
-sentinel survives a round trip. An element with neither a `value` attribute nor a value defaults to
-`#000000`, and `form.reset()` returns to the declarative `value` attribute (or to `#000000`).
+sentinel survives a round trip. The public `value` and `defaultValue` both default to the empty
+string, matching the mirrored form contract; the uncommitted preview and editable field still begin
+at black (`#000000`). A bare `required` picker is therefore value-missing, and `form.reset()` returns
+to the declarative value or to empty when none was supplied.
 
 Colour is never the only channel carrying state: the trigger's `aria-describedby` points at a
 visually-hidden span spelling the current value out in text, the panel shows it in an editable
 field, and the selected palette swatch is marked with `aria-pressed` plus a check mark rather than
 a tint alone.
+
+Validation is projected onto both editing owners with an explicit stateful `aria-invalid`. A
+required empty picker starts pristine, so the popup trigger and panel value input both expose
+`aria-invalid="false"` even though `checkValidity()` is false. Once focus leaves the control, the
+resulting `user-invalid` state changes both to `"true"`; `reportValidity()` reveals the same state
+without requiring a blur. A valid value or `form.reset()` clears the projection back to `"false"`,
+while visible error content makes it `"true"`. Inline mode omits the trigger, but its value input
+follows the same pristine/user-invalid contract.
 
 **Not the same control as `lr-swatch-picker`.** This one is freeform: `swatches` is a shortcut row
 *beside* a saturation grid, a hue ramp and a text field, and the committed value can be any colour
@@ -48,9 +62,12 @@ the browser parses. `<lr-swatch-picker>` offers exactly its `options` and nothin
 designer-chosen colours; reach for this when it must not.
 
 **Properties:** the shared
-form properties `name`, `value`, `disabled`, and `required`, plus `label`, `hint`, `errorText`
+form properties `name`, `value`, `defaultValue` (`value`; Shoelace markup may use the
+`default-value` compatibility attribute), `customError` (`custom-error`), `disabled`, and
+`required`, plus `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), and `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'`
-(reflected — same scale as `lr-input`'s `size`, for compact swatch rendering at every density tier),
+(reflected — the same visual-density scale as `lr-input`, applied to the centered visible swatch;
+the interactive target independently retains the `--lr-icon-button-size` floor),
 and:
 
 - `format: 'hex' | 'rgb' | 'hsl' | 'hsv' = 'hex'` — the syntax `value` is **written** in. Parsing is
@@ -69,40 +86,75 @@ and:
   the raw colour string is announced. The palette container renders only while the normalized list
   is non-empty
 - `withoutFormatToggle: boolean = false` (attribute `without-format-toggle`) — removes the button
-  that cycles between formats
+  that cycles between formats. `noFormatToggle` (`no-format-toggle`) is the Shoelace spelling and
+  reaches the same behavior; either one wins
+- `inline: boolean = false` (reflected) — renders the full panel in normal flow and omits the popup
+  trigger. In this mode `focus()` targets the grid handle and `click()` targets the value field.
+  The panel stays visible regardless of `open`; `show()`/`hide()` still update that lifecycle state
+  and its events so switching back to popup mode has a deterministic result
+- `hoist: boolean = false` (reflected) — uses fixed popup positioning to escape clipping
+  ancestors; the default absolute strategy stays in the component's local scrolling context
+- `withLabel: boolean = false` (`with-label`, reflected) and `withHint: boolean = false`
+  (`with-hint`, reflected) — SSR hints that the corresponding slots are populated, so their chrome
+  is present before client-side slot observation
 - `placement: Placement = 'bottom-start'` (reflected) — preferred panel placement, from the Floating
   UI vocabulary. The resolved side still flips/shifts to stay in the viewport, and the
   `left`/`right` component is swapped under RTL
-- `open: boolean = false` (reflected) — whether the panel is showing. Assigning `true` while the
-  control is effectively disabled is ignored, and a `disabled` that flips on while the panel is
-  already open closes it
+- `open: boolean = false` (reflected) — whether the popup panel is open. Assigning `true` while the
+  control is effectively disabled is ignored, and a `disabled` that flips on while the popup is
+  already open closes it. Inline rendering remains visible at either value
 
-**Methods:** `show()` opens the panel (a no-op while effectively disabled), `hide()` closes it and
-returns focus to the trigger, and `click()`/`focus(options?)`/`blur()` forward to the trigger.
+**Methods:** `show()` opens the popup (a no-op while effectively disabled), and `hide()` closes it
+and returns focus to the trigger. In popup mode `click()` activates the trigger and therefore
+toggles the popup, while `focus(options?)` targets that trigger. Inline mode has no trigger:
+`click()` activates the editable value field and `focus(options?)` targets the grid handle.
+`blur()` blurs the active internal control in either mode; `click()` and `focus()` are inert while
+effectively disabled. In inline mode `show()`/`hide()` update `open` and lifecycle events without
+hiding the in-flow panel.
 `getFormattedValue(format?)` returns the current colour in any of the eight output formats —
 `'hex' | 'hexa' | 'rgb' | 'rgba' | 'hsl' | 'hsla' | 'hsv' | 'hsva'`, defaulting to `'hex'` —
 independently of `format`/`opacity`, honouring `uppercase`. Use it to read, say, an `rgba()` string
 out of a picker configured to store hex, without touching `value`.
+`getHexString(hue, saturation, brightness, alpha = 100)` converts percent-scaled HSV(A) channels
+to six-digit hex, or eight-digit hex when alpha is below 100, honoring `uppercase`.
+The shared form methods are
+`getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
+`resetValidity()`. `resetValidity()` clears only consumer-supplied custom validity and recomputes
+the current intrinsic constraints; it leaves `value`/`defaultValue` and prior interaction state
+unchanged.
 
-**Slots:** `label`, `hint`, `error`. **Events:**
-composed `input` (fired for every colour change during an interaction) and `change` (fired once an
-interaction commits: pointer release, key release, swatch click, text entry, eyedropper result),
-`lr-change` with `{ value }` (the newly serialized value), `lr-show` and `lr-hide` (the panel opened
+**Slots:** `label`, `hint`, `error`. Slotted label text replaces the `label` property's visible text
+and names both the trigger and dialog; a host `aria-label` remains the strongest naming override.
+
+**Events:** each serialized value-changing edit emits a bubbling/composed native `InputEvent` named
+`input`, followed by the no-detail `lr-input` compatibility alias. A completed interaction emits
+one bubbling/composed native `Event` named `change`, followed by `lr-change` with
+`detail: { value }`. The commit pair occurs on pointer release, key release, swatch click, an
+accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
+emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair. Also
+emitted are `lr-show` / `lr-after-show` and `lr-hide` / `lr-after-hide` (the panel opened
 or closed — never emitted for a declaratively-open picker's first render, nor for a close caused by
-disconnection), and `focus`/`blur` (re-dispatched from
-the trigger's own `focus`/`blur`, bubbling and composed unlike the native events). A change that
+disconnection; because this panel has no opening animation, each `lr-after-*` immediately follows
+its matching lifecycle event in the completed update), and `focus`/`blur` plus their migrated
+`lr-focus`/`lr-blur` aliases (exactly one bubbling/composed native `FocusEvent` relay when focus
+enters or leaves the internal controls in either popup or inline mode), and `lr-invalid`
+(no detail) once when native validity fails. A change that
 doesn't move the serialized value emits nothing, so dragging within a single rounded colour is
 silent.
 
 **Keyboard.** The grid handle, hue handle and opacity handle are each a real `role="slider"` with a
 localized name and `aria-valuetext`. Arrow keys step by 1 (percent or degree), Shift+Arrow by 10,
 and Home/End jump to that axis' extremes; ArrowLeft/ArrowRight swap meaning under RTL, ArrowUp/Down
-never do. One discrete press pairs a keydown (`input`) with a keyup (`change`); OS key repeat
-re-fires `input` but still commits once. The panel is Escape-dismissible and returns focus to the
-trigger; a pointerdown outside the element closes it too.
+never do. One discrete press pairs a keydown (`input`/`lr-input`) with a keyup
+(`change`/`lr-change`); OS key repeat re-fires the edit pair but still commits once. The panel is
+Escape-dismissible and returns focus to the trigger; a pointerdown outside the element closes it
+too.
 
-**CSS parts:** `form-control`, `form-control-label` (the label; `label` is an alias kept for
-back-compat), `trigger-container` (the row wrapping the trigger), `trigger` (the swatch button that
+**CSS parts:** `base` (compatibility name for the field wrapper; use `color-picker`),
+`color-picker` (the field wrapper; it is the same node as `base` and `form-control`),
+`form-control` (the field wrapper; it is the same node as `base` and `color-picker`),
+`form-control-label` (the label; `label` is an alias kept for back-compat), `trigger-container`
+(the row wrapping the trigger), `trigger` (the swatch button that
 opens the panel), `panel` (the positioned `role="dialog"` surface), `grid` (the
 saturation/brightness square) and `grid-handle` (its draggable, keyboard-operable handle),
 `slider` and `slider-handle` (carried by **both** ramps), `hue-slider` / `hue-slider-handle` and
@@ -110,15 +162,28 @@ saturation/brightness square) and `grid-handle` (its draggable, keyboard-operabl
 token, so `::part(slider)` styles both ramps while `::part(hue-slider)` reaches only one; the
 opacity pair renders only with `opacity` set), `preview` (the current-colour dot beside the ramps),
 `input` (the text field holding the serialized value), `format-button` (the format-cycling button,
-absent with `without-format-toggle`), `eyedropper-button` (rendered only where the browser exposes
-the EyeDropper API), `swatches` (the palette container, rendered only when the normalized `swatches`
+absent with either format-toggle suppression property), plus `format-button__base`,
+`format-button__start`/`format-button__prefix`, `format-button__label`,
+`format-button__end`/`format-button__suffix`, and `format-button__caret`;
+`eyedropper-button` / `eye-dropper-button` (rendered only where the browser exposes the EyeDropper
+API), with the corresponding `eyedropper-button__base|start|label|end|caret` and Shoelace
+`eye-dropper-button__base|prefix|label|suffix|caret` aliases; `swatches` (the palette container, rendered only when the normalized `swatches`
 list is non-empty), `swatch` (one palette entry), `swatch-selected` (a token **added to** the
 swatch matching the current value — state after `::part()` never matches, so write
 `::part(swatch-selected)`), `hint`, `error`.
 
-**Themeable custom properties:** `--lr-color-picker-swatch-size` — the trigger's inline and block size,
-auto-swapped per `size` tier (default `'m'` reads `2.5rem`, `'2xs'` reads `1.25rem`, etc.), matching
-the size ladder `lr-input` uses. The panel's geometry has its own set, all declared on `:host`:
+The eyedropper aliases are also addressable individually as `eyedropper-button__base`,
+`eyedropper-button__start`, `eyedropper-button__label`, `eyedropper-button__end`,
+`eyedropper-button__caret`, `eye-dropper-button__base`, `eye-dropper-button__prefix`,
+`eye-dropper-button__label`, `eye-dropper-button__suffix`, and `eye-dropper-button__caret`.
+
+**Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
+not the button's minimum target. It is auto-swapped per `size` tier (default `'m'` reads `2.5rem`,
+`'2xs'` reads `1.25rem`, etc.), matching the visual-density ladder `lr-input` uses. The trigger's
+inline and block sizes are each
+`max(var(--lr-color-picker-swatch-size), var(--lr-icon-button-size))`: compact tiers center a smaller
+swatch inside the shared hit-area floor, while a larger swatch expands the target with it. The
+panel's geometry has its own set, all declared on `:host`:
 
 - `--lr-color-picker-grid-inline-size` (default `var(--lr-size-15rem)`) and
   `--lr-color-picker-grid-block-size` (default `var(--lr-size-8rem)`) — the saturation/brightness
@@ -138,6 +203,11 @@ the size ladder `lr-input` uses. The panel's geometry has its own set, all decla
   hue wheel. Both text directions read the same list; only the gradient's direction differs.
   Override it to theme a wide-gamut or perceptually-uniform ramp.
 
+The upstream aliases `--grid-width`, `--grid-height`, `--grid-handle-size`, `--slider-height`, and
+`--slider-handle-size` feed the corresponding Lyra geometry properties above; Shoelace's
+`--swatch-size` feeds `--lr-color-picker-palette-swatch-size`. An explicit `--lr-*` value takes
+precedence over its alias.
+
 Three more are **state, not configuration** — the component rewrites each inline on every render, so
 setting them from a stylesheet has no lasting effect: `--lr-color-picker-swatch-color` (the live
 colour painted on the trigger, preview, slider handles and palette swatches),
@@ -147,7 +217,8 @@ the current colour and text direction). Read them if you need the resolved colou
 
 **Additional API surface:**
 
-- `click()` — Activates the internal trigger button, opening or closing the panel.
+- `click()` — In popup mode activates the trigger, opening or closing the panel; in inline mode
+  activates the editable value field instead. It is a no-op while effectively disabled.
 - `--lr-color-picker-gap` — Gap between field chrome and panel rows. Default: `var(--lr-space-xs)`.
 - `--lr-color-picker-radius` — Trigger, grid, field and panel corner radius. Default: `var(--lr-radius)`.
 - `--lr-color-picker-hover-border-color` — Hover border color, shared by the trigger, handles, text

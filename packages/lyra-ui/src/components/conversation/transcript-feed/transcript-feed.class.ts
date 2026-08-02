@@ -51,6 +51,8 @@ export interface LyraTranscriptFeedEventMap {
  * @csspart interim - Present (alongside `entry`) on an interim row.
  * @csspart jump-button - The "jump to latest" affordance, shown only while `follow` is `false`.
  * @csspart empty - The empty-state wrapper.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> {
   static override styles = [LyraElement.styles, styles];

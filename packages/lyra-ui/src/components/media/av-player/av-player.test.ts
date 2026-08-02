@@ -4,6 +4,7 @@ import '../../layout/virtual-list/virtual-list.js';
 import type { LyraAvPlayer, LyraAvCue } from './av-player.js';
 import { styles } from './av-player.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 
 const MP3_SRC = 'https://example.test/podcast.mp3';
 const MP4_SRC = 'https://example.test/clip.mp4';
@@ -13,6 +14,26 @@ const CUES: LyraAvCue[] = [
   { id: 'c2', start: 10, end: 25, text: 'Today we discuss agents', speaker: 'Host' },
   { id: 'c3', start: 25, end: 40, text: 'Thanks for having me', speaker: 'Guest' },
 ];
+
+it('redraws a token-colored waveform after an out-of-band theme invalidation', async () => {
+  const el = (await fixture(
+    html`<lr-av-player .peaks=${[0.25, 0.75]}></lr-av-player>`,
+  )) as LyraAvPlayer;
+  await el.updateComplete;
+  let redraws = 0;
+  const internals = el as unknown as { drawWaveform: () => void };
+  const originalDraw = internals.drawWaveform;
+  internals.drawWaveform = () => {
+    redraws += 1;
+  };
+  try {
+    invalidateLyraTheme(el);
+    await aTimeout(0);
+    expect(redraws).to.equal(1);
+  } finally {
+    internals.drawWaveform = originalDraw;
+  }
+});
 
 function mediaEl(el: LyraAvPlayer): HTMLMediaElement {
   return el.shadowRoot!.querySelector('audio, video') as HTMLMediaElement;

@@ -122,6 +122,8 @@ function isRealPreviewNode(n: Node): boolean {
  * `status` to the matching `-quiet` tone (`success`/`warning`/`danger`).
  * @cssprop [--lr-citation-badge-border=transparent] - Resting border color of `base`; no `status`
  * changes it, so it stays transparent unless a host overrides it.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   static override styles = [LyraElement.styles, styles];

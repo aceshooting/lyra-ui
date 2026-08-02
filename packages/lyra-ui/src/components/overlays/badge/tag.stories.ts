@@ -11,9 +11,17 @@ export const Default: StoryObj = { render: () => html`<lr-tag variant="brand">Ex
 
 export const Removable: StoryObj = {
   name: 'Removable (self-removes unless vetoed)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`with-remove` is the Lyra spelling; Shoelace markup can use its `removable` alias. Both render the same button, which exports `remove-button` and `remove-button__base` part names.',
+      },
+    },
+  },
   render: () => html`<div style=${row}>
     <lr-tag variant="brand" with-remove>status:open</lr-tag>
-    <lr-tag variant="success" with-remove pill>label:ready</lr-tag>
+    <lr-tag variant="success" removable pill>label:ready</lr-tag>
     <lr-tag variant="danger" with-remove appearance="accent">severity:high</lr-tag>
   </div>`,
 };

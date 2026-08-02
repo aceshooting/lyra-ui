@@ -27,6 +27,19 @@ export const Checked: Story = {
   render: () => html`<lr-checkbox checked>Subscribe to updates</lr-checkbox>`,
 };
 
+export const SupportingTextAliases: Story = {
+  name: 'WA hint and Shoelace help text',
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-m);">
+      <lr-checkbox hint="Required for account recovery">Recovery email</lr-checkbox>
+      <lr-checkbox default-checked>
+        Product updates
+        <span slot="help-text">Shoelace-compatible supporting-text slot</span>
+      </lr-checkbox>
+    </div>
+  `,
+};
+
 export const Indeterminate: Story = {
   render: () => html`<lr-checkbox indeterminate>Select all</lr-checkbox>`,
 };

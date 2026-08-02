@@ -13,6 +13,47 @@ it('renders a link with design-token color and no default UA underline', async (
   expect(base.getAttribute('aria-current')).to.equal('false');
 });
 
+it('renders a native button when a non-current item has no href', async () => {
+  const breadcrumb = await fixture(html`
+    <lr-breadcrumb><lr-breadcrumb-item>Open menu</lr-breadcrumb-item></lr-breadcrumb>
+  `);
+  const el = breadcrumb.querySelector('lr-breadcrumb-item') as LyraBreadcrumbItem;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('button[part="base"]');
+  expect(button).to.exist;
+  expect(button!.type).to.equal('button');
+  expect(button!.getAttribute('aria-current')).to.equal('false');
+  await expect(breadcrumb).to.be.accessible();
+});
+
+it('supports both upstream adornment vocabularies and part aliases', async () => {
+  const el = (await fixture(html`
+    <lr-breadcrumb-item href="/reports">
+      <span slot="start">S</span><span slot="prefix">P</span>
+      Reports
+      <span slot="end">E</span><span slot="suffix">X</span>
+      <span slot="separator">→</span>
+    </lr-breadcrumb-item>
+  `)) as LyraBreadcrumbItem;
+  expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="label"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part~="start"][part~="prefix"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part~="end"][part~="suffix"]')).to.exist;
+  for (const name of ['start', 'prefix', 'end', 'suffix', 'separator']) {
+    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>(`slot[name="${name}"]`)!;
+    expect(slot.assignedNodes({ flatten: true }).length, name).to.be.greaterThan(0);
+  }
+});
+
+it('forwards target and derives a safe rel without exposing an independent rel property', async () => {
+  const el = (await fixture(html`
+    <lr-breadcrumb-item href="https://example.com" target="_blank">Example</lr-breadcrumb-item>
+  `)) as LyraBreadcrumbItem;
+  const anchor = el.shadowRoot!.querySelector('a')!;
+  expect(anchor.getAttribute('target')).to.equal('_blank');
+  expect(anchor.getAttribute('rel')).to.equal('noopener noreferrer');
+  expect('rel' in el).to.be.false;
+});
+
 it('shows a focus ring on the link via :focus-visible', async () => {
   const el = (await fixture(html`<lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>`)) as LyraBreadcrumbItem;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;

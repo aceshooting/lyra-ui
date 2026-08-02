@@ -1,0 +1,522 @@
+/* Opt-in light-DOM utilities. Every selector names an exact `lr-*` class and stays in the
+   low-priority `lr-utilities` layer. Unlayered application CSS therefore wins regardless of load
+   order, and importing this asset never resets native elements by itself. */
+
+@layer lr-base, lr-theme, lr-utilities, lr-overrides;
+
+@layer lr-utilities {
+  :where(.lr-block) {
+    display: block;
+  }
+
+  :where(.lr-inline-block) {
+    display: inline-block;
+  }
+
+  :where(.lr-flex) {
+    display: flex;
+  }
+
+  :where(.lr-inline-flex) {
+    display: inline-flex;
+  }
+
+  :where(.lr-grid) {
+    display: grid;
+  }
+
+  :where(.lr-flow-root) {
+    display: flow-root;
+  }
+
+  :where(.lr-stack) {
+    display: flex;
+    flex-direction: column;
+    gap: var(
+      --lr-layout-gap,
+      var(--lr-space-m, var(--lr-theme-space-m, 0.75rem))
+    );
+  }
+
+  :where(.lr-cluster) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(
+      --lr-layout-gap,
+      var(--lr-space-m, var(--lr-theme-space-m, 0.75rem))
+    );
+  }
+
+  :where(.lr-grid-auto) {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(
+        min(
+          100%,
+          var(
+            --lr-grid-min-inline-size,
+            var(--lr-size-14rem, var(--lr-theme-size-14rem, 14rem))
+          )
+        ),
+        1fr
+      )
+    );
+    gap: var(
+      --lr-layout-gap,
+      var(--lr-space-m, var(--lr-theme-space-m, 0.75rem))
+    );
+  }
+
+  :where(.lr-row) {
+    flex-direction: row;
+  }
+
+  :where(.lr-column) {
+    flex-direction: column;
+  }
+
+  :where(.lr-wrap) {
+    flex-wrap: wrap;
+  }
+
+  :where(.lr-nowrap) {
+    flex-wrap: nowrap;
+  }
+
+  :where(.lr-grow) {
+    flex-grow: 1;
+  }
+
+  :where(.lr-grow-0) {
+    flex-grow: 0;
+  }
+
+  :where(.lr-shrink) {
+    flex-shrink: 1;
+  }
+
+  :where(.lr-shrink-0) {
+    flex-shrink: 0;
+  }
+
+  :where(.lr-items-start) {
+    align-items: start;
+  }
+
+  :where(.lr-items-center) {
+    align-items: center;
+  }
+
+  :where(.lr-items-end) {
+    align-items: end;
+  }
+
+  :where(.lr-items-stretch) {
+    align-items: stretch;
+  }
+
+  :where(.lr-items-baseline) {
+    align-items: baseline;
+  }
+
+  :where(.lr-justify-start) {
+    justify-content: start;
+  }
+
+  :where(.lr-justify-center) {
+    justify-content: center;
+  }
+
+  :where(.lr-justify-end) {
+    justify-content: end;
+  }
+
+  :where(.lr-justify-between) {
+    justify-content: space-between;
+  }
+
+  :where(.lr-justify-around) {
+    justify-content: space-around;
+  }
+
+  :where(.lr-self-start) {
+    align-self: start;
+  }
+
+  :where(.lr-self-center) {
+    align-self: center;
+  }
+
+  :where(.lr-self-end) {
+    align-self: end;
+  }
+
+  :where(.lr-self-stretch) {
+    align-self: stretch;
+  }
+
+  :where(.lr-gap-0) {
+    gap: 0;
+  }
+
+  :where(.lr-gap-xs) {
+    gap: var(--lr-space-xs, var(--lr-theme-space-xs, 0.25rem));
+  }
+
+  :where(.lr-gap-s) {
+    gap: var(--lr-space-s, var(--lr-theme-space-s, 0.5rem));
+  }
+
+  :where(.lr-gap-m) {
+    gap: var(--lr-space-m, var(--lr-theme-space-m, 0.75rem));
+  }
+
+  :where(.lr-gap-l) {
+    gap: var(--lr-space-l, var(--lr-theme-space-l, 1rem));
+  }
+
+  :where(.lr-gap-2xl) {
+    gap: var(--lr-space-2xl, var(--lr-theme-space-2xl, 2rem));
+  }
+
+  :where(.lr-inline-full) {
+    inline-size: 100%;
+  }
+
+  :where(.lr-block-full) {
+    block-size: 100%;
+  }
+
+  :where(.lr-size-full) {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  :where(.lr-min-inline-0) {
+    min-inline-size: 0;
+  }
+
+  :where(.lr-min-block-0) {
+    min-block-size: 0;
+  }
+
+  :where(.lr-max-inline-full) {
+    max-inline-size: 100%;
+  }
+
+  :where(.lr-max-inline-prose) {
+    max-inline-size: var(--lr-prose-max-inline-size, 65ch);
+  }
+
+  :where(.lr-center) {
+    inline-size: min(
+      100%,
+      var(
+        --lr-content-max-inline-size,
+        var(--lr-size-48rem, var(--lr-theme-size-48rem, 48rem))
+      )
+    );
+    margin-inline: auto;
+  }
+
+  :where(.lr-overflow-auto) {
+    overflow: auto;
+  }
+
+  :where(.lr-overflow-hidden) {
+    overflow: hidden;
+  }
+
+  :where(.lr-text-start) {
+    text-align: start;
+  }
+
+  :where(.lr-text-center) {
+    text-align: center;
+  }
+
+  :where(.lr-text-end) {
+    text-align: end;
+  }
+
+  :where(.lr-text-xs) {
+    font-size: var(--lr-font-size-xs, var(--lr-theme-font-size-xs, 0.75rem));
+  }
+
+  :where(.lr-text-sm) {
+    font-size: var(--lr-font-size-sm, var(--lr-theme-font-size-sm, 0.8125rem));
+  }
+
+  :where(.lr-text-base) {
+    font-size: var(--lr-font-size-m, var(--lr-theme-font-size-m, 1rem));
+  }
+
+  :where(.lr-text-lg) {
+    font-size: var(--lr-font-size-lg, var(--lr-theme-font-size-lg, 1.125rem));
+  }
+
+  :where(.lr-text-xl) {
+    font-size: var(--lr-font-size-xl, var(--lr-theme-font-size-xl, 1.25rem));
+  }
+
+  :where(.lr-text-quiet) {
+    color: var(
+      --lr-color-text-quiet,
+      var(--lr-theme-color-text-quiet, GrayText)
+    );
+  }
+
+  :where(.lr-font-normal) {
+    font-weight: var(
+      --lr-font-weight-normal,
+      var(--lr-theme-font-weight-normal, 400)
+    );
+  }
+
+  :where(.lr-font-medium) {
+    font-weight: var(
+      --lr-font-weight-medium,
+      var(--lr-theme-font-weight-medium, 500)
+    );
+  }
+
+  :where(.lr-font-semibold) {
+    font-weight: var(
+      --lr-font-weight-semibold,
+      var(--lr-theme-font-weight-semibold, 600)
+    );
+  }
+
+  :where(.lr-font-bold) {
+    font-weight: var(
+      --lr-font-weight-bold,
+      var(--lr-theme-font-weight-bold, 700)
+    );
+  }
+
+  :where(.lr-font-mono) {
+    font-family: var(
+      --lr-font-mono,
+      var(
+        --lr-theme-font-family-mono,
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Consolas,
+        monospace
+      )
+    );
+  }
+
+  :where(.lr-text-break) {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  :where(.lr-text-nowrap) {
+    white-space: nowrap;
+  }
+
+  :where(.lr-truncate) {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.lr-text-balance) {
+    text-wrap: balance;
+  }
+
+  :where(.lr-text-pretty) {
+    text-wrap: pretty;
+  }
+
+  :where(.lr-prose) {
+    max-inline-size: var(--lr-prose-max-inline-size, 65ch);
+    color: var(--lr-color-text, var(--lr-theme-color-text-normal, CanvasText));
+    font-family: var(
+      --lr-font,
+      var(--lr-theme-font-family-body, system-ui, sans-serif)
+    );
+    font-size: var(--lr-font-size-m, var(--lr-theme-font-size-m, 1rem));
+    line-height: var(
+      --lr-line-height-normal,
+      var(--lr-theme-line-height-normal, 1.5)
+    );
+    overflow-wrap: anywhere;
+  }
+
+  :where(.lr-prose)
+    > :where(
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      p,
+      ul,
+      ol,
+      dl,
+      blockquote,
+      pre,
+      table,
+      figure
+    ) {
+    margin-block: 0;
+  }
+
+  :where(.lr-prose)
+    > :where(
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      p,
+      ul,
+      ol,
+      dl,
+      blockquote,
+      pre,
+      table,
+      figure
+    )
+    + :where(
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      p,
+      ul,
+      ol,
+      dl,
+      blockquote,
+      pre,
+      table,
+      figure
+    ) {
+    margin-block-start: var(
+      --lr-prose-flow-space,
+      var(--lr-space-l, var(--lr-theme-space-l, 1rem))
+    );
+  }
+
+  :where(.lr-prose) :where(h1, h2, h3, h4, h5, h6) {
+    color: var(--lr-color-text, var(--lr-theme-color-text-normal, CanvasText));
+    font-weight: var(
+      --lr-font-weight-semibold,
+      var(--lr-theme-font-weight-semibold, 600)
+    );
+    line-height: var(
+      --lr-line-height-compact,
+      var(--lr-theme-line-height-compact, 1.25)
+    );
+  }
+
+  :where(.lr-prose) :where(h1) {
+    font-size: var(--lr-font-size-3xl, var(--lr-theme-font-size-3xl, 2rem));
+  }
+
+  :where(.lr-prose) :where(h2) {
+    font-size: var(--lr-font-size-2xl, var(--lr-theme-font-size-2xl, 1.75rem));
+  }
+
+  :where(.lr-prose) :where(h3) {
+    font-size: var(--lr-font-size-xl, var(--lr-theme-font-size-xl, 1.25rem));
+  }
+
+  :where(.lr-prose) :where(a) {
+    color: var(
+      --lr-color-brand,
+      var(--lr-theme-color-brand-fill-loud, LinkText)
+    );
+    text-underline-offset: var(
+      --lr-space-2xs,
+      var(--lr-theme-space-2xs, 0.125rem)
+    );
+  }
+
+  :where(.lr-prose) :where(code, kbd, samp, pre) {
+    font-family: var(
+      --lr-font-mono,
+      var(
+        --lr-theme-font-family-mono,
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Consolas,
+        monospace
+      )
+    );
+  }
+
+  :where(.lr-prose) :where(blockquote) {
+    padding-inline-start: var(
+      --lr-prose-quote-padding,
+      var(--lr-space-l, var(--lr-theme-space-l, 1rem))
+    );
+    border-inline-start: var(
+        --lr-prose-quote-border-width,
+        var(--lr-border-width-thick, var(--lr-theme-border-width-thick, 3px))
+      )
+      solid
+      var(
+        --lr-color-border-strong,
+        var(--lr-theme-color-border-strong, GrayText)
+      );
+    color: var(
+      --lr-color-text-quiet,
+      var(--lr-theme-color-text-quiet, GrayText)
+    );
+  }
+
+  :where(.lr-visually-hidden),
+  :where(.lr-visually-hidden-focusable:not(:focus, :focus-within)) {
+    position: absolute;
+    inline-size: var(
+      --lr-visually-hidden-size,
+      var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px))
+    );
+    block-size: var(
+      --lr-visually-hidden-size,
+      var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px))
+    );
+    padding: 0;
+    border: 0;
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  :where(
+      .lr-visually-hidden-focusable:focus,
+      .lr-visually-hidden-focusable:focus-within
+    ) {
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    clip-path: none;
+    overflow: visible;
+    white-space: normal;
+  }
+
+  :where(.lr-fouce-hidden:not(:defined)) {
+    visibility: hidden;
+  }
+
+  :where(.lr-hidden) {
+    display: none;
+  }
+
+  :where(lr-page[view="desktop"]) :where(.lr-page-mobile-only),
+  :where(lr-page[view="mobile"]) :where(.lr-page-desktop-only) {
+    display: none;
+  }
+}

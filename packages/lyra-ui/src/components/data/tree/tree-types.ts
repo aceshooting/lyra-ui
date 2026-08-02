@@ -4,6 +4,9 @@
 
 import type { LyraVariant } from '../../../internal/variants.js';
 
+/** Selection behavior shared by the declarative and data-driven tree models. */
+export type TreeSelection = 'single' | 'multiple' | 'leaf' | 'leaf-multiple';
+
 /** Tone for a `TreeBadge` chip — the shared semantic tone. Kept as a local name so existing
  *  imports keep resolving. */
 export type TreeBadgeTone = LyraVariant;
@@ -23,6 +26,9 @@ export interface TreeItem {
   selected?: boolean;
   /** Removes this item from roving focus and prevents select/toggle activation. */
   disabled?: boolean;
+  /** Marks children as asynchronously loadable. Assign a refreshed item with children (or
+   * `lazy: false`) in response to `lr-lazy-load` to finish the pending expansion. */
+  lazy?: boolean;
   children?: TreeItem[];
   badge?: string | number;
   /** Additive, token-colored chips rendered after the legacy `badge`. Omit for byte-identical

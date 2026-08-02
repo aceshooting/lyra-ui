@@ -88,8 +88,10 @@ treat a gap in any of them as a bug, not a missing feature.
 
 ## Theming — design tokens only
 
-See "Design tokens only" in [coding-conventions.md](coding-conventions.md) — every value
-references a `--lr-*` property from `internal/tokens.styles.ts`, bridging to `--lr-theme-*` with a
-hardcoded fallback. This also makes i18n and RTL "just work" visually: token-driven spacing and
-sizing hardcode no text direction or font width, so longer/shorter translated strings and mirrored
-RTL layouts reflow correctly without component-specific overrides.
+See "Design tokens only" in [coding-conventions.md](coding-conventions.md) — every component value
+references a centralized `--lr-*` property. Themeable base tokens bridge to `--lr-theme-*` with a
+built-in fallback; aliases, computed/ramp tokens, environment values, and fixed contract constants
+can resolve within the internal layer instead. This also makes i18n and RTL "just work" visually:
+token-driven spacing and sizing hardcode no text direction or font width, so longer/shorter
+translated strings and mirrored RTL layouts reflow correctly without component-specific
+overrides.

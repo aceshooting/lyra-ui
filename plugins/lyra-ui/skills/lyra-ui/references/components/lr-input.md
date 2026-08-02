@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/input/input.js';` (registers the tag; side-effect import)
 - **Class** `LyraInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/input/input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,20 +24,24 @@ Pressing Enter submits the ancestor `<form>` — the implicit submission a nativ
 see "Enter-to-submit" below for the exact rules and for which controls deliberately opt out.
 
 **Properties:**
-- `type: LyraInputType = 'text'` — `'text' | 'password' | 'email' | 'number' | 'time' | 'search'`
+- `type: LyraInputType = 'text'` — `'text' | 'password' | 'email' | 'number' | 'time' | 'search' |
+  'date' | 'datetime-local' | 'tel' | 'url'`
 - `size: LyraSize = 'm'` (reflected — see "Shared form vocabulary" below)
-- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
-  (reflected) — the shared field-surface vocabulary. `filled-outlined` (the default) draws both a
-  surface fill and a border; `outlined` drops the fill, `filled` drops the border, `plain` drops
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
+  (reflected) — the shared field-surface vocabulary. `outlined` (the mapped default) draws a border
+  without a fill; `filled-outlined` draws both, `filled` drops the border, `plain` drops
   both, and `accent` tints both with the brand color. Each value does nothing but swap
   `--lr-input-fill`/`--lr-input-border-color`, so either can be retuned without a
   `::part(input-wrapper)` rule
+- `filled: boolean = false` (reflected) — Shoelace alias for the filled treatment
 - `pill: boolean = false` (reflected) — rounds the control row to a full pill by swapping
   `--lr-input-radius` to `--lr-radius-pill`
 - `autofocus: boolean = false` — forwarded to the internal native `<input>` rather than left on the
   host, so the browser's own autofocus algorithm targets the real text control (the custom-element
   host is not focusable). Left unset, the native attribute is omitted entirely
 - `value: string = ''` (from `FormAssociated`)
+- `defaultValue: string = ''` — reset value, backed by the standard `value` content attribute;
+  `default-value` is accepted as a Shoelace attribute alias
 - `placeholder: string = ''`
 - `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
   `search` input has a value; clearing preserves input focus
@@ -45,14 +51,27 @@ see "Enter-to-submit" below for the exact rules and for which controls deliberat
 - `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `label: string = ''`
 - `hint: string = ''`
+- `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins when both
+  are set. `withLabel`/`withHint` (`with-label`/`with-hint`) provide optional SSR slot-presence hints
 - `errorText: string = ''` (attribute `error-text`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `autocomplete: string = ''`
+- `title: string = ''` — forwarded to the native input
 - `spellcheck: boolean = true` — forwarded to the native input, including `spellcheck="false"`
-- `autocapitalize: string = ''` / `autoCorrect: string = ''` (attribute `autocorrect`)
+- `autocapitalize: string = ''` / `autocorrect` (read: `boolean = true`; write:
+  `boolean | 'off' | 'on'`; attribute values `on`/`off`)
 - `inputMode: string = ''` (attribute `inputmode`) / `enterKeyHint: string = ''` (attribute
-  `enterkeyhint`) — these four are forwarded verbatim to the native input; an empty string omits
-  the attribute entirely
+  `enterkeyhint`) — `autocapitalize`, `inputMode`, and `enterKeyHint` are forwarded verbatim to the
+  native input and an empty string omits them; `autocorrect` is normalized to canonical `on`/`off`
+- Lowercase native IDLs `inputmode: string` and `enterkeyhint: string` delegate to the camel-case
+  native properties; `autocorrect` reads as boolean while accepting both Web Awesome's boolean
+  writes and Shoelace's `'off'`/`'on'` writes
+
+**8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
+alias. Prefer boolean `autocorrect` writes in new code; migrated Shoelace `'off'`/`'on'` property
+writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
+`autocorrect="off"`.
+
 - `min?: number | string` / `max?: number | string` (attributes `min`/`max`) /
   `step?: number | 'any'` (attribute `step`, accepts the native `'any'` value alongside a number)
   — forwarded verbatim to the native
@@ -81,6 +100,8 @@ see "Enter-to-submit" below for the exact rules and for which controls deliberat
   **Breaking in 8.0.0:** `type="number"` used to hide them unconditionally; left unset, the
   platform's spinners now render exactly as they do on a bare `<input type="number">`.
   `<lr-number-input>` defaults this the other way (`true`), so its rendering is unchanged
+- `noSpinButtons: boolean = false` (attribute `no-spin-buttons`) — Shoelace alias for
+  `withoutSpinButtons`; either suppresses native number spinners
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
 **Getters/methods:** `input: HTMLInputElement | null` (the internal native `<input>`, for direct DOM
@@ -92,8 +113,17 @@ matching the native `<input>`'s own contract), `setSelectionRange(start, end, di
 (no-op before render, otherwise throws the same native `InvalidStateError` a native `<input>` would
 for an unsupported `type`), and `setRangeText(replacement, start?, end?, selectMode?)` (no-op
 before render; syncs `value` afterward without emitting a user event).
+The shared form surface also exposes `getForm()`, which returns the browser-resolved owner including
+an external form selected by the `form` attribute. `resetValidity()` clears only consumer-supplied
+custom validity and recomputes the current native/required constraints; it leaves
+`value`/`defaultValue` and prior interaction state unchanged, so an intrinsically invalid input
+stays invalid.
 
 Three more native passthroughs:
+
+- `valueAsDate: Date | null` / `valueAsNumber: number` — native getters/setters for date/time and
+  numeric input types. Assignment synchronizes `value`, form value, and validity without emitting a
+  user edit event; unsupported types retain the native `null`/`NaN` behavior.
 
 - `showPicker(): void` — opens the browser's own picker for the current `type` (the time picker, and
   whatever chooser the platform offers for the other types), delegating to the internal native
@@ -117,15 +147,20 @@ Three more native passthroughs:
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
 `change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
-own `blur`/`focus`), and `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/
-`change`/`lr-change` sequence).
+own `blur`/`focus`) each followed by its prefixed alias `lr-blur`/`lr-focus` (no detail), and
+`lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/`change`/`lr-change`
+sequence). `lr-invalid` (no detail) fires when a validity check finds the input invalid.
 
-**Slots:** `label`, `hint`, `error`, `start` (adornment before the input), `end` (adornment after the
-input and built-in actions).
+**Slots:** `label`, `hint`/`help-text`, `error`, `start`/`prefix` (aliases before the input),
+`end`/`suffix` (aliases after the input and built-in actions), `clear-icon`,
+`show-password-icon`, and `hide-password-icon`.
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `password-toggle`
+**CSS parts:** `form-control`, `form-control-label`, `label`, `base`/`form-control-input`/
+`input-wrapper` (compatibility names on the row wrapping the native input and actions), `input`,
+`password-toggle`, `password-toggle-button`
 (present only when `type="password"` **and** `password-toggle` is set), `start`, `end`,
-`clear-button` (non-empty clearable `text`/`search` inputs only), `hint`, `error`.
+`clear-button` (non-empty clearable `text`/`search` inputs only),
+`hint`/`form-control-help-text` (compatibility names on the same hint node), and `error`.
 
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
 `--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
@@ -143,14 +178,14 @@ the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall 
 lozenge. `pill` re-assigns it to `--lr-radius-pill`. `lr-number-input`/`lr-time-input` inherit both
 unchanged.
 
-`--lr-input-fill` (default `var(--lr-color-surface)`) is the control row's background and
+`--lr-input-fill` (default `transparent`) is the control row's background and
 `--lr-input-border-color` (default `var(--lr-color-border)`) its border color. Both are swapped by
-`appearance` rather than by `size`, and the documented defaults are `appearance="filled-outlined"`'s
+`appearance` rather than by `size`, and the documented defaults are `appearance="outlined"`'s
 values (they are also declared bare on `:host`, so an element whose `appearance` attribute hasn't
 reflected yet still paints the committed default). Setting either directly retunes the surface
 without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
 
-### Shared form vocabulary — `size`, `appearance`, `pill`, `setCustomValidity()`
+### Shared form vocabulary — `size`, `appearance`, `pill`, and custom validity
 
 Four things every form control in this family now spells the same way. They are documented here
 because `lr-input` is where a reader meets all four at once; each component's own list restates only
@@ -170,14 +205,15 @@ what is specific to it.
   (both) and `plain` (neither). It used to double as a *container* treatment on other components;
   that meaning moved to `frame` (`card`/`plain`) in 8.0.0, so `appearance` means one thing
   library-wide. `lr-button` adds two tiers of its own on top (`quiet` and `link`). Text fields
-  default to `filled-outlined`, `lr-select` to `outlined`, `lr-button` to `accent`.
+  (`lr-input`, `lr-textarea`, and `lr-select`) default to `outlined`; `lr-button` defaults to `accent`.
 - **`pill` rounds the control's ends.** Available on `lr-input`, `lr-number-input`, `lr-time-input`,
   `lr-textarea`, `lr-select`, `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input`,
   `lr-button` and `lr-radio-button`. In every case it does exactly one thing — re-assign that
   component's own `--lr-*-radius` knob to `--lr-radius-pill` — rather than declaring a radius on a
   part, so the knob stays the single corner-radius override point and a consumer's own value still
   wins over it.
-- **`setCustomValidity(message)` is on every form-associated *value* control here** — every one
+- **`setCustomValidity(message)` and `resetValidity()` are on every form-associated *value* control
+  here** — every one
   that submits something, whether it drives `ElementInternals` through the shared mixin or by hand.
   (`lr-button` and `lr-icon-button` are form-associated so an ancestor `<fieldset disabled>` and
   `form.elements` reach them, but they carry no value or validity, so they have no such method.) It
@@ -187,9 +223,11 @@ what is specific to it.
   `:invalid`/`:state(invalid)`.
   `''` clears it and republishes the control's *own* computed validity rather than forcing it valid:
   a required-and-empty field goes back to `valueMissing`. The message survives every intrinsic
-  recomputation and a `form.reset()`, exactly like a native control — only another
-  `setCustomValidity('')` clears it — and is used verbatim, never localized, because it is
-  caller-supplied content.
+  recomputation and a `form.reset()`, exactly like a native control; `setCustomValidity('')` or
+  `resetValidity()` clears it. `resetValidity()` affects only that consumer layer and recomputes the
+  current intrinsic constraints: it does not change `value`/`defaultValue`, make the control
+  pristine again, or force an intrinsically invalid value valid. The message is used verbatim,
+  never localized, because it is caller-supplied content.
 
 ### Enter-to-submit
 

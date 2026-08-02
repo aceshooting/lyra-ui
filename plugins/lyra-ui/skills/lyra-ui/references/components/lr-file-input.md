@@ -5,23 +5,35 @@
 - **Import** `import '@aceshooting/lyra-ui/components/media/file-input/file-input.js';` (registers the tag; side-effect import)
 - **Class** `LyraFileInput`, also available unregistered from `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-file-input`
 
-A drag-drop + click-to-browse file dropzone. Emits raw `File[]` only — no client-side CSV/XLSX/etc.
-parsing (that's left entirely to the host).
+A form-associated drag-drop + click-to-browse file dropzone. It stores and renders raw `File[]`;
+no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the host).
 
 **Properties:**
 - `multiple: boolean = false` (reflected)
 - `disabled: boolean = false` (reflected)
+- `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
+  synchronize rendering, validity, and form submission
+- `fileCount: number` and `dragging: boolean` (read-only)
+- `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
+  `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
+  `File`; `multiple` submits repeated entries under `name`
+- `customError: string | null` (attribute `custom-error`) — reflected consumer validation message;
+  a non-empty value blocks submission until cleared with `setCustomValidity('')` or
+  `resetValidity()`
 - `accept: string = ''` — a native-`accept`-style string (`.csv,.xlsx`, `text/csv`, `image/*`, or any
   comma-separated mix); now enforced on **both** the native picker dialog and the drag-drop path, see
   gotchas
+- `capture: '' | 'user' | 'environment' = ''` — forwarded to the native file picker
 - `allowedMimeTypes: string[] = []` (attribute: false) — exact MIME-string allowlist
 - `forbiddenMimeTypes: string[] = []` (attribute: false) — exact MIME-string denylist, checked
   **before** (and takes precedence over) `allowedMimeTypes`
@@ -32,7 +44,14 @@ parsing (that's left entirely to the host).
   constrained spaces (a toolbar, a table cell) — the same convention as `lr-empty`'s `compact`. The
   dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
   `--lr-space-l` dropzone.
-- `label: string = 'Drop files here or click to browse'`
+- `label: string = ''` and `hint: string = ''`; an empty `label` leaves the localized dropzone
+  instruction (`fileInputDefaultLabel`) as the visible fallback
+- `withLabel: boolean = false` and `withHint: boolean = false` (attributes `with-label` and
+  `with-hint`) — SSR slot-presence hints
+- `size: LyraSize = 'm'` (reflected) and `validators: unknown[] = []` (attribute: false)
+- `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
+  first render. Assign another shadow descendant to override where native constraint-validation UI
+  is anchored; assign `undefined` to restore the default focusable base
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
   dropzone/button accessible name without changing visible copy
 - `acceptedMessage: string = '{count} file(s) added.'` (attribute `accepted-message`) — live-region
@@ -40,16 +59,21 @@ parsing (that's left entirely to the host).
 - `rejectedMessage: string = '{count} file(s) rejected.'` (attribute `rejected-message`) — live-region
   message after rejected files; `{count}` is replaced with the rejected count
 
-**Methods:** `openPicker()` programmatically opens the native file dialog; `focus(options?)`
-forwards to the interactive dropzone.
+**Methods:** `openPicker()` programmatically opens the native file dialog; `focus(options?)`,
+`blur()`, and `click()` forward to the interactive dropzone. Standard FACE methods are
+`getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
+`resetValidity()`; reset clears only consumer custom validity and restores current intrinsic
+`required` validity.
 
-**Events:** `lr-files` (`detail: { files: File[], rejected: RejectedFile[] }`, fired on both drop
+**Events:** a user selection or removal emits native bubbling/composed `input`, then `change`;
+programmatic `files` writes are silent. `lr-files` (`detail: { files: File[], rejected: RejectedFile[] }`, fired on both drop
 and manual file-picker selection) — `RejectedFile = { file: File; reason: 'type' | 'count' | 'size' | 'directory'
 }`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
 input (`multiple` unset) receives more than one file (in which case *all* files are rejected, none
 accepted), `'size'` from `maxFileSize`, or `'directory'` for a dropped folder. `focus`/`blur` fire
 when the semantic dropzone (the actual keyboard-focusable element, not the hidden native `<input>`)
 gains/loses focus.
+`lr-invalid` is the bubbling/composed alias of native invalidity.
 
 Each rejected file also renders as its own line in the visible `[part="rejection"]` alert, naming
 the file and the reason via one of four locale keys: `fileInputRejectedType` (default
@@ -60,25 +84,32 @@ file can be selected at a time.'`), and — for `'directory'` — the pre-existi
 `{filename}` placeholder). The filename is interpolated as caller-supplied data, never localized
 itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
-**Slots:** default slot — custom dropzone content, overrides the `label` attribute text when
-provided. The semantic button's accessible name comes from `accessibleLabel`/host `aria-label`,
+**Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
+content; `label` and `hint` supply form chrome. The semantic button's accessible name comes from
+`accessibleLabel`/host `aria-label`,
 then `label`, so icon-only slot content still announces correctly. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
 controls keep their own activation and do not also open the picker; clicking non-interactive custom
 content still activates the dropzone.
 
-**CSS parts:** `base` (the native dropzone button, visually behind but semantically beside the
-slotted content), `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
+**CSS parts:** `file-input`, `form-control-label`, `label`, `hint`, `dropzone`, `dropzone-icon`,
+`dropzone-text`, `base` (the native dropzone button, visually behind but semantically beside the
+slotted content), `input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
+`file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden `role="status" aria-live="polite"`
 element carrying the drag accept/reject announcement and the aggregate accepted/rejected count),
 `rejection` (a **visible** `role="alert"` region, rendered only while a rejection exists, listing
 each currently-rejected file next to a per-reason message — in addition to, never in place of, the
 sr-only `status` summary above)
 
+**CSS custom states:** `blank` and `dragging`, plus the shared validity states `required`,
+`optional`, `valid`, `invalid`, `user-valid`, and `user-invalid`.
+
 **Themeable custom properties:** `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
 `[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default
 `var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
 `--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
-`compact`. All three apply only while `compact` is set, so they are the way to tune a dense dropzone
+`compact`. `--lr-file-input-font-size` (default `var(--lr-form-control-font-size)`) controls the
+dropzone text size. The three compact properties apply only while `compact` is set, so they are the way to tune a dense dropzone
 without re-pointing shared spacing tokens for everything else on the page. The drag accept/reject
 highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
 `--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
@@ -121,9 +152,9 @@ an extension-only `accept` list.
 - Paste-from-clipboard **is** supported and on by default: a `paste` event on the dropzone reads
   `e.clipboardData.files` and routes it through the same accept/reject classification as a drop.
   Set `paste="false"` (or `.paste = false`) to opt out.
-- Dragged folders **are** detected via `webkitGetAsEntry()` and reported as
-  `rejected[].reason === 'directory'` (paired with a synthetic zero-byte `File` carrying the folder
-  name), not silently accepted as a phantom file.
+- Dragged folders are traversed recursively in `multiple` mode and every nested file is added. In
+  single-file mode a folder is reported as `rejected[].reason === 'directory'` (paired with a
+  synthetic zero-byte `File` carrying the folder name).
 - `maxFileSize` fails safe rather than open: `0` (the default) or `Infinity` mean "no limit", but a
   `NaN`/negative value — an unparsable `max-file-size` attribute, or a config that hasn't loaded
   yet — falls back to a 25 MB cap (exported as `DEFAULT_MAX_FILE_SIZE_BYTES`) instead of disabling

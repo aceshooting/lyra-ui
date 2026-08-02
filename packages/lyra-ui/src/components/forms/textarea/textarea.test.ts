@@ -5,6 +5,18 @@ import type { LyraTextarea } from './textarea.js';
 import { styles } from './textarea.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 
+it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+  const el = await fixture<LyraTextarea>(html`<lr-textarea required aria-label="Notes"></lr-textarea>`);
+  const aliases: CustomEvent[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0].target).to.equal(el);
+  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
+  expect(aliases[0].cancelable).to.be.false;
+});
+
 it('falls back from an invalid runtime resize value without injecting declarations', async () => {
   const el = await fixture<LyraTextarea>(html`<lr-textarea></lr-textarea>`);
   el.resize = 'both;position:fixed' as unknown as LyraTextarea['resize'];
@@ -15,6 +27,13 @@ it('falls back from an invalid runtime resize value without injecting declaratio
   el.resize = 'both';
   await el.updateComplete;
   expect(textarea.style.resize).to.equal('both');
+});
+
+it('reflects the pinned Web Awesome resize property', async () => {
+  const el = await fixture<LyraTextarea>(html`<lr-textarea></lr-textarea>`);
+  el.resize = 'horizontal';
+  await el.updateComplete;
+  expect(el.getAttribute('resize')).to.equal('horizontal');
 });
 
 it('gives the textarea field hover feedback matching the keyboard focus-visible cue', () => {
@@ -59,10 +78,10 @@ it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wi
   }
 });
 
-it('defaults to rows=3, resize="vertical", editable, and an empty value', async () => {
+it('defaults to the mapped rows=4, resize="vertical", editable, and an empty value', async () => {
   const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
   const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-  expect(el.rows).to.equal(3);
+  expect(el.rows).to.equal(4);
   expect(el.resize).to.equal('vertical');
   expect(el.value).to.equal('');
   expect(el.readonly).to.equal(false);
@@ -311,7 +330,7 @@ describe('label/hint/error chrome', () => {
   it('renders no chrome when label/hint/errorText are unset (today\'s exact bare output)', async () => {
     const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
     const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
-    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(label.hidden).to.be.true;
     expect(hint.hidden).to.be.true;
@@ -323,7 +342,7 @@ describe('label/hint/error chrome', () => {
       html`<lr-textarea label="Notes" hint="Keep it short" error-text="Required"></lr-textarea>`,
     )) as LyraTextarea;
     const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
-    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(label.hidden).to.be.false;
     expect(label.textContent).to.contain('Notes');
@@ -346,7 +365,7 @@ describe('label/hint/error chrome', () => {
     `)) as LyraTextarea;
     await el.updateComplete;
     const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect((el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement).hidden).to.be.false;
     expect(hint.hidden).to.be.false;
@@ -749,12 +768,12 @@ describe('lr-textarea appearance', () => {
   const fieldOf = (el: LyraTextarea) => el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
   const TRANSPARENT = 'rgba(0, 0, 0, 0)';
 
-  it('defaults to "filled-outlined", reflected, keeping the committed fill + border', async () => {
+  it('defaults to mapped "outlined", reflected, keeping the committed border only', async () => {
     const el = await fixture<LyraTextarea>(html`<lr-textarea aria-label="Notes"></lr-textarea>`);
-    expect(el.appearance).to.equal('filled-outlined');
-    expect(el.getAttribute('appearance')).to.equal('filled-outlined');
+    expect(el.appearance).to.equal('outlined');
+    expect(el.getAttribute('appearance')).to.equal('outlined');
     const cs = getComputedStyle(fieldOf(el));
-    expect(cs.backgroundColor).to.not.equal(TRANSPARENT);
+    expect(cs.backgroundColor).to.equal(TRANSPARENT);
     expect(cs.borderTopColor).to.not.equal(TRANSPARENT);
   });
 
@@ -786,8 +805,8 @@ describe('lr-textarea appearance', () => {
 describe('lr-textarea wrapper parts', () => {
   it('wraps the native textarea in a textarea-wrapper part', async () => {
     const el = await fixture<LyraTextarea>(html`<lr-textarea aria-label="Notes"></lr-textarea>`);
-    const wrapper = el.shadowRoot!.querySelector('[part="textarea-wrapper"]') as HTMLElement;
-    expect(el.shadowRoot!.querySelectorAll('[part="textarea-wrapper"]').length).to.equal(1);
+    const wrapper = el.shadowRoot!.querySelector('[part~="textarea-wrapper"]') as HTMLElement;
+    expect(el.shadowRoot!.querySelectorAll('[part~="textarea-wrapper"]').length).to.equal(1);
     expect(wrapper.querySelectorAll('textarea').length).to.equal(1);
   });
 
@@ -971,4 +990,98 @@ it('is accessible with the pill treatment applied', async () => {
     html`<lr-textarea pill label="Notes" hint="Optional"></lr-textarea>`,
   );
   await expect(el).to.be.accessible();
+});
+
+describe('lr-textarea mapped Textarea parity surface', () => {
+  it('forwards autofocus/title and exposes defaultValue reset semantics', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form><lr-textarea name="notes" value="seed" autofocus title="Notes editor"></lr-textarea></form>
+    `);
+    const el = form.querySelector('lr-textarea') as LyraTextarea;
+    const native = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    expect(native.autofocus).to.be.true;
+    expect(native.title).to.equal('Notes editor');
+    expect(el.defaultValue).to.equal('seed');
+    el.value = 'edited';
+    form.reset();
+    expect(el.value).to.equal('seed');
+  });
+
+  it('accepts default-value as an attribute alias for the supported defaultValue reset IDL', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form><lr-textarea name="notes" default-value="seed"></lr-textarea></form>
+    `);
+    const el = form.querySelector('lr-textarea') as LyraTextarea;
+    expect(el.defaultValue).to.equal('seed');
+    expect(el.value).to.equal('seed');
+
+    el.value = 'edited';
+    form.reset();
+    expect(el.value).to.equal('seed');
+  });
+
+  it('accepts filled/help-text and with-label/with-hint SSR aliases', async () => {
+    const el = (await fixture(html`
+      <lr-textarea filled help-text="Alias hint" with-label with-hint></lr-textarea>
+    `)) as LyraTextarea & { filled: boolean; helpText: string; withLabel: boolean; withHint: boolean };
+    expect(el.filled).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part~="label"]') as HTMLElement).hidden).to.be.false;
+    expect((el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement).hidden).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part~="hint"]')?.textContent).to.contain('Alias hint');
+  });
+
+  it('accepts help-text slot and exports form-control-input/adjuster part aliases', async () => {
+    const el = await fixture<LyraTextarea>(html`
+      <lr-textarea><span slot="help-text">Slotted help</span></lr-textarea>
+    `);
+    expect(el.shadowRoot!.querySelector('[part~="form-control-input"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part~="textarea-adjuster"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part~="form-control-help-text"]')).to.exist;
+    const help = el.shadowRoot!.querySelector('slot[name="help-text"]') as HTMLSlotElement;
+    expect(help.assignedElements()[0]?.textContent).to.equal('Slotted help');
+  });
+
+  it('keeps a boolean autocorrect read while accepting both upstream write vocabularies', async () => {
+    const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea & {
+      inputmode: string;
+      enterkeyhint: string;
+    };
+    el.autocorrect = false;
+    el.inputmode = 'text';
+    el.enterkeyhint = 'done';
+    await el.updateComplete;
+    const native = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    expect(el.autocorrect).to.equal(false);
+    expect(native.getAttribute('autocorrect')).to.equal('off');
+    expect(el.inputMode).to.equal('text');
+    expect(el.enterKeyHint).to.equal('done');
+
+    el.setAttribute('autocorrect', 'on');
+    await el.updateComplete;
+    expect(el.autocorrect).to.equal(true);
+    expect(native.getAttribute('autocorrect')).to.equal('on');
+
+    const shoelaceWrite = el as unknown as { autocorrect: boolean | string };
+    shoelaceWrite.autocorrect = 'off';
+    await el.updateComplete;
+    expect(el.autocorrect).to.equal(false);
+    expect(native.getAttribute('autocorrect')).to.equal('off');
+    shoelaceWrite.autocorrect = 'sentences';
+    await el.updateComplete;
+    expect(el.autocorrect).to.equal(true);
+    expect(native.getAttribute('autocorrect')).to.equal('on');
+
+    el.removeAttribute('autocorrect');
+    await el.updateComplete;
+    expect(el.autocorrect, 'attribute removal restores the true default').to.equal(true);
+    expect(native.hasAttribute('autocorrect'), 'the native control resumes its browser default').to.equal(false);
+  });
+
+  it('reflects the blank custom state across live value changes', async () => {
+    const el = await fixture<LyraTextarea>(html`<lr-textarea></lr-textarea>`);
+    expect(el.matches(':state(blank)')).to.be.true;
+    el.value = 'note';
+    await el.updateComplete;
+    expect(el.matches(':state(blank)')).to.be.false;
+  });
 });

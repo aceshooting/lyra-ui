@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/radio/radio.js';` (registers the tag; side-effect import)
 - **Class** `LyraRadio`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -15,17 +17,21 @@
 
 A form-associated single-choice control. Use it alone or inside `lr-radio-group`.
 
-**Properties:** `checked`, `disabled`, `required`, `name`, and `value` (all reflected where
-applicable). A selected radio submits its value through `ElementInternals`.
+**Properties:** live, non-reflecting `checked`; reflected `defaultChecked` (attribute `checked`);
+reflected `customError: string | null` (attribute `custom-error`); `disabled`, `required`, `name`,
+and `value`. A selected standalone radio submits its value through `ElementInternals`.
 An empty `name` is canonicalized to an omitted attribute rather than reappearing as `name=""`.
 `effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
-`blur()`, and `click()` forward to the internal radio control.
+`blur()`, and `click()` forward to the internal radio control; `getForm()` returns the standalone
+radio's owning form and the aggregate group's owning form while the radio is group-owned.
 
 - `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
   `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`. It scales the indicator off the same
   values `lr-input`/`lr-select`/`lr-button` read, so controls of one `size` line up in a row. The
   slotted label keeps the standard control-label type size at every tier — restyle it through
   `::part(label)` to make it track the control.
+- `appearance: 'default' | 'button' = 'default'` (reflected) — WA's button presentation on the
+  same `<lr-radio>` tag; it retains radio semantics, group ownership, value, and events
 - `pill: boolean = false` (reflected) — rounds the control's own chrome into a pill instead of the
   shared control radius. A plain `<lr-radio>`'s indicator is a circle at every setting, so this is
   visible on `<lr-radio-button>`, which inherits this class and renders rectangular chrome; it is
@@ -34,20 +40,27 @@ An empty `name` is canonicalized to an omitted attribute rather than reappearing
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("that plan is no longer
 available"): a non-empty message raises `customError` and blocks submission, `''` restores the
 control's own computed validity so a required-and-unselected radio goes back to `valueMissing`. It
-survives every selection, every group-driven `required` change, and a form reset. It lives on the
-radio rather than on `<lr-radio-group>` because the group is not itself form-associated — it
-designates one member as the group's validity owner, and that radio is what participates in the
-owning form.
+survives every selection, every group-driven `required` change, and a form reset. A standalone
+radio owns the error itself; an owned radio delegates it to the form-associated aggregate group.
+`resetValidity()` clears the error through that same standalone-or-group owner.
 
-**Events:** native-style composed `input` and `change`. A standalone radio also emits `lr-change`
-with `{ checked, value }`. An owned radio suppresses that child alias at its source; its group emits
-the sole aggregate `lr-change` described below, so capture and bubble listeners cannot observe two
-differently shaped aliases. The internal control's native `focus` and `blur` are re-dispatched as
-bubbling, composed host events.
+`checked` follows native dirty-state semantics: changing `defaultChecked`/the `checked` attribute
+updates the current reset default without overwriting a dirty live selection, and `form.reset()`
+restores the current default.
+
+**Events:** a standalone selection emits, in order, native-style composed `input`, `lr-input`,
+native-style composed `change`, then `lr-change`; both aliases carry `{ checked, value }`. An owned
+radio emits none of those child value events; its group emits the sole aggregate sequence described
+below, so capture and bubble listeners cannot observe two differently shaped event sets. The
+internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events,
+each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
+`lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
 
 **Slots:** default label content.
 
-**CSS parts:** `base`, `circle`, `dot`, `label`.
+**CSS parts:** default appearance: `base`, `circle` / `control` (with Shoelace's
+`control--checked` state token), `dot` / `checked-icon`, and `label`. Button appearance: `base`,
+`button`, `control`, `button--checked` while selected, and `label`.
 
 **Themeable custom properties:**
 
@@ -74,6 +87,8 @@ bubbling, composed host events.
 while `checked` — a component-scoped indirection (the same pattern `lr-checkbox`'s own
 `--lr-checkbox-checked-bg`/`-border` pair uses) so a consumer can retint just this control's checked
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
+WA's `--checked-icon-color` and `--checked-icon-scale` aliases feed the selected indicator's color
+and scale.
 
 ```html
 <lr-radio name="format" value="json">JSON</lr-radio>

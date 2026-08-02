@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.js';` (registers the tag; side-effect import)
 - **Class** `LyraVirtualList`, also available unregistered from `@aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -229,8 +231,8 @@ history sidebar); it is not the right approach for a hundred-thousand-row list w
   an `<lr-menu>` popup in a row-action menu, a tooltip, an outward focus ring — is therefore painted
   *underneath* every following row, no matter how high its own `z-index` is: that `z-index` only
   orders siblings inside the row's own context. The last row always looks correct, which is exactly
-  why a short fixture never catches it. A row lifts to `--lr-layer-content` while something inside
-  it holds focus or while it contains an open `lr-menu`. The explicit menu-open branch covers
+  why the failure tends to hide in short lists. A row lifts to `--lr-layer-content` while something
+  inside it holds focus or while it contains an open `lr-menu`. The explicit menu-open branch covers
   imperative opening and virtual measurement/render cycles, where focus can temporarily return to
   the document while the popup remains visible. The value deliberately *matches*
   `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order

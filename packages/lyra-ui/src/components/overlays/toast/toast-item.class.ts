@@ -5,7 +5,12 @@ import { closeIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
-import type { LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
+import {
+  normalizeSize,
+  type LyraSize,
+  type LyraSizeStep,
+  type LyraVariant,
+} from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './toast-item.styles.js';
 
@@ -50,6 +55,17 @@ export interface LyraToastItemEventMap {
  * @csspart icon - The icon wrapper.
  * @csspart content - The message wrapper.
  * @csspart close-button - The dismiss button.
+ * @csspart close-icon - The close glyph wrapper.
+ * @csspart close-icon__svg - The close glyph's SVG element.
+ * @csspart progress-ring - The auto-dismiss progress ring around the close glyph.
+ * @csspart progress-ring__base - The progress ring's SVG element.
+ * @csspart progress-ring__indicator - The elapsed-time indicator circle.
+ * @csspart progress-ring__label - The ring's centered close-glyph container.
+ * @csspart progress-ring__track - The progress ring's background circle.
+ * @cssprop --accent-width - Mapped alias for `--lr-toast-accent-width`.
+ * @cssprop --hide-duration - Mapped alias for `--lr-toast-hide-duration`.
+ * @cssprop --padding - Mapped alias for `--lr-toast-padding`.
+ * @cssprop --show-duration - Mapped alias for `--lr-toast-show-duration`.
  * @cssprop [--lr-toast-accent-width=var(--lr-size-4px)] - Width of the accent bar, and the extra
  *   inline-start padding reserved for it.
  * @cssprop [--lr-toast-accent-color=var(--lr-color-border)] - Color of the accent bar and the icon.
@@ -63,6 +79,8 @@ export interface LyraToastItemEventMap {
  *   transition used while showing.
  * @cssprop [--lr-toast-hide-duration=var(--lr-transition-base, 180ms ease-out)] - Opacity/transform
  *   transition used while hiding.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   static override styles = [LyraElement.styles, variants, styles];
@@ -70,8 +88,18 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   /** Auto-dismiss delay in ms. Set to `Infinity` (or <= 0) to disable. */
   @property({ type: Number }) duration = 5000;
 
-  /** Visual size. */
-  @property({ reflect: true }) size: ToastSize = 'm';
+  private _size: ToastSize = 'm';
+  /** Visual size. Upstream `small`/`medium`/`large` writes normalize to canonical `s`/`m`/`l`
+   * reads without changing the constructed `m` default. */
+  @property({ reflect: true })
+  get size(): ToastSize {
+    return this._size;
+  }
+  set size(value: LyraSize) {
+    const old = this._size;
+    this._size = normalizeSize(value ?? 'm');
+    this.requestUpdate('size', old);
+  }
 
   /** Severity/variant. */
   @property({ reflect: true }) variant: ToastVariant = 'neutral';
@@ -137,6 +165,9 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       // interruption instead of keeping its original, now-stale role.
       this.setAttribute('role', this.variant === 'danger' || this.variant === 'warning' ? 'alert' : 'status');
     }
+    this.shadowRoot
+      ?.querySelector<SVGElement>('[part~="close-icon"] svg')
+      ?.setAttribute('part', 'close-icon__svg');
   }
 
   override firstUpdated(): void {
@@ -404,6 +435,29 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     }
   }
 
+  private renderCloseControl(): TemplateResult {
+    const close = html`<span part="close-icon">${closeIcon()}</span>`;
+    const duration = this.safeDuration;
+    if (!Number.isFinite(duration) || duration <= 0) return close;
+
+    return html`
+      <span part="progress-ring" aria-hidden="true">
+        <svg part="progress-ring__base" viewBox="0 0 20 20" focusable="false">
+          <circle part="progress-ring__track" cx="10" cy="10" r="8" pathLength="1"></circle>
+          <circle
+            part="progress-ring__indicator"
+            cx="10"
+            cy="10"
+            r="8"
+            pathLength="1"
+            style=${`animation-duration: ${duration}ms`}
+          ></circle>
+        </svg>
+        <span part="progress-ring__label">${close}</span>
+      </span>
+    `;
+  }
+
   override render(): TemplateResult {
     return html`
       <div
@@ -432,7 +486,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
             void this.hide();
           }}
         >
-          ${closeIcon()}
+          ${this.renderCloseControl()}
         </button>
       </div>
     `;

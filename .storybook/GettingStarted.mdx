@@ -18,10 +18,11 @@ npm install @aceshooting/lyra-ui
 is required to render a button, a form, a table or a dialog.
 
 Everything heavier than that is an **optional peer dependency** — Chart.js for `<lr-chart>`,
-MapLibre for `<lr-map>`, PDF.js for `<lr-pdf-viewer>`, and so on. None of them is imported eagerly;
-a component loads its peer on demand the first time it needs it, and fails closed with a localized
-error message if it isn't installed. You only install the ones whose components you actually use.
-See the [Optional peers](?path=/docs/guides-getting-started--docs#optional-peers) note below.
+MapLibre for `<lr-map>`, PDF.js for `<lr-pdf-viewer>`, and so on. Component-facing peers are normally
+loaded on demand and fail closed with a localized error if unavailable; `<lr-phone-input>` instead
+accepts a consumer-built phone-number adapter, while the React/Vue/Svelte peers are types-only. You
+only install the peers for surfaces you actually use. See the
+[Optional peers](?path=/docs/guides-getting-started--docs#optional-peers) note below.
 
 ## Registering an element
 
@@ -66,6 +67,20 @@ import '@aceshooting/lyra-ui/components/layout/tab-group/tab-panel.js';
 </lr-tab-group>
 ```
 
+The v8 Page and media surfaces use the same granular convention, as do the compatibility tags that
+preserve displaced Lyra behavior:
+
+```js
+import '@aceshooting/lyra-ui/components/layout/page/page.js';
+import '@aceshooting/lyra-ui/components/media/video/video.js';
+import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
+
+import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
+import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
+import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';
+import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
+```
+
 ## The two import styles
 
 ### Granular subpaths — the default
@@ -93,12 +108,11 @@ Two things to know before you ship it:
 - **It defeats tree-shaking.** The barrel's entire purpose is the side effect of registering every
   tag, so a bundler cannot drop any of it. Importing the barrel to use three components pulls in all
   of them.
-- **It is not actually complete.** The barrel deliberately skips every tag gated behind an optional
-  peer dependency — the whole chart family (`<lr-chart>` and its typed subclasses, `<lr-box-plot>`,
+- **It is not actually complete.** The barrel deliberately skips 15 inventory-designated
+  optional-peer-family tags — the whole chart family (`<lr-chart>` and its typed subclasses, `<lr-box-plot>`,
   `<lr-histogram>`), plus `<lr-map>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>` and
-  `<lr-geojson-view>`. If the barrel registered those, every consumer would pull Chart.js, MapLibre
-  and d3 into their bundle whether or not they render a chart. Those tags always need their own
-  subpath import, so the moment you use one you are writing granular imports anyway.
+  `<lr-geojson-view>`. Their peers still load lazily, but those tags are intentionally outside the
+  broad root registration surface and always need their own subpath import.
 
 The barrel also re-exports a broad compatibility surface of commonly used classes, helpers and
 types — but it is a convenience, not an exhaustive promise. The component's own entry point is the
@@ -134,6 +148,43 @@ costs nothing up front, because every peer is loaded by a dynamic import at rend
 a tag never pulls Chart.js, MapLibre or d3 into your first-paint bundle. It does mean the tag exists
 and will fail closed with a localized error if you render it without installing its peer.
 
+## Loading arbitrary Lyra markup on demand
+
+The optional manual autoloader is side-effect-free: it imports only inventory-known tags that are
+actually rendered, without pulling the root barrel into the application entry chunk.
+
+```ts
+import { discover, start, stop } from '@aceshooting/lyra-ui/autoloader.js';
+import { allDefined } from '@aceshooting/lyra-ui/utilities/defined.js';
+
+await discover(document); // scan once
+await start(document);    // scan, then observe dynamic/Turbo-style replacements
+await allDefined(document);
+stop();
+```
+
+Both scans include caller-owned open shadow roots and scoped custom-element registries. A loader-owned
+`data-lr-autoload-pending` marker remains through the component's first update, so application CSS
+can avoid a flash of undefined content. `{ events: true }` enables bubbling/composed
+`lr-autoload-preload`, `lr-autoload-loaded`, and `lr-autoload-error` events. Failed imports clear
+their marker and can be retried by a later scan.
+
+Optional-peer tags are excluded unless every required package is explicitly allowed:
+
+```ts
+await start(document, {
+  optionalPeers: ['dompurify', 'postal-mime'],
+  events: true,
+});
+```
+
+The side-effectful `@aceshooting/lyra-ui/autoloader-cdn.js` entry auto-starts for an ESM CDN. Put
+`data-lyra-autoloader` on its script when the CDN wraps module URLs; script-local
+`data-lyra-optional-peers="dompurify,postal-mime"` and `data-lyra-autoload-events` configure the
+same policy. Both autoloader entries are Node-safe no-ops without a document. `allDefined()` loads
+nothing itself: call it after explicit registrations or the autoloader when a test/bootstrap path
+needs every currently rendered known tag and its first update to be ready.
+
 ## Importing a class without registering a tag
 
 Every registration entry has a `.class.js` sibling that exports the class — and its
@@ -157,13 +208,21 @@ Beyond `components/*`, the package publishes a small set of focused entries:
 | Subpath | What it is |
 | --- | --- |
 | `@aceshooting/lyra-ui/theme.css` | Ready-made light + dark theme values. See [Theming](?path=/docs/guides-theming--docs). |
+| `@aceshooting/lyra-ui/native.css` | Optional tokenized styles for native descendants of an explicit `.lr-native` scope. |
+| `@aceshooting/lyra-ui/utilities.css` | Optional low-specificity `lr-*` layout, sizing, prose, text, visibility, and Page helper classes. |
 | `@aceshooting/lyra-ui/theme.js` | Zero-dependency runtime for persisting and applying a theme mode/accent. |
 | `@aceshooting/lyra-ui/localization.js` | Side-effect-free locale runtime. See [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs). |
+| `@aceshooting/lyra-ui/autoloader.js` | Side-effect-free on-demand `discover()` / `start()` / `stop()` for rendered inventory tags. |
+| `@aceshooting/lyra-ui/autoloader-cdn.js` | Side-effect entry that auto-starts the guarded autoloader for ESM-CDN use. |
+| `@aceshooting/lyra-ui/ssr-loader.js` | Lit hydration hook, server renderer fallback, support matrix, and diagnostics. |
+| `@aceshooting/lyra-ui/custom-elements-jsx` | Type-only React 19 / JSX template declarations. |
+| `@aceshooting/lyra-ui/vue` | Type-only Vue custom-element declarations. |
+| `@aceshooting/lyra-ui/svelte` | Type-only Svelte custom-element declarations. |
 | `@aceshooting/lyra-ui/events` | Types only — the global typed-event surface. See [Events](?path=/docs/guides-events--docs). |
 | `@aceshooting/lyra-ui/ai` | Provider-neutral types and stream adapters for the agentic components. |
 | `@aceshooting/lyra-ui/utilities` | The curated, semver-covered helper surface (also importable one module at a time, e.g. `utilities/positioner`). |
 | `@aceshooting/lyra-ui/testing` | happy-dom shims so form-associated controls are constructible in a non-browser test DOM. |
-| `@aceshooting/lyra-ui/translations/<locale>.js` | One of the eight shipped locale catalogs, as a side-effect-only import. |
+| `@aceshooting/lyra-ui/translations/<locale>.js` | One of the ten shipped locale catalogs, as a side-effect-only import. |
 
 `theme.js`, `localization.js` and `events` are deliberately free of component imports, so an
 application can set up theming, locales and event typing without pulling the component graph into
@@ -191,12 +250,67 @@ Switch modes with `class="lr-light"` / `class="lr-dark"` (or `data-lr-theme="lig
 any ancestor. [Theming](?path=/docs/guides-theming--docs) covers the token layers, how far an
 override reaches, and the `theme.js` runtime for persisting the choice.
 
+## Optional native styles and utilities
+
+The light-DOM styles are separate from every component entry and from `theme.css`. Import either
+one independently; importing neither preserves the browser and application styles you already have.
+
+```css
+@import '@aceshooting/lyra-ui/native.css';
+@import '@aceshooting/lyra-ui/utilities.css';
+```
+
+`native.css` never installs a page-wide reset. It styles native elements only when they are
+**descendants** of `.lr-native`; the element carrying the marker is not reset itself. This makes an
+existing region an explicit boundary:
+
+```html
+<section class="lr-native lr-stack">
+  <h2>Profile</h2>
+  <label for="display-name">Display name</label>
+  <input id="display-name" />
+</section>
+```
+
+`utilities.css` uses exact class selectors wrapped in `:where()`. Its main groups are display and
+composition (`lr-flex`, `lr-grid`, `lr-stack`, `lr-cluster`, `lr-grid-auto`), wrap/alignment/gap,
+logical sizing and overflow, text/prose, `lr-visually-hidden` / `lr-visually-hidden-focusable`,
+`lr-fouce-hidden`, and the `lr-page-mobile-only` / `lr-page-desktop-only` helpers. The Page helpers
+follow `<lr-page view="mobile|desktop">`, which is derived from that Page's allocated inline size;
+they do not consult the viewport.
+
+Both files declare the same order as `theme.css`: `lr-base`, `lr-theme`, `lr-utilities`, then
+`lr-overrides`. Native styles live in `lr-base` and utility classes in `lr-utilities`, so ordinary
+unlayered application CSS remains authoritative regardless of import order. All design values come
+from Lyra tokens; the complete class inventory and bundle-specific override hooks are in
+<a href="./llms/shared.md#optional-native-styles-and-css-utilities" target="_blank" rel="noreferrer">llms/shared.md</a>.
+
+### External modal interop
+
+If a third-party modal opens above a Lyra modal, yield Lyra's document-level Escape, Tab, and inert
+ownership for the connected external root:
+
+```ts
+import { suspendLyraModalsFor } from '@aceshooting/lyra-ui/utilities/overlay-manager.js';
+
+const externalModal = document.querySelector<HTMLElement>('#vendor-modal')!;
+const release = suspendLyraModalsFor(externalModal);
+// When the external modal closes:
+release();
+```
+
+The release function is idempotent, document-scoped, and nestable. Lyra preserves its own stack and
+focus-return targets while suspended; disconnecting or adopting the external root releases it
+automatically.
+
 ## Optional peers
 
-A component that needs a peer imports it dynamically, the first time it renders something that
-requires it. If the peer is not installed, the component fails closed and renders a localized error
-in a live region rather than throwing. Empty-but-valid results get their own state and never take
-the error path.
+Most component-facing peers are imported dynamically the first time a component renders something
+that requires them. If one is not installed, the component fails closed and renders a localized
+error in a live region rather than throwing. Empty-but-valid results get their own state and never
+take the error path. `<lr-phone-input>` is the exception: it accepts a consumer-created adapter and
+never imports `libphonenumber-js` itself. React, Vue, and Svelte are compile-time declaration peers,
+not component runtimes.
 
 Install only what you use:
 
@@ -211,8 +325,18 @@ The full component-to-peer table is in
 
 ## Using them from a framework
 
-They are custom elements, so they work anywhere — with two caveats that apply to custom elements in
-general, not to this library specifically.
+They are custom elements, so they work anywhere. React/JSX, Vue, and Svelte projects can opt into
+generated declarations once in their type graph; these entries emit empty JavaScript, add no
+wrapper dependency, and do not register tags:
+
+```ts
+import type {} from '@aceshooting/lyra-ui/custom-elements-jsx';
+import type {} from '@aceshooting/lyra-ui/vue';
+import type {} from '@aceshooting/lyra-ui/svelte';
+```
+
+Continue importing the granular registration modules for the elements the application renders.
+Two runtime caveats apply to custom elements in general, not to this library specifically.
 
 **Complex values must be property-bound, not attribute-bound.** An attribute stringifies, so
 `rows="[object Object]"` is what an array binding gets you. Use your framework's property syntax:
@@ -240,6 +364,46 @@ tableRef.current.addEventListener('lr-sort', onSort); // React
 Angular additionally needs `CUSTOM_ELEMENTS_SCHEMA` in the module or component that uses the tags.
 And remember that in-DOM HTML lower-cases attribute names — a camelCase *property* name only
 survives in framework templates and in JavaScript, never in hand-written HTML.
+
+## SSR and declarative shadow DOM
+
+Root and granular component imports are server-safe under Node 20+. Import the public loader before
+any other module that can import Lit. Its machine-readable matrix classifies every tag into one of
+two initial-render tiers:
+
+- `render-and-hydrate` emits Declarative Shadow DOM and reuses the server nodes in the browser.
+- `client-render` preserves the host, serializable attributes, and light DOM on the server, then
+  creates shadow DOM on upgrade for components that need layout, canvas, observers, media, or other
+  browser APIs during their first render.
+
+```ts
+import {
+  lyraSsrElementRenderers,
+  LYRA_SSR_SUPPORT_MATRIX,
+} from '@aceshooting/lyra-ui/ssr-loader.js';
+import { render, LitElementRenderer } from '@lit-labs/ssr';
+import { html } from 'lit';
+
+const result = render(html`<lr-page><main>Dashboard</main></lr-page>`, {
+  elementRenderers: lyraSsrElementRenderers(LitElementRenderer),
+});
+```
+
+The fallback renderer must precede `LitElementRenderer`. Property bindings cannot be serialized in
+the fallback tier, remote content remains client-only, and layout/observer/canvas/media work begins
+after hydration. `getLyraSsrMode()` and `diagnoseLyraHydration()` expose the declared tier and live
+readiness diagnostics; optional-peer components still need their granular registration import.
+
+## Component status and deprecation
+
+Every component page carries a `stable` or `experimental` status and the first published `since`
+version. Stable means production-ready. Experimental means the design is still under review, but a
+published experimental API receives the same semver protection as a stable one.
+
+A deprecation is separate, explicit metadata: it names the replacement, rationale, deprecation
+version, and earliest removal version. An API deprecated in major M remains through the complete
+M+1 release line and cannot be removed before M+2. The machine-readable metadata powers the same
+badges and notices in Storybook, the Custom Elements Manifest, editor data, and the LLM reference.
 
 ## Where to go next
 

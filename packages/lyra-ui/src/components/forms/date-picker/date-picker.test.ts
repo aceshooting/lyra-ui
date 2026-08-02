@@ -1119,3 +1119,147 @@ for (const [label, selector] of [
     }
   });
 }
+
+describe('reviewed date-picker parity surface', () => {
+  it('exposes and reflects reviewed IDL values and defaults', async () => {
+    const el = (await fixture(html`<lr-date-picker></lr-date-picker>`)) as LyraDatePicker;
+    const callback = (_date: Date): boolean => true;
+    const content = (date: Date): string => `day ${date.getDate()}`;
+    const dates = [new Date(2026, 6, 4)];
+    el.disabledDates = dates;
+    el.isDateDisabled = callback;
+    el.dayContent = content;
+    el.maxRange = 9;
+    el.minRange = 2;
+    el.pageBy = 'single';
+    el.today = '2026-07-04';
+    el.view = 'months';
+    el.withWeekNumbers = true;
+    await el.updateComplete;
+
+    expect(el.disabledDates).to.equal(dates);
+    expect(el.isDateDisabled).to.equal(callback);
+    expect(el.dayContent).to.equal(content);
+    expect(el.getAttribute('max-range')).to.equal('9');
+    expect(el.getAttribute('min-range')).to.equal('2');
+    expect(el.getAttribute('page-by')).to.equal('single');
+    expect(el.getAttribute('today')).to.equal('2026-07-04');
+    expect(el.getAttribute('view')).to.equal('months');
+    expect(el.hasAttribute('with-week-numbers')).to.be.true;
+    expect(el.firstDayOfWeek).to.equal('auto');
+    expect(el.weekdayFormat).to.equal('short');
+  });
+
+  it('round-trips valueAsDate and valueAsRange through the reflected ISO value', async () => {
+    const el = (await fixture(html`<lr-date-picker></lr-date-picker>`)) as LyraDatePicker;
+    el.valueAsDate = new Date(2026, 6, 15);
+    await el.updateComplete;
+    expect(el.value).to.equal('2026-07-15');
+    expect(el.getAttribute('value')).to.equal('2026-07-15');
+    el.mode = 'range';
+    el.valueAsRange = { from: new Date(2026, 6, 20), to: new Date(2026, 6, 10) };
+    await el.updateComplete;
+    expect(el.value).to.equal('2026-07-10/2026-07-20');
+    expect(el.valueAsRange.from?.getDate()).to.equal(10);
+    expect(el.valueAsRange.to?.getDate()).to.equal(20);
+  });
+
+  it('combines disabled dates, weekdays, predicates, range limits, and semantic day parts', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker
+        mode="range"
+        value="2026-07-10"
+        disabled-dates="2026-07-12, 2026-07-13"
+        disabled-days-of-week="sun"
+        min-range="3"
+        max-range="5"
+      ></lr-date-picker>
+    `)) as LyraDatePicker;
+    el.isDateDisabled = (date) => date.getDate() === 14;
+    await el.updateComplete;
+
+    for (const iso of ['2026-07-11', '2026-07-12', '2026-07-13', '2026-07-14', '2026-07-15']) {
+      const day = el.shadowRoot!.querySelector(`[data-date="${iso}"]`) as HTMLButtonElement;
+      expect(day.disabled, iso).to.be.true;
+      expect(day.getAttribute('part'), iso).to.include('day-disabled');
+    }
+    const weekend = el.shadowRoot!.querySelector('[data-date="2026-07-18"]') as HTMLButtonElement;
+    expect(weekend.getAttribute('part')).to.include('day-weekend');
+  });
+
+  it('renders reviewed structural parts, week numbers, and all four slots', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker value="2026-07-15" with-week-numbers>
+        <span slot="header">Custom header</span>
+        <span slot="previous-icon">Prev</span>
+        <span slot="next-icon">Next</span>
+        <span slot="footer">Custom footer</span>
+      </lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+    for (const part of [
+      'date-picker', 'months', 'month', 'header', 'nav', 'previous', 'next', 'title',
+      'month-label', 'weekdays', 'weekday', 'weeknumbers', 'weeknumber', 'grid', 'day',
+      'day-label', 'footer',
+    ]) {
+      expect(el.shadowRoot!.querySelector(`[part~="${part}"]`), part).to.exist;
+    }
+    for (const name of ['header', 'previous-icon', 'next-icon', 'footer']) {
+      const slot = el.shadowRoot!.querySelector(`slot[name="${name}"]`) as HTMLSlotElement;
+      expect(slot.assignedElements().length, name).to.equal(1);
+    }
+  });
+
+  it('supports day content and emits non-cancelable focus/view events with reviewed detail', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
+    el.dayContent = (date) => date.getDate() === 15 ? 'Payday' : undefined;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-date="2026-07-15"]')!.textContent).to.include('Payday');
+
+    const focusEvent = oneEvent(el, 'lr-focus-day');
+    (el.shadowRoot!.querySelector('[data-date="2026-07-16"]') as HTMLButtonElement).focus();
+    const focused = await focusEvent as CustomEvent<{ date: Date }>;
+    expect(focused.cancelable).to.be.false;
+    expect(focused.detail.date.getDate()).to.equal(16);
+    expect(el.focusedDate).to.equal('2026-07-16');
+
+    const viewEvent = oneEvent(el, 'lr-view-change');
+    (el.shadowRoot!.querySelector('[part~="title"]') as HTMLButtonElement).click();
+    const viewed = await viewEvent as CustomEvent<{ view: string; date: Date }>;
+    expect(viewed.cancelable).to.be.false;
+    expect(viewed.detail.view).to.equal('months');
+    expect(viewed.detail.date).to.be.instanceOf(Date);
+  });
+
+  it('emits exactly one native InputEvent/Event pair in order from the host', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
+    await el.updateComplete;
+    const seen: Event[] = [];
+    for (const name of ['input', 'change']) el.addEventListener(name, (event) => seen.push(event));
+    (el.shadowRoot!.querySelector('[data-date="2026-07-20"]') as HTMLButtonElement).click();
+    expect(seen.map((event) => event.type)).to.deep.equal(['input', 'change']);
+    expect(seen[0] instanceof InputEvent).to.be.true;
+    expect(seen[1] instanceof Event).to.be.true;
+    expect(seen[1] instanceof CustomEvent).to.be.false;
+    for (const event of seen) {
+      expect(event.target === el, event.type).to.be.true;
+      expect(event.bubbles, event.type).to.be.true;
+      expect(event.composed, event.type).to.be.true;
+      expect(event.cancelable, event.type).to.be.false;
+    }
+  });
+
+  it('publishes disabled/range/readonly states and is accessible when populated', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker mode="range" value="2026-07-10/2026-07-15" readonly with-week-numbers>
+        <span slot="footer">Choose a reporting period</span>
+      </lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+    const internals = (el as unknown as { internals: ElementInternals }).internals;
+    expect(internals.states.has('range')).to.be.true;
+    expect(internals.states.has('readonly')).to.be.true;
+    expect(internals.states.has('disabled')).to.be.false;
+    await expect(el).shadowDom.to.be.accessible();
+  });
+});

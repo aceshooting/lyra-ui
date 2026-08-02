@@ -19,6 +19,30 @@ function namesFromJSDoc(source) {
   return [...source.matchAll(/@csspart\s+([A-Za-z0-9_-]+)/g)].map((match) => match[1]);
 }
 
+/** Every single- or double-quoted string literal in a small source expression. Empty literals
+ * remain empty so one `: ''` branch cannot pair its quote with the next branch's quote. */
+function stringLiterals(source) {
+  return [...source.matchAll(/'([^'\\]*(?:\\.[^'\\]*)*)'|"([^"\\]*(?:\\.[^"\\]*)*)"/g)]
+    .map((match) => match[1] ?? match[2] ?? '');
+}
+
+function addLiteralPartNames(source, names) {
+  for (const literal of stringLiterals(source)) {
+    for (const name of literal.trim().split(/\s+/)) {
+      if (name) names.add(name);
+    }
+  }
+  // A subclass getter commonly appends one alias with a template literal, e.g.
+  // `` `${super.inputWrapperParts} time-input` ``. The interpolation is inherited plumbing; only
+  // the static words around it are new part tokens owned by this member.
+  for (const template of source.matchAll(/`([^`\\]*(?:\\.[^`\\]*)*)`/g)) {
+    const staticText = template[1].replace(/\$\{[\s\S]*?\}/g, ' ');
+    for (const name of staticText.trim().split(/\s+/)) {
+      if (name) names.add(name);
+    }
+  }
+}
+
 function namesFromTemplates(source) {
   const names = new Set();
   for (const match of source.matchAll(/\bpart\s*=\s*["']([^"']+)["']/g)) {
@@ -31,7 +55,7 @@ function namesFromTemplates(source) {
   // its initial array-literal names and its pushed string-literal names, so this check doesn't
   // false-positive on that pattern (see <lr-date-picker>'s calendar-day parts).
   for (const match of source.matchAll(/\bparts\s*=\s*\[([^\]]*)\]/g)) {
-    for (const literal of match[1].matchAll(/["']([^"']+)["']/g)) names.add(literal[1]);
+    addLiteralPartNames(match[1], names);
   }
   for (const match of source.matchAll(/\bparts\.push\(\s*["']([^"']+)["']\s*\)/g)) {
     names.add(match[1]);
@@ -58,14 +82,10 @@ function namesFromTemplates(source) {
   // from any declaration or parameter type named exactly `part`, matching this codebase's own
   // naming convention for that variable.
   for (const match of source.matchAll(/\b(?:const|let)\s+part\s*=([^;]+);/g)) {
-    for (const literal of match[1].matchAll(/["']([^"']+)["']/g)) {
-      for (const name of literal[1].trim().split(/\s+/)) {
-        if (name) names.add(name);
-      }
-    }
+    addLiteralPartNames(match[1], names);
   }
   for (const match of source.matchAll(/\bpart\s*:\s*((?:'[^']+'|"[^"]+")(?:\s*\|\s*(?:'[^']+'|"[^"]+"))*)/g)) {
-    for (const literal of match[1].matchAll(/["']([^"']+)["']/g)) names.add(literal[1]);
+    addLiteralPartNames(match[1], names);
   }
   // A static `part="prefix ...${identifier}"` attribute (a literal string with one interpolated
   // segment, not a fully dynamic binding) -- e.g. <lr-flow-node>'s
@@ -78,7 +98,7 @@ function namesFromTemplates(source) {
     const typeMatch = source.match(
       new RegExp(`\\b${identifier}\\s*:\\s*((?:'[^']+'|"[^"]+")(?:\\s*\\|\\s*(?:'[^']+'|"[^"]+"))*)`),
     );
-    const values = typeMatch ? [...typeMatch[1].matchAll(/["']([^"']+)["']/g)].map((m) => m[1]) : [];
+    const values = typeMatch ? stringLiterals(typeMatch[1]) : [];
     for (const value of values) {
       for (const name of `${prefix}${value}${suffix}`.trim().split(/\s+/)) {
         if (name) names.add(name);
@@ -95,6 +115,10 @@ function namesFromTemplates(source) {
   // string-literal union annotation). Resolve the binding's identifier rather than requiring
   // every helper to call its variable exactly `part` -- <lr-evaluation-run> and
   // <lr-graph-query-builder> both use descriptive names for two related parts in one helper.
+  // Literals directly inside the binding cover the common inline conditional form first.
+  for (const match of source.matchAll(/\bpart\s*=\s*\$\{([^}]*)\}/g)) {
+    addLiteralPartNames(match[1], names);
+  }
   for (const match of source.matchAll(/\bpart\s*=\s*\$\{(\w+)\}/g)) {
     const [, identifier] = match;
     const escapedIdentifier = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -102,18 +126,27 @@ function namesFromTemplates(source) {
       new RegExp(`\\b(?:const|let)\\s+${escapedIdentifier}\\s*(?::\\s*[^=;]+)?=([^;]+);`),
     );
     if (declaration) {
-      for (const literal of declaration[1].matchAll(/["']([^"']+)["']/g)) {
-        for (const name of literal[1].trim().split(/\s+/)) {
-          if (name) names.add(name);
-        }
-      }
+      addLiteralPartNames(declaration[1], names);
     }
     const typeDeclaration = source.match(
       new RegExp(`\\b${escapedIdentifier}\\s*:\\s*((?:'[^']+'|"[^"]+")(?:\\s*\\|\\s*(?:'[^']+'|"[^"]+"))*)`),
     );
     if (typeDeclaration) {
-      for (const literal of typeDeclaration[1].matchAll(/["']([^"']+)["']/g)) names.add(literal[1]);
+      addLiteralPartNames(typeDeclaration[1], names);
     }
+  }
+  // Bound part vocabularies can live in a getter so subclasses append aliases without duplicating
+  // a render template (`this.inputWrapperParts`), or in a method shared by multiple render branches
+  // (`this.itemPartNames()`). Follow every matching same-directory getter/method, including the
+  // superclass implementation concatenated by renderSurfaceFor(), and accept only quoted tokens.
+  for (const match of source.matchAll(/\bpart\s*=\s*\$\{\s*(?:this|super)\.(\w+)/g)) {
+    const identifier = match[1];
+    const escapedIdentifier = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const memberPattern = new RegExp(
+      `\\b(?:get\\s+)?${escapedIdentifier}\\s*(?:\\([^)]*\\))?\\s*(?::\\s*[^\\{]+)?\\{([\\s\\S]*?)\\n\\s*\\}`,
+      'g',
+    );
+    for (const member of source.matchAll(memberPattern)) addLiteralPartNames(member[1], names);
   }
   // `element.setAttribute('part', 'literal')` -- the imperative-DOM equivalent of a literal
   // `part="literal"` template attribute, used by the shared <mark>-wrap highlight-painting
@@ -121,6 +154,19 @@ function namesFromTemplates(source) {
   // emit a lit template attribute for a part name it doesn't itself own.
   for (const match of source.matchAll(/\.setAttribute\(\s*["']part["']\s*,\s*["']([^"']+)["']\s*\)/g)) {
     names.add(match[1]);
+  }
+  // Fetched SVGs retain sanitizer-approved third-party part names while adding Lyra's public
+  // token through a Set. Only accept `.add('token')` when that exact Set is spread into a
+  // `setAttribute('part', ...)` sink, so unrelated Set values cannot mask a missing rendered part.
+  for (const match of source.matchAll(/\b(\w+)\.add\(\s*(['"])([^'"]+)\2\s*\)/g)) {
+    const [, identifier, , literal] = match;
+    const escapedIdentifier = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const reachesPart = new RegExp(
+      `\\.setAttribute\\(\\s*["']part["']\\s*,\\s*\\[\\.\\.\\.${escapedIdentifier}\\]\\.join\\(`,
+    ).test(source);
+    if (reachesPart) {
+      for (const name of literal.trim().split(/\s+/)) if (name) names.add(name);
+    }
   }
   return names;
 }

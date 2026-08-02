@@ -65,6 +65,7 @@ function stopIcon(): SVGTemplateResult {
 }
 
 export interface LyraChatComposerEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-stop': CustomEvent<undefined>;
   'lr-submit': CustomEvent<{ value: string }>;
@@ -126,6 +127,7 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @event lr-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
  * @event blur - Re-dispatched from the internal native textarea as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal native textarea as a bubbling, composed event.
+ * @event lr-invalid - The composer failed a validity check.
  * @csspart base - The bordered root container. Drops its card chrome (border, background, padding,
  * radius) under `frame="plain"`, where the focus affordance becomes an underline on this same
  * part instead of the border-color shift.
@@ -136,6 +138,8 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @csspart trailing - The wrapper around the `trailing` slot and the built-in `action-button`.
  * @csspart action-button - The built-in send/stop button. Absent from the accessibility tree's meaningful content whenever `trailing` has assigned content. Style its busy treatment via `:host([status='sending'])`/`:host([status='streaming'])`, or the dedicated `--lr-chat-composer-busy-bg` cssprop below.
  * @cssprop [--lr-chat-composer-busy-bg=var(--lr-color-text-quiet)] - `action-button` background while `status` is `"sending"` or `"streaming"`. Scoped separately from the shared `--lr-color-text-quiet` token, which the `textarea` part's placeholder also reads -- overriding this recolors only the busy button, not the placeholder text too.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   static override styles = [LyraElement.styles, styles];

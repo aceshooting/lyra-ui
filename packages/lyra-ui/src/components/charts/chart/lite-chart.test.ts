@@ -1036,7 +1036,7 @@ it('pointText overrides the per-bar title-derived accessible name', async () => 
   ></lr-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   expect(rect.querySelector('title')!.textContent).to.equal('custom a 42 0');
-  expect(rect.hasAttribute('aria-label')).to.equal(false);
+  expect(rect.getAttribute('aria-label')).to.equal('custom a 42 0');
 });
 
 it('pointText overrides the per-point title-derived accessible name for type="line" too', async () => {
@@ -1048,7 +1048,7 @@ it('pointText overrides the per-point title-derived accessible name for type="li
   ></lr-lite-chart>`);
   const point = el.shadowRoot!.querySelector('[part="point"]') as SVGCircleElement;
   expect(point.querySelector('title')!.textContent).to.equal('pt x:7#0');
-  expect(point.hasAttribute('aria-label')).to.equal(false);
+  expect(point.getAttribute('aria-label')).to.equal('pt x:7#0');
 });
 
 it('falls back to the built-in raw-value title when pointText is unset (regression)', async () => {
@@ -1059,7 +1059,7 @@ it('falls back to the built-in raw-value title when pointText is unset (regressi
   ></lr-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   expect(rect.querySelector('title')!.textContent).to.equal('S, a: 42');
-  expect(rect.hasAttribute('aria-label')).to.equal(false);
+  expect(rect.getAttribute('aria-label')).to.equal('S, a: 42');
 });
 
 it('formats the built-in bar/point label through localize() and Intl instead of a hard-coded template', async () => {
@@ -1070,7 +1070,7 @@ it('formats the built-in bar/point label through localize() and Intl instead of 
   ></lr-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   const expected = `S, a: ${new Intl.NumberFormat(el.effectiveLocale).format(1234.5)}`;
-  expect(rect.hasAttribute('aria-label')).to.equal(false);
+  expect(rect.getAttribute('aria-label')).to.equal(expected);
   expect(rect.querySelector('title')!.textContent).to.equal(expected);
 });
 
@@ -2250,7 +2250,7 @@ describe('review remediation regressions', () => {
 });
 
 describe('remediated lite-chart semantics and geometry', () => {
-  it('uses one SVG title as each mark name instead of duplicating it as name and description', async () => {
+  it('keeps each native SVG tooltip and explicit cross-engine command name in sync', async () => {
     const bars = await mount(html`
       <lr-lite-chart
         .labels=${['A']}
@@ -2259,7 +2259,7 @@ describe('remediated lite-chart semantics and geometry', () => {
     `);
     const bar = bars.shadowRoot!.querySelector('[part="bar"]')!;
     expect(bar.querySelector('title')?.textContent).to.equal('Revenue, A: 1');
-    expect(bar.hasAttribute('aria-label')).to.equal(false);
+    expect(bar.getAttribute('aria-label')).to.equal('Revenue, A: 1');
 
     const lines = await mount(html`
       <lr-lite-chart
@@ -2270,7 +2270,7 @@ describe('remediated lite-chart semantics and geometry', () => {
     `);
     const point = lines.shadowRoot!.querySelector('[part="point"]')!;
     expect(point.querySelector('title')?.textContent).to.equal('Revenue, A: 1');
-    expect(point.hasAttribute('aria-label')).to.equal(false);
+    expect(point.getAttribute('aria-label')).to.equal('Revenue, A: 1');
   });
 
   it('announces a roving-keyboard move exactly once', async () => {

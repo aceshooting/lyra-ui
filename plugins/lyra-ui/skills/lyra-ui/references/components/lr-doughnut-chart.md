@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/charts/chart/doughnut-chart.js';` (registers the tag; side-effect import)
 - **Class** `LyraDoughnutChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/doughnut-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -25,9 +27,11 @@ Everything else is inherited verbatim from `lr-chart`; each name below has the s
 and behavior there. **See `llms/components/lr-chart.md` for the details, code example, and gotchas
 of every entry in these lists.**
 
-**Properties:** `labels`, `datasets`, `legend`, `legendPosition` (attribute `legend-position`),
-`valueFormatter`, `area`, `zoom`, `height`, `xLabel` (`x-label`), `yLabel` (`y-label`), `y2Label`
-(`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`, `stacked`, `dataLabels`
+**Properties:** `description`, `grid`, `indexAxis` (`index-axis`), `label`, `legendPosition`
+(`legend-position`), `max`, `min`, `plugins`, `stacked`, `withoutAnimation` (`without-animation`),
+`withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
+`yLabel` (`y-label`), plus additive `labels`, `datasets`, `legend`, `valueFormatter`, `area`, `zoom`,
+`height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`, `dataLabels`
 (`data-labels`), `stackTotals` (`stack-totals`), `config`, `accessibleLabel`
 (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
 (`show-data-table`), `chartArea` (readonly). `type` is the only member that differs: read-only,
@@ -39,7 +43,7 @@ locked to this tag's value.
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-point-click` (`detail: { datasetIndex,
 index, label, value }`).
 
-**Slots:** `data-table`, `center`.
+**Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
 `reset-zoom-button`, `description`, `data-table`, `center`, `error` (`role="alert"` message
@@ -50,7 +54,11 @@ rendered in place of `canvas` when the optional `chart.js` peer dependency fails
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width` — all inherited from `LyraChart`,
 identical in meaning and default (see `lr-chart` above); each of the eight variants below reads the
-same set, so one rule retunes them together.
+same set, so one rule retunes them together. The mirrored hooks are `--border-color-1`,
+`--border-color-2`, `--border-color-3`, `--border-color-4`, `--border-color-5`,
+`--border-color-6`, `--fill-color-1`, `--fill-color-2`, `--fill-color-3`, `--fill-color-4`,
+`--fill-color-5`, `--fill-color-6`, `--border-radius`, `--border-width`, `--grid-border-width`,
+`--grid-color`, `--line-border-width`, and `--point-radius`, also identical to the core chart.
 
 **Optional peer deps:** same as `lr-chart` — `chart.js`, plus `chartjs-plugin-zoom` only once
 `zoom` is set, and `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set.

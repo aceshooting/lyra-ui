@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/media/image-comparer/image-comparer.js';` (registers the tag; side-effect import)
 - **Class** `LyraImageComparer`, also available unregistered from `@aceshooting/lyra-ui/components/media/image-comparer/image-comparer.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,19 +24,28 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
   and its range handle
 - `beforeLabel`/`afterLabel` — fallback text for empty named slots
 
-**Events:** `lr-position-change` (`detail: { position }`), plus composed `focus` and `blur` events
-from the internal range handle.
+**Events:** `lr-position-change` (`detail: { position }`) on every native range input update;
+native bubbling/composed `change` when that range gesture commits; plus composed `focus` and
+`blur` events from the internal range input.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
 
-**Slots:** `before`, `after`.
+**Slots:** `before`, `after`, and `handle` (decorative content inside the visible drag handle).
 
-**CSS parts:** `base`, `before`, `after`, `divider`, and `handle`.
+**CSS parts:** `base` and `comparison` are aliases on the same comparison viewport; `before`,
+`after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native
+range input).
+
+**CSS custom properties:** `--divider-width` (default `var(--lr-size-1px)`) controls the dividing
+line's thickness; `--handle-size` (default `var(--lr-icon-button-size)`) sizes the visible handle in
+both axes. The `dragging` CSS custom state is present only while a pointer gesture is active and is
+cleared on pointer cancellation, blur, or disconnect.
 
 ```html
 <lr-image-comparer aria-label="Before and after">
   <img slot="before" alt="Before" src="before.png">
   <img slot="after" alt="After" src="after.png">
+  <span slot="handle" aria-hidden="true">↔</span>
 </lr-image-comparer>
 ```
 

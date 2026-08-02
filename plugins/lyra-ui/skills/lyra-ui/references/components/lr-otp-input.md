@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/otp-input/otp-input.js';` (registers the tag; side-effect import)
 - **Class** `LyraOtpInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/otp-input/otp-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,48 +19,124 @@ A form-associated one-time-code field: several character segments that together 
 Mirrors `wa-otp-input`.
 
 The segments are **presentational**. A single real `<input>` sits transparently across them and owns
-focus, selection and the value — which is what makes paste, SMS autofill (`autocomplete` defaults to
-`one-time-code`), IME composition and mobile keyboards work without reimplementing any of it, and
-keeps the control to one tab stop rather than one per character.
+focus, selection and the value. It remains the native integration point for SMS autofill
+(`autocomplete` defaults to `one-time-code`), IME composition and mobile keyboards, and keeps the
+control to one tab stop rather than one per character. Fixed-cell keyboard and paste handlers map
+those native editing intents into the visual cells without exposing one input per character.
 
-Every entry path — typing, paste, autofill, a `value` assignment, a narrowing `type` change — funnels
-through one sanitizer, so none of them can produce a value another could not. Characters the current
-`type` rejects are dropped silently: pasting `"ABC-123"` into a numeric field yields `123`.
+Every live-value path — typing, paste, autofill, a `value` assignment, pristine default propagation,
+form reset, browser state restoration, or a narrowing `type` change — funnels through one sanitizer,
+so none of them can produce a value another could not. Characters the current `type` rejects are
+dropped silently: pasting or assigning `"ABC-123"` to a numeric field yields `123`. Programmatic,
+reset, and restoration paths remain event-silent and preserve native dirty/default-value semantics.
 
-**Properties:** `label`, `hint`, `errorText` (`error-text`); `length: number = 6` (reflected);
-`format: string = ''` (reflected) — `#` marks a segment and any other character becomes a literal
-separator (`format="###-###"`), overriding `length`; `type: 'numeric' | 'alpha' | 'alphanumeric' =
-'numeric'` (reflected, also drives `inputmode`); `case: 'preserve' | 'upper' | 'lower' = 'preserve'`
-(reflected); `mask: boolean = false` and `withMask: boolean = false` (`with-mask`) — display-only,
-`value` and the screen-reader text are unaffected; `readonly: boolean = false`;
-`autocomplete: string = 'one-time-code'`; plus the shared form-associated surface (`name`, `value`,
-`disabled`, `required`, `form`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`,
-`reportValidity()`).
+**Properties:** `label`, `hint`, `errorText` (`error-text`);
+`appearance: 'outlined' | 'filled' | 'filled-outlined' | 'contained' = 'outlined'` (reflected);
+`autofocus: boolean = false`; `autosubmit: boolean = false` (reflected);
+`size: LyraSize = 'm'` (reflected after an explicit property/attribute write, accepting
+`2xs`/`xs`/`s`/`m`/`l`/`xl` and the shared aliases). While unset, its generic font/radius/height
+slots inherit a containing control's size context; standalone font and radius rendering falls back
+to `m`. Explicitly writing even the same-default `m` pins the `m` mapping, and removing the
+attribute restores contextual inheritance;
+`length: number = 6` (reflected); `format: string = ''` — `#` marks a segment and any
+other character becomes a literal separator (`format="###-###"`), overriding `length`;
+`type: 'numeric' | 'alpha' | 'alphanumeric' = 'numeric'` (reflected, also drives `inputmode`);
+`case: 'preserve' | 'upper' | 'lower' = 'preserve'` (reflected); `mask: boolean = false` masks entered
+characters, while `withMask: boolean = false` (`with-mask`) independently paints the mask glyph in
+empty segments. With only `with-mask`, entered characters remain visible; with both properties,
+filled and empty segments paint the glyph. Both are display-only, so `value` and screen-reader text
+are unaffected. `readonly: boolean = false`; `autocomplete: string = 'one-time-code'`; plus the shared
+form-associated surface (`name`, `value`, `defaultValue`, `customError` (`custom-error`), `disabled`,
+`required`, `form`, `validity`, `validationMessage`, `willValidate`, `getForm()`, `checkValidity()`,
+`reportValidity()`, and `setCustomValidity()`).
 
-**Methods:** `focus()`, `blur()`, `click()`, `select()`.
+**Methods:** `focus()`, `blur()`, `click()`, `select()`, `clear()`, `resetValidity()`, and
+`formStateRestoreCallback(state, reason)`. `clear()` empties a nonempty code, emits `lr-clear`, and
+returns focus to the real input. `resetValidity()` clears only a consumer-supplied custom error and
+recomputes the intrinsic required/completeness constraints. The browser restoration callback
+sanitizes string state and restores unsupported state shapes as the empty value. `select()` selects
+the real compact-string value; typing replaces its selected occupied cells at the first selected
+cell, while Backspace/Delete clears them in one edit.
 
-**Read-only:** `segmentCount: number` — how many segments are actually rendered, i.e. `format`'s `#`
-count when `format` is set, else `length`, clamped to 1–32. This is the number `value` is truncated
-to and the field is validated against, so read it rather than re-deriving it from `length`.
+**Read-only:** `input: HTMLInputElement | null` exposes the real native input and
+`validationTarget: HTMLInputElement | null` exposes the same element as the native validation-UI
+anchor. Both are `null` before the component connects and renders. `effectiveLength: number` and
+its retained `segmentCount` alias report how many segments are actually rendered: a valid
+`format`'s `#` count, else `length`, clamped to 1–32. A nonempty format containing no `#` is treated
+as unset, so `length` supplies the segments and no literal-only row renders. Literal runs are
+coalesced into one separator cell, and an adversarially long format is still bounded to 32
+segments. This is the number `value` is truncated to and the field is validated against, so read it
+instead of re-deriving it from `length`.
 
-**Events:** `input`, `change`, and `lr-complete` — `detail: { value }`, once every segment is filled.
+**Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`, and
+`lr-clear` (no detail) when a nonempty field is cleared by the user or `clear()`. Fixed-cell edits
+emit `input` immediately and one `change` when the field settles on blur or Enter. Intermediate IME
+composition events stay on the real input without sanitizing or committing; the final
+non-composing input commits and relays once. `lr-complete` (`detail: { value }`) fires only on an
+incomplete-to-complete transition, so replacing a filled cell does not complete again. It always
+bubbles, composes, and is cancelable. With `autosubmit`, the component calls `requestSubmit()` on
+its owning form after the event unless a listener calls `preventDefault()`. The real input's native
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
+do not cross the shadow boundary; each is followed by its prefixed alias `lr-focus` / `lr-blur` (no
+detail). `lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.
+Programmatic value/default/reset/state-restoration writes do not emit `input`, `change`, or
+`lr-complete`.
 
-**Slots:** `label`, `hint`, `error` (each replaces the matching attribute for rich content).
+**Keyboard and paste:** Left/Right move through visually adjacent fixed cells, with the index delta
+mirrored in RTL. Backspace clears the current cell and moves back; Delete clears it in place.
+Neither operation shifts later characters. Typing replaces the active cell and advances. A
+nonempty native selection maps its compact-string offsets back to occupied visual cells: typing
+replaces the selection at its first cell, while either deletion key clears every selected cell.
+Enter flushes a pending `change` and requests exactly one submission from the owning form. Pasting
+fills accepted characters from the first cell in one input operation. The public and submitted
+`value` concatenates occupied cells; a middle hole is a visual editing state and is not encoded in
+that string.
 
-**CSS parts:** `base`, `label`, `field`, `control` (the real, transparent input), `segment`,
-`separator`, `hint`, `error`. `segment` carries `active`, `masked`, `placeholder-mask` and `invalid`
-as additional part tokens.
+**Slots:** `label` and `hint` provide rich content when their matching attributes are empty; a
+nonempty `label`/`hint` attribute wins when both sources are supplied. The `error` slot replaces
+`errorText` when both are supplied. Sources are never concatenated.
 
-**Themeable custom properties:** `--lr-otp-input-mask-char` (the mask glyph — must be a *quoted*
-string, it is used as CSS `content`); otherwise shared tokens.
+**CSS parts:** `base` / `form-control` (aliases on the outer wrapper), `label` /
+`form-control-label` (aliases on the label), `field` / `segments` (aliases on the segment wrapper),
+`control` (the real, transparent input), `segment`, `separator` / `segment-literal` (aliases on
+separators), `hint`, and `error`. A populated required label paints the shared required asterisk.
+`segment` carries `active`, `masked`, `placeholder-mask`, and `invalid` as additional part tokens.
+
+**Themeable custom properties:** `--mask-char` (mapped mask-glyph alias, defaulting to the retained
+`--lr-otp-input-mask-char`; the value must be a *quoted* CSS string), `--segment-border-radius`
+(default `var(--lr-form-control-radius, var(--lr-radius))`), `--segment-gap` (default
+`var(--lr-space-xs)`, ignored by `contained`), and `--segment-size` (default `2.5em` at standalone
+`size="m"`), which is the exact inline and block size of each non-shrinking cell. The segment row,
+rather than each cell, carries the shared minimum target floor and becomes horizontally scrollable
+when the allocated inline size is too small; label, hint, and error copy wrap within that allocation.
+The internal role token `--lr-otp-input-segment-size` supplies that `2.5em` default and can be
+retuned through `--lr-theme-otp-input-segment-size` when the `--segment-size` override is absent.
+
+The retained per-cell hooks are `--lr-otp-input-segment-fill` (default `transparent`),
+`--lr-otp-input-segment-border-color` (default `var(--lr-color-border)`), and
+`--lr-otp-input-segment-radius` (defaulting through `--segment-border-radius` to the shared
+form-control radius). `filled` uses the raised-surface fill with a transparent cell border;
+`filled-outlined` adds the shared border; `outlined` keeps the transparent fill and shared border.
+`contained` makes individual cells transparent, borderless, square segments inside the single
+raised, bordered row whose radius remains controlled by `--segment-border-radius`.
+
+**CSS custom states:** `--blank`, `--filled`, `disabled`, and `readonly`, plus the shared
+form-associated validity states.
 
 **Validation:** a partially-entered code reports `tooShort` with the localized `otpInputIncomplete`
-message; `required` and empty reports `valueMissing`. Validation text only renders once the user has
-engaged with the field.
+message; `required` and empty reports `valueMissing`. Intrinsic invalid segment styling and the
+internal input's intrinsic `aria-invalid` state wait until the user types, blurs, or reports
+validity. Explicit `errorText` or `error`-slot chrome renders immediately, is referenced by
+`aria-describedby`, and makes the internal input `aria-invalid="true"` immediately, matching the
+other Lyra form controls. `readonly` suspends intrinsic required/completeness validity while the
+control cannot be edited and restores the current intrinsic result when editing is enabled again.
 
 ```html
 <lr-otp-input label="Verification code" required error-text="Enter the code we sent you."></lr-otp-input>
 <lr-otp-input label="License key" type="alphanumeric" case="upper" format="####-####-####"></lr-otp-input>
+<form>
+  <lr-otp-input name="code" label="PIN" length="4" appearance="contained" autosubmit></lr-otp-input>
+</form>
 ```
 
 ---

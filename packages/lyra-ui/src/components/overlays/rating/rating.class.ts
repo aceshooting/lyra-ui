@@ -3,12 +3,20 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import {
+  attachInternalsSafely,
+  getFormOwner,
+  installCustomErrorProperty,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import type { LyraSizeStep } from '../../../internal/variants.js';
+import { normalizeSize, type LyraSize, type LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './rating.styles.js';
-import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 
 const DEFAULT_MAX = 5;
 /** No real-world star rating needs more stars than this; caps an untrusted `max` so it can't turn
@@ -34,12 +42,14 @@ export type LyraRatingHoverPhase = 'start' | 'move' | 'end';
 export type LyraRatingSymbolRenderer = (value: number, selected: boolean) => unknown;
 
 export interface LyraRatingEventMap {
+  change: Event;
   'lr-change': CustomEvent<{ value: number }>;
   'lr-hover': CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>;
   focus: FocusEvent;
   blur: FocusEvent;
   'lr-focus': CustomEvent<undefined>;
   'lr-blur': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<undefined>;
 }
 
 // A five-point star, sharing internal/icons.ts's 24x24 viewBox / 1em sizing
@@ -67,13 +77,16 @@ function starSolid(): SVGTemplateResult {
  * is natively a numeric score. The submitted entry is the clamped value stringified (`"0"` while
  * unrated), and `required` reports `valueMissing` until a rating above zero is set. As with a
  * native `<input>`, the `value` *content attribute* is the reset default — `form.reset()` restores
- * it — while the `value` IDL property is the live score and is deliberately not reflected.
+ * it — while the `value` IDL property is the live score and is deliberately not reflected. The
+ * `default-value` compatibility attribute reaches that same reset default.
  *
  * Deliberately no label/hint/error chrome: `label` here is an accessible-name override, not visible
  * label text. A rating is a row of symbols with no field frame of its own, so a consumer wanting a
  * labeled field wraps this element in their own layout, exactly as `<lr-slider>` does.
  *
  * @customElement lr-rating
+ * @event change - Bubbling, composed native `Event` emitted when a user commits a new value,
+ * immediately before `lr-change`. Programmatic writes and no-op gestures are silent.
  * @event lr-change - The rating changed. `detail: { value }`.
  * @event lr-hover - The pointer entered, moved across, or left the symbols while the rating is
  * settable. `detail: { phase, value }`, where `value` is the rating that committing the current
@@ -82,6 +95,7 @@ function starSolid(): SVGTemplateResult {
  * @event blur - Native blur relayed once from the internal slider control.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-invalid - The rating failed a validity check.
  * @method focus - Forwards focus to the internal slider control.
  * @method blur - Forwards blur to the internal slider control.
  * @method click - Forwards activation to the internal slider control.
@@ -90,7 +104,8 @@ function starSolid(): SVGTemplateResult {
  * @method setCustomValidity - Sets (or, with `''`, clears) a consumer-supplied validation error.
  * Survives intrinsic revalidation and a form reset; clearing it restores the computed validity
  * rather than forcing the control valid.
- * @csspart base - The slider-like rating control.
+ * @csspart base - Compatibility name for the slider-like control; use `rating`.
+ * @csspart rating - The slider-like rating control. It is the same node as `base`.
  * @csspart star - Each visual symbol.
  * @csspart star-fill - The filled overlay inside each symbol, clipped to that
  * symbol's filled fraction (0%, a partial percentage under a fractional
@@ -100,6 +115,13 @@ function starSolid(): SVGTemplateResult {
  * hover preview.
  * @cssprop [--lr-rating-size=var(--lr-font-size-xl)] - Symbol size. Each `size` step rewrites it;
  * the `m` default reproduces the treatment this component had before `size` existed.
+ * @cssprop [--symbol-color=var(--lr-rating-empty-color,var(--lr-color-border))] - Compatibility
+ * alias for the inactive symbol color. `--lr-rating-empty-color` wins when both are set.
+ * @cssprop [--symbol-color-active=var(--lr-rating-fill,var(--lr-color-warning))] - Compatibility
+ * alias for the active symbol color. `--lr-rating-fill` wins when both are set.
+ * @cssprop --symbol-size - Shoelace-compatible symbol size. It feeds the current `size` step when
+ * `--lr-rating-size` is unset; the Lyra-prefixed property wins when both are set.
+ * @cssprop [--symbol-spacing=var(--lr-space-xs)] - Compatibility spacing around symbols.
  * @cssstate required - A rating above zero is required. Style with `lr-rating:state(required)`.
  * @cssstate optional - No rating is required.
  * @cssstate valid - The control currently satisfies its constraints.
@@ -110,6 +132,8 @@ function starSolid(): SVGTemplateResult {
  * validation (a submit attempt runs `reportValidity()`).
  * @cssstate user-invalid - Invalid, and the user has interacted. This is the state to paint red;
  * a form reset returns the control to pristine and drops it again.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraRating extends LyraElement<LyraRatingEventMap> {
   static formAssociated = true;
@@ -120,9 +144,17 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   // assignment: native form APIs (`new FormData(form)`, `form.checkValidity()`) read them in the
   // same tick, long before Lit's async update cycle would have run.
   static override properties = {
-    value: { type: Number, noAccessor: true },
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
+    value: { attribute: false, noAccessor: true },
+    defaultValue: {
+      attribute: 'value',
+      type: Number,
+      reflect: true,
+      useDefault: true,
+      noAccessor: true,
+    },
     max: { type: Number, reflect: true, noAccessor: true },
-    name: { reflect: true, noAccessor: true },
+    name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
@@ -134,10 +166,31 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   /** Accessible name for the whole control, used when the host carries no `aria-label`. Not
    *  rendered as visible text — a rating has no field frame of its own. */
   @property() label = '';
-  /** Visual density; rewrites `--lr-rating-size`. */
-  @property({ reflect: true }) size: LyraRatingSize = 'm';
+  private _size: LyraRatingSize = 'm';
+  /** Visual density; rewrites `--lr-rating-size`. Upstream `small`/`medium`/`large` writes
+   * normalize to the canonical `s`/`m`/`l` read vocabulary. */
+  @property({ reflect: true })
+  get size(): LyraRatingSize {
+    return this._size;
+  }
+  set size(value: LyraSize) {
+    const old = this._size;
+    this._size = normalizeSize(value ?? 'm');
+    this.requestUpdate('size', old);
+  }
   /** Renders a consumer-supplied symbol per position instead of the built-in star. */
   @property({ attribute: false }) getSymbol?: LyraRatingSymbolRenderer;
+  /** Internal reactive adapter for the public `default-value` compatibility attribute. The
+   * supported JS property remains `defaultValue`; this accessor is not public API.
+   * @internal
+   * @default 0 */
+  @property({ attribute: 'default-value', type: Number })
+  get defaultValueAlias(): number {
+    return this.defaultValue;
+  }
+  set defaultValueAlias(next: number | null) {
+    this.defaultValue = finiteNumber(next ?? 0, 0);
+  }
 
   /** The rating the current pointer position would commit; only meaningful while `hovering`. */
   @state() private hoverValue = 0;
@@ -145,6 +198,8 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   private _value = 0;
   private _max = DEFAULT_MAX;
   private _name = '';
@@ -152,6 +207,9 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   private _disabled = false;
   private _fieldsetDisabled = false;
   private _defaultValue = 0;
+  private _valueDirty = false;
+  private settingDefaultValue = false;
+  private reflectingDefaultValue = false;
   /** Whether the user has driven this control yet — rated it, blurred it, or triggered validation.
    *  Gates the `user-valid`/`user-invalid` custom states: a pristine `required` rating IS invalid,
    *  but painting it red before anyone has touched it is hostile. Mirrors the `FormAssociated`
@@ -161,10 +219,12 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   constructor() {
     super();
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     // Shares the mixin's attach-or-degrade helper so both paths handle a missing *and* a throwing
     // `attachInternals()` (SSR/test DOMs, partial polyfills) without breaking construction.
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     this.internals.setFormValue('0');
     // `focusout` is the only blur signal observable on the host: native `blur` neither bubbles nor
     // crosses a shadow boundary, so it can never reach here from the internal slider. Registered
@@ -180,9 +240,28 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
   set value(next: number) {
     const old = this._value;
+    if (!this.settingDefaultValue) this._valueDirty = true;
     this._value = typeof next === 'number' ? next : Number(next);
     this.syncFormValue();
     this.requestUpdate('value', old);
+  }
+  /** Reflected current reset default; changing it never overwrites a dirty live rating. The
+   * `default-value` compatibility attribute reaches this same property.
+   * @default 0 */
+  get defaultValue(): number { return this._defaultValue; }
+  set defaultValue(next: number | null) {
+    if (this.reflectingDefaultValue) return;
+    const old = this._defaultValue;
+    this._defaultValue = next == null ? 0 : (typeof next === 'number' ? next : Number(next));
+    this.reflectingDefaultValue = true;
+    try {
+      if (next == null) this.removeAttribute('value');
+      else this.setAttribute('value', String(this._defaultValue));
+    } finally {
+      this.reflectingDefaultValue = false;
+    }
+    if (!this._valueDirty) this.restoreLiveValueFromDefault();
+    this.requestUpdate('defaultValue', old);
   }
 
   /** The highest rating to show, i.e. the number of symbols rendered. */
@@ -201,7 +280,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   get name(): string {
     return this._name;
   }
-  set name(next: string) {
+  set name(next: string | null) {
     const old = this._name;
     this._name = next ?? '';
     if (this._name) this.setAttribute('name', this._name);
@@ -240,8 +319,10 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   get form(): HTMLFormElement | null {
-    return this.internals.form;
+    return getFormOwner(this.internals);
   }
+  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
+  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
   get labels(): NodeList {
     return this.internals.labels;
   }
@@ -257,7 +338,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
-    return this.renderRoot?.querySelector('[part="base"]') ?? null;
+    return this.renderRoot?.querySelector('[part~="base"]') ?? null;
   }
 
   checkValidity(): boolean {
@@ -290,17 +371,33 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this.syncValidityStates();
   }
 
+  /** Clears consumer-supplied validity and restores the current required/value constraint. */
+  resetValidity(): void {
+    this.setCustomValidity('');
+  }
+
   formResetCallback(): void {
     this.resetHover();
-    this.value = this._defaultValue;
+    this.restoreLiveValueFromDefault();
     // A reset form is pristine again: drop the interaction flag so the `user-*` states stop
     // matching, even though a required-and-unrated control is still `invalid`.
     this._hasInteracted = false;
     this.syncValidityStates();
   }
 
-  formStateRestoreCallback(state: string | File | FormData | null, _mode?: 'restore' | 'autocomplete'): void {
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    reason: 'autocomplete' | 'restore',
+  ): void {
+    void reason;
     this.value = typeof state === 'string' ? finiteNumber(Number(state), 0) : 0;
+  }
+
+  private restoreLiveValueFromDefault(): void {
+    this.settingDefaultValue = true;
+    try { this.value = this._defaultValue; }
+    finally { this.settingDefaultValue = false; }
+    this._valueDirty = false;
   }
 
   formDisabledCallback(fieldsetDisabled: boolean): void {
@@ -321,16 +418,6 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // A disconnect/reconnect cycle (drag-drop reparenting, list virtualization) never delivers the
     // pointerleave that would otherwise end the gesture, so the preview would resume frozen.
     this.resetHover();
-  }
-
-  override attributeChangedCallback(name: string, old: string | null, val: string | null): void {
-    super.attributeChangedCallback(name, old, val);
-    // Native `<input>` semantics: the *content attribute* is the reset default, and only markup or
-    // an explicit `setAttribute` updates it. Using the property setter to capture "whichever
-    // assignment happened first" would instead make a user's very first rating permanent.
-    // Stored raw, not clamped: HTML applies observed attributes in source order, so `value="8"`
-    // parsed before `max="10"` would otherwise be frozen at the default max's ceiling.
-    if (name === 'value') this._defaultValue = this._value;
   }
 
   /** `max`, normalized to a finite non-negative integer count and capped at `MAX_STARS` so an
@@ -399,6 +486,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     const clamped = Math.max(0, Math.min(this.safeMax, Math.round(next / precision) * precision));
     if (clamped === this.value) return;
     this.value = clamped;
+    dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { value: this.value });
   }
 
@@ -476,7 +564,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   };
 
   private get control(): HTMLElement | null {
-    return this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    return this.renderRoot.querySelector<HTMLElement>('[part~="base"]');
   }
 
   override focus(options?: FocusOptions): void {
@@ -522,7 +610,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // `max` shrank below the hovered position while the pointer was still down.
     const displayValue = this.hovering && this.interactive ? Math.min(this.hoverValue, safeMax) : safeValue;
     const count = Math.round(safeMax);
-    return html`<div part="base" role="slider" tabindex=${this.effectiveDisabled ? '-1' : '0'}
+    return html`<div part="base rating" role="slider" tabindex=${this.effectiveDisabled ? '-1' : '0'}
       aria-label=${this.getAttribute('aria-label') || this.accessibleLabel || this.label || this.localize('rating')}
       aria-valuemin="0" aria-valuemax=${safeMax} aria-valuenow=${safeValue}
       aria-valuetext=${getNumberFormat(this.effectiveLocale).format(safeValue)}

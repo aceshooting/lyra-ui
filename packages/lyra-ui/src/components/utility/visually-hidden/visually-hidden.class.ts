@@ -11,6 +11,8 @@ import { styles } from './visually-hidden.styles.js';
  *
  * @customElement lr-visually-hidden
  * @slot - The content to hide visually.
+ * @status stable
+ * @since 8.0.0
  */
 export class LyraVisuallyHidden extends LyraElement {
   static override styles = [LyraElement.styles, styles];

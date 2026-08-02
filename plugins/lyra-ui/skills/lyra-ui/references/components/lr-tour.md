@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/tour/tour.js';` (registers the tag; side-effect import)
 - **Class** `LyraTour`, also available unregistered from `@aceshooting/lyra-ui/components/utility/tour/tour.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -20,6 +22,7 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 `activeIndex` and `open` are self-managed.
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — no separate `show()`/`hide()`; set this or call
   `start()`/`end()`
 - `steps: TourStep[] = []` (attribute: false) — empty renders nothing
@@ -93,6 +96,7 @@ retuning `--lr-theme-popover-viewport-clamp` once at `:root` narrows or widens a
 rather than per component.
 
 **Known gotchas:**
+
 - By default the spotlighted target is **non-interactive**: it stays visible and announceable (not
   `inert`, not `aria-hidden`) but every pointer event over the viewport is captured by the backdrop.
   A default step uses a modal overlay and traps focus in the panel. Set `step.interactiveTarget` to

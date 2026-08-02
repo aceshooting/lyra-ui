@@ -689,7 +689,7 @@ it('paginates client-side rows and emits controlled page requests', async () => 
   expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Alpha');
 
   const next = el.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector(
-    '[part="next-button"]',
+    '[part~="next-button"]',
   ) as HTMLButtonElement;
   const eventPromise = oneEvent(el, 'lr-page-change');
   next.click();

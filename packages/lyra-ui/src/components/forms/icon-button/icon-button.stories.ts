@@ -33,3 +33,27 @@ export const SlottedContent: Story = {
     </div>
   `,
 };
+
+export const ShoelaceAliasesAndLink: Story = {
+  name: 'Shoelace name and link surface',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`name`, `library`, `href`, `target`, and `download` can be retained when migrating a ' +
+          'Shoelace icon button. Link mode renders a native anchor and derives the safe `rel` value.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex;gap:var(--lr-space-s);align-items:center">
+      <lr-icon-button name="search" library="default" label="Search"></lr-icon-button>
+      <lr-icon-button
+        name="chevron-right"
+        label="Open documentation"
+        href="https://example.com/docs"
+        target="_blank"
+      ></lr-icon-button>
+    </div>
+  `,
+};

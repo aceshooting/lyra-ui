@@ -24,7 +24,7 @@ export const styles = css`
        themselves from --lr-theme-icon-button-size and --lr-theme-space-s. */
     --lr-checkbox-label-indent: calc(var(--lr-checkbox-box-size) + var(--lr-space-s));
   }
-  [part='base'] {
+  [part~='base'] {
     display: inline-flex;
     align-items: center;
     /* Derived from the published indent rather than repeating --lr-space-s, so the advertised
@@ -34,16 +34,16 @@ export const styles = css`
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
-  [part='base']:focus-visible {
+  [part~='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  :host(:disabled) [part='base'] {
+  :host(:disabled) [part~='base'] {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
 
-  [part='box'] {
+  [part~='box'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -68,7 +68,7 @@ export const styles = css`
       background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
   }
-  :host(:not(:disabled)) [part='base']:hover [part='box'] {
+  :host(:not(:disabled)) [part~='base']:hover [part~='box'] {
     border-color: var(--lr-color-brand);
   }
   /* Pressed. Expressed as a ring around the box rather than as a fill, because the box's own fill
@@ -76,12 +76,12 @@ export const styles = css`
      tinting it under the thumb would either wash out the checkmark or read as a half-toggled box.
      A ring is unambiguous in both states, and is visibly more than the hover's border-colour step
      -- same soft-ring pressed vocabulary <lr-slider>'s thumb uses. */
-  :host(:not(:disabled)) [part='base']:active [part='box'] {
+  :host(:not(:disabled)) [part~='base']:active [part~='box'] {
     border-color: var(--lr-color-brand);
     box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-color-brand-quiet);
   }
-  :host([checked]) [part='box'],
-  :host([indeterminate]) [part='box'] {
+  [part~='checked'],
+  [part~='indeterminate'] {
     /* Component-scoped indirection (mirrors lr-source-picker's identical
        --lr-source-picker-checked-bg/-border pair) so a consumer can retint just this control's
        checked/indeterminate fill without hijacking the shared --lr-color-brand token used across
@@ -93,12 +93,14 @@ export const styles = css`
      matching lr-combobox/lr-select's data-invalid styling hook --
      beyond the transient native validation-bubble popup, which only shows
      momentarily around reportValidity()/form submission. */
-  :host([data-invalid]) [part='box'] {
+  :host([data-invalid]) [part~='box'] {
     border-color: var(--lr-color-danger);
   }
 
-  [part='checkmark'] {
+  [part~='checkmark'] {
     display: block;
+    color: var(--checked-icon-color, currentColor);
+    transform: scale(var(--checked-icon-scale, 1));
   }
 
   /* No explicit "display" here (unlike e.g. lr-combobox's
@@ -110,8 +112,16 @@ export const styles = css`
     color: var(--lr-color-text);
   }
 
+  [part~='hint'] {
+    margin-block-start: var(--lr-space-xs);
+    margin-inline-start: var(--lr-checkbox-label-indent);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
+  [part~='hint'][hidden] { display: none; }
+
   @media (prefers-reduced-motion: reduce) {
-    [part='box'] {
+    [part~='box'] {
       transition: none !important;
     }
   }

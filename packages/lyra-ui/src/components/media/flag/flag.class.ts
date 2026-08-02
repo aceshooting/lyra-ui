@@ -128,6 +128,8 @@ export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | 
  * @cssprop [--lr-flag-aspect-ratio=4 / 3] - Rectangular flag aspect ratio.
  * @cssprop [--lr-flag-object-fit=cover] - How the image fits its flag frame.
  * @cssprop --lr-flag-radius - Rectangular flag corner radius.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraFlag extends LyraElement {
   static override styles = [LyraElement.styles, styles];

@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/card/card.js';` (registers the tag; side-effect import)
 - **Class** `LyraCard`, also available unregistered from `@aceshooting/lyra-ui/components/layout/card/card.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,6 +25,14 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   for a quiet brand-tinted background; `'filled-outlined'` keeps the border and adds that same tinted
   background; `'accent'` drops the border for a single colored accent stripe on the leading edge;
   `'plain'` has no border or background at all.
+- `orientation: 'horizontal' | 'vertical' = 'vertical'` (reflected) — vertical renders media,
+  header/actions, body, and footer/footer-actions as sections. Horizontal arranges media/image,
+  body, and `actions` in logical order and stacks them when the card's own container drops below
+  30rem.
+- `withHeader`, `withHeaderActions`, `withMedia`, `withFooter`, and `withFooterActions` (boolean,
+  reflected as `with-header`, `with-header-actions`, `with-media`, `with-footer`, and
+  `with-footer-actions`) — SSR presence hints. They expose an otherwise-empty section wrapper before
+  slot assignment can be measured; populated slots are still detected automatically after hydration.
 - `interactive: boolean = false` (reflected) — opt-in clickable-tile behavior: the hover/focus-visible
   treatment (border-color shift, `cursor: pointer`) plus, when `href` is **not** also set, real
   activation semantics. Those come from a real native `<button part="activation-button">` stretched
@@ -47,41 +57,54 @@ or by Enter/Space on `[part='activation-button']`. Only fired while `interactive
 `href`. Never fired for an interaction that originated in a slotted control, so a card can keep its
 own action buttons (see the gotchas below).
 
-**Slots:** default (the card body), `header` (header row content, rendered above the body), `media`
-(media content, e.g. an image, rendered above the header), `footer` (footer content, rendered below
-the body), `actions` (small header controls, rendered alongside the header content).
+**Slots:** default (the card body), `header` (vertical header content), `media` and `image` (aliases
+for media above the header vertically or at logical start horizontally), `footer` (vertical footer
+content), `header-actions` and `footer-actions` (controls aligned with those vertical sections), and
+`actions` (horizontal-card actions; retained as the legacy header-actions spelling vertically).
 
 **CSS parts:** `base` (the outer container — a `<div>`, or an `<a>` when `href` is set),
 `activation-button` (the native whole-card action, rendered only while `interactive` without `href`;
 it is absolutely positioned across the card, `pointer-events: none` so it never intercepts a click
-meant for slotted content, and it owns the card's `:focus-visible` ring), `media` (wrapper around
-the `media` slot, hidden entirely when empty), `header` (wrapper around the `header` slot and
+meant for slotted content, and it owns the card's `:focus-visible` ring), `media` and `image`
+(aliases on the wrapper around both media slots, hidden entirely when empty), `header` (wrapper around the `header` slot and
 `actions`, hidden entirely when both are empty), `actions` (wrapper around the `actions` slot,
 hidden entirely when empty), `body` (wrapper around the default slot), `footer` (wrapper around the
-`footer` slot, hidden entirely when empty).
+`footer` and `footer-actions` slots, hidden entirely when both are empty).
 
-**Themeable custom properties:** shared tokens only — `--lr-color-border`/`-surface`/`-brand`/
+**Themeable custom properties:** `--spacing` (default `var(--lr-space-m)`) controls the padding and
+gap around card sections. Shoelace-compatible `--padding` is its fallback; `--border-color`,
+`--border-radius`, and `--border-width` control the outer and section borders. Otherwise shared
+tokens — `--lr-color-border`/`-surface`/`-brand`/
 `-brand-quiet`, `--lr-radius`, `--lr-space-s`/`-m`, `--lr-transition-fast`,
 `--lr-focus-ring-*`.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-card appearance="outlined" interactive href="/reports/42">
-  <img slot="media" src="/thumb.png" alt="" />
+<lr-card appearance="outlined" interactive href="/reports/42" with-media with-header>
+  <img slot="image" src="/thumb.png" alt="" />
   <span slot="header">Q3 Report</span>
-  <span slot="actions"><lr-chip tone="success">Ready</lr-chip></span>
+  <span slot="header-actions"><lr-chip tone="success">Ready</lr-chip></span>
   Revenue up 12% quarter-over-quarter.
   <span slot="footer">Updated 2 days ago</span>
+  <button slot="footer-actions" type="button">Download</button>
 </lr-card>
 ```
 
 **Known gotchas:**
 - every `appearance` renders on the *same* `[part="base"]` element — there's no separate element per
   variant, so a `::part(base)` override applies uniformly regardless of `appearance`.
-- slot-presence (`header`/`media`/`footer`/`actions`) is tracked in JS, not via CSS `:empty` (a
+- slot-presence (`header`/`media`/`image`/`footer`/`actions`/`header-actions`/`footer-actions`) is
+  tracked in JS, not via CSS `:empty` (a
   `[part]` wrapper always contains a literal `<slot>` child, so `:empty` never matches) — the same
   pattern `lr-empty`/`lr-widget` use.
+- The `with-*` hints force section presence; do not set one for a section that should stay absent.
+  They are safe to leave in server-rendered markup once hydrated, because actual slot detection is
+  combined with—not substituted for—the hints.
+- Horizontal orientation intentionally omits the vertical header/footer presentation and uses the
+  `actions` slot beside the body. Its 30rem breakpoint is a container query on the card allocation,
+  not a viewport media query, so the same card can be horizontal in a wide region and stacked in a
+  narrow sidebar on one page.
 - **`[part='base']` itself deliberately carries no `role="button"` and is not focusable.** A card is
   a *container* — it routinely holds slotted buttons and links — and `role="button"` around
   focusable descendants is the `nested-interactive` accessibility violation this library's own a11y

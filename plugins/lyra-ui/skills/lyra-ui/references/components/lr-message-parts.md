@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';` (registers the tag; side-effect import)
 - **Class** `LyraMessageParts`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecated event** `lr-tool-chip-select` since `7.0.0`; use event `lr-tool-call-chip-select`; removal not before `9.0.0` — The replacement names the selected tool-call component precisely; the shorter event remains as a bubbling compatibility alias.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 14 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

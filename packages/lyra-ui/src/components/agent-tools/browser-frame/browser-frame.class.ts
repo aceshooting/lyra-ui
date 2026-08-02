@@ -96,6 +96,8 @@ export interface LyraBrowserFrameEventMap {
  *   color.
  * @cssprop [--lr-browser-frame-ping-move-color=var(--lr-color-text-quiet)] - Move-ping border
  *   color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

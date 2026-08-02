@@ -14,7 +14,7 @@ export const styles = css`
     --lr-input-font-size: var(--lr-form-control-font-size);
     --lr-input-control-min-height: var(--lr-form-control-height);
     /* --lr-input-control-height is intentionally NOT declared here. It is a consumer-facing escape
-       hatch consumed only through the two var() fallbacks on [part='input-wrapper'] below;
+       hatch consumed only through the two var() fallbacks on [part~='input-wrapper'] below;
        declaring any value for it (even 'auto') would make those fallback arms unreachable and
        silently turn --lr-input-control-min-height into dead code. Left undeclared, both arms stay
        live: the per-tier floor falls out of the fallback, and setting the property from anywhere
@@ -24,10 +24,9 @@ export const styles = css`
        tighter than a text field wants between an adornment and the caret. */
     --lr-input-gap: var(--lr-space-xs);
     --lr-input-radius: var(--lr-form-control-radius);
-    /* Fill/border pair swapped per appearance below. Declared here as well so an element whose
-       appearance attribute hasn't reflected yet (or was removed by hand) still paints the
-       committed filled-outlined treatment rather than an unstyled box. */
-    --lr-input-fill: var(--lr-color-surface);
+    /* Fill/border pair swapped per appearance below. The mapped default is outlined, so an element
+       whose appearance attribute has not reflected yet still paints the correct border-only box. */
+    --lr-input-fill: transparent;
     --lr-input-border-color: var(--lr-color-border);
   }
   :host([appearance='filled-outlined']) {
@@ -39,6 +38,10 @@ export const styles = css`
     --lr-input-border-color: var(--lr-color-border);
   }
   :host([appearance='filled']) {
+    --lr-input-fill: var(--lr-color-surface-raised);
+    --lr-input-border-color: transparent;
+  }
+  :host([filled]) {
     --lr-input-fill: var(--lr-color-surface-raised);
     --lr-input-border-color: transparent;
   }
@@ -69,7 +72,7 @@ export const styles = css`
     content: ' *';
     color: var(--lr-color-danger);
   }
-  [part='input-wrapper'] {
+  [part~='input-wrapper'] {
     display: flex;
     align-items: center;
     gap: var(--lr-input-gap);
@@ -84,7 +87,7 @@ export const styles = css`
     border-radius: var(--lr-input-radius);
     background: var(--lr-input-fill);
   }
-  [part='input-wrapper']:focus-within {
+  [part~='input-wrapper']:focus-within {
     border-color: var(--lr-color-brand);
   }
   /* :host(:disabled), not :host([disabled]) -- lr-input is form-associated
@@ -100,7 +103,7 @@ export const styles = css`
      ancestor's, so keeping both would have doubly faded the text relative
      to the buttons/adornments beside it. Mirrors lr-date-input's/lr-radio's
      identical fix. */
-  :host(:disabled) [part='input-wrapper'] {
+  :host(:disabled) [part~='input-wrapper'] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
@@ -196,12 +199,12 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='hint'] {
+  [part~='hint'] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  [part='hint'][hidden] {
+  [part~='hint'][hidden] {
     display: none;
   }
   [part='error'] {
@@ -214,7 +217,7 @@ export const styles = css`
   }
   [part='form-control'],
   [part='form-control-label'],
-  [part='hint'],
+  [part~='hint'],
   [part='error'] {
     min-inline-size: 0;
     max-inline-size: 100%;

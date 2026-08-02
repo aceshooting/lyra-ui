@@ -81,6 +81,8 @@ export interface LyraSegmentedEventMap {
  * @cssprop [--lr-segmented-track-gap=var(--lr-size-0-125rem)] - Gap between segments.
  * @cssprop [--lr-segmented-track-radius=var(--lr-radius)] - Track corner radius.
  * @cssprop [--lr-segmented-track-padding=var(--lr-size-0-125rem)] - Track inset padding.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   static override styles = [LyraElement.styles, sizes, styles];

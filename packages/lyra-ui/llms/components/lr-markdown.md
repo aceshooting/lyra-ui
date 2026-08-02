@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/conversation/markdown/markdown.js';` (registers the tag; side-effect import)
 - **Class** `LyraMarkdown`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/markdown/markdown.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 11 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -32,6 +34,14 @@ while content is still arriving.
 
 **Properties:**
 - `content: string = ''` — the Markdown source to render
+- `tabSize: number = 4` (attribute `tab-size`) — tab-stop width used to expand tabs in leading
+  indentation before parsing. Values are finite-integer guarded and clamped to `[1, 32]` at use;
+  invalid values fall back to `4`. This is separate from `--lr-code-block-tab-size`, which controls
+  how tabs already inside rendered code are displayed.
+- `marked: Marked-compatible parser | undefined` (readonly, no attribute) — the configurable
+  `marked.Marked` parser shared by every `<lr-markdown>` instance on the page. It is `undefined`
+  while the optional peer is still resolving or unavailable; configuration installed with
+  `marked.use()` is copied into each parse.
 - `sanitize: boolean = true` — sanitize `marked`'s HTML output with DOMPurify before rendering
 - `escapeHtml: boolean = false` (attribute `escape-html`) — when `true`, overrides `marked`'s `html`
   renderer hook to emit the HTML-escaped source text instead of passing raw/sanitized markup through
@@ -82,11 +92,15 @@ while content is still arriving.
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
   lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
-- `anchorKinds: readonly ('fragment' | 'text-quote')[]` (readonly) — the anchor kinds this
+- `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']` — the anchor kinds this
   component resolves for the shared anchor-target contract.
 
-**Methods:** `getHeadingTree()` returns the document-ordered heading outline (`{ level, text, slug
-}[]`) computed on every parse, regardless of `headingAnchors`.
+**Methods:**
+- `renderMarkdown(): void` — immediately reruns the current content through the parse, sanitize,
+  and fallback pipeline. Use it to refresh existing content after changing `marked` configuration;
+  it safely no-ops while the optional parser is unresolved.
+- `getHeadingTree()` — returns the document-ordered heading outline (`{ level, text, slug }[]`)
+  computed on every parse, regardless of `headingAnchors`.
 
 **Events:**
 - `lr-link-click` (`detail: { href: string; internal: true }`) — fired, with the click prevented,
@@ -126,7 +140,9 @@ is loaded and caught independently — a consumer who installs only `marked` and
 `sanitize="false"` (so `dompurify` is never needed) is a valid, supported combination. Also `shiki`,
 the same optional peer `<lr-code-block>` uses, for `highlightCode`'s fenced-block syntax
 highlighting — independent of the `marked`/`dompurify` pair, and its absence never blocks rendering
-(fenced blocks simply stay unhighlighted).
+(fenced blocks simply stay unhighlighted). The readonly `marked` property becomes available only
+after that lazy load resolves and exposes the same configurable parser to every `<lr-markdown>`
+instance; call `renderMarkdown()` after `marked.use(...)` to refresh content that is already shown.
 
 ```html
 <lr-markdown
@@ -170,10 +186,11 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
 - `target` is not in DOMPurify's default attribute allowlist (unlike `part`/`rel`/`class`, which
   already are), so sanitization is called with `ADD_ATTR: ['target']` — without that, every rendered
   link's `target` would be silently stripped by sanitization even though the anchor itself survives.
-- a fresh `marked.Marked()` instance (with a fresh renderer) is built on every single parse rather
-  than cached, specifically so the renderer's `link()` override always closes over the *current*
-  `linkTarget` — `marked`'s `.use()` otherwise persists whatever renderer it was given for the
-  instance's lifetime, which would go stale if `linkTarget` changed after a cached instance's first use.
+- a fresh internal `marked.Marked()` instance (with a fresh renderer) is built on every parse so
+  the renderer's `link()` override always closes over the *current* `linkTarget`. The public
+  `marked` parser is still shared: its current configured defaults are copied into that fresh
+  instance on each pass, avoiding a stale closure while preserving `marked.use(...)` hooks and
+  extensions.
 - `internal-link-prefix` matching compares against the raw `href` *attribute*, not the resolved
   `.href` IDL property (always an absolute URL in the browser) — a prefix like `/docs/` matches a
   relative markdown link but would never match against the resolved property.

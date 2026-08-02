@@ -23,7 +23,7 @@ export type LyraAccordionAppearance = Exclude<LyraAppearance, 'accent'>;
  * @slot label - Header label; takes priority over `label`, `summary`, and the `summary` slot.
  * @slot summary - Compatibility alias for the `label` slot.
  * @slot icon - Optional decorative expand/collapse icon.
- * @csspart base - Deprecated compatibility name for the outer wrapper; use `accordion-item`.
+ * @csspart base - Compatibility name for the outer wrapper; use `accordion-item`.
  * @csspart accordion-item - The outer wrapper. It is the same node as `base`.
  * @csspart heading - Heading around the trigger; omitted for `heading-level="none"`.
  * @csspart button - The trigger button.
@@ -49,11 +49,12 @@ export type LyraAccordionAppearance = Exclude<LyraAppearance, 'accent'>;
  * @cssprop [--lr-details-spacing=var(--lr-form-control-padding-inline)] - Details compatibility
  *   alias for the item's spacing.
  * @cssstate animating - Present while an expand/collapse transition is settling.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAccordionItem extends LyraDetails {
   static override styles = [LyraElement.styles, sizes, styles];
 
-  private readonly itemInternals = this.attachInternals();
   @state() private hasLabelSlot = false;
   @state() private hasLegacySummarySlot = false;
 
@@ -82,11 +83,11 @@ export class LyraAccordionItem extends LyraDetails {
 
   /** Whether the icon appears before or after the label. */
   @property({ attribute: 'icon-placement', reflect: true })
-  iconPlacement: LyraAccordionIconPlacement = 'end';
+  override iconPlacement: LyraAccordionIconPlacement = 'end';
 
   /** Visual treatment inherited from the owning accordion. */
   @property({ reflect: true })
-  appearance: LyraAccordionAppearance = 'outlined';
+  override appearance: LyraAccordionAppearance = 'outlined';
 
   /** @internal Roving-tabindex state controlled by the owning accordion. */
   @property({ attribute: false }) isTabbable = true;
@@ -129,9 +130,9 @@ export class LyraAccordionItem extends LyraDetails {
   }
 
   /** Details-compatible expansion. Prefer `expand()` in accordion code. */
-  override show(): void {
+  override async show(): Promise<void> {
     const old = this.open;
-    super.show();
+    const settled = super.show();
     if (this.open === old) {
       // A post-mount attribute write still invokes Lit's property setter even when Details rejects
       // the transition while disabled. Reflect the actual state back through both aliases.
@@ -139,31 +140,37 @@ export class LyraAccordionItem extends LyraDetails {
         this.toggleAttribute('open', false);
         this.toggleAttribute('expanded', false);
       }
+      await settled;
       return;
     }
     this.requestUpdate('expanded', old);
     this.setAnimating(true);
+    await settled;
   }
 
   /** Details-compatible collapse. Prefer `collapse()` in accordion code. */
-  override hide(): void {
+  override async hide(): Promise<void> {
     const old = this.open;
-    super.hide();
-    if (this.open === old) return;
+    const settled = super.hide();
+    if (this.open === old) {
+      await settled;
+      return;
+    }
     this.requestUpdate('expanded', old);
     this.setAnimating(true);
+    await settled;
   }
 
   /** Expand with animation. Disabled or already-expanded items are unchanged. */
   expand(): void {
     if (this.expanded || this.disabled) return;
-    this.show();
+    void this.show();
   }
 
   /** Collapse with animation. Disabled or already-collapsed items are unchanged. */
   collapse(): void {
     if (!this.expanded || this.disabled) return;
-    this.hide();
+    void this.hide();
   }
 
   /** Toggle the expanded state. */
@@ -194,8 +201,8 @@ export class LyraAccordionItem extends LyraDetails {
   }
 
   private setAnimating(animating: boolean): void {
-    if (animating) this.itemInternals.states.add('animating');
-    else this.itemInternals.states.delete('animating');
+    if (animating) this.detailsInternals.states.add('animating');
+    else this.detailsInternals.states.delete('animating');
   }
 
   private handleTriggerClick = (): void => {

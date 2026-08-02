@@ -5,4 +5,4 @@
  * supported entry points, and they are covered by semver. The `internal/` modules they forward to
  * are not — that tree is free to move.
  */
-export * from '../internal/prefix.js';
+export { defineElement, LYRA_PREFIX, tag } from '../internal/prefix.js';

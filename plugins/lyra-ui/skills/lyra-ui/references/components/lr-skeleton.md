@@ -5,19 +5,22 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/skeleton/skeleton.js';` (registers the tag; side-effect import)
 - **Class** `LyraSkeleton`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/skeleton/skeleton.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-skeleton`
 
-Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
+Loading placeholder (`text`/`circle`/`rect` shapes, opt-in `pulse`/`sheen` effects).
 
 **Properties:**
 - `variant: 'text'|'circle'|'rect' = 'text'` (reflected)
-- `effect: 'pulse'|'sheen' = 'pulse'` (reflected)
+- `effect: 'pulse'|'sheen'|'none' = 'none'` (reflected) — animation is opt-in. **Changed in
+  8.0.0:** the Lyra default was `pulse`; set `effect="pulse"` to preserve that motion explicitly.
 - `width?: string`
 - `height?: string`
 - `label: string = 'Loading…'` — accessible name for this instance's own `role="status"` (rendered as
@@ -31,17 +34,21 @@ Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
 
 **Slots:** none.
 
-**CSS parts:** `base`
+**CSS parts:** `base` and `indicator` are aliases on the same placeholder/animation surface.
 
 **Themeable custom properties:** `--lr-skeleton-w`, `--lr-skeleton-h` (set/cleared by the
-`width`/`height` properties; defaults `100%` / `var(--lr-size-1em)`) and the shared
-`--lr-transition-ambient` (default `1.8s ease-in-out`) for the pulse/sheen timing.
+`width`/`height` properties; defaults `100%` / `var(--lr-size-1em)`),
+`--lr-skeleton-color` (default `var(--lr-color-border)`), `--lr-skeleton-sheen-color` (default
+`var(--lr-color-surface)`), `--lr-skeleton-border-radius` (default `var(--lr-radius)` for text and
+rectangle shapes); upstream `--color`, `--sheen-color`, and `--border-radius` feed those same
+values. The shared `--lr-transition-ambient` (default `1.8s ease-in-out`) controls the pulse/sheen
+timing.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-skeleton variant="circle" width="3rem" height="3rem"></lr-skeleton>
-<lr-skeleton variant="text" label="Loading name"></lr-skeleton>
+<lr-skeleton variant="circle" effect="pulse" width="3rem" height="3rem"></lr-skeleton>
+<lr-skeleton variant="text" effect="sheen" label="Loading name"></lr-skeleton>
 ```
 
 **Known gotchas:**

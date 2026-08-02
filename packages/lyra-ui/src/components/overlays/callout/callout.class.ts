@@ -1,14 +1,15 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
-import { variants } from '../../../internal/variants.styles.js';
-import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraAppearance, LyraSize, LyraVariant } from '../../../internal/variants.js';
+import { contextualSizes, contextualVariants } from '../../../internal/contextual-vocabulary.styles.js';
 import { styles } from './callout.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** The library's one semantic-tone vocabulary. */
 export type CalloutVariant = LyraVariant;
+/** The library's shared fill/border treatment vocabulary. */
+export type CalloutAppearance = LyraAppearance;
 /** The library's one size ladder, in either spelling. */
 export type CalloutSize = LyraSize;
 export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
@@ -17,8 +18,9 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
  * `<lr-callout>` — an inline message surface for status, warning, and error content.
  * Set `inline` for lightweight reactive status/error text: it removes the panel chrome while
  * preserving the semantic role, optional leading icon, and close action.
- * Initial content is not announced as a new live update. Later message, heading, or variant
- * changes activate polite announcements, or assertive announcements for `variant="danger"`.
+ * Initial content is not announced as a new live update. Once the first render and slot
+ * distribution settle, the region is armed: later updates are polite, or assertive for
+ * `variant="danger"`.
  *
  * @customElement lr-callout
  * @slot - Message content.
@@ -26,7 +28,7 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
  * @slot icon - Optional icon.
  * @event lr-close - The close action was accepted. Cancelable before the callout hides.
  * @attr inline - Uses the lightweight inline treatment without border, background, or panel padding.
- * @csspart base - The callout surface.
+ * @csspart base - The semantic grid wrapper inside the host-owned callout surface.
  * @csspart icon - The icon wrapper.
  * @csspart content - The message content.
  * @csspart heading - The heading wrapper.
@@ -36,62 +38,82 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
  *   variant.
  * @csspart close-icon - The close button's visible "×" glyph, independent of `close-button`'s hit
  *   target size -- shrinks in the `inline` variant while the hit target stays full-size.
- * @cssprop [--lr-callout-background=var(--lr-color-surface)] - The callout surface's background.
- *   Each non-neutral `variant` sets it to that variant's quiet fill from the shared semantic grid.
- * @cssprop [--lr-callout-border=var(--lr-color-border)] - The callout surface's border color. Each
- *   non-neutral `variant` sets it to that variant's loud fill.
- * @cssprop [--lr-callout-color=var(--lr-color-text)] - The callout's text color. Each non-neutral
- *   `variant` sets it to that variant's loud fill.
+ * @cssprop [--lr-callout-background=var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))] -
+ *   The host surface's background: an inherited semantic quiet fill, with brand as the standalone
+ *   fallback.
+ * @cssprop [--lr-callout-border=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
+ *   host surface's border color.
+ * @cssprop [--lr-callout-color=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
+ *   host surface's text color.
  * @cssprop [--lr-callout-close-hover-bg=var(--lr-color-brand-quiet)] - The close button's hover
  *   background, decoupled from `--lr-callout-background` so a consumer can retint one without
  *   affecting the other (e.g. keeping the hover fill visibly distinct from a `variant="brand"`
  *   panel, which shares the same default token).
- * @cssprop [--lr-callout-font-size=var(--lr-form-control-font-size)] - The callout's text size.
+ * @cssprop [--lr-callout-font-size=var(--lr-form-control-font-size,var(--lr-font-size-m))] - The callout's text size.
  *   Each `size` tier sets it from the library's shared size ladder.
- * @cssprop [--lr-callout-padding=var(--lr-form-control-padding-inline)] - Padding of the panel, on
+ * @cssprop [--lr-callout-padding=var(--lr-form-control-padding-inline,var(--lr-space-m))] - Padding of the panel, on
  *   both axes. Each `size` tier sets it from the shared ladder's inline-padding knob: a panel's
  *   block rhythm is generous like a control's inline padding, not tight like its block padding
  *   (which exists to fit text inside a fixed control height). `inline` removes it entirely.
  * @cssprop [--lr-callout-gap=var(--lr-space-s)] - Space between the icon, the content, and the
  *   close action. Deliberately does not vary by `size`: it separates three adjacent boxes rather
  *   than setting the panel's density, and shrinking it at the small tiers only crowds them.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
-  static override styles = [LyraElement.styles, variants, sizes, styles];
-  @property({ reflect: true }) variant: CalloutVariant = 'neutral';
+  static override styles = [LyraElement.styles, contextualVariants, contextualSizes, styles];
 
-  /** Visual density, on the library's shared ladder. Both spellings of every tier are accepted
-   *  (`s`/`small`, `m`/`medium`, `l`/`large`), so markup migrated from Web Awesome or Shoelace
-   *  needs no attribute rewrite. `m` reproduces the panel this component had before `size`
-   *  existed. */
-  @property({ reflect: true }) size: CalloutSize = 'm';
+  /** Semantic palette. The property defaults to `brand` without forcing an attribute, allowing an
+   *  unset nested callout to inherit its containing semantic context. Explicitly assigning
+   *  `brand` reflects it, making the standalone default an intentional local override. */
+  @property({ reflect: true, useDefault: true })
+  variant: CalloutVariant = 'brand';
+
+  /** How much of the active `variant` palette is spent on fill, border, and text. Unset preserves
+   *  the established callout treatment; every explicit Web Awesome appearance is reflected. */
+  @property({ reflect: true }) appearance!: CalloutAppearance;
+
+  /** Visual density, on the library's shared ladder. The `m` property default is not reflected,
+   *  so an unset nested callout inherits its containing size context. Both Web Awesome spellings
+   *  are accepted (`s`/`small`, `m`/`medium`, `l`/`large`). */
+  @property({ reflect: true, useDefault: true })
+  size: CalloutSize = 'm';
 
   @property() heading = '';
   @property({ type: Boolean, reflect: true }) closable = false;
   @property({ type: Boolean, reflect: true }) inline = false;
-  
+
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) open = true;
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   @state() private hasIcon = false;
   @state() private hasHeading = false;
   @state() private liveActive = false;
-  private contentObserver?: MutationObserver;
+  private connectionGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.contentObserver ??= new MutationObserver(() => {
-      if (this.hasUpdated) this.liveActive = true;
-    });
-    this.contentObserver.observe(this, { childList: true, characterData: true, subtree: true });
+    const generation = ++this.connectionGeneration;
+    // The initial render commits with aria-live="off". Wait through the first slot-distribution
+    // paint and any update it schedules before arming; otherwise an initially slotted heading can
+    // become visible in the same update that turns announcements on.
+    void this.updateComplete
+      .then(() => {
+        const view = this.ownerDocument?.defaultView;
+        return typeof view?.requestAnimationFrame === 'function'
+          ? new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()))
+          : Promise.resolve();
+      })
+      .then(() => this.updateComplete)
+      .then(() => {
+        if (this.isConnected && generation === this.connectionGeneration) this.liveActive = true;
+      });
   }
 
   override disconnectedCallback(): void {
-    this.contentObserver?.disconnect();
+    this.connectionGeneration += 1;
+    this.liveActive = false;
     super.disconnectedCallback();
-  }
-
-  protected override willUpdate(changed: PropertyValues): void {
-    if (this.hasUpdated && (changed.has('heading') || changed.has('variant'))) this.liveActive = true;
   }
   private close = (): void => {
     const event = this.emit('lr-close', undefined, { cancelable: true });
@@ -114,7 +136,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
         <div part="heading" ?hidden=${!this.heading && !this.hasHeading}>${this.heading}<slot name="heading" @slotchange=${this.onSlotChange}></slot></div>
         <div part="message"><slot></slot></div>
       </div>
-      <button part="close-button" ?hidden=${!this.closable} aria-label=${this.localize('close')} @click=${this.close}><span part="close-icon" aria-hidden="true">×</span></button>
+      <button type="button" part="close-button" ?hidden=${!this.closable} aria-label=${this.localize('close')} @click=${this.close}><span part="close-icon" aria-hidden="true">×</span></button>
     </div>`;
   }
 }

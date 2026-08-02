@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraPdfViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `pdfjs-dist` — see `llms/peers.md`
 - **Themeable via** 17 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -25,12 +27,13 @@ directly, since z-stacking doesn't affect tab order. Residual: a click that *end
 drag* over a highlighted passage never activates it — the selection-in-progress check exists exactly
 to tell that apart from a genuine activation click.
 
-**Properties:** `src` and `name` are strings. `page: number = 1` is the one-based current page and
+**Properties:** `src: string = ''` and `name: string = ''`. `page: number = 1` is the one-based
+current page and
 `zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
 CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
  page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
- declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
-`['page', 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
+ declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['page',
+'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
 anchor-target contract). Page and page-addressed region anchors require an in-range integer page
 and are rejected rather than clamped; region rectangles also require finite coordinates and
 nonnegative dimensions.

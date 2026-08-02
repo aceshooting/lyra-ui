@@ -162,6 +162,8 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
  * @cssprop --lr-archive-viewer-highlight-neutral-background - Neutral highlight background.
  * @cssprop --lr-archive-viewer-highlight-active-background - Active highlight background.
  * @cssprop --lr-archive-viewer-highlight-active-outline - Active fallback-highlight outline.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   static override styles = [LyraElement.styles, styles, srOnly];

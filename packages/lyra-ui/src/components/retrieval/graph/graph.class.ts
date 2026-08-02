@@ -16,6 +16,7 @@ import { finiteNumber, finiteRange, finiteInteger } from '../../../internal/numb
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import '../../overlays/skeleton/skeleton.class.js';
 
 export type GraphLayout = 'force' | 'layered';
@@ -127,6 +128,9 @@ const EXPAND_BADGE_OFFSET = Math.SQRT1_2; // places the badge at the node's edge
 const FOCUS_HALO_PADDING = 6; // world px added to the node's own radius for the halo ring
 const HULL_PADDING = 24; // world px; CSS mirrors this via stroke-width: 2 * --lr-size-24px
 const CANVAS_NODE_LABEL_MIN_ZOOM = 0.5; // canvas-only declutter -- node labels draw only at/above this scale
+// WebKit does not pointer-hit-test a mathematically zero-length SVG line. A sub-pixel segment
+// preserves the circular target created by the round, zoom-compensated 24px stroke in every engine.
+const NODE_HIT_SEGMENT_HALF = 0.5;
 
 
 /**
@@ -315,6 +319,8 @@ export interface LyraGraphEventMap {
  * @cssprop [--lr-graph-hull-opacity=0.12] - Hull element opacity (composites fill+stroke as one
  *   group, avoiding a double-opacity seam at the fill/stroke boundary). Applies to both SVG and
  *   canvas renderers.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -562,6 +568,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  `linkEls` (real, simulated links only) so onTick() can write their positions too; see
    *  onTick()'s own comment for why a stub needs this at all. */
   private danglingLinkEls: SVGLineElement[] = [];
+
+  constructor() {
+    super();
+    new ThemeWatcher(this, () => {
+      if (this.renderer === 'canvas') this.markCanvasDirty();
+    });
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -1710,6 +1723,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         })
         .on('zoom', (event: OptionalPeerApi) => {
           this.gEl?.setAttribute('transform', event.transform.toString());
+          this.updateHitAreaZoomScale(event.transform.k);
           this.updateEdgeLabelZoomGate(event.transform.k);
           this.scheduleViewportChange();
         })
@@ -1723,6 +1737,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // identity transform, k=1. Apply the edge-label zoom gate against that known value now, or
       // it stays unset (edge labels wrongly visible) until the user's first pan/zoom, regardless
       // of what edgeLabelMinZoom actually is.
+      this.updateHitAreaZoomScale(1);
       this.updateEdgeLabelZoomGate(1);
     } else if (this.zoomBehavior && (changed.has('minZoom') || changed.has('maxZoom'))) {
       this.zoomBehavior.scaleExtent([this.safeMinZoom, this.safeMaxZoom]);
@@ -1803,6 +1818,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
   }
 
+  /**
+   * Keeps SVG pointer strokes at their tokenized screen-space size. WebKit computes
+   * `vector-effect: non-scaling-stroke` correctly but still hit-tests the pre-vector-effect,
+   * transformed width, so explicit inverse zoom is required for the interactive geometry.
+   */
+  private updateHitAreaZoomScale(zoom: number): void {
+    const safeZoom = finiteRange(zoom, 1, Number.EPSILON);
+    this.gEl?.style.setProperty('--_lr-graph-hit-area-scale', String(1 / safeZoom));
+  }
+
   /** The `renderer="canvas"` twin of `applyInteractions()`'s svg zoom-bind branch -- binds d3-zoom
    *  and the pointer/hit-testing handlers to the just-rendered `<canvas>` once (guarded by the same
    *  `zoomedEl` field `applyInteractions()` uses, so `focusNode()`/`fit()`/`tweenCamera()` keep
@@ -1859,9 +1884,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       }
       const hit = this.nodeHitEls[i];
       if (hit) {
-        hit.setAttribute('x1', String(n.x ?? 0));
+        hit.setAttribute('x1', String((n.x ?? 0) - NODE_HIT_SEGMENT_HALF));
         hit.setAttribute('y1', String(n.y ?? 0));
-        hit.setAttribute('x2', String(n.x ?? 0));
+        hit.setAttribute('x2', String((n.x ?? 0) + NODE_HIT_SEGMENT_HALF));
         hit.setAttribute('y2', String(n.y ?? 0));
       }
       const label = this.nodeLabelEls[i];
@@ -2630,7 +2655,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   data-hit-area="hull"
                   aria-hidden="true"
                   focusable="false"
-                  vector-effect="non-scaling-stroke"
                   d=${hullPathD(hull)}
                   @click=${() => this.onCommunityClick(entry.community)}
                 ></path>
@@ -2658,7 +2682,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   data-hit-area="link"
                   aria-hidden="true"
                   focusable="false"
-                  vector-effect="non-scaling-stroke"
                   x1=${coordinates.x1}
                   y1=${coordinates.y1}
                   x2=${coordinates.x2}
@@ -2723,10 +2746,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 data-hit-area="node"
                 aria-hidden="true"
                 focusable="false"
-                vector-effect="non-scaling-stroke"
-                x1=${n.x ?? 0}
+                x1=${(n.x ?? 0) - NODE_HIT_SEGMENT_HALF}
                 y1=${n.y ?? 0}
-                x2=${n.x ?? 0}
+                x2=${(n.x ?? 0) + NODE_HIT_SEGMENT_HALF}
                 y2=${n.y ?? 0}
                 @click=${(e: MouseEvent) => this.onNodeClick(n, e)}
                 @dblclick=${(e: MouseEvent) => this.onNodeDblClick(n, e)}

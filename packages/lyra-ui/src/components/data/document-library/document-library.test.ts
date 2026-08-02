@@ -35,7 +35,7 @@ const docs: LibraryDocument[] = [
 
 function findCheckbox(table: HTMLElement, rowIndex: number): HTMLElement {
   const rows = table.shadowRoot!.querySelectorAll('[data-row-key]');
-  return rows[rowIndex]!.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  return rows[rowIndex]!.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 }
 
 it('renders every document as a grid row, sorted by name ascending by default (unsorted input)', async () => {
@@ -205,7 +205,7 @@ it('select-all header checkbox selects/deselects every currently visible row and
   const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement;
   const headerCheckboxBase = () =>
     (table.shadowRoot!.querySelector('thead lr-checkbox') as HTMLElement).shadowRoot!.querySelector(
-      '[part="base"]',
+      '[part~="base"]',
     ) as HTMLElement;
 
   const listener = oneEvent(el, 'lr-selection-change');

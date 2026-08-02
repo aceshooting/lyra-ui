@@ -26,6 +26,8 @@ export interface LyraScrollerEventMap {
  * @csspart base - The overall scroller layout.
  * @csspart viewport - The native scroll container.
  * @csspart content - The slotted content wrapper.
+ * @csspart start-shadow - Logical-start overflow cue.
+ * @csspart end-shadow - Logical-end overflow cue.
  * @csspart previous - The previous/start control.
  * @csspart next - The next/end control.
  * @csspart control - Shared part on both `previous` and `next`.
@@ -33,6 +35,10 @@ export interface LyraScrollerEventMap {
  * @csspart next-glyph - The chevron glyph inside `next`, mirrored under RTL.
  * @cssprop [--lr-scroller-control-size=var(--lr-size-2rem)] - Control size.
  * @cssprop [--lr-scroller-min-block-size=var(--lr-size-10rem)] - Minimum vertical scroller size.
+ * @cssprop [--shadow-color=var(--lr-color-surface)] - Base color of each edge shadow.
+ * @cssprop [--shadow-size=var(--lr-size-2rem)] - Inline/block extent of each edge shadow.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -41,6 +47,12 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   @property({ type: Boolean, reflect: true }) controls = false;
   @property({ type: Boolean, attribute: "hide-scrollbar", reflect: true })
   hideScrollbar = false;
+  /** Web Awesome spelling of `hideScrollbar`; either flag suppresses the native scrollbar. */
+  @property({ type: Boolean, attribute: "without-scrollbar", reflect: true })
+  withoutScrollbar = false;
+  /** Removes both visual edge cues while leaving native scrolling untouched. */
+  @property({ type: Boolean, attribute: "without-shadow", reflect: true })
+  withoutShadow = false;
   @property({ type: Number, attribute: "scroll-step" }) scrollStep = 0;
   @property() label = "";
 
@@ -185,14 +197,26 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
               : html`<span part="previous-glyph" aria-hidden="true">‹</span>`}
           </button>`
         : nothing}
-      <div
-        part="viewport"
-        role="region"
-        aria-label=${label}
-        tabindex="0"
-        @scroll=${this.onScroll}
-      >
-        <div part="content"><slot @slotchange=${this.updateEdges}></slot></div>
+      <div class="viewport-wrap">
+        <span
+          part="start-shadow"
+          aria-hidden="true"
+          ?hidden=${this.withoutShadow || this.canScrollStart}
+        ></span>
+        <div
+          part="viewport"
+          role="region"
+          aria-label=${label}
+          tabindex="0"
+          @scroll=${this.onScroll}
+        >
+          <div part="content"><slot @slotchange=${this.updateEdges}></slot></div>
+        </div>
+        <span
+          part="end-shadow"
+          aria-hidden="true"
+          ?hidden=${this.withoutShadow || this.canScrollEnd}
+        ></span>
       </div>
       ${this.controls
         ? html`<button

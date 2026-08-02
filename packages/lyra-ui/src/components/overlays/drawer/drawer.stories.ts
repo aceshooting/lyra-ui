@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import './drawer.js';
 import type { LyraDrawer } from './drawer.js';
 
 const meta: Meta = {
@@ -11,10 +12,36 @@ export default meta;
 type Story = StoryObj;
 
 export const End: Story = {
-  render: (_args, context) => html`<lr-drawer .open=${context.viewMode !== 'docs'} placement="end" heading="Filters" closable>
+  render: (_args, context) => html`<lr-drawer .open=${context.viewMode !== 'docs'} placement="end" label="Filters">
     <p>Use this panel for contextual controls without leaving the current page.</p>
     <div slot="footer"><button type="button">Apply</button></div>
   </lr-drawer>`,
+};
+
+export const Contained: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`contained` positions the drawer inside this relative wrapper as a nonmodal panel: no backdrop, page inerting, scroll lock, focus trap, top layer, or global Escape ownership.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <div
+      style="position: relative; overflow: hidden; min-block-size: 20rem; border: 1px dashed var(--lr-color-border);"
+    >
+      <lr-drawer
+        contained
+        .open=${context.viewMode !== 'docs'}
+        placement="end"
+        label="Inspector"
+        style="--size: 18rem"
+      >
+        <p>The rest of the page remains interactive.</p>
+      </lr-drawer>
+    </div>
+  `,
 };
 
 export const Start: Story = {

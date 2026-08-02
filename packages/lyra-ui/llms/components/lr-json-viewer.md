@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraJsonViewer`, also available unregistered from `@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -22,6 +24,7 @@ renders as a leaf `Circular reference` marker (`data-type="circular"`) instead o
 stack overflow on cyclic `data`.
 
 **Properties:**
+
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)
 - `collapsedDepth?: number` (attribute `collapsed-depth`) — nodes at or beyond this nesting depth
   (root = `0`) start collapsed; omitted/`undefined` means nothing auto-collapses
@@ -44,7 +47,7 @@ matches and the cursor.
 
 **Events:** `lr-copy` (`detail: { text: string }`) — fired by the top-level copy button or a
 per-node one. Fires even when `navigator.clipboard` is unavailable or the write silently failed
-(a rejected `writeText()` is swallowed), so a consumer can still observe copy *intent* — the event
+(a rejected `writeText()` is swallowed), so a consumer can still observe copy _intent_ — the event
 is not a confirmation that the OS clipboard was actually reached. Copying a circular `data` value
 serializes safely, substituting the same `Circular reference` marker the tree view renders, instead
 of throwing. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — fired whenever the
@@ -98,14 +101,18 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
 ```html
 <lr-json-viewer copyable max-height="24rem"></lr-json-viewer>
 <script type="module">
-  document.querySelector('lr-json-viewer').data = { hello: 'world', items: [1, 2, 3] };
+  document.querySelector('lr-json-viewer').data = {
+    hello: 'world',
+    items: [1, 2, 3],
+  };
 </script>
 ```
 
 **Known gotchas:**
+
 - `data` is property-only (`attribute: false`) — it must be set via `.data = ...` or a lit-html `.data=${...}`
   binding, never as a plain HTML attribute.
-- Search highlighting auto-expands only the *ancestors* of a match, not the whole tree — a
+- Search highlighting auto-expands only the _ancestors_ of a match, not the whole tree — a
   non-matching sibling subtree elsewhere stays collapsed (or expanded) exactly as it already was.
 - An explicit per-node expand/collapse (from clicking a node's `toggle` button) overrides
   `collapsedDepth` and declarative search-driven auto-expansion for that path. Imperative

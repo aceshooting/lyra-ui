@@ -9,7 +9,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Before/after comparison with a native range handle. Host `focus()`, `blur()`, and `click()` forward to that handle.',
+          'Before/after comparison with a native range input. The `handle` slot customizes its visible affordance, `--divider-width` and `--handle-size` tune the geometry, and the `dragging` CSS state follows pointer gestures. Host `focus()`, `blur()`, and `click()` forward to the range input.',
       },
     },
   },
@@ -25,8 +25,14 @@ export const Default: Story = {
 };
 
 export const Vertical: Story = {
-  render: () => html`<lr-image-comparer orientation="vertical" position="65" aria-label="Vertical comparison">
+  render: () => html`<lr-image-comparer
+    orientation="vertical"
+    position="65"
+    aria-label="Vertical comparison"
+    style="--divider-width: var(--lr-border-width-medium); --handle-size: var(--lr-size-2rem)"
+  >
     <div slot="before" style="padding: var(--lr-space-2xl); background: var(--lr-color-surface-raised);">Top</div>
     <div slot="after" style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">Bottom</div>
+    <span slot="handle" aria-hidden="true">↕</span>
   </lr-image-comparer>`,
 };

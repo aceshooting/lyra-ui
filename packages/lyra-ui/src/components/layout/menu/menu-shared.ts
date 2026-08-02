@@ -24,6 +24,15 @@ export type MenuFocusTarget = 'first' | 'last' | 'none';
 export interface SubmenuPanel extends HTMLElement {
   open: boolean;
   anchor: HTMLElement | null;
-  show(focus?: MenuFocusTarget): void;
-  hide(options?: { focusTrigger?: boolean }): void;
+  updateComplete?: Promise<unknown>;
+  show(focus?: MenuFocusTarget): void | Promise<void>;
+  hide(options?: { focusTrigger?: boolean }): void | Promise<void>;
+}
+
+/** The small owner surface used when `<lr-menu>` supplies its interaction engine to another
+ * trigger/popup component. Kept structural so the menu layer does not import an overlay class. */
+export interface ContainedMenuOwner {
+  open: boolean;
+  show(): void | Promise<void>;
+  hide(options?: { focusTrigger?: boolean }): void | Promise<void>;
 }

@@ -8,6 +8,7 @@ import { getScratchCtx } from '../../../internal/canvas.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import {
   layoutWordCloud,
   MAX_FONT_SIZE_PX,
@@ -36,9 +37,7 @@ const NAV_KEYS = new Set(['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Ho
 const FOCUS_RING_PAD = 2;
 
 
-const warnedSkipCounts = new Set<number>();
-
-function warnSkippedWords(count: number): void {
+function warnSkippedWords(count: number, warnedSkipCounts: Set<number>): void {
   if (warnedSkipCounts.has(count)) return;
   warnedSkipCounts.add(count);
   console.warn(
@@ -96,6 +95,8 @@ export interface WordCloudLegendItem {
  * @cssprop [--lr-word-cloud-color-6=var(--lr-color-chart-2)] - Sixth entry of the default categorical palette.
  * @cssprop [--lr-word-cloud-color-7=var(--lr-color-chart-3)] - Seventh entry of the default categorical palette.
  * @cssprop [--lr-word-cloud-color-8=var(--lr-color-chart-4)] - Eighth entry of the default categorical palette.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -145,6 +146,14 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   private authorRole: string | null = null;
   private authorAriaLabel: string | null = null;
   private syncingGeneratedSemantics = false;
+  private readonly warnedSkipCounts = new Set<number>();
+  private typographyThemeSignature = '';
+  private paletteThemeSignature = '';
+
+  constructor() {
+    super();
+    new ThemeWatcher(this, this.onThemeInvalidated);
+  }
 
   override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
     super.attributeChangedCallback(name, oldValue, value);
@@ -211,7 +220,11 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     }
   }
 
-  private relayout(): void {
+  private relayout(preserveInteraction = false): void {
+    const focusedOriginalIndex = preserveInteraction && this.focusedIndex !== null
+      ? this.navOrder()[this.focusedIndex]?.originalIndex
+      : undefined;
+    const priorLiveText = this.liveText;
     // The font family/weight tokens are invariant for the whole layout pass --
     // read them once here rather than inside the per-word `measureText`
     // callback below, which `layoutWordCloud()` calls once per eligible word
@@ -240,20 +253,51 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       orientations: this.orientations,
       measureText,
     });
-    if (this.cachedLayout.skipped.length > 0) warnSkippedWords(this.cachedLayout.skipped.length);
+    if (this.cachedLayout.skipped.length > 0) {
+      warnSkippedWords(this.cachedLayout.skipped.length, this.warnedSkipCounts);
+    }
     // The previous focus cursor may no longer address a real word once the
     // data changes out from under it.
-    this.focusedIndex = null;
-    this.liveText = '';
+    if (focusedOriginalIndex !== undefined) {
+      const nextIndex = this.navOrder().findIndex((word) => word.originalIndex === focusedOriginalIndex);
+      this.focusedIndex = nextIndex < 0 ? null : nextIndex;
+      this.liveText = nextIndex < 0 ? '' : priorLiveText;
+    } else {
+      this.focusedIndex = null;
+      this.liveText = '';
+    }
   }
 
   /** Forces a relayout so the font-family theme token (`--lr-font`) is
-   *  re-read from computed style — mirrors `lr-chart`'s `refreshTheme()`.
-   *  No global theme-broadcast event exists in lyra-ui to subscribe to
-   *  automatically; call this from a consumer's own theme-toggle handler. */
+   *  re-read from computed style — mirrors `lr-chart`'s `refreshTheme()`. ThemeWatcher calls this
+   *  automatically only when the effective typography metrics changed; the public method remains
+   *  available for host theme systems that need an explicit synchronous refresh. */
   refreshTheme(): void {
-    this.relayout();
+    this.relayout(true);
+    this.captureThemeSignatures();
     this.requestUpdate();
+  }
+
+  private captureThemeSignatures(): void {
+    this.typographyThemeSignature = `${this.fontWeight()}\u0000${this.fontFamily()}`;
+    this.paletteThemeSignature = this.paletteColors().join('\u0000');
+  }
+
+  private onThemeInvalidated = (): void => {
+    const typography = `${this.fontWeight()}\u0000${this.fontFamily()}`;
+    const palette = this.paletteColors().join('\u0000');
+    if (!this.typographyThemeSignature || typography !== this.typographyThemeSignature) {
+      this.refreshTheme();
+      return;
+    }
+    if (palette !== this.paletteThemeSignature) {
+      this.paletteThemeSignature = palette;
+      this.requestUpdate();
+    }
+  };
+
+  override firstUpdated(): void {
+    this.captureThemeSignatures();
   }
 
   private activate(word: PlacedWord): void {

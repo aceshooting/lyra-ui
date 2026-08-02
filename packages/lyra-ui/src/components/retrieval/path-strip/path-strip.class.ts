@@ -34,6 +34,8 @@ export interface LyraPathStripEventMap {
  * @csspart relation - One `edge`-kind element's relation label (a `<button>`).
  * @csspart arrow - The `aria-hidden` directed-edge arrow glyph, logical (mirrors under RTL).
  * @csspart empty - The empty-state message, shown when `path` is empty.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

@@ -1,12 +1,19 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { styles } from './details.styles.js';
 
 /** The library's one size ladder, in either spelling. */
 export type LyraDetailsSize = LyraSize;
+/** Web Awesome's disclosure appearances. */
+export type LyraDetailsAppearance = Exclude<LyraAppearance, 'accent'>;
+/** Logical position of the disclosure icon. */
+export type LyraDetailsIconPlacement = 'start' | 'end';
 
 export interface LyraDetailsEventMap {
   'lr-show': CustomEvent<undefined>;
@@ -30,6 +37,8 @@ export interface LyraDetailsEventMap {
  * @slot summary - Summary content. Takes priority over `summary` when any light-DOM child
  *   carries `slot="summary"` — the fallback localized "Details" text only appears when neither
  *   is set.
+ * @slot expand-icon - Icon shown while the panel is closed.
+ * @slot collapse-icon - Icon shown while the panel is open.
  * @slot - Panel content.
  * @event lr-show - The panel is about to open. Cancelable.
  * @event lr-after-show - The panel is open and its marker transition has finished.
@@ -38,8 +47,12 @@ export interface LyraDetailsEventMap {
  * @event lr-toggle - The disclosure state changed. `detail: { open }`. Kept alongside the four
  *   events above because it is the single event that reports which way the panel went, which
  *   `<lr-accordion>` uses to close the siblings of a newly-opened panel.
- * @csspart base - The native details element.
+ * @csspart base - Compatibility name for the native details wrapper; use `details`.
+ * @csspart details - The native details wrapper. It is the same node as `base`.
+ * @csspart header - The summary-row layout wrapper.
  * @csspart summary - The summary control.
+ * @csspart icon - The expand/collapse icon wrapper.
+ * @csspart summary-icon - Shoelace-compatible alias for `icon`; both names are on the same node.
  * @csspart content - The panel content.
  * @cssprop [--lr-details-font-size=var(--lr-form-control-font-size)] - Text size of the summary
  *   and the panel. Each `size` tier sets it from the library's shared size ladder.
@@ -48,10 +61,18 @@ export interface LyraDetailsEventMap {
  *   disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding
  *   knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text
  *   inside a fixed control height and would collapse the summary row.
+ * @cssprop --spacing - Upstream-compatible spacing override for the summary and content.
+ * @cssprop [--show-duration=var(--lr-duration-base)] - Expand-icon transition duration.
+ * @cssprop [--hide-duration=var(--lr-duration-base)] - Collapse-icon transition duration.
+ * @cssstate animating - Present while an expand/collapse transition is settling.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   static override styles = [LyraElement.styles, sizes, styles];
 
+  /** Shared with subclasses so one host never calls `attachInternals()` twice. */
+  protected readonly detailsInternals = attachInternalsSafely(this);
   private _open = false;
 
   /** Whether the panel is expanded. Assigning it runs the full `lr-show`/`lr-hide` lifecycle and
@@ -69,11 +90,21 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       this.applyOpenState(normalized);
       return;
     }
-    if (normalized) this.show();
-    else this.hide();
+    if (normalized) void this.show();
+    else void this.hide();
   }
 
   @property({ type: Boolean, reflect: true }) disabled = false;
+
+  /** Groups disclosures in the same document or shadow root. Opening one closes its open peers. */
+  @property({ reflect: true }) name = '';
+
+  /** Visual surface treatment. */
+  @property({ reflect: true }) appearance: LyraDetailsAppearance = 'outlined';
+
+  /** Logical side of the expand/collapse icon. */
+  @property({ attribute: 'icon-placement', reflect: true })
+  iconPlacement: LyraDetailsIconPlacement = 'end';
 
   /** Visual density, on the library's shared ladder. Both spellings of every tier are accepted
    *  (`s`/`small`, `m`/`medium`, `l`/`large`), so markup migrated from Web Awesome or Shoelace
@@ -104,30 +135,67 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     // A pending after-event must not announce a transition the detached element is no longer
     // part of.
     this.transitionToken++;
+    setCustomState(this.detailsInternals, 'animating', false);
     super.disconnectedCallback();
   }
 
-  /** Expand the panel. Emits `lr-show` first — vetoing it leaves the panel closed. A disabled
-   *  panel never opens. */
-  show(): void {
+  override firstUpdated(): void {
+    // Reconcile initially-open markup after every sibling has had a chance to upgrade. The last
+    // open disclosure in document order wins, matching native named details grouping.
+    if (this._open) this.closeNamedPeers();
+  }
+
+  /** Expand the panel. The promise resolves after `lr-after-show`; vetoed or disabled requests
+   *  resolve without changing state. */
+  async show(): Promise<void> {
     if (this._open || this.disabled) return;
     if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
       return;
     }
+    if (!this.closeNamedPeers()) {
+      this.syncOpenAttribute();
+      return;
+    }
     this.applyOpenState(true);
-    void this.settleTransition('lr-after-show');
+    await this.settleTransition('lr-after-show');
   }
 
-  /** Collapse the panel. Emits `lr-hide` first — vetoing it leaves the panel open. */
-  hide(): void {
+  /** Collapse the panel. The promise resolves after `lr-after-hide`; vetoed requests resolve
+   *  without changing state. */
+  async hide(): Promise<void> {
     if (!this._open) return;
     if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
       return;
     }
     this.applyOpenState(false);
-    void this.settleTransition('lr-after-hide');
+    await this.settleTransition('lr-after-hide');
+  }
+
+  /** Close open peers that share this non-empty name. A custom element's internal native
+   * `<details>` lives in its own shadow root, so the platform's native `name` grouping cannot
+   * coordinate separate hosts; the hosts do that work here. */
+  private closeNamedPeers(): boolean {
+    if (!this.name) return true;
+    const root = this.getRootNode() as ParentNode;
+    if (typeof root.querySelectorAll !== 'function') return true;
+    let allClosed = true;
+    for (const candidate of root.querySelectorAll(this.localName)) {
+      if (
+        candidate !== this &&
+        candidate instanceof LyraDetails &&
+        candidate.name === this.name &&
+        candidate.open
+      ) {
+        void candidate.hide();
+        // hide() applies accepted state synchronously before its Promise waits for motion. If a
+        // peer vetoes lr-hide it is still open here, so this disclosure must not create a
+        // two-open group behind the consumer's back.
+        if (candidate.open) allClosed = false;
+      }
+    }
+    return allClosed;
   }
 
   private applyOpenState(next: boolean): void {
@@ -144,41 +212,60 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
 
   private async settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
     const token = ++this.transitionToken;
-    await this.updateComplete;
-    if (this.transitionToken !== token) return;
-    // `lr-toggle` is deliberately emitted here rather than synchronously from show()/hide(): a
-    // consumer that binds `.open` from its own template writes this property from inside its own
-    // render, and a synchronous listener that then mutates that consumer's state schedules an
-    // update mid-update. Emitting once the disclosure has actually rendered keeps the historical
-    // timing (it used to ride the native <details> toggle event) while preserving the documented
-    // lr-show -> lr-toggle -> lr-after-show ordering.
-    this.emit('lr-toggle', { open: this._open });
-    if (this.isConnected) {
-      const view = this.ownerDocument.defaultView;
-      if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
+    setCustomState(this.detailsInternals, 'animating', true);
+    try {
+      await this.updateComplete;
       if (this.transitionToken !== token) return;
-      const base = (this.renderRoot as ShadowRoot).querySelector('[part~="base"]');
-      // subtree: true so the disclosure marker's own transition (declared on a pseudo-element of a
-      // descendant) is waited on too. It resolves through --lr-transition-fast, which the token
-      // layer flattens under prefers-reduced-motion, so this settles in that branch as well.
-      const animations = base?.getAnimations({ subtree: true }) ?? [];
-      await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
-      if (this.transitionToken !== token) return;
+      // `lr-toggle` is deliberately emitted here rather than synchronously from show()/hide(): a
+      // consumer that binds `.open` from its own template writes this property from inside its own
+      // render, and a synchronous listener that then mutates that consumer's state schedules an
+      // update mid-update. Emitting once the disclosure has actually rendered keeps the historical
+      // timing (it used to ride the native <details> toggle event) while preserving the documented
+      // lr-show -> lr-toggle -> lr-after-show ordering.
+      this.emit('lr-toggle', { open: this._open });
+      if (this.isConnected) {
+        const view = this.ownerDocument.defaultView;
+        if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
+        if (this.transitionToken !== token) return;
+        const base = (this.renderRoot as ShadowRoot).querySelector('[part~="base"]');
+        // subtree: true so the disclosure marker's own transition (declared on a pseudo-element of a
+        // descendant) is waited on too. It resolves through --lr-transition-fast, which the token
+        // layer flattens under prefers-reduced-motion, so this settles in that branch as well.
+        const animations = base?.getAnimations({ subtree: true }) ?? [];
+        await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
+        if (this.transitionToken !== token) return;
+      }
+      this.emit(event);
+    } finally {
+      if (this.transitionToken === token) setCustomState(this.detailsInternals, 'animating', false);
     }
-    this.emit(event);
   }
 
   // The native <details> toggle is a click default action, so cancelling the click is the only way
   // to keep a vetoed lr-show from visually expanding the panel before the veto is known. State is
   // driven entirely from show()/hide() instead, and the native element follows the property.
   private onClick = (event: Event): void => {
+    // Links and controls inside the summary slot retain their own behavior. Native <summary>
+    // already exempts such controls from disclosure activation, so leaving their click alone is
+    // both the platform contract and the only way a slotted link can navigate.
+    const path = event.composedPath();
+    const summaryIndex = path.findIndex((node) => node instanceof HTMLElement && node.localName === 'summary');
+    if (
+      path.slice(0, summaryIndex < 0 ? 0 : summaryIndex).some(
+        (node) =>
+          node instanceof Element &&
+          node.matches('a[href], button, input, select, textarea, [contenteditable]:not([contenteditable="false"])'),
+      )
+    ) {
+      return;
+    }
     event.preventDefault();
     if (this.disabled) {
       event.stopPropagation();
       return;
     }
-    if (this._open) this.hide();
-    else this.show();
+    if (this._open) void this.hide();
+    else void this.show();
   };
 
   // Safety net only: the click default action is cancelled above, so the native element toggles
@@ -191,22 +278,40 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       details.open = false;
       return;
     }
-    if (details.open) this.show();
-    else this.hide();
+    if (details.open) void this.show();
+    else void this.hide();
   };
 
   private onSummarySlotChange = (e: Event): void => {
     this.hasSummarySlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
   override render(): TemplateResult {
-    return html`<details part="base" .open=${this.open} @toggle=${this.onToggle}>
+    return html`<details
+      part="base details"
+      .open=${this.open}
+      name=${this.name || nothing}
+      @toggle=${this.onToggle}
+    >
       <summary
         part="summary"
         aria-expanded=${this.open ? 'true' : 'false'}
         aria-disabled=${this.disabled ? 'true' : 'false'}
         @click=${this.onClick}
       >
-        ${this.hasSummarySlot || this.summary ? '' : this.localize('details')}<slot name="summary" @slotchange=${this.onSummarySlotChange}>${this.summary}</slot>
+        <span part="header">
+          <span class="summary-content"
+            >${this.hasSummarySlot || this.summary ? '' : this.localize('details')}<slot
+              name="summary"
+              @slotchange=${this.onSummarySlotChange}
+              >${this.summary}</slot
+            ></span
+          >
+          <span part="icon summary-icon" aria-hidden="true">
+            <slot name=${this.open ? 'collapse-icon' : 'expand-icon'}
+              ><span class="icon-fallback">${chevronIcon()}</span></slot
+            >
+          </span>
+        </span>
       </summary>
       <div part="content"><slot></slot></div>
     </details>`;

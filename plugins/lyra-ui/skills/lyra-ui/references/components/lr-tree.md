@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/data/tree/tree.js';` (registers the tag; side-effect import)
 - **Class** `LyraTree`, also available unregistered from `@aceshooting/lyra-ui/components/data/tree/tree.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-tree-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -39,11 +41,9 @@ with the stale markup sitting inert in the light DOM — no error anywhere.
 A tree containing any author-written `<lr-tree-item>` child is read purely as the declarative model
 and `data` is ignored. The empty state renders only when neither model has any items.
 
-Deliberately **not** mirrored, because there is no lyra equivalent to rename to: lazy loading
-(`lazy`, `sl-lazy-load`, `sl-lazy-change`), checkbox multi-select (`sl-tree`'s
-`selection="multiple"` and its `checkbox` part), the `expand-icon`/`collapse-icon` slots, and the
-`sl-expand`/`sl-collapse`/`sl-after-expand`/`sl-after-collapse` quartet — `lr-node-toggle` carries
-the same information in one event with an `expanded` flag.
+Both child models use the same selection, roving-focus, checkbox-cascade, icon, and lazy-loading
+engine. The upstream lifecycle names are normalized to the library-wide `lr-` prefix;
+`lr-node-toggle` and `lr-node-select` remain as additive Lyra notifications.
 
 ### `lr-tree`
 
@@ -56,13 +56,17 @@ deeply-nested node's own shadow root still reaches it).
 **Properties:**
 - `data: TreeItem[] = []` (attribute: false) — the object child model; ignored while any
   author-written `<lr-tree-item>` child is present. `TreeItem { id: string; label: string; children?:
-  TreeItem[]; selected?: boolean; disabled?: boolean; badge?: string | number; badges?: TreeBadge[];
+  TreeItem[]; selected?: boolean; disabled?: boolean; lazy?: boolean; badge?: string | number; badges?: TreeBadge[];
   icon?: unknown; description?: string; accessibleLabel?: string }`. `TreeBadge` is `{ text:
   string; tone?: TreeBadgeTone; label?: string }`, where `TreeBadgeTone` is
   `'neutral'|'brand'|'success'|'warning'|'danger'`. The legacy singular `badge` renders first;
   `badges` adds tone-mapped chips after it and each chip's accessible name uses `label ?? text`.
   `icon` renders as a decorative leading visual, `description` as secondary visible row text, and
   `accessibleLabel` names the `role="treeitem"` host without changing its visible label
+- `selection: 'single'|'multiple'|'leaf'|'leaf-multiple' = 'single'` — self-managed selection for
+  both child models. `single` selects one item; `leaf` selects one loaded leaf; `multiple` displays
+  checkboxes and cascades through enabled descendants; `leaf-multiple` applies that cascade only
+  to leaves. Partially-selected branches expose `indeterminate`
 - `label: string = ''` — accessible name for the tree; `role="tree"` lives on an internal
   `[part="base"]` element. The component forwards a host `aria-label` to that semantic element when
   `label` is empty; `label` takes precedence when both are set. External `aria-labelledby` idrefs
@@ -70,6 +74,9 @@ deeply-nested node's own shadow root still reaches it).
 - `reorderable: boolean = false` (reflected) — opts into keyboard reordering. Unset, no `lr-reorder`
   is ever emitted, Ctrl/Cmd+Arrow behaves exactly like a plain Arrow press, and the internal live
   region is not rendered at all.
+
+**Read-only getter:** `selectedItems: LyraTreeItem[]` returns selected item elements in document
+order, including derived fully-selected parents in either multiple mode.
 
 **Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous *visible* node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
@@ -85,7 +92,8 @@ enabled descendants are never left visibly stranded outside this navigation walk
 **Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
 cycle).
 
-**Events:** `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
+**Events:** `lr-selection-change` (`detail: { selection }`, where `selection` is the current
+`selectedItems` array) and `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
 Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
 component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
 moved node. `parentId` is `null` for a top-level item, and `fromIndex`/`toIndex` are **sibling-scoped
@@ -94,21 +102,22 @@ and never fires at a subtree boundary, so a reorder can never become a reparent:
 the last child of a subtree is ambiguous (the visually next row is a top-level uncle, so "move down"
 could mean either "swap with the next sibling" — there is none — or "reparent up a level"), and
 reparenting is a structural edit with no keyboard affordance distinguishing the two. Such a request
-is simply not made: no event, no announcement, focus stays put. Otherwise this element dispatches
-nothing directly (see `lr-tree-item` below — those bubble up and are also observed internally to keep
-the roving `activeId` in sync with clicks).
+is simply not made: no event, no announcement, focus stays put. Item events listed below bubble
+through the tree as well.
 
 **Slots:** default — top-level `<lr-tree-item>` elements, each nesting its own children (the
 declarative model). Leave it empty and assign `data` for the object model; the same slot then holds
-the items `<lr-tree>` generates.
+the items `<lr-tree>` generates. `expand-icon` and `collapse-icon` provide tree-wide disclosure
+icons; an item-level slot with the same name takes precedence.
 
-**CSS parts:** `base`, `empty` (the empty-state message, shown when neither child model has any
-items)
+**CSS parts:** `base` and `tree` are aliases on the same `role="tree"` root; `empty` is the
+empty-state message shown when neither child model has any items.
 
 **Themeable custom properties:** shared tokens `--lr-space-xs`/`-s`, `--lr-color-brand-quiet`,
 `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-text`, `--lr-radius`,
 `--lr-focus-ring-*` (row `:focus-visible` ring, driven by `:host(:focus-visible)` since the host
-itself is the focusable `role="treeitem"`).
+itself is the focusable `role="treeitem"`), plus `--indent-size`, `--indent-guide-color`,
+`--indent-guide-offset`, `--indent-guide-style`, and `--indent-guide-width`.
 
 **Optional peer deps:** none.
 
@@ -121,19 +130,22 @@ so this node's own nested children (whether rendered in its own shadow root or p
 light DOM, as further `role="group"` content) are genuine DOM descendants of the treeitem, matching
 the WAI-ARIA treeitem pattern's containment expectation.
 
-**Properties — declarative model** (write these as attributes; each is ignored once an `item` object
-is assigned, because that object already carries the same information):
+**Properties — declarative model** (write these as attributes; `item` data seeds the matching state
+when assigned):
 - `label: string = ''` — the row's label, used only when nothing is slotted into the default slot
 - `disabled: boolean = false` (reflected) — removes the item from roving focus and blocks
   select/toggle activation
 - `selected: boolean = false` (reflected) — renders the selected state and is exposed as
   `aria-selected`
+- `lazy: boolean = false` (reflected) — defers expansion, renders the spinner, and emits
+  `lr-lazy-load` until children arrive or `lazy` is cleared
 
 **Properties — data model:**
 - `item: TreeItem` (attribute: false) — the whole subtree as one object, normally assigned by
-  `<lr-tree>` from its `data`. An assigned `item` **wins**: `label`/`disabled`/`selected` and any
-  light-DOM children are ignored. `item.selected` is tri-state — `undefined` means "this tree does
-  not express selection" and leaves `aria-selected` off the host entirely
+  `<lr-tree>` from its `data`. An assigned `item` **wins** for label/disabled/children and seeds
+  `selected`/`lazy`; a refreshed object identity re-seeds those values. Light-DOM children are
+  ignored while `item` is assigned. Outside an owning tree, an omitted `item.selected` leaves
+  `aria-selected` off the host; an owning tree always publishes explicit true/false state
 - `ancestry: TreeItem[] = []` (attribute: false) — the ancestor object identities used to stop a
   cyclic `TreeItem` graph before it recurses; pushed down by the parent item
 
@@ -147,6 +159,9 @@ is assigned, because that object already carries the same information):
   `aria-posinset` values among its siblings, pushed down from `<lr-tree>`; normally set internally,
   not by consumers. `setSize` passes `-1` through unchanged (ARIA's "set size unknown" sentinel) and
   clamps everything else to a finite integer `>= 1`
+- `loading: boolean` (read-only) — a lazy expansion is waiting for children
+- `indeterminate: boolean` (read-only) — an enabled branch has some but not all selectable
+  descendants selected
 
 **Read-only getters** — each answers for whichever child model is in use, which is what lets
 `<lr-tree>` drive both with one implementation:
@@ -164,23 +179,34 @@ is assigned, because that object already carries the same information):
   past a nesting depth of 64, which is what stops a runaway recursion; a `TreeItem` graph that
   contains itself is caught earlier by `ancestry`
 
-**Methods:** `expand()`, `collapse()` (each a no-op if already in that state, disabled, or a leaf),
+**Methods:** `expand()`, `collapse()` (each a no-op if already in that state, disabled, loading, or a leaf),
 `select()` (fires `lr-node-select`; a no-op while disabled). `childItems(): LyraTreeItem[]` returns
 this node's **direct** child `<lr-tree-item>` elements — from its own shadow root in the data model,
 from its own light-DOM children in the declarative one. A grandchild is not included; it lives under
-its own parent.
+its own parent. `getChildrenItems({ includeDisabled = true } = {})` is the upstream-compatible
+public spelling over the same direct-child list.
 
 **Events:** `lr-node-toggle` (`detail: { id, expanded }`, fired by `expand()`/`collapse()` — via
 the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { id }`, fired by `select()`
 — via clicking anywhere in the row or Enter/Space) — dispatched from `lr-tree-item`,
-bubble/compose up
-through `lr-tree`'s light DOM.
+bubble/compose up through `lr-tree`'s light DOM. `lr-expand`/`lr-collapse` fire when a transition
+begins; `lr-after-expand`/`lr-after-collapse` fire after the matching themeable duration. Rapid
+opposite transitions and disconnects invalidate stale after-events. `lr-lazy-load` requests data
+with `detail: { item, generation }`; `lr-lazy-change` reports `detail: { item, loading }` when the
+pending state starts or ends. Disabling or disconnecting an item invalidates the pending generation.
 
 **Slots:** default — the row's label content in the declarative model. `children` — where nested
 `<lr-tree-item>` children are projected; **assigned by the component**, so write the nested items in
-the default slot and never set `slot="children"` yourself. Neither slot is used in the data model.
+the default slot and never set `slot="children"` yourself. `expand-icon` and `collapse-icon`
+override the owning tree's corresponding icon for one item. The label/children slots are unused in
+the data model.
 
-**CSS parts:** `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`. `badge`
+**CSS parts:** `base` and `tree-item` are aliases on the same outer wrapper around the row and child
+group; `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`, `item`,
+`item--disabled`, `item--expanded`, `item--indeterminate`, `item--selected`, `indentation`,
+`expand-button`, `spinner`, `spinner__base`, `children`, `checkbox`, `checkbox__base`,
+`checkbox__control`, `checkbox__control--checked`, `checkbox__control--indeterminate`,
+`checkbox__checked-icon`, `checkbox__indeterminate-icon`, and `checkbox__label`. `badge`
 is applied to the legacy singular `item.badge` and to every `item.badges` chip; additive chips carry
 `data-tone="neutral|brand|success|warning|danger"`. `icon` is `aria-hidden="true"`; `content`
 groups the primary label and optional wrapping secondary description while preserving one
@@ -189,6 +215,7 @@ the declarative model has no icon/description/badge inputs, so a row written as 
 `row`/`toggle`/`content`/`label` (and `group` while expanded) and nothing else.
 
 **Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for indentation);
+`--show-duration`/`--hide-duration` (both default through `--lr-duration-base`);
 `--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row; and paired
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each

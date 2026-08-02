@@ -9,8 +9,11 @@ export const styles = css`
        both chain through the existing icon-button-size token rather than a
        new bespoke literal, so the toggle reads at the same scale as
        lr-playback's own play/pause button. */
-    --lr-animated-image-control-box-size: var(--lr-icon-button-size);
-    --lr-animated-image-icon-size: calc(var(--lr-icon-button-size) * 0.35);
+    --lr-animated-image-control-box-size: var(--control-box-size, var(--lr-icon-button-size));
+    --lr-animated-image-icon-size: var(
+      --icon-size,
+      calc(var(--lr-icon-button-size) * 0.35)
+    );
     /* Same purpose/default as --lr-media-card-max-height -- caps the
        rendered media's block-size so one oversized animated image can't blow
        out a layout. */

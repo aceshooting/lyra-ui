@@ -13,8 +13,7 @@ type Story = StoryObj;
 function controlledPagination(total = 237) {
   return html`<lr-pagination
     total=${total}
-    page-size="20"
-    @lr-page-change=${(event: CustomEvent<{ page: number }>) => {
+    @lr-page-change=${(event: CustomEvent<{ page: number; pageSize: number }>) => {
       (event.currentTarget as LyraPagination).page = event.detail.page;
     }}
   ></lr-pagination>`;
@@ -33,8 +32,8 @@ export const Default: Story = {
 
 /** `focus()` and `blur()` target the editable page-jump input of the compact layout, and surface
  *  host focus events. */
-/** The default `standard` layout: every page is its own control, with elided runs collapsed into a
- *  decorative gap so the control keeps a constant width as the reader pages through. */
+/** The default `standard` layout: every page is its own control, with elided runs collapsed into an
+ *  interactive jump so the control keeps a constant width as the reader pages through. */
 export const Elided: Story = {
   render: () =>
     controlled(
@@ -125,8 +124,9 @@ export const Sizes: Story = {
   `,
 };
 
-/** With `href-template`, each page renders as a real link, so the pager works before hydration and
- *  is crawlable. The current page deliberately has no `href` -- the reader is already there. */
+/** With `href-template`, page, ellipsis, previous/next, and first/last controls render as real
+ *  links, so the whole pager works before hydration and is crawlable. The current and unavailable
+ *  controls deliberately have no `href`. */
 export const Links: Story = {
   render: () => html`
     <lr-pagination
@@ -152,6 +152,52 @@ export const Compact: Story = {
         @lr-page-change=${apply}
       ></lr-pagination>`,
     ),
+};
+
+export const CancelableRequest: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`lr-before-page-change` carries `{ page, pageSize }` and can veto a request before the ordinary controlled `lr-page-change` intent fires. This example refuses even-numbered pages.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <lr-pagination
+        total="237"
+        @lr-before-page-change=${(event: CustomEvent<{ page: number; pageSize: number }>) => {
+          if (event.detail.page % 2 === 0) event.preventDefault();
+        }}
+        @lr-page-change=${(event: CustomEvent<{ page: number; pageSize: number }>) => {
+          (event.currentTarget as LyraPagination).page = event.detail.page;
+        }}
+      ></lr-pagination>
+      <p>Even page requests are vetoed; odd pages remain controlled by the listener.</p>
+    </div>
+  `,
+};
+
+export const CustomNavigationIcons: Story = {
+  render: () => html`
+    <lr-pagination total="237" page="4" with-edges>
+      <span slot="first-icon" aria-hidden="true">⇤</span>
+      <span slot="previous-icon" aria-hidden="true">←</span>
+      <span slot="next-icon" aria-hidden="true">→</span>
+      <span slot="last-icon" aria-hidden="true">⇥</span>
+    </lr-pagination>
+  `,
+};
+
+export const VisibilityFlags: Story = {
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-m); justify-items:start;">
+      <lr-pagination total="237" page="4" without-nav with-edges></lr-pagination>
+      <lr-pagination total="5" hide-single-page></lr-pagination>
+      <p>The second pager renders nothing because its default page size yields one page.</p>
+    </div>
+  `,
 };
 
 export const ProgrammaticFocus: Story = {
@@ -202,6 +248,14 @@ export const Empty: Story = {
 export const Loading: Story = {
   render: () => html`
     <lr-pagination total="237" page-size="20" page="4" loading></lr-pagination>
+  `,
+};
+
+/** The public `disabled` property also publishes `:state(disabled)` for host-level theming. The
+ * separate loading and empty-data conditions disable the controls without claiming that state. */
+export const Disabled: Story = {
+  render: () => html`
+    <lr-pagination total="237" page-size="20" page="4" disabled></lr-pagination>
   `,
 };
 

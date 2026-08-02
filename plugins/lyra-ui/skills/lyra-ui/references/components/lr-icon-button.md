@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/icon-button/icon-button.js';` (registers the tag; side-effect import)
 - **Class** `LyraIconButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/icon-button/icon-button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,11 +20,19 @@ inside. Its `type="submit"`/`"reset"` behavior is forwarded to the ancestor form
 
 **Properties:**
 - `icon: string = ''` — an `lr-icon` glyph name (see `llms/components/lr-icon.md`)
+- `name: string = ''` — Shoelace alias for `icon`; reads and writes stay synchronized. Assigning
+  the upstream `undefined` spelling clears both names to the canonical `''` read value
+- `library?: string` / `src?: string` — forwarded to the nested `lr-icon`, preserving Shoelace
+  icon-library and remote-SVG markup. Remote SVG loading inherits `lr-icon`'s URL, byte-ceiling,
+  sanitization, and stale-generation guards
 - `accessibleLabel: string = ''` (attribute: `aria-label`) — the typed override for the button's
   accessible name; wins over `label`
 - `label: string = ''` — accessible name when `accessibleLabel` is unset
 - `disabled: boolean = false` (reflected)
 - `type: 'button' | 'submit' | 'reset' = 'button'`
+- `href?: string`, `target?: string`, `download?: string` — a safe `href` renders a native anchor;
+  `target` derives `rel="noopener noreferrer"`, and `download` selects the stricter downloadable-URL
+  allowlist. A disabled link keeps the anchor but removes `href`
 
 With neither `accessibleLabel` nor `label` set, the name falls back to the localized
 `iconButtonLabel` string rather than being empty — override it per instance with `.strings` or
@@ -38,9 +48,16 @@ browsers intentionally clear each serialized internal IDREF attribute after its 
 list is assigned. Browsers without those APIs retain the forwarded string attributes as
 best-effort fallbacks.
 
-**Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
-the native button, activating it — including this component's own `type="submit"`/`type="reset"`
-handling, since the click goes through the same `<button>` the pointer/keyboard path does.
+**Methods:** `focus(options?)`, `blur()` — forward to the native interactive root. `click()` also
+forwards to it, activating a safe anchor or — in button mode — this component's own
+`type="submit"`/`type="reset"` handling, since the click goes through the same `<button>` the
+pointer/keyboard path does.
+`getForm()` returns the browser-resolved form owner, including an external owner selected by the
+`form` attribute.
+
+**Events:** a plain native `click` crosses the shadow boundary unmodified. The internal button's
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
+its prefixed alias `lr-focus` / `lr-blur` (no detail).
 
 **Slots:** (default) — custom icon content. It is rendered **beside** the `icon` glyph, as a
 sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts only when `icon` is
@@ -62,8 +79,8 @@ node. This is narrowly scoped to that whitelist: a complete `<svg>`, `<img>`, or
 (e.g. `<lr-flag>`) is never touched by it and keeps rendering as an untouched sibling at its own
 natural aspect ratio.
 
-**CSS parts:** `button`, `fallback` (only present in the DOM while at least one top-level slotted
-element needs the bare-geometry fallback above)
+**CSS parts:** `base`/`button` (the same native button or anchor), `fallback` (only present in the
+DOM while at least one top-level slotted element needs the bare-geometry fallback above)
 
 **Themeable custom properties:** `--lr-icon-button-size` (default `2.5rem`) is the **minimum**
 tappable inline and block size of the native button — a floor, not a fixed size. Content larger
@@ -99,3 +116,13 @@ These are the same per-component indirection `lr-button`'s
 without a `::part(button)` rule. All nine are undeclared by default and read as inline `var()`
 fallbacks, so setting only the resting value carries through hover and press, and setting none of
 them leaves rendering unchanged.
+
+```html
+<lr-icon-button name="search" library="default" label="Search"></lr-icon-button>
+<lr-icon-button
+  name="chevron-right"
+  label="Open documentation"
+  href="https://example.com/docs"
+  target="_blank"
+></lr-icon-button>
+```

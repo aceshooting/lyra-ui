@@ -13,12 +13,12 @@ export const styles = css`
     --lr-color-picker-swatch-size: var(--lr-form-control-height, var(--lr-size-2-5rem));
     --lr-color-picker-gap: var(--lr-space-xs);
     --lr-color-picker-radius: var(--lr-radius);
-    --lr-color-picker-grid-inline-size: var(--lr-size-15rem);
-    --lr-color-picker-grid-block-size: var(--lr-size-8rem);
-    --lr-color-picker-grid-handle-size: var(--lr-size-1rem);
-    --lr-color-picker-slider-block-size: var(--lr-size-0-75rem);
-    --lr-color-picker-slider-handle-size: var(--lr-size-1-25rem);
-    --lr-color-picker-palette-swatch-size: var(--lr-size-1-5rem);
+    --lr-color-picker-grid-inline-size: var(--grid-width, var(--lr-size-15rem));
+    --lr-color-picker-grid-block-size: var(--grid-height, var(--lr-size-8rem));
+    --lr-color-picker-grid-handle-size: var(--grid-handle-size, var(--lr-size-1rem));
+    --lr-color-picker-slider-block-size: var(--slider-height, var(--lr-size-0-75rem));
+    --lr-color-picker-slider-handle-size: var(--slider-handle-size, var(--lr-size-1-25rem));
+    --lr-color-picker-palette-swatch-size: var(--swatch-size, var(--lr-size-1-5rem));
     --lr-color-picker-checker-color: var(--lr-color-border);
     --lr-color-picker-checker-size: var(--lr-size-0-5rem);
     /* The sRGB hue wheel's own stops. These are the algorithm's data, not a design decision, so
@@ -39,8 +39,9 @@ export const styles = css`
     --lr-color-picker-grid-hue: transparent;
     --lr-color-picker-opacity-gradient: none;
   }
-  [part='form-control'] {
+  [part~='form-control'] {
     display: inline-flex;
+    position: relative;
     flex-direction: column;
     gap: var(--lr-color-picker-gap);
   }
@@ -63,7 +64,6 @@ export const styles = css`
 
   /* The alpha checkerboard every translucent surface sits on. A conic-gradient tile beats four
      stacked linear gradients and needs no extra element. */
-  [part~='trigger'],
   [part~='preview'],
   [part~='swatch'] {
     background-color: var(--lr-color-surface);
@@ -81,19 +81,58 @@ export const styles = css`
     align-items: center;
   }
   [part~='trigger'] {
-    /* min-* mirrors the size ladder rather than pinning a separate floor: at the default m tier
-       the trigger already resolves to --lr-icon-button-size, and the smaller tiers are a
-       deliberate density choice for dense toolbars. */
-    min-inline-size: var(--lr-color-picker-swatch-size);
-    min-block-size: var(--lr-color-picker-swatch-size);
-    inline-size: var(--lr-color-picker-swatch-size);
-    block-size: var(--lr-color-picker-swatch-size);
+    position: relative;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    inline-size: max(var(--lr-color-picker-swatch-size), var(--lr-icon-button-size));
+    block-size: max(var(--lr-color-picker-swatch-size), var(--lr-icon-button-size));
     padding: 0;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid transparent;
     border-radius: var(--lr-color-picker-radius);
+    background: transparent;
     cursor: pointer;
   }
-  [part~='trigger']::after,
+  [part~='trigger']::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-start: 50%;
+    box-sizing: border-box;
+    inline-size: var(--lr-color-picker-swatch-size);
+    block-size: var(--lr-color-picker-swatch-size);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-color-picker-radius);
+    background-color: var(--lr-color-surface);
+    background-image: conic-gradient(
+      var(--lr-color-picker-checker-color) 0deg 90deg,
+      transparent 90deg 180deg,
+      var(--lr-color-picker-checker-color) 180deg 270deg,
+      transparent 270deg 360deg
+    );
+    background-size: var(--lr-color-picker-checker-size) var(--lr-color-picker-checker-size);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  [part~='trigger']::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-start: 50%;
+    inline-size: calc(
+      var(--lr-color-picker-swatch-size) - var(--lr-border-width-thin) - var(--lr-border-width-thin)
+    );
+    block-size: calc(
+      var(--lr-color-picker-swatch-size) - var(--lr-border-width-thin) - var(--lr-border-width-thin)
+    );
+    border-radius: var(--lr-color-picker-radius);
+    background-color: var(--lr-color-picker-swatch-color);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  :host(:dir(rtl)) [part~='trigger']::before,
+  :host(:dir(rtl)) [part~='trigger']::after {
+    transform: translate(50%, -50%);
+  }
   [part~='preview']::after,
   [part~='swatch']::after {
     content: '';
@@ -103,32 +142,33 @@ export const styles = css`
     border-radius: inherit;
     background-color: var(--lr-color-picker-swatch-color);
   }
-  [part~='trigger']:hover {
+  [part~='trigger']:where(:hover),
+  [part~='trigger']:where(:hover)::before {
     border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
-  /* Pressed deepens the same edge rather than tinting the box: this part's ::after paints the
-     selected colour across the whole button, so a background mix would sit underneath it -- and
-     mixing that fill would misreport the very value the swatch exists to show. */
-  [part~='trigger']:active {
+  /* Pressed deepens the same edge rather than tinting the box: its pseudo-element paints the
+     selected colour, so mixing the fill would misreport the value the swatch exists to show. */
+  [part~='trigger']:where(:active),
+  [part~='trigger']:where(:active)::before {
     border-color: color-mix(
       in oklab,
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part~='trigger']:focus-visible {
+  [part~='trigger']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
 
   [part~='panel'] {
-    /* Fixed from the start (not only once JS positions it on open) so the closed panel never
-       occupies a box in the host's normal flow. Physical top/left, not the logical inset
-       properties: positioner.ts's place() always overwrites these via style.left/style.top, and
-       under RTL inset-inline-start resolves to the physical right, leaving both right:0 and left:Npx
-       active -- the over-constrained resolution then discards the JS value and pins the panel to
-       the viewport edge. */
-    position: fixed;
+    /* Absolutely positioned from the start (not only once JS positions it on open) so the closed
+       panel never occupies a box in the host's normal flow. The hoist option makes place() switch this to
+       fixed at runtime. Physical top/left, not the logical inset properties: place() overwrites
+       these via style.left/style.top, and under RTL inset-inline-start resolves to the physical
+       right, leaving both right:0 and left:Npx active -- the over-constrained resolution would
+       discard the JS value and pin the panel to the viewport edge. */
+    position: absolute;
     top: 0;
     /* policy-allow(physical-css): must stay the same physical property positioner.ts's place()
        overwrites via style.left; see the comment above. */
@@ -147,6 +187,11 @@ export const styles = css`
   }
   [part~='panel'][hidden] {
     display: none;
+  }
+  :host([inline]) [part~='panel'] {
+    position: static;
+    inset: auto;
+    box-shadow: none;
   }
   .row {
     display: flex;
@@ -168,6 +213,7 @@ export const styles = css`
     block-size: var(--lr-color-picker-grid-block-size);
     border-radius: var(--lr-color-picker-radius);
     cursor: crosshair;
+    touch-action: none;
     background-color: var(--lr-color-picker-grid-hue);
     /* The saturation/value square is defined as a white-to-transparent tint across the inline axis
        over a transparent-to-shade wash down the block axis. Both endpoints are the achromatic
@@ -205,6 +251,7 @@ export const styles = css`
     position: relative;
     block-size: var(--lr-size-1-5rem);
     cursor: pointer;
+    touch-action: pan-y;
   }
   [part~='slider']::before {
     content: '';
@@ -214,6 +261,30 @@ export const styles = css`
     block-size: var(--lr-color-picker-slider-block-size);
     border-radius: var(--lr-radius-pill);
     transform: translateY(-50%);
+  }
+  [part~='slider']:where(:hover)::before {
+    box-shadow: 0 0 0 var(--lr-border-width-thin)
+      var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
+  }
+  [part~='slider']:where(:hover) {
+    outline: var(--lr-border-width-thin) solid
+      var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
+  }
+  [part~='slider']:where(:active)::before {
+    box-shadow: 0 0 0 var(--lr-border-width-medium)
+      color-mix(
+        in oklab,
+        var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      );
+  }
+  [part~='slider']:where(:active) {
+    outline: var(--lr-border-width-medium) solid
+      color-mix(
+        in oklab,
+        var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      );
   }
   [part~='hue-slider']::before {
     background-image: linear-gradient(to right, var(--lr-color-picker-hue-stops));
@@ -249,15 +320,15 @@ export const styles = css`
   :host(:dir(rtl)) [part~='slider-handle'] {
     transform: translate(50%, -50%);
   }
-  [part~='grid-handle']:hover,
-  [part~='slider-handle']:hover {
+  [part~='grid-handle']:where(:hover),
+  [part~='slider-handle']:where(:hover) {
     border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
   /* A knob's pressed state is the grab itself: the ring deepens and the cursor closes, which is
      the whole feedback a drag has before the value starts moving. The handle's own fill is the
      live colour, so it stays untouched here for the same reason as the trigger above. */
-  [part~='grid-handle']:active,
-  [part~='slider-handle']:active {
+  [part~='grid-handle']:where(:active),
+  [part~='slider-handle']:where(:active) {
     border-color: color-mix(
       in oklab,
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
@@ -265,8 +336,8 @@ export const styles = css`
     );
     cursor: grabbing;
   }
-  [part~='grid-handle']:focus-visible,
-  [part~='slider-handle']:focus-visible {
+  [part~='grid-handle']:where(:focus-visible),
+  [part~='slider-handle']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -293,10 +364,10 @@ export const styles = css`
   /* no-pressed-state: pressing a text field places a caret, it does not activate a target -- there
      is no "did my click register?" gap to fill, and the engaged state it leads to is already drawn
      by the :focus-visible rule below. Native text inputs have no pressed treatment either. */
-  [part~='input']:hover {
+  [part~='input']:where(:hover) {
     border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
-  [part~='input']:focus-visible {
+  [part~='input']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -317,15 +388,15 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
   }
-  [part~='format-button']:hover,
-  [part~='eyedropper-button']:hover {
+  [part~='format-button']:where(:hover),
+  [part~='eyedropper-button']:where(:hover) {
     border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
   /* These two carry their own surface fill (unlike the swatches), so the pressed state is the
      shared background mix: the button visibly sinks toward the text colour, on top of the deeper
      edge, and lands in the same direction whether the theme is light or dark. */
-  [part~='format-button']:active,
-  [part~='eyedropper-button']:active {
+  [part~='format-button']:where(:active),
+  [part~='eyedropper-button']:where(:active) {
     border-color: color-mix(
       in oklab,
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
@@ -333,8 +404,8 @@ export const styles = css`
     );
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  [part~='format-button']:focus-visible,
-  [part~='eyedropper-button']:focus-visible {
+  [part~='format-button']:where(:focus-visible),
+  [part~='eyedropper-button']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -354,18 +425,18 @@ export const styles = css`
     border-radius: 50%;
     cursor: pointer;
   }
-  [part~='swatch']:hover {
+  [part~='swatch']:where(:hover) {
     border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
   /* Edge only, again: ::after paints the palette entry's own colour over this box. */
-  [part~='swatch']:active {
+  [part~='swatch']:where(:active) {
     border-color: color-mix(
       in oklab,
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part~='swatch']:focus-visible {
+  [part~='swatch']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -394,6 +465,11 @@ export const styles = css`
     cursor: not-allowed;
   }
   :host(:disabled) [part~='trigger'],
+  :host(:disabled) [part~='grid'],
+  :host(:disabled) [part~='grid-handle'],
+  :host(:disabled) [part~='slider'],
+  :host(:disabled) [part~='slider-handle'],
+  :host(:disabled) [part~='input'],
   :host(:disabled) [part~='swatch'],
   :host(:disabled) [part~='format-button'],
   :host(:disabled) [part~='eyedropper-button'] {
@@ -414,7 +490,7 @@ export const styles = css`
   [part='error'][hidden] {
     display: none;
   }
-  [part='form-control'],
+  [part~='form-control'],
   [part~='form-control-label'],
   [part='hint'],
   [part='error'] {

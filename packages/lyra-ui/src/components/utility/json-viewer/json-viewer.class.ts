@@ -152,6 +152,8 @@ export interface LyraJsonViewerEventMap {
  * @cssprop [--lr-json-viewer-boolean-color=var(--lr-color-warning)] - Boolean value color.
  * @cssprop [--lr-json-viewer-null-color=var(--lr-color-text-quiet)] - Null, undefined, and
  *   circular-reference marker color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

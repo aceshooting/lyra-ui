@@ -26,6 +26,44 @@ export const LyraIconButtonTrigger: Story = {
   `,
 };
 
+export const ShoelaceSlotShape: Story = {
+  name: 'Default trigger + content slot',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Shoelace markup puts the trigger in the default slot and tooltip content in `slot="content"`. A named `trigger` instead selects the Web Awesome/default-content shape.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-tooltip .open=${context.viewMode !== 'docs'} manual>
+      <button type="button">Default-slot trigger</button>
+      <span slot="content">Named tooltip content</span>
+    </lr-tooltip>
+  `,
+};
+
+export const CompatibilityOptions: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`without-arrow` suppresses the mapped default arrow, `hoist` switches absolute positioning to fixed, and `disabled` blocks interaction and programmatic opening.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; gap: 2rem;">
+      <lr-tooltip without-arrow hoist show-delay="0">
+        Fixed without an arrow
+        <button slot="trigger">Hoisted</button>
+      </lr-tooltip>
+      <lr-tooltip disabled content="This cannot open"><button>Disabled</button></lr-tooltip>
+    </div>
+  `,
+};
+
 export const ActionableContent: Story = {
   parameters: {
     docs: {

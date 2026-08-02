@@ -202,6 +202,8 @@ function defaultFilter(thread: ChatThread, query: string, locale: string): boole
  *   `<mark>` descendants returned by `renderExcerpt`.
  * @cssprop [--lr-thread-list-excerpt-highlight-padding=0] - Padding of `<mark>` descendants
  *   returned by `renderExcerpt`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   static override styles = [LyraElement.styles, styles];

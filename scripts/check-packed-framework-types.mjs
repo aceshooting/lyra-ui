@@ -118,6 +118,7 @@ const input = (
     with-clear
     onlr-change={(event) => {
       const value: string = event.detail.value;
+      event.currentTarget.select();
       void value;
     }}
     style={{ '--lr-input-control-height': '3rem' }}
@@ -195,8 +196,8 @@ function selectInput(): void {
   with-clear
   onlr-change={onChange}
   style:--lr-input-control-height="3rem"
-/>
-<lr-table {rows} />
+></lr-input>
+<lr-table {rows}></lr-table>
 <button type="button" onclick={selectInput}>Select</button>
 `,
   );
@@ -294,6 +295,14 @@ async function verifyInstalledArtifacts(fixtureDir) {
     await access(join(installed, relativePath));
   }
 
+  const packageManifest = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'));
+  if (
+    packageManifest.customElements !== 'custom-elements.json' ||
+    packageManifest.exports?.['./custom-elements.json'] !== './custom-elements.json'
+  ) {
+    throw new Error('the packed manifest metadata does not resolve to custom-elements.json');
+  }
+
   for (const runtimeFile of [
     'dist/custom-elements-jsx.js',
     'dist/svelte.js',
@@ -354,7 +363,13 @@ async function main() {
       join(fixtureDir, 'node_modules', '.bin', binName('tsc')),
       ['-p', 'tsconfig.react.json'],
       fixtureDir,
-      'React 19 packed declaration check',
+      'React 19 / TypeScript 5.9 packed declaration check',
+    );
+    await run(
+      join(uiPackage, 'node_modules', '.bin', binName('tsc')),
+      ['-p', join(fixtureDir, 'tsconfig.react.json')],
+      fixtureDir,
+      'React 19 / TypeScript 7 packed declaration check',
     );
     await run(
       join(fixtureDir, 'node_modules', '.bin', binName('vue-tsc')),
@@ -364,7 +379,7 @@ async function main() {
     );
     await run(
       join(fixtureDir, 'node_modules', '.bin', binName('svelte-check')),
-      ['--tsconfig', 'tsconfig.svelte.json', '--threshold', 'error'],
+      ['--tsconfig', 'tsconfig.svelte.json', '--threshold', 'warning', '--fail-on-warnings'],
       fixtureDir,
       'Svelte packed declaration check',
     );

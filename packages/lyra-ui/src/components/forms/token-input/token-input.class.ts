@@ -10,6 +10,15 @@ import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
+import {
+  createStringArrayFormDataState,
+  getFormOwner,
+  installCustomErrorProperty,
+  readStringArrayFormDataState,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 
 /** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
  *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
@@ -51,6 +60,7 @@ function createNoopInternals(): ElementInternals {
 }
 
 export interface LyraTokenInputEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   input: CustomEvent<{ value: string[] }>;
   change: CustomEvent<{ value: string[] }>;
   focus: CustomEvent<undefined>;
@@ -75,6 +85,19 @@ const delimiterConverter = {
   toAttribute: (value: string | null): string => (value === null ? 'none' : value),
 };
 
+const stringArrayConverter = {
+  fromAttribute: (value: string | null): string[] | null => {
+    if (value === null) return null;
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return Array.isArray(parsed) && parsed.every((entry) => typeof entry === 'string') ? parsed : [];
+    } catch {
+      return [];
+    }
+  },
+  toAttribute: (value: string[] | null): string | null => value == null ? null : JSON.stringify(value),
+};
+
 /** `<lr-token-input>` — an editable, form-associated list of removable tokens.
  *
  * Enter commits the typed draft into a token while there is one; with the draft empty it performs
@@ -94,6 +117,7 @@ const delimiterConverter = {
  *   call `preventDefault()` to veto the removal (e.g. pending an async confirmation or a
  *   protected-token check) and the token stays in `value` unchanged.
  * @event lr-token-edit - An existing token was edited in place and committed; detail is `{ value, previousValue, index }`. Not emitted for a reverted, unchanged, emptied, or duplicate-colliding edit.
+ * @event lr-invalid - The token list failed a validity check.
  * @csspart form-control - Outer control wrapper.
  * @csspart form-control-label - Label.
  * @csspart input-wrapper - Token and input row.
@@ -135,15 +159,25 @@ const delimiterConverter = {
  *   or been through a `reportValidity()`/submit attempt).
  * @cssstate user-invalid - `invalid`, but only after that same interaction — a required control
  *   nobody has touched yet is invalid without being styled as an error.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
+    defaultValue: {
+      attribute: 'value',
+      reflect: true,
+      useDefault: true,
+      converter: stringArrayConverter,
+      noAccessor: true,
+    },
   };
 
   @property() label = '';
@@ -207,10 +241,16 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   @query('#input') private inputEl?: HTMLInputElement;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   private labelId = nextId('token-input-label');
   private hintId = nextId('token-input-hint');
   private errorId = nextId('token-input-error');
   private _value: string[] = [];
+  private _defaultValue: string[] = [];
+  private _valueDirty = false;
+  private settingDefaultValue = false;
+  private reflectingDefaultValue = false;
   // Tracked separately from the consumer's own `disabled` -- a fieldset
   // cascade must never mutate that IDL property/attribute itself (mirrors
   // lr-select's/lr-combobox's identical `_fieldsetDisabled`/
@@ -224,6 +264,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   get value(): string[] { return this._value; }
   set value(next: string[]) {
     const old = this._value;
+    if (!this.settingDefaultValue) this._valueDirty = true;
     const normalized = Array.isArray(next) ? [...next] : [];
     if (this.editingIndex >= 0 && normalized !== old) {
       this.editingIndex = -1;
@@ -233,6 +274,22 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this._value = normalized;
     this.requestUpdate('value', old);
     if (this.internals) this.syncValidity();
+  }
+  /** Reflected JSON-array reset default; changing it never overwrites a dirty live token list. */
+  get defaultValue(): string[] { return [...this._defaultValue]; }
+  set defaultValue(next: string[] | null) {
+    if (this.reflectingDefaultValue) return;
+    const old = this._defaultValue;
+    this._defaultValue = Array.isArray(next) ? [...next] : [];
+    this.reflectingDefaultValue = true;
+    try {
+      if (next == null) this.removeAttribute('value');
+      else this.setAttribute('value', JSON.stringify(this._defaultValue));
+    } finally {
+      this.reflectingDefaultValue = false;
+    }
+    if (!this._valueDirty) this.restoreLiveValueFromDefault();
+    this.requestUpdate('defaultValue', old);
   }
 
   /** The form submission key, reflected synchronously for native form APIs.
@@ -270,13 +327,22 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.requestUpdate('disabled', old);
   }
 
-  constructor() { super(); this.internals = createInternalsSafely(this); this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]()); }
+  constructor() {
+    super();
+    this.internals = createInternalsSafely(this);
+    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+  }
   override connectedCallback(): void { super.connectedCallback(); this.syncValidity(); }
   override disconnectedCallback(): void {
     this.discardTransientState(true);
     super.disconnectedCallback();
   }
-  get form(): HTMLFormElement | null { return this.internals.form; }
+  get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
+  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  get labels(): NodeList { return this.internals.labels; }
   get validity(): ValidityState { return this.internals.validity; }
   get validationMessage(): string { return this.internals.validationMessage; }
   get willValidate(): boolean { return this.internals.willValidate; }
@@ -359,7 +425,10 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     syncValidityStates(this.internals, { required: this.required, hasInteracted: this.touched });
     const data = new FormData();
     if (this.name) this.value.forEach((token) => data.append(this.name, token));
-    this.internals.setFormValue(this.name ? data : null);
+    this.internals.setFormValue(
+      this.name ? data : null,
+      createStringArrayFormDataState(this.name, this.value),
+    );
   }
   private updateValue(next: string[], event?: 'add' | 'remove'): void {
     this.value = next;
@@ -522,7 +591,23 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onErrorSlotChange = (e: Event): void => { this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   formResetCallback(): void {
-    this.value = [];
+    this.restoreLiveValueFromDefault();
+    this.discardTransientState(true);
+    this.rovingIndex = 0;
+    this.touched = false;
+    this.syncValidity();
+  }
+  private restoreLiveValueFromDefault(): void {
+    this.settingDefaultValue = true;
+    try { this.value = [...this._defaultValue]; }
+    finally { this.settingDefaultValue = false; }
+    this._valueDirty = false;
+  }
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    _mode?: 'restore' | 'autocomplete',
+  ): void {
+    this.value = readStringArrayFormDataState(state);
     this.discardTransientState(true);
     this.rovingIndex = 0;
     this.touched = false;

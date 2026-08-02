@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/charts/chart/histogram.js';` (registers the tag; side-effect import)
 - **Class** `LyraHistogram`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/histogram.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,8 +30,10 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. The `type`
   lock is the same `lockChartType()` accessor pair the typed `lr-*-chart` subclasses use (e.g.
   `llms/components/lr-bar-chart.md`) — `el.type = 'line'` is a genuine no-op here too.
-- All other `LyraChart` properties are inherited and usable: `legend`, `legendPosition` (attribute
-  `legend-position`), `valueFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
+- All other `LyraChart` properties are inherited and usable: `description`, `grid`, `indexAxis`
+  (`index-axis`), `legend`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
+  `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
+  (`without-tooltip`), `valueFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`,
   `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `accessibleLabel`
   (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
@@ -43,7 +47,7 @@ labels are regenerated from the rebinned sample range.
 **Events:** `lr-zoom`, `lr-point-click` — inherited; `lr-point-click`'s `index` is the bucket index
 and `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
 
-**Slots:** `data-table`, `center`.
+**Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
 `reset-zoom-button`, `description`, `data-table`, `center`, `error` (`role="alert"` message
@@ -53,7 +57,11 @@ inherited from `LyraChart`, unaffected by the binning logic).
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width` — inherited from `LyraChart`,
-identical in meaning.
+identical in meaning, together with the mirrored `--border-color-1`, `--border-color-2`,
+`--border-color-3`, `--border-color-4`, `--border-color-5`, `--border-color-6`, `--fill-color-1`,
+`--fill-color-2`, `--fill-color-3`, `--fill-color-4`, `--fill-color-5`, `--fill-color-6`,
+`--border-radius`, `--border-width`, `--grid-border-width`, `--grid-color`,
+`--line-border-width`, and `--point-radius` hooks listed on the core chart.
 
 **Optional peer deps:** the same `chart.js` (+ `chartjs-plugin-zoom` when `zoom` is set) peers.
 

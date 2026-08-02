@@ -5,7 +5,14 @@ import { AnchoredPopoverController } from '../../../internal/anchored-popover-co
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import {
+  attachInternalsSafely,
+  getFormOwner,
+  installCustomErrorProperty,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './voice-picker.styles.js';
@@ -47,6 +54,7 @@ export type LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[];
 type DisplayEntry = DisplayCatalogEntry<LyraVoiceCatalogEntry>;
 
 export interface LyraVoicePickerEventMap {
+  'lr-invalid': CustomEvent<undefined>;
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
   'lr-preview-request': CustomEvent<{ voiceId: string; previewUrl?: string }>;
   'lr-preview-change': CustomEvent<{ voiceId: string | null }>;
@@ -96,6 +104,7 @@ export interface LyraVoicePickerEventMap {
  * @event lr-preview-request - `detail: { voiceId: string; previewUrl?: string }`. Cancelable.
  * @event lr-preview-change - `detail: { voiceId: string | null }` — internal playback started
  *   (`voiceId`) or stopped (`null`).
+ * @event lr-invalid - The picker failed a validity check.
  * @csspart form-control-label - The `<label>` element.
  * @csspart trigger - The trigger button (closed-dropdown mode).
  * @csspart combobox - The text-input container (free-text mode).
@@ -122,15 +131,24 @@ export interface LyraVoicePickerEventMap {
  *   Selected option label weight.
  * @cssprop [--lr-voice-picker-preview-hover-bg=var(--lr-color-brand-quiet)] - Preview hover fill.
  * @cssprop [--lr-voice-picker-preview-hover-color=var(--lr-color-brand)] - Preview hover icon.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
   static override properties = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
-    value: { noAccessor: true },
+    value: { attribute: false, noAccessor: true },
+    defaultValue: {
+      attribute: 'value',
+      reflect: true,
+      useDefault: true,
+      noAccessor: true,
+    },
     name: { reflect: true, noAccessor: true },
   };
 
@@ -164,6 +182,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
   private listId = nextId('voice-picker-list');
   private controlId = nextId('voice-picker-control');
   private popupPosition = new AnchoredPopoverController();
@@ -174,6 +194,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private _disabled = false;
   private _required = false;
   private _defaultValue = '';
+  private _valueDirty = false;
+  private settingDefaultValue = false;
+  private reflectingDefaultValue = false;
   private suppressControlEvents = false;
   private transferControlFocus = false;
 
@@ -184,11 +207,20 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     // attach-or-degrade helper so both paths handle a missing *and* a throwing `attachInternals()`.
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     this.internals.setFormValue('');
   }
 
   get form(): HTMLFormElement | null {
-    return this.internals.form;
+    return getFormOwner(this.internals);
+  }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  /** Returns the browser-resolved owning form, including an external owner selected by `form`. */
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
   }
   get labels(): NodeList {
     return this.internals.labels;
@@ -285,21 +317,33 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.open = false;
   }
 
-  override attributeChangedCallback(name: string, old: string | null, val: string | null): void {
-    super.attributeChangedCallback(name, old, val);
-    if (name === 'value') this._defaultValue = this._value;
-  }
-
   /** The current voice id (empty string when nothing is selected). */
   get value(): string {
     return this._value;
   }
   set value(next: string) {
     const old = this._value;
+    if (!this.settingDefaultValue) this._valueDirty = true;
     this._value = next ?? '';
     this.internals.setFormValue(this._value);
     this.updateValidity();
     this.requestUpdate('value', old);
+  }
+  /** Reflected current reset default; changing it never overwrites a dirty live `value`. */
+  get defaultValue(): string { return this._defaultValue; }
+  set defaultValue(next: string) {
+    if (this.reflectingDefaultValue) return;
+    const old = this._defaultValue;
+    this._defaultValue = next ?? '';
+    this.reflectingDefaultValue = true;
+    try {
+      if (this._defaultValue) this.setAttribute('value', this._defaultValue);
+      else this.removeAttribute('value');
+    } finally {
+      this.reflectingDefaultValue = false;
+    }
+    if (!this._valueDirty) this.restoreLiveValueFromDefault();
+    this.requestUpdate('defaultValue', old);
   }
 
   get name(): string {
@@ -364,7 +408,13 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   formResetCallback(): void {
     this.touched = false;
-    this.value = this._defaultValue;
+    this.restoreLiveValueFromDefault();
+  }
+  private restoreLiveValueFromDefault(): void {
+    this.settingDefaultValue = true;
+    try { this.value = this._defaultValue; }
+    finally { this.settingDefaultValue = false; }
+    this._valueDirty = false;
   }
   formStateRestoreCallback(state: string | File | FormData | null, _mode?: 'restore' | 'autocomplete'): void {
     this.value = typeof state === 'string' ? state : '';

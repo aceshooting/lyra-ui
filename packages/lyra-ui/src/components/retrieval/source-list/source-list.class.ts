@@ -45,6 +45,8 @@ export interface LyraSourceListEventMap {
  * @csspart header - The clickable header (`<button>`) toggling `expanded`.
  * @csspart toggle - The chevron indicator inside the header.
  * @csspart list - The wrapper around the default slot, `hidden` while collapsed.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   static override styles = [LyraElement.styles, styles];

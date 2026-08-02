@@ -179,6 +179,8 @@ interface FlowNodeCardEl extends HTMLElement {
  *   colors above this one is `:hover`-gated rather than attribute-gated, so a `::part(node):hover`
  *   override would lose to this rule's own higher internal specificity rather than to the
  *   `::part()[attr]` restriction those four work around. Set to `transparent` to opt out.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

@@ -85,6 +85,8 @@ export interface LyraAgentTraceEventMap {
  *   (`activeSpanId`) handoff quick-jump entry. Shadow Parts forbids an attribute selector after
  *   `::part()`, so the active entry could otherwise only be restyled by hijacking the library-wide
  *   `--lr-color-brand-quiet` token.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   static override styles = [LyraElement.styles, styles];

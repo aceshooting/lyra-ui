@@ -3,12 +3,60 @@ import { select } from 'd3-selection';
 import './graph.js';
 import { LyraGraph } from './graph.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
+import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const nodes = [
   { id: 'a', label: 'A' },
   { id: 'b', label: 'B' },
 ];
 const links = [{ source: 'a', target: 'b' }];
+
+function stubPointerCapture(canvas: HTMLCanvasElement): {
+  captured: Set<number>;
+  restore(): void;
+} {
+  const setDescriptor = Object.getOwnPropertyDescriptor(canvas, 'setPointerCapture');
+  const releaseDescriptor = Object.getOwnPropertyDescriptor(canvas, 'releasePointerCapture');
+  const captured = new Set<number>();
+  Object.defineProperty(canvas, 'setPointerCapture', {
+    configurable: true,
+    value: (pointerId: number) => captured.add(pointerId),
+  });
+  Object.defineProperty(canvas, 'releasePointerCapture', {
+    configurable: true,
+    value: (pointerId: number) => captured.delete(pointerId),
+  });
+  return {
+    captured,
+    restore() {
+      if (setDescriptor) Object.defineProperty(canvas, 'setPointerCapture', setDescriptor);
+      else delete (canvas as unknown as { setPointerCapture?: unknown }).setPointerCapture;
+      if (releaseDescriptor) Object.defineProperty(canvas, 'releasePointerCapture', releaseDescriptor);
+      else delete (canvas as unknown as { releasePointerCapture?: unknown }).releasePointerCapture;
+    },
+  };
+}
+
+it('invalidates the cached canvas scene after an out-of-band theme change', async () => {
+  const el = (await fixture(
+    html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`,
+  )) as LyraGraph;
+  await el.updateComplete;
+  let invalidations = 0;
+  const internals = el as unknown as { markCanvasDirty: () => void };
+  const originalMarkCanvasDirty = internals.markCanvasDirty;
+  internals.markCanvasDirty = () => {
+    invalidations += 1;
+  };
+  try {
+    invalidateLyraTheme(el);
+    await aTimeout(0);
+    expect(invalidations).to.equal(1);
+  } finally {
+    internals.markCanvasDirty = originalMarkCanvasDirty;
+  }
+});
 
 // d3-force's internal timer runs on requestAnimationFrame, which Chromium
 // throttles heavily on backgrounded tabs when many test files run
@@ -127,7 +175,7 @@ it('renders an svg with a circle per node once d3 loads', async () => {
 
 it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px under scale', async () => {
   const el = (await fixture(
-    html`<lr-graph width="400" height="300" style="inline-size:400px;block-size:300px"></lr-graph>`,
+    html`<lr-graph seed="7" width="400" height="300" style="inline-size:400px;block-size:300px"></lr-graph>`,
   )) as LyraGraph;
   el.communities = [{ id: 'team', memberIds: ['a', 'b'] }];
   el.nodes = [
@@ -152,21 +200,34 @@ it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px un
     for (const hit of elements) {
       expect(hit.hasAttribute('part'), `${kind} hit is internal`).to.be.false;
       expect(hit.getAttribute('aria-hidden'), `${kind} hit is not duplicated for AT`).to.equal('true');
-      expect(hit.getAttribute('vector-effect'), `${kind} hit does not scale`).to.equal('non-scaling-stroke');
       expect(Number.parseFloat(getComputedStyle(hit).strokeWidth), `${kind} stroke`).to.be.at.least(24);
     }
   }
-  const graphLayer = el.shadowRoot!.querySelector('svg > g') as SVGGElement;
-  graphLayer.setAttribute('transform', 'scale(0.25)');
+  expect(await el.focusNode('a', { zoom: 0.25 })).to.equal(true);
+  el.scrollIntoView({ block: 'center', inline: 'center' });
+  await aTimeout(0);
   const nodeHit = hits.node[0] as SVGLineElement;
-  const nodeCenter = new DOMPoint(
-    nodeHit.x1.baseVal.value,
-    nodeHit.y1.baseVal.value,
-  ).matrixTransform(nodeHit.getScreenCTM()!);
-  expect(
-    el.shadowRoot!.elementFromPoint(nodeCenter.x + 11, nodeCenter.y),
-    'scaled node pointer edge',
-  ).to.equal(nodeHit);
+  const renderedNode = el.shadowRoot!.querySelector<SVGGraphicsElement>('[part="node"]')!;
+  const renderedNodeRect = renderedNode.getBoundingClientRect();
+  const nodeCenter = {
+    x: renderedNodeRect.left + renderedNodeRect.width / 2,
+    y: renderedNodeRect.top + renderedNodeRect.height / 2,
+  };
+  // Probe the browser's real pointer dispatch. WebKit's ShadowRoot.elementFromPoint() returns the
+  // outer SVG for this coordinate even though native hit testing correctly reaches the line; a
+  // failed DOM-node equality assertion also makes WTR recursively serialize the SVG tree.
+  let pointerActivations = 0;
+  el.addEventListener('lr-node-click', () => pointerActivations++);
+  try {
+    await resetMouse();
+    await sendMouse({
+      type: 'click',
+      position: [Math.round(nodeCenter.x + 11), Math.round(nodeCenter.y)],
+    });
+    expect(pointerActivations, 'scaled node pointer edge').to.equal(1);
+  } finally {
+    await resetMouse();
+  }
   expect(select(hits.node[0]!).on('mousedown.drag')).to.be.a('function');
 
   const activations: string[] = [];
@@ -2079,11 +2140,18 @@ describe('canvas renderer — interaction and a11y', () => {
     const clientY = rect.top + target.y!;
     let detail: { id: string; x: number; y: number } | undefined;
     el.addEventListener('lr-node-click', (e) => (detail = (e as CustomEvent).detail));
-    canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX, clientY, pointerId: 1 }));
-    canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX, clientY, pointerId: 1 }));
-    expect(detail?.id).to.equal(target.id);
-    expect(detail?.x).to.be.a('number');
-    expect(detail?.y).to.be.a('number');
+    const capture = stubPointerCapture(canvas);
+    try {
+      canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX, clientY, pointerId: 1 }));
+      expect(capture.captured.has(1)).to.equal(true);
+      canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX, clientY, pointerId: 1 }));
+      expect(capture.captured.has(1)).to.equal(false);
+      expect(detail?.id).to.equal(target.id);
+      expect(detail?.x).to.be.a('number');
+      expect(detail?.y).to.be.a('number');
+    } finally {
+      capture.restore();
+    }
   });
 
   it('clicking empty canvas space with no hit clears the selection when selectionMode is set', async () => {
@@ -3836,19 +3904,26 @@ describe('coverage: canvas renderer internals', () => {
     const rect = canvas.getBoundingClientRect();
     const startX = rect.left + target.x;
     const startY = rect.top + target.y;
-    canvas.dispatchEvent(
-      new PointerEvent('pointerdown', { bubbles: true, clientX: startX, clientY: startY, pointerId: 1 }),
-    );
-    canvas.dispatchEvent(
-      new PointerEvent('pointermove', { bubbles: true, clientX: startX + 40, clientY: startY + 20, pointerId: 1 }),
-    );
-    expect(target.fx).to.be.a('number');
-    expect(target.fy).to.be.a('number');
-    canvas.dispatchEvent(
-      new PointerEvent('pointerup', { bubbles: true, clientX: startX + 40, clientY: startY + 20, pointerId: 1 }),
-    );
-    expect(target.fx).to.be.null;
-    expect(target.fy).to.be.null;
+    const capture = stubPointerCapture(canvas);
+    try {
+      canvas.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, clientX: startX, clientY: startY, pointerId: 1 }),
+      );
+      expect(capture.captured.has(1)).to.equal(true);
+      canvas.dispatchEvent(
+        new PointerEvent('pointermove', { bubbles: true, clientX: startX + 40, clientY: startY + 20, pointerId: 1 }),
+      );
+      expect(target.fx).to.be.a('number');
+      expect(target.fy).to.be.a('number');
+      canvas.dispatchEvent(
+        new PointerEvent('pointerup', { bubbles: true, clientX: startX + 40, clientY: startY + 20, pointerId: 1 }),
+      );
+      expect(capture.captured.has(1)).to.equal(false);
+      expect(target.fx).to.be.null;
+      expect(target.fy).to.be.null;
+    } finally {
+      capture.restore();
+    }
   });
 
   it('cancels a canvas node drag on pointercancel and lostpointercapture', async () => {

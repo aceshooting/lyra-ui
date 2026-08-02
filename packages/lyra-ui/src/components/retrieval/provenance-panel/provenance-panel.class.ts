@@ -45,6 +45,8 @@ export interface LyraProvenancePanelEventMap {
  * @csspart count - A section's item-count badge.
  * @csspart body - A section's content wrapper, `hidden` while collapsed.
  * @csspart empty - The empty state, shown when every section is empty.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap> {
   static override styles = [LyraElement.styles, styles];

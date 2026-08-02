@@ -15,6 +15,7 @@ const requiredStories = [
   'dialog--open-initially',
   'responsivepanel--forced-overlay-bottom-sheet',
   'apprail--forced-icon-only',
+  'layout-page--desktop',
   'table--default',
   'toast--triggers',
   'codeblock--plain-fallback',
@@ -41,6 +42,7 @@ const storyChecks = new Map([
   ['dialog--open-initially', 'lr-dialog'],
   ['responsivepanel--forced-overlay-bottom-sheet', 'lr-responsive-panel'],
   ['apprail--forced-icon-only', 'lr-app-rail'],
+  ['layout-page--desktop', 'lr-page'],
   ['table--default', 'lr-table'],
   ['toast--triggers', 'button'],
   ['codeblock--plain-fallback', 'lr-code-block'],
@@ -74,6 +76,9 @@ const mimeTypes = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
 };
+
+const isHydrationWarning = (message) =>
+  message.type() === 'warning' && /\bhydrat(?:e|ed|es|ing|ion)\b/i.test(message.text());
 
 async function serve(request, response) {
   const requestPath = decodeURIComponent(new URL(request.url ?? '/', 'http://localhost').pathname);
@@ -232,7 +237,7 @@ async function auditComponentDocs(browser, baseUrl, entries) {
       };
       const onConsole = (message) => {
         if (
-          message.type() !== 'error' ||
+          (message.type() !== 'error' && !isHydrationWarning(message)) ||
           isIgnorableError(message.text()) ||
           /Failed to load resource: net::ERR_|Failed to load resource.*404/.test(message.text())
         ) {
@@ -446,7 +451,12 @@ async function main() {
     if (!isIgnorableNetworkError(text)) browserErrors.push(text);
   });
   page.on('console', (message) => {
-    if (message.type() === 'error' && !isIgnorableNetworkError(message.text())) browserErrors.push(message.text());
+    if (
+      (message.type() === 'error' || isHydrationWarning(message)) &&
+      !isIgnorableNetworkError(message.text())
+    ) {
+      browserErrors.push(message.text());
+    }
   });
 
   try {
@@ -563,7 +573,10 @@ async function main() {
     await dropdownDocs.locator('button[slot="trigger"]').click();
     await dropdownDocsFrame.waitForTimeout(150);
     const dropdownDocsLayout = await dropdownDocs.evaluate((element) => {
-      const popup = element.shadowRoot?.querySelector('[part="popup"]');
+      // `popup` is one token in the mapped multi-alias part list (`popup base base__popup panel`).
+      // Match the token rather than requiring it to be the part attribute's only value; every
+      // clipping, available-size, overflow, transform, and hit-test assertion below stays intact.
+      const popup = element.shadowRoot?.querySelector('[part~="popup"]');
       const canvas = element.closest('.docs-story');
       const preview = element.closest('.sbdocs-preview');
       const zoomWrapper = canvas?.querySelector(':scope > div:has(> .innerZoomElementWrapper)');

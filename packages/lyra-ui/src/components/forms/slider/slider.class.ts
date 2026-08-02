@@ -1,23 +1,34 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
+import {
+  attachInternalsSafely,
+  getFormOwner,
+  installCustomErrorProperty,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
+import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncValidityStates } from '../../../internal/custom-states.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { isRtl } from '../../../internal/rtl.js';
 import {
   decimalPlaces,
   finiteInterpolate,
-  finiteMidpoint,
   finiteNumber,
   finiteRange,
   finiteRatio,
   isSliderKey,
 } from '../../../internal/numbers.js';
 import { styles } from './slider.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import {
+  dispatchNativeEvent,
+  dispatchNativeInputEvent,
+  relayNativeEvent,
+} from '../../../internal/native-event-relay.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 
 /** PageUp/PageDown move by a larger increment than a single Arrow step,
@@ -33,15 +44,24 @@ const PAGE_STEP_MULTIPLIER = 10;
  *  dropped entirely rather than half-drawn. */
 const MAX_MARKER_INTERVALS = 100;
 
+/** Presence boolean that also accepts the explicit HTML spelling `="false"`. */
+const falseDefaultBooleanConverter = {
+  fromAttribute: (value: string | null): boolean => value !== null && value !== 'false',
+};
+
 /** Shadow-root-scoped id of the rendered hint region, referenced by each
  *  handle's `aria-describedby`. Ids are scoped per shadow root, so a fixed
  *  one cannot collide across instances. */
 const HINT_ID = 'slider-hint';
+const LABEL_ID = 'slider-label';
 
 /** The value axis. `'horizontal'` maps values to the inline axis (mirroring
  *  under RTL), `'vertical'` to the block axis with the domain minimum at the
  *  block end. */
 export type SliderOrientation = 'horizontal' | 'vertical';
+
+/** Side of a handle used for its focus/drag tooltip. */
+export type SliderTooltipPlacement = 'top' | 'right' | 'bottom' | 'left';
 
 /** Which handle a value belongs to: the single thumb of a plain slider, or
  *  one of the two handles of a `range` slider. */
@@ -67,7 +87,7 @@ export interface LyraSliderChangeDetail {
 }
 
 export interface LyraSliderEventMap {
-  input: Event;
+  input: InputEvent;
   change: Event;
   'lr-input': CustomEvent<LyraSliderChangeDetail>;
   'lr-change': CustomEvent<LyraSliderChangeDetail>;
@@ -75,6 +95,7 @@ export interface LyraSliderEventMap {
   blur: FocusEvent;
   'lr-focus': CustomEvent<undefined>;
   'lr-blur': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<undefined>;
 }
 
 interface SliderDragState {
@@ -96,46 +117,24 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
 
 /**
  * `<lr-slider>` — a numeric range control (e.g. an LLM "temperature"
- * setting), form-associated. Mirrors native `<input type="range">`
- * semantics: `value` is the string form-submitted via `FormAssociated`,
- * `valueAsNumber` is the ergonomic numeric accessor (mirroring the native
- * `<input type=range>` IDL attribute of the same name) kept in sync with it
- * in both directions — reads parse `value`, writes stringify back to it.
- *
- * Unlike the mixin's other consumers, an unset `value` is eagerly defaulted
- * — on connect, and again after `form.reset()` — to the midpoint of
- * `[min, max]` snapped to `step`, the same "range sanitization algorithm"
- * default a native range input applies. A slider always represents *some*
- * number, so `required` (inherited from `FormAssociated`) only has a window
- * to block submission before that default lands, matching how `required`
- * isn't a meaningful constraint on a native range input either.
+ * setting), form-associated. Its live `value` and reflected/reset `defaultValue` are numbers;
+ * `valueAsNumber` remains a numeric alias and `valueAsString` preserves the library's former
+ * string round-trip explicitly. A bare slider starts at `0`, matching the mapped contract rather
+ * than silently choosing the domain midpoint.
  *
  * Clicking anywhere on the track (not just the 16px thumb) jumps the thumb
  * to that point and continues the same gesture as a drag, matching native
  * `<input type=range>` click-to-seek. In `range` mode the click moves
  * whichever handle is nearer the clicked position.
  *
- * `range` turns the control into a two-handle selection between `minValue`
- * and `maxValue`. Each handle is a separately focusable `role="slider"` with
- * its own localized accessible name, and each reports the *reachable*
- * sub-range through `aria-valuemin`/`aria-valuemax` — bounded by its sibling
- * rather than by the full domain, because the handles may meet but never
- * cross. When they meet, both report the same number, the indicator has zero
- * length, and each handle can still travel away from the meeting point in
- * its own direction.
+ * `range` turns the control into a two-handle selection between `minValue` and `maxValue`, which
+ * default to `0` and `50`. When one handle crosses the other it pushes its sibling instead of
+ * stopping, so the active thumb always follows the user's pointer/key. A named range submits two
+ * same-name `FormData` entries in lower/upper order; a single slider submits one numeric string.
  *
- * A range slider does not submit a value: a two-value control cannot be
- * expressed through the single-string `FormAssociated` contract, so while
- * `range` is set the control removes itself from its form's `FormData`
- * (matching `<lr-time-range>`, which is likewise form-associated only for
- * the `<fieldset disabled>` cascade). Read `minValue`/`maxValue`, or the
- * `lr-change` detail, instead. Turning `range` back off restores normal
- * single-value submission.
- *
- * Deliberately no label/error chrome -- `label` here is an accessible-name override, not
- * visible label text; a labeled-field consumer wraps this element in their own layout. `hint`
- * is the one exception, since a slider's units/meaning frequently need a written explanation
- * that has nowhere else to live.
+ * `label`/`hint` plus their slots render visible form context. `with-label`/`with-hint` are SSR
+ * presence hints only: hydrated instances also detect populated content automatically. The
+ * `reference` slot supplies endpoint/unit context in the `references` part.
  *
  * @customElement lr-slider
  * @event input - Native event fired continuously while a user moves a handle.
@@ -153,8 +152,21 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @event blur - Native blur relayed once from the thumb losing focus.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-invalid - The slider failed a validity check.
+ * @slot label - Rich visible label content, appended after the plain `label` property.
  * @slot hint - Rich hint content, replacing the plain-text `hint` attribute.
- * @csspart base - The row wrapping the track and the optional value readout. Carries
+ * @slot help-text - Shoelace-compatible alias for the `hint` slot.
+ * @slot reference - Endpoint or unit references rendered beside the track.
+ * @csspart base - Compatibility name on the interactive track row; use `slider`.
+ * @csspart slider - Interactive track row. It is the same node as `base`.
+ * @csspart form-control - Shoelace-compatible name on the same interactive row.
+ * @csspart form-control-label - Shoelace-compatible name on the visible label.
+ * @csspart form-control-input - Shoelace-compatible name on the interactive track row.
+ * @csspart form-control-help-text - Shoelace-compatible name on the hint region.
+ * @csspart input - Shoelace-compatible name on the interactive track row.
+ * @csspart label - Visible label content.
+ * @csspart references - Wrapper for the `reference` slot.
+ * @csspart control - The row wrapping the track and the optional value readout. Carries
  *   `role="group"` (named from `label`/`aria-label`) in `range` mode, so the two handles are
  *   announced as one control.
  * @csspart track - The full-length background line.
@@ -167,9 +179,21 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @csspart thumb-min - The lower handle in `range` mode (also carries `thumb`).
  * @csspart thumb-max - The upper handle in `range` mode (also carries `thumb`).
  * @csspart tooltip - The live value bubble rendered per handle when `with-tooltip` is set.
+ * @csspart tooltip__tooltip - Upstream alias on the tooltip bubble.
+ * @csspart tooltip__content - Tooltip text wrapper.
+ * @csspart tooltip__arrow - Decorative tooltip arrow.
  * @csspart tooltip-visible - Added to `tooltip` while that handle is focused or being dragged.
  * @csspart value - The visible numeric readout, rendered when `show-value` is true.
  * @csspart hint - The hint region, hidden while neither `hint` nor the `hint` slot has content.
+ * @method focus - Focuses the first thumb, or the lower thumb in range mode.
+ * @method blur - Blurs whichever thumb currently owns focus.
+ * @method click - Activates the first thumb.
+ * @method stepUp - Silently increments the focused thumb (or the single/lower thumb) by `step`.
+ * @method stepDown - Silently decrements the focused thumb (or the single/lower thumb) by `step`.
+ * @method getForm - Returns the resolved form owner.
+ * @method checkValidity - Returns whether custom constraint validation currently passes.
+ * @method reportValidity - Reports validity through the browser's validation UI.
+ * @method setCustomValidity - Sets or clears a caller-supplied validation message.
  * @cssprop [--lr-slider-track-length=var(--lr-size-10rem)] - Length of the track in
  *   `orientation="vertical"`; the horizontal track fills its container instead. Declared as an
  *   inline `var()` fallback (never on `:host`), so a consumer override at any ancestor wins.
@@ -181,8 +205,33 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  *   area around it never drops below 1.75rem/28px, whatever this is set to.
  * @cssprop [--lr-slider-track-thickness=calc(var(--lr-slider-thumb-size) * 0.25)] - Thickness of
  *   the track, the filled indicator and (scaled from it) the `with-markers` ticks.
+ * @cssprop --thumb-size - Shoelace alias setting both thumb dimensions.
+ * @cssprop --thumb-width - Upstream thumb inline size.
+ * @cssprop --thumb-height - Upstream thumb block size.
+ * @cssprop --track-height - Shoelace alias for track thickness.
+ * @cssprop --track-size - Web Awesome alias for track thickness.
+ * @cssprop --track-color-active - Filled indicator color.
+ * @cssprop --track-color-inactive - Resting track color.
+ * @cssprop --track-active-offset - Additional indicator offset.
+ * @cssprop --tooltip-offset - Shoelace tooltip distance alias.
+ * @cssprop [--lr-slider-tooltip-distance=8] - Numeric CSS-pixel distance written by the
+ *   `tooltipDistance` property for the internal tooltip-placement calculation.
+ * @cssprop --marker-width - Marker inline size.
+ * @cssprop --marker-height - Marker block size.
+ * @cssstate disabled - The control is disabled directly or by a fieldset.
+ * @cssstate dragging - At least one pointer drag is active.
+ * @cssstate focused - One of the thumbs owns focus.
+ * @cssstate required - The `required` form flag is set.
+ * @cssstate optional - The `required` form flag is not set.
+ * @cssstate valid - The slider has no custom validity error.
+ * @cssstate invalid - The slider has a custom validity error.
+ * @cssstate user-valid - Valid after user interaction or an explicit validity report.
+ * @cssstate user-invalid - Invalid after user interaction or an explicit validity report.
+ * @status stable
+ * @since 4.0.0
  */
-export class LyraSlider extends FormAssociated(LyraSliderBase) {
+export class LyraSlider extends LyraSliderBase {
+  static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
   // These accessors sanitize the live value synchronously when a range
@@ -190,6 +239,18 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   // default async field setter from leaving `.value`, `.valueAsNumber`, and
   // ElementInternals' form value disagreeing until the next update flush.
   static override properties = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
+    value: { attribute: false, noAccessor: true },
+    defaultValue: {
+      attribute: 'value',
+      type: Number,
+      reflect: true,
+      useDefault: true,
+      noAccessor: true,
+    },
+    name: { reflect: true, noAccessor: true },
+    required: { type: Boolean, reflect: true, noAccessor: true },
+    disabled: { type: Boolean, reflect: true, noAccessor: true },
     min: { type: Number, noAccessor: true },
     max: { type: Number, noAccessor: true },
     step: { type: Number, noAccessor: true },
@@ -212,23 +273,174 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    */
   size: LyraSize = 'm';
 
+  private internals: ElementInternals;
+  private validityController: AnchoredValidityController;
+  /** Caller-supplied constraint-validation message.
+   * @default null */
+  declare customError: string | null;
+  private _value = 0;
+  private _defaultValue = 0;
+  private _valueDirty = false;
+  private settingDefaultValue = false;
+  private reflectingDefaultValue = false;
+  private _name: string | null = null;
+  private _required = false;
+  private _disabled = false;
+  private _fieldsetDisabled = false;
+  private _hasInteracted = false;
   private _min = 0;
   private _max = 100;
   private _step = 1;
   private _range = false;
-  // `undefined` means "never assigned", which resolves to the domain bound —
-  // so an untouched range slider selects its whole domain whatever `min`/
-  // `max` happen to be, instead of snapping to a fixed 0/100 pair.
-  private _minValue: number | undefined;
-  private _maxValue: number | undefined;
-  private _defaultMinValue: number | undefined;
-  private _defaultMaxValue: number | undefined;
-  // HTML applies observed attributes before the element is connected. Keep a
-  // declarative value until all min/max/step attributes have been delivered;
-  // otherwise a value attribute encountered before step="..." would be
-  // snapped using the old default step and lose the author's number.
-  private pendingValue: string | undefined;
+  private _minValue = 0;
+  private _maxValue = 50;
+  private _minValueDirty = false;
+  private _maxValueDirty = false;
+  private applyingRangeValueAttribute = false;
+  private _defaultMinValue = 0;
+  private _defaultMaxValue = 50;
 
+  constructor() {
+    super();
+    this.internals = attachInternalsSafely(this);
+    this.validityController = new AnchoredValidityController(
+      this,
+      this.internals,
+      () => this[VALIDITY_ANCHOR](),
+    );
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    this.internals.setFormValue('0', '0');
+    this.addEventListener('input', this.markInteracted);
+    this.addEventListener('change', this.markInteracted);
+    this.addEventListener('focusout', this.markInteracted);
+    this.syncValidityStates();
+  }
+
+  /** Live numeric value. String writes remain accepted as a source-compatible input path, but
+   * reads are always finite numbers; use `valueAsString` when a string round-trip is desired.
+   * @default 0 */
+  get value(): number {
+    return this._value;
+  }
+  set value(next: number | string) {
+    const old = this._value;
+    if (!this.settingDefaultValue) this._valueDirty = true;
+    this._value = this.clampValue(finiteNumber(Number(next), this.defaultNumericValue()));
+    this.syncFormValue();
+    this.requestUpdate('value', old);
+  }
+
+  /** Reflected numeric reset default, sourced from the `value` content attribute.
+   * @default 0 */
+  get defaultValue(): number {
+    return this._defaultValue;
+  }
+  set defaultValue(next: number | string | null) {
+    if (this.reflectingDefaultValue) return;
+    const old = this._defaultValue;
+    this._defaultValue = next == null
+      ? 0
+      : finiteNumber(Number(next), 0);
+    this.reflectingDefaultValue = true;
+    try {
+      if (next == null) this.removeAttribute('value');
+      else this.setAttribute('value', String(this._defaultValue));
+    } finally {
+      this.reflectingDefaultValue = false;
+    }
+    if (!this._valueDirty) this.restoreLiveValueFromDefault();
+    this.requestUpdate('defaultValue', old);
+  }
+
+  /** Numeric compatibility alias for `value`.
+   * @default 0 */
+  get valueAsNumber(): number {
+    return this.value;
+  }
+  set valueAsNumber(next: number) {
+    this.value = next;
+  }
+
+  /** Explicit string compatibility accessor retained for integrations that serialize eagerly.
+   * @default '0' */
+  get valueAsString(): string {
+    return String(this.value);
+  }
+  set valueAsString(next: string) {
+    this.value = next;
+  }
+
+  /** Submitted form-data key. A null/empty name omits the control from submission.
+   * @default null */
+  get name(): string | null {
+    return this._name;
+  }
+  set name(next: string | null) {
+    const old = this._name;
+    this._name = next || null;
+    if (this._name) this.setAttribute('name', this._name);
+    else this.removeAttribute('name');
+    this.syncFormValue();
+    this.requestUpdate('name', old);
+  }
+
+  /** Whether the control participates in the required form-state vocabulary. A slider always
+   * has a numeric value, so this flag does not by itself make the control invalid.
+   * @default false */
+  get required(): boolean {
+    return this._required;
+  }
+  set required(next: boolean) {
+    const old = this._required;
+    this._required = Boolean(next);
+    this.toggleAttribute('required', this._required);
+    this.updateValidity();
+    this.requestUpdate('required', old);
+  }
+
+  /** Prevents focus, user edits, and form submission.
+   * @default false */
+  get disabled(): boolean {
+    return this._disabled;
+  }
+  set disabled(next: boolean) {
+    const old = this._disabled;
+    this._disabled = Boolean(next);
+    this.toggleAttribute('disabled', this._disabled);
+    if (this._disabled) this.pendingKeyHandle = null;
+    this.syncInteractionStates();
+    this.requestUpdate('disabled', old);
+  }
+
+  get effectiveDisabled(): boolean {
+    return this.disabled || this._fieldsetDisabled;
+  }
+
+  get form(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
+  }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
+  }
+  get labels(): NodeList {
+    return this.internals.labels;
+  }
+  get validity(): ValidityState {
+    return this.internals.validity;
+  }
+  get validationMessage(): string {
+    return this.internals.validationMessage;
+  }
+  get willValidate(): boolean {
+    return this.internals.willValidate;
+  }
+
+  /** Lower domain bound.
+   * @default 0 */
   get min(): number {
     return this._min;
   }
@@ -239,6 +451,8 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     this.sanitizeCurrentValue();
   }
 
+  /** Upper domain bound.
+   * @default 100 */
   get max(): number {
     return this._max;
   }
@@ -249,6 +463,8 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     this.sanitizeCurrentValue();
   }
 
+  /** Step-grid interval; non-positive values select the unstepped mode.
+   * @default 1 */
   get step(): number {
     return this._step;
   }
@@ -256,15 +472,17 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     const old = this._step;
     // A zero/negative step is retained as an explicit "unstepped" mode;
     // invalid/non-finite input follows the same safe path without poisoning
-    // the current value with NaN.
-    this._step = finiteRange(next, 0, 0);
+    // the current value with NaN. Removing the attribute restores the mapped
+    // default instead of being mistaken for an explicit zero.
+    this._step = next == null ? 1 : finiteRange(next, 0, 0);
     this.requestUpdate('step', old);
     this.sanitizeCurrentValue();
   }
 
   /** Two-handle mode: the control selects the span between `minValue` and
    *  `maxValue` instead of a single number. See the class doc for what this
-   *  means for form submission. */
+   *  means for form submission.
+   * @default false */
   get range(): boolean {
     return this._range;
   }
@@ -275,30 +493,47 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     this.syncFormValue();
   }
 
-  /** The lower handle's value in `range` mode. Unset, it resolves to `min`.
-   *  Assigning past `maxValue` stops at `maxValue` — the handles meet
-   *  rather than cross. */
+  /** Read-only upstream alias indicating whether two handles are active.
+   * @default false */
+  get isRange(): boolean {
+    return this.range;
+  }
+
+  /** The lower handle's value in `range` mode. Crossing pushes the upper handle.
+   * @default 0 */
   get minValue(): number {
-    const { lo } = this.domain();
-    return this._minValue === undefined ? lo : this._minValue;
+    return this._minValue;
   }
   set minValue(next: number) {
     const old = this._minValue;
-    const { lo } = this.domain();
-    this._minValue = Math.min(this.clampValue(finiteNumber(next, lo)), this.maxValue);
+    if (!this.applyingRangeValueAttribute) this._minValueDirty = true;
+    this._minValue = this.clampValue(finiteNumber(next, 0));
+    if (this._minValue > this._maxValue) {
+      const oldMax = this._maxValue;
+      this._maxValue = this._minValue;
+      if (!this.applyingRangeValueAttribute) this._maxValueDirty = true;
+      this.requestUpdate('maxValue', oldMax);
+    }
+    this.syncFormValue();
     this.requestUpdate('minValue', old);
   }
 
-  /** The upper handle's value in `range` mode. Unset, it resolves to `max`.
-   *  Assigning below `minValue` stops at `minValue`. */
+  /** The upper handle's value in `range` mode. Crossing pushes the lower handle.
+   * @default 50 */
   get maxValue(): number {
-    const { hi } = this.domain();
-    return this._maxValue === undefined ? hi : this._maxValue;
+    return this._maxValue;
   }
   set maxValue(next: number) {
     const old = this._maxValue;
-    const { hi } = this.domain();
-    this._maxValue = Math.max(this.clampValue(finiteNumber(next, hi)), this.minValue);
+    if (!this.applyingRangeValueAttribute) this._maxValueDirty = true;
+    this._maxValue = this.clampValue(finiteNumber(next, 50));
+    if (this._maxValue < this._minValue) {
+      const oldMin = this._minValue;
+      this._minValue = this._maxValue;
+      if (!this.applyingRangeValueAttribute) this._minValueDirty = true;
+      this.requestUpdate('minValue', oldMin);
+    }
+    this.syncFormValue();
     this.requestUpdate('maxValue', old);
   }
 
@@ -315,6 +550,21 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    *  every handle through `aria-describedby`. Use the `hint` slot instead for rich content. */
   @property() hint = '';
 
+  /** Shoelace-compatible spelling of `hint`; `hint` wins when both are supplied. */
+  @property({ attribute: 'help-text' }) helpText = '';
+
+  /** SSR presence hint for visible label chrome. Hydrated instances also inspect slot content. */
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+
+  /** SSR presence hint for hint chrome. Hydrated instances also inspect both hint slots. */
+  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
+
+  /** Focuses the first thumb after the first client render. */
+  @property({ type: Boolean }) override autofocus = false;
+
+  /** Origin of the single-slider indicator. The fill spans between this value and `value`. */
+  @property({ type: Number, attribute: 'indicator-offset' }) indicatorOffset?: number;
+
   /** Which axis carries the value. `'vertical'` also switches the primary keys to
    *  ArrowUp/ArrowDown and exposes `aria-orientation="vertical"`. */
   @property({ reflect: true }) orientation: SliderOrientation = 'horizontal';
@@ -324,10 +574,20 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   @property({ type: Boolean, reflect: true }) readonly = false;
 
   /** Whether to draw a tick mark at every `step` position along the track. */
-  @property({ type: Boolean, reflect: true, attribute: 'with-markers' }) withMarkers = false;
+  @property({ type: Boolean, attribute: 'with-markers' }) withMarkers = false;
 
-  /** Whether to show a live value bubble above each handle while it is focused or dragged. */
-  @property({ type: Boolean, reflect: true, attribute: 'with-tooltip' }) withTooltip = false;
+  /** Whether to show a live value bubble beside each focused or dragged handle. */
+  @property({ type: Boolean, attribute: 'with-tooltip' }) withTooltip = false;
+
+  /** Physical side of the handle on which the tooltip is placed. */
+  @property({ reflect: true, attribute: 'tooltip-placement' })
+  tooltipPlacement: SliderTooltipPlacement = 'top';
+
+  /** Gap between a handle and its tooltip, measured in CSS pixels. */
+  @property({ type: Number, attribute: 'tooltip-distance' }) tooltipDistance = 8;
+
+  /** Shoelace-compatible tooltip switch. `none` hides; top/bottom also set the placement. */
+  @property() tooltip: 'top' | 'bottom' | 'none' = 'none';
 
   /** Optional human-readable formatter for a handle's `aria-valuetext` (and
    *  its `with-tooltip` bubble). It receives the same finite, clamped number
@@ -336,9 +596,14 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    *  `null`/`undefined` to omit the attribute. */
   @property({ attribute: false }) valueFormatter?: SliderValueFormatter;
 
-  @property({ type: Boolean, attribute: 'show-value', converter: trueDefaultBooleanConverter }) showValue = true;
+  /** Shoelace-compatible single-argument tooltip formatter. */
+  @property({ attribute: false }) tooltipFormatter?: (value: number) => string;
+
+  @property({ type: Boolean, attribute: 'show-value', converter: falseDefaultBooleanConverter }) showValue = false;
 
   @state() private hasHintSlot = false;
+  @state() private hasLabelSlot = false;
+  @state() private hasReferenceSlot = false;
 
   // Keyed by pointerId (a Map, not a single scalar) so two concurrent drags
   // — a two-finger touch, one per range handle — each keep tracking their
@@ -350,41 +615,38 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   /** The focused handle, tracked only to decide tooltip visibility. */
   private focusedHandle: SliderHandle | null = null;
 
-  override get disabled(): boolean {
-    return super.disabled;
-  }
-
-  override set disabled(next: boolean) {
-    super.disabled = next;
-    if (next) this.pendingKeyHandle = null;
-  }
-
-  formDisabledCallback(disabled: boolean): void {
-    const parent = Object.getPrototypeOf(LyraSlider.prototype) as {
-      formDisabledCallback: (this: LyraSlider, disabled: boolean) => void;
-    };
-    parent.formDisabledCallback.call(this, disabled);
-    if (disabled) this.pendingKeyHandle = null;
-  }
-
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.pendingValue !== undefined) {
-      const pending = this.pendingValue;
-      this.pendingValue = undefined;
-      this.value = pending;
-    } else {
-      this.ensureValue();
-    }
-    // Attributes are delivered before connection and in document order, so a
-    // `min-value` written before `min` was clamped against the *default*
-    // domain; re-sanitize now that every declarative attribute has landed.
+    // Attribute reactions are not ordered consistently across engines while
+    // a custom element upgrades. In WebKit the reflected `value` default can
+    // be applied before `step`, which would snap `value="0.2"` to the initial
+    // integer grid and leave it there after `step="0.1"` arrives. Once every
+    // parsed attribute is available, re-derive an untouched live value from
+    // its reset default on the final domain/grid. A script-written (dirty)
+    // value is only re-clamped, so reconnecting never resets user state.
+    if (this._valueDirty) this.sanitizeCurrentValue();
+    else this.restoreLiveValueFromDefault();
+    // Keep the raw range defaults until all domain/step attributes have
+    // upgraded, for the same cross-engine ordering reason as scalar `value`.
+    // Dirty handles survive reconnects; untouched handles are re-derived on
+    // the final grid and therefore reset to the exact declarative numbers.
+    if (!this._minValueDirty) this._minValue = this.clampValue(this._defaultMinValue);
+    if (!this._maxValueDirty) this._maxValue = this.clampValue(this._defaultMaxValue);
     this.sanitizeHandles();
-    // A hint child present from the start never fires an initial slotchange
-    // in every engine, so seed the flag from the light DOM too.
-    this.hasHintSlot =
-      this.hasHintSlot || Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
+    const slots = Array.from(this.children, (child) => child.getAttribute('slot'));
+    this.hasHintSlot = slots.some((slot) => slot === 'hint' || slot === 'help-text');
+    this.hasLabelSlot = slots.includes('label');
+    this.hasReferenceSlot = slots.includes('reference');
     this.syncFormValue();
+    this.updateValidity();
+    this.syncInteractionStates();
+  }
+
+  protected override firstUpdated(): void {
+    if (!this.autofocus) return;
+    requestAnimationFrame(() => {
+      if (this.isConnected && this.autofocus) this.focus();
+    });
   }
 
   override disconnectedCallback(): void {
@@ -397,6 +659,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     this.drags.clear();
     this.pendingKeyHandle = null;
     this.focusedHandle = null;
+    this.syncInteractionStates();
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('pointercancel', this.onPointerUp);
@@ -404,60 +667,122 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   }
 
   override attributeChangedCallback(name: string, old: string | null, value: string | null): void {
-    super.attributeChangedCallback(name, old, value);
-    // What `form.reset()` restores the range handles to — the *content
-    // attribute* only, exactly as `FormAssociated` tracks `value`'s own
-    // default (a later property assignment must not become permanent).
-    if (name === 'min-value') this._defaultMinValue = this._minValue;
-    if (name === 'max-value') this._defaultMaxValue = this._maxValue;
-  }
-
-  /** The numeric counterpart of `value`, mirroring native `<input
-   *  type=range>.valueAsNumber`. Reading always returns a finite, clamped,
-   *  step-snapped number — even if `value` is momentarily `""` (e.g. right
-   *  after `form.reset()` restores an undeclared default) — by falling back
-   *  to the midpoint of `[min, max]`. Writing stringifies the clamped result
-   *  back into `value`. */
-  get valueAsNumber(): number {
-    if (super.value === '') return this.defaultNumericValue();
-    const n = Number(super.value);
-    return Number.isFinite(n) ? this.clampValue(n) : this.defaultNumericValue();
-  }
-
-  set valueAsNumber(next: number) {
-    this.value = String(Number.isFinite(next) ? this.clampValue(next) : this.defaultNumericValue());
-  }
-
-  /**
-   * `FormAssociated` provides the form plumbing; this override adds the
-   * slider's native-range sanitization at the IDL boundary so invalid direct
-   * assignments cannot briefly submit a literal `NaN`/`Infinity`.
-   */
-  override get value(): string {
-    return super.value;
-  }
-
-  override set value(next: string) {
-    const raw = next ?? '';
-    if (!this.isConnected) {
-      this.pendingValue = raw;
-      super.value = raw;
-      this.syncFormValue();
-      return;
+    const isRangeValue = name === 'min-value' || name === 'max-value';
+    if (isRangeValue) this.applyingRangeValueAttribute = true;
+    try {
+      super.attributeChangedCallback(name, old, value);
+    } finally {
+      if (isRangeValue) this.applyingRangeValueAttribute = false;
     }
-    const numeric = Number(raw);
-    const sanitized = raw === '' || !Number.isFinite(numeric) ? this.defaultNumericValue() : this.clampValue(numeric);
-    super.value = String(sanitized);
-    this.syncFormValue();
+    // Store the unsnapped content default. WebKit can deliver this reaction
+    // before `step`; clamping here would permanently lose a fractional reset
+    // value. connectedCallback()/formResetCallback() resolve it on the final
+    // domain and grid instead.
+    if (name === 'min-value') {
+      this._defaultMinValue = value === null ? 0 : finiteNumber(Number(value), 0);
+    }
+    if (name === 'max-value') {
+      this._defaultMaxValue = value === null ? 50 : finiteNumber(Number(value), 50);
+    }
   }
 
-  override formResetCallback(): void {
-    super.formResetCallback();
-    this.value = String(this.valueAsNumber);
+  formDisabledCallback(fieldsetDisabled: boolean): void {
+    this._fieldsetDisabled = fieldsetDisabled;
+    if (fieldsetDisabled) this.pendingKeyHandle = null;
+    this.syncInteractionStates();
+    this.requestUpdate();
+  }
+
+  /** @internal */
+  [VALIDITY_ANCHOR](): HTMLElement | null {
+    return this.firstThumb();
+  }
+
+  checkValidity(): boolean {
+    return this.internals.checkValidity();
+  }
+
+  reportValidity(): boolean {
+    this.markInteracted();
+    return this.internals.reportValidity();
+  }
+
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.syncValidityStates();
+  }
+
+  /** Clears consumer-supplied validity and restores the current range constraints. */
+  resetValidity(): void {
+    this.setCustomValidity('');
+  }
+
+  formResetCallback(): void {
+    this.restoreLiveValueFromDefault();
     this._minValue = this._defaultMinValue;
     this._maxValue = this._defaultMaxValue;
+    this._minValueDirty = false;
+    this._maxValueDirty = false;
     this.sanitizeHandles();
+    this._hasInteracted = false;
+    this.syncFormValue();
+    this.syncValidityStates();
     this.requestUpdate();
+  }
+
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    reason: 'autocomplete' | 'restore',
+  ): void {
+    void reason;
+    if (state instanceof FormData) {
+      const values = [...state.values()].filter((entry): entry is string => typeof entry === 'string');
+      if (values.length >= 2) {
+        this.minValue = finiteNumber(Number(values[0]), this._defaultMinValue);
+        this.maxValue = finiteNumber(Number(values[1]), this._defaultMaxValue);
+      }
+      return;
+    }
+    this.value = typeof state === 'string' ? state : this._defaultValue;
+  }
+
+  private restoreLiveValueFromDefault(): void {
+    this.settingDefaultValue = true;
+    try {
+      this.value = this._defaultValue;
+    } finally {
+      this.settingDefaultValue = false;
+    }
+    this._valueDirty = false;
+  }
+
+  private updateValidity(): void {
+    this.validityController.setValidity({});
+    this.syncValidityStates();
+  }
+
+  private syncValidityStates(): void {
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this._hasInteracted,
+    });
+  }
+
+  private markInteracted = (): void => {
+    if (this._hasInteracted) return;
+    this._hasInteracted = true;
+    this.syncValidityStates();
+  };
+
+  private syncInteractionStates(): void {
+    const states = this.internals.states;
+    const set = (name: string, active: boolean): void => {
+      if (active) states.add(name);
+      else states.delete(name);
+    };
+    set('disabled', this.effectiveDisabled);
+    set('dragging', this.drags.size > 0);
+    set('focused', this.focusedHandle !== null);
   }
 
   /** Activates the first internal thumb control, mirroring `<lr-switch>`'s identical `override
@@ -481,6 +806,26 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     else this.firstThumb()?.blur();
   }
 
+  /** Silently advances the focused handle, matching native range IDL semantics. */
+  stepUp(steps = 1): void {
+    this.stepBy(steps);
+  }
+
+  /** Silently retreats the focused handle, matching native range IDL semantics. */
+  stepDown(steps = 1): void {
+    this.stepBy(-steps);
+  }
+
+  private stepBy(steps: number): void {
+    if (!this.interactive) return;
+    const step = finiteRange(this.step, 0, 0);
+    if (step <= 0) return;
+    const count = Math.trunc(finiteNumber(steps, 1));
+    if (count === 0) return;
+    const handle = this.range && this.focusedHandle !== 'max' ? 'min' : this.focusedHandle ?? 'value';
+    this.assignValueFor(handle, this.valueForHandle(handle) + step * count);
+  }
+
   private firstThumb(): HTMLElement | null {
     return (this.renderRoot?.querySelector('[part~="thumb"]') as HTMLElement | null) ?? null;
   }
@@ -498,45 +843,44 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     return !this.effectiveDisabled && !this.readonly;
   }
 
-  /** If `value` is still unset, seed it with the sanitized default — the
-   *  midpoint of `[min, max]`, snapped to `step` — so `value`/`valueAsNumber`
-   *  and rendering never have to treat "" as a real, distinct state. */
-  private ensureValue(): void {
-    if (this.value === '') this.value = String(this.defaultNumericValue());
-  }
-
   /** Re-sanitize an already assigned value immediately after range settings change. */
   private sanitizeCurrentValue(): void {
-    if (!this.isConnected) return;
     this.sanitizeHandles();
-    const current = super.value;
-    if (current === '') return;
-    const sanitized = String(this.clampValue(Number(current)));
-    if (sanitized !== current) this.value = sanitized;
+    const old = this._value;
+    this._value = this.clampValue(this._value);
+    if (this._value !== old) this.requestUpdate('value', old);
+    this.syncFormValue();
   }
 
-  /** Re-clamp both explicitly-assigned range handles into the current domain
-   *  and step grid, keeping `minValue <= maxValue`. Unset handles need no work
-   *  — they resolve to the domain bounds on read. */
+  /** Re-clamp both range handles into the current domain and step grid. */
   private sanitizeHandles(): void {
-    if (this._minValue !== undefined) this._minValue = this.clampValue(this._minValue);
-    if (this._maxValue !== undefined) this._maxValue = this.clampValue(this._maxValue);
-    const { lo, hi } = this.domain();
-    const rawMin = this._minValue ?? lo;
-    const rawMax = this._maxValue ?? hi;
-    if (rawMin > rawMax) {
-      if (this._minValue !== undefined) this._minValue = Math.min(rawMin, rawMax);
-      if (this._maxValue !== undefined) this._maxValue = Math.max(rawMin, rawMax);
-    }
+    this._minValue = this.clampValue(this._minValue);
+    this._maxValue = this.clampValue(this._maxValue);
+    if (this._minValue > this._maxValue) this._maxValue = this._minValue;
   }
 
-  /** Publish (or withhold) this control's submission value. A `range` slider
-   *  carries two numbers, which the single-string `FormAssociated` contract
-   *  cannot express, so it withdraws from `FormData` entirely instead of
-   *  submitting a value it isn't showing. */
+  /** Publish a scalar string, or two same-name entries for a range. */
   private syncFormValue(): void {
-    if (this.range) this.internals?.setFormValue(null);
-    else this.internals?.setFormValue(super.value);
+    if (!this.internals) return;
+    if (!this.range) {
+      const serialized = String(this.value);
+      this.internals.setFormValue(serialized, serialized);
+      this.updateValidity();
+      return;
+    }
+    const state = new FormData();
+    const stateKey = this.name || 'value';
+    state.append(stateKey, String(this.minValue));
+    state.append(stateKey, String(this.maxValue));
+    if (!this.name) {
+      this.internals.setFormValue(null, state);
+    } else {
+      const submission = new FormData();
+      submission.append(this.name, String(this.minValue));
+      submission.append(this.name, String(this.maxValue));
+      this.internals.setFormValue(submission, state);
+    }
+    this.updateValidity();
   }
 
   private domain(): { lo: number; hi: number } {
@@ -544,16 +888,14 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     // arrives here as NaN, and a literal `min="Infinity"`/`max="Infinity"`
     // arrives as +-Infinity; `isNaN(...)` alone only catches the former, so
     // test finiteness instead -- otherwise Infinity propagates into every
-    // clampValue()/percentOf() caller (e.g. the midpoint default computing
-    // `0 + Infinity / 2`).
+    // clampValue()/percentOf() caller.
     const min = finiteNumber(this.min, 0);
     const max = finiteNumber(this.max, 100);
     return { lo: Math.min(min, max), hi: Math.max(min, max) };
   }
 
   private defaultNumericValue(): number {
-    const { lo, hi } = this.domain();
-    return this.clampValue(finiteMidpoint(lo, hi));
+    return this.clampValue(0);
   }
 
   private percentOf(value: number): number {
@@ -567,7 +909,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     // A NaN/Infinity `raw` (e.g. `valueAsNumber = NaN`, or a `value` string
     // that fails Number conversion) would otherwise propagate straight
     // through the Math.round/Math.max/Math.min calls below and poison the
-    // submitted FormAssociated value with the literal "NaN"/"Infinity" —
+    // submitted form value with the literal "NaN"/"Infinity" —
     // resolve it to a real, finite, in-domain number instead.
     raw = finiteNumber(raw, lo);
     // A non-positive or non-finite step would otherwise divide by zero/NaN
@@ -601,15 +943,10 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     return this.valueAsNumber;
   }
 
-  /** A handle's actually reachable sub-range, bounded by its sibling the same
-   *  way `setValueFor()` enforces it — used both for
-   *  `aria-valuemin`/`aria-valuemax` and for Home/End's jump targets, rather
-   *  than reporting the full `[min, max]` domain the sibling makes partly
-   *  unreachable. */
+  /** Each active handle can reach the full domain because crossing pushes its sibling. */
   private reachableBounds(handle: SliderHandle): { min: number; max: number } {
     const { lo, hi } = this.domain();
-    if (handle === 'min') return { min: lo, max: this.maxValue };
-    if (handle === 'max') return { min: this.minValue, max: hi };
+    void handle;
     return { min: lo, max: hi };
   }
 
@@ -623,7 +960,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   }
 
   private emitInput(handle: SliderHandle): void {
-    dispatchNativeEvent(this, 'input');
+    dispatchNativeInputEvent(this);
     this.emit('lr-input', this.detailFor(handle));
   }
 
@@ -632,29 +969,41 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     this.emit('lr-change', this.detailFor(handle));
   }
 
-  /** Assign one handle, clamped to the domain, the step grid, and its sibling.
-   *  Returns whether anything actually moved. */
-  private setValueFor(handle: SliderHandle, raw: number, commit: boolean): boolean {
+  /** Assign one handle silently. Crossing pushes the sibling to the same value. */
+  private assignValueFor(handle: SliderHandle, raw: number): boolean {
     const previous = this.valueForHandle(handle);
     const stepped = this.clampValue(raw);
-    // The handles may meet but never cross: the moving one stops at its
-    // sibling's current value.
-    const clamped =
-      handle === 'min'
-        ? Math.min(stepped, this.maxValue)
-        : handle === 'max'
-          ? Math.max(stepped, this.minValue)
-          : stepped;
-    if (clamped === previous) return false;
+    if (stepped === previous) return false;
     if (handle === 'min') {
-      this._minValue = clamped;
+      this._minValueDirty = true;
+      this._minValue = stepped;
       this.requestUpdate('minValue', previous);
+      if (this._minValue > this._maxValue) {
+        const previousMax = this._maxValue;
+        this._maxValueDirty = true;
+        this._maxValue = this._minValue;
+        this.requestUpdate('maxValue', previousMax);
+      }
     } else if (handle === 'max') {
-      this._maxValue = clamped;
+      this._maxValueDirty = true;
+      this._maxValue = stepped;
       this.requestUpdate('maxValue', previous);
+      if (this._maxValue < this._minValue) {
+        const previousMin = this._minValue;
+        this._minValueDirty = true;
+        this._minValue = this._maxValue;
+        this.requestUpdate('minValue', previousMin);
+      }
     } else {
-      this.value = String(clamped);
+      this.value = stepped;
     }
+    if (handle !== 'value') this.syncFormValue();
+    return true;
+  }
+
+  /** Assign one handle as a user edit and publish the matching event pairs. */
+  private setValueFor(handle: SliderHandle, raw: number, commit: boolean): boolean {
+    if (!this.assignValueFor(handle, raw)) return false;
     this.emitInput(handle);
     if (commit) this.emitChange(handle);
     return true;
@@ -747,6 +1096,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     // fires `lostpointercapture` — both need the same teardown as pointerup.
     window.addEventListener('pointercancel', this.onPointerUp);
     window.addEventListener('lostpointercapture', this.onPointerUp);
+    this.syncInteractionStates();
     this.requestUpdate();
     return drag;
   }
@@ -825,11 +1175,13 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
       window.removeEventListener('pointercancel', this.onPointerUp);
       window.removeEventListener('lostpointercapture', this.onPointerUp);
     }
+    this.syncInteractionStates();
     this.requestUpdate();
   }
 
   private onHandleFocus(handle: SliderHandle, event: FocusEvent): void {
     this.focusedHandle = handle;
+    this.syncInteractionStates();
     this.requestUpdate();
     relayNativeEvent(this, event);
     this.emit('lr-focus');
@@ -838,15 +1190,30 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   private onHandleBlur(handle: SliderHandle, event: FocusEvent): void {
     if (this.focusedHandle === handle) {
       this.focusedHandle = null;
+      this.syncInteractionStates();
       this.requestUpdate();
     }
     relayNativeEvent(this, event);
     this.emit('lr-blur');
   }
 
-  private onHintSlotChange = (e: Event): void => {
-    this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onSlotChange = (event: Event): void => {
+    const slot = event.target as HTMLSlotElement;
+    if (slot.name === 'hint' || slot.name === 'help-text') {
+      this.hasHintSlot = this.slotsHaveContent(['hint', 'help-text']);
+    }
+    if (slot.name === 'label') this.hasLabelSlot = this.slotsHaveContent(['label']);
+    if (slot.name === 'reference') this.hasReferenceSlot = this.slotsHaveContent(['reference']);
   };
+
+  private slotsHaveContent(names: readonly string[]): boolean {
+    return names.some((name) => {
+      const slot = this.renderRoot.querySelector<HTMLSlotElement>(`slot[name="${name}"]`);
+      return slot?.assignedNodes({ flatten: true }).some((node) =>
+        node.nodeType === Node.ELEMENT_NODE || Boolean(node.textContent?.trim()),
+      ) ?? false;
+    });
+  }
 
   private formatValue(value: number): string {
     return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 }).format(value);
@@ -886,12 +1253,20 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     return Array.from({ length: intervals + 1 }, (_unused, index) => (index / intervals) * 100);
   }
 
-  private renderHandle(handle: SliderHandle, describedBy: string | undefined): TemplateResult {
+  private renderHandle(
+    handle: SliderHandle,
+    describedBy: string | undefined,
+    labelledBy: string | undefined,
+  ): TemplateResult {
     const value = this.valueForHandle(handle);
     const bounds = this.reachableBounds(handle);
     const percent = this.percentOf(value);
     const numeric = this.formatValue(value);
-    const valueText = this.valueFormatter ? this.valueFormatter(value, handle) : numeric;
+    const valueText = this.valueFormatter
+      ? this.valueFormatter(value, handle)
+      : this.tooltipFormatter
+        ? this.tooltipFormatter(value)
+        : numeric;
     const partName = { value: 'thumb', min: 'thumb thumb-min', max: 'thumb thumb-max' }[handle];
     const handleLabel = {
       value: this.resolvedLabel(),
@@ -901,7 +1276,16 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     const tooltipShown =
       this.focusedHandle === handle ||
       Array.from(this.drags.values()).some((drag) => drag.handle === handle);
-    const tooltipPart = tooltipShown ? 'tooltip tooltip-visible' : 'tooltip';
+    const tooltipPart = tooltipShown
+      ? 'tooltip tooltip__tooltip tooltip-visible'
+      : 'tooltip tooltip__tooltip';
+    const showTooltip = this.withTooltip || this.tooltip !== 'none';
+    const placement = this.tooltip === 'none' ? this.tooltipPlacement : this.tooltip;
+    const tooltipStyle = `${this.offsetStyle(percent)};--lr-slider-tooltip-distance:${finiteRange(
+      this.tooltipDistance,
+      8,
+      0,
+    )}`;
     return html`
       <div
         part=${partName}
@@ -912,7 +1296,8 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
         aria-valuemax=${bounds.max}
         aria-valuenow=${value}
         aria-valuetext=${valueText ?? nothing}
-        aria-label=${handleLabel}
+        aria-label=${labelledBy && handle === 'value' ? nothing : handleLabel}
+        aria-labelledby=${labelledBy && handle === 'value' ? labelledBy : nothing}
         aria-describedby=${describedBy ?? nothing}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-readonly=${this.readonly ? 'true' : 'false'}
@@ -923,32 +1308,56 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
         @focus=${(event: FocusEvent) => this.onHandleFocus(handle, event)}
         @blur=${(event: FocusEvent) => this.onHandleBlur(handle, event)}
       ></div>
-      ${this.withTooltip
-        ? html`<span part=${tooltipPart} aria-hidden="true" style=${this.offsetStyle(percent)}
-            >${valueText ?? numeric}</span
-          >`
+      ${showTooltip
+        ? html`<span
+            part=${tooltipPart}
+            data-placement=${placement}
+            aria-hidden="true"
+            style=${tooltipStyle}
+          >
+            <span part="tooltip__content">${valueText ?? numeric}</span>
+            <span part="tooltip__arrow"></span>
+          </span>`
         : nothing}
     `;
   }
 
   override render(): TemplateResult {
     const vertical = this.orientation === 'vertical';
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
+    const hasHint = this.withHint || this.hasHintSlot || this.hint.length > 0 || this.helpText.length > 0;
+    const hasLabel = this.withLabel || this.hasLabelSlot || this.label.length > 0;
+    const hasReference = this.hasReferenceSlot;
     const describedBy = hasHint ? HINT_ID : undefined;
-    const startPercent = this.range ? this.percentOf(this.minValue) : 0;
+    const labelledBy = hasLabel && !this.hasAttribute('aria-label') ? LABEL_ID : undefined;
+    const valuePercent = this.percentOf(this.value);
+    const offsetPercent = this.percentOf(
+      this.indicatorOffset === undefined
+        ? this.domain().lo
+        : finiteNumber(this.indicatorOffset, this.domain().lo),
+    );
+    const startPercent = this.range
+      ? this.percentOf(this.minValue)
+      : Math.min(valuePercent, offsetPercent);
     const endPercent = this.range
       ? this.percentOf(this.maxValue)
-      : this.percentOf(this.valueAsNumber);
+      : Math.max(valuePercent, offsetPercent);
     const span = Math.max(0, endPercent - startPercent);
     const indicatorStyle = vertical
       ? `inset-block-end:${startPercent}%;block-size:${span}%`
       : `inset-inline-start:${startPercent}%;inline-size:${span}%`;
     const markers = this.markerPercents();
     return html`
+      <div id=${LABEL_ID} part="label form-control-label" ?hidden=${!hasLabel}>
+        ${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot>
+      </div>
+      <div part="references" ?hidden=${!hasReference}>
+        <slot name="reference" @slotchange=${this.onSlotChange}></slot>
+      </div>
       <div
-        part="base"
+        part="base slider form-control form-control-input input control"
         role=${this.range ? 'group' : nothing}
-        aria-label=${this.range ? this.resolvedLabel() : nothing}
+        aria-label=${this.range && !labelledBy ? this.resolvedLabel() : nothing}
+        aria-labelledby=${this.range && labelledBy ? labelledBy : nothing}
         @pointerdown=${this.onBasePointerDown}
       >
         <div part="track"></div>
@@ -961,14 +1370,19 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
             </div>`
           : nothing}
         ${this.range
-          ? html`${this.renderHandle('min', describedBy)}${this.renderHandle('max', describedBy)}`
-          : this.renderHandle('value', describedBy)}
+          ? html`${this.renderHandle('min', describedBy, undefined)}${this.renderHandle(
+              'max',
+              describedBy,
+              undefined,
+            )}`
+          : this.renderHandle('value', describedBy, labelledBy)}
       </div>
       ${this.showValue
         ? html`<span part="value" aria-hidden="true">${this.readoutText()}</span>`
         : nothing}
-      <div id=${HINT_ID} part="hint" ?hidden=${!hasHint}>
-        ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+      <div id=${HINT_ID} part="hint form-control-help-text" ?hidden=${!hasHint}>
+        ${this.hint || this.helpText}<slot name="hint" @slotchange=${this.onSlotChange}></slot
+        ><slot name="help-text" @slotchange=${this.onSlotChange}></slot>
       </div>
     `;
   }

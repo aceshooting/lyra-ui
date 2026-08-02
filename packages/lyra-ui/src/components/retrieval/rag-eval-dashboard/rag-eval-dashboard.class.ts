@@ -55,6 +55,8 @@ export interface LyraRagEvalDashboardEventMap {
  * @csspart runs-heading - Run-history heading.
  * @csspart run - One evaluation run.
  * @csspart empty - The no-runs or unavailable-controlled-slice state.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -50,6 +50,72 @@ export const DeclarativeItems: Story = {
   `,
 };
 
+/** Multiple selection displays checkboxes, cascades branch selection, and derives indeterminate parents. */
+export const MultipleSelection: Story = {
+  render: () => html`
+    <lr-tree style="max-width: 20rem" label="Release contents" selection="multiple">
+      <lr-tree-item expanded>
+        Packages
+        <lr-tree-item selected>Core</lr-tree-item>
+        <lr-tree-item>Icons</lr-tree-item>
+        <lr-tree-item disabled>Private fixtures</lr-tree-item>
+      </lr-tree-item>
+      <lr-tree-item>Documentation</lr-tree-item>
+    </lr-tree>
+  `,
+};
+
+/** Tree-wide icons are inherited by every disclosure; an item-level slot can override either one. */
+export const CustomDisclosureIcons: Story = {
+  render: () => html`
+    <lr-tree style="max-width: 20rem" label="Custom disclosure icons">
+      <span slot="collapse-icon" aria-hidden="true">⊞</span>
+      <span slot="expand-icon" aria-hidden="true">⊟</span>
+      <lr-tree-item>
+        Guides
+        <lr-tree-item>Installation</lr-tree-item>
+        <lr-tree-item>Theming</lr-tree-item>
+      </lr-tree-item>
+      <lr-tree-item>
+        Components
+        <span slot="collapse-icon" aria-hidden="true">＋</span>
+        <span slot="expand-icon" aria-hidden="true">−</span>
+        <lr-tree-item>Tree</lr-tree-item>
+      </lr-tree-item>
+    </lr-tree>
+  `,
+};
+
+/** Lazy items request children once and remain visibly busy until content arrives. */
+export const LazyLoading: Story = {
+  render: () => {
+    const latestGeneration = new WeakMap<HTMLElement, number>();
+    const loadChildren = (
+      event: CustomEvent<{
+        item: HTMLElement & { lazy: boolean; loading: boolean };
+        generation: number;
+      }>,
+    ): void => {
+      const { item, generation } = event.detail;
+      latestGeneration.set(item, generation);
+      window.setTimeout(() => {
+        if (!item.isConnected || !item.loading || latestGeneration.get(item) !== generation) return;
+        for (const label of ['Birch', 'Cedar', 'Maple', 'Pine']) {
+          const child = document.createElement(item.localName);
+          child.setAttribute('label', label);
+          item.appendChild(child);
+        }
+        item.lazy = false;
+      }, 450);
+    };
+    return html`
+      <lr-tree style="max-width: 20rem" label="Available trees" @lr-lazy-load=${loadChildren}>
+        <lr-tree-item lazy>Available trees</lr-tree-item>
+      </lr-tree>
+    `;
+  },
+};
+
 export const RichRows: Story = {
   render: () => html`
     <lr-tree

@@ -43,6 +43,8 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @csspart next-button - Next-slide button.
  * @csspart next-icon - Next-slide icon.
  * @csspart container - The renderer-owned output container.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   // `srOnly` is not optional chrome here: the shared anchor-target mixin's

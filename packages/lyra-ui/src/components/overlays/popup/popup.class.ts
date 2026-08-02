@@ -14,7 +14,6 @@ import {
 } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from '../overlay/overlay-arrow.js';
 import { styles } from './popup.styles.js';
 
@@ -26,6 +25,15 @@ export type {
   PlaceStrategy,
   PlaceSync,
 };
+
+/** Shared boundary vocabulary exposed by the mapped popup primitive. */
+export type LyraPopupBoundary = 'viewport' | 'scroll';
+
+/** Every public anchor form the mapped primitive accepts. */
+export type LyraPopupAnchor = Element | string | VirtualAnchor;
+
+/** The mapped spelling is `initial`; `initial-placement` remains a compatibility alias. */
+export type LyraPopupFlipFallbackStrategy = 'best-fit' | 'initial' | 'initial-placement';
 
 /** Every `Placement` Floating UI accepts, for validating the `flip-fallback-placements` list. */
 const PLACEMENTS: ReadonlySet<string> = new Set([
@@ -64,18 +72,16 @@ export interface LyraPopupEventMap {
  * inline editor, a colour-picker panel, a custom autocomplete list. If you find yourself adding
  * light dismiss and focus return on top, use `<lr-popover>` instead.
  *
- * Two defaults deliberately diverge from the upstream primitive this mirrors, because changing
- * either would silently move every popup already shipped on top of this element:
- * `strategy` defaults to `fixed` rather than `absolute`, and `shift-padding`, when unset, inherits
- * `padding` (`8`) rather than falling to `0`. Set `strategy="absolute"` / `shift-padding="0"` to
- * get the upstream defaults exactly. `auto-size` likewise narrows an always-on measurement rather
- * than switching one on: this element has always published the available space as
- * `--lr-positioner-available-inline-size`/`--lr-positioner-available-block-size` and capped the
+ * The v8 defaults match the mapped primitive: `placement="top"`, `strategy="absolute"`, zero
+ * distance/padding, and opt-in flip/shift. `auto-size` narrows an always-on measurement rather
+ * than switching one on: this element publishes the available space as
+   * `--lr-positioner-available-inline-size`/`--lr-positioner-available-block-size` and caps the
  * popup with them, so `auto-size` re-measures the named axes against `auto-size-boundary` and
  * `auto-size-padding` instead of the shared `padding`.
  *
  * @customElement lr-popup
- * @slot anchor - The element to position against. Ignored when `for` or `virtualAnchor` is set.
+ * @slot anchor - The element to position against. Ignored when `anchor`, `for`, or
+ * `virtualAnchor` is set.
  * @slot - The floating content.
  * @event lr-reposition - Emitted after each recomputation. `detail: { placement }` carries the
  * placement actually used, which `flip` may have changed.
@@ -88,7 +94,17 @@ export interface LyraPopupEventMap {
  * `<lr-popover>` and `<lr-tooltip>`.
  * @csspart hover-bridge - The invisible quad spanning the `distance` gap between anchor and popup,
  * rendered only when `hover-bridge` is set.
- * @cssprop [--lr-popup-arrow-size=var(--lr-size-0-375rem)] - Half-width of the arrow square.
+ * @cssprop [--arrow-size=var(--lr-popup-arrow-size,var(--lr-size-0-375rem))] - Half-width of the
+ * arrow square. `--lr-popup-arrow-size` remains a compatibility alias.
+ * @cssprop --lr-popup-arrow-size - Retained Lyra fallback for `--arrow-size`.
+ * @cssprop [--arrow-color=var(--lr-color-surface-raised)] - Arrow fill.
+ * @cssprop [--popup-border-width=var(--lr-border-width-thin)] - Popup/arrow border width.
+ * @cssprop [--show-duration=var(--lr-duration-fast)] - Activation transition duration.
+ * @cssprop [--hide-duration=var(--lr-duration-fast)] - Deactivation transition duration.
+ * @cssprop --auto-size-available-width - Read-only available inline size.
+ * @cssprop --auto-size-available-height - Read-only available block size.
+ * @status stable
+ * @since 8.0.0
  */
 export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -103,24 +119,29 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
    */
   @property({ reflect: true }) for = '';
 
+  /** Element, same-root id string, or Floating UI-compatible virtual element to position against.
+   *  Takes precedence over `for` and the anchor slot; `virtualAnchor` remains the highest-priority
+   *  Lyra compatibility path. */
+  @property() anchor: LyraPopupAnchor | null = null;
+
   /** Preferred placement. `flip`/`shift` may override it; the result is reported by `lr-reposition`. */
-  @property({ reflect: true }) placement: Placement = 'bottom-start';
+  @property({ reflect: true }) placement: Placement = 'top';
 
   /**
-   * CSS positioning scheme. `fixed` (the default here) escapes every ancestor's
+   * CSS positioning scheme. `fixed` escapes every ancestor's
    * transform/filter/containment context; `absolute` positions against the nearest positioned
-   * ancestor, so the popup scrolls away with the content it belongs to.
+   * ancestor, so the popup scrolls away with the content it belongs to. Defaults to `absolute`.
    */
-  @property({ reflect: true }) strategy: PlaceStrategy = 'fixed';
+  @property({ reflect: true }) strategy: PlaceStrategy = 'absolute';
 
   /** Distance from the anchor along the placement axis, in pixels. */
-  @property({ type: Number }) distance = 4;
+  @property({ type: Number }) distance = 0;
 
   /** Offset along the anchor's edge, in pixels. */
   @property({ type: Number }) skidding = 0;
 
   /** Flip to the opposite side when the preferred one does not fit. */
-  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) flip = true;
+  @property({ type: Boolean, reflect: true }) flip = false;
 
   /**
    * Space-delimited placements `flip` tries, in order, instead of just the opposite side —
@@ -130,10 +151,15 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
 
   /**
    * What `flip` settles on when none of the candidate placements fit: `best-fit` takes the
-   * least-overflowing one, `initial-placement` keeps `placement` as written.
+   * least-overflowing one, `initial` keeps `placement` as written. `initial-placement` remains a
+   * compatibility alias.
    */
   @property({ attribute: 'flip-fallback-strategy' })
-  flipFallbackStrategy: PlaceFlipFallbackStrategy = 'best-fit';
+  flipFallbackStrategy: LyraPopupFlipFallbackStrategy = 'best-fit';
+
+  /** Shared clipping boundary. `viewport` ignores clipping ancestors; `scroll` uses them. The
+   *  separate flip/shift/auto-size boundaries below override this value one middleware at a time. */
+  @property({ reflect: true }) boundary: LyraPopupBoundary = 'viewport';
 
   /** Element(s) `flip` measures overflow against, instead of the popup's clipping ancestors. */
   @property({ attribute: false }) flipBoundary: PlaceBoundary | null = null;
@@ -142,19 +168,16 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @property({ type: Number, attribute: 'flip-padding' }) flipPadding = 0;
 
   /** Shift along the anchor's edge to stay within the viewport. */
-  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) shift = true;
+  @property({ type: Boolean, reflect: true }) shift = false;
 
   /** Element(s) `shift` measures overflow against, instead of the popup's clipping ancestors. */
   @property({ attribute: false }) shiftBoundary: PlaceBoundary | null = null;
 
-  /**
-   * Padding kept clear inside the shift boundary, in pixels. Unset (`null`) inherits `padding`,
-   * which is what this element did before the knob existed.
-   */
-  @property({ type: Number, attribute: 'shift-padding' }) shiftPadding: number | null = null;
+  /** Padding kept clear inside the shift boundary, in pixels. */
+  @property({ type: Number, attribute: 'shift-padding' }) shiftPadding = 0;
 
   /** Viewport padding kept clear by `shift` and by the available-size measurement. */
-  @property({ type: Number }) padding = 8;
+  @property({ type: Number }) padding = 0;
 
   /**
    * Re-measures the available space on the named axes against `auto-size-boundary` and
@@ -186,7 +209,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
 
   /** Keeps the arrow this far from the popup's corners, in pixels. */
-  @property({ type: Number, attribute: 'arrow-padding' }) arrowPadding = 0;
+  @property({ type: Number, attribute: 'arrow-padding' }) arrowPadding = 10;
 
   /**
    * Anchor against an arbitrary rectangle rather than an element — a canvas hit, a chart datum, a
@@ -195,13 +218,19 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
    */
   @property({ attribute: false }) virtualAnchor: VirtualAnchor | { x: number; y: number; width?: number; height?: number } | null = null;
 
-  @query('[part~="popup"]') private popupElement!: HTMLElement;
+  /** The positioned popup element, exposed for mapped popup integrations. Upstream public types
+   * permit assignment, so writes are accepted for source compatibility; the shadow-owned node
+   * remains authoritative because replacing it would detach positioning, parts, and animation. */
+  get popup(): HTMLElement {
+    return this.renderRoot?.querySelector<HTMLElement>('[part~="popup"]') as HTMLElement;
+  }
+  set popup(_next: HTMLElement) {}
   @query('[part~="arrow"]') private arrowElement!: HTMLElement;
   @query('[part~="hover-bridge"]') private hoverBridgeElement!: HTMLElement;
   @query('[part="anchor"]') private anchorSlotWrapper!: HTMLElement;
 
   private stopPlacing?: () => void;
-  private resolvedPlacement: Placement = 'bottom-start';
+  private resolvedPlacement: Placement = 'top';
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
@@ -221,30 +250,28 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
    *  layout change — but a consumer that moved a virtual anchor imperatively can force a pass. */
   reposition(): void {
     this.teardown();
-    if (!this.active || !this.popupElement) return;
+    if (!this.active || !this.popup) return;
     const anchor = this.resolveAnchor();
     if (!anchor) return;
     const arrowPadding = Math.max(0, finiteNumber(this.arrowPadding, 0));
-    this.stopPlacing = place(anchor, this.popupElement, {
+    this.stopPlacing = place(anchor, this.popup, {
       placement: rtlAwarePlacement(this.placement, this),
       strategy: this.strategy === 'absolute' ? 'absolute' : 'fixed',
-      offset: finiteNumber(this.distance, 4),
+      offset: finiteNumber(this.distance, 0),
       skidding: finiteNumber(this.skidding, 0),
+      boundary: this.boundary === 'scroll' ? undefined : [],
       flip: this.flip,
       flipFallbackPlacements: this.parsedFlipFallbackPlacements,
       flipFallbackStrategy:
-        this.flipFallbackStrategy === 'initial-placement' ? 'initial-placement' : 'best-fit',
+        this.flipFallbackStrategy === 'initial' || this.flipFallbackStrategy === 'initial-placement'
+          ? 'initial-placement'
+          : 'best-fit',
       flipBoundary: this.flipBoundary ?? undefined,
       flipPadding: Math.max(0, finiteNumber(this.flipPadding, 0)),
       shift: this.shift,
       shiftBoundary: this.shiftBoundary ?? undefined,
-      // Unset (or unparseable) shift padding inherits `padding`, which is what this element did
-      // before the knob existed.
-      shiftPadding:
-        this.shiftPadding === null
-          ? undefined
-          : Math.max(0, finiteNumber(this.shiftPadding, finiteNumber(this.padding, 8))),
-      padding: finiteNumber(this.padding, 8),
+      shiftPadding: Math.max(0, finiteNumber(this.shiftPadding, 0)),
+      padding: Math.max(0, finiteNumber(this.padding, 0)),
       autoSize: AUTO_SIZE_AXES.has(this.autoSize as string) ? (this.autoSize as PlaceAutoSize) : undefined,
       autoSizeBoundary: this.autoSizeBoundary ?? undefined,
       autoSizePadding: Math.max(0, finiteNumber(this.autoSizePadding, 0)),
@@ -253,6 +280,17 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
       arrowPadding,
       hoverBridge: this.hoverBridge ? this.hoverBridgeElement : undefined,
       onPlaced: ({ placement, arrow }) => {
+        // Upstream exposes these two read-only compatibility properties without a prefix. Write
+        // them from the token-backed internal measurement rather than declaring an unprefixed
+        // design value in component CSS (which the repository style policy correctly rejects).
+        this.popup.style.setProperty(
+          '--auto-size-available-width',
+          this.popup.style.getPropertyValue('--lr-positioner-available-inline-size'),
+        );
+        this.popup.style.setProperty(
+          '--auto-size-available-height',
+          this.popup.style.getPropertyValue('--lr-positioner-available-block-size'),
+        );
         // The same arrow geometry <lr-popover> and <lr-tooltip> use, so `arrow-placement` means
         // one thing across every anchored surface in the library.
         const side = applyOverlayArrow(this.arrowElement ?? null, {
@@ -262,7 +300,8 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
           arrowPlacement: this.arrowPlacement,
           arrowPadding,
           rtl: this.effectiveDirection === 'rtl',
-          sizeProperty: '--lr-popup-arrow-size',
+          sizeProperty: '--arrow-size',
+          fallbackSizeProperty: '--lr-popup-arrow-size',
         });
         this.applyArrowSidePart(side);
         if (placement === this.resolvedPlacement) return;
@@ -296,6 +335,17 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
       if (!Number.isFinite(rect.x) || !Number.isFinite(rect.y)) return null;
       return virtualAnchorFromRect(rect);
     }
+    if (this.anchor) {
+      if (typeof this.anchor === 'string') {
+        const root = this.getRootNode() as Document | ShadowRoot;
+        const target = root.getElementById?.(this.anchor) ?? null;
+        if (target) return target;
+      } else if (this.anchor instanceof Element) {
+        return this.anchor;
+      } else if (typeof this.anchor.getBoundingClientRect === 'function') {
+        return this.anchor;
+      }
+    }
     if (this.for) {
       const root = this.getRootNode() as Document | ShadowRoot;
       const target = root.getElementById?.(this.for) ?? null;
@@ -309,7 +359,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
    *  selector shape silently never matches. */
   private applySidePart(placement: Placement): void {
     const side = placement.split('-')[0] ?? 'bottom';
-    this.popupElement?.setAttribute('part', `popup ${side}`);
+    this.popup?.setAttribute('part', `popup ${side}`);
   }
 
   /** Same rule as `applySidePart`: the resolved side rides in the part name, never in an

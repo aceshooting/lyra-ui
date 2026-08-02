@@ -5,15 +5,29 @@ import { styles } from './button.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-button', () => {
+  it('bridges a host invalid check to one non-cancelable lr-invalid alias', async () => {
+    const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
+    const aliases: CustomEvent[] = [];
+    el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+
+    el.dispatchEvent(new Event('invalid', { cancelable: true }));
+
+    expect(aliases).to.have.lengthOf(1);
+    expect(aliases[0].target).to.equal(el);
+    expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
+    expect(aliases[0].cancelable).to.be.false;
+  });
+
   it('defaults to neutral/accent/m/button with a slotted label', async () => {
     const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
     expect(el.variant).to.equal('neutral');
+    expect(el.getAttribute('variant')).to.equal('neutral');
     expect(el.appearance).to.equal('accent');
     expect(el.size).to.equal('m');
     expect(el.type).to.equal('button');
     expect(el.loading).to.equal(false);
     expect(el.disabled).to.equal(false);
-    const button = el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement;
+    const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
     expect(button.type).to.equal('button');
   });
 
@@ -24,13 +38,27 @@ describe('lr-button', () => {
     expect(el.getAttribute('variant')).to.equal('danger');
     expect(el.getAttribute('appearance')).to.equal('outlined');
     expect(el.getAttribute('size')).to.equal('l');
-    const button = el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement;
+    const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
     expect(button.disabled).to.be.true;
+  });
+
+  it('reflects the pinned Web Awesome href and submitter value properties', async () => {
+    const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
+    el.href = '/account';
+    el.value = 'save-account';
+    await el.updateComplete;
+
+    expect(el.getAttribute('href')).to.equal('/account');
+    expect(el.getAttribute('value')).to.equal('save-account');
+
+    el.href = undefined;
+    await el.updateComplete;
+    expect(el.hasAttribute('href')).to.be.false;
   });
 
   it('fires a native click that bubbles and composes through the shadow boundary when enabled', async () => {
     const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
-    const button = el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement;
+    const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
     setTimeout(() => button.click());
     const ev = await oneEvent(el, 'click');
     expect(ev.bubbles).to.be.true;
@@ -60,11 +88,11 @@ describe('lr-button', () => {
     const disabledEl = (await fixture(html`<lr-button disabled>Save</lr-button>`)) as LyraButton;
     let calls = 0;
     disabledEl.addEventListener('click', () => calls++);
-    (disabledEl.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement).click();
+    (disabledEl.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement).click();
 
     const loadingEl = (await fixture(html`<lr-button .loading=${true}>Save</lr-button>`)) as LyraButton;
     loadingEl.addEventListener('click', () => calls++);
-    (loadingEl.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement).click();
+    (loadingEl.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement).click();
 
     expect(calls).to.equal(0);
   });
@@ -75,7 +103,7 @@ describe('lr-button', () => {
     el.loading = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.not.be.null;
-    const button = el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement;
+    const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
     expect(button.getAttribute('aria-busy')).to.equal('true');
   });
 
@@ -83,7 +111,7 @@ describe('lr-button', () => {
     const el = (await fixture(
       html`<lr-button aria-label="Close dialog" appearance="plain"><svg slot="start"></svg></lr-button>`,
     )) as LyraButton;
-    const button = el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement;
+    const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
     expect(button.getAttribute('aria-label')).to.equal('Close dialog');
   });
 
@@ -91,7 +119,7 @@ describe('lr-button', () => {
     const el = (await fixture(
       html`<lr-button aria-label="Close dialog" appearance="plain"><svg slot="start"></svg></lr-button>`,
     )) as LyraButton;
-    const button = el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement;
+    const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
     expect(el.accessibleLabel).to.equal('Close dialog');
 
     el.setAttribute('aria-label', 'Dismiss dialog');
@@ -109,7 +137,7 @@ describe('lr-button', () => {
     const el = (await fixture(
       html`<lr-button href="/settings" aria-label="Open settings">Settings</lr-button>`,
     )) as LyraButton;
-    const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+    const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
     expect(anchor.getAttribute('aria-label')).to.equal('Open settings');
 
     el.accessibleLabel = 'Manage settings';
@@ -129,7 +157,7 @@ describe('lr-button', () => {
       e.preventDefault();
       submitted = true;
     });
-    (el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement).click();
     expect(submitted).to.be.true;
   });
 
@@ -143,8 +171,42 @@ describe('lr-button', () => {
     const input = form.querySelector('input') as HTMLInputElement;
     input.value = 'changed';
     const el = form.querySelector('lr-button') as LyraButton;
-    (el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement).click();
     expect(input.value).to.equal('');
+  });
+
+  it('submits and resets through an external form owner, including submitter overrides', async () => {
+    const root = await fixture(html`
+      <div>
+        <form id="external-button-owner"><input name="field" value="initial" /></form>
+        <lr-button
+          form="external-button-owner"
+          type="submit"
+          name="action"
+          value="save"
+          formmethod="post"
+        >Save</lr-button>
+      </div>
+    `);
+    const form = root.querySelector('form') as HTMLFormElement;
+    const input = form.querySelector('input') as HTMLInputElement;
+    const el = root.querySelector('lr-button') as LyraButton;
+    const seen: { action: FormDataEntryValue | null; method: string } = { action: null, method: '' };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      seen.action = new FormData(form, event.submitter).get('action');
+      seen.method = (event.submitter as HTMLButtonElement).formMethod;
+    });
+
+    el.click();
+    expect(seen.action).to.equal('save');
+    expect(seen.method).to.equal('post');
+    expect(form.querySelectorAll('button').length, 'transient submitter is removed').to.equal(0);
+
+    input.value = 'changed';
+    el.type = 'reset';
+    el.click();
+    expect(input.value).to.equal('initial');
   });
 
   it('forwards host click() to the internal native button', async () => {
@@ -217,7 +279,7 @@ describe('lr-button', () => {
     // surface -- i.e. no hover at all -- while a source assertion on it stayed green.
     const el = (await fixture(html`<lr-button appearance="quiet">Save</lr-button>`)) as LyraButton;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const computed = getComputedStyle(base);
     expect(computed.backgroundColor, 'quiet is transparent at rest').to.equal('rgba(0, 0, 0, 0)');
     expect(computed.color, 'quiet text is the muted token, not the body text').to.not.equal(
@@ -230,7 +292,7 @@ describe('lr-button', () => {
       >
     `)) as LyraButton;
     await retuned.updateComplete;
-    const retunedBase = getComputedStyle(retuned.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    const retunedBase = getComputedStyle(retuned.shadowRoot!.querySelector('[part~="base"]') as HTMLElement);
     expect(retunedBase.color).to.equal('rgb(1, 2, 3)');
     expect(retunedBase.borderTopColor).to.equal('rgb(4, 5, 6)');
   });
@@ -243,21 +305,21 @@ describe('lr-button', () => {
       html`<lr-button appearance="quiet" variant="danger">Save</lr-button>`,
     )) as LyraButton;
     expect(dangerEl.getAttribute('appearance')).to.equal('quiet');
-    const neutralBase = neutralEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const dangerBase = dangerEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const neutralBase = neutralEl.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const dangerBase = dangerEl.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(getComputedStyle(neutralBase).color).to.equal(getComputedStyle(dangerBase).color);
     expect(getComputedStyle(neutralBase).borderColor).to.equal(getComputedStyle(dangerBase).borderColor);
   });
 
-  it('ships a default :hover/:active treatment on [part="base"], disabled under reduced motion', () => {
+  it('ships a default :hover/:active treatment on [part~="base"], disabled under reduced motion', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     // The hover/press COLOURS are asserted as rendered results in the hover-and-press-feedback
     // block below -- a stylesheet-text match cannot tell a fill that moves from one that resolves
     // to the page surface, which is exactly how the quiet hover shipped broken. What is left here
     // is the reduced-motion contract, which is a media-query shape rather than a colour.
-    expect(css).to.match(/\[part='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*scale\(/);
+    expect(css).to.match(/\[part~='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*scale\(/);
     expect(css).to.match(
-      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*none[^}]*\}[^]*\}/,
+      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part~='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*none[^}]*\}[^]*\}/,
     );
   });
 
@@ -308,7 +370,7 @@ describe('lr-button', () => {
     expect(el.effectiveDisabled, 'the button reflects inherited fieldset state').to.be.true;
 
     await el.updateComplete;
-    const button = el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement;
+    const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
     expect(button.disabled, 'the internal native button reflects the inherited state').to.be.true;
 
     fieldset.disabled = false;
@@ -326,8 +388,8 @@ describe('lr-button', () => {
     )) as LyraButton;
     expect(accentEl.appearance).to.equal('accent');
     expect(accentEl.getAttribute('appearance')).to.equal('accent');
-    const filledBase = filledEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const accentBase = accentEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const filledBase = filledEl.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const accentBase = accentEl.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(getComputedStyle(accentBase).backgroundColor).to.not.equal(
       getComputedStyle(filledBase).backgroundColor,
     );
@@ -335,7 +397,7 @@ describe('lr-button', () => {
 
   it('reads the standard medium tier from the shared ladder and keeps the floor rethemeable', async () => {
     const el = (await fixture(html`<lr-button>Go</lr-button>`)) as LyraButton;
-    const baseEl = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const baseEl = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(getComputedStyle(baseEl).fontSize).to.equal('16px');
     expect(getComputedStyle(baseEl).minBlockSize).to.equal('40px');
     // The per-tier floor still reaches min-block-size through --lr-button-size-*, so overriding one
@@ -353,7 +415,7 @@ describe('lr-button', () => {
     };
     for (const [size, px] of Object.entries(expected)) {
       const el = (await fixture(html`<lr-button size=${size}>Go</lr-button>`)) as LyraButton;
-      const baseEl = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const baseEl = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       expect(getComputedStyle(baseEl).minBlockSize, `size=${size}`).to.equal(px);
     }
   });
@@ -369,7 +431,7 @@ describe('lr-button', () => {
       html`<lr-button appearance="link" variant="brand">Retry</lr-button>`,
     )) as LyraButton;
     expect(el.getAttribute('appearance')).to.equal('link');
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const cs = getComputedStyle(base);
     // No border (the base rule's transparent-but-present border is dropped entirely).
     expect(cs.borderTopWidth).to.equal('0px');
@@ -393,8 +455,8 @@ describe('lr-button', () => {
     const plainEl = (await fixture(
       html`<lr-button appearance="plain" variant="brand">Retry</lr-button>`,
     )) as LyraButton;
-    const linkBase = linkEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const plainBase = plainEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const linkBase = linkEl.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const plainBase = plainEl.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(getComputedStyle(linkBase).color).to.equal(getComputedStyle(plainBase).color);
   });
 
@@ -405,18 +467,18 @@ describe('lr-button', () => {
       </div>
     `)) as HTMLElement;
     const button = el.querySelector('lr-button') as LyraButton;
-    const base = button.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = button.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(getComputedStyle(base).fontSize).to.equal('21px');
   });
 
   it('declares the underline offset and keeps a focus-visible outline for appearance="link"', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/:host\(\[appearance='link'\]\) \[part='base'\][^}]*text-decoration: underline/);
+    expect(css).to.match(/:host\(\[appearance='link'\]\) \[part~='base'\][^}]*text-decoration: underline/);
     expect(css).to.match(
-      /:host\(\[appearance='link'\]\) \[part='base'\][^}]*text-underline-offset: var\(--lr-size-0-15rem\)/,
+      /:host\(\[appearance='link'\]\) \[part~='base'\][^}]*text-underline-offset: var\(--lr-size-0-15rem\)/,
     );
     // The generic focus-visible rule still applies to the link appearance (it is not overridden).
-    expect(css).to.match(/\[part='base'\]:focus-visible\s*\{[^}]*outline:/);
+    expect(css).to.match(/\[part~='base'\]:focus-visible\s*\{[^}]*outline:/);
   });
 
   it('is accessible as an inline link', async () => {
@@ -427,8 +489,8 @@ describe('lr-button', () => {
   it('supports size="2xs": tighter than xs, with the ladder\'s tightest floor', async () => {
     const el = (await fixture(html`<lr-button size="2xs">Go</lr-button>`)) as LyraButton;
     const xsEl = (await fixture(html`<lr-button size="xs">Go</lr-button>`)) as LyraButton;
-    const cs = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
-    const xsCs = getComputedStyle(xsEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    const cs = getComputedStyle(el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement);
+    const xsCs = getComputedStyle(xsEl.shadowRoot!.querySelector('[part~="base"]') as HTMLElement);
     expect(cs.minBlockSize).to.equal('20px');
     expect(parseFloat(cs.fontSize)).to.be.lessThan(parseFloat(xsCs.fontSize));
     expect(parseFloat(cs.paddingInlineStart)).to.be.lessThan(parseFloat(xsCs.paddingInlineStart));
@@ -455,7 +517,7 @@ describe('lr-button', () => {
       { size: 'xl', padInline: '16px', padBlock: '8px', fontSize: '20px', minHeight: '56px' },
     ];
 
-    const base = (el: LyraButton) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = (el: LyraButton) => el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
     it('renders the ladder\'s padding/font-size/min-height at all six tiers when the properties are untouched', async () => {
       for (const tier of tiers) {
@@ -484,7 +546,7 @@ describe('lr-button', () => {
       expect(cs.fontSize).to.equal('11px');
     });
 
-    it('takes every tier\'s geometry from the shared ladder, with no per-tier rule on [part="base"]', () => {
+    it('takes every tier\'s geometry from the shared ladder, with no per-tier rule on [part~="base"]', () => {
       const css = styles.cssText.replace(/\s+/g, ' ');
       // The knobs read the ladder rather than restating a scale of their own.
       expect(css).to.match(
@@ -494,12 +556,12 @@ describe('lr-button', () => {
         /:host\(\[size='[^']+'\]\)[^{]*\{[^}]*--lr-button-(?:padding|font-size)/,
       );
       expect(css).to.match(
-        /\[part='base'\] \{[^}]*padding-inline: var\(--lr-button-padding-inline\);[^}]*padding-block: var\(--lr-button-padding-block\);/,
+        /\[part~='base'\] \{[^}]*padding-inline: var\(--lr-button-padding-inline\);[^}]*padding-block: var\(--lr-button-padding-block\);/,
       );
       // A per-tier rule may only re-assign a cssprop -- never declare a property on the part.
       for (const size of ['2xs', 'xs', 's', 'l', 'xl']) {
-        expect(css, `size=${size} must not restyle [part='base'] directly`).to.not.include(
-          `:host([size='${size}']) [part='base']`,
+        expect(css, `size=${size} must not restyle [part~='base'] directly`).to.not.include(
+          `:host([size='${size}']) [part~='base']`,
         );
       }
     });
@@ -576,7 +638,7 @@ describe('lr-button', () => {
         /--lr-button-height:/,
       );
       expect(css).to.match(
-        /\[part='base'\] \{[^}]*min-block-size: var\(--lr-button-height, var\(--lr-button-min-height\)\);[^}]*block-size: var\(--lr-button-height, auto\);/,
+        /\[part~='base'\] \{[^}]*min-block-size: var\(--lr-button-height, var\(--lr-button-min-height\)\);[^}]*block-size: var\(--lr-button-height, auto\);/,
       );
     });
 
@@ -593,8 +655,8 @@ describe('lr-button', () => {
   describe('start/end adornment wrappers collapse when unslotted', () => {
     it('collapses both adornment wrappers (display:none) when nothing is slotted into start/end', async () => {
       const el = (await fixture(html`<lr-button>Label</lr-button>`)) as LyraButton;
-      const startWrapper = el.shadowRoot!.querySelector('[part="start"]') as HTMLElement;
-      const endWrapper = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+      const startWrapper = el.shadowRoot!.querySelector('[part~="start"]') as HTMLElement;
+      const endWrapper = el.shadowRoot!.querySelector('[part~="end"]') as HTMLElement;
       // Assert the *rendered* result, not the stylesheet text: a silently-inert :empty rule
       // (a <slot> is an element child, so :empty never matched) is invisible to CSS-text asserts.
       expect(getComputedStyle(startWrapper).display).to.equal('none');
@@ -605,8 +667,8 @@ describe('lr-button', () => {
       const el = (await fixture(
         html`<lr-button><span slot="start">*</span>Label</lr-button>`,
       )) as LyraButton;
-      const startWrapper = el.shadowRoot!.querySelector('[part="start"]') as HTMLElement;
-      const endWrapper = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+      const startWrapper = el.shadowRoot!.querySelector('[part~="start"]') as HTMLElement;
+      const endWrapper = el.shadowRoot!.querySelector('[part~="end"]') as HTMLElement;
       expect(getComputedStyle(startWrapper).display).to.not.equal('none');
       // The unused end wrapper still collapses.
       expect(getComputedStyle(endWrapper).display).to.equal('none');
@@ -616,7 +678,7 @@ describe('lr-button', () => {
   describe('appearance="outlined" fill', () => {
     it('stays transparent when --lr-button-outlined-fill is unset', async () => {
       const el = (await fixture(html`<lr-button appearance="outlined">Save</lr-button>`)) as LyraButton;
-      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       expect(getComputedStyle(base).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
     });
 
@@ -624,7 +686,7 @@ describe('lr-button', () => {
       const el = (await fixture(html`<lr-button appearance="outlined">Save</lr-button>`)) as LyraButton;
       el.style.setProperty('--lr-button-outlined-fill', 'rgb(12, 34, 56)');
       await el.updateComplete;
-      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       expect(getComputedStyle(base).backgroundColor).to.equal('rgb(12, 34, 56)');
     });
 
@@ -632,7 +694,7 @@ describe('lr-button', () => {
       const css = styles.cssText.replace(/\s+/g, ' ');
       expect(css).to.include('--lr-button-outlined-fill: transparent;');
       expect(css).to.match(
-        /:host\(\[appearance='outlined'\]\) \[part='base'\] \{[^}]*background: var\(--lr-button-outlined-fill\);/,
+        /:host\(\[appearance='outlined'\]\) \[part~='base'\] \{[^}]*background: var\(--lr-button-outlined-fill\);/,
       );
     });
 
@@ -655,7 +717,7 @@ describe('lr-button', () => {
       const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
       el.style.setProperty('--lr-button-shadow', '0 4px 8px rgba(0, 0, 0, 0.3)');
       await el.updateComplete;
-      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       const probe = document.createElement('span');
       probe.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
       document.body.appendChild(probe);
@@ -666,7 +728,7 @@ describe('lr-button', () => {
 
     it('renders no box-shadow when the token is unset (regression)', async () => {
       const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
-      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       expect(getComputedStyle(base).boxShadow).to.equal('none');
     });
   });
@@ -676,20 +738,20 @@ describe('lr-button', () => {
       const el = (await fixture(
         html`<lr-button href="https://example.com">Go</lr-button>`,
       )) as LyraButton;
-      const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+      const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
       expect(anchor).to.exist;
       expect(anchor.getAttribute('href')).to.equal('https://example.com');
-      expect(el.shadowRoot!.querySelector('button[part="base"]')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('button[part~="base"]')).to.not.exist;
     });
 
     it('still renders the label/start/end/spinner content inside the anchor', async () => {
       const el = (await fixture(
         html`<lr-button href="https://example.com"><span slot="start">*</span>Go</lr-button>`,
       )) as LyraButton;
-      const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+      const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
       expect(anchor.querySelector('[part="label"]')).to.exist;
-      expect(anchor.querySelector('[part="start"]')).to.exist;
-      expect(anchor.querySelector('[part="end"]')).to.exist;
+      expect(anchor.querySelector('[part~="start"]')).to.exist;
+      expect(anchor.querySelector('[part~="end"]')).to.exist;
     });
 
     it('derives rel="noopener noreferrer" when target is set on a link button', async () => {
@@ -721,7 +783,7 @@ describe('lr-button', () => {
       const el = (await fixture(
         html`<lr-button href="mailto:hello@example.com">Email</lr-button>`,
       )) as LyraButton;
-      const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+      const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
       expect(anchor).to.exist;
       expect(anchor.getAttribute('href')).to.equal('mailto:hello@example.com');
     });
@@ -735,22 +797,22 @@ describe('lr-button', () => {
       )) as LyraButton;
       // Assert on the root's tag name rather than node existence: a failing `to.not.exist` on a
       // DOM node hangs the whole file while chai tries to serialize it as `actual`.
-      expect(el.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('button');
+      expect(el.shadowRoot!.querySelector('[part~="base"]')!.localName).to.equal('button');
     });
 
     it('ignores an unsafe href scheme, falling back to the native button', async () => {
       const el = (await fixture(
         html`<lr-button href="javascript:alert(1)">Go</lr-button>`,
       )) as LyraButton;
-      expect(el.shadowRoot!.querySelector('a[part="base"]')).to.not.exist;
-      expect(el.shadowRoot!.querySelector('button[part="base"]')).to.exist;
+      expect(el.shadowRoot!.querySelector('a[part~="base"]')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('button[part~="base"]')).to.exist;
     });
 
     it('forwards a host aria-label onto the internal anchor as a literal string', async () => {
       const el = (await fixture(
         html`<lr-button href="https://example.com" aria-label="Open the site">Go</lr-button>`,
       )) as LyraButton;
-      const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+      const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
       expect(anchor.getAttribute('aria-label')).to.equal('Open the site');
     });
 
@@ -758,7 +820,7 @@ describe('lr-button', () => {
       const el = (await fixture(
         html`<lr-button href="https://example.com">Go</lr-button>`,
       )) as LyraButton;
-      const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+      const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
       let clicked = 0;
       // Prevent the default navigation that host click() would otherwise trigger.
       anchor.addEventListener('click', (e) => {
@@ -786,7 +848,7 @@ describe('lr-button', () => {
         const el = (await fixture(
           html`<lr-button disabled href="https://example.com">Go</lr-button>`,
         )) as LyraButton;
-        const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+        const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
         expect(anchor).to.exist;
         expect(anchor.hasAttribute('href'), 'a disabled link button must not carry href').to.be
           .false;
@@ -797,7 +859,7 @@ describe('lr-button', () => {
         const el = (await fixture(
           html`<lr-button disabled href="https://example.com">Go</lr-button>`,
         )) as LyraButton;
-        const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+        const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
         let navigations = 0;
         // A default-prevented, href-less anchor fires no navigation; count any that slip through.
         anchor.addEventListener('click', (e) => {
@@ -815,7 +877,7 @@ describe('lr-button', () => {
         )) as LyraButton;
         el.disabled = false;
         await el.updateComplete;
-        const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+        const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
         expect(anchor.getAttribute('href')).to.equal('https://example.com');
         expect(anchor.hasAttribute('aria-disabled')).to.be.false;
       });
@@ -832,7 +894,7 @@ describe('lr-button', () => {
         const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
         fieldset.disabled = true;
         await el.updateComplete;
-        const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+        const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
         expect(anchor.hasAttribute('href')).to.be.false;
         expect(anchor.getAttribute('aria-disabled')).to.equal('true');
       });
@@ -843,8 +905,8 @@ describe('lr-button', () => {
         const el = (await fixture(
           html`<lr-button variant="brand" appearance="outlined" size="l">Go</lr-button>`,
         )) as LyraButton;
-        expect(el.shadowRoot!.querySelector('button[part="base"]')).to.exist;
-        expect(el.shadowRoot!.querySelector('a[part="base"]')).to.not.exist;
+        expect(el.shadowRoot!.querySelector('button[part~="base"]')).to.exist;
+        expect(el.shadowRoot!.querySelector('a[part~="base"]')).to.not.exist;
       });
 
       it('exposes href/target/download as undefined by default', async () => {
@@ -866,7 +928,7 @@ describe('lr-button', () => {
           e.preventDefault();
           submitted = true;
         });
-        (el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement).click();
+        (el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement).click();
         expect(submitted).to.be.true;
       });
     });
@@ -877,7 +939,7 @@ it('makes a loading anchor busy and fully inoperable', async () => {
   const el = (await fixture(
     html`<lr-button href="https://example.com" loading>Save</lr-button>`,
   )) as LyraButton;
-  const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+  const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
   let clicks = 0;
   anchor.addEventListener('click', (event) => {
     clicks++;
@@ -910,7 +972,7 @@ describe('lr-button: pill', () => {
     const el = (await fixture(html`<lr-button pill>Save</lr-button>`)) as LyraButton;
     expect(el.pill).to.be.true;
     expect(el.getAttribute('pill')).to.equal('');
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     // Rendered result, not stylesheet text: --lr-radius-pill resolves to 999px by default.
     expect(getComputedStyle(base).borderRadius).to.equal('999px');
   });
@@ -919,7 +981,7 @@ describe('lr-button: pill', () => {
     const el = (await fixture(
       html`<lr-button pill href="https://example.com">Go</lr-button>`,
     )) as LyraButton;
-    const base = el.shadowRoot!.querySelector('a[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLElement;
     expect(getComputedStyle(base).borderRadius).to.equal('999px');
   });
 
@@ -927,7 +989,7 @@ describe('lr-button: pill', () => {
     const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
     expect(el.pill).to.be.false;
     expect(el.hasAttribute('pill')).to.be.false;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     // --lr-radius (0.375rem) at the default 16px root font size, exactly as before pill existed.
     expect(getComputedStyle(base).borderRadius).to.equal('6px');
   });
@@ -936,7 +998,7 @@ describe('lr-button: pill', () => {
     const el = (await fixture(html`<lr-button pill>Save</lr-button>`)) as LyraButton;
     el.pill = false;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(getComputedStyle(base).borderRadius).to.equal('6px');
   });
 
@@ -944,7 +1006,7 @@ describe('lr-button: pill', () => {
     const el = (await fixture(
       html`<lr-button pill appearance="link">Retry</lr-button>`,
     )) as LyraButton;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(getComputedStyle(base).borderRadius).to.equal('0px');
   });
 
@@ -982,7 +1044,7 @@ describe('lr-button: with-caret', () => {
     const el = (await fixture(
       html`<lr-button with-caret href="https://example.com">Menu</lr-button>`,
     )) as LyraButton;
-    expect(el.shadowRoot!.querySelectorAll('a[part="base"] [part="caret"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('a[part~="base"] [part="caret"]').length).to.equal(1);
   });
 
   it('hides the caret behind the loading spinner, like the label and adornments', async () => {
@@ -1038,9 +1100,9 @@ describe('lr-button: appearance="filled-outlined"', () => {
     expect(bothEl.appearance).to.equal('filled-outlined');
     expect(bothEl.getAttribute('appearance')).to.equal('filled-outlined');
 
-    const filled = getComputedStyle(filledEl.shadowRoot!.querySelector('[part="base"]')!);
-    const outlined = getComputedStyle(outlinedEl.shadowRoot!.querySelector('[part="base"]')!);
-    const both = getComputedStyle(bothEl.shadowRoot!.querySelector('[part="base"]')!);
+    const filled = getComputedStyle(filledEl.shadowRoot!.querySelector('[part~="base"]')!);
+    const outlined = getComputedStyle(outlinedEl.shadowRoot!.querySelector('[part~="base"]')!);
+    const both = getComputedStyle(bothEl.shadowRoot!.querySelector('[part~="base"]')!);
 
     expect(both.backgroundColor).to.equal(filled.backgroundColor);
     expect(both.color).to.equal(filled.color);
@@ -1298,7 +1360,7 @@ describe('lr-button: named submitter and form-submission overrides', () => {
       </form>
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-button') as LyraButton;
-    const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+    const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
     let submitted = false;
     form.addEventListener('submit', (event) => {
       event.preventDefault();
@@ -1312,7 +1374,7 @@ describe('lr-button: named submitter and form-submission overrides', () => {
 });
 
 describe('lr-button — the shared styling vocabulary', () => {
-  const base = (el: LyraButton) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = (el: LyraButton) => el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const height = (el: LyraButton) => base(el).getBoundingClientRect().height;
 
   it('defaults appearance to the loud accent tier, matching the upstream default', async () => {
@@ -1397,7 +1459,7 @@ describe('lr-button — the shared styling vocabulary', () => {
 });
 
 describe('lr-button hover and press feedback', () => {
-  // Every fixture below zeroes --lr-transition-fast: [part='base'] transitions its background, so
+  // Every fixture below zeroes --lr-transition-fast: [part~='base'] transitions its background, so
   // reading getComputedStyle one frame after the pointer arrives would otherwise catch the
   // INTERPOLATED colour -- still the resting one at t=0 -- and report a working hover as broken.
   // The colour a fill has to differ FROM, resolved through the same token cascade the component
@@ -1425,7 +1487,7 @@ describe('lr-button hover and press feedback', () => {
         html`<lr-button appearance=${appearance} style="--lr-transition-fast: 0s">Save</lr-button>`,
       )) as LyraButton;
       await el.updateComplete;
-      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       const surface = surfaceColor(el);
       const resting = getComputedStyle(base).backgroundColor;
       try {
@@ -1446,7 +1508,7 @@ describe('lr-button hover and press feedback', () => {
       html`<lr-button appearance="quiet" style="--lr-transition-fast: 0s">Save</lr-button>`,
     )) as LyraButton;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     try {
       await sendMouse({ type: 'move', position: center(base) });
       const hovered = getComputedStyle(base).backgroundColor;
@@ -1465,7 +1527,7 @@ describe('lr-button hover and press feedback', () => {
       html`<lr-button appearance="accent" variant="brand" style="--lr-transition-fast: 0s">Save</lr-button>`,
     )) as LyraButton;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const resting = getComputedStyle(base).backgroundColor;
     try {
       await sendMouse({ type: 'move', position: center(base) });
@@ -1477,5 +1539,158 @@ describe('lr-button hover and press feedback', () => {
     } finally {
       await resetMouse();
     }
+  });
+});
+
+describe('lr-button — mapped Shoelace and Web Awesome surface', () => {
+  it('keeps Lyra defaults while accepting Shoelace variant spellings', async () => {
+    const defaultEl = (await fixture(html`<lr-button variant="default">Default</lr-button>`)) as LyraButton;
+    const primaryEl = (await fixture(html`<lr-button variant="primary">Primary</lr-button>`)) as LyraButton;
+    const textEl = (await fixture(html`<lr-button variant="text">Text</lr-button>`)) as LyraButton;
+
+    expect(defaultEl.variant).to.equal('neutral');
+    expect(defaultEl.appearance).to.equal('accent');
+    expect(primaryEl.variant).to.equal('brand');
+    expect(textEl.variant).to.equal('neutral');
+    expect(textEl.appearance).to.equal('plain');
+  });
+
+  it('maps caret, outline, and circle without replacing their Lyra counterparts', async () => {
+    const caret = (await fixture(html`<lr-button caret>Menu</lr-button>`)) as LyraButton;
+    expect(caret.caret).to.be.true;
+    expect(caret.withCaret).to.be.true;
+    expect(caret.shadowRoot!.querySelectorAll('[part="caret"]').length).to.equal(1);
+
+    const outlined = (await fixture(html`<lr-button outline>Outlined</lr-button>`)) as LyraButton;
+    const outlinedBase = outlined.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    expect(outlined.outline).to.be.true;
+    expect(getComputedStyle(outlinedBase).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+
+    const circle = (await fixture(
+      html`<lr-button circle aria-label="Settings"><svg aria-hidden="true"></svg></lr-button>`,
+    )) as LyraButton;
+    const circleBase = circle.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const box = circleBase.getBoundingClientRect();
+    expect(circle.circle).to.be.true;
+    expect(box.width).to.be.closeTo(box.height, 1);
+    expect(Number.parseFloat(getComputedStyle(circleBase).borderRadius)).to.be.at.least(box.height / 2);
+  });
+
+  it('projects prefix/suffix aliases through the same start/end wrappers and parts', async () => {
+    const el = (await fixture(html`
+      <lr-button>
+        <span slot="prefix">Before</span>
+        Save
+        <span slot="suffix">After</span>
+      </lr-button>
+    `)) as LyraButton;
+    await el.updateComplete;
+
+    const start = el.shadowRoot!.querySelector('[part~="start"]') as HTMLElement;
+    const prefix = el.shadowRoot!.querySelector('[part~="prefix"]') as HTMLElement;
+    const end = el.shadowRoot!.querySelector('[part~="end"]') as HTMLElement;
+    const suffix = el.shadowRoot!.querySelector('[part~="suffix"]') as HTMLElement;
+    expect(start.isSameNode(prefix)).to.be.true;
+    expect(end.isSameNode(suffix)).to.be.true;
+    expect(start.hidden).to.be.false;
+    expect(end.hidden).to.be.false;
+    expect(start.querySelector('slot[name="prefix"]')).to.exist;
+    expect(end.querySelector('slot[name="suffix"]')).to.exist;
+  });
+
+  it('honors with-start/with-end as SSR presence hints without requiring assigned content', async () => {
+    const el = (await fixture(html`<lr-button with-start with-end>Save</lr-button>`)) as LyraButton;
+    expect(el.withStart).to.be.true;
+    expect(el.withEnd).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part~="start"]') as HTMLElement).hidden).to.be.false;
+    expect((el.shadowRoot!.querySelector('[part~="end"]') as HTMLElement).hidden).to.be.false;
+  });
+
+  it('maps Shoelace hyphenated form overrides onto the canonical native override properties', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <form id="mapped-button-owner"></form>
+        <lr-button
+          form="mapped-button-owner"
+          form-action="/mapped"
+          form-enctype="multipart/form-data"
+          form-method="post"
+          form-no-validate
+          form-target="mapped-result"
+          type="submit"
+        >Submit</lr-button>
+      </div>
+    `);
+    const form = wrapper.querySelector('form')!;
+    const el = wrapper.querySelector('lr-button') as LyraButton;
+
+    expect(el.form === form).to.be.true;
+    expect(el.formAction).to.equal('/mapped');
+    expect(el.formEnctype).to.equal('multipart/form-data');
+    expect(el.formMethod).to.equal('post');
+    expect(el.formNoValidate).to.be.true;
+    expect(el.formTarget).to.equal('mapped-result');
+  });
+
+  it('exposes synchronous required/custom validity and state restoration without changing submitter semantics', async () => {
+    const el = (await fixture(html`<lr-button required>Submit</lr-button>`)) as LyraButton;
+    el.strings = { fieldRequired: 'Choose a submit action.' };
+    el.value = '';
+    expect(el.required).to.be.true;
+    expect(el.validity.valueMissing).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('Choose a submit action.');
+
+    el.value = 'publish';
+    expect(el.checkValidity()).to.be.true;
+
+    el.setCustomValidity('Approval is required');
+    expect(el.customError).to.equal('Approval is required');
+    expect(el.getAttribute('custom-error')).to.equal('Approval is required');
+    expect(el.validity.customError).to.be.true;
+    expect(el.reportValidity()).to.be.false;
+
+    el.resetValidity();
+    expect(el.customError).to.equal(null);
+    expect(el.validity.valid).to.be.true;
+
+    el.formStateRestoreCallback('restored', 'restore');
+    expect(el.value).to.equal('restored');
+  });
+
+  it('publishes disabled/loading/link/icon-button custom states as live rendered facts', async () => {
+    const el = (await fixture(html`
+      <lr-button href="https://example.com" aria-label="Settings"><svg aria-hidden="true"></svg></lr-button>
+    `)) as LyraButton;
+    const states = (el as unknown as { internals: ElementInternals }).internals.states;
+    expect(states.has('link')).to.be.true;
+    expect(states.has('icon-button')).to.be.true;
+    expect(states.has('disabled')).to.be.false;
+    expect(states.has('loading')).to.be.false;
+
+    el.loading = true;
+    await el.updateComplete;
+    expect(states.has('loading')).to.be.true;
+    expect(states.has('disabled')).to.be.true;
+
+    el.loading = false;
+    el.disabled = true;
+    await el.updateComplete;
+    expect(states.has('loading')).to.be.false;
+    expect(states.has('disabled')).to.be.true;
+  });
+
+  it('exposes rel as a target-derived compatibility surface and ignores an unsafe author value', async () => {
+    const el = (await fixture(html`
+      <lr-button href="https://example.com" target="_blank" rel="opener">Open</lr-button>
+    `)) as LyraButton;
+    const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+    expect(el.rel).to.equal('noopener noreferrer');
+    expect(anchor.rel).to.equal('noopener noreferrer');
+
+    el.target = undefined;
+    await el.updateComplete;
+    expect(el.rel).to.be.undefined;
+    expect(anchor.hasAttribute('rel')).to.be.false;
   });
 });

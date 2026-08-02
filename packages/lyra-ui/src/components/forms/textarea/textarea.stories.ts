@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { LyraTextarea } from './textarea.js';
 
 const meta: Meta = {
   title: 'Textarea',
@@ -52,6 +53,37 @@ export const Readonly: Story = {
 };
 
 /**
+ * `autocorrect` always reads as boolean. Its wider string setter preserves Shoelace property
+ * writes: `'off'`/`'false'` disable it and every other string enables it.
+ */
+export const AutocorrectPropertyWrites: Story = {
+  render: () => {
+    const write = (event: Event, value: boolean | string) => {
+      const root = (event.currentTarget as HTMLElement).closest('[data-autocorrect-story]')!;
+      const textarea = root.querySelector('lr-textarea') as LyraTextarea;
+      textarea.autocorrect = value;
+      const output = root.querySelector('output')!;
+      output.textContent = `autocorrect reads ${String(textarea.autocorrect)}`;
+    };
+
+    return html`
+      <div
+        data-autocorrect-story
+        style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-20rem);"
+      >
+        <lr-textarea label="Editing assistance" rows="2"></lr-textarea>
+        <div style="display: flex; gap: var(--lr-space-xs); flex-wrap: wrap;">
+          <button type="button" @click=${(event: Event) => write(event, false)}>Write false</button>
+          <button type="button" @click=${(event: Event) => write(event, 'off')}>Write "off"</button>
+          <button type="button" @click=${(event: Event) => write(event, 'enabled')}>Write "enabled"</button>
+        </div>
+        <output aria-live="polite">autocorrect reads true</output>
+      </div>
+    `;
+  },
+};
+
+/**
  * `size` scales the field's padding and font size on the library's one form-control ladder, shared
  * with `<lr-input>`/`<lr-select>`/`<lr-button>`. A textarea's own height comes from `rows`/`resize`,
  * so the ladder's control-height floor does not apply here.
@@ -95,12 +127,19 @@ export const Pill: Story = {
 export const Appearance: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; max-inline-size: 24rem">
-      <lr-textarea appearance="filled-outlined" label="filled-outlined (default)" rows="2"></lr-textarea>
-      <lr-textarea appearance="outlined" label="outlined" rows="2"></lr-textarea>
+      <lr-textarea appearance="outlined" label="outlined (default)" rows="2"></lr-textarea>
+      <lr-textarea appearance="filled-outlined" label="filled-outlined" rows="2"></lr-textarea>
       <lr-textarea appearance="filled" label="filled" rows="2"></lr-textarea>
       <lr-textarea appearance="plain" label="plain" rows="2"></lr-textarea>
       <lr-textarea appearance="accent" label="accent" rows="2"></lr-textarea>
     </div>
+  `,
+};
+
+/** Shoelace's `filled`/`help-text` aliases use the same field and form-chrome engine. */
+export const ShoelaceAliases: Story = {
+  render: () => html`
+    <lr-textarea filled label="Notes" help-text="Rendered through help-text" default-value="Seed text"></lr-textarea>
   `,
 };
 

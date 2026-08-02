@@ -13,6 +13,10 @@ import { styles } from './tab-panel.styles.js';
  *
  * @customElement lr-tab-panel
  * @slot - The panel's content.
+ * @csspart base - The panel content wrapper.
+ * @cssprop [--padding=0] - Inner panel padding.
+ * @status stable
+ * @since 8.0.0
  */
 export class LyraTabPanel extends LyraElement {
   static override styles = [LyraElement.styles, styles];
@@ -20,8 +24,12 @@ export class LyraTabPanel extends LyraElement {
   /** Matches the `panel` of the `<lr-tab>` that reveals this panel. */
   @property({ reflect: true }) name = '';
 
+  /** Whether this panel is active. The owning group synchronizes it after hydration; setting it
+   * explicitly supplies the SSR-visible panel. */
+  @property({ type: Boolean, reflect: true }) active = false;
+
   override render(): TemplateResult {
-    return html`<slot></slot>`;
+    return html`<div part="base"><slot></slot></div>`;
   }
 }
 

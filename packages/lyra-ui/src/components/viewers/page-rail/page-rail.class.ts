@@ -56,6 +56,8 @@ type ThumbnailState = 'pending' | 'ready' | 'unavailable';
  * @cssprop [--lr-page-rail-height=var(--lr-size-24rem)] - Block size of the virtualized rail.
  * @cssprop [--lr-page-rail-current-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `[part="page-current"]` button for the current `page`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   static override styles = [LyraElement.styles, styles];

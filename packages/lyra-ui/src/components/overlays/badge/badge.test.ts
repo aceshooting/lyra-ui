@@ -25,7 +25,7 @@ const resolvedColor = (host: HTMLElement, property: 'background-color' | 'color'
   resolved(host, property, token);
 
 function base(el: HTMLElement): HTMLElement {
-  return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  return el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 }
 
 it('renders a themed badge and tag alias', async () => {
@@ -241,6 +241,18 @@ describe('attention', () => {
     const el = (await fixture(html`<lr-tag attention="pulse">New</lr-tag>`)) as LyraBadge;
     expect(getComputedStyle(base(el)).animationName).to.not.equal('none');
   });
+});
+
+it('supports the mapped pulse boolean and --pulse-color hook', async () => {
+  const el = (await fixture(html`
+    <lr-badge pulse style="--pulse-color: rgb(1, 2, 3)">New</lr-badge>
+  `)) as LyraBadge;
+  expect(el.pulse).to.be.true;
+  expect(el.hasAttribute('pulse')).to.be.true;
+  expect(resolved(el, 'color', '--lr-badge-pulse-color')).to.equal('rgb(1, 2, 3)');
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    expect(getComputedStyle(base(el)).animationName).to.equal('lr-badge-pulse');
+  }
 });
 
 // -- start/end slots ---------------------------------------------------------

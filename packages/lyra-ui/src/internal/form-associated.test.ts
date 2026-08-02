@@ -178,12 +178,121 @@ it('exposes native-like form ownership, label, and constraint-validation state',
   expect(ctl.willValidate).to.be.false;
 });
 
+it('accepts a string form-owner assignment while keeping reads element-valued', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <form id="external-owner"></form>
+      <lr-demo-ctl name="quantity" value="4"></lr-demo-ctl>
+    </div>
+  `);
+  const form = wrapper.querySelector('form')!;
+  const ctl = wrapper.querySelector('lr-demo-ctl') as unknown as Ctl & {
+    form: string | HTMLFormElement | null;
+    getForm(): HTMLFormElement | null;
+  };
+
+  ctl.form = 'external-owner';
+
+  expect((ctl as unknown as HTMLElement).getAttribute('form')).to.equal('external-owner');
+  expect((ctl.form as HTMLFormElement | null)?.id).to.equal('external-owner');
+  expect(ctl.getForm()?.id).to.equal('external-owner');
+  expect(new FormData(form).get('quantity')).to.equal('4');
+
+  ctl.form = null;
+  expect((ctl as unknown as HTMLElement).hasAttribute('form')).to.be.false;
+  expect(ctl.form).to.equal(null);
+  expect(ctl.getForm()).to.equal(null);
+});
+
+it('keeps live value dirty while the reflected default changes, then resets to the current default', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-demo-ctl name="quantity" value="initial"></lr-demo-ctl></form>
+  `);
+  const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl & { defaultValue: string };
+  const host = ctl as unknown as HTMLElement;
+  expect(ctl.defaultValue).to.equal('initial');
+
+  ctl.value = 'live-edit';
+  ctl.defaultValue = 'new-default';
+  expect(host.getAttribute('value')).to.equal('new-default');
+  expect(ctl.value).to.equal('live-edit');
+  expect(new FormData(form).get('quantity')).to.equal('live-edit');
+
+  form.reset();
+  expect(ctl.value).to.equal('new-default');
+  expect(ctl.defaultValue).to.equal('new-default');
+
+  // Reset clears the dirty flag, so a later default change updates the live value too.
+  ctl.defaultValue = 'latest-default';
+  expect(ctl.value).to.equal('latest-default');
+  expect(new FormData(form).get('quantity')).to.equal('latest-default');
+});
+
+it('treats direct value-attribute mutation as a default change without overwriting a dirty live value', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-demo-ctl name="quantity" value="initial"></lr-demo-ctl></form>
+  `);
+  const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl & { defaultValue: string };
+  const host = ctl as unknown as HTMLElement;
+
+  ctl.value = 'live-edit';
+  host.setAttribute('value', 'attribute-default');
+  expect(ctl.defaultValue).to.equal('attribute-default');
+  expect(ctl.value).to.equal('live-edit');
+
+  form.reset();
+  expect(ctl.value).to.equal('attribute-default');
+});
+
+it('maps the reflected custom-error property to custom validity without losing intrinsic validity', async () => {
+  const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl & {
+    customError: string | null;
+  };
+  const host = ctl as unknown as HTMLElement;
+
+  ctl.customError = 'Rejected by the server.';
+  expect(host.getAttribute('custom-error')).to.equal('Rejected by the server.');
+  expect(ctl.validity.customError).to.be.true;
+  expect(ctl.validationMessage).to.equal('Rejected by the server.');
+
+  ctl.customError = null;
+  expect(host.hasAttribute('custom-error')).to.be.false;
+  expect(ctl.validity.customError).to.be.false;
+  expect(ctl.validity.valueMissing).to.be.true;
+  expect(ctl.validationMessage).to.equal('This field is required.');
+});
+
+it('emits exactly one bubbling, composed, non-cancelable lr-invalid alias for a failed check', async () => {
+  const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+  const aliases: CustomEvent[] = [];
+  (ctl as unknown as HTMLElement).addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+
+  // A composed synthetic event from inside the shadow tree is retargeted to the host. The relay
+  // must inspect the original composed-path target rather than mistaking that retargeting for the
+  // FACE host's own native invalid notification.
+  const inner = document.createElement('input');
+  (ctl.renderRoot as ShadowRoot).append(inner);
+  inner.dispatchEvent(new Event('invalid', { composed: true }));
+  expect(aliases.length).to.equal(0);
+
+  expect(ctl.checkValidity()).to.be.false;
+
+  expect(aliases.length).to.equal(1);
+  expect(aliases[0]?.target).to.equal(ctl);
+  expect(aliases[0]?.bubbles).to.be.true;
+  expect(aliases[0]?.composed).to.be.true;
+  expect(aliases[0]?.cancelable).to.be.false;
+});
+
 it('restores a string state synchronously without emitting a user event', async () => {
   const form = await fixture<HTMLFormElement>(html`
     <form><lr-demo-ctl name="quantity" value="initial"></lr-demo-ctl></form>
   `);
   const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl & {
-    formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
+    formStateRestoreCallback(
+      state: string | File | FormData | null,
+      reason: 'autocomplete' | 'restore',
+    ): void;
   };
 
   ctl.value = 'changed';
@@ -230,6 +339,18 @@ describe('setCustomValidity()', () => {
     ctl.value = 'filled in';
     expect(ctl.validity.valid).to.be.true;
     expect(ctl.validationMessage).to.equal('');
+  });
+
+  it('resetValidity() clears the custom layer and recomputes intrinsic validity', async () => {
+    const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+    ctl.setCustomValidity('Rejected by the server.');
+    expect(ctl.validity.customError).to.be.true;
+
+    ctl.resetValidity();
+
+    expect(ctl.validity.customError).to.be.false;
+    expect(ctl.validity.valueMissing).to.be.true;
+    expect(ctl.validationMessage).to.equal('This field is required.');
   });
 
   it('survives every intrinsic validity recomputation until explicitly cleared', async () => {

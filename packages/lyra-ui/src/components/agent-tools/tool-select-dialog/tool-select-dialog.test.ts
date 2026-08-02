@@ -46,7 +46,7 @@ function checkboxFor(el: LyraToolSelectDialog, id: string): LyraCheckbox {
 }
 
 function clickCheckbox(checkbox: LyraCheckbox): void {
-  (checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
+  (checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
 }
 
 // The heading's textContent also carries the aria-hidden visual count and
@@ -417,7 +417,7 @@ describe('useDefaults', () => {
       html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selected=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     const toggle = el.shadowRoot!.querySelector('[part="defaults-toggle"]') as HTMLElement;
-    const base = toggle.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = toggle.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
     const listener = oneEvent(el, 'lr-change');
     base.click();
@@ -435,7 +435,7 @@ describe('useDefaults', () => {
       html`<lr-tool-select-dialog use-defaults .tools=${TOOLS}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     const toggle = el.shadowRoot!.querySelector('[part="defaults-toggle"]') as HTMLElement;
-    const base = toggle.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = toggle.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     let count = 0;
     el.addEventListener('lr-change', () => count++);
 

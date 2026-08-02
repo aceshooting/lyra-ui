@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import './qr-code.js';
 
 const meta: Meta = {
   title: 'QR Code',
@@ -35,6 +36,19 @@ export const CustomColors: Story = {
     <lr-qr-code
       value="https://example.com/branded"
       style="--lr-qr-code-fill: var(--lr-color-brand); --lr-qr-code-background: var(--lr-color-brand-quiet);"
+    ></lr-qr-code>
+  `,
+};
+
+export const EmbeddedImage: Story = {
+  render: () => html`
+    <lr-qr-code
+      value="https://example.com/branded"
+      image="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' rx='12' fill='%230969da'/%3E%3C/svg%3E"
+      image-background="white"
+      image-coverage="0.35"
+      image-padding="4"
+      size="180"
     ></lr-qr-code>
   `,
 };

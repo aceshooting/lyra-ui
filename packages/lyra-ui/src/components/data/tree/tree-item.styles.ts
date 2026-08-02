@@ -5,11 +5,15 @@ export const styles = css`
     display: block;
     outline: none; /* the host is the focusable treeitem; the visible ring lives on [part=row] */
   }
+  [part~='item'] {
+    display: contents;
+  }
   :host(:focus-visible) [part='row'] {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='row'] {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
@@ -19,7 +23,7 @@ export const styles = css`
        below truncates the remaining overflow and tree.styles.ts's [part=base]
        adds an overflow-x:auto fallback for whatever's left. */
     padding-inline-start: calc(
-      var(--lr-space-s) + min(var(--lr-tree-depth, 0) * var(--lr-space-l), var(--lr-size-8rem))
+      var(--lr-space-s) + min(var(--lr-tree-depth, 0) * var(--indent-size, var(--lr-space-l)), var(--lr-size-8rem))
     );
     cursor: pointer;
     border-radius: var(--lr-radius);
@@ -74,6 +78,23 @@ export const styles = css`
     cursor: pointer;
     flex: 0 0 auto;
   }
+  [part='expand-button'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+  [part='indentation'] {
+    position: absolute;
+    inset-block: var(--indent-guide-offset, 0);
+    inset-inline-start: 0;
+    box-sizing: border-box;
+    inline-size: min(
+      calc(var(--lr-tree-depth, 0) * var(--indent-size, var(--lr-space-l))),
+      var(--lr-size-8rem)
+    );
+    border-inline-end-width: var(--indent-guide-width, 0);
+    border-inline-end-style: var(--indent-guide-style, solid);
+    border-inline-end-color: var(--indent-guide-color, var(--lr-color-border));
+  }
   [part='toggle']:disabled {
     cursor: default;
   }
@@ -81,6 +102,85 @@ export const styles = css`
     /* visibility (not display) so the placeholder keeps its layout box --
        a leaf row still lines up with sibling rows that do have a chevron. */
     visibility: hidden;
+  }
+  [part='spinner'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  [part='spinner__base'] {
+    box-sizing: border-box;
+    inline-size: var(--lr-size-1rem);
+    block-size: var(--lr-size-1rem);
+    border: var(--lr-border-width-medium) solid var(--lr-color-border);
+    border-block-start-color: var(--lr-color-brand);
+    border-radius: 50%;
+    animation: lr-tree-spin var(--lr-duration-ambient) linear infinite;
+  }
+  [part='checkbox'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+  [part='checkbox']:hover [part~='checkbox__control'] {
+    border-color: var(--lr-color-brand);
+  }
+  [part='checkbox']:active [part~='checkbox__control'] {
+    border-color: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  :host([aria-disabled='true']) [part='checkbox'] {
+    cursor: default;
+  }
+  :host([aria-disabled='true']) [part='checkbox']:hover [part~='checkbox__control'] {
+    border-color: var(--lr-color-border);
+  }
+  :host([aria-disabled='true']) [part='checkbox']:active [part~='checkbox__control'] {
+    border-color: var(--lr-color-border);
+  }
+  [part='checkbox__base'] {
+    display: inline-flex;
+  }
+  [part~='checkbox__control'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    inline-size: var(--lr-size-1rem);
+    block-size: var(--lr-size-1rem);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    color: var(--lr-color-on-brand);
+    background: var(--lr-color-surface);
+  }
+  [part~='checkbox__control--checked'],
+  [part~='checkbox__control--indeterminate'] {
+    border-color: var(--lr-color-brand);
+    background: var(--lr-color-brand);
+  }
+  [part='checkbox__checked-icon'],
+  [part='checkbox__indeterminate-icon'] {
+    display: none;
+    line-height: var(--lr-line-height-compact);
+  }
+  [part~='checkbox__control--checked'] [part='checkbox__checked-icon'] {
+    display: inline;
+  }
+  [part~='checkbox__control--indeterminate'] [part='checkbox__checked-icon'] {
+    display: none;
+  }
+  [part~='checkbox__control--indeterminate'] [part='checkbox__indeterminate-icon'] {
+    display: inline;
+  }
+  [part='checkbox__label'] {
+    display: contents;
   }
   :host([expanded]) [part='toggle'] {
     transform: rotate(90deg);
@@ -147,5 +247,34 @@ export const styles = css`
   [part='badge'][data-tone='danger'] {
     color: var(--lr-tree-badge-danger-color, var(--lr-color-danger));
     background: var(--lr-tree-badge-danger-bg, var(--lr-color-danger-quiet));
+  }
+  [part='children'] {
+    animation-duration: var(--show-duration, var(--lr-duration-base));
+    animation-timing-function: var(--lr-easing-standard);
+  }
+  :host([expanded]) [part='children'] {
+    animation-name: lr-tree-show;
+  }
+
+  @keyframes lr-tree-show {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes lr-tree-spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [part='children'],
+    [part='spinner__base'] {
+      animation: none;
+    }
   }
 `;

@@ -230,6 +230,8 @@ export interface LyraAgentRunEventMap {
  *   `compact`.
  * @cssprop [--lr-agent-run-compact-gap=var(--lr-space-s)] - Gap between `[part="base"]`'s header
  *   and body while `compact`.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   static override styles = [LyraElement.styles, srOnly, styles];

@@ -128,16 +128,16 @@ export const styles = css`
     min-block-size: 0;
   }
   /* Plain ::part() styling one level in, unrelated to exportparts -- stretches the embedded
-     frame to fill the stage, overriding zoomable-frame's own min-block-size default. */
-  lr-zoomable-frame[part='frame'] {
+     frame to fill the stage, overriding pan-zoom's own min-block-size default. */
+  lr-pan-zoom[part='frame'] {
     display: block;
     inline-size: 100%;
     block-size: 100%;
   }
-  lr-zoomable-frame[part='frame']::part(base) {
+  lr-pan-zoom[part='frame']::part(base) {
     block-size: 100%;
   }
-  lr-zoomable-frame[part='frame']::part(viewport) {
+  lr-pan-zoom[part='frame']::part(viewport) {
     block-size: 100%;
   }
   [part='previous-button'],

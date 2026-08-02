@@ -4,6 +4,12 @@ export const styles = css`
   :host {
     display: inline-flex;
   }
+  lr-tooltip {
+    display: inline-flex;
+  }
+  slot:not([name]) {
+    display: contents;
+  }
   /* Every selector below matches with ~= rather than =, because the button's part list gains a
      state token ('base base-error') while the feedback state is showing. */
   [part~='base'] {
@@ -39,8 +45,11 @@ export const styles = css`
   /* After the hover and pressed rules, at equal specificity, so hovering or holding the failed
      button still changes its background (the interactive affordance) without repainting the failure
      color away. */
+  [part~='base-success'] {
+    color: var(--success-color, var(--lr-color-success));
+  }
   [part~='base-error'] {
-    color: var(--lr-color-danger);
+    color: var(--error-color, var(--lr-color-danger));
   }
   [part~='base']:disabled {
     cursor: not-allowed;
@@ -49,6 +58,11 @@ export const styles = css`
   [part~='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part~='copy-icon'],
+  [part~='success-icon'],
+  [part~='error-icon'] {
+    display: inline-flex;
   }
   [part~='base'] svg {
     display: block;

@@ -5,25 +5,36 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/progress/progress-bar.js';` (registers the tag; side-effect import)
 - **Class** `LyraProgressBar`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/progress/progress-bar.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-progress-bar`
 
-A determinate or indeterminate progress bar.
+A determinate or indeterminate progress bar with an independently visible label and optional
+formatted percentage.
 
-**Properties:** `value`, `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
-`accessibleLabel` (`accessible-label`).
+**Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
+`label` (mapped accessible-name property), plus the Lyra compatibility alias `accessibleLabel`
+(`accessible-label`). Host `aria-label` has highest precedence.
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
-determinate. When `show-value` exposes label-slot text, that visible text names the progressbar
-unless host `aria-label`/`accessible-label` overrides it; live label mutations stay synchronized.
+determinate. Slotted label content is always visible and names the progressbar unless an explicit
+label overrides it; `show-value` controls only whether the locale-formatted percentage is appended.
+Live label mutations stay synchronized.
 
-**Slots:** `label`. **CSS parts:** `base`, `track`, `indicator`, `label`.
-**Themeable custom properties:** `--lr-progress-height` (default `var(--lr-size-0-5rem)`) — the
-block size of the progress track.
+**Slots:** default — label content; `label` — compatibility alias for the default slot.
+**CSS parts:** `base` and `progress-bar` are aliases on the same progressbar; `track`, `indicator`,
+`label`.
+**Themeable custom properties:** `--lr-progress-track-height` (default
+`var(--lr-progress-height, var(--lr-size-1rem))`; `--lr-progress-height` is the legacy fallback),
+`--lr-progress-track-color` (default `var(--lr-color-brand-quiet)`),
+`--lr-progress-indicator-color` (default `var(--lr-color-brand)`), and
+`--lr-progress-label-color` (default `var(--lr-color-text)`). Upstream aliases are `--height` and
+`--track-height`, plus `--track-color`, `--indicator-color`, and `--label-color`.
 
 **Additional API surface:**
 

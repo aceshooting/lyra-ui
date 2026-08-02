@@ -5,12 +5,35 @@ import type { LyraInput } from './input.class.js';
 import { styles } from './input.styles.js';
 
 describe('lr-input', () => {
+  it('emits lr-invalid once for a failed check and stays silent once valid', async () => {
+    const el = (await fixture(html`<lr-input required aria-label="Name"></lr-input>`)) as LyraInput;
+    const aliases: CustomEvent[] = [];
+    el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+
+    expect(el.checkValidity()).to.be.false;
+    expect(aliases).to.have.lengthOf(1);
+    expect(aliases[0].target).to.equal(el);
+    expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
+    expect(aliases[0].cancelable).to.be.false;
+
+    el.value = 'Ada';
+    expect(el.checkValidity()).to.be.true;
+    expect(aliases).to.have.lengthOf(1);
+  });
+
   it('defaults to type="text" with an empty value', async () => {
     const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
     expect(el.type).to.equal('text');
     expect(el.value).to.equal('');
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
     expect(input.type).to.equal('text');
+  });
+
+  it('reflects the pinned Web Awesome type property', async () => {
+    const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
+    el.type = 'email';
+    await el.updateComplete;
+    expect(el.getAttribute('type')).to.equal('email');
   });
 
   it('defaults to size "m" and reflects a size attribute', async () => {
@@ -674,7 +697,7 @@ describe('lr-input', () => {
     const el = (await fixture(html`<lr-input size="2xs" aria-label="Name"></lr-input>`)) as LyraInput;
     const xsEl = (await fixture(html`<lr-input size="xs" aria-label="Name"></lr-input>`)) as LyraInput;
     const field = (host: LyraInput) => host.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
-    const row = (host: LyraInput) => host.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    const row = (host: LyraInput) => host.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
     expect(parseFloat(getComputedStyle(field(el)).fontSize)).to.be.lessThan(
       parseFloat(getComputedStyle(field(xsEl)).fontSize),
     );
@@ -692,7 +715,7 @@ describe('lr-input', () => {
 
   describe('exact-height escape hatch', () => {
     const wrapper = (el: LyraInput) =>
-      el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+      el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
 
     it('keeps the per-size min-height floor when --lr-input-control-height is unset', async () => {
       const mEl = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
@@ -717,7 +740,7 @@ describe('lr-input', () => {
 
   describe('gap/radius custom properties', () => {
     const wrapper = (el: LyraInput) =>
-      el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+      el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
 
     it('exposes --lr-input-gap and --lr-input-radius, defaulting to the pre-existing literals', async () => {
       const el = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
@@ -738,7 +761,7 @@ describe('lr-input', () => {
 
     it('keeps the gap constant across tiers while the radius follows the shared ladder', async () => {
       const wrapperOf = (host: LyraInput) =>
-        host.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+        host.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
       const mEl = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
       const xsEl = (await fixture(html`<lr-input size="xs" aria-label="Name"></lr-input>`)) as LyraInput;
       // The adornment gap is deliberately outside the ladder -- it never varied by tier.
@@ -757,7 +780,7 @@ it('dims the input-wrapper chrome via the :disabled pseudo-class when disabled d
   // :disabled when an ancestor <fieldset disabled> cascades into it, and only :host(:disabled)
   // tracks that. Mirrors lr-date-input's/lr-radio's identical fix.
   const direct = (await fixture(html`<lr-input disabled></lr-input>`)) as LyraInput;
-  const directWrapper = direct.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  const directWrapper = direct.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
   expect(getComputedStyle(directWrapper).opacity).to.equal(
     getComputedStyle(directWrapper).getPropertyValue('--lr-opacity-disabled').trim(),
   );
@@ -767,7 +790,7 @@ it('dims the input-wrapper chrome via the :disabled pseudo-class when disabled d
     <form><fieldset disabled><lr-input></lr-input></fieldset></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-input') as LyraInput;
-  const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  const wrapper = el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
   expect(el.hasAttribute('disabled'), 'the host attribute must not be mutated by fieldset cascading').to.be.false;
   expect(getComputedStyle(wrapper).opacity).to.equal(
     getComputedStyle(wrapper).getPropertyValue('--lr-opacity-disabled').trim(),
@@ -794,7 +817,7 @@ it('forwards host click to the native input and suppresses it while effectively 
 
 // -- Slotted supporting text ------------------------------------------------
 
-it('tracks slotted hint and error content through slotchange', async () => {
+it('preserves rendered hint/error behavior while shared slot presence changes', async () => {
   const el = (await fixture(html`
     <lr-input label="Name">
       <span slot="hint">Full legal name</span>
@@ -802,34 +825,35 @@ it('tracks slotted hint and error content through slotchange', async () => {
     </lr-input>
   `)) as LyraInput;
   await el.updateComplete;
-  const flags = el as unknown as { hasHintSlot: boolean; hasErrorSlot: boolean };
-  expect(flags.hasHintSlot).to.be.true;
-  expect(flags.hasErrorSlot).to.be.true;
+  const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(hint.hidden).to.be.false;
+  expect(error.hidden).to.be.false;
 
   el.querySelector('[slot="hint"]')!.remove();
   el.querySelector('[slot="error"]')!.remove();
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await el.updateComplete;
-  expect(flags.hasHintSlot).to.be.false;
-  expect(flags.hasErrorSlot).to.be.false;
+  expect(hint.hidden).to.be.true;
+  expect(error.hidden).to.be.true;
 });
 
 // -- 8.0 surface: appearance / pill / spin buttons / picker + step methods ---
 
 describe('lr-input appearance', () => {
-  const wrapper = (el: LyraInput) => el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  const wrapper = (el: LyraInput) => el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
   const TRANSPARENT = 'rgba(0, 0, 0, 0)';
 
-  it('defaults to appearance="filled-outlined" and reflects it', async () => {
+  it('defaults to the mapped appearance="outlined" and reflects it', async () => {
     const el = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
-    expect(el.appearance).to.equal('filled-outlined');
-    expect(el.getAttribute('appearance')).to.equal('filled-outlined');
+    expect(el.appearance).to.equal('outlined');
+    expect(el.getAttribute('appearance')).to.equal('outlined');
   });
 
-  it('keeps the committed fill + border rendering at the default appearance', async () => {
+  it('keeps the mapped border-only rendering at the default appearance', async () => {
     const el = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
     const cs = getComputedStyle(wrapper(el));
-    expect(cs.backgroundColor).to.not.equal(TRANSPARENT);
+    expect(cs.backgroundColor).to.equal(TRANSPARENT);
     expect(cs.borderTopColor).to.not.equal(TRANSPARENT);
   });
 
@@ -1187,7 +1211,7 @@ describe('lr-input implicit form submission', () => {
 describe('lr-input unset-regression for the 8.0 opt-ins', () => {
   it('renders the committed control row when appearance/pill/password-toggle/without-spin-buttons/autofocus are left alone', async () => {
     const el = (await fixture(html`<lr-input value="abc" aria-label="Name"></lr-input>`)) as LyraInput;
-    const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    const wrapper = el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
     const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
     expect(el.shadowRoot!.querySelectorAll('[part="password-toggle"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part="stepper-up"]').length).to.equal(0);
@@ -1227,7 +1251,7 @@ describe('lr-input clear-button spelling parity', () => {
 
 describe('lr-input — the shared size ladder', () => {
   const wrapper = (el: LyraInput) =>
-    el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
   const height = (el: LyraInput) => wrapper(el).getBoundingClientRect().height;
 
   // The same guarantee lr-button makes: a migrating consumer's `size="small"` must land on the
@@ -1260,5 +1284,128 @@ describe('lr-input — the shared size ladder', () => {
       const el = (await fixture(html`<lr-input size=${size} aria-label="Name"></lr-input>`)) as LyraInput;
       expect(height(el), `size=${size}`).to.equal(px);
     }
+  });
+});
+
+describe('lr-input mapped Input parity surface', () => {
+  it('supports the remaining mapped native types and title passthrough', async () => {
+    for (const type of ['date', 'datetime-local', 'tel', 'url'] as const) {
+      const el = (await fixture(html`<lr-input type=${type} title="Edit value"></lr-input>`)) as LyraInput;
+      expect(el.type).to.equal(type);
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(native.type).to.equal(type);
+      expect(native.title).to.equal('Edit value');
+    }
+  });
+
+  it('keeps a boolean autocorrect read while accepting both upstream write vocabularies', async () => {
+    const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput & {
+      inputmode: string;
+      enterkeyhint: string;
+    };
+    el.autocorrect = false;
+    el.inputmode = 'email';
+    el.enterkeyhint = 'done';
+    await el.updateComplete;
+    const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    expect(el.autocorrect).to.equal(false);
+    expect(native.getAttribute('autocorrect')).to.equal('off');
+    expect(el.inputMode).to.equal('email');
+    expect(el.enterKeyHint).to.equal('done');
+    el.setAttribute('autocorrect', 'on');
+    el.inputMode = 'url';
+    el.enterKeyHint = 'go';
+    await el.updateComplete;
+    expect(el.autocorrect).to.equal(true);
+    expect(native.getAttribute('autocorrect')).to.equal('on');
+    expect(el.inputmode).to.equal('url');
+    expect(el.enterkeyhint).to.equal('go');
+
+    const shoelaceWrite = el as unknown as { autocorrect: boolean | 'off' | 'on' };
+    shoelaceWrite.autocorrect = 'off';
+    await el.updateComplete;
+    expect(el.autocorrect).to.equal(false);
+    expect(native.getAttribute('autocorrect')).to.equal('off');
+    shoelaceWrite.autocorrect = 'on';
+    await el.updateComplete;
+    expect(el.autocorrect).to.equal(true);
+    expect(native.getAttribute('autocorrect')).to.equal('on');
+
+    el.removeAttribute('autocorrect');
+    await el.updateComplete;
+    expect(el.autocorrect, 'attribute removal restores the true default').to.equal(true);
+    expect(native.hasAttribute('autocorrect'), 'the native control resumes its browser default').to.equal(false);
+  });
+
+  it('accepts filled/no-spin-buttons and prefix/suffix/help-text aliases', async () => {
+    const el = (await fixture(html`
+      <lr-input filled no-spin-buttons help-text="Alias hint" type="number" with-label>
+        <span slot="prefix">P</span><span slot="suffix">S</span>
+      </lr-input>
+    `)) as LyraInput & { filled: boolean; noSpinButtons: boolean; helpText: string; withLabel: boolean };
+    const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    expect(el.filled).to.be.true;
+    expect(el.noSpinButtons).to.be.true;
+    expect(native.hasAttribute('data-without-spin-buttons')).to.be.true;
+    const prefix = el.shadowRoot!.querySelector('slot[part="prefix"]') as HTMLSlotElement;
+    const suffix = el.shadowRoot!.querySelector('slot[part="suffix"]') as HTMLSlotElement;
+    expect(prefix.assignedElements()[0]?.textContent).to.equal('P');
+    expect(suffix.assignedElements()[0]?.textContent).to.equal('S');
+    expect(el.shadowRoot!.querySelector('[part~="form-control-help-text"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part~="hint"]')?.textContent).to.contain('Alias hint');
+    expect((el.shadowRoot!.querySelector('[part~="label"]') as HTMLElement).hidden).to.be.false;
+  });
+
+  it('exports mapped icon slots and nested part aliases', async () => {
+    const el = (await fixture(html`
+      <lr-input type="password" password-toggle value="secret" clearable>
+        <span slot="show-password-icon">show</span>
+        <span slot="hide-password-icon">hide</span>
+        <span slot="clear-icon">clear</span>
+      </lr-input>
+    `)) as LyraInput;
+    const toggle = el.shadowRoot!.querySelector('[part~="password-toggle-button"]') as HTMLButtonElement;
+    const show = toggle.querySelector('slot[name="show-password-icon"]') as HTMLSlotElement;
+    expect(show.assignedElements()[0]?.textContent).to.equal('show');
+    expect(el.shadowRoot!.querySelector('[part~="form-control-input"]')).to.exist;
+    toggle.click();
+    await el.updateComplete;
+    const hide = toggle.querySelector('slot[name="hide-password-icon"]') as HTMLSlotElement;
+    expect(hide.assignedElements()[0]?.textContent).to.equal('hide');
+
+    el.type = 'text';
+    await el.updateComplete;
+    const clear = el.shadowRoot!.querySelector('slot[name="clear-icon"]') as HTMLSlotElement;
+    expect(clear.assignedElements()[0]?.textContent).to.equal('clear');
+  });
+
+  it('exposes native valueAsDate/valueAsNumber without emitting edit events', async () => {
+    const el = (await fixture(html`<lr-input type="date"></lr-input>`)) as LyraInput & {
+      valueAsDate: Date | null;
+      valueAsNumber: number;
+    };
+    let edits = 0;
+    el.addEventListener('input', () => { edits += 1; });
+    el.valueAsNumber = Date.UTC(2024, 0, 2);
+    expect(el.value).to.equal('2024-01-02');
+    expect(el.valueAsDate?.toISOString().slice(0, 10)).to.equal('2024-01-02');
+    expect(edits).to.equal(0);
+  });
+
+  it('accepts default-value as a reset alias and reflects the blank custom state', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form><lr-input name="q" default-value="seed"></lr-input></form>
+    `);
+    const el = form.querySelector('lr-input') as LyraInput;
+    await el.updateComplete;
+    expect(el.defaultValue).to.equal('seed');
+    expect(el.value).to.equal('seed');
+    expect(el.matches(':state(blank)')).to.be.false;
+    el.value = '';
+    await el.updateComplete;
+    expect(el.matches(':state(blank)')).to.be.true;
+    form.reset();
+    await el.updateComplete;
+    expect(el.value).to.equal('seed');
   });
 });

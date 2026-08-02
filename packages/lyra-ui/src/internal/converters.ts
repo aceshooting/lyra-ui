@@ -2,6 +2,12 @@ import type { ComplexAttributeConverter } from 'lit';
 
 const trueUnlessLiteralFalse = (value: string | null): boolean => value !== 'false';
 
+/** Reflects non-empty strings while keeping the empty/default value absent from markup. */
+export const omittedEmptyStringConverter: ComplexAttributeConverter<string> = {
+  fromAttribute: (value) => value ?? '',
+  toAttribute: (value) => value || null,
+};
+
 /**
  * Converter for a reflected boolean whose default is `true`.
  *
@@ -31,6 +37,17 @@ export const presenceTrueDefaultBooleanConverter: ComplexAttributeConverter<bool
 export const spellcheckConverter: ComplexAttributeConverter<boolean> = {
   fromAttribute: trueUnlessLiteralFalse,
   toAttribute: (value): string => (value ? 'true' : 'false'),
+};
+
+/** Normalizes the combined Web Awesome boolean and Shoelace string write vocabularies. */
+export const normalizeAutocorrect = (value: boolean | string | null): boolean =>
+  value === null || (typeof value === 'string' ? value !== 'off' && value !== 'false' : Boolean(value));
+
+/** Native/Web Awesome `autocorrect` IDL parsing: the property is boolean while the HTML
+ * attribute uses the enumerated `"on"`/`"off"` vocabulary. */
+export const autocorrectConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute: normalizeAutocorrect,
+  toAttribute: (value): string => (value ? 'on' : 'off'),
 };
 
 /** Spellcheck variant that keeps the default `true` value absent and serializes only `false`. */

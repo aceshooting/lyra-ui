@@ -79,6 +79,8 @@ export interface LyraAgentWorkspaceEventMap {
  * @csspart section-heading - A built-in details section heading.
  * @csspart composer - The composer region.
  * @csspart composer-input - The built-in `<lr-chat-composer>`.
+ * @status stable
+ * @since 4.2.0
  */
 export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -3,6 +3,24 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './format.styles.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import {
+  dateTimeFormatOptions,
+  type FormatDateHour,
+  type FormatDateMonth,
+  type FormatDateNumeric,
+  type FormatDateStyle,
+  type FormatDateText,
+  type FormatDateTimeZoneName,
+} from './format-options.js';
+
+export type {
+  FormatDateHour,
+  FormatDateMonth,
+  FormatDateNumeric,
+  FormatDateStyle,
+  FormatDateText,
+  FormatDateTimeZoneName,
+} from './format-options.js';
 
 /**
  * `<lr-format-date>` — locale-aware `Intl.DateTimeFormat` output.
@@ -11,23 +29,31 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
  *
  * @customElement lr-format-date
  * @slot - Fallback content for an invalid date.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraFormatDate extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  @property() date: string | number | Date = '';
-  @property() year: Intl.DateTimeFormatOptions['year'] = 'numeric';
-  @property() month: Intl.DateTimeFormatOptions['month'] = 'long';
-  @property() day: Intl.DateTimeFormatOptions['day'] = 'numeric';
-  @property({ attribute: 'date-style' }) dateStyle?: Intl.DateTimeFormatOptions['dateStyle'];
-  @property({ attribute: 'time-style' }) timeStyle?: Intl.DateTimeFormatOptions['timeStyle'];
+  @property() date: string | number | Date = new Date();
+  @property() weekday?: FormatDateText;
+  @property() era?: FormatDateText;
+  @property() year?: FormatDateNumeric;
+  @property() month?: FormatDateMonth;
+  @property() day?: FormatDateNumeric;
+  @property() hour?: FormatDateNumeric;
+  @property() minute?: FormatDateNumeric;
+  @property() second?: FormatDateNumeric;
+  @property({ attribute: 'time-zone-name' }) timeZoneName?: FormatDateTimeZoneName;
+  @property({ attribute: 'date-style' }) dateStyle?: FormatDateStyle;
+  @property({ attribute: 'time-style' }) timeStyle?: FormatDateStyle;
   /** IANA time-zone name forwarded to `Intl.DateTimeFormat` (attribute `time-zone`). */
   @property({ attribute: 'time-zone' }) timeZone?: Intl.DateTimeFormatOptions['timeZone'];
+  @property({ attribute: 'hour-format' }) hourFormat: FormatDateHour = 'auto';
+
   override render(): TemplateResult {
-    const value = this.date instanceof Date ? this.date : new Date(this.date);
-    const options: Intl.DateTimeFormatOptions = this.dateStyle || this.timeStyle
-      ? { dateStyle: this.dateStyle, timeStyle: this.timeStyle }
-      : { year: this.year, month: this.month, day: this.day };
-    options.timeZone = this.timeZone;
+    const source = this.date ?? new Date();
+    const value = source instanceof Date ? source : new Date(source);
+    const options = dateTimeFormatOptions(this);
     let text = '';
     if (!Number.isNaN(value.getTime())) {
       try {
@@ -38,11 +64,7 @@ export class LyraFormatDate extends LyraElement {
         try {
           text = getDateTimeFormat(this.effectiveLocale || undefined, localOptions).format(value);
         } catch {
-          const safeOptions: Intl.DateTimeFormatOptions = {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          };
+          const safeOptions: Intl.DateTimeFormatOptions = {};
           try {
             // Invalid formatting options must not silently erase an otherwise-valid locale.
             text = getDateTimeFormat(this.effectiveLocale || undefined, safeOptions).format(value);
@@ -53,7 +75,9 @@ export class LyraFormatDate extends LyraElement {
         }
       }
     }
-    return html`${text || html`<slot></slot>`}`;
+    return text
+      ? html`<time datetime=${value.toISOString()}>${text}</time>`
+      : html`<slot></slot>`;
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-format-date': LyraFormatDate; } }

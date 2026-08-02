@@ -71,9 +71,10 @@ export const styles = css`
   }
   [data-hit-area] {
     fill: none;
-    stroke: transparent;
-    stroke-width: var(--lr-size-24px);
-    vector-effect: non-scaling-stroke;
+    /* WebKit excludes a fully transparent SVG stroke from native pointer targeting. */
+    stroke: var(--lr-color-text);
+    stroke-opacity: 0.001;
+    stroke-width: calc(var(--lr-size-24px) * var(--_lr-graph-hit-area-scale, 1));
     cursor: pointer;
   }
   [data-hit-area='node'],

@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/mention-popover/mention-popover.js';` (registers the tag; side-effect import)
 - **Class** `LyraMentionPopover`, also available unregistered from `@aceshooting/lyra-ui/components/utility/mention-popover/mention-popover.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -22,6 +24,7 @@ option share one tree scope. A string `aria-activedescendant` cannot resolve fro
 the document into an option in this component's shadow root.
 
 **Properties:**
+
 - `anchor?: HTMLElement` (attribute: false) — the element to position the popup relative to. A
   plain `<textarea>` or single-line text `<input type="text"|"search">` gets caret-precise
   positioning; any other element anchors the whole popup under that element's own box.
@@ -47,6 +50,7 @@ the document into an option in this component's shadow root.
   `activeDescendantId`, it cannot form a cross-shadow string IDREF from a host input.
 
 **Methods:**
+
 - `handleKeyDown(e: KeyboardEvent): boolean` — the host's own text-control `keydown` handler calls
   this while the popover is open. Handles `ArrowDown`/`ArrowUp` (moves the highlight) and
   `Enter`/`Tab` (commits the highlighted row) — both pairs return `false` with no
@@ -101,8 +105,7 @@ available space. See `lr-tour` for the shared-clamp note.
 
   textarea.addEventListener('keydown', (e) => {
     if (popover.open && popover.handleKeyDown(e)) {
-      if (!popover.syncActiveDescendant(textarea) &&
-          (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      if (!popover.syncActiveDescendant(textarea) && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
         void popover.focusActiveOption();
       }
       return;
@@ -111,7 +114,12 @@ available space. See `lr-tour` for the shared-clamp note.
   textarea.addEventListener('input', () => {
     popover.anchor = textarea;
     popover.items = [
-      { id: 'ada', label: 'Ada Lovelace', description: 'Engineering', icon: '👩‍💻' },
+      {
+        id: 'ada',
+        label: 'Ada Lovelace',
+        description: 'Engineering',
+        icon: '👩‍💻',
+      },
       { id: 'grace', label: 'Grace Hopper', description: 'Engineering' },
     ];
     popover.query = 'a'; // detected since the trigger character
@@ -140,6 +148,7 @@ automatically only on an `anchor` or `query` change while open (a keystroke move
 fresh `query` is the proxy for "the caret may have moved").
 
 **Known gotchas:**
+
 - a host-level `aria-label` attribute on `<lr-mention-popover>` now takes priority over `label`
   (and its localized default) when resolving `[part="listbox"]`'s accessible name — previously it
   was silently ignored. Matches the same fallback on `<lr-combobox>`/`<lr-table>`.
@@ -163,7 +172,7 @@ fresh `query` is the proxy for "the caret may have moved").
   active option.
 - There's no persisted "selection" the way `<lr-combobox>`'s own listbox has one — a mention is
   either committed (closing the popover) or dismissed with nothing chosen. `aria-selected="true"`
-  here marks whichever row is currently *active* (what Enter/Tab would commit right now, per the
+  here marks whichever row is currently _active_ (what Enter/Tab would commit right now, per the
   WAI-ARIA combobox-with-list-autocomplete pattern), not a separate persisted value.
 
 ---

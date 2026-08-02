@@ -55,6 +55,8 @@ const DEFAULT_TEMPERATURE = 1;
  * @csspart temperature-row - The row wrapping the temperature label/slider/value.
  * @csspart temperature-label - The visible "Temperature" caption.
  * @csspart temperature-value - The visible current temperature readout.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -180,7 +182,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
         <div part="temperature-row">
           <span part="temperature-label">${temperatureLabel}</span>
           <lr-slider
-            .label=${temperatureLabel}
+            aria-label=${temperatureLabel}
             .min=${this.temperatureMin}
             .max=${this.temperatureMax}
             .step=${this.temperatureStep}

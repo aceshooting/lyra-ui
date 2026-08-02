@@ -121,6 +121,8 @@ interface DrilldownCategory {
  * @csspart entity-item - One nested `lr-entity-card`.
  * @csspart empty - The empty state, shown when `path` is empty or the current node has no content
  *   in any category.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -270,15 +272,13 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
           (node) => node.id,
           (node, index) => {
             const isCurrent = index === lastIndex;
-            return html`<lr-breadcrumb-item part="breadcrumb-item" ?current=${isCurrent}>
-              ${isCurrent
-                ? node.label
-                : html`<button
-                    type="button"
-                    part="breadcrumb-button"
-                    @click=${() => this.navigateTo(node, index)}
-                  >${node.label}</button>`}
-            </lr-breadcrumb-item>`;
+            return isCurrent
+              ? html`<lr-breadcrumb-item part="breadcrumb-item" current>${node.label}</lr-breadcrumb-item>`
+              : html`<lr-breadcrumb-item
+                  part="breadcrumb-item"
+                  exportparts="base: breadcrumb-button"
+                  @click=${() => this.navigateTo(node, index)}
+                >${node.label}</lr-breadcrumb-item>`;
           },
         )}
       </lr-breadcrumb>

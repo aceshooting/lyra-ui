@@ -179,6 +179,8 @@ export interface LyraXmlViewerEventMap {
  *   non-active matches can be recolored without touching the active one.
  * @cssprop [--lr-xml-viewer-match-bg=var(--lr-color-warning-quiet)] - Background of a matching
  *   `[part="tag"]`/`[part="attribute-value"]`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
   static override styles = [LyraElement.styles, styles, srOnly];

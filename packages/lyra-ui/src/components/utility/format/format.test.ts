@@ -14,13 +14,125 @@ it('formats numbers and bytes through Intl', async () => {
   expect(el.querySelector('lr-format-bytes')?.shadowRoot?.textContent).to.match(/1\s?kB/i);
 });
 
+it('supports the complete mapped number-format vocabulary and both grouping aliases', async () => {
+  const percent = (await fixture(html`
+    <lr-format-number value="0.25" type="percent" locale="en-US"></lr-format-number>
+  `)) as LyraFormatNumber;
+  expect(percent.shadowRoot?.textContent?.trim()).to.equal('25%');
+
+  const currency = (await fixture(html`
+    <lr-format-number
+      value="1234.56"
+      type="currency"
+      currency="EUR"
+      currency-display="code"
+      without-grouping
+      locale="en-US"
+    ></lr-format-number>
+  `)) as LyraFormatNumber;
+  expect(currency.shadowRoot?.textContent?.trim()).to.equal('EUR\u00a01234.56');
+
+  currency.withoutGrouping = false;
+  currency.noGrouping = true;
+  await currency.updateComplete;
+  expect(currency.shadowRoot?.textContent?.trim()).to.equal('EUR\u00a01234.56');
+
+  const digits = (await fixture(html`
+    <lr-format-number
+      value="12.3456"
+      minimum-integer-digits="3"
+      maximum-significant-digits="3"
+      locale="en-US"
+    ></lr-format-number>
+  `)) as LyraFormatNumber;
+  expect(digits.shadowRoot?.textContent?.trim()).to.equal('012.3');
+});
+
 it('formats dates and relative time', async () => {
   const el = await fixture(html`<div>
     <lr-format-date date="2024-01-01T00:00:00Z" locale="en-US"></lr-format-date>
     <lr-relative-time date="2030-01-01T00:00:00Z" locale="en-US"></lr-relative-time>
   </div>`);
-  expect(el.querySelector('lr-format-date')?.shadowRoot?.textContent).to.contain('January');
+  expect(el.querySelector('lr-format-date')?.shadowRoot?.textContent?.trim()).to.equal(
+    new Intl.DateTimeFormat('en-US').format(new Date('2024-01-01T00:00:00Z')),
+  );
   expect(el.querySelector('lr-relative-time')?.shadowRoot?.textContent).to.contain('in');
+});
+
+it('defaults date/relative-time to now and renders machine-readable semantic time elements', async () => {
+  const before = Date.now();
+  const date = (await fixture(html`<lr-format-date locale="en-US"></lr-format-date>`)) as LyraFormatDate;
+  const relative = (await fixture(html`<lr-relative-time locale="en-US"></lr-relative-time>`)) as LyraRelativeTime;
+  const after = Date.now();
+
+  const dateTime = date.shadowRoot!.querySelector('time')!;
+  const relativeTime = relative.shadowRoot!.querySelector('time')!;
+  const dateInstant = new Date(dateTime.getAttribute('datetime')!).getTime();
+  const relativeInstant = new Date(relativeTime.getAttribute('datetime')!).getTime();
+  expect(dateInstant).to.be.within(before, after);
+  expect(relativeInstant).to.be.within(before, after);
+  expect(relativeTime.textContent?.trim()).to.not.equal('');
+});
+
+it('forwards the complete validated granular date/time vocabulary', async () => {
+  const instant = new Date('2024-01-01T00:30:45Z');
+  const el = (await fixture(html`
+    <lr-format-date
+      .date=${instant}
+      locale="en-US"
+      weekday="short"
+      era="short"
+      year="2-digit"
+      month="2-digit"
+      day="2-digit"
+      hour="2-digit"
+      minute="2-digit"
+      second="2-digit"
+      time-zone-name="short"
+      time-zone="UTC"
+      hour-format="24"
+    ></lr-format-date>
+  `)) as LyraFormatDate;
+  const expected = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    era: 'short',
+    year: '2-digit',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short',
+    timeZone: 'UTC',
+    hour12: false,
+  }).format(instant);
+  expect(el.shadowRoot?.querySelector('time')?.textContent).to.equal(expected);
+});
+
+it('uses mapped decimal byte scaling with byte/bit and display controls', async () => {
+  const bytes = (await fixture(html`
+    <lr-format-bytes value="1000" unit="byte" display="short" locale="en-US"></lr-format-bytes>
+  `)) as LyraFormatBytes;
+  expect(bytes.shadowRoot?.textContent?.trim()).to.match(/^1\s?kB$/i);
+
+  const bits = (await fixture(html`
+    <lr-format-bytes value="1000" unit="bit" display="long" locale="en-US"></lr-format-bytes>
+  `)) as LyraFormatBytes;
+  expect(bits.shadowRoot?.textContent?.trim()).to.match(/^1\s+kilobit$/i);
+});
+
+it('supports long/short/narrow relative-time output and machine-readable datetime', async () => {
+  const target = new Date(Date.now() + 2 * 86_400_000);
+  const el = (await fixture(html`
+    <lr-relative-time .date=${target} unit="day" format="narrow" numeric="always" locale="en-US"></lr-relative-time>
+  `)) as LyraRelativeTime;
+  const expected = new Intl.RelativeTimeFormat('en-US', {
+    numeric: 'always',
+    style: 'narrow',
+  }).format(2, 'day');
+  const time = el.shadowRoot!.querySelector('time')!;
+  expect(time.textContent).to.equal(expected);
+  expect(time.getAttribute('datetime')).to.equal(target.toISOString());
 });
 
 it('supports style-based date formatting without mixing Intl option families', async () => {
@@ -68,6 +180,7 @@ it('falls back to the browser time zone when time-zone is invalid instead of thr
 it('falls back safely for invalid Intl number/date/relative-time option values', async () => {
   const number = (await fixture(html`<lr-format-number value="1234"></lr-format-number>`)) as LyraFormatNumber;
   number.notation = 'invalid' as Intl.NumberFormatOptions['notation'];
+  number.type = 'currency';
   number.currency = 'not-a-currency';
   await number.updateComplete;
   expect(number.shadowRoot?.textContent?.trim()).to.not.equal('');
@@ -85,8 +198,15 @@ it('falls back safely for invalid Intl number/date/relative-time option values',
   `)) as LyraRelativeTime;
   relative.unit = 'invalid' as LyraRelativeTime['unit'];
   relative.numeric = 'invalid' as LyraRelativeTime['numeric'];
+  relative.format = 'invalid' as LyraRelativeTime['format'];
   await relative.updateComplete;
   expect(relative.shadowRoot?.textContent?.trim()).to.not.equal('');
+
+  const bytes = (await fixture(html`<lr-format-bytes value="1000"></lr-format-bytes>`)) as LyraFormatBytes;
+  bytes.unit = 'invalid' as LyraFormatBytes['unit'];
+  bytes.display = 'invalid' as LyraFormatBytes['display'];
+  await bytes.updateComplete;
+  expect(bytes.shadowRoot?.textContent?.trim()).to.match(/^1\s?kB$/i);
 });
 
 it('falls back safely when an explicit locale is invalid', async () => {
@@ -117,6 +237,7 @@ it('preserves a valid effective locale while discarding invalid number options',
   const el = (await fixture(html`
     <lr-format-number value="1234.5" locale="ar-EG"></lr-format-number>
   `)) as LyraFormatNumber;
+  el.type = 'currency';
   el.currency = 'x';
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.match(/[٠-٩]/);
@@ -134,6 +255,42 @@ it('preserves a valid effective locale while discarding invalid date options', a
 it('inherits locale from an ancestor when no explicit locale is set', async () => {
   const el = await fixture(html`<div lang="de-DE"><lr-format-number value="1234.5"></lr-format-number></div>`);
   expect(el.querySelector('lr-format-number')?.shadowRoot?.textContent).to.contain('1.234,5');
+});
+
+it('reacts to a live locale switch', async () => {
+  const el = (await fixture(html`
+    <lr-format-number value="1234.5" locale="en-US"></lr-format-number>
+  `)) as LyraFormatNumber;
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('1,234.5');
+  el.locale = 'de-DE';
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('1.234,5');
+});
+
+it('schedules sync relative-time at the next rounded unit boundary instead of fixed polling', async () => {
+  const originalSetTimeout = window.setTimeout;
+  const originalClearTimeout = window.clearTimeout;
+  const delays: number[] = [];
+  let timer = 0;
+  window.setTimeout = ((_handler: TimerHandler, delay?: number) => {
+    delays.push(Number(delay));
+    timer += 1;
+    return timer;
+  }) as typeof window.setTimeout;
+  window.clearTimeout = (() => {}) as typeof window.clearTimeout;
+  try {
+    const target = new Date(Date.now() + 100_000);
+    const el = (await fixture(html`
+      <lr-relative-time .date=${target} unit="minute" numeric="always" sync></lr-relative-time>
+    `)) as LyraRelativeTime;
+    await el.updateComplete;
+    const scheduled = delays.at(-1)!;
+    expect(scheduled).to.be.greaterThan(9_000);
+    expect(scheduled).to.be.lessThan(11_000);
+  } finally {
+    window.setTimeout = originalSetTimeout;
+    window.clearTimeout = originalClearTimeout;
+  }
 });
 
 it('is accessible', async () => {
@@ -224,6 +381,23 @@ it('clamps out-of-range minimum/maximumFractionDigits instead of letting Intl.Nu
   el.maximumFractionDigits = 2;
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+});
+
+it('clamps integer/significant digit options and orders crossed significant bounds', async () => {
+  const el = (await fixture(html`<lr-format-number value="1234.567"></lr-format-number>`)) as LyraFormatNumber;
+
+  el.minimumIntegerDigits = Number.NaN;
+  el.minimumSignificantDigits = 500;
+  el.maximumSignificantDigits = -1;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+
+  el.minimumIntegerDigits = 99;
+  el.minimumSignificantDigits = 5;
+  el.maximumSignificantDigits = 2;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+  expect(el.shadowRoot?.textContent).to.not.contain('NaN');
 });
 
 it('reflects the locale property back to the locale attribute (inherited LyraElement `reflect: true`)', async () => {

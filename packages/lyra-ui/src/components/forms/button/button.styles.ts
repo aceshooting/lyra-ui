@@ -19,7 +19,7 @@ export const styles = css`
     --lr-button-size-l: var(--lr-form-control-height-l);
     --lr-button-size-xl: var(--lr-form-control-height-xl);
     /* Geometry knobs, each pointed at the ladder's active-tier value. No per-tier rule declares a
-       CSS property on [part='base'], so a consumer can still retune a tier (e.g. pin a size="s"
+       CSS property on [part~='base'], so a consumer can still retune a tier (e.g. pin a size="s"
        button into a compact toolbar row) without a ::part(base) rule. The ladder matches BOTH
        spellings of every tier in one selector list, so size="small" is size="s" for free. */
     --lr-button-padding-block: var(--lr-form-control-padding-block);
@@ -84,6 +84,11 @@ export const styles = css`
   :host([appearance='accent']) {
     --lr-button-hover-base: var(--lr-button-accent-fill);
   }
+  /* Shoelace's boolean outline surface is an additive alias. It never rewrites appearance, so
+     removing it restores the exact Lyra treatment the author selected. */
+  :host([outline]) {
+    --lr-button-hover-base: var(--lr-color-surface);
+  }
   /* The one place a variant still needs naming. The four chromatic variants use their loud fill as
      the chrome-less foreground -- brand text on the page surface IS the brand colour. Neutral's
      loud fill is a mid grey chosen to carry LIGHT text, so reusing it as dark-on-surface text would
@@ -95,13 +100,16 @@ export const styles = css`
     --lr-button-accent: var(--lr-color-text);
   }
   /* Fully rounded ends. Re-assigning the radius knob rather than declaring border-radius on
-     [part='base'] keeps one corner-radius declaration in the sheet, and leaves
+     [part~='base'] keeps one corner-radius declaration in the sheet, and leaves
      appearance="link"'s own literal "border-radius: 0" winning (a pill inline link would be a
      button-shaped box, which is exactly what that appearance exists to avoid). */
   :host([pill]) {
     --lr-button-radius: var(--lr-radius-pill);
   }
-  [part='base'] {
+  :host([circle]) {
+    --lr-button-radius: var(--lr-radius-pill);
+  }
+  [part~='base'] {
     display: inline-flex;
     position: relative;
     inline-size: var(--lr-button-width);
@@ -130,16 +138,21 @@ export const styles = css`
        drop shadow (e.g. an elevated/floating action button) without a ::part(base) rule. */
     box-shadow: var(--lr-button-shadow, none);
   }
-  :host([appearance='filled']) [part='base'] {
+  :host([appearance='filled']) [part~='base'] {
     background: var(--lr-button-fill);
     color: var(--lr-button-on-fill);
   }
-  :host([appearance='accent']) [part='base'] {
+  :host([appearance='accent']) [part~='base'] {
     background: var(--lr-button-accent-fill);
     color: var(--lr-button-accent-on-fill);
     border-color: var(--lr-button-accent-fill);
   }
-  :host([appearance='outlined']) [part='base'] {
+  :host([appearance='outlined']) [part~='base'] {
+    background: var(--lr-button-outlined-fill);
+    color: var(--lr-button-accent);
+    border-color: var(--lr-button-outlined-border);
+  }
+  :host([outline]) [part~='base'] {
     background: var(--lr-button-outlined-fill);
     color: var(--lr-button-accent);
     border-color: var(--lr-button-outlined-border);
@@ -148,52 +161,52 @@ export const styles = css`
      the variant-tinted --lr-button-border -- a filled button whose edge still reads against a
      same-toned surface. Both halves stay on their existing knobs, so retuning either tier retunes
      this one with it. */
-  :host([appearance='filled-outlined']) [part='base'] {
+  :host([appearance='filled-outlined']) [part~='base'] {
     background: var(--lr-button-fill);
     color: var(--lr-button-on-fill);
     border-color: var(--lr-button-outlined-border);
   }
-  :host([appearance='plain']) [part='base'] {
+  :host([appearance='plain']) [part~='base'] {
     background: transparent;
     color: var(--lr-button-accent);
     border-color: transparent;
   }
-  :host([appearance='quiet']) [part='base'] {
+  :host([appearance='quiet']) [part~='base'] {
     background: transparent;
     color: var(--lr-button-quiet-text);
     border-color: var(--lr-button-quiet-border);
   }
-  [part='base']:disabled {
+  [part~='base']:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='base']:not(:disabled) {
+  [part~='base']:not(:disabled) {
     transition:
       background-color var(--lr-transition-fast),
       color var(--lr-transition-fast),
       transform var(--lr-transition-fast);
   }
   /* One hover and one press rule for every appearance -- what moves per tier is the mix BASE
-     declared above, not the rule. Both out-specify each :host([appearance='…']) [part='base']
+     declared above, not the rule. Both out-specify each :host([appearance='…']) [part~='base']
      block, so no tier silently loses its pointer feedback. */
-  [part='base']:not(:disabled):hover {
+  [part~='base']:not(:disabled):hover {
     background: var(--lr-button-hover-background);
   }
-  [part='base']:not(:disabled):active {
+  [part~='base']:not(:disabled):active {
     background: var(--lr-button-active-background);
     transform: scale(var(--lr-button-active-scale, 0.9875));
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='base']:not(:disabled):active {
+    [part~='base']:not(:disabled):active {
       transform: none;
     }
   }
-  [part='base']:focus-visible {
+  [part~='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='start'],
-  [part='end'] {
+  [part~='start'],
+  [part~='end'] {
     display: inline-flex;
     align-items: center;
   }
@@ -202,9 +215,18 @@ export const styles = css`
      This higher-specificity selector wins over the display: inline-flex above so the empty
      wrapper collapses and stops contributing a dead --lr-button-gap of inline space -- mirrors
      input.styles.ts's identical [part='start'][hidden]/[part='end'][hidden] rule. */
-  [part='start'][hidden],
-  [part='end'][hidden] {
+  [part~='start'][hidden],
+  [part~='end'][hidden] {
     display: none;
+  }
+  /* A declared circle and an automatically detected icon-only label both use a square control.
+     circle additionally takes the pill radius above; an icon-only WA button keeps its selected
+     appearance's ordinary radius. */
+  :host([circle]) [part~='base'],
+  [part~='base'][data-icon-button] {
+    inline-size: var(--lr-button-height, var(--lr-button-min-height));
+    aspect-ratio: 1;
+    padding-inline: var(--lr-button-padding-block);
   }
   /* Decorative dropdown chevron. The shared chevronIcon() points right, so the glyph -- not the
      wrapping part -- is rotated to point down, matching lr-select's expand-icon; a down caret is
@@ -249,7 +271,7 @@ export const styles = css`
      --lr-button-font-size knobs, so it wins over any tier's (and any consumer's) geometry, and it
      zeroes both min-block-size and block-size so a pinned --lr-button-height cannot give an inline
      link a button-shaped box either. */
-  :host([appearance='link']) [part='base'] {
+  :host([appearance='link']) [part~='base'] {
     inline-size: auto;
     padding: 0;
     border: 0;
@@ -266,11 +288,11 @@ export const styles = css`
      padding, so the shared hover/press background would paint a tight rectangle around bare
      inline text in the middle of a paragraph -- exactly the button-shaped box this appearance
      exists to avoid. It moves its text by the same two mix tokens instead. */
-  :host([appearance='link']) [part='base']:not(:disabled):hover {
+  :host([appearance='link']) [part~='base']:not(:disabled):hover {
     background: transparent;
     color: color-mix(in oklab, var(--lr-button-accent), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
-  :host([appearance='link']) [part='base']:not(:disabled):active {
+  :host([appearance='link']) [part~='base']:not(:disabled):active {
     background: transparent;
     color: color-mix(in oklab, var(--lr-button-accent), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
@@ -282,9 +304,9 @@ export const styles = css`
     justify-content: center;
     animation: lr-button-spin var(--lr-button-spinner-duration, var(--lr-transition-ambient)) infinite;
   }
-  :host([loading]) [part='start'],
+  :host([loading]) [part~='start'],
   :host([loading]) [part='label'],
-  :host([loading]) [part='end'],
+  :host([loading]) [part~='end'],
   :host([loading]) [part='caret'] {
     opacity: 0;
   }

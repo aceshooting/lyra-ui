@@ -63,6 +63,13 @@ export const WithImage: Story = {
   `,
 };
 
+export const MappedLabelAndSize: Story = {
+  name: 'Mapped label and --size hook',
+  render: () => html`
+    <lr-avatar initials="AB" label="Account owner" style="--size:var(--lr-size-3rem)"></lr-avatar>
+  `,
+};
+
 export const AccessibleNameOverride: Story = {
   name: 'Host aria-label overrides alt',
   parameters: {

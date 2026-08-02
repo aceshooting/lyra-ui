@@ -48,13 +48,18 @@ jobs:
       # dependency -- not the whole library being flagged dead. See knip.jsonc's own header comment.
       - run: pnpm run check:dead-code
       - run: pnpm run check:secrets
+      # Root component imports, the runtime registration allowlist, and sideEffects are generated
+      # from the checked-in component inventory. Regenerate-and-diff catches a new/moved component
+      # even when a contributor ran only the non-mutating lint check locally.
+      - run: pnpm registrations
+      - run: git diff --exit-code -- packages/lyra-ui/src/lyra.ts packages/lyra-ui/src/internal/root-registration-allowlist.ts packages/lyra-ui/package.json
       - run: pnpm manifest
       - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
       - run: pnpm --filter @aceshooting/lyra-ui run generate-editor-data
       - run: git diff --exit-code -- packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json
       - run: pnpm readme:check
       - run: ./package.sh
-      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/
+      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/ skills/lyra-ui.skill
       - run: pnpm skill:check
       - run: pnpm storybook:check-theme
 
@@ -76,6 +81,11 @@ jobs:
       # src/package-entrypoints.test.ts dynamically imports the package's published entry points
       # (./dist/lyra.js etc., per package.json's "exports"), which only exist after a build.
       - run: pnpm build
+      # Proves root + every granular import under plain Node, renders the complete declared SSR
+      # matrix, then loads a real DSD response in Chromium and rejects hydration warnings,
+      # replaced server nodes, or broken client-render fallbacks.
+      - run: pnpm --filter @aceshooting/lyra-ui test:ssr
+      - run: pnpm --filter @aceshooting/lyra-ui test:hydration
       # Needs dist/ from the build step above: measures the library's own esbuild-bundled gzip
       # weight (optional peers externalized) against the budgets in
       # packages/lyra-ui/scripts/bundle-budgets.json, and re-measures every per-component entry so
@@ -132,7 +142,7 @@ jobs:
           out="$(pnpm --filter @aceshooting/lyra-ui pack --dry-run 2>&1)"
           echo "$out"
           missing=0
-          for f in custom-elements.json llms.txt llms-full.txt llms/index.md llms/shared.md llms/tokens.md llms/peers.md llms/migration.md llms/components/lr-table.md; do
+          for f in dist/ssr-loader.js custom-elements.json llms.txt llms-full.txt llms/index.md llms/shared.md llms/tokens.md llms/peers.md llms/migration.md llms/components/lr-table.md; do
             if ! grep -qF "$f" <<< "$out"; then
               echo "::error::tarball is missing expected file: $f"
               missing=1
@@ -181,8 +191,8 @@ jobs:
       - run: pnpm docs:check-show-code
 
   # Blocking as of the 2026-07-20 font-substitution determinism fix (see
-  # packages/lyra-ui/visual-baselines/README.md): a full 62-story x 3-axis run now reproduces
-  # 186/186 clean, so a mismatch here is a real signal rather than run-to-run capture noise. Split
+  # packages/lyra-ui/visual-baselines/README.md): a full 83-story x 3-axis run now reproduces
+  # 249/249 clean, so a mismatch here is a real signal rather than run-to-run capture noise. Split
   # into its own job (rather than folded into docs-and-storybook, which also needs docs:build)
   # because test:visual alone runs ~3.5min and would otherwise sit in the critical path of the
   # faster docs checks.
@@ -224,7 +234,8 @@ jobs:
       # compatible pnpm 10 instead, but pnpm has its own Corepack-like
       # "manage package manager versions" self-enforcement: any pnpm binary
       # run from this repo root notices the packageManager mismatch and
-      # silently re-execs itself as 11.10.0, reintroducing the crash. Disable
+      # silently re-execs itself as the packageManager-pinned pnpm 11,
+      # reintroducing the crash. Disable
       # that self-management for this job (harmless on the Node 22 leg, where
       # the installed version already matches packageManager).
       npm_config_manage_package_manager_versions: 'false'

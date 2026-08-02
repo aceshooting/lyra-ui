@@ -5,6 +5,25 @@ import type { LyraSwitch } from './switch.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 
+it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+  const el = (await fixture(html`<lr-switch required>Enable</lr-switch>`)) as LyraSwitch;
+  const aliases: CustomEvent[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0].target).to.equal(el);
+  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
+  expect(aliases[0].cancelable).to.be.false;
+});
+
+it('reflects the pinned Web Awesome value property', async () => {
+  const el = (await fixture(html`<lr-switch>Enable</lr-switch>`)) as LyraSwitch;
+  el.value = 'enabled';
+  await el.updateComplete;
+  expect(el.getAttribute('value')).to.equal('enabled');
+});
+
 it('exposes namespaced geometry custom properties', async () => {
   // Reads the real computed custom-property cascade on a rendered instance instead of
   // substring-matching the exported stylesheet source, which would still pass even if the
@@ -21,7 +40,7 @@ it('exposes namespaced geometry custom properties', async () => {
 
 it('gives the switch track hover and press feedback matching the keyboard focus-visible cue', async () => {
   // Rendered results, not stylesheet text. This shipped as a filter: brightness() lift on
-  // [part='base'] -- which faded the LABEL along with the track, because a filter applies to the
+  // [part~='base'] -- which faded the LABEL along with the track, because a filter applies to the
   // whole subtree -- and a source match could not tell the difference.
   // --lr-transition-fast is zeroed: the track transitions its background, so reading
   // getComputedStyle one frame after the pointer arrives would otherwise catch the INTERPOLATED
@@ -30,8 +49,8 @@ it('gives the switch track hover and press feedback matching the keyboard focus-
     html`<lr-switch style="--lr-transition-fast: 0s">Label</lr-switch>`,
   )) as LyraSwitch;
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const track = el.shadowRoot!.querySelector('[part~="track"]') as HTMLElement;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   const restingTrack = getComputedStyle(track).backgroundColor;
   const restingLabel = getComputedStyle(label).color;
@@ -59,8 +78,8 @@ it('moves the checked track under the pointer too, away from its own brand fill'
     html`<lr-switch checked style="--lr-transition-fast: 0s">Label</lr-switch>`,
   )) as LyraSwitch;
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const track = el.shadowRoot!.querySelector('[part~="track"]') as HTMLElement;
   const resting = getComputedStyle(track).backgroundColor;
   const rect = base.getBoundingClientRect();
   try {
@@ -133,24 +152,24 @@ it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wi
 
 it('defaults to unchecked with role="switch" and aria-checked="false"', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(el.checked).to.be.false;
   expect(base.getAttribute('role')).to.equal('switch');
   expect(base.getAttribute('aria-checked')).to.equal('false');
 });
 
-it('reflects checked to the attribute and to aria-checked', async () => {
+it('keeps live checked out of the default attribute while updating aria-checked', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
   el.checked = true;
   await el.updateComplete;
-  expect(el.hasAttribute('checked')).to.be.true;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(el.hasAttribute('checked')).to.be.false;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-checked')).to.equal('true');
 });
 
 it('toggles and emits lr-change with detail.checked on click', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   setTimeout(() => base.click());
   let ev = await oneEvent(el, 'lr-change');
@@ -173,14 +192,14 @@ describe('native form event contract', () => {
     return seen;
   };
 
-  it('emits exactly one native Event pair and one typed alias pair on a pointer click', async () => {
+  it('emits exactly one native event pair and one typed alias pair on a pointer click', async () => {
     const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const seen = recordSequence(el);
 
     base.click();
     expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
-    expect(seen[0].event.constructor === Event).to.be.true;
+    expect(seen[0].event instanceof InputEvent).to.be.true;
     expect(seen[2].event.constructor === Event).to.be.true;
     expect(seen[0].event.target === el && seen[2].event.target === el).to.be.true;
     expect(seen[1].event instanceof CustomEvent).to.be.true;
@@ -188,22 +207,19 @@ describe('native form event contract', () => {
     expect(el.checked).to.be.true;
   });
 
-  it('emits input and change on Space and on Enter keydown', async () => {
+  it('emits input and change on Space while leaving Enter to the surrounding form', async () => {
     const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const seen = recordSequence(el);
 
     base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
     expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
 
-    base.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
-    );
-    expect(seen.map(({ type }) => type)).to.deep.equal([
-      'input', 'lr-input', 'change', 'lr-change',
-      'input', 'lr-input', 'change', 'lr-change',
-    ]);
-    expect(el.checked).to.be.false;
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    base.dispatchEvent(enter);
+    expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+    expect(enter.defaultPrevented).to.be.false;
+    expect(el.checked).to.be.true;
   });
 
   it('emits input and change from the programmatic host click() activation path', async () => {
@@ -237,7 +253,7 @@ describe('native form event contract', () => {
     const seen = recordSequence(el);
 
     el.click();
-    el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.dispatchEvent(
+    el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!.dispatchEvent(
       new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }),
     );
     expect(seen).to.have.lengthOf(0);
@@ -257,14 +273,14 @@ describe('native form event contract', () => {
     const seen = recordSequence(el);
 
     form.reset();
-    el.formStateRestoreCallback('checked');
+    el.formStateRestoreCallback('checked', 'restore');
     expect(seen).to.have.lengthOf(0);
   });
 });
 
-it('toggles on Space and Enter keydown', async () => {
+it('toggles on Space but not Enter keydown', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   setTimeout(() =>
     base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })),
@@ -272,16 +288,91 @@ it('toggles on Space and Enter keydown', async () => {
   let ev = await oneEvent(el, 'lr-change');
   expect(ev.detail.checked).to.be.true;
 
-  setTimeout(() =>
-    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
-  );
-  ev = await oneEvent(el, 'lr-change');
-  expect(ev.detail.checked).to.be.false;
+  let changes = 0;
+  el.addEventListener('lr-change', () => changes++);
+  const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  base.dispatchEvent(enter);
+  expect(changes).to.equal(0);
+  expect(enter.defaultPrevented).to.be.false;
+  expect(el.checked).to.be.true;
+});
+
+it('uses logical ArrowLeft/ArrowRight off/on semantics in LTR and RTL', async () => {
+  for (const [dir, onKey, offKey] of [
+    ['ltr', 'ArrowRight', 'ArrowLeft'],
+    ['rtl', 'ArrowLeft', 'ArrowRight'],
+  ] as const) {
+    const el = (await fixture(html`<lr-switch dir=${dir}>Choice</lr-switch>`)) as LyraSwitch;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const events: string[] = [];
+    el.addEventListener('input', () => events.push('input'));
+    el.addEventListener('change', () => events.push('change'));
+
+    const on = new KeyboardEvent('keydown', { key: onKey, bubbles: true, cancelable: true });
+    base.dispatchEvent(on);
+    expect(on.defaultPrevented, `${dir} on key`).to.be.true;
+    expect(el.checked, `${dir} on state`).to.be.true;
+    expect(events).to.deep.equal(['input', 'change']);
+
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: onKey, bubbles: true, cancelable: true }));
+    expect(events, `${dir} repeated on is silent`).to.deep.equal(['input', 'change']);
+
+    const off = new KeyboardEvent('keydown', { key: offKey, bubbles: true, cancelable: true });
+    base.dispatchEvent(off);
+    expect(off.defaultPrevented, `${dir} off key`).to.be.true;
+    expect(el.checked, `${dir} off state`).to.be.false;
+    expect(events).to.deep.equal(['input', 'change', 'input', 'change']);
+  }
+});
+
+it('exports wrapper/control and help-text aliases without replacing Lyra part names', async () => {
+  const el = (await fixture(html`
+    <lr-switch help-text="Supporting text">Choice</lr-switch>
+  `)) as LyraSwitch & { helpText: string };
+  await el.updateComplete;
+  const baseParts = el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('part')!.split(/\s+/);
+  const controlParts = el.shadowRoot!.querySelector('[part~="control"]')!.getAttribute('part')!.split(/\s+/);
+  const hintParts = el.shadowRoot!.querySelector('[part~="hint"]')!.getAttribute('part')!.split(/\s+/);
+  expect(baseParts).to.include.members(['base', 'switch', 'wrapper']);
+  expect(controlParts).to.include.members(['track', 'control']);
+  expect(hintParts).to.include.members(['hint', 'form-control-help-text']);
+  expect((el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement).textContent).to.contain('Supporting text');
+  await expect(el).to.be.accessible();
+});
+
+it('accepts a Shoelace help-text slot and default-checked attribute', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-switch default-checked>
+        Choice
+        <span slot="help-text">Slotted help</span>
+      </lr-switch>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-switch') as LyraSwitch;
+  await el.updateComplete;
+  expect(el.checked).to.be.true;
+  const helpSlot = el.shadowRoot!.querySelector('slot[name="help-text"]') as HTMLSlotElement;
+  expect(helpSlot.assignedNodes({ flatten: true }).map((node) => node.textContent).join('')).to.contain('Slotted help');
+  el.checked = false;
+  form.reset();
+  expect(el.checked).to.be.true;
+});
+
+it('accepts the WA with-hint SSR presence hint before slot assignment is observable', async () => {
+  const el = (await fixture(html`
+    <lr-switch with-hint aria-label="Choice"></lr-switch>
+  `)) as LyraSwitch & { withHint: boolean };
+  await el.updateComplete;
+  expect(el.withHint).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part~="hint"]')!.hasAttribute('hidden')).to.be.false;
+  expect((el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).getAttribute('aria-describedby'))
+    .to.equal('switch-hint');
 });
 
 it('preventDefault()s the Space keydown so the page does not scroll', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const ev = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
   base.dispatchEvent(ev);
   expect(ev.defaultPrevented).to.be.true;
@@ -289,7 +380,7 @@ it('preventDefault()s the Space keydown so the page does not scroll', async () =
 
 it('ignores click and keydown activation while disabled, and is not focusable', async () => {
   const el = (await fixture(html`<lr-switch disabled>Label</lr-switch>`)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('tabindex')).to.equal('-1');
   expect(base.getAttribute('aria-disabled')).to.equal('true');
 
@@ -303,26 +394,26 @@ it('ignores click and keydown activation while disabled, and is not focusable', 
 
 it('is focusable (tabindex 0) when enabled', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('tabindex')).to.equal('0');
 });
 
 it('exposes explicit false aria-required/aria-disabled states by default', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-required')).to.equal('false');
   expect(base.getAttribute('aria-disabled')).to.equal('false');
 });
 
 it('sets aria-required when required', async () => {
   const el = (await fixture(html`<lr-switch required>Label</lr-switch>`)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-required')).to.equal('true');
 });
 
 it('forwards focus() and blur() to the internal switch control', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   el.focus();
   expect(el.shadowRoot!.activeElement === base).to.be.true;
@@ -340,7 +431,9 @@ it('relays exactly one native focus/blur pair plus one prefixed alias pair', asy
   el.addEventListener('lr-blur', () => aliases.push('lr-blur'));
 
   el.focus();
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')?.split(/\s+/)).to.include.members([
+    'base', 'switch', 'wrapper',
+  ]);
   el.blur();
   expect(el.shadowRoot!.activeElement).to.equal(null);
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
@@ -352,7 +445,7 @@ it('relays exactly one native focus/blur pair plus one prefixed alias pair', asy
 it('reflects aria-invalid on the inner switch only after the field has been interacted with once', async () => {
   const el = (await fixture(html`<lr-switch required>Label</lr-switch>`)) as LyraSwitch;
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-invalid')).to.equal('false');
 
   base.dispatchEvent(new FocusEvent('blur'));
@@ -380,13 +473,13 @@ it('forwards a host aria-label onto the inner role="switch" element', async () =
   const el = (await fixture(
     html`<lr-switch aria-label="Enable notifications"></lr-switch>`,
   )) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-label')).to.equal('Enable notifications');
 });
 
 it('does not set an empty aria-label on the inner element when the host has none', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.hasAttribute('aria-label')).to.be.false;
 });
 
@@ -528,13 +621,17 @@ it('focuses the inner switch after direct and submit-driven validity reporting',
   sentinel.focus();
   expect(el.reportValidity()).to.be.false;
   expect(document.activeElement?.localName).to.equal('lr-switch');
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')?.split(/\s+/)).to.include.members([
+    'base', 'switch', 'wrapper',
+  ]);
 
   sentinel.focus();
   form.requestSubmit();
   expect(submitCount).to.equal(0);
   expect(document.activeElement?.localName).to.equal('lr-switch');
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')?.split(/\s+/)).to.include.members([
+    'base', 'switch', 'wrapper',
+  ]);
 });
 
 it('applies and removes explicit disabled form state synchronously', async () => {
@@ -623,7 +720,7 @@ it('temporarily disables through a fieldset without overwriting the author disab
   const el = form.querySelector('lr-switch') as LyraSwitch;
   const explicitlyDisabled = form.querySelector('[name="always-disabled"]') as LyraSwitch;
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   expect(el.disabled).to.be.false;
   expect(el.effectiveDisabled).to.be.false;
@@ -679,11 +776,11 @@ it('is accessible with a populated hint/errorText (the parts never rendered by t
 describe('hint/error chrome', () => {
   it('renders no hint/error chrome when hint/errorText are unset (today\'s exact bare output)', async () => {
     const el = (await fixture(html`<lr-switch>Enable notifications</lr-switch>`)) as LyraSwitch;
-    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(hint.hidden).to.be.true;
     expect(error.hidden).to.be.true;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(base.hasAttribute('aria-describedby')).to.be.false;
   });
 
@@ -691,7 +788,7 @@ describe('hint/error chrome', () => {
     const el = (await fixture(
       html`<lr-switch hint="You can change this later" error-text="Required">Enable notifications</lr-switch>`,
     )) as LyraSwitch;
-    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(hint.hidden).to.be.false;
     expect(hint.textContent).to.contain('You can change this later');
@@ -703,7 +800,7 @@ describe('hint/error chrome', () => {
     const el = (await fixture(
       html`<lr-switch hint="Hint text" error-text="Err text">Enable notifications</lr-switch>`,
     )) as LyraSwitch;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(base.getAttribute('aria-describedby')).to.equal('switch-error switch-hint');
   });
 
@@ -715,7 +812,7 @@ describe('hint/error chrome', () => {
         <span slot="error">Slotted error</span>
       </lr-switch>
     `)) as LyraSwitch;
-    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
     expect(hint.hidden).to.be.false;
@@ -804,7 +901,7 @@ describe('size', () => {
   async function trackOf(markup: unknown): Promise<DOMRect> {
     const el = (await fixture(markup as never)) as LyraSwitch;
     await el.updateComplete;
-    const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+    const track = el.shadowRoot!.querySelector('[part~="track"]') as HTMLElement;
     return track.getBoundingClientRect();
   }
 
@@ -836,7 +933,7 @@ describe('size', () => {
     for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
       const el = (await fixture(html`<lr-switch size=${size} checked>Label</lr-switch>`)) as LyraSwitch;
       await el.updateComplete;
-      const track = (el.shadowRoot!.querySelector('[part="track"]') as HTMLElement).getBoundingClientRect();
+      const track = (el.shadowRoot!.querySelector('[part~="track"]') as HTMLElement).getBoundingClientRect();
       const thumb = (el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement).getBoundingClientRect();
       expect(thumb.height, `${size} thumb fits`).to.be.lessThan(track.height);
       expect(thumb.right, `${size} thumb stays inside`).to.be.at.most(track.right + 0.5);
@@ -973,10 +1070,10 @@ describe('lr-switch setCustomValidity()', () => {
     expect(el.validationMessage).to.equal('Server says no');
   });
 
-  it('restores the computed validity when cleared, rather than forcing the control valid', async () => {
+  it('resetValidity() restores computed validity rather than forcing the control valid', async () => {
     const el = (await fixture(html`<lr-switch required>Agree</lr-switch>`)) as LyraSwitch;
     el.setCustomValidity('Server says no');
-    el.setCustomValidity('');
+    el.resetValidity();
     expect(el.validity.customError, 'custom error cleared').to.be.false;
     expect(
       el.validity.valueMissing,

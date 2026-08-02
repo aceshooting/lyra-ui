@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/tab-group/tab.js';` (registers the tag; side-effect import)
 - **Class** `LyraTab`, also available unregistered from `@aceshooting/lyra-ui/components/layout/tab-group/tab.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** nothing component-specific — inherits only the shared surface
+- **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,10 +24,18 @@ button.
 
 **Properties:** `panel: string = ''` (reflected) — the `name` of the `<lr-tab-panel>` this tab
 reveals; `disabled: boolean = false` (reflected) — removes the tab from keyboard navigation and
-prevents activation.
+prevents activation; `active: boolean = false` (reflected) — SSR selection hint, synchronized by
+the owning group after hydration; `closable: boolean = false` (reflected) — shows the mapped close
+affordance.
 
-**Events:** none — the owning group emits `lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's
-visible content). **CSS parts:** none; style the group's `tab` part instead.
+**Events:** `lr-close` (no detail) — the Lyra-convention mapping of Shoelace's `sl-close`, emitted
+when the close affordance is clicked or Delete is pressed on the focused owning tab. It bubbles, is
+composed and noncancelable. A disabled tab never emits it. The tab never removes itself or its
+panel; the consumer handles the request. The owning group separately emits
+`lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's visible content). **CSS parts:** `base`
+and `tab` are aliases on the same projected-content slot; `close-button` and
+`close-button__base` are aliases on the same non-focusable visual close affordance. Style the
+group's `tab` part for the real interactive tab button.
 
 **Themeable custom properties:** none of its own, and the group's are not settable here. The button
 this tab is projected into lives in `<lr-tab-group>`'s shadow root, so it inherits
@@ -33,8 +43,36 @@ this tab is projected into lives in `<lr-tab-group>`'s shadow root, so it inheri
 from the group host or an ancestor of it. Declaring one on the `<lr-tab>` itself does nothing: this
 element is *inside* that button in the flattened tree, and inheritance only runs the other way.
 
-The group writes this element's `slot` attribute itself. A tab with no `panel` still gets a stable
+Before group hydration, an unassigned tab places itself in the public `nav` slot. The group then
+writes its internal per-tab `slot` attribute itself. A tab with no `panel` still gets a stable
 synthetic name from its position, so an unpaired tab renders a button with an empty panel rather
 than silently disappearing.
+
+The visual close affordance is non-focusable because `<lr-tab-group>` projects this descriptor
+inside the real `role="tab"` button. Rendering another focusable button there would create a
+nested-interactive accessibility violation and break the APG's one-stop roving-tabindex model. The
+glyph carries a localized `title`, stays out of the accessible name, and stops propagation so
+closing an inactive tab never selects it first. Keyboard users focus the same real tab button and
+press Delete, advertised through `aria-keyshortcuts`. Remove the corresponding `<lr-tab>` and
+`<lr-tab-panel>` in an `lr-close` listener; the group then reconciles selection automatically.
+
+```html
+<lr-tab-group id="documents" aria-label="Open documents">
+  <lr-tab panel="overview" active>Overview</lr-tab>
+  <lr-tab panel="notes" closable>Notes</lr-tab>
+  <lr-tab-panel name="overview" active>Overview content</lr-tab-panel>
+  <lr-tab-panel name="notes">Notes content</lr-tab-panel>
+</lr-tab-group>
+```
+
+```js
+const group = document.querySelector('#documents');
+group.addEventListener('lr-close', (event) => {
+  const tab = event.target;
+  const name = tab.panel;
+  tab.remove();
+  group.querySelector(`lr-tab-panel[name="${CSS.escape(name)}"]`)?.remove();
+});
+```
 
 ---

@@ -121,6 +121,8 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * @csspart frame - The sandboxed iframe.
  * @csspart loading - The pre-load status.
  * @csspart error - The invalid-resource error.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   static override styles = [LyraElement.styles, styles];

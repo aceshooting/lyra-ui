@@ -25,6 +25,8 @@ export interface LyraReorderItemEventMap {
  * @csspart move-down-button - The move-down button.
  * @csspart content - Wrapper around the default slot.
  * @cssprop [--lr-reorder-item-gap=var(--lr-space-xs)] - Gap between the move buttons and content.
+ * @status stable
+ * @since 6.0.0
  */
 export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   static override styles = [LyraElement.styles, styles];

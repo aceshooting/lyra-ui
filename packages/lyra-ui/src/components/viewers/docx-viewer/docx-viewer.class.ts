@@ -212,6 +212,8 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @cssprop --lr-docx-viewer-search-match-background - Search-match background.
  * @cssprop --lr-docx-viewer-search-match-active-background - Active search-match background.
  * @cssprop --lr-docx-viewer-search-match-active-foreground - Active search-match foreground.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

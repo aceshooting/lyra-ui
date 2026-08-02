@@ -69,8 +69,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-avatar-size);
-    block-size: var(--lr-avatar-size);
+    inline-size: var(--size, var(--lr-avatar-size));
+    block-size: var(--size, var(--lr-avatar-size));
     overflow: hidden;
     border-radius: var(--lr-radius-pill);
     background: var(--lr-avatar-bg);

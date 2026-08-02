@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/toast/toast-item.js';` (registers the tag; side-effect import)
 - **Class** `LyraToastItem`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/toast/toast-item.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-toast` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -25,7 +27,9 @@ One per page recommended — the region.
   'bottom-start'|'bottom-center'|'bottom-end'`
 
 **Methods:** `async create(message: string, options?: ToastCreateOptions): Promise<LyraToastItem>` —
-`ToastCreateOptions = { variant?, duration?, size?, withIcon? }`
+`ToastCreateOptions = { variant?, duration?, size?, withIcon? }`. Its `size` accepts the canonical
+`2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; the created item's getter
+normalizes the long aliases to `s`/`m`/`l`.
 
 **Events:** none.
 
@@ -33,8 +37,12 @@ One per page recommended — the region.
 
 **CSS parts:** `stack`
 
+**CSS custom states:** `visible` while at least one `lr-toast-item` is present in the region.
+
 **Themeable custom properties:** `--lr-toast-gap` (default `var(--lr-space-s)`),
 `--lr-toast-width` (default `var(--lr-size-28rem)`) — set directly on the `<lr-toast>` element.
+The mapped `--gap` and `--width` names are compatibility aliases for those two Lyra-prefixed
+properties; an explicitly set Lyra-prefixed property continues to take precedence.
 Every `<lr-toast-item>` property below is also documented on the region, because custom properties
 inherit into the items slotted inside it: one declaration on `<lr-toast>` retunes the whole stack.
 
@@ -47,7 +55,8 @@ A single notification.
 **Properties:**
 - `duration: number = 5000` (ms; `Infinity` or `<= 0` disables auto-dismiss)
 - `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — drives both `--lr-toast-padding` and the
-  toast's own font-size via `:host([size=...])`, from a compact `2xs` up to a roomier `xl`)
+  toast's own font-size via `:host([size=...])`, from a compact `2xs` up to a roomier `xl`;
+  setters also accept `small`/`medium`/`large` and normalize reads to `s`/`m`/`l`)
 - `variant: 'brand'|'success'|'warning'|'danger'|'neutral' = 'neutral'` (reflected)
 - `withIcon: boolean = false` (attribute `with-icon`)
 
@@ -58,7 +67,11 @@ DOM.
 
 **Slots:** default (message), `icon`
 
-**CSS parts:** `toast-item`, `accent`, `icon`, `content`, `close-button`
+**CSS parts:** `toast-item`, `accent`, `icon`, `content`, `close-button`, `close-icon`,
+`close-icon__svg`, `progress-ring`, `progress-ring__base`, `progress-ring__indicator`,
+`progress-ring__label`, `progress-ring__track`. The progress-ring tree is rendered for a finite,
+positive auto-dismiss duration and surrounds the close glyph; its indicator pauses alongside the
+auto-dismiss timer on hover or focus.
 
 **Themeable custom properties:** `--lr-toast-accent-width` (default `var(--lr-size-4px)`),
 `--lr-toast-show-duration`/`--lr-toast-hide-duration`
@@ -67,6 +80,8 @@ transition duration and uses it for its completion fallback), `--lr-toast-paddin
 (`var(--lr-space-m)`), `--lr-toast-font-size` (`var(--lr-font-size-m)`) — both are auto-swapped per
 `size`, from a compact `2xs` up to a roomier `xl` — `--lr-toast-accent-color` (default
 `var(--lr-color-border)`, auto-swapped per `variant` to that variant's loud fill).
+The mapped names `--accent-width`, `--show-duration`, `--hide-duration`, and `--padding` alias their
+respective Lyra-prefixed properties. Setting the Lyra-prefixed form explicitly wins over its alias.
 
 **Optional peer deps:** none.
 
@@ -94,7 +109,9 @@ toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick:
 
 `toast(input: ToastOptions | string): ToastHandle` where
 `ToastOptions = ToastCreateOptions & { message: string; placement?: ToastPlacement; action?: { label: string; onClick: (item: LyraToastItem) => void } }`,
-and `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. Lazily mounts (and
+and `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. Because it extends
+`ToastCreateOptions`, the helper accepts the same long `small`/`medium`/`large` size aliases and
+normalizes the created item identically. It lazily mounts (and
 re-mounts if removed) **one singleton `<lr-toast>` region per distinct `placement`** on
 `document.body` — a `toast()` call targeting one placement never relocates toasts already showing
 at another, since `placement` is a per-call option rather than a single global region's setting.

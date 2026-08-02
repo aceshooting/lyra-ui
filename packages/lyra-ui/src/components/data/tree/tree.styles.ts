@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     display: block;
   }
-  [part='base'] {
+  [part~='base'] {
     display: flex;
     flex-direction: column;
     /* Fallback for a deeply-indented node whose row still overflows despite

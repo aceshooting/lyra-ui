@@ -5,90 +5,122 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/carousel/carousel.js';` (registers the tag; side-effect import)
 - **Class** `LyraCarousel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/carousel/carousel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-carousel`
 
-Accessible carousel for arbitrary slotted slide elements. Mirrors `wa-carousel` / `sl-carousel`. It
-shows one assigned element at a time and provides keyboard, button, and indicator navigation. Slide
+Accessible scroll-snap carousel for arbitrary slotted slide elements. Mirrors `wa-carousel` /
+`sl-carousel`, including their opt-in navigation and pagination, multi-slide pages, logical
+orientation, autoplay, loop, mouse dragging, slots, methods, parts, and custom properties. Slide
 semantics (`role="group"`, a localized "slide" role description, and a localized "Slide N of M"
-label) are added only to `<lr-carousel-item>` children — an arbitrary slotted element keeps its own
-native or authored semantics untouched, and an explicit `role`/`aria-label` on an
-`<lr-carousel-item>` wins over the generated one.
+label) are added only to `<lr-carousel-item>` children. An arbitrary slotted element keeps its own
+native or authored semantics, and an explicit `role`, `aria-roledescription`, or `aria-label` on an
+`<lr-carousel-item>` wins over generated metadata.
 
 **Properties:**
-- `index: number = 0` (attribute `index`, reflected) — active slide index
+- `currentSlide: number = 0` (attribute `current-slide`, reflected) — zero-based index of the first
+  slide in the active page. `index: number = 0` (attribute `index`, reflected) is the established
+  Lyra alias; setting either name updates and reflects both through one clamped state value.
 - `loop: boolean = false` (attribute `loop`, reflected) — wraps navigation at either end
-- `autoplay: boolean = false` (attribute `autoplay`, reflected) and `autoplayInterval: number = 5000`
-  (attribute `autoplay-interval`) — optional timed advance; autoplay is disabled under reduced motion
-- `showIndicators: boolean = true` (attribute `show-indicators`) — renders slide indicator buttons
+- `autoplay: boolean = false` (attribute `autoplay`, reflected) and
+  `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — optional timed advance.
+  Autoplay pauses while the page is hidden or the user is hovering, focusing, or dragging the
+  carousel, and remains off under `prefers-reduced-motion: reduce`.
+- `navigation: boolean = false` (attribute `navigation`, reflected) — renders previous and next
+  buttons
+- `pagination: boolean = false` (attribute `pagination`, reflected) — renders page indicators.
+  `showIndicators: boolean = false` (attribute `show-indicators`) is the synchronized Lyra alias;
+  its legacy literal `show-indicators="false"` spelling remains understood.
+- `slidesPerPage: number = 1` (attribute `slides-per-page`) — number of simultaneously operable
+  slides. Values used for layout are finite integers clamped to at least one and at most the live
+  slide count.
+- `slidesPerMove: number = 1` (attribute `slides-per-move`) — number advanced by `next()` and
+  `previous()`, clamped to `slidesPerPage`. A final partial movement lands on the last full page.
+- `orientation: 'horizontal'|'vertical' = 'horizontal'` — inline-axis or block-axis layout and
+  scrolling. Give a vertical carousel a definite block size.
+- `mouseDragging: boolean = false` (attribute `mouse-dragging`, reflected) — adds desktop
+  click-and-drag scrolling without replacing native touch and trackpad scrolling. Pointer
+  cancellation releases capture, removes drag state, and returns to the active snap position.
+- `slides: number = 0` (attribute `slides`, reflected) — live assigned-slide count; updated after
+  dynamic child changes
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — fallback landmark name; a host
   `aria-label` takes precedence
 
-**Methods:** `next()`, `previous()`, and `goTo(index)` update the active index and emit
-`lr-slide-change` (`detail: { index }`).
+**8.0 default migration:** navigation and pagination now match the mapped opt-in defaults. Markup
+that relied on Lyra's former always-present arrow row or `showIndicators = true` must add
+`navigation` and/or `pagination`; the `showIndicators` property/attribute remains an alias but now
+defaults to `false`. The autoplay interval also changes from Lyra's former 5000ms to the mapped
+3000ms default. Existing explicit values continue to win.
 
-**Events:** `lr-slide-change` (`detail: { index }`) — emitted after the active slide changes,
-whether from a button, a key, an indicator, autoplay, or the user swiping the track to rest on
-another slide.
+**Methods:**
+- `next(behavior: ScrollBehavior = 'smooth')` and
+  `previous(behavior: ScrollBehavior = 'smooth')` move by `slidesPerMove`
+- `goToSlide(index, behavior: ScrollBehavior = 'smooth')` moves to a specific slide;
+  `goTo(index, behavior)` is the Lyra compatibility alias
+- `addSlide(slide: LyraCarouselItem)` appends a slide and `removeSlide(index)` removes one; page
+  count, reflected `slides`, active range, inertness, loop endcaps, and pagination reconcile
+  automatically
 
-**Touch, swipe, and scroll snapping (new in 8.0.0).** The slides live in a native scroll-snap
-track, so touch swiping, trackpad panning, momentum, and rubber-banding all come from the platform
-rather than a synthetic pointer-drag. `viewport` is the real scroll port (`overflow-x: auto`,
-`overflow-y: hidden`, `scroll-snap-type: inline mandatory`, `overscroll-behavior-inline: contain`,
-native scrollbar hidden), and every assigned slide is one snap area (`scroll-snap-align: start`).
-Scrolling to a slide by hand is therefore a first-class way to change the active slide: once the
-scroller comes to rest — on `scrollend` where the engine implements it, otherwise after a short
-quiet period — the resting slide is adopted, `index` updates, and `lr-slide-change` fires exactly
-once for the whole gesture rather than once per slide the finger flicked past. Correspondingly, a
-programmatic change (a control, a key, `goTo()`, or writing `index`) scrolls the track to that
-slide instead of swapping it in place. The first alignment after mount is instant, so an `index`
-set in markup does not read as the carousel sliding into place on load, and under
-`prefers-reduced-motion` every alignment is instant. Every slide other than the one at `index`
-keeps its box — the track needs something to scroll between — but stays `inert` with
-`aria-hidden="true"`, so a link two slides away is never reachable by Tab while it is scrolled out
-of view. (An author's own `inert`/`aria-hidden` on the active slide is preserved rather than
-cleared.) Nothing sets
-`scroll-snap-stop: always`, so `goTo()`, Home, and End travel all the way to their target instead
-of stopping at the first slide they cross. Positions are measured from rectangles rather than
-`scrollLeft`, which keeps the whole mechanism correct under RTL, where the inline start is the
-right edge and the scroll offset itself is negative.
+**Events:** `lr-slide-change` (`detail: { index, slide }`) — emitted after the active slide changes
+from a method, button, key, pagination item, autoplay tick, or settled user scroll. `slide` is the
+original assigned element at `index`, never a loop endcap.
 
-**CSS parts:** `base` (the `role="region"` landmark), `viewport` (the keyboard-focusable slide
-viewport, and the scroll-snap scroll port), `track` (the slotted-slide wrapper, laid out as the
-inline snap track), `controls`, `previous-button`, `next-button`, `previous-glyph`/`next-glyph` (the
-chevron inside each, mirrored under RTL), `indicators`, `indicator` (one indicator's hit target,
-sized to the shared minimum tappable size), and `indicator-dot` (the compact visible dot inside it).
+**Paging and scrolling.** The page count is the set of reachable starts from zero to
+`slideCount - slidesPerPage`, stepping by `slidesPerMove` and always including the final start. All
+slides in the active page are restored to their authored `inert`/`aria-hidden` state; every other
+slide keeps its layout box but becomes `inert` and `aria-hidden="true"`, so visible multi-slide
+pages remain fully operable while off-page links are unreachable. Native mandatory scroll snap
+owns touch, trackpad, momentum, and rubber-band behavior. Settling adopts the nearest page once and
+emits one event for the whole gesture. Programmatic movement scrolls the same track; first mount
+and reduced-motion alignment are instant. Loop mode adds inert, accessibility-hidden endcaps so
+forward/backward wrapping continues in the requested direction, then silently resets to the
+matching original slide. Clone idrefs and form-identifying attributes are not duplicated.
 
-**Themeable custom properties:** `--lr-carousel-indicator-current-bg` (default
-`var(--lr-color-brand-quiet)`) and `--lr-carousel-indicator-current-border-color` (default
-`var(--lr-color-brand)`) — background and border color of the current slide's `indicator-dot`
-(`[aria-current='true']`). Same state-hook mechanics as `<lr-widget>`'s view-toggle pair above:
-inline `var()` fallbacks, never declared on `:host`, so either can be set on the element or on any
-ancestor; unset, each falls back to the token the rule used before. This shape is what makes the
-current indicator addressable at all — `::part(indicator)[aria-current='true']` is invalid CSS, so
-hijacking a library-wide color token was previously the only lever.
+Horizontal Left/Right keys follow logical direction and swap under RTL; vertical carousels use
+Up/Down without an RTL inversion. Home and End move to the first and final reachable start. The
+populated multi-slide state remains accessible at a 320px allocation.
 
-`--lr-carousel-slide-basis` (default `100%`, new in 8.0.0) — the flex basis of every slide in the
-snap track. The default gives one slide per view; a smaller value shows several at once while the
-snap positions still land on each slide's inline start. Note that the inertness above is keyed to
-`index`, not to visibility: in a multi-per-view layout the neighbouring slides are on screen but
-still `inert`/`aria-hidden`, so reserve it for slides whose content is not interactive.
+**Slots:** default slides, `previous-icon`, and `next-icon`. Named icon slots replace only the
+decorative glyph content; Lyra retains the localized button names and minimum hit areas.
+
+**CSS parts:** `base carousel` (same region node), `scroll-container viewport` (same focusable
+scroll port), `navigation`, `navigation-button`, `navigation-button-previous` /
+`navigation-button-next`, Shoelace aliases `navigation-button--previous` /
+`navigation-button--next`, and Lyra aliases `previous-button` / `next-button` plus
+`previous-glyph` / `next-glyph`; `pagination indicators`, `pagination-item indicator`, active
+aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot`. `track` and
+`controls` are Lyra extensions.
+
+**Themeable custom properties:** mapped `--aspect-ratio` (default `16/9`), `--scroll-hint`
+(logical scroll-area padding), and `--slide-gap` (default `var(--lr-space-m)`). Lyra extensions
+`--lr-carousel-indicator-current-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-carousel-indicator-current-border-color` (default `var(--lr-color-brand)`) color only the
+active `indicator-dot`. `--lr-carousel-slide-basis` remains a compatibility escape hatch that
+overrides the basis computed from `slidesPerPage`; prefer the property for normal multi-slide
+layouts because it also updates paging and accessibility state.
 
 ```html
-<lr-carousel aria-label="Screenshots">
-  <img alt="Dashboard overview" src="overview.png">
-  <img alt="Dashboard details" src="details.png">
+<lr-carousel navigation pagination aria-label="Screenshots">
+  <lr-carousel-item><img alt="Dashboard overview" src="overview.png"></lr-carousel-item>
+  <lr-carousel-item><img alt="Dashboard details" src="details.png"></lr-carousel-item>
 </lr-carousel>
 ```
 
 ```html
-<!-- Three slides per view, snapping one slide at a time. -->
-<lr-carousel aria-label="Projects" style="--lr-carousel-slide-basis: 33.333%">
+<lr-carousel
+  navigation
+  pagination
+  mouse-dragging
+  slides-per-page="3"
+  slides-per-move="2"
+  aria-label="Projects"
+>
   <lr-card>Solar</lr-card>
   <lr-card>Wind</lr-card>
   <lr-card>Battery</lr-card>

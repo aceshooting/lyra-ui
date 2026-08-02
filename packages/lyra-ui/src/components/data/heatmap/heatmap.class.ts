@@ -418,6 +418,8 @@ export interface LyraHeatmapEventMap {
  * @cssprop [--lr-heatmap-annotation-color=var(--lr-color-danger)] - Border color for an annotated cell.
  * @cssprop [--lr-heatmap-selected-color=var(--lr-color-success)] - Border color for the selected cell.
  * @cssprop [--lr-heatmap-color-steps-gradient=linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))] - Gradient painted on the continuous legend bar. Set on the host by the component itself while `colorSteps` is supplied, and removed again when it is not; the fallback is the two-endpoint scale ramp.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -988,6 +990,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   /** Redraws canvas content after an upstream token or theme change. */
   refreshTheme(): void {
+    // `colorSteps` may contain var()/color-mix() expressions that resolve through the live host
+    // theme. Its cache key intentionally uses the authored expressions, so a theme invalidation
+    // must discard the previously computed canvas colors even though the property text is stable.
+    this.cachedRamp = null;
     const changed = this.refreshAccessibleTargetSize();
     if (!changed) this.draw();
   }
@@ -1094,6 +1100,27 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     });
   };
 
+  /** Resolves a safe caller-supplied color in this element's live token scope before it reaches
+   * canvas. Canvas accepts ordinary colors but not `var()`; a hidden child lets the browser resolve
+   * arbitrary nested `var()`/`color-mix()` expressions without a hand-written CSS parser. */
+  private resolveColorStep(color: string, fallback: string): string {
+    const safe = sanitizeCssColor(color);
+    if (!safe) return fallback;
+
+    const scope = this.ownerDocument.createElement('span');
+    const probe = this.ownerDocument.createElement('span');
+    scope.hidden = true;
+    scope.style.color = fallback;
+    probe.style.color = safe;
+    scope.append(probe);
+    this.renderRoot.append(scope);
+    try {
+      return getComputedStyle(probe).color.trim() || fallback;
+    } finally {
+      scope.remove();
+    }
+  }
+
   private colorRamp(
     bucketCount: number,
     cs: CSSStyleDeclaration,
@@ -1106,9 +1133,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (steps && steps.length >= 2) {
       const key = `steps ${steps.join(' ')}`;
       if (this.cachedRamp?.key === key) return this.cachedRamp;
-      const colors = steps.map((c) => formatRgb(resolveRgb(c, FALLBACK_SCALE_LO)));
-      const loRgb = resolveRgb(steps[0]!, FALLBACK_SCALE_LO);
-      const hiRgb = resolveRgb(steps[steps.length - 1]!, FALLBACK_SCALE_HI);
+      const resolved = steps.map((color, index) =>
+        this.resolveColorStep(color, index === steps.length - 1 ? FALLBACK_SCALE_HI : FALLBACK_SCALE_LO),
+      );
+      const colors = resolved.map((color) => formatRgb(resolveRgb(color, FALLBACK_SCALE_LO)));
+      const loRgb = resolveRgb(resolved[0]!, FALLBACK_SCALE_LO);
+      const hiRgb = resolveRgb(resolved[resolved.length - 1]!, FALLBACK_SCALE_HI);
       this.cachedRamp = { key, colors, loRgb, hiRgb };
       return this.cachedRamp;
     }

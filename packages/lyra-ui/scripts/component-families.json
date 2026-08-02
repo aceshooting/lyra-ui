@@ -55,7 +55,7 @@
     "rubric-form": "forms", "select": "forms", "slider": "forms", "swatch-picker": "forms",
     "switch": "forms", "textarea": "forms", "time-range": "forms", "token-input": "forms",
 
-    "calendar": "data", "context-meter": "data", "document-library": "data",
+    "calendar": "data", "context-meter": "data", "data-grid": "data", "document-library": "data",
     "env-list": "data", "file-tree": "data", "flow-canvas": "data", "flow-controls": "data",
     "flow-minimap": "data", "flow-node": "data", "flow-run-overlay": "data", "gauge": "data",
     "graph-query-builder": "data", "heatmap": "data", "pagination": "data", "query-builder": "data",
@@ -64,14 +64,14 @@
 
     "chart": "charts",
 
-    "app-rail": "layout", "breadcrumb": "layout", "button-group": "layout", "card": "layout",
+    "app-rail": "layout", "breadcrumb": "layout", "button-group": "layout", "card": "layout", "page": "layout",
     "carousel": "layout", "command-palette": "layout", "control-group": "layout",
     "dashboard-grid": "layout", "details": "layout", "dock-panel": "layout",
     "drilldown-panel": "layout", "filter-bar": "layout", "menu": "layout",
-    "reorder-list": "layout", "responsive-panel": "layout", "scroller": "layout", "segmented": "layout", "split": "layout",
+    "reorder-list": "layout", "responsive-panel": "layout", "scroller": "layout", "segmented": "layout", "split": "layout", "split-panel": "layout",
     "stepper": "layout", "tab-group": "layout", "virtual-list": "layout", "widget": "layout",
 
-    "badge": "overlays", "callout": "overlays", "chip": "overlays", "dialog": "overlays",
+    "alert": "overlays", "badge": "overlays", "callout": "overlays", "chip": "overlays", "dialog": "overlays",
     "drawer": "overlays", "empty": "overlays", "kbd": "overlays", "overlay": "overlays",
     "popup": "overlays", "progress": "overlays", "rating": "overlays", "skeleton": "overlays", "spinner": "overlays",
     "toast": "overlays",
@@ -89,9 +89,9 @@
     "attachment-trigger": "media", "av-player": "media", "avatar": "media", "avatar-group": "media",
     "file-icon": "media", "file-input": "media", "flag": "media", "image-comparer": "media",
     "image-viewer": "media", "lightbox": "media", "map": "media", "media-card": "media",
-    "playback": "media", "qr-code": "media", "zoomable-frame": "media",
+    "pan-zoom": "media", "playback": "media", "qr-code": "media", "video": "media", "video-playlist": "media", "zoomable-frame": "media",
 
-    "copy-button": "utility", "diff-view": "utility", "divider": "utility",
+    "copy-button": "utility", "diff-view": "utility", "divider": "utility", "styles": "utility",
     "export-button": "utility", "format": "utility", "icon": "utility",
     "intersection-observer": "utility", "json-viewer": "utility", "known-date": "utility",
     "live-region": "utility", "mention-popover": "utility", "mutation-observer": "utility",

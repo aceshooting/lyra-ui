@@ -7,7 +7,7 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part="base"] {
+  [part~="base"] {
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -21,5 +21,8 @@ export const styles = css`
     padding: 0;
     min-inline-size: 0;
     max-inline-size: 100%;
+  }
+  .separator-source {
+    display: none;
   }
 `;

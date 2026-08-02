@@ -1,0 +1,430 @@
+import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
+import { property, query } from 'lit/decorators.js';
+import { nextId } from '../../../internal/a11y.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteRange } from '../../../internal/numbers.js';
+import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import { styles } from './page.styles.js';
+
+const DEFAULT_MOBILE_BREAKPOINT = '768px';
+
+/** The Page presentation derived from its allocated inline size. */
+export type PageView = 'mobile' | 'desktop';
+
+/** The logical edge that owns navigation in either Page presentation. */
+export type PageNavigationPlacement = 'start' | 'end';
+
+function navigationIcon(): SVGTemplateResult {
+  return svg`
+    <svg
+      width="1em"
+      height="1em"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.75"
+      stroke-linecap="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <line x1="4" y1="7" x2="20" y2="7"></line>
+      <line x1="4" y1="12" x2="20" y2="12"></line>
+      <line x1="4" y1="17" x2="20" y2="17"></line>
+    </svg>
+  `;
+}
+
+/**
+ * `<lr-page>` — a semantic application/page shell that derives its mobile or desktop presentation
+ * from its own allocated inline size. A single static navigation subtree participates in the
+ * desktop grid and is promoted in place to a modal mobile drawer, so assigned nodes, component
+ * instances, focus, form state, and scroll state are never cloned or replaced at a breakpoint.
+ *
+ * Each instance owns unique main/drawer/navigation IDs. Its skip link therefore targets its own
+ * main landmark even when several Pages coexist. The default skip and navigation controls are
+ * localized, and a host `aria-label` overrides the navigation landmark's localized name.
+ *
+ * `disable-sticky` is a whitespace-token attribute accepting `banner`, `header`, `subheader`,
+ * `menu`, and `aside`. A token only disables that region; unrelated sticky regions keep working.
+ * Slotted controls carrying `data-toggle-nav` toggle the mobile drawer, matching the documented
+ * light-DOM Page pattern without adding a stale `nav-state` property.
+ *
+ * @customElement lr-page
+ * @slot - Main content.
+ * @slot aside - Complementary content beside the main region.
+ * @slot banner - A page-wide notice above the header.
+ * @slot footer - Page-wide footer content.
+ * @slot header - Primary page header content.
+ * @slot main-footer - Content after the main body but inside the main landmark.
+ * @slot main-header - Content before the main body but inside the main landmark.
+ * @slot menu - A compact menu beside the main region.
+ * @slot navigation - Primary navigation content.
+ * @slot navigation-footer - Content after the navigation links.
+ * @slot navigation-header - Content before the navigation links.
+ * @slot navigation-toggle - A custom control that toggles mobile navigation.
+ * @slot navigation-toggle-icon - Replaces the default toggle's menu glyph.
+ * @slot skip-to-content - Replaces the localized skip-link text.
+ * @slot subheader - A secondary header row.
+ * @csspart aside - Wrapper for the `aside` slot and the complementary landmark.
+ * @csspart banner - Wrapper for the `banner` slot.
+ * @csspart base - Compatibility name for the root Page wrapper; use `page`.
+ * @csspart body - Desktop grid/mobile stack containing menu, navigation, main, and aside.
+ * @csspart dialog-wrapper - Mobile backdrop and drawer positioning layer; display-contents on desktop.
+ * @csspart drawer - Navigation's modal surface on mobile; display-contents on desktop.
+ * @csspart footer - Page-wide footer landmark.
+ * @csspart header - Primary page header landmark.
+ * @csspart main - The unique main landmark.
+ * @csspart main-content - Wrapper for the default slot.
+ * @csspart main-footer - Wrapper for the `main-footer` slot.
+ * @csspart main-header - Wrapper for the `main-header` slot.
+ * @csspart menu - Wrapper for the `menu` slot.
+ * @csspart navigation - The primary navigation landmark.
+ * @csspart navigation-desktop - Desktop compatibility name on the same node as `navigation`.
+ * @csspart navigation-footer - Wrapper for the `navigation-footer` slot.
+ * @csspart navigation-header - Wrapper for the `navigation-header` slot.
+ * @csspart navigation-toggle - The default mobile navigation button.
+ * @csspart navigation-toggle-icon - The default button's icon wrapper.
+ * @csspart page - Root Page wrapper; the same node as `base`.
+ * @csspart skip-to-content - The focus-revealed skip link.
+ * @csspart subheader - Wrapper for the `subheader` slot.
+ * @cssprop [--lr-page-aside-width=auto] - Desktop aside column width.
+ * @cssprop [--lr-page-banner-height=0px] - Minimum banner height and sticky offset.
+ * @cssprop [--lr-page-header-height=0px] - Minimum header height and sticky offset.
+ * @cssprop [--lr-page-main-width=1fr] - Desktop main column width.
+ * @cssprop [--lr-page-menu-width=auto] - Desktop menu column width.
+ * @cssprop [--lr-page-subheader-height=0px] - Minimum subheader height and sticky offset.
+ * @cssprop [--aside-width] - Web Awesome alias for `--lr-page-aside-width`.
+ * @cssprop [--banner-height] - Web Awesome alias for `--lr-page-banner-height`.
+ * @cssprop [--header-height] - Web Awesome alias for `--lr-page-header-height`.
+ * @cssprop [--main-width] - Web Awesome alias for `--lr-page-main-width`.
+ * @cssprop [--menu-width] - Web Awesome alias for `--lr-page-menu-width`.
+ * @cssprop [--subheader-height] - Web Awesome alias for `--lr-page-subheader-height`.
+ * @status stable
+ * @since 8.0.0
+ */
+export class LyraPage extends LyraElement {
+  static override styles = [LyraElement.styles, styles];
+
+  /** Presentation derived from the Page's allocated inline size. It begins at `desktop` so server
+   * output is deterministic, then reflects the first live allocation measurement. */
+  @property({ reflect: true }) view: PageView = 'desktop';
+
+  /** Whether mobile navigation is open. Desktop navigation remains visible independently. */
+  @property({ type: Boolean, attribute: 'nav-open', reflect: true }) navOpen = false;
+
+  /** Allocation breakpoint. Bare numbers/px, `rem`, and `em` use the shared CSS-length resolver;
+   * invalid values fall back to `768px`. */
+  @property({ attribute: 'mobile-breakpoint' }) mobileBreakpoint = '768px';
+
+  /** Logical edge occupied by desktop navigation and the mobile drawer. */
+  @property({ attribute: 'navigation-placement', reflect: true })
+  navigationPlacement: PageNavigationPlacement = 'start';
+
+  /** Hides the default mobile toggle. Slotted `data-toggle-nav` controls remain available. */
+  @property({ type: Boolean, attribute: 'disable-navigation-toggle', reflect: true })
+  disableNavigationToggle = false;
+
+  /** Host-level accessible-name override forwarded to the internal navigation landmark. */
+  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
+
+  private readonly mainId = nextId('page-main');
+  private readonly navigationId = nextId('page-navigation');
+  private readonly drawerId = nextId('page-drawer');
+  private readonly skipTargetId = nextId('page-skip-target');
+  private resizeObserver?: ResizeObserver;
+  private resizeView?: Window;
+  private overlayHandle?: OverlayHandle;
+  private navigationTrigger?: HTMLElement;
+  private customToggle?: HTMLElement;
+  private customToggleOwnsLabel = false;
+  private customToggleGeneratedLabel?: string;
+
+  @query('[part~="main"]') private mainElement?: HTMLElement;
+  @query('[part~="drawer"]') private drawerElement?: HTMLElement;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // A URL fragment cannot resolve to an id inside a shadow root. Make the host the real,
+    // per-instance native fragment target while the click handler below moves focus to the
+    // semantic main landmark inside. Preserve an author-supplied host id/tabindex.
+    if (!this.id) this.id = this.skipTargetId;
+    if (!this.hasAttribute('tabindex')) this.tabIndex = -1;
+    this.measureAllocation();
+    this.observeAllocation();
+    if (this.hasUpdated && this.view === 'mobile' && this.navOpen) {
+      if (this.overlayHandle?.isActive()) this.overlayHandle.resume();
+      else this.syncOverlay();
+      queueMicrotask(() => this.overlayHandle?.focusInitial());
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    this.resizeView?.removeEventListener('resize', this.onWindowResize);
+    this.resizeView = undefined;
+    this.overlayHandle?.suspend();
+    super.disconnectedCallback();
+  }
+
+  protected override firstUpdated(): void {
+    this.measureAllocation();
+    this.observeAllocation();
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (changed.has('mobileBreakpoint') && changed.get('mobileBreakpoint') !== undefined) {
+      this.measureAllocation();
+    }
+    this.syncCustomToggle();
+    this.syncOverlay(changed);
+  }
+
+  private observeAllocation(): void {
+    if (!this.isConnected) return;
+    this.resizeView?.removeEventListener('resize', this.onWindowResize);
+    this.resizeView = undefined;
+    const view = this.ownerDocument.defaultView;
+    const ResizeObserverConstructor = view?.ResizeObserver;
+    if (ResizeObserverConstructor) {
+      this.resizeObserver ??= new ResizeObserverConstructor((entries) => {
+        const entry = entries.find((candidate) => candidate.target === this) ?? entries[0];
+        const inlineSize = entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width;
+        if (inlineSize !== undefined) this.applyMeasuredInlineSize(inlineSize);
+      });
+      this.resizeObserver.observe(this);
+      return;
+    }
+    if (view) {
+      this.resizeView = view;
+      view.addEventListener('resize', this.onWindowResize);
+    }
+  }
+
+  private readonly onWindowResize = (): void => this.measureAllocation();
+
+  private measureAllocation(): void {
+    const width = this.getBoundingClientRect().width;
+    if (width > 0) this.applyMeasuredInlineSize(width);
+  }
+
+  /** Applies an authoritative allocation measurement. Kept separate from ResizeObserver delivery
+   * so reconnect and deterministic browser contracts exercise the same classification path. */
+  private applyMeasuredInlineSize(width: number): void {
+    if (!Number.isFinite(width) || width < 0) return;
+    const resolved = resolveCssLength(this.mobileBreakpoint, this);
+    const fallback = resolveCssLength(DEFAULT_MOBILE_BREAKPOINT, this) ?? 768;
+    const breakpoint = Math.max(0, resolved !== undefined && Number.isFinite(resolved) ? resolved : fallback);
+    const next: PageView = width <= breakpoint ? 'mobile' : 'desktop';
+    if (next !== this.view) this.view = next;
+  }
+
+  private syncOverlay(changed?: PropertyValues<this>): void {
+    const shouldBeActive = this.isConnected && this.view === 'mobile' && this.navOpen;
+    if (shouldBeActive) {
+      if (this.overlayHandle?.isActive()) {
+        this.overlayHandle.resume();
+        return;
+      }
+      this.overlayHandle = activateOverlay({
+        host: this,
+        panel: () => this.drawerElement ?? null,
+        onEscape: () => this.hideNavigation(),
+        onBackdrop: () => this.hideNavigation(),
+        ...(this.navigationTrigger ? { restoreFocusTo: this.navigationTrigger } : {}),
+        lockScroll: true,
+        suspendWhenUnrendered: true,
+      });
+      this.overlayHandle.focusInitial();
+      return;
+    }
+
+    if (this.overlayHandle) {
+      const restoreFocus = Boolean(changed?.has('navOpen') && !this.navOpen);
+      this.overlayHandle.deactivate({ restoreFocus });
+      this.overlayHandle = undefined;
+    }
+    if (!this.navOpen) this.navigationTrigger = undefined;
+  }
+
+  private syncCustomToggle(): void {
+    const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="navigation-toggle"]');
+    const next = slot?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+    if (next !== this.customToggle) {
+      this.customToggle = next;
+      this.customToggleOwnsLabel = Boolean(next && !next.hasAttribute('aria-label'));
+      this.customToggleGeneratedLabel = undefined;
+    }
+    if (!next) return;
+    next.setAttribute('aria-expanded', this.navOpen ? 'true' : 'false');
+    next.setAttribute('aria-controls', this.drawerId);
+    if (this.customToggleOwnsLabel) {
+      const currentLabel = next.getAttribute('aria-label');
+      if (currentLabel !== null && currentLabel !== this.customToggleGeneratedLabel) {
+        // The consumer supplied a label after assignment; it wins from this point onward.
+        this.customToggleOwnsLabel = false;
+        this.customToggleGeneratedLabel = undefined;
+        return;
+      }
+      const label = this.localize(this.navOpen ? 'closeNavigation' : 'openNavigation');
+      next.setAttribute('aria-label', label);
+      this.customToggleGeneratedLabel = label;
+    }
+  }
+
+  private rememberTriggerAndToggle(trigger: HTMLElement): void {
+    if (!this.navOpen) this.navigationTrigger = trigger;
+    this.toggleNavigation();
+  }
+
+  private readonly onDefaultToggleClick = (event: MouseEvent): void => {
+    this.rememberTriggerAndToggle(event.currentTarget as HTMLElement);
+  };
+
+  private readonly onToggleSlotClick = (event: MouseEvent): void => {
+    const trigger = event
+      .composedPath()
+      .find(
+        (candidate): candidate is HTMLElement =>
+          candidate instanceof HTMLElement && candidate.getAttribute('slot') === 'navigation-toggle',
+      );
+    if (trigger) this.rememberTriggerAndToggle(trigger);
+  };
+
+  private readonly onPageClick = (event: MouseEvent): void => {
+    const path = event.composedPath();
+    // A custom navigation-toggle may also carry data-toggle-nav. Its dedicated slot listener has
+    // already toggled once, so the delegated compatibility path must not toggle it back.
+    if (
+      path.some(
+        (candidate) =>
+          candidate instanceof HTMLElement && candidate.getAttribute('slot') === 'navigation-toggle',
+      )
+    ) {
+      return;
+    }
+    const trigger = path
+      .find(
+        (candidate): candidate is HTMLElement =>
+          candidate instanceof HTMLElement && candidate.hasAttribute('data-toggle-nav'),
+      );
+    if (trigger) this.rememberTriggerAndToggle(trigger);
+  };
+
+  private readonly onBackdropClick = (event: MouseEvent): void => {
+    if (event.target === event.currentTarget) this.overlayHandle?.dismissBackdrop();
+  };
+
+  private readonly onSkipClick = (event: MouseEvent): void => {
+    event.preventDefault();
+    this.mainElement?.focus();
+    this.mainElement?.scrollIntoView({ block: 'start' });
+  };
+
+  /** Open mobile navigation. Desktop navigation is already visible, but the state is retained so
+   * an open drawer can move through desktop and back without replacing its content. */
+  showNavigation(): void {
+    this.navOpen = true;
+  }
+
+  /** Close mobile navigation. */
+  hideNavigation(): void {
+    this.navOpen = false;
+  }
+
+  /** Toggle mobile navigation. */
+  toggleNavigation(): void {
+    this.navOpen = !this.navOpen;
+  }
+
+  /** Number of vertically visible CSS pixels for `element`, clamped to the current viewport. */
+  visiblePixelsInViewport(element: HTMLElement | null): number {
+    if (!element) return 0;
+    const rect = element.getBoundingClientRect();
+    if (!Number.isFinite(rect.top) || !Number.isFinite(rect.bottom)) return 0;
+    const view = element.ownerDocument.defaultView;
+    const candidateHeight = view?.innerHeight ?? element.ownerDocument.documentElement.clientHeight;
+    if (!Number.isFinite(candidateHeight) || candidateHeight <= 0) return 0;
+    const viewportHeight = finiteRange(candidateHeight, 0, 0);
+    const visible = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+    return finiteRange(visible, 0, 0, viewportHeight);
+  }
+
+  override render(): TemplateResult {
+    const mobile = this.view === 'mobile';
+    const overlayOpen = mobile && this.navOpen;
+    const navigationLabel = this.accessibleLabel ?? this.localize('navigation');
+    return html`
+      <div part="base page" @click=${this.onPageClick}>
+        <a part="skip-to-content" href=${`#${this.id || this.skipTargetId}`} @click=${this.onSkipClick}>
+          <slot name="skip-to-content">${this.localize('skipToContent')}</slot>
+        </a>
+
+        <div part="banner"><slot name="banner"></slot></div>
+        <header part="header">
+          <slot name="header"></slot>
+          <div class="navigation-toggle-container">
+            <slot
+              name="navigation-toggle"
+              @click=${this.onToggleSlotClick}
+              @slotchange=${this.syncCustomToggle}
+            >
+              <button
+                part="navigation-toggle"
+                type="button"
+                aria-expanded=${this.navOpen ? 'true' : 'false'}
+                aria-controls=${this.drawerId}
+                aria-label=${this.localize(this.navOpen ? 'closeNavigation' : 'openNavigation')}
+                @click=${this.onDefaultToggleClick}
+              >
+                <span part="navigation-toggle-icon">
+                  <slot name="navigation-toggle-icon">${navigationIcon()}</slot>
+                </span>
+              </button>
+            </slot>
+          </div>
+        </header>
+        <div part="subheader"><slot name="subheader"></slot></div>
+
+        <div part="body">
+          <div part="menu"><slot name="menu"></slot></div>
+          <div part="dialog-wrapper" @click=${this.onBackdropClick}>
+            <div
+              id=${this.drawerId}
+              part="drawer"
+              role=${overlayOpen ? 'dialog' : nothing}
+              aria-modal=${overlayOpen ? 'true' : nothing}
+              aria-label=${overlayOpen ? navigationLabel : nothing}
+              aria-hidden=${mobile && !this.navOpen ? 'true' : nothing}
+              tabindex=${overlayOpen ? '-1' : nothing}
+              ?inert=${mobile && !this.navOpen}
+            >
+              <nav id=${this.navigationId} part="navigation navigation-desktop" aria-label=${navigationLabel}>
+                <div part="navigation-header"><slot name="navigation-header"></slot></div>
+                <slot name="navigation"></slot>
+                <div part="navigation-footer"><slot name="navigation-footer"></slot></div>
+              </nav>
+            </div>
+          </div>
+
+          <main id=${this.mainId} part="main" tabindex="-1">
+            <div part="main-header"><slot name="main-header"></slot></div>
+            <div part="main-content"><slot></slot></div>
+            <div part="main-footer"><slot name="main-footer"></slot></div>
+          </main>
+          <aside part="aside"><slot name="aside"></slot></aside>
+        </div>
+
+        <footer part="footer"><slot name="footer"></slot></footer>
+      </div>
+    `;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-page': LyraPage;
+  }
+}

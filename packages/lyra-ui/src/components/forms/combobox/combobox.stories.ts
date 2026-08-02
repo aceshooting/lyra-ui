@@ -32,6 +32,32 @@ export const Multiple: Story = {
   `,
 };
 
+export const CreateAndCustomValues: Story = {
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-m); max-inline-size:22rem;">
+      <lr-combobox
+        label="Tags"
+        hint="Type a new tag and choose the localized create row."
+        multiple
+        allow-create
+        with-clear
+        appearance="filled-outlined"
+      >
+        <lr-option value="stable">Stable</lr-option>
+        <lr-option value="preview">Preview</lr-option>
+      </lr-combobox>
+      <lr-combobox
+        label="Custom single value"
+        hint="Enter commits text without appending an option."
+        allow-custom-value
+        placement="top"
+      >
+        <lr-option value="known">Known value</lr-option>
+      </lr-combobox>
+    </div>
+  `,
+};
+
 /** 320px allocation with selected unbroken content and long option metadata. */
 export const Narrow: Story = {
   name: 'Narrow (320px)',

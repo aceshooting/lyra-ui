@@ -76,6 +76,8 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/dashboard-grid--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/data-display-avatar-group--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/data-display-chip-group--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/data-grid--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/data-sparkline--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/datepicker-inline--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/datepicker-withinput--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/dialog--docs</loc></url>
@@ -118,6 +120,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/evaldataset--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/evaluationrun--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/exportbutton--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-alert--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-callout--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-progress--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-progress-bar--docs</loc></url>
@@ -159,6 +162,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/image-comparer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/ingestion-queue--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/input--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/input-native-time-input--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/input-number-input--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/input-radio-group--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/input-time-input--docs</loc></url>
@@ -171,7 +175,9 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/knowledgebaseadmin--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-divider--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-menu-label--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-page--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-scroller--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-split-panel--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/lightbox--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/liveregion--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/locale-picker--docs</loc></url>
@@ -179,6 +185,10 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/markdown--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/markdowncore--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/mcp-app--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/media-pan-zoom--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/media-video--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/media-video-playlist--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/media-zoomable-frame--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/mediacard--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/memorypanel--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/mentionpopover--docs</loc></url>
@@ -242,13 +252,13 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/source-picker--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/sourcecard--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/sourcelist--docs</loc></url>
-  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/sparkline--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/split--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/stacktrace--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/stat--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/stepper--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/streamingtext--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/streamstatus--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/styles-native-and-utilities--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/suggestionchips--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/swatch-picker--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/switch--docs</loc></url>
@@ -292,5 +302,4 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/widget--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/widget-renderer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/wordcloud--docs</loc></url>
-  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/zoomable-frame--docs</loc></url>
 </urlset>

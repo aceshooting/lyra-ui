@@ -3,26 +3,66 @@ import './rating.js';
 import type { LyraRating } from './rating.js';
 import { styles } from './rating.styles.js';
 
+it('emits one non-cancelable lr-invalid alias when a validity check fails', async () => {
+  const el = await fixture<LyraRating>(html`<lr-rating required aria-label="Score"></lr-rating>`);
+  const aliases: CustomEvent[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+
+  expect(el.checkValidity()).to.be.false;
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0].target).to.equal(el);
+  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
+  expect(aliases[0].cancelable).to.be.false;
+});
+
 it('gives the star row hover feedback matching the keyboard focus-visible cue', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='base'\]:hover \[part='star'\]\s*\{[^}]*color:/);
+  expect(css).to.match(/\[part~='base'\]:hover \[part='star'\]\s*\{[^}]*color:/);
 });
 
 it('keeps --lr-rating-empty-color reachable while the editable rating is hovered', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(
-    /\[part='base'\]:hover \[part='star'\]\s*\{[^}]*color:\s*var\(--lr-rating-empty-color,/,
+    /\[part~='base'\]:hover \[part='star'\]\s*\{[^}]*color:\s*var\(--lr-rating-empty-color,/,
   );
+});
+
+it('applies the mapped symbol color and spacing custom properties to rendered symbols', async () => {
+  const el = await fixture<LyraRating>(html`
+    <lr-rating
+      value="2"
+      style="--symbol-color: rgb(1, 2, 3); --symbol-color-active: rgb(4, 5, 6); --symbol-spacing: 11px;"
+    ></lr-rating>
+  `);
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const star = el.shadowRoot!.querySelector('[part="star"]') as HTMLElement;
+  const fill = star.querySelector('[part="star-fill"]') as HTMLElement;
+
+  expect(getComputedStyle(star).color).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(fill).color).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(base).columnGap).to.equal('11px');
+});
+
+it('applies --symbol-size while preserving --lr-rating-size precedence', async () => {
+  const mapped = await fixture<LyraRating>(html`
+    <lr-rating style="--symbol-size: 37px;"></lr-rating>
+  `);
+  const lyraOverride = await fixture<LyraRating>(html`
+    <lr-rating style="--symbol-size: 37px; --lr-rating-size: 29px;"></lr-rating>
+  `);
+
+  expect(getComputedStyle(mapped.shadowRoot!.querySelector('[part="star"]')!).fontSize).to.equal('37px');
+  expect(getComputedStyle(lyraOverride.shadowRoot!.querySelector('[part="star"]')!).fontSize).to.equal('29px');
 });
 
 it('gates the pointer cursor and hover highlight behind readonly/disabled, not just disabled (regression)', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/:host\(:not\(:disabled\):not\(\[readonly\]\)\) \[part='base'\]\s*\{[^}]*cursor:\s*pointer/);
+  expect(css).to.match(/:host\(:not\(:disabled\):not\(\[readonly\]\)\) \[part~='base'\]\s*\{[^}]*cursor:\s*pointer/);
   expect(css).to.match(
-    /:host\(:not\(:disabled\):not\(\[readonly\]\)\) \[part='base'\]:hover \[part='star'\]\s*\{[^}]*color:/,
+    /:host\(:not\(:disabled\):not\(\[readonly\]\)\) \[part~='base'\]:hover \[part='star'\]\s*\{[^}]*color:/,
   );
   // The old disabled-only gate must be gone, not merely joined by the new readonly+disabled one.
-  expect(css).to.not.include(":host(:not([disabled])) [part='base']:hover [part='star']");
+  expect(css).to.not.include(":host(:not([disabled])) [part~='base']:hover [part='star']");
   // `:disabled` (not `[disabled]`) is what tracks fieldset-cascaded disablement.
   expect(css).to.not.include(':host([disabled])');
 });
@@ -30,15 +70,15 @@ it('gates the pointer cursor and hover highlight behind readonly/disabled, not j
 it('does not show a pointer cursor on a readonly rating (it is still focusable but not settable)', async () => {
   const interactive = (await fixture(html`<lr-rating></lr-rating>`)) as LyraRating;
   const readonly = (await fixture(html`<lr-rating readonly></lr-rating>`)) as LyraRating;
-  const interactiveBase = interactive.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  const readonlyBase = readonly.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const interactiveBase = interactive.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const readonlyBase = readonly.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(getComputedStyle(interactiveBase).cursor).to.equal('pointer');
   expect(getComputedStyle(readonlyBase).cursor).to.not.equal('pointer');
 });
 
 it('exposes a keyboard-accessible rating slider', async () => {
   const el = (await fixture(html`<lr-rating value="2"></lr-rating>`)) as LyraRating;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('role')).to.equal('slider');
   expect(base.getAttribute('aria-valuenow')).to.equal('2');
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
@@ -46,13 +86,69 @@ it('exposes a keyboard-accessible rating slider', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('emits one native change Event before lr-change for a keyboard commit', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div><lr-rating value="2"></lr-rating></div>`);
+  const el = wrapper.querySelector('lr-rating') as LyraRating;
+  const events: Event[] = [];
+  wrapper.addEventListener('change', (event) => events.push(event));
+  wrapper.addEventListener('lr-change', (event) => events.push(event));
+
+  baseOf(el).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+  );
+
+  expect(events.map((event) => event.type)).to.deep.equal(['change', 'lr-change']);
+  const native = events[0]!;
+  expect(native.constructor === Event).to.be.true;
+  expect(native.target === el).to.be.true;
+  expect(native.bubbles && native.composed).to.be.true;
+  expect(native.cancelable).to.be.false;
+  expect('detail' in native).to.be.false;
+  expect((events[1] as CustomEvent<{ value: number }>).detail).to.deep.equal({ value: 3 });
+});
+
+it('emits the same native change contract for a pointer commit', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><lr-rating value="0" precision="0.5" max="5"></lr-rating></div>
+  `);
+  const el = wrapper.querySelector('lr-rating') as LyraRating;
+  const events: Event[] = [];
+  wrapper.addEventListener('change', (event) => events.push(event));
+  wrapper.addEventListener('lr-change', (event) => events.push(event));
+  const thirdStar = starsOf(el)[2]!;
+  pinStar(thirdStar);
+
+  thirdStar.dispatchEvent(new MouseEvent('click', { clientX: 110, clientY: 20, bubbles: true }));
+
+  expect(el.value).to.equal(2.5);
+  expect(events.map((event) => event.type)).to.deep.equal(['change', 'lr-change']);
+  expect(events[0]!.constructor === Event && events[0]!.target === el).to.be.true;
+});
+
+it('keeps native and prefixed change events silent for programmatic/default/reset writes', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-rating name="score" value="2"></lr-rating></form>
+  `);
+  const el = form.querySelector('lr-rating') as LyraRating;
+  const events: string[] = [];
+  el.addEventListener('change', () => events.push('change'));
+  el.addEventListener('lr-change', () => events.push('lr-change'));
+
+  el.value = 4;
+  el.defaultValue = 1;
+  form.reset();
+  el.formStateRestoreCallback('3', 'restore');
+
+  expect(events).to.deep.equal([]);
+});
+
 it('locale-formats the spoken slider value and forwards host focus/blur/click to the control', async () => {
   const el = (await fixture(html`<lr-rating lang="ar" value="2.5" precision="0.5"></lr-rating>`)) as LyraRating;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-valuetext')).to.equal(new Intl.NumberFormat('ar').format(2.5));
 
   el.focus();
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base rating');
   el.blur();
   expect(el.shadowRoot!.activeElement).to.equal(null);
   let clicked = 0;
@@ -82,7 +178,7 @@ it('relays one native focus/blur pair and one prefixed alias pair from the slide
 
 it('reverses horizontal value movement under RTL', async () => {
   const el = (await fixture(html`<div dir="rtl"><lr-rating value="2"></lr-rating></div>`)).querySelector('lr-rating') as LyraRating;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
   expect(el.value).to.equal(3);
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
@@ -91,23 +187,28 @@ it('reverses horizontal value movement under RTL', async () => {
 
 it('does not emit lr-change when the clamped value is unchanged', async () => {
   const el = (await fixture(html`<lr-rating value="5" max="5"></lr-rating>`)) as LyraRating;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   let changeCount = 0;
+  let nativeChangeCount = 0;
   el.addEventListener('lr-change', () => { changeCount++; });
+  el.addEventListener('change', () => { nativeChangeCount++; });
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
   expect(el.value).to.equal(5);
   expect(changeCount).to.equal(0);
+  expect(nativeChangeCount).to.equal(0);
 
   el.value = 0;
   changeCount = 0;
+  nativeChangeCount = 0;
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
   expect(changeCount).to.equal(0);
+  expect(nativeChangeCount).to.equal(0);
 });
 
 it('clamps a non-finite or oversized max to a safe, bounded star count', async () => {
   const nan = (await fixture(html`<lr-rating max="abc"></lr-rating>`)) as LyraRating;
-  const nanBase = nan.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const nanBase = nan.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(nanBase.getAttribute('aria-valuemax')).to.equal('5');
   expect(nan.shadowRoot!.querySelectorAll('[part="star"]').length).to.equal(5);
 
@@ -117,20 +218,20 @@ it('clamps a non-finite or oversized max to a safe, bounded star count', async (
 
 it('clamps an out-of-range or non-finite value to [0, max]', async () => {
   const negative = (await fixture(html`<lr-rating value="-10" max="5"></lr-rating>`)) as LyraRating;
-  expect(negative.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
+  expect(negative.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
 
   const over = (await fixture(html`<lr-rating value="999" max="5"></lr-rating>`)) as LyraRating;
-  expect(over.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuenow')).to.equal('5');
+  expect(over.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('5');
 
   const nan = (await fixture(html`<lr-rating max="5"></lr-rating>`)) as LyraRating;
   nan.value = NaN;
   await nan.updateComplete;
-  expect(nan.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
+  expect(nan.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
 });
 
 it('falls back to a safe positive precision instead of throwing when precision is non-finite', async () => {
   const el = (await fixture(html`<lr-rating value="2" precision="abc"></lr-rating>`)) as LyraRating;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(() =>
     base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })),
   ).to.not.throw();
@@ -168,7 +269,7 @@ it('selects the pointer segment within a star using fractional precision', async
 it('keeps the slider base at least 40px in both axes when max is zero or one', async () => {
   for (const max of [0, 1]) {
     const el = (await fixture(html`<lr-rating max=${max}></lr-rating>`)) as LyraRating;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const rect = base.getBoundingClientRect();
     expect(rect.width, `max=${max}`).to.be.at.least(40);
     expect(rect.height, `max=${max}`).to.be.at.least(40);
@@ -178,7 +279,7 @@ it('keeps the slider base at least 40px in both axes when max is zero or one', a
 // -- helpers --------------------------------------------------------------
 
 const baseOf = (el: LyraRating): HTMLElement =>
-  el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 const starsOf = (el: LyraRating): NodeListOf<HTMLElement> =>
   el.shadowRoot!.querySelectorAll<HTMLElement>('[part="star"]');
 
@@ -364,7 +465,7 @@ it('blocks form submission with a consumer-supplied custom error, and reports it
   form.requestSubmit();
   expect(submits, 'a custom error blocks submission').to.equal(0);
 
-  el.setCustomValidity('');
+  el.resetValidity();
   expect(el.validity.customError).to.be.false;
   expect(el.validationMessage).to.equal('');
   form.requestSubmit();
@@ -471,10 +572,50 @@ it('inherits an ancestor fieldset disablement without mutating its own `disabled
 
 it('restores a numeric value through formStateRestoreCallback', async () => {
   const el = (await fixture(html`<lr-rating name="score" max="5"></lr-rating>`)) as LyraRating;
-  el.formStateRestoreCallback('4');
+  el.formStateRestoreCallback('4', 'restore');
   expect(el.value).to.equal(4);
-  el.formStateRestoreCallback(null);
+  el.formStateRestoreCallback(null, 'restore');
   expect(el.value).to.equal(0);
+});
+
+it('separates the live numeric value from the reflected current default', async () => {
+  const form = (await fixture(html`
+    <form><lr-rating name="score" value="2"></lr-rating></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-rating') as LyraRating;
+  expect(el.value).to.equal(2);
+  expect(el.defaultValue).to.equal(2);
+
+  el.value = 4;
+  expect(el.getAttribute('value')).to.equal('2');
+  el.setAttribute('value', '3');
+  expect(el.defaultValue).to.equal(3);
+  expect(el.value, 'attribute mutation cannot overwrite dirty live state').to.equal(4);
+
+  form.reset();
+  expect(el.value).to.equal(3);
+  el.defaultValue = 1;
+  expect(el.getAttribute('value')).to.equal('1');
+  expect(el.value, 'after reset the live value is pristine again').to.equal(1);
+});
+
+it('accepts default-value as a reset-default alias without overwriting a dirty live score', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-rating name="score" default-value="2"></lr-rating></form>
+  `);
+  const el = form.querySelector('lr-rating') as LyraRating;
+  expect(el.defaultValue).to.equal(2);
+  expect(el.value).to.equal(2);
+  expect(new FormData(form).get('score')).to.equal('2');
+
+  el.value = 4;
+  el.setAttribute('default-value', '3');
+  await el.updateComplete;
+  expect(el.defaultValue).to.equal(3);
+  expect(el.value, 'an alias mutation updates only the reset target after the value is dirty').to.equal(4);
+
+  form.reset();
+  expect(el.value).to.equal(3);
 });
 
 // -- label ----------------------------------------------------------------

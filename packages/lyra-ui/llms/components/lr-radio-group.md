@@ -5,38 +5,62 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/radio/radio-group.js';` (registers the tag; side-effect import)
 - **Class** `LyraRadioGroup`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio-group.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-radio-group`
 
-A labeled, keyboard-navigable group of `lr-radio` controls. Arrow keys, Home, and End move
-focus; arrow navigation selects the next enabled radio.
+A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and the orientation's arrow
+axis move focus and select the next enabled radio: Up/Down when vertical, Left/Right when
+horizontal. Horizontal direction mirrors under RTL, and disabled options are skipped.
 
-**Properties:** `label`, `hint`, `errorText` (`error-text`), `name`, `required`, `disabled`,
-`aria-label` (through `accessibleLabel`), and `size: LyraSize = 'm'` (reflected) — the size of the
+**Properties:** `label`, `hint`, `helpText` (`help-text`, Shoelace alias), `errorText`
+(`error-text`), `name` (empty by default, with the empty attribute omitted), live `value`, reflected
+`defaultValue` (attribute `value`; Shoelace's `default-value` is also accepted), `customError`
+(`custom-error`), `required`, `disabled`, `orientation: 'vertical' | 'horizontal' = 'vertical'`,
+`withLabel`/`withHint` (`with-label`/`with-hint` SSR presence hints), `aria-label` (through
+`accessibleLabel`), and `size: LyraSize = 'm'` (reflected) — the size of the
 group's **own** chrome, on the shared ladder and accepting both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
 `small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
-options off the same values the controls themselves use. It deliberately does **not** resize the
-`<lr-radio>`/`<lr-radio-button>` children: each carries its own `size`, so a group can hold options
-at mixed sizes and an explicitly-sized option is never silently overridden by its container. Set the
-same `size` on the children to scale the whole group.
+options off the same values the controls themselves use, and propagates the selected tier to every
+owned `<lr-radio>`/`<lr-radio-button>` child (including children added later). Group size is the
+authoritative aggregate setting.
+
+The group is the sole aggregate form-associated owner. A non-empty selected value contributes one
+`name=value` entry; owned radios suppress their own entries and validity while a standalone radio
+continues to participate independently. `form`, `getForm()`, `labels`, native validity, external
+form ownership, fieldset disablement, reset, and session restoration all live on the group.
+`value` is non-reflecting live state; `defaultValue`/the `value` attribute is the current reset
+default and cannot overwrite a dirty selection. Reset restores that current default, and session
+restore selects the stored value silently even when it arrives before the radio children.
 
 **Events:** per owned selection — including keyboard activation — the group emits, in order,
-native-style composed `input`, `lr-input`, native-style composed `change`, then exactly one
-group-owned `lr-change`. The two native-style events carry no detail (read `event.target.value`);
-both prefixed aliases carry `{ value, radio }`. The selected child does not emit its
-standalone alias. Ownership is resolved synchronously, so immediate removal restores standalone
+a bubbling/composed `InputEvent` named `input`, `lr-input`, a bubbling/composed `Event` named
+`change`, then exactly one group-owned `lr-change`. The two native events carry no detail (read
+`event.target.value`);
+both prefixed aliases carry `{ value, radio }`. The selected child does not emit its standalone
+value events. Ownership is resolved synchronously, so immediate removal restores standalone
 behavior and immediate reparenting routes the event to the new group without waiting for a
-mutation-observer turn.
+mutation-observer turn. `lr-invalid` (no detail) is group-owned and fires when the group's validity
+check fails; a consumer listening above the group does not receive a second prefixed alias from the
+child validity owner.
 
-**Slots:** default radios, `label`, `hint`, `error`.
+**Slots:** default radios, `label`, `hint`, `help-text` (Shoelace hint alias), `error`.
 
-**CSS parts:** `base`, `label`, `hint`, `error`.
+**CSS parts:** `base`, `form-control`, `label` / `form-control-label`, `radios` /
+`form-control-input` / `button-group` / `button-group__base`, `hint` /
+`form-control-help-text`, and `error`.
 
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
 options and its messages, scaled by `size` through the shared control ladder.
+
+**Methods:** `setCustomValidity(message = '')` sets or clears a group-level consumer error. A
+non-empty message raises `customError` and blocks submission; `setCustomValidity('')` and
+`resetValidity()` restore the group's computed validity, including `valueMissing` when a required
+group has no selected radio.

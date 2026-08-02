@@ -405,11 +405,11 @@ describe('deny/approve as lr-button', () => {
     await el.updateComplete;
     const resolve = (token: string) => getComputedStyle(el).getPropertyValue(token).trim();
     const denyBase = (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).shadowRoot!.querySelector(
-      '[part="base"]',
+      '[part~="base"]',
     ) as HTMLElement;
     const approveBase = (
       el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton
-    ).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    ).shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     // Deny is variant="neutral" appearance="outlined": no fill, so it recedes against whatever
     // surface the bar sits on, with --lr-color-text for the label. Both are declared on the button
     // rather than inherited -- when lr-button's default appearance changed to "accent" in 8.0.0, a
@@ -425,7 +425,7 @@ describe('deny/approve as lr-button', () => {
     const dangerResolve = (token: string) => getComputedStyle(danger).getPropertyValue(token).trim();
     const dangerApproveBase = (
       danger.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton
-    ).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    ).shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(getComputedStyle(dangerApproveBase).backgroundColor).to.equal(toRgb(dangerResolve('--lr-color-danger')));
     expect(getComputedStyle(dangerApproveBase).color).to.equal(toRgb(dangerResolve('--lr-color-on-danger')));
   });
@@ -441,12 +441,14 @@ describe('deny/approve as lr-button', () => {
       const el = (await fixture(
         html`<lr-confirm-bar class="consumer-probe"></lr-confirm-bar>`,
       )) as LyraConfirmBar;
-      const denyBase = (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).shadowRoot!.querySelector(
-        '[part="base"]',
-      ) as HTMLElement;
-      const approveBase = (
-        el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton
-      ).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const denyButton = el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
+      const approveButton = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
+      expect(denyButton.getAttribute('exportparts')).to.include('button:deny-button-base');
+      expect(approveButton.getAttribute('exportparts')).to.include('button:approve-button-base');
+      denyButton.setAttribute('exportparts', 'button:deny-button-base');
+      approveButton.setAttribute('exportparts', 'button:approve-button-base');
+      const denyBase = denyButton.shadowRoot!.querySelector('[part~="button"]') as HTMLElement;
+      const approveBase = approveButton.shadowRoot!.querySelector('[part~="button"]') as HTMLElement;
       expect(getComputedStyle(denyBase).letterSpacing).to.equal('3px');
       expect(getComputedStyle(approveBase).letterSpacing).to.equal('5px');
     } finally {

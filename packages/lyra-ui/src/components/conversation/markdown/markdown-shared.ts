@@ -162,6 +162,9 @@ function mathExtension(renderMath: (token: MathToken) => string) {
  *  both. */
 export interface ParseMarkdownOptions {
   marked: OptionalPeerApi;
+  /** Snapshot of `<lr-markdown>`'s shared configurable parser defaults. Core omits this, keeping
+   *  its public surface lean while still using the same parsing implementation. */
+  markedConfiguration?: OptionalPeerApi;
   content: string;
   gfm: boolean;
   linkTarget: string | null;
@@ -340,6 +343,20 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
       },
     },
   });
+  // `<lr-markdown>` exposes a shared configurable parser, but this function still creates a fresh
+  // internal instance so its renderer closures always capture the current component properties.
+  // Apply the public parser's current defaults last: consumer hooks/extensions are meaningful,
+  // and sanitization still runs over the resulting HTML in `renderMarkdownDocument()`.
+  if (options.markedConfiguration && typeof options.markedConfiguration === 'object') {
+    // A pristine `Marked#defaults` contains `renderer: null`, `hooks: null`, and similar reset
+    // sentinels. Passing those through `.use()` after our renderer would erase the part-bearing
+    // overrides above. Keep meaningful configured values (including `false`) and discard only
+    // nullish defaults; once a consumer installs a real renderer/hook, that object survives.
+    const configuredDefaults = Object.fromEntries(
+      Object.entries(options.markedConfiguration).filter(([, value]) => value != null),
+    );
+    if (Object.keys(configuredDefaults).length > 0) instance.use(configuredDefaults);
+  }
   return { html: instance.parse(content, { gfm, async: false }), hadMathFallback };
 }
 
@@ -488,6 +505,7 @@ export function beginMarkdownDepsLoad(
 export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolean {
   return (
     changed.has('content') ||
+    changed.has('tabSize') ||
     changed.has('sanitize') ||
     changed.has('gfm') ||
     changed.has('linkTarget') ||

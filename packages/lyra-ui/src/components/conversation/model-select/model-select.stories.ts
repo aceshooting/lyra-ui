@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './model-select.js';
+import type { LyraModelSelect } from './model-select.js';
 
 const meta: Meta = {
   title: 'ModelSelect',
@@ -101,4 +102,72 @@ export const RequiredInForm: Story = {
       <button type="submit">Submit</button>
     </form>
   `,
+};
+
+export const FormLifecycle: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`defaultValue` supplies the reset value while live `value` stays dirty. The buttons also demonstrate `customError`, `getForm()`, and `lr-invalid`.',
+      },
+    },
+  },
+  render: () => {
+    const pickerFor = (event: Event) =>
+      (event.currentTarget as HTMLElement)
+        .closest('form')
+        ?.querySelector('lr-model-select') as LyraModelSelect | null;
+    const outputFor = (event: Event) =>
+      (event.currentTarget as HTMLElement).closest('form')?.querySelector('output');
+    const choose = (event: Event) => {
+      const picker = pickerFor(event);
+      const output = outputFor(event);
+      if (!picker || !output) return;
+      picker.value = 'o3';
+      output.textContent = `Live value: ${picker.value}; reset default: ${picker.defaultValue}`;
+    };
+    const reject = (event: Event) => {
+      const picker = pickerFor(event);
+      if (!picker) return;
+      picker.customError = 'This model is unavailable for the current account.';
+      picker.reportValidity();
+    };
+    const clear = (event: Event) => {
+      const picker = pickerFor(event);
+      const output = outputFor(event);
+      if (!picker || !output) return;
+      picker.customError = null;
+      output.textContent = `Owner resolved: ${picker.getForm() === picker.closest('form')}`;
+    };
+    const reset = (event: Event) => {
+      const picker = pickerFor(event);
+      const output = outputFor(event);
+      picker?.closest('form')?.reset();
+      if (picker && output) output.textContent = `Reset value: ${picker.value}`;
+    };
+    const reportInvalid = (event: Event) => {
+      const output = (event.currentTarget as HTMLElement).closest('form')?.querySelector('output');
+      if (output) output.textContent = 'lr-invalid: model selection rejected.';
+    };
+
+    return html`
+      <form style="display:grid;gap:0.75rem;max-width:24rem" @submit=${(event: Event) => event.preventDefault()}>
+        <lr-model-select
+          name="model"
+          required
+          .defaultValue=${'gpt-4.1'}
+          .catalog=${OPENAI_CATALOG}
+          @lr-invalid=${reportInvalid}
+        ></lr-model-select>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+          <button type="button" @click=${choose}>Choose o3 in code</button>
+          <button type="button" @click=${reset}>Reset</button>
+          <button type="button" @click=${reject}>Set server error</button>
+          <button type="button" @click=${clear}>Clear error</button>
+        </div>
+        <output aria-live="polite"></output>
+      </form>
+    `;
+  },
 };

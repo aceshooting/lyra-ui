@@ -2009,3 +2009,282 @@ describe('lr-date-input implicit form submission', () => {
     expect(submits, 'a bare Enter still submits').to.equal(1);
   });
 });
+
+describe('reviewed date-input parity surface', () => {
+  it('exposes and reflects reviewed wrapper and delegated defaults', async () => {
+    const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+    expect(el.appearance).to.equal('outlined');
+    expect(el.assumeInteractionOn).to.deep.equal(['input']);
+    expect(el.disabledDates).to.equal('');
+    expect(el.distance).to.equal(0);
+    expect(el.maxRange).to.equal(0);
+    expect(el.minRange).to.equal(0);
+    expect(el.pageBy).to.equal('months');
+    expect(el.placement).to.equal('bottom-start');
+    expect(el.today).to.equal('');
+    expect(el.validators).to.deep.equal([]);
+    el.appearance = 'filled';
+    el.distance = 7;
+    el.maxRange = 9;
+    el.minRange = 2;
+    el.pageBy = 'single';
+    el.today = '2026-07-04';
+    el.withHint = true;
+    el.withLabel = true;
+    el.withWeekNumbers = true;
+    await el.updateComplete;
+    expect(el.getAttribute('appearance')).to.equal('filled');
+    expect(el.getAttribute('distance')).to.equal('7');
+    expect(el.getAttribute('max-range')).to.equal('9');
+    expect(el.getAttribute('min-range')).to.equal('2');
+    expect(el.getAttribute('page-by')).to.equal('single');
+    expect(el.getAttribute('today')).to.equal('2026-07-04');
+    expect(el.hasAttribute('with-week-numbers')).to.be.true;
+  });
+
+  it('round-trips Date IDLs and keeps an incomplete range out of FormData', async () => {
+    const form = (await fixture(html`
+      <form><lr-date-input name="period" mode="range"></lr-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-date-input') as LyraDateInput;
+    el.valueAsRange = { from: new Date(2026, 6, 10), to: new Date(2026, 6, 15) };
+    expect(el.value).to.equal('2026-07-10/2026-07-15');
+    expect(new FormData(form).get('period')).to.equal('2026-07-10/2026-07-15');
+    el.value = '2026-07-10';
+    expect(new FormData(form).get('period')).to.equal('');
+    el.mode = 'single';
+    el.valueAsDate = new Date(2026, 6, 20);
+    expect(el.value).to.equal('2026-07-20');
+    expect(el.valueAsDate?.getDate()).to.equal(20);
+  });
+
+  it('makes clear() inert while blank, disabled, or readonly and emits the reviewed trio otherwise', async () => {
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+    const events: Event[] = [];
+    for (const name of ['lr-clear', 'input', 'change']) el.addEventListener(name, (event) => events.push(event));
+    el.disabled = true;
+    el.clear();
+    expect(el.value).to.equal('2026-07-15');
+    el.disabled = false;
+    el.readonly = true;
+    el.clear();
+    expect(el.value).to.equal('2026-07-15');
+    el.readonly = false;
+    el.clear();
+    expect(el.value).to.equal('');
+    expect(events.map((event) => event.type)).to.deep.equal(['lr-clear', 'input', 'change']);
+    expect(events[0] instanceof CustomEvent).to.be.true;
+    expect(events[1] instanceof InputEvent).to.be.true;
+    expect((events[1] as InputEvent).inputType).to.equal('deleteContentBackward');
+    expect(events[2] instanceof CustomEvent).to.be.false;
+    for (const event of events) {
+      expect(event.target === el, event.type).to.be.true;
+      expect(event.bubbles, event.type).to.be.true;
+      expect(event.composed, event.type).to.be.true;
+      expect(event.cancelable, event.type).to.be.false;
+    }
+    events.length = 0;
+    el.clear();
+    expect(events).to.deep.equal([]);
+  });
+
+  it('honors cancelable show/hide vetoes and emits after events only after a settled transition', async () => {
+    const el = (await fixture(html`
+      <lr-date-input style="--show-duration: 1ms; --hide-duration: 1ms"></lr-date-input>
+    `)) as LyraDateInput;
+    let showRequest: Event | undefined;
+    const vetoShow = (event: Event): void => { showRequest = event; event.preventDefault(); };
+    el.addEventListener('lr-show', vetoShow);
+    await el.show();
+    expect(showRequest?.cancelable).to.be.true;
+    expect(el.open).to.be.false;
+    el.removeEventListener('lr-show', vetoShow);
+
+    const afterShow = oneEvent(el, 'lr-after-show');
+    await el.show();
+    const shown = await afterShow;
+    expect(shown.cancelable).to.be.false;
+    expect(el.open).to.be.true;
+
+    let hideRequest: Event | undefined;
+    const vetoHide = (event: Event): void => { hideRequest = event; event.preventDefault(); };
+    el.addEventListener('lr-hide', vetoHide);
+    await el.hide();
+    expect(hideRequest?.cancelable).to.be.true;
+    expect(el.open).to.be.true;
+    el.removeEventListener('lr-hide', vetoHide);
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    await el.hide();
+    const hidden = await afterHide;
+    expect(hidden.cancelable).to.be.false;
+    expect(el.open).to.be.false;
+  });
+
+  it('repositions an open popup when placement or distance changes', async () => {
+    const el = (await fixture(html`<lr-date-input open></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    const state = el as unknown as { cleanupFn?: () => void };
+    const initialCleanup = state.cleanupFn;
+    expect(initialCleanup).to.be.a('function');
+
+    el.placement = 'top-end';
+    await el.updateComplete;
+    const placementCleanup = state.cleanupFn;
+    expect(placementCleanup).to.be.a('function').and.not.equal(initialCleanup);
+
+    el.distance = 8;
+    await el.updateComplete;
+    expect(state.cleanupFn).to.be.a('function').and.not.equal(placementCleanup);
+  });
+
+  it('keeps blur/change/focus/input/clear/invalid non-cancelable', async () => {
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+    const seen = new Map<string, Event>();
+    for (const name of ['blur', 'change', 'focus', 'input', 'lr-clear', 'lr-invalid']) {
+      el.addEventListener(name, (event) => seen.set(name, event));
+    }
+    el.focus();
+    el.blur();
+    el.clear();
+    el.required = true;
+    el.checkValidity();
+    await el.updateComplete;
+    for (const name of ['blur', 'change', 'focus', 'input', 'lr-clear', 'lr-invalid']) {
+      expect(seen.get(name), `${name} fired`).to.exist;
+      expect(seen.get(name)?.cancelable, name).to.be.false;
+    }
+  });
+
+  it('relays typed input/change and focus/blur once with native constructors and payload', async () => {
+    const wrapper = await fixture(html`
+      <div><button id="related">Related</button><lr-date-input></lr-date-input></div>
+    `);
+    const el = wrapper.querySelector('lr-date-input') as LyraDateInput;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    const related = wrapper.querySelector('#related') as HTMLButtonElement;
+    const valueEvents: Event[] = [];
+    const focusEvents: FocusEvent[] = [];
+    for (const name of ['input', 'change']) el.addEventListener(name, (event) => valueEvents.push(event));
+    for (const name of ['focus', 'blur']) {
+      el.addEventListener(name, (event) => focusEvents.push(event as FocusEvent));
+    }
+
+    input.value = '2026-07-20';
+    input.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      composed: true,
+      data: '0',
+      inputType: 'insertText',
+    }));
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    input.dispatchEvent(new FocusEvent('focus', { relatedTarget: related }));
+    input.dispatchEvent(new FocusEvent('blur', { relatedTarget: related }));
+
+    expect(el.value).to.equal('2026-07-20');
+    expect(valueEvents.map((event) => event.type)).to.deep.equal(['input', 'change']);
+    expect(valueEvents[0] instanceof InputEvent).to.be.true;
+    expect((valueEvents[0] as InputEvent).data).to.equal('0');
+    expect((valueEvents[0] as InputEvent).inputType).to.equal('insertText');
+    expect(valueEvents[1] instanceof CustomEvent).to.be.false;
+    expect(focusEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+    expect(focusEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+    expect(focusEvents.every((event) => event.relatedTarget === related)).to.be.true;
+    for (const event of [...valueEvents, ...focusEvents]) {
+      expect(event.target === el, event.type).to.be.true;
+      expect(event.bubbles, event.type).to.be.true;
+      expect(event.composed, event.type).to.be.true;
+      expect(event.cancelable, event.type).to.be.false;
+    }
+  });
+
+  it('relays the nested picker native input/change pair exactly once', async () => {
+    const el = (await fixture(html`
+      <lr-date-input value="2026-07-15" open></lr-date-input>
+    `)) as LyraDateInput;
+    await el.updateComplete;
+    const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
+    await picker.updateComplete;
+    const seen: Event[] = [];
+    for (const name of ['input', 'change']) el.addEventListener(name, (event) => seen.push(event));
+
+    (picker.shadowRoot!.querySelector('[data-date="2026-07-20"]') as HTMLButtonElement).click();
+
+    expect(seen.map((event) => event.type)).to.deep.equal(['input', 'change']);
+    expect(seen[0] instanceof InputEvent).to.be.true;
+    expect(seen[1] instanceof CustomEvent).to.be.false;
+    expect(seen.every((event) => event.target === el)).to.be.true;
+  });
+
+  it('forwards reviewed date constraints, callbacks, slots, and dynamic day slots', async () => {
+    const el = (await fixture(html`
+      <lr-date-input value="2026-07-15" with-clear with-week-numbers>
+        <span slot="clear-icon">Clear it</span>
+        <span slot="expand-icon">Open it</span>
+        <span slot="previous-icon">Prev</span>
+        <span slot="next-icon">Next</span>
+        <span slot="footer">Footer</span>
+        <span slot="day-2026-07-15">Payday</span>
+      </lr-date-input>
+    `)) as LyraDateInput;
+    el.disabledDates = ['2026-07-16'];
+    el.disabledDaysOfWeek = 'sun';
+    el.isDateDisabled = (date) => date.getDate() === 17;
+    el.dayContent = (date) => date.getDate() === 18 ? 'Custom 18' : undefined;
+    el.show();
+    await el.updateComplete;
+    const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
+    await picker.updateComplete;
+    expect(picker.disabledDates).to.equal(el.disabledDates);
+    expect(picker.disabledDaysOfWeek).to.equal('sun');
+    expect(picker.isDateDisabled).to.equal(el.isDateDisabled);
+    expect(picker.withWeekNumbers).to.be.true;
+    expect(picker.shadowRoot!.querySelector('[data-date="2026-07-16"]')!.getAttribute('part')).to.include('day-disabled');
+    const daySlot = picker.shadowRoot!.querySelector(
+      '[data-date="2026-07-15"] slot[name="day-2026-07-15"]',
+    ) as HTMLSlotElement;
+    const forwardingSlot = daySlot.assignedElements()[0] as HTMLSlotElement;
+    expect(forwardingSlot.assignedElements()[0]?.textContent).to.include('Payday');
+    expect(picker.shadowRoot!.querySelector('[data-date="2026-07-18"]')!.textContent).to.include('Custom 18');
+  });
+
+  it('publishes reviewed states and parts and supports SSR label/hint hints', async () => {
+    const el = (await fixture(html`
+      <lr-date-input mode="range" open with-label with-hint></lr-date-input>
+    `)) as LyraDateInput;
+    await el.updateComplete;
+    for (const part of [
+      'date-input', 'base', 'form-control', 'form-control-input', 'form-control-label', 'label',
+      'input-wrapper', 'input', 'range-separator', 'segment', 'segment-literal', 'start', 'end',
+      'expand-button', 'expand-icon', 'popup', 'date-picker', 'hint',
+    ]) {
+      expect(el.shadowRoot!.querySelector(`[part~="${part}"]`), part).to.exist;
+    }
+    expect(el.internals.states.has('blank')).to.be.true;
+    expect(el.internals.states.has('open')).to.be.true;
+    expect(el.internals.states.has('range')).to.be.true;
+    expect(el.internals.states.has('disabled')).to.be.false;
+    expect((el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement).hidden).to.be.false;
+    expect((el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement).hidden).to.be.false;
+  });
+
+  it('exposes validationTarget/resetValidity and is accessible while open and populated', async () => {
+    const el = (await fixture(html`
+      <lr-date-input
+        label="Reporting period"
+        hint="Pick a start and end date"
+        mode="range"
+        value="2026-07-10/2026-07-15"
+        open
+        with-week-numbers
+      ></lr-date-input>
+    `)) as LyraDateInput;
+    await el.updateComplete;
+    expect(el.validationTarget?.localName).to.equal('input');
+    el.setCustomValidity('No longer available');
+    expect(el.validity.customError).to.be.true;
+    el.resetValidity();
+    expect(el.validity.customError).to.be.false;
+    await expect(el).shadowDom.to.be.accessible();
+  });
+});

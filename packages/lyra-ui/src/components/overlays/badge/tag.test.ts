@@ -9,13 +9,13 @@ import type { LyraTag } from './tag.js';
 // public custom element is expected to carry.
 
 const removeButton = (el: LyraTag): HTMLButtonElement | null =>
-  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="remove-button"]');
 
 it('renders content and inherits the badge variant styling contract', async () => {
   const el = (await fixture(html`<lr-tag variant="success">Ready</lr-tag>`)) as LyraTag;
   expect(el.textContent).to.contain('Ready');
   expect(el.variant).to.equal('success');
-  const base = el.shadowRoot!.querySelector('[part="base"]');
+  const base = el.shadowRoot!.querySelector('[part~="base"]');
   expect(base?.tagName).to.equal('SPAN');
 });
 
@@ -34,7 +34,7 @@ describe('withRemove', () => {
   it('renders no remove affordance by default, leaving the committed output unchanged', async () => {
     const el = (await fixture(html`<lr-tag>Plain</lr-tag>`)) as LyraTag;
     expect(el.withRemove).to.be.false;
-    expect(el.shadowRoot!.querySelectorAll('[part="remove-button"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part~="remove-button"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('button').length).to.equal(0);
   });
 
@@ -46,6 +46,20 @@ describe('withRemove', () => {
     expect(button?.type).to.equal('button');
     // The glyph itself is decorative; the name comes from the button's own aria-label.
     expect(button!.querySelector('svg')?.getAttribute('aria-hidden')).to.equal('true');
+  });
+
+  it('accepts removable as the Shoelace alias and exports its base part alias', async () => {
+    const el = (await fixture(html`<lr-tag removable>Removable alias</lr-tag>`)) as LyraTag;
+    expect(el.removable).to.be.true;
+    expect(el.withRemove).to.be.true;
+    const button = removeButton(el)!;
+    expect(button.part.contains('remove-button')).to.be.true;
+    expect(button.part.contains('remove-button__base')).to.be.true;
+
+    el.removable = false;
+    await el.updateComplete;
+    expect(el.withRemove).to.be.false;
+    expect(removeButton(el)).to.equal(null);
   });
 
   it('names the remove button with the tag label, localized', async () => {
@@ -135,7 +149,7 @@ describe('withRemove', () => {
 
   it('is accessible while removable', async () => {
     const el = (await fixture(html`<lr-tag with-remove variant="brand">beta</lr-tag>`)) as LyraTag;
-    expect(el.shadowRoot!.querySelectorAll('[part="remove-button"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part~="remove-button"]').length).to.equal(1);
     await expect(el).to.be.accessible();
   });
 });
@@ -176,7 +190,7 @@ describe('lr-remove', () => {
     const tag = host.querySelector('lr-tag') as LyraTag;
     const button = removeButton(tag)!;
     button.focus();
-    expect(tag.shadowRoot!.activeElement?.getAttribute('part')).to.equal('remove-button');
+    expect((tag.shadowRoot!.activeElement as HTMLElement | null)?.part.contains('remove-button')).to.be.true;
 
     let fired = 0;
     tag.addEventListener('lr-remove', (event) => {

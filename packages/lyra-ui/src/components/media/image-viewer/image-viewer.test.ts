@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './image-viewer.js';
 import type { LyraImageViewer, ImageRotation } from './image-viewer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
-import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.js';
+import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import { styles } from './image-viewer.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -11,7 +11,7 @@ const PNG_SRC = 'https://example.test/photo.png';
 /** A real 1x1 PNG, for the tests that must keep the loaded frame's DOM alive across an `await`.
  *
  *  `PNG_SRC` never resolves, so its `<img>` eventually fires `error`, `loadState` flips to
- *  `'error'`, and `renderBody()` swaps the whole `lr-zoomable-frame` subtree -- highlight layer
+ *  `'error'`, and `renderBody()` swaps the whole `lr-pan-zoom` subtree -- highlight layer
  *  included -- for `[part='error']`. That teardown is correct behaviour, but it lands at an
  *  unpredictable point (a DNS failure, so its timing tracks the runner's network, not the test),
  *  and once a highlight box is detached `getComputedStyle(box).backgroundColor` reads `''` rather
@@ -129,7 +129,7 @@ describe('image loading', () => {
 });
 
 describe('zoom, rotation, and fit', () => {
-  it('delegates zoomIn/zoomOut/resetZoom to the embedded zoomable-frame and stays in sync', async () => {
+  it('delegates zoomIn/zoomOut/resetZoom to the embedded pan-zoom surface and stays in sync', async () => {
     const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`)) as LyraImageViewer;
     el.zoomIn();
     await el.updateComplete;
@@ -150,7 +150,7 @@ describe('zoom, rotation, and fit', () => {
     expect(event.detail).to.deep.equal({ zoom: 1.25 });
   });
 
-  it('passes min-zoom/max-zoom/zoom-step through to the embedded lr-zoomable-frame, mirroring lr-lightbox', async () => {
+  it('passes min-zoom/max-zoom/zoom-step through to the embedded lr-pan-zoom, mirroring lr-lightbox', async () => {
     const el = (await fixture(html`
       <lr-image-viewer src=${PNG_SRC} min-zoom="0.25" max-zoom="8" zoom-step="0.5"></lr-image-viewer>
     `)) as LyraImageViewer;
@@ -158,7 +158,7 @@ describe('zoom, rotation, and fit', () => {
     expect(el.minZoom).to.equal(0.25);
     expect(el.maxZoom).to.equal(8);
     expect(el.zoomStep).to.equal(0.5);
-    const frame = el.shadowRoot!.querySelector('lr-zoomable-frame') as LyraZoomableFrame;
+    const frame = el.shadowRoot!.querySelector('lr-pan-zoom') as LyraPanZoom;
     expect(frame.minZoom).to.equal(0.25);
     expect(frame.maxZoom).to.equal(8);
     expect(frame.zoomStep).to.equal(0.5);
@@ -823,7 +823,7 @@ it('contains an unbroken highlight label inside a 320px allocation', async () =>
   }];
   const wrapper = (await fixture(html`
     <div style="inline-size: 320px">
-      <lr-image-viewer src=${PNG_SRC} .highlights=${highlights}></lr-image-viewer>
+      <lr-image-viewer src=${LOADABLE_PNG} .highlights=${highlights}></lr-image-viewer>
     </div>
   `)) as HTMLElement;
   const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;

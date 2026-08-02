@@ -156,9 +156,10 @@ function formatDuration(ms: number): {
  * function call an agent made mid-conversation, e.g.
  * `web_search: Searching web…` with a `running` spinner. It owns no detail
  * surface of its own: clicking (or Enter/Space-activating) it only fires
- * `lr-tool-call-chip-select` (plus, for one minor cycle, the deprecated
- * `lr-tool-chip-select` alias) — a consumer wires that to opening a
- * `<lr-tool-result-dialog>` (or anything else) at the call site. Keeping
+ * `lr-tool-call-chip-select` (plus the deprecated `lr-tool-chip-select`
+ * compatibility alias, retained through the documented removal window) —
+ * a consumer wires that to opening a `<lr-tool-result-dialog>` (or
+ * anything else) at the call site. Keeping
  * the two decoupled means a chip can be reused wherever a compact call
  * summary is useful, with or without a detail surface behind it.
  *
@@ -190,8 +191,8 @@ function formatDuration(ms: number): {
  * @event lr-tool-call-chip-select - The chip was activated (click or
  * Enter/Space while focused). `detail: { name, callId }`.
  * @event lr-tool-chip-select - Deprecated alias for
- * `lr-tool-call-chip-select`, fired alongside it for one minor cycle so
- * existing listeners keep working. Removed in the next major.
+ * `lr-tool-call-chip-select`, fired alongside it so existing listeners keep
+ * working. Deprecated since 4.0.0; removal is not permitted before 9.0.0.
  * @csspart base - The clickable pill (`<button>`).
  * @csspart icon - Wrapper around the status glyph / `icon` slot.
  * @csspart label - Wrapper around `category`, `name` and `summary`.
@@ -208,6 +209,8 @@ function formatDuration(ms: number): {
  * @cssprop [--lr-tool-call-chip-accent=var(--lr-color-text-quiet)] - Per-status accent color for the status glyph and status text. Reassigned by this component's own `:host([status="…"])` rules (`running` → brand, `success` → success, `error` → danger, `denied` → warning), so a page-level override only wins for the default/`pending` tone.
  * @cssprop [--lr-tool-call-chip-bg=var(--lr-color-surface)] - Per-status chip background. Reassigned by the same `:host([status="…"])` rules (each status's `-quiet` tint).
  * @cssprop [--lr-tool-call-chip-border=var(--lr-color-border)] - Per-status chip border color. Reassigned by the same `:host([status="…"])` rules (`transparent` for every non-`pending` status).
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -355,9 +358,8 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   private onClick = (): void => {
     const detail: ToolChipSelectDetail = { name: this.name, callId: this.callId };
     this.emit<ToolChipSelectDetail>('lr-tool-call-chip-select', detail);
-    // Deprecated alias, fired alongside the renamed event above for one
-    // minor cycle so existing `lr-tool-chip-select` listeners keep
-    // working; removed in the next major.
+    // Deprecated alias retained through its documented compatibility window
+    // so existing `lr-tool-chip-select` listeners keep working.
     this.emit<ToolChipSelectDetail>('lr-tool-chip-select', detail);
   };
 

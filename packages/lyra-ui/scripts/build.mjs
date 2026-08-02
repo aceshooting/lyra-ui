@@ -1,4 +1,4 @@
-import { cp, rm } from 'node:fs/promises';
+import { cp, mkdir, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,3 +27,11 @@ await new Promise((resolve, reject) => {
 });
 
 await cp(join(packageDir, 'src', 'theme.css'), join(packageDir, 'dist', 'theme.css'));
+
+const stylesDir = join(packageDir, 'dist', 'styles');
+await mkdir(stylesDir, { recursive: true });
+await Promise.all(
+  ['native.css', 'utilities.css'].map((name) =>
+    cp(join(packageDir, 'src', 'styles', name), join(stylesDir, name)),
+  ),
+);

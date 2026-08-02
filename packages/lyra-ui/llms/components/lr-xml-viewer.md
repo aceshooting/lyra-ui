@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer.js';` (registers the tag; side-effect import)
 - **Class** `LyraXmlViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -26,8 +28,8 @@ string` (property only) — raw XML text to parse and render; wins over `src`, a
 synchronously. `name: string = ''` — accessible label. `collapsedDepth?: number` (attribute
 `collapsed-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed. `copyable:
 boolean = false` (reflected) — shows copy-to-clipboard affordances, one for the whole document plus
-one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds` is a readonly
-`['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
+one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds: readonly
+LyraAnchorKind[] = ['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
 contract) — each numeric path segment is the 0-based index within the parent's *element* children,
 and an optional trailing string segment `'@attrName'` addresses one existing, nonempty-named
 attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.

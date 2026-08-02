@@ -124,6 +124,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   valid `timestamp` is set.
  * @cssprop [--lr-activity-feed-max-height=16rem] - Cap on how tall the expanded body grows
  *   before it scrolls internally (non-virtualized mode); also sizes the internal virtual-list.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   static override styles = [LyraElement.styles, styles];

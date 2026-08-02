@@ -136,6 +136,8 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @csspart graph - The composed `lr-graph`.
  * @csspart detail-popover - The composed `lr-popover` hosting the details overlay.
  * @csspart detail-card - The default-content `lr-entity-card`, only present while `selectedNodeId` resolves to a node.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphExplorerEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

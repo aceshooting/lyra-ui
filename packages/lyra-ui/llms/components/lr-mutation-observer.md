@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/mutation-observer/mutation-observer.js';` (registers the tag; side-effect import)
 - **Class** `LyraMutationObserver`, also available unregistered from `@aceshooting/lyra-ui/components/utility/mutation-observer/mutation-observer.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -17,11 +19,17 @@ Lifecycle-managed wrapper around the native `MutationObserver`. All element chil
 slot are observed and their mutation records are emitted as a composed event; the wrapper itself
 adds no layout.
 
-**Properties:** `disabled: boolean = false` (reflected), `childList: boolean = true` (attribute
-`child-list`), `observeAttributes: boolean = false` (attribute `attributes`), `characterData: boolean = false` (attribute
-`character-data`), `subtree: boolean = true`, and `attributeFilter: string[] = []`.
+**Properties:** `disabled: boolean = false` (reflected), `childList: boolean = false` (attribute
+`child-list`; **changed in 8.0.0** from Lyra's former `true` default, so opt in explicitly when
+needed; reflected), `attr: string | null = null` (reflected; `*` observes every attribute; otherwise a
+space-separated filter), `attrOldValue: boolean = false` (`attr-old-value`), `charData: boolean =
+false` (`char-data`), and `charDataOldValue: boolean = false` (`char-data-old-value`); all four
+mapped attributes reflect. Lyra's
+existing aliases remain: `observeAttributes` (`attributes`), `characterData` (`character-data`),
+`subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`.
 
-**Events:** `lr-mutation` with `{ records: MutationRecord[] }` in `detail`.
+**Events:** `lr-mutation`; `detail.records` and mapped `detail.mutationList` reference the same
+`MutationRecord[]` batch.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 

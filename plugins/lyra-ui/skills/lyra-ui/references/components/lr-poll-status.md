@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/poll-status/poll-status.js';` (registers the tag; side-effect import)
 - **Class** `LyraPollStatus`, also available unregistered from `@aceshooting/lyra-ui/components/utility/poll-status/poll-status.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -21,6 +23,7 @@ scheduled-interval countdown — this mirrors its internal `<lr-live-region>` co
 accessible phase-transition announcements.
 
 **Properties:**
+
 - `nextInMs?: number` (attribute `next-in-ms`) — milliseconds until the next scheduled action, as of
   whenever this was last set; setting it (re)starts the countdown from "now." Unset (the default)
   shows no countdown.
@@ -61,7 +64,7 @@ repainting every other component that reuses the same shared success token. Plus
 
 Internally, a 1-second ticker re-derives the remaining time from a captured target timestamp (rather
 than a naive per-tick decrement), so the countdown stays accurate even if the tab was backgrounded
-and timers were throttled. Assigning a *changed* `nextInMs` value starts a fresh deadline; assigning
+and timers were throttled. Assigning a _changed_ `nextInMs` value starts a fresh deadline; assigning
 the same value is a normal Lit no-op, so use `restart()` for a new cycle with the same delay.
 Pausing/resuming, toggling `active`, disconnecting/reconnecting, or toggling either after the due
 event stops/starts only an unconsumed ticker: a consumed deadline never replays until `nextInMs`
@@ -69,6 +72,7 @@ changes or `restart()` is called. Phase transitions ("Paused.", "Resumed.", "Ref
 announced via an internal `<lr-live-region>` in polite mode.
 
 **Known gotchas:**
+
 - `restart()` is the explicit reset/extend path when the configured delay value itself has not
   changed.
 - `active="false"` and `paused` both stop the ticker independently, but only `paused` fires

@@ -165,7 +165,7 @@ export default {
   files: 'src/**/*.test.ts',
   nodeResolve: true,
   browsers: [playwrightLauncher({ product: browserProduct })],
-  // The full suite includes 353 files and several optional-peer integration
+  // The full suite spans hundreds of files and several optional-peer integration
   // fixtures. Keep the suite-level watchdog above the normal two-minute
   // budget, including the coverage-instrumented large-graph benchmark, so a
   // slow CI worker reports the actual test result instead of turning a

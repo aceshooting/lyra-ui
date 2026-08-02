@@ -1,5 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { LyraAnimation } from './animation.js';
+import { setAnimation, setDefaultAnimation } from '../../../utilities/animation-registry.js';
 import './animation.js';
 
 /** Stubs `window.matchMedia('(prefers-reduced-motion: reduce)')` with a
@@ -481,6 +482,142 @@ it('ignores non-finite currentTime assignments instead of forwarding them into W
     el.currentTime = Number.NEGATIVE_INFINITY;
   }).to.not.throw();
   expect(el.currentTime).to.equal(125);
+});
+
+it('resolves named presets through the public registry while retaining token timing by default', async () => {
+  const cleanup = setDefaultAnimation('animation.fade-in', {
+    keyframes: [{ opacity: 0.3 }, { opacity: 0.7 }],
+  });
+  try {
+    const el = (await fixture(html`
+      <lr-animation name="fade-in" timing-preset="fast" iterations="1">
+        <p>content</p>
+      </lr-animation>
+    `)) as LyraAnimation;
+    await el.updateComplete;
+    const native = el.querySelector('p')!.getAnimations()[0];
+    const [from, to] = native.effect!.getKeyframes();
+    expect(String(from.opacity)).to.equal('0.3');
+    expect(String(to.opacity)).to.equal('0.7');
+    expect(native.effect!.getComputedTiming().duration).to.equal(120);
+  } finally {
+    cleanup();
+  }
+});
+
+it('uses a weak per-instance preset override ahead of the global value and keeps it on reconnect', async () => {
+  const globalCleanup = setDefaultAnimation('animation.zoom-in', {
+    keyframes: [{ opacity: 0.1 }, { opacity: 0.2 }],
+  });
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  el.name = 'zoom-in';
+  el.iterations = 1;
+  const target = document.createElement('p');
+  target.textContent = 'content';
+  el.append(target);
+  const instanceCleanup = setAnimation(el, 'animation.zoom-in', {
+    keyframes: [{ opacity: 0.8 }, { opacity: 0.9 }],
+  });
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    expect(String(target.getAnimations()[0].effect!.getKeyframes()[0]?.opacity)).to.equal('0.8');
+
+    el.remove();
+    document.body.append(el);
+    await el.updateComplete;
+    expect(String(target.getAnimations()[0].effect!.getKeyframes()[0]?.opacity)).to.equal('0.8');
+
+    instanceCleanup();
+    el.duration = 321;
+    await el.updateComplete;
+    expect(String(target.getAnimations()[0].effect!.getKeyframes()[0]?.opacity)).to.equal('0.1');
+  } finally {
+    instanceCleanup();
+    globalCleanup();
+    el.remove();
+  }
+});
+
+it('rebuilds a registry animation when inherited text direction changes', async () => {
+  const wrapper = document.createElement('div');
+  wrapper.dir = 'ltr';
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  el.name = 'slide-in-start';
+  el.iterations = 1;
+  const target = document.createElement('p');
+  target.textContent = 'content';
+  el.append(target);
+  wrapper.append(el);
+  const cleanup = setAnimation(el, 'animation.slide-in-start', {
+    keyframes: [{ transform: 'translateX(-12px)' }, { transform: 'translateX(0)' }],
+    rtlKeyframes: [{ transform: 'translateX(12px)' }, { transform: 'translateX(0)' }],
+  });
+  document.body.append(wrapper);
+  try {
+    await el.updateComplete;
+    expect(String(target.getAnimations()[0].effect!.getKeyframes()[0]?.transform)).to.include('-12px');
+
+    wrapper.dir = 'rtl';
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await el.updateComplete;
+    expect(String(target.getAnimations()[0].effect!.getKeyframes()[0]?.transform)).to.include('12px');
+  } finally {
+    cleanup();
+    wrapper.remove();
+  }
+});
+
+it('a null registry override disables visible motion but preserves start/finish lifecycle', async () => {
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  el.name = 'fade-in';
+  el.play = true;
+  el.iterations = 1;
+  const target = document.createElement('p');
+  target.textContent = 'content';
+  el.append(target);
+  const cleanup = setAnimation(el, 'animation.fade-in', null);
+  try {
+    const started = oneEvent(el, 'lr-start');
+    const finished = oneEvent(el, 'lr-finish');
+    document.body.append(el);
+    await started;
+    await finished;
+    expect(target.getAnimations().every((item) => item.effect!.getComputedTiming().duration === 0)).to.be.true;
+  } finally {
+    cleanup();
+    el.remove();
+  }
+});
+
+it('does not let registry timing reintroduce motion under reduced motion', async () => {
+  const motion = stubReducedMotion(true);
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  el.name = 'fade-in';
+  const target = document.createElement('p');
+  target.textContent = 'content';
+  el.append(target);
+  const cleanup = setAnimation(el, 'animation.fade-in', {
+    keyframes: [{ opacity: 0 }, { opacity: 1 }],
+    options: { delay: 80, duration: 800, endDelay: 40, iterations: 8 },
+  });
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    // A zero-duration paused animation is omitted from Element#getAnimations() in every engine;
+    // inspect the component-owned native animation directly to verify the resolved timing.
+    const native = (el as unknown as { animation?: Animation }).animation;
+    expect(native).to.exist;
+    const timing = native!.effect!.getComputedTiming();
+    expect(timing.delay).to.equal(0);
+    expect(timing.duration).to.equal(0);
+    expect(timing.endDelay).to.equal(0);
+    expect(timing.iterations).to.equal(1);
+  } finally {
+    cleanup();
+    el.remove();
+    motion.restore();
+  }
 });
 
 it('play-on-visible: observes the slotted target and starts playback once it intersects, then auto-disconnects (repeat defaults to false)', async () => {

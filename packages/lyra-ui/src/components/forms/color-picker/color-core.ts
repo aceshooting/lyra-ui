@@ -250,7 +250,24 @@ function resolveViaCssom(text: string): LyraColorHsva | null {
   document.body.append(probe);
   const computed = getComputedStyle(probe).color;
   probe.remove();
-  return parseFunctional(computed.trim());
+  const serialized = computed.trim();
+  const functional = parseFunctional(serialized);
+  if (functional) return functional;
+
+  // Modern computed colors may remain in lab()/oklch()/color() form. Canvas converts every
+  // browser-supported computed color into the picker's sRGB working space without duplicating
+  // the browser's color-science implementation.
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) return null;
+  context.clearRect(0, 0, 1, 1);
+  context.fillStyle = serialized;
+  context.fillRect(0, 0, 1, 1);
+  const [red = 0, green = 0, blue = 0, alpha = 0] = context.getImageData(0, 0, 1, 1).data;
+  const converted = rgbToHsv(red, green, blue);
+  return hsva(converted.h, converted.s, converted.v, alpha / 255);
 }
 
 /** Parses any colour this component accepts, or returns `null` when the input is not a colour. */

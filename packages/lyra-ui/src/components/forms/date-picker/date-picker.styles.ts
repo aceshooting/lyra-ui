@@ -46,6 +46,15 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-date-picker-radius);
   }
+  [part='date-picker'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='months'] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-date-picker-month-gap);
+  }
   [part='header'] {
     display: flex;
     align-items: center;
@@ -53,9 +62,34 @@ export const styles = css`
     gap: var(--lr-date-picker-header-gap);
     margin-block-end: var(--lr-space-xs);
   }
+  [part='nav'] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lr-date-picker-header-gap);
+    inline-size: 100%;
+  }
   [part='title'] {
+    appearance: none;
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
     font-weight: var(--lr-font-weight-semibold);
     font-size: var(--lr-size-0-9375rem);
+  }
+  :where([part='title']):hover {
+    color: var(--lr-color-brand);
+  }
+  :where([part='title']):active {
+    color: var(--lr-color-brand);
+    background: var(--lr-color-brand-quiet);
+    border-radius: var(--lr-date-picker-radius);
+  }
+  :where([part='title']):focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='previous'],
   [part='next'] {
@@ -119,6 +153,9 @@ export const styles = css`
     display: grid;
     grid-template-columns: repeat(7, var(--lr-cell-size));
   }
+  :host([with-week-numbers]) [part='weekdays'] {
+    margin-inline-start: calc(var(--lr-cell-size) + var(--lr-border-width-thin));
+  }
   [part='weekday'] {
     text-align: center;
     font-size: var(--lr-font-size-xs);
@@ -128,6 +165,24 @@ export const styles = css`
   [part='grid'] {
     display: grid;
     grid-template-columns: repeat(7, var(--lr-cell-size));
+  }
+  .calendar-body {
+    display: flex;
+    align-items: stretch;
+  }
+  [part='weeknumbers'] {
+    display: grid;
+    grid-template-rows: repeat(6, var(--lr-cell-size));
+    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+  [part='weeknumber'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-cell-size);
+    block-size: var(--lr-cell-size);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
   }
   [part='week'] {
     display: contents;
@@ -171,6 +226,9 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     border-radius: 0;
   }
+  [part~='day-range-preview'] {
+    background: var(--lr-color-brand-quiet);
+  }
   [part~='day-selected'],
   [part~='day-range-start'],
   [part~='day-range-end'] {
@@ -185,5 +243,51 @@ export const styles = css`
   [part~='day']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='view-grid'] {
+    display: grid;
+    gap: var(--lr-space-xs);
+  }
+  [part='view-row'] {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(var(--lr-size-3rem), 1fr));
+    gap: var(--lr-space-xs);
+  }
+  [part='view-item'] {
+    inline-size: 100%;
+    min-block-size: var(--lr-icon-button-size);
+    border: none;
+    border-radius: var(--lr-date-picker-radius);
+    background: none;
+    color: var(--lr-color-text);
+    cursor: pointer;
+    font: inherit;
+    padding: var(--lr-space-s);
+  }
+  :where([part~='view-item']):hover {
+    background: var(--lr-color-brand-quiet);
+  }
+  :where([part~='view-item']):active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  :where([part~='view-item']):focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part~='view-item-selected'] {
+    background: var(--lr-color-brand);
+    color: var(--lr-color-on-brand);
+  }
+  [part~='view-item-today'] {
+    outline: var(--lr-border-width-thin) solid var(--lr-color-brand);
+    outline-offset: var(--lr-size-neg-1px);
+  }
+  [part~='view-item-disabled'] {
+    cursor: not-allowed;
+    opacity: var(--lr-opacity-disabled);
   }
 `;

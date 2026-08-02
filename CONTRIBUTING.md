@@ -10,7 +10,7 @@ touching component internals.
 pnpm install
 ```
 
-Node ≥ 20, `pnpm@11.13.0` (pinned via `packageManager` in `package.json` — check that file if this
+Node ≥ 20, `pnpm@11.18.0` (pinned via `packageManager` in `package.json` — check that file if this
 drifts again).
 
 ## Running things locally
@@ -19,8 +19,7 @@ drifts again).
 pnpm test         # -r: @web/test-runner per package for @aceshooting/lyra-ui;
                   #     @aceshooting/lyra-flags has no test runner, just a plain Node script
 pnpm lint         # -r: for @aceshooting/lyra-ui this is NOT just tsc --noEmit — it's
-                  #     contract-policy (~15 sub-checks: source/style policy, part reachability,
-                  #     manifest + llms freshness, side-effects, form-associated, event-barrel...)
+                  #     the full contract-policy chain from packages/lyra-ui/package.json,
                   #     then tsc --noEmit, then a type-level test suite. A green `pnpm lint` failing
                   #     for a reason that has nothing to do with TypeScript types is expected, not a
                   #     tooling bug — see AGENTS.md's Dev commands section for the full chain.
@@ -28,16 +27,25 @@ pnpm build        # -r: tsc -p tsconfig.json per package -> dist/
 pnpm docs         # Storybook docs site at localhost:6006, demos every component live
 ```
 
-Reproduce CI locally with the same sequence CI runs: install --frozen-lockfile, Playwright
-Chromium install, lint, **build, then test** (build must precede test — a package-entrypoints test
-imports the built `dist/` output), manifest and its consistency checks, docs/storybook checks, then a
-dry-run pack check that the published tarball still contains
-`custom-elements.json`/`llms.txt`/`llms-full.txt`/`llms/`. `.github/workflows/ci.yml` is the authoritative,
-up-to-date step list — read it directly rather than trusting a restated summary here.
+Under Node 22 with the repository-pinned pnpm, run `./scripts/ci.sh` to reproduce the six primary
+CI jobs as one local aggregate. Use `./scripts/ci.sh --platform-matrix` to add the Node 20/22 ×
+Firefox/WebKit platform-contract matrix. `.github/workflows/ci.yml` is the authoritative,
+up-to-date gate list; [`docs/agents/ci-and-gates.md`](./docs/agents/ci-and-gates.md) documents the
+local aggregate and its prerequisites.
+
+The complete Firefox/WebKit suite also runs in four deterministic shards from the scheduled and
+manually dispatchable `.github/workflows/full-engine.yml` workflow. To reproduce a shard locally,
+build first, install the relevant Playwright browser, then run:
+
+```bash
+WTR_BROWSER=firefox WTR_STRICT_CONSOLE=1 \
+  WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=4 \
+  pnpm --filter @aceshooting/lyra-ui test:full-engine-shard
+```
 
 ## Making a change
 
-1. Follow the coding conventions in [`AGENTS.md`](./AGENTS.md#coding-conventions-every-component-follows-these--deviating-needs-a-strong-reason) — every
+1. Follow the [coding conventions in `AGENTS.md`](./AGENTS.md#coding-conventions--digest) — every
    component extends `LyraElement`, uses `--lr-*` design tokens (no raw hex/px values), and
    registers its tag through `src/internal/prefix.ts`.
 2. Add or update tests alongside the component you're changing (`@web/test-runner`, colocated

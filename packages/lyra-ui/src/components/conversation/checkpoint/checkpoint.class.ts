@@ -71,6 +71,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @csspart cancel-button - Cancels, reverting to `restore-button`.
  * @cssprop [--lr-checkpoint-spin-duration=var(--lr-transition-ambient)] - Restoring-spinner
  *   timing, inheriting the shared ambient-motion token by default (stopped under reduced motion).
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   static override styles = [LyraElement.styles, styles];

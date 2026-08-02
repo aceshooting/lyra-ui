@@ -161,6 +161,8 @@ export interface LyraDashboardGridEventMap {
  *   of a cell whose current drag/resize preview collides with another cell.
  * @cssprop [--lr-dashboard-grid-interaction-shadow=var(--lr-shadow)] - Box shadow applied to a
  *   cell for the duration of its pointer drag or resize interaction.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

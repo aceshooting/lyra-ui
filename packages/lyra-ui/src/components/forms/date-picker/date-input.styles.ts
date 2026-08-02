@@ -37,6 +37,19 @@ export const styles = css`
   :host([pill]) {
     --lr-date-input-radius: var(--lr-radius-pill);
   }
+  [part='date-input'],
+  [part='base'] {
+    display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :host([appearance='filled']) [part='input-wrapper'] {
+    border-color: transparent;
+    background: var(--lr-color-surface-raised);
+  }
+  :host([appearance='filled-outlined']) [part='input-wrapper'] {
+    background: var(--lr-color-surface-raised);
+  }
   /* Each tier reuses lr-input's own 2xs-xl padding/font-size scale (input.styles.ts), so the two
      read as equally dense at a given size -- density parity, not height parity; see the
      min-height comment above for why a same-size pair does not end up the same height. That scale
@@ -124,6 +137,10 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-date-input-font-size);
   }
+  [part='form-control-input'],
+  [part='segment'] {
+    display: contents;
+  }
   [part='input']::placeholder {
     color: var(--lr-date-input-placeholder-color, var(--lr-color-text-quiet));
   }
@@ -183,20 +200,19 @@ export const styles = css`
   }
   [part='popup'] {
     position: fixed;
-    z-index: var(--lr-layer-dropdown);
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem));
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
-    transition:
-      opacity var(--lr-transition-fast),
-      transform var(--lr-transition-fast),
-      visibility var(--lr-transition-fast);
+    transition-property: opacity, transform, visibility;
+    transition-duration: var(--hide-duration, var(--lr-transition-fast));
   }
   :host([open]) [part='popup'] {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
+    transition-duration: var(--show-duration, var(--lr-transition-fast));
   }
   @media (prefers-reduced-motion: reduce) {
     [part='popup'] {

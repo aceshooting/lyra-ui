@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/utility/format/format-number.js';` (registers the tag; side-effect import)
 - **Class** `LyraFormatNumber`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/format-number.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** nothing component-specific — inherits only the shared surface
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -28,18 +30,24 @@ Malformed runtime options fall back to a safe option set without discarding an o
 effective locale. Only a malformed locale itself falls back to the runtime default.
 
 **Properties:**
+
 - `value: number = 0`
-- `currency: string = ''` — an ISO 4217 code (`'EUR'`, `'JPY'`). Non-empty switches the formatter to
-  `style: 'currency'`; empty leaves it at `Intl`'s default decimal style
+- `type: 'currency' | 'decimal' | 'percent' = 'decimal'`
+- `currency: string = 'USD'` and `currencyDisplay: 'symbol' | 'narrowSymbol' | 'code' | 'name' =
+'symbol'` (`currency-display`); used only by currency formatting
+- `withoutGrouping: boolean = false` (`without-grouping`) and `noGrouping: boolean = false`
+  (`no-grouping`) — Web Awesome/Shoelace aliases; either disables grouping separators
 - `notation: 'standard' | 'compact' | 'scientific' | 'engineering' = 'standard'`
+- `minimumIntegerDigits?: number` (attribute `minimum-integer-digits`)
 - `minimumFractionDigits?: number` (attribute `minimum-fraction-digits`)
 - `maximumFractionDigits?: number` (attribute `maximum-fraction-digits`)
+- `minimumSignificantDigits?: number` / `maximumSignificantDigits?: number` (matching kebab-case
+  attributes)
 
 **Slots:** default — fallback content, rendered only when `value` is not finite (`NaN`/`Infinity`,
 e.g. a malformed attribute) or the formatted string is empty.
 
-Both fraction-digit properties are normalized to finite integers clamped to `Intl`'s own accepted
-`[0, 100]`, and swapped if clamping left `minimum > maximum` — either would otherwise throw a
-`RangeError` and crash the render. Leaving one `undefined` passes nothing for it, so `Intl`'s own
-notation-driven defaults still apply; there is no forced default pair. No `percent`/`unit` style and
-no `signDisplay`/`currencyDisplay`/grouping knob — compose `Intl.NumberFormat` directly for those.
+All digit properties are finite-integer guarded before `Intl` construction: integer/significant
+digits clamp to `[1, 21]`, fractions to `[0, 100]`, and crossed minimum/maximum pairs are ordered.
+Leaving one `undefined` preserves `Intl`'s own defaults. Closed-set values assigned through untyped
+JavaScript fall back to their documented defaults.

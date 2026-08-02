@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/conversation/voice-picker/voice-picker.js';` (registers the tag; side-effect import)
 - **Class** `LyraVoicePicker`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/voice-picker/voice-picker.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -40,9 +42,15 @@ string = ''`, `autoCorrect: string = ''` (attribute `autocorrect`), `autocomplet
 `enterkeyhint`), and `open: boolean = false` (reflected) — all mirror `lr-model-select`'s
 identically-named properties.
 
-**Form association:** hand-rolled via `attachInternals()`, mirroring `lr-model-select`: `value`
-getter/setter (the current voice id, `''` when nothing is selected), `name` (reflected), `disabled`
-(reflected), `required` (reflected — enforced via `internals.setValidity()`), plus
+**Form association:** hand-rolled via `attachInternals()`, mirroring `lr-model-select`: live,
+non-reflecting `value: string = ''` (the current voice id), reflected
+`defaultValue: string = ''` (attribute `value`, the current reset default), reflected
+`customError: string | null = null` (`custom-error`), `name`, `disabled`
+(reflected), and `required` (reflected — enforced via `internals.setValidity()`). Their exact
+signatures are `name: string = ''`, `disabled: boolean = false`, and `required: boolean = false`.
+It also exposes `form: HTMLFormElement | null = null`, readonly `labels: NodeList`, `validity:
+ValidityState`, `validationMessage: string`, `willValidate: boolean`, and `effectiveDisabled:
+boolean`, plus
 `checkValidity()`/`reportValidity()` and `setCustomValidity(message: string)`. The last is the
 standard channel for a server-side rejection ("that voice is not enabled for your account") no
 client-side constraint can express: a non-empty `message` raises `customError` and becomes
@@ -50,6 +58,7 @@ client-side constraint can express: a non-empty `message` raises `customError` a
 `:state(invalid)`; `''` clears only that consumer layer, leaving a `required` picker with no value
 still `valueMissing`. The custom error survives every intrinsic recomputation in between and a
 `form.reset()`, matching a native control, and the message is used verbatim, never localized.
+`getForm()` returns the browser-resolved owning form.
 
 **Methods:** `click()` (override) — same forwarding contract as `lr-model-select`'s own `click()`
 override (see that section for the full rationale): closed-dropdown mode forwards a real `.click()`
@@ -58,11 +67,13 @@ to the trigger `<button>`, whose own `@click` handler opens it; free-text mode i
 `focus` the way a real click's `mousedown` default action does, and this mode's open behavior is
 wired to the input's native `focus` event, not a `click` handler on the input itself. Mirrors
 `<lr-button>`'s identical host `click()` forwarding.
+`focus(options?)` and `blur()` forward to whichever internal control the active mode renders.
 
 **Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` and re-dispatched
-`focus`/`blur` (picker-family contract, same as `lr-model-select`).
+`focus`/`blur` (picker-family contract, same as `lr-model-select`), and one bubbling/composed
+`lr-invalid` alias when native validity fails.
 
 **Slots:** `hint`, `error`.
 

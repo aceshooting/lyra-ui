@@ -1,6 +1,8 @@
 import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './locale-picker.js';
+import '../../../translations/fa.js';
+import '../../../translations/he.js';
 import type { LyraLocalePicker } from './locale-picker.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getRegisteredLyraLocales, registerLyraLocale, setLyraLocale, getLyraLocale } from '../../../internal/localization.js';
@@ -153,6 +155,41 @@ it('shows a flag, native name, and tag per row when showFlags is on (the default
   expect(row.querySelector('lr-flag')).to.exist;
   expect(row.textContent).to.contain(localeNativeName('fr'));
   expect(row.textContent).to.contain('fr');
+});
+
+it('renders Persian and Hebrew regional entries with native names and derived regional flags', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fa-IR', 'he-IL']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+
+  const offered = [...rows(el)];
+  expect(offered.map((row) => row.dataset.value)).to.deep.equal(['fa-IR', 'he-IL']);
+  expect(offered[0].textContent).to.contain(localeNativeName('fa-IR'));
+  expect(offered[1].textContent).to.contain(localeNativeName('he-IL'));
+  expect((offered[0].querySelector('lr-flag') as HTMLElement).getAttribute('language')).to.equal('fa-IR');
+  expect((offered[1].querySelector('lr-flag') as HTMLElement).getAttribute('language')).to.equal('he-IL');
+});
+
+it('auto-discovers imported Persian and Hebrew catalogs', async () => {
+  const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+  const offered = [...rows(el)].map((row) => row.dataset.value);
+  expect(offered).to.include('fa');
+  expect(offered).to.include('he');
+});
+
+it('uses the Persian and Hebrew catalog labels through regional fallback', async () => {
+  const persian = (await fixture(
+    html`<lr-locale-picker locale="fa-IR" .locales=${['fa', 'he']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  const hebrew = (await fixture(
+    html`<lr-locale-picker locale="he-IL" .locales=${['fa', 'he']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  expect(trigger(persian).getAttribute('aria-label')).to.equal('زبان');
+  expect(trigger(hebrew).getAttribute('aria-label')).to.equal('שפה');
 });
 
 it('showFlags=false omits the flag element entirely, not just visually', async () => {
@@ -347,7 +384,7 @@ it('is accessible while open', async () => {
 // Obligation 11: RTL fixture -- logical layout, no accidental Left/Right remap.
 it('mirrors row text-align via logical properties under dir="rtl", with no Left/Right remap added', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
-    <div dir="rtl"><lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker></div>
+    <div dir="rtl" lang="fa-IR"><lr-locale-picker .locales=${['fa-IR', 'he-IL']}></lr-locale-picker></div>
   `);
   const el = wrapper.querySelector('lr-locale-picker') as LyraLocalePicker;
   el.open = true;

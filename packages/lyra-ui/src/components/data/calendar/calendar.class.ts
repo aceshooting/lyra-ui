@@ -41,6 +41,8 @@ export type CalendarView = 'month' | 'agenda';
  * @cssprop [--lr-calendar-day-min-block-size=var(--lr-size-6rem)] - Minimum block size of a day cell.
  * @cssprop [--lr-calendar-day-min-block-size-narrow=var(--lr-size-4rem)] - Minimum block size of a day cell once the host is narrower than 28rem.
  * @cssprop [--lr-calendar-day-selected-bg=var(--lr-color-brand-quiet)] - Background of a selected day cell, decoupled from the shared token also driving the nav-button/agenda-event hover background.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   static override styles = [LyraElement.styles, styles];

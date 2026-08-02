@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/media/qr-code/qr-code.js';` (registers the tag; side-effect import)
 - **Class** `LyraQrCode`, also available unregistered from `@aceshooting/lyra-ui/components/media/qr-code/qr-code.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `qrcode` — see `llms/peers.md`
-- **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -14,10 +16,22 @@
 ## `lr-qr-code`
 
 Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`,
-`label`, `size`, `radius`, and `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`). The canvas
-owns `role="img"`; its accessible name uses host `aria-label`, then `label`, then `value`. Empty
-values render an empty state.
-**CSS parts:** `base`, `canvas`, `empty`, `loading`, and `error`. **CSS custom properties:**
+`label`, `size` (clamped to `1`–`2048` CSS px), `radius` (clamped to `0`–`0.5`), and
+`errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`, default `H`); `fill` and `background` are
+mapped color aliases that take precedence over the equivalent CSS custom properties. `image` accepts
+a safe media URL for a centered overlay, `imageBackground` (`image-background`) paints its coverage
+box, `imageCoverage` (`image-coverage`, default `0.5`) controls that box as a fraction of the canvas
+side, and `imagePadding` (`image-padding`, default `0`) pads the image within it. Image geometry is
+finite-number guarded and clamped; supplying a valid image forces error correction to `H` so the
+covered modules remain recoverable. Unsafe image URLs are ignored and a failed image load leaves the
+base QR symbol intact.
+
+The canvas owns `role="img"`; its accessible name uses host `aria-label`, then `label`, then `value`.
+Empty values render an empty state. `generate(): Promise<void>` explicitly re-encodes the current
+value. `refreshTheme(): void` redraws cached modules for consumer-owned token changes; ordinary
+ancestor theme and color-scheme changes redraw automatically. Async peer and image results are
+generation-guarded, including across disconnect/reconnect.
+**CSS parts:** `base` and `qr-code` are aliases on the same outer wrapper; `canvas`, `empty`,
+`loading`, and `error`. **CSS custom properties:**
 `--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme
-changes redraw automatically. Call `refreshTheme()` only for consumer-owned token changes that
-aren't represented by those signals.
+changes redraw automatically. The mapped `fill`/`background` properties win when non-empty.

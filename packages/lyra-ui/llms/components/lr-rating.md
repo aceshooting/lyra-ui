@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/rating/rating.js';` (registers the tag; side-effect import)
 - **Class** `LyraRating`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/rating/rating.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -24,17 +26,25 @@ string — routing through it would force every consumer into string round-tripp
 natively a numeric score. The submitted entry is the clamped value stringified (`"0"` while
 unrated), and `required` reports `valueMissing` until a rating above zero is set. As on a native
 `<input>`, the `value` *content attribute* is the reset default that `form.reset()` restores, while
-the `value` IDL property is the live score and is deliberately not reflected.
+the `value` IDL property is the live score and is deliberately not reflected. The mapped
+`default-value` attribute is accepted as a compatibility spelling for that same reset default.
 
-**Properties:** `value: number = 0`, `max: number = 5`, `precision: number = 1`,
+**Properties:** live, non-reflecting `value: number = 0`; reflected
+`defaultValue: number = 0` (attribute `value`, the current reset default; `default-value` is an
+accepted compatibility alias); `customError: string |
+null` (attribute `custom-error`); `max: number = 5`; `precision: number = 1`;
 `readonly: boolean = false` (reflected), `disabled`, `required`, `name`,
 `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — rewrites `--lr-rating-size` from a type ramp
 rather than the shared control ladder, since a rating has no control frame to size; the `m` default
-reproduces the treatment this component had before `size` existed), plus two separate naming knobs:
+reproduces the treatment this component had before `size` existed; setters also accept
+`small`/`medium`/`large` and normalize reads to `s`/`m`/`l`), plus two separate naming knobs:
 `accessibleLabel: string = ''` (attribute **`aria-label`**) and `label: string = ''` (attribute
 `label`). `label` is an accessible-name fallback used when the host carries no `aria-label` — it is
 *not* visible label text, since a rating is a bare row of symbols with no field frame of its own;
 wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+
+Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
+clears to the canonical `''` read value rather than creating a nullable state.
 
 `getSymbol?: (value: number, selected: boolean) => unknown` (property only, no attribute) — **new in
 8.0.0.** Renders a consumer-supplied symbol per position instead of the built-in star. It is called
@@ -44,8 +54,13 @@ clipped to that position's filled fraction (`selected` true), which is what keep
 text, never as markup. Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
+- `change` — a native `Event` (bubbling, composed, non-cancelable, and carrying no `detail`) emitted
+  when a user commits a genuinely new value. It fires immediately before `lr-change`; read the
+  numeric score from `event.target.value`. Programmatic `value`/`defaultValue` writes, reset/state
+  restore, and gestures that clamp to the current value are silent.
 - `lr-change` — `detail: { value }`. The rating was committed to a new value. Not emitted when the
-  clamped value is unchanged, nor on a programmatic `value` write.
+  clamped value is unchanged, nor on a programmatic `value` write. It fires immediately after the
+  native `change` event for the same user commit.
 - `lr-hover` — **new in 8.0.0.** `detail: { phase: 'start' | 'move' | 'end', value }`, where `value`
   is the rating that committing the current pointer position *would* produce — enough to render a
   live description of what is being hovered without waiting for a click. Fires only while the rating
@@ -58,9 +73,11 @@ text, never as markup. Left unset, the built-in star outline/solid pair is uncha
   events, because the native ones do not cross the shadow boundary.
 - `lr-focus` / `lr-blur` — prefixed compatibility aliases (no detail), each fired immediately after
   its unprefixed counterpart.
+- `lr-invalid` — no detail; fired when a validity check finds the rating invalid.
 
 **Methods:** `focus()`, `blur()` and `click()` forward to the internal rating control.
-`checkValidity()` and `reportValidity()` behave as on a native form control — `reportValidity()`
+`getForm()` returns the browser-resolved owning form. `checkValidity()` and `reportValidity()`
+behave as on a native form control — `reportValidity()`
 additionally shows the browser's validation UI, and counts as interaction, so a failed submit is
 what starts `user-invalid` matching. `setCustomValidity(message: string)` sets a consumer-supplied
 rejection no client-side constraint can express ("you have already rated this item"): a non-empty
@@ -70,9 +87,11 @@ so it is used verbatim and never localized. `setCustomValidity('')` clears it an
 control's *computed* validity rather than forcing it valid — a `required` control that is still
 unrated stays `valueMissing`. Like a native control, the custom error survives every intrinsic
 recomputation in between (each `value`/`max`/`required` change re-runs validation) and a
-`form.reset()`; only another `setCustomValidity('')` clears it.
+`form.reset()`; `setCustomValidity('')` or `resetValidity()` clears it.
 
-**Reset and state restore.** `form.reset()` restores the `value` *content attribute*, drops any
+**Reset and state restore.** A live `value` write marks the rating dirty, so later
+`defaultValue`/`value`-attribute/`default-value`-attribute mutations update the reset target without
+overwriting the live score. `form.reset()` restores that current default, drops any
 in-flight hover preview, and returns the control to pristine, so the `user-valid`/`user-invalid`
 states stop matching even though a required-and-unrated control is still `invalid`. Browser session
 restore (`formStateRestoreCallback`) reinstates the previously submitted numeric value; a
@@ -82,14 +101,19 @@ non-string restored state falls back to `0` rather than producing NaN geometry.
 `lr-rating:state(user-invalid)` is the one to paint red. Plain `invalid` matches a pristine
 `required` rating that has never been set.
 
-**CSS parts:** `base` (the `role="slider"` control), `star` (each rendered symbol), `star-fill` (the
+**CSS parts:** `base` (compatibility name for the slider-like control; use `rating`),
+`rating` (the `role="slider"` control; it is the same node as `base`), `star` (each rendered symbol), `star-fill` (the
 filled overlay inside each symbol, clipped to that symbol's filled fraction — 0%, a partial
 percentage under a fractional `precision`, or 100%).
 
 **Themeable custom properties:** `--lr-rating-fill` (default `--lr-color-warning` — filled-symbol
 color), `--lr-rating-empty-color` (default `--lr-color-border` — unfilled-symbol color, also
 retained during hover preview), and `--lr-rating-size` (default `--lr-font-size-xl` — symbol size;
-each `size` step rewrites it).
+each `size` step rewrites it). The mapped compatibility hooks are `--symbol-color` (inactive
+symbols), `--symbol-color-active` (filled symbols), `--symbol-size` (symbol size), and
+`--symbol-spacing` (the gap around symbols). The Lyra-prefixed color and size names win if both a
+Lyra property and its compatibility alias are set. `--symbol-size` otherwise feeds the active
+`size` step, while `--symbol-spacing` defaults to `--lr-space-xs`.
 
 Pointer selection resolves the position within the clicked star and snaps upward to `precision`
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
@@ -97,7 +121,15 @@ input as well as keyboard/value updates. The semantic slider's base keeps a 40×
 activation area even for the degenerate `max=0`/`max=1` cases; larger ratings naturally grow wider.
 
 ```html
-<lr-rating name="score" label="Overall rating" max="5" precision="0.5" size="l"></lr-rating>
+<lr-rating
+  name="score"
+  label="Overall rating"
+  default-value="2"
+  max="5"
+  precision="0.5"
+  size="l"
+  style="--symbol-color-active: var(--lr-color-success); --symbol-size: var(--lr-font-size-2xl); --symbol-spacing: var(--lr-space-s)"
+></lr-rating>
 <p id="preview"></p>
 <script type="module">
   import '@aceshooting/lyra-ui/components/overlays/rating/rating.js';
@@ -109,6 +141,7 @@ activation area even for the degenerate `max=0`/`max=1` cases; larger ratings na
     const { phase, value } = event.detail;
     preview.textContent = phase === 'end' ? '' : `Rate ${value}`;
   });
+  rating.addEventListener('change', (event) => console.log('native commit', event.target.value));
   rating.addEventListener('lr-change', (event) => console.log('committed', event.detail.value));
 </script>
 ```

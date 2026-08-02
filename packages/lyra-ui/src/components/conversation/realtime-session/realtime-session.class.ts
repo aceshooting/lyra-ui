@@ -49,6 +49,8 @@ const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
  * @csspart capture - Native push-to-talk capture.
  * @csspart transcript - Live transcript.
  * @csspart error - Localized connection error.
+ * @status stable
+ * @since 7.0.0
  */
 export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap> {
   static override styles = [LyraElement.styles, styles];

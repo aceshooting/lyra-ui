@@ -2,6 +2,120 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './sparkline.js';
 import type { LyraSparkline } from './sparkline.js';
 
+it('publishes the documented Sparkline defaults and reflected closed sets', async () => {
+  const el = (await fixture(html`<lr-sparkline></lr-sparkline>`)) as LyraSparkline;
+  expect(el.appearance).to.equal('solid');
+  expect(el.curve).to.equal('linear');
+  expect(el.data).to.equal('');
+  expect(el.label).to.equal('');
+  expect(el.trend).to.equal(undefined);
+
+  el.appearance = 'gradient';
+  el.curve = 'natural';
+  el.trend = 'positive';
+  await el.updateComplete;
+  expect(el.getAttribute('appearance')).to.equal('gradient');
+  expect(el.getAttribute('curve')).to.equal('natural');
+  expect(el.getAttribute('trend')).to.equal('positive');
+});
+
+it('parses space-separated data, uses label verbatim, and exposes the public part aliases', async () => {
+  const el = (await fixture(html`
+    <lr-sparkline data="5 4 4 3 4 2 3" label="Revenue over seven days"></lr-sparkline>
+  `)) as LyraSparkline;
+  const svg = el.shadowRoot!.querySelector('svg');
+  expect(el.shadowRoot!.querySelectorAll('[part~="line"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part~="fill"]').length).to.equal(1);
+  expect(svg?.getAttribute('part')).to.equal('sparkline base');
+  expect(svg?.getAttribute('aria-label')).to.equal('Revenue over seven days');
+});
+
+it('requires at least two finite data values without emitting invalid SVG coordinates', async () => {
+  const el = (await fixture(html`
+    <lr-sparkline data="5 nope Infinity" label="Insufficient data"></lr-sparkline>
+  `)) as LyraSparkline;
+  expect(el.shadowRoot!.querySelectorAll('[part~="line"]').length).to.equal(0);
+  expect(el.shadowRoot!.innerHTML.includes('NaN')).to.equal(false);
+  expect(el.shadowRoot!.innerHTML.includes('Infinity')).to.equal(false);
+});
+
+it('renders solid, gradient, and line appearances distinctly', async () => {
+  const solid = (await fixture(html`
+    <lr-sparkline data="1 3 2" label="Solid"></lr-sparkline>
+  `)) as LyraSparkline;
+  const gradient = (await fixture(html`
+    <lr-sparkline appearance="gradient" data="1 3 2" label="Gradient"></lr-sparkline>
+  `)) as LyraSparkline;
+  const line = (await fixture(html`
+    <lr-sparkline appearance="line" data="1 3 2" label="Line"></lr-sparkline>
+  `)) as LyraSparkline;
+
+  expect(solid.shadowRoot!.querySelectorAll('[part~="fill"]').length).to.equal(1);
+  expect(solid.shadowRoot!.querySelectorAll('linearGradient').length).to.equal(0);
+  expect(gradient.shadowRoot!.querySelectorAll('[part~="fill"]').length).to.equal(1);
+  expect(gradient.shadowRoot!.querySelectorAll('linearGradient').length).to.equal(1);
+  expect(line.shadowRoot!.querySelectorAll('[part~="fill"]').length).to.equal(0);
+});
+
+it('changes the generated path for natural and step curves', async () => {
+  const linear = (await fixture(html`
+    <lr-sparkline curve="linear" data="1 3 2" label="Linear"></lr-sparkline>
+  `)) as LyraSparkline;
+  const natural = (await fixture(html`
+    <lr-sparkline curve="natural" data="1 3 2" label="Natural"></lr-sparkline>
+  `)) as LyraSparkline;
+  const step = (await fixture(html`
+    <lr-sparkline curve="step" data="1 3 2" label="Step"></lr-sparkline>
+  `)) as LyraSparkline;
+
+  const linearPath = linear.shadowRoot!.querySelector('[part~="line"]')?.getAttribute('d');
+  const naturalPath = natural.shadowRoot!.querySelector('[part~="line"]')?.getAttribute('d');
+  const stepPath = step.shadowRoot!.querySelector('[part~="line"]')?.getAttribute('d');
+  expect(linearPath?.includes('L')).to.equal(true);
+  expect(naturalPath?.includes('C')).to.equal(true);
+  expect(stepPath?.includes('H')).to.equal(true);
+  expect(new Set([linearPath, naturalPath, stepPath]).size).to.equal(3);
+});
+
+it('lets public color and width hooks override trend defaults in rendered SVG', async () => {
+  const el = (await fixture(html`
+    <lr-sparkline
+      trend="negative"
+      data="1 3 2"
+      label="Custom themed trend"
+      style="--line-color: rgb(12, 34, 56); --fill-color: rgb(65, 43, 21); --line-width: 3"
+    ></lr-sparkline>
+  `)) as LyraSparkline;
+  const line = el.shadowRoot!.querySelector('[part~="line"]')!;
+  const fill = el.shadowRoot!.querySelector('[part~="fill"]')!;
+  expect(getComputedStyle(line).stroke).to.equal('rgb(12, 34, 56)');
+  expect(getComputedStyle(fill).fill).to.equal('rgb(65, 43, 21)');
+  expect(getComputedStyle(line).strokeWidth).to.equal('3px');
+});
+
+it('mirrors chronological point placement in RTL', async () => {
+  const ltr = (await fixture(html`
+    <lr-sparkline data="1 3 2" label="LTR"></lr-sparkline>
+  `)) as LyraSparkline;
+  const rtl = (await fixture(html`
+    <lr-sparkline dir="rtl" data="1 3 2" label="RTL"></lr-sparkline>
+  `)) as LyraSparkline;
+  const ltrPath = ltr.shadowRoot!.querySelector('[part~="line"]')!.getAttribute('d')!;
+  const rtlPath = rtl.shadowRoot!.querySelector('[part~="line"]')!.getAttribute('d')!;
+  expect(ltrPath.startsWith('M0,')).to.equal(true);
+  expect(rtlPath.startsWith('M100,')).to.equal(true);
+});
+
+it('uses the documented inline one-em by four-em default allocation', async () => {
+  const el = (await fixture(html`
+    <lr-sparkline data="1 2" label="Sized sparkline"></lr-sparkline>
+  `)) as LyraSparkline;
+  const style = getComputedStyle(el);
+  const fontSize = Number.parseFloat(style.fontSize);
+  expect(Number.parseFloat(style.height)).to.be.closeTo(fontSize, 0.1);
+  expect(Number.parseFloat(style.width)).to.be.closeTo(fontSize * 4, 0.1);
+});
+
 it('applies the image role and generated accessible name to the semantic SVG', async () => {
   const el = (await fixture(`<lr-sparkline></lr-sparkline>`)) as LyraSparkline;
   el.values = [1, 3, 2, 5];
@@ -38,7 +152,7 @@ it('renders a filled area in area mode', async () => {
   const el = (await fixture(`<lr-sparkline type="area"></lr-sparkline>`)) as LyraSparkline;
   el.values = [1, 2, 3];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="area"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part~="area"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="line"]')).to.exist;
 });
 
@@ -55,7 +169,7 @@ it('centers flat data instead of collapsing to the bottom edge', async () => {
   const area = (await fixture(`<lr-sparkline type="area"></lr-sparkline>`)) as LyraSparkline;
   area.values = [5, 5, 5, 5];
   await area.updateComplete;
-  const areaPath = area.shadowRoot!.querySelector('[part="area"]')!;
+  const areaPath = area.shadowRoot!.querySelector('[part~="area"]')!;
   expect(areaPath.getAttribute('d')).to.contain('50');
 });
 

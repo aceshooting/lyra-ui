@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.js';` (registers the tag; side-effect import)
 - **Class** `LyraMarkdownCore`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 11 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -41,7 +43,8 @@ either.
 `highlight-code`), `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — required,
 unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced block stays
 unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading-anchors`),
-`math: boolean = false`, `anchorKinds: readonly ('fragment' | 'text-quote')[]` (readonly).
+`math: boolean = false`, `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment',
+'text-quote']`.
 
 **Methods:** `getHeadingTree()` — same contract as `<lr-markdown>`'s own.
 

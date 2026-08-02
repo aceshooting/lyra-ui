@@ -1,0 +1,615 @@
+{
+  "$schema": "./translation-reviews.schema.json",
+  "schemaVersion": 1,
+  "source": {
+    "path": "src/internal/localization.ts#DEFAULT_STRINGS",
+    "keyCount": 1232,
+    "sha256": "sha256:87d51cf63fe718c819175d7f390854c9926b865ab090687a0446290c2ef55b08"
+  },
+  "upstreamLocaleBreadth": {
+    "webAwesome": {
+      "version": "3.11.0",
+      "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf",
+      "locales": [
+        "ar",
+        "cs",
+        "da",
+        "de",
+        "de-CH",
+        "en",
+        "en-GB",
+        "es",
+        "fa",
+        "fi",
+        "fr",
+        "he",
+        "hi",
+        "hr",
+        "hu",
+        "id",
+        "it",
+        "ja",
+        "kk",
+        "nb",
+        "nl",
+        "nn",
+        "pl",
+        "pt",
+        "ru",
+        "sl",
+        "sv",
+        "tr",
+        "uk",
+        "zh-CN",
+        "zh-TW"
+      ]
+    },
+    "shoelace": {
+      "version": "2.20.1",
+      "commit": "25bd8ec776609670a932f21390be59a495df497d",
+      "locales": [
+        "ar",
+        "cs",
+        "da",
+        "de",
+        "de-CH",
+        "en",
+        "en-GB",
+        "es",
+        "fa",
+        "fi",
+        "fr",
+        "he",
+        "hr",
+        "hu",
+        "id",
+        "it",
+        "ja",
+        "nb",
+        "nl",
+        "nn",
+        "pl",
+        "pt",
+        "ru",
+        "sl",
+        "sv",
+        "tr",
+        "uk",
+        "zh-CN",
+        "zh-TW"
+      ]
+    },
+    "normalizedUnion": [
+      "ar",
+      "cs",
+      "da",
+      "de",
+      "de-CH",
+      "en",
+      "en-GB",
+      "es",
+      "fa",
+      "fi",
+      "fr",
+      "he",
+      "hi",
+      "hr",
+      "hu",
+      "id",
+      "it",
+      "ja",
+      "kk",
+      "nb",
+      "nl",
+      "nn",
+      "pl",
+      "pt",
+      "ru",
+      "sl",
+      "sv",
+      "tr",
+      "uk",
+      "zh-CN",
+      "zh-TW"
+    ]
+  },
+  "releasePlan": {
+    "builtIn": [
+      "en"
+    ],
+    "shippedBeforeV8": [
+      "ar",
+      "de",
+      "es",
+      "fr",
+      "ja",
+      "ru",
+      "zh-CN"
+    ],
+    "v8ReleaseExpansion": [
+      "fa",
+      "he"
+    ],
+    "deferred": [
+      "cs",
+      "da",
+      "de-CH",
+      "en-GB",
+      "fi",
+      "hi",
+      "hr",
+      "hu",
+      "id",
+      "it",
+      "kk",
+      "nb",
+      "nl",
+      "nn",
+      "pl",
+      "pt",
+      "sl",
+      "sv",
+      "tr",
+      "uk",
+      "zh-TW"
+    ],
+    "regionalExtensions": [
+      "pt-BR"
+    ],
+    "selectionRationale": [
+      "The target breadth is the normalized public locale-module filename union from the pinned Web Awesome 3.11.0 and Shoelace 2.20.1 releases; translated upstream text was not consulted.",
+      "Persian and Hebrew occur in both pinned sets, satisfy explicit consumer demand, and extend full-catalog right-to-left coverage beyond the existing Arabic catalog.",
+      "Every remaining union member is deferred until a complete original catalog and an independent translation review can be recorded instead of shipping English scaffold text."
+    ]
+  },
+  "catalogs": [
+    {
+      "locale": "fa",
+      "direction": "rtl",
+      "source": {
+        "keyCount": 1232,
+        "sha256": "sha256:87d51cf63fe718c819175d7f390854c9926b865ab090687a0446290c2ef55b08"
+      },
+      "catalog": {
+        "keyCount": 1232,
+        "sha256": "sha256:ca36d9b51afd15866f23e5708246c64c96fc2a35f72116c98e99659c8fca849e"
+      },
+      "translator": {
+        "status": "complete-original",
+        "role": "project localization contributor",
+        "completedAt": "2026-08-02",
+        "evidence": "Drafted afresh from DEFAULT_STRINGS, then terminology-corrected and structurally validated in this repository; no upstream translated text was consulted."
+      },
+      "reviewer": {
+        "status": "approved",
+        "role": "independent localization reviewer",
+        "reviewedAt": "2026-08-02",
+        "evidence": "An AI-assisted independent repository review inspected all 1,232 English/Persian message pairs in source order, identified and re-reviewed 621 semantic, grammar, register, and orthography corrections against the frozen catalog hash, verified every placeholder and plural shape plus all 42 exact-English allowlist rationales, and confirmed fa-IR fallback, plural selection, and RTL behavior on Chromium, Firefox, and WebKit; no upstream translated text was consulted. This records a code-and-language review and does not claim human or native-speaker identity."
+      },
+      "englishIdenticalAllowlist": [
+        {
+          "messagePath": "accessibleLabelSeparator",
+          "rationale": "The value is a locale-neutral em dash separator whose surrounding spaces are required for label boundaries."
+        },
+        {
+          "messagePath": "avPlayerRateOption",
+          "rationale": "The value contains only the supplied playback rate and the locale-neutral multiplication sign."
+        },
+        {
+          "messagePath": "boxPlotQ1",
+          "rationale": "Q1 is the standard statistical notation for the first quartile."
+        },
+        {
+          "messagePath": "boxPlotQ3",
+          "rationale": "Q3 is the standard statistical notation for the third quartile."
+        },
+        {
+          "messagePath": "chartSummarySeparator",
+          "rationale": "The value is a locale-neutral punctuation separator whose trailing space is required between summaries."
+        },
+        {
+          "messagePath": "chartValueLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "contactViewerAddressFormat",
+          "rationale": "The address template contains only caller-supplied fields, line breaks, and spaces."
+        },
+        {
+          "messagePath": "contactViewerTypedValue",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral parentheses."
+        },
+        {
+          "messagePath": "contextMeterLabeledSummary",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "contextMeterSegmentLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "emailViewerGroupAddress",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "fileSizeUnitB",
+          "rationale": "B is the international byte-unit symbol used by file-size displays."
+        },
+        {
+          "messagePath": "fileSizeUnitGb",
+          "rationale": "GB is the international gigabyte-unit abbreviation used by file-size displays."
+        },
+        {
+          "messagePath": "fileSizeUnitKb",
+          "rationale": "KB is the international kilobyte-unit abbreviation used by file-size displays."
+        },
+        {
+          "messagePath": "fileSizeUnitMb",
+          "rationale": "MB is the international megabyte-unit abbreviation used by file-size displays."
+        },
+        {
+          "messagePath": "fileSizeUnitTb",
+          "rationale": "TB is the international terabyte-unit abbreviation used by file-size displays."
+        },
+        {
+          "messagePath": "fileTreeDiffSummary",
+          "rationale": "The compact diff summary contains only numeric placeholders and standard plus/minus markers."
+        },
+        {
+          "messagePath": "fileTypePdf",
+          "rationale": "PDF is the official international file-format initialism."
+        },
+        {
+          "messagePath": "fileTypeWithSize",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral parentheses."
+        },
+        {
+          "messagePath": "flowRunStatusCount",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "flowRunStepStatus",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "flowStatusWithDetail",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral dash."
+        },
+        {
+          "messagePath": "flowStatusWithDuration",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral parentheses."
+        },
+        {
+          "messagePath": "gaugeValueLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "graphTypedNode",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral parentheses."
+        },
+        {
+          "messagePath": "heatmapCalendarCellLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "ingestionItemProgressLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral dash."
+        },
+        {
+          "messagePath": "kbdControlVisual",
+          "rationale": "Ctrl is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdEscapeVisual",
+          "rationale": "Esc is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdPageDownVisual",
+          "rationale": "PgDn is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdPageUpVisual",
+          "rationale": "PgUp is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdTabWord",
+          "rationale": "Tab is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "neighborGroupHeader",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral parentheses."
+        },
+        {
+          "messagePath": "paginationEmptySummary",
+          "rationale": "The value contains only caller-supplied placeholders separated by a space."
+        },
+        {
+          "messagePath": "pdfViewerCurrentZoom",
+          "rationale": "The compact zoom value contains only a numeric placeholder and the universal percent sign."
+        },
+        {
+          "messagePath": "resultFieldLabel",
+          "rationale": "The value contains only a caller-supplied label and a locale-neutral separator."
+        },
+        {
+          "messagePath": "retrievalFilterChipLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "sequenceStripCategoryCount",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "showMoreCollapsed",
+          "rationale": "The compact overflow badge contains only a count placeholder and a standard plus sign."
+        },
+        {
+          "messagePath": "spanKindLlm",
+          "rationale": "LLM is the established technical initialism used in model traces."
+        },
+        {
+          "messagePath": "traceTreeMetricLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "traceTreeSpanStatus",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral dash."
+        }
+      ]
+    },
+    {
+      "locale": "he",
+      "direction": "rtl",
+      "source": {
+        "keyCount": 1232,
+        "sha256": "sha256:87d51cf63fe718c819175d7f390854c9926b865ab090687a0446290c2ef55b08"
+      },
+      "catalog": {
+        "keyCount": 1232,
+        "sha256": "sha256:4b0d8c1804dadbfd57fa07668ab08b8bb1c88ab4e2865050fb88f978af43c85c"
+      },
+      "translator": {
+        "status": "complete-original",
+        "role": "project localization contributor",
+        "completedAt": "2026-08-02",
+        "evidence": "Drafted afresh from DEFAULT_STRINGS, then terminology-corrected and structurally validated in this repository; no upstream translated text was consulted."
+      },
+      "reviewer": {
+        "status": "approved",
+        "role": "independent localization reviewer",
+        "reviewedAt": "2026-08-02",
+        "evidence": "An AI-assisted independent repository review checked all 1,232 Hebrew messages in DEFAULT_STRINGS order for meaning, fluent UI grammar and register, RTL wording, plural categories, placeholder preservation, punctuation, technical terminology, and all 57 English-identical rationales. The exact frozen catalog then passed structural/schema validation, the review-ledger unit test, the package build and type check, and 113 focused Chromium localization, locale-picker, package-entrypoint, and RTL tests. This records a code-and-language review and does not claim human or native-speaker identity."
+      },
+      "englishIdenticalAllowlist": [
+        {
+          "messagePath": "accessibleLabelSeparator",
+          "rationale": "The value is a locale-neutral em dash separator whose surrounding spaces are required for label boundaries."
+        },
+        {
+          "messagePath": "avPlayerRateOption",
+          "rationale": "The value contains only the supplied playback rate and the locale-neutral multiplication sign."
+        },
+        {
+          "messagePath": "chartSummarySeparator",
+          "rationale": "The value is a locale-neutral punctuation separator whose trailing space is required between summaries."
+        },
+        {
+          "messagePath": "chartValueLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "contactViewerAddressFormat",
+          "rationale": "The address template contains only caller-supplied fields, line breaks, and spaces."
+        },
+        {
+          "messagePath": "contactViewerTypedValue",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral parentheses."
+        },
+        {
+          "messagePath": "contextMeterLabeledSummary",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "contextMeterSegmentLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "emailViewerGroupAddress",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "entityChipWithType",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "fileSizeUnitB",
+          "rationale": "B is the international byte-unit symbol used by file-size displays."
+        },
+        {
+          "messagePath": "fileSizeUnitGb",
+          "rationale": "GB is the international gigabyte-unit abbreviation used by file-size displays."
+        },
+        {
+          "messagePath": "fileSizeUnitKb",
+          "rationale": "KB is the international kilobyte-unit abbreviation used by file-size displays."
+        },
+        {
+          "messagePath": "fileSizeUnitMb",
+          "rationale": "MB is the international megabyte-unit abbreviation used by file-size displays."
+        },
+        {
+          "messagePath": "fileSizeUnitTb",
+          "rationale": "TB is the international terabyte-unit abbreviation used by file-size displays."
+        },
+        {
+          "messagePath": "fileTreeDiffSummary",
+          "rationale": "The compact diff summary contains only numeric placeholders and standard plus/minus markers."
+        },
+        {
+          "messagePath": "fileTypePdf",
+          "rationale": "PDF is the official international file-format initialism."
+        },
+        {
+          "messagePath": "fileTypeWithSize",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral parentheses."
+        },
+        {
+          "messagePath": "flowRunStatusCount",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "flowRunStepStatus",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "flowStatusWithDetail",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral dash."
+        },
+        {
+          "messagePath": "flowStatusWithDuration",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral parentheses."
+        },
+        {
+          "messagePath": "gaugeValueLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "graphTypedNode",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral parentheses."
+        },
+        {
+          "messagePath": "heatmapCalendarCellLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "ingestionItemProgressLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral dash."
+        },
+        {
+          "messagePath": "kbdAltWord",
+          "rationale": "Alt is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdBackspaceWord",
+          "rationale": "Backspace is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdControlVisual",
+          "rationale": "Ctrl is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdControlWord",
+          "rationale": "Control is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdDeleteVisual",
+          "rationale": "Del is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdDeleteWord",
+          "rationale": "Delete is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdEndWord",
+          "rationale": "End is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdEnterWord",
+          "rationale": "Enter is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdEscapeVisual",
+          "rationale": "Esc is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdEscapeWord",
+          "rationale": "Escape is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdHomeWord",
+          "rationale": "Home is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdPageDownVisual",
+          "rationale": "PgDn is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdPageDownWord",
+          "rationale": "Page Down is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdPageUpVisual",
+          "rationale": "PgUp is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdPageUpWord",
+          "rationale": "Page Up is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdShiftWord",
+          "rationale": "Shift is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "kbdTabWord",
+          "rationale": "Tab is the legend printed on the corresponding physical keyboard key."
+        },
+        {
+          "messagePath": "liteChartBarLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral separators."
+        },
+        {
+          "messagePath": "neighborGroupHeader",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral parentheses."
+        },
+        {
+          "messagePath": "neighborRowLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral separators."
+        },
+        {
+          "messagePath": "paginationEmptySummary",
+          "rationale": "The value contains only caller-supplied placeholders separated by a space."
+        },
+        {
+          "messagePath": "pdfViewerCurrentZoom",
+          "rationale": "The compact zoom value contains only a numeric placeholder and the universal percent sign."
+        },
+        {
+          "messagePath": "resultFieldLabel",
+          "rationale": "The value contains only a caller-supplied label and a locale-neutral separator."
+        },
+        {
+          "messagePath": "retrievalFilterChipLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "sequenceStripCategoryCount",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "showMoreCollapsed",
+          "rationale": "The compact overflow badge contains only a count placeholder and a standard plus sign."
+        },
+        {
+          "messagePath": "spanKindLlm",
+          "rationale": "LLM is the established technical initialism used in model traces."
+        },
+        {
+          "messagePath": "statTrendAnnouncement",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "traceTreeMetricLabel",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        },
+        {
+          "messagePath": "traceTreeSpanStatus",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral dash."
+        },
+        {
+          "messagePath": "wordCloudWordAnnouncement",
+          "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        }
+      ]
+    }
+  ]
+}

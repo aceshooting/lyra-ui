@@ -259,6 +259,8 @@ export interface LyraLiteChartEventMap {
  * @csspart data-list - A visually hidden list of all plotted data points (single-series only).
  * @csspart data-table - A visually hidden category×series data table, rendered instead of `data-list` when there is more than one dataset so a screen-reader user hears series grouping rather than one flattened N×M sequence.
  * @cssprop [--lr-lite-chart-selected-outline-color=var(--lr-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndex`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -987,6 +989,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               style=${styleMap({ color })}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
+              aria-label=${titleText}
               aria-pressed=${selected ? 'true' : 'false'}
               ?data-selected=${selected}
               data-mark-index=${markIndex}
@@ -1011,6 +1014,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               style=${styleMap({ color })}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
+              aria-label=${titleText}
               aria-pressed=${selected ? 'true' : 'false'}
               ?data-selected=${selected}
               data-mark-index=${markIndex}
@@ -1097,6 +1101,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               style=${styleMap({ color })}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
+              aria-label=${titleText}
               aria-pressed=${selected ? 'true' : 'false'}
               ?data-selected=${selected}
               data-mark-index=${markIndex}

@@ -110,6 +110,8 @@ const FRESHNESS_TONE: Record<LibraryDocumentFreshness, 'success' | 'warning' | '
  * @csspart row - Exported from `<lr-table>`'s own `row` part.
  * @csspart cell - Exported from `<lr-table>`'s own `cell` part.
  * @csspart header-cell - Exported from `<lr-table>`'s own `header-cell` part.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap> {
   static override styles = [LyraElement.styles, styles];

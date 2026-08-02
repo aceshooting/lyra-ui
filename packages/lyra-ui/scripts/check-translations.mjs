@@ -38,11 +38,15 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
+import { validateTranslationReviews } from './translation-review.mjs';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 const localizationFile = join(packageRoot, 'src/internal/localization.ts');
 const translationsRoot = join(packageRoot, 'src/translations');
 const packageJsonPath = join(packageRoot, 'package.json');
+const reviewFixturePath = join(packageRoot, 'scripts/fixtures/translation-reviews.json');
+const reviewSchemaPath = join(packageRoot, 'scripts/fixtures/translation-reviews.schema.json');
+const upstreamTagsPath = join(packageRoot, 'scripts/fixtures/upstream-tags.json');
 
 /** The complete CLDR plural category set; a catalog may not invent a seventh. */
 const PLURAL_CATEGORIES = ['zero', 'one', 'two', 'few', 'many', 'other'];
@@ -208,6 +212,7 @@ async function main() {
   const requiredSideEffects = [];
 
   const summaries = [];
+  const catalogEntries = new Map();
 
   for (const name of files) {
     const file = relative(packageRoot, join(translationsRoot, name));
@@ -240,6 +245,7 @@ async function main() {
     }
     const entries = messageEntries(catalog, file, errors);
     const translated = new Map(entries);
+    catalogEntries.set(tag, entries);
 
     const missing = englishOrder.filter((key) => !translated.has(key));
     if (missing.length > 0) {
@@ -333,6 +339,34 @@ async function main() {
     }
 
     summaries.push(`${tag} (${translated.size} keys, plural categories: ${categories.join('/')})`);
+  }
+
+  try {
+    const [reviewSource, schemaSource, upstreamSource] = await Promise.all([
+      readFile(reviewFixturePath, 'utf8'),
+      readFile(reviewSchemaPath, 'utf8'),
+      readFile(upstreamTagsPath, 'utf8'),
+    ]);
+    const fixture = JSON.parse(reviewSource);
+    // Parsing the schema here makes a missing or malformed authoritative schema fail the same gate
+    // as its fixture, even though cross-file facts are enforced by validateTranslationReviews().
+    JSON.parse(schemaSource);
+    const upstream = JSON.parse(upstreamSource);
+    errors.push(
+      ...validateTranslationReviews(fixture, {
+        englishEntries,
+        catalogs: catalogEntries,
+        upstreamPins: {
+          webawesome: upstream.webawesome,
+          shoelace: upstream.shoelace,
+        },
+        requireApproved: true,
+      }).map((error) => `scripts/fixtures/translation-reviews.json: ${error}`),
+    );
+  } catch (error) {
+    errors.push(
+      `translation review fixture/schema could not be read: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 
   if (!anyCatalogDeclared) {

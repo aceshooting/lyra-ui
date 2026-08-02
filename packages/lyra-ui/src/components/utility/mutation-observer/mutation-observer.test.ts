@@ -3,19 +3,34 @@ import './mutation-observer.js';
 import type { LyraMutationObserver } from './mutation-observer.class.js';
 
 describe('<lr-mutation-observer>', () => {
+  it('reflects the mapped observer attributes after property assignment', async () => {
+    const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+    el.childList = true;
+    el.attr = 'data-state';
+    el.attrOldValue = true;
+    el.charData = true;
+    el.charDataOldValue = true;
+    await el.updateComplete;
+    expect(el.getAttribute('child-list')).to.equal('');
+    expect(el.getAttribute('attr')).to.equal('data-state');
+    expect(el.getAttribute('attr-old-value')).to.equal('');
+    expect(el.getAttribute('char-data')).to.equal('');
+    expect(el.getAttribute('char-data-old-value')).to.equal('');
+  });
   it('forwards mutations from slotted content', async () => {
-    const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer><div></div></lr-mutation-observer>`);
+    const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer child-list><div></div></lr-mutation-observer>`);
     await el.updateComplete;
     const target = el.querySelector('div')!;
     const event = oneEvent(el, 'lr-mutation');
     target.append(document.createElement('span'));
-    const result = await event as CustomEvent<{ records: MutationRecord[] }>;
+    const result = await event as CustomEvent<{ records: MutationRecord[]; mutationList: MutationRecord[] }>;
     expect(result.detail.records.length).to.be.greaterThan(0);
+    expect(result.detail.mutationList).to.equal(result.detail.records);
   });
 
   it('coalesces synchronous mutations across multiple slotted targets into one shared-observer event', async () => {
     const el = await fixture<LyraMutationObserver>(
-      html`<lr-mutation-observer><div id="a"></div><div id="b"></div></lr-mutation-observer>`,
+      html`<lr-mutation-observer child-list><div id="a"></div><div id="b"></div></lr-mutation-observer>`,
     );
     await el.updateComplete;
     const a = el.querySelector('#a')!;
@@ -42,7 +57,7 @@ describe('<lr-mutation-observer>', () => {
   });
 
   it('drives observation solely through the internal <slot>, not a host-level slotchange listener', async () => {
-    const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer><div></div></lr-mutation-observer>`);
+    const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer child-list><div></div></lr-mutation-observer>`);
     await el.updateComplete;
 
     let hostSlotchangeFired = false;
@@ -63,7 +78,7 @@ describe('<lr-mutation-observer>', () => {
   });
 
   it('still reports mutations after a bare reconnect with no property change (e.g. a reparent)', async () => {
-    const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer><div></div></lr-mutation-observer>`);
+    const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer child-list><div></div></lr-mutation-observer>`);
     await el.updateComplete;
     const parent = el.parentElement!;
 
@@ -86,27 +101,23 @@ describe('<lr-mutation-observer>', () => {
     expect(el.disabled).to.equal(true);
   });
 
-  describe('true-defaulting child-list/subtree attributes', () => {
-    it('clears childList/subtree from a plain HTML attribute (child-list="false" subtree="false"), not just a property binding', async () => {
-      // Lit's default presence-based Boolean converter can never clear a true-defaulting property
-      // from a literal attribute value -- only .prop=${false} would work without the converter
-      // fix. This proves the plain-markup form (the actual regression) is what's fixed.
+  describe('mapped observer defaults and compatibility aliases', () => {
+    it('defaults child-list to false while retaining Lyra\'s subtree default', async () => {
       const el = await fixture<LyraMutationObserver>(
-        html`<lr-mutation-observer child-list="false" subtree="false"><div></div></lr-mutation-observer>`,
+        html`<lr-mutation-observer><div></div></lr-mutation-observer>`,
       );
       expect(el.childList).to.equal(false);
-      expect(el.subtree).to.equal(false);
+      expect(el.subtree).to.equal(true);
     });
 
-    it('still defaults both to true with no attribute present', async () => {
-      const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer><div></div></lr-mutation-observer>`);
+    it('enables child-list from its plain HTML boolean attribute', async () => {
+      const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer child-list><div></div></lr-mutation-observer>`);
       expect(el.childList).to.equal(true);
-      expect(el.subtree).to.equal(true);
     });
 
     it('an observer with child-list="false" ignores child mutations but still reports attribute mutations', async () => {
       const el = await fixture<LyraMutationObserver>(
-        html`<lr-mutation-observer child-list="false" attributes><div></div></lr-mutation-observer>`,
+        html`<lr-mutation-observer attributes><div></div></lr-mutation-observer>`,
       );
       await el.updateComplete;
       const target = el.querySelector('div')!;
@@ -127,9 +138,30 @@ describe('<lr-mutation-observer>', () => {
     });
   });
 
+  it('supports attr/attr-old-value and char-data/char-data-old-value mapped aliases', async () => {
+    const el = await fixture<LyraMutationObserver>(html`
+      <lr-mutation-observer attr="data-state" attr-old-value char-data char-data-old-value>
+        <div data-state="before">Before</div>
+      </lr-mutation-observer>
+    `);
+    await el.updateComplete;
+    await aTimeout(0);
+    const target = el.querySelector('div')!;
+
+    const attributeEvent = oneEvent(el, 'lr-mutation');
+    target.setAttribute('data-state', 'after');
+    const attributeResult = (await attributeEvent) as CustomEvent<{ mutationList: MutationRecord[] }>;
+    expect(attributeResult.detail.mutationList[0]?.oldValue).to.equal('before');
+
+    const textEvent = oneEvent(el, 'lr-mutation');
+    target.firstChild!.textContent = 'After';
+    const textResult = (await textEvent) as CustomEvent<{ mutationList: MutationRecord[] }>;
+    expect(textResult.detail.mutationList[0]?.oldValue).to.equal('Before');
+  });
+
   it('treats a non-empty attributeFilter as enabling attribute observation', async () => {
     const el = await fixture<LyraMutationObserver>(
-      html`<lr-mutation-observer child-list="false"><div></div></lr-mutation-observer>`,
+      html`<lr-mutation-observer><div></div></lr-mutation-observer>`,
     );
     el.attributeFilter = ['data-state'];
     await el.updateComplete;

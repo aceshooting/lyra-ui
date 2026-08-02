@@ -1,274 +1,278 @@
-// Side-effect imports register every component…
-import './components/data/sparkline/sparkline.js';
-import './components/overlays/toast/toast.js';
-import './components/overlays/toast/toast-item.js';
-import './components/forms/combobox/combobox.js';
-import './components/forms/combobox/option.js';
-import './components/forms/select/select.js';
-import './components/forms/date-picker/date-picker.js';
-import './components/forms/date-picker/date-input.js';
-import './components/overlays/empty/empty.js';
-import './components/overlays/skeleton/skeleton.js';
-import './components/data/stat/stat.js';
-import './components/data/table/table.js';
-import './components/data/gauge/gauge.js';
-import './components/utility/export-button/export-button.js';
-import './components/utility/copy-button/copy-button.js';
-import './components/layout/split/split.js';
-import './components/forms/time-range/time-range.js';
-import './components/media/playback/playback.js';
-import './components/data/pagination/pagination.js';
-import './components/data/heatmap/heatmap.js';
-import './components/data/tree/tree.js';
-import './components/data/tree/tree-item.js';
-import './components/charts/chart/lite-chart.js';
-import './components/media/file-input/file-input.js';
-import './components/forms/phone-input/phone-input.js';
-import './components/layout/widget/widget.js';
-import './components/data/word-cloud/word-cloud.js';
-import './components/overlays/dialog/dialog.js';
-import './components/overlays/drawer/drawer.js';
-import './components/layout/tab-group/tab-group.js';
-import './components/layout/tab-group/tab.js';
-import './components/layout/tab-group/tab-panel.js';
-import './components/forms/checkbox/checkbox.js';
-import './components/forms/switch/switch.js';
-import './components/utility/json-viewer/json-viewer.js';
-import './components/utility/live-region/live-region.js';
-import './components/conversation/markdown/markdown.js';
-import './components/conversation/markdown/markdown-core.js';
-import './components/conversation/chat-message/chat-message.js';
-import './components/conversation/typing-indicator/typing-indicator.js';
-import './components/agent-tools/tool-call-chip/tool-call-chip.js';
-import './components/agent-tools/tool-result-view/tool-result-view.js';
-import './components/agent-tools/tool-result-dialog/tool-result-dialog.js';
-import './components/conversation/chat-composer/chat-composer.js';
-import './components/media/attachment-chip/attachment-chip.js';
-import './components/conversation/stream-status/stream-status.js';
-import './components/layout/virtual-list/virtual-list.js';
-import './components/conversation/conversation-item/conversation-item.js';
-import './components/conversation/model-select/model-select.js';
-import './components/forms/slider/slider.js';
-import './components/agent-tools/tool-select-dialog/tool-select-dialog.js';
-import './components/retrieval/citation-badge/citation-badge.js';
-import './components/retrieval/source-list/source-list.js';
-import './components/retrieval/source-card/source-card.js';
+// <generated:root-component-registrations>
+// Generated from scripts/fixtures/component-inventory.json. Run `pnpm registrations` to refresh.
+// Side-effect imports register every component whose inventory row is rootIncluded.
+import './components/layout/details/accordion.js';
+import './components/layout/details/accordion-item.js';
+import './components/agent-tools/activity-feed/activity-feed.js';
+import './components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.js';
+import './components/agent-tools/agent-run/agent-run.js';
+import './components/agent-tools/agent-trace/agent-trace.js';
+import './components/conversation/agent-workspace/agent-workspace.js';
+import './components/overlays/alert/alert.js';
+import './components/media/animated-image/animated-image.js';
+import './components/media/animation/animation.js';
 import './components/layout/app-rail/app-rail.js';
 import './components/layout/app-rail/app-rail-item.js';
-import './components/layout/reorder-list/reorder-item.js';
-import './components/layout/reorder-list/reorder-list.js';
-import './components/layout/responsive-panel/responsive-panel.js';
-import './components/utility/mention-popover/mention-popover.js';
-import './components/conversation/streaming-text/streaming-text.js';
-import './components/agent-tools/thinking-panel/thinking-panel.js';
-import './components/conversation/generation-status/generation-status.js';
-import './components/conversation/code-block/code-block.js';
-import './components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';
-import './components/agent-tools/tool-param-form/tool-param-form.js';
-import './components/layout/menu/menu.js';
-import './components/layout/menu/menu-item.js';
-import './components/layout/menu/menu-label.js';
-import './components/layout/menu/dropdown-item.js';
-import './components/overlays/overlay/popover.js';
-import './components/overlays/popup/popup.js';
-import './components/overlays/overlay/tooltip.js';
-import './components/overlays/overlay/dropdown.js';
-import './components/overlays/chip/chip.js';
-import './components/overlays/chip/chip-group.js';
-import './components/conversation/model-settings-panel/model-settings-panel.js';
-import './components/data/context-meter/context-meter.js';
-import './components/layout/control-group/control-group.js';
-import './components/layout/dock-panel/dock-panel.js';
-import './components/viewers/document-preview/document-preview.js';
-import './components/viewers/document-viewer/document-viewer.js';
-import './components/viewers/svg-viewer/svg-viewer.js';
-import './components/viewers/html-viewer/html-viewer.js';
-import './components/viewers/dataset-viewer/dataset-viewer.js';
-import './components/viewers/contact-viewer/contact-viewer.js';
-import './components/viewers/pdf-viewer/pdf-viewer.js';
-import './components/media/image-viewer/image-viewer.js';
-import './components/viewers/spreadsheet-viewer/spreadsheet-viewer.js';
-import './components/viewers/csv-viewer/csv-viewer.js';
-import './components/viewers/xml-viewer/xml-viewer.js';
-import './components/viewers/docx-viewer/docx-viewer.js';
-import './components/viewers/email-viewer/email-viewer.js';
-import './components/viewers/calendar-viewer/calendar-viewer.js';
+import './components/agent-tools/approval-queue/approval-queue.js';
 import './components/viewers/archive-viewer/archive-viewer.js';
-import './components/viewers/archive-viewer/archive-viewer-register.js';
-import './components/viewers/ebook-viewer/ebook-viewer.js';
-import './components/viewers/ebook-viewer/ebook-viewer-register.js';
-import './components/viewers/pptx-viewer/pptx-viewer.js';
-import './components/media/file-icon/file-icon.js';
-import './components/media/media-card/media-card.js';
+import './components/agent-tools/artifact-panel/artifact-panel.js';
+import './components/media/attachment-chip/attachment-chip.js';
 import './components/media/attachment-trigger/attachment-trigger.js';
-import './components/overlays/kbd/kbd.js';
-import './components/agent-tools/result-card/result-card.js';
-import './components/agent-tools/result-card/result-field.js';
+import './components/conversation/audio-visualizer/audio-visualizer.js';
+import './components/media/av-player/av-player.js';
 import './components/media/avatar/avatar.js';
+import './components/media/avatar-group/avatar-group.js';
+import './components/overlays/badge/badge.js';
+import './components/conversation/branch-picker/branch-picker.js';
+import './components/layout/breadcrumb/breadcrumb.js';
+import './components/layout/breadcrumb/breadcrumb-item.js';
+import './components/agent-tools/browser-frame/browser-frame.js';
+import './components/forms/button/button.js';
+import './components/layout/button-group/button-group.js';
+import './components/data/calendar/calendar.js';
+import './components/viewers/calendar-viewer/calendar-viewer.js';
+import './components/overlays/callout/callout.js';
 import './components/layout/card/card.js';
 import './components/layout/carousel/carousel.js';
 import './components/layout/carousel/carousel-item.js';
-import './components/layout/stepper/stepper.js';
-import './components/layout/segmented/segmented.js';
-import './components/forms/swatch-picker/swatch-picker.js';
-import './components/utility/diff-view/diff-view.js';
-import './components/utility/poll-status/poll-status.js';
-import './components/conversation/code-block/code-block-core.js';
-import './components/forms/textarea/textarea.js';
-import './components/forms/button/button.js';
-import './components/layout/button-group/button-group.js';
-import './components/forms/input/input.js';
-import './components/forms/input/number-input.js';
-import './components/forms/input/time-input.js';
-import './components/media/image-comparer/image-comparer.js';
-import './components/media/zoomable-frame/zoomable-frame.js';
-import './components/layout/scroller/scroller.js';
-import './components/utility/resize-observer/resize-observer.js';
-import './components/utility/intersection-observer/intersection-observer.js';
-import './components/utility/mutation-observer/mutation-observer.js';
-import './components/forms/radio/radio.js';
-import './components/forms/radio/radio-button.js';
-import './components/forms/otp-input/otp-input.js';
-import './components/forms/radio/radio-group.js';
-import './components/overlays/spinner/spinner.js';
-import './components/overlays/progress/progress-bar.js';
-import './components/overlays/progress/progress-ring.js';
-import './components/overlays/badge/badge.js';
-import './components/overlays/badge/tag.js';
-import './components/overlays/callout/callout.js';
-import './components/layout/details/details.js';
-import './components/layout/details/accordion.js';
-import './components/layout/details/accordion-item.js';
-import './components/utility/divider/divider.js';
-import './components/utility/visually-hidden/visually-hidden.js';
-import './components/layout/breadcrumb/breadcrumb.js';
-import './components/layout/breadcrumb/breadcrumb-item.js';
-import './components/utility/format/format-number.js';
-import './components/utility/format/format-date.js';
-import './components/utility/format/format-bytes.js';
-import './components/utility/format/relative-time.js';
-import './components/overlays/rating/rating.js';
-import './components/forms/color-picker/color-picker.js';
-import './components/forms/checkbox-group/checkbox-group.js';
-import './components/forms/token-input/token-input.js';
-import './components/utility/icon/icon.js';
-import './components/forms/icon-button/icon-button.js';
-import './components/layout/command-palette/command-palette.js';
-import './components/forms/code-editor/code-editor.js';
-import './components/data/calendar/calendar.js';
-import './components/media/animated-image/animated-image.js';
-import './components/media/animation/animation.js';
-import './components/media/avatar-group/avatar-group.js';
-import './components/viewers/include/include.js';
-import './components/utility/known-date/known-date.js';
-import './components/media/lightbox/lightbox.js';
-import './components/media/qr-code/qr-code.js';
-import './components/utility/random-content/random-content.js';
-import './components/data/timeline/timeline-item.js';
-import './components/data/timeline/timeline.js';
-import './components/utility/tour/tour.js';
-import './components/data/sequence-strip/sequence-strip.js';
-import './components/forms/emoji-picker/emoji-picker.js';
-import './components/forms/locale-picker/locale-picker.js';
-import './components/data/file-tree/file-tree.js';
-import './components/agent-tools/commit-card/commit-card.js';
-import './components/agent-tools/stack-trace/stack-trace.js';
-import './components/agent-tools/test-results/test-results.js';
-import './components/conversation/audio-visualizer/audio-visualizer.js';
-import './components/conversation/branch-picker/branch-picker.js';
-import './components/agent-tools/compare-panel/compare-panel.js';
-import './components/viewers/highlight-layer/highlight-layer.js';
-import './components/conversation/message-feedback/message-feedback.js';
-import './components/conversation/message-parts/message-parts.js';
-import './components/viewers/page-rail/page-rail.js';
-import './components/conversation/prompt-input/prompt-input.js';
-import './components/conversation/prompt-queue/prompt-queue.js';
-import './components/conversation/push-to-talk/push-to-talk.js';
-import './components/conversation/selection-toolbar/selection-toolbar.js';
-import './components/forms/rubric-form/rubric-form.js';
-import './components/agent-tools/span-waterfall/span-waterfall.js';
-import './components/agent-tools/task-list/task-list.js';
-import './components/agent-tools/terminal/terminal.js';
-import './components/agent-tools/trace-tree/trace-tree.js';
-import './components/agent-tools/activity-feed/activity-feed.js';
-import './components/conversation/message-actions/message-actions.js';
-import './components/conversation/transcript-feed/transcript-feed.js';
-import './components/data/env-list/env-list.js';
-import './components/conversation/handoff-divider/handoff-divider.js';
-import './components/media/av-player/av-player.js';
-import './components/agent-tools/artifact-panel/artifact-panel.js';
-import './components/agent-tools/browser-frame/browser-frame.js';
+import './components/conversation/chat-composer/chat-composer.js';
+import './components/conversation/chat-message/chat-message.js';
 import './components/conversation/chat-viewport/chat-viewport.js';
+import './components/forms/checkbox/checkbox.js';
+import './components/forms/checkbox-group/checkbox-group.js';
 import './components/conversation/checkpoint/checkpoint.js';
-import './components/agent-tools/confirm-bar/confirm-bar.js';
-import './components/viewers/notebook-viewer/notebook-viewer.js';
-import './components/conversation/suggestion-chips/suggestion-chips.js';
-import './components/conversation/thread-list/thread-list.js';
-import './components/conversation/usage-badge/usage-badge.js';
-import './components/conversation/voice-picker/voice-picker.js';
-import './components/conversation/widget-renderer/widget-renderer.js';
-import './components/data/flow-canvas/flow-canvas.js';
-import './components/data/flow-node/flow-node.js';
-import './components/data/flow-minimap/flow-minimap.js';
-import './components/data/flow-controls/flow-controls.js';
-import './components/retrieval/node-palette/node-palette.js';
-import './components/data/flow-run-overlay/flow-run-overlay.js';
-import './components/retrieval/graph-legend/graph-legend.js';
-import './components/retrieval/entity-card/entity-card.js';
-import './components/retrieval/entity-chip/entity-chip.js';
-import './components/retrieval/neighbor-list/neighbor-list.js';
-import './components/retrieval/path-strip/path-strip.js';
-import './components/retrieval/community-card/community-card.js';
+import './components/overlays/chip/chip.js';
+import './components/overlays/chip/chip-group.js';
 import './components/retrieval/chunk-inspector/chunk-inspector.js';
-import './components/retrieval/source-picker/source-picker.js';
-import './components/retrieval/provenance-panel/provenance-panel.js';
-import './components/retrieval/mind-map/mind-map.js';
-import './components/agent-tools/agent-run/agent-run.js';
-import './components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.js';
-import './components/agent-tools/mcp-app/mcp-app.js';
-import './components/agent-tools/approval-queue/approval-queue.js';
-import './components/conversation/agent-workspace/agent-workspace.js';
-import './components/agent-tools/agent-trace/agent-trace.js';
+import './components/retrieval/citation-badge/citation-badge.js';
+import './components/retrieval/claim-evidence/claim-evidence.js';
+import './components/conversation/code-block/code-block.js';
+import './components/conversation/code-block/code-block-core.js';
+import './components/forms/code-editor/code-editor.js';
+import './components/forms/color-picker/color-picker.js';
+import './components/forms/combobox/combobox.js';
+import './components/layout/command-palette/command-palette.js';
+import './components/agent-tools/commit-card/commit-card.js';
+import './components/retrieval/community-card/community-card.js';
+import './components/agent-tools/compare-panel/compare-panel.js';
+import './components/agent-tools/confirm-bar/confirm-bar.js';
+import './components/viewers/contact-viewer/contact-viewer.js';
 import './components/agent-tools/context-inspector/context-inspector.js';
+import './components/data/context-meter/context-meter.js';
+import './components/layout/control-group/control-group.js';
+import './components/conversation/conversation-item/conversation-item.js';
+import './components/utility/copy-button/copy-button.js';
+import './components/viewers/csv-viewer/csv-viewer.js';
 import './components/layout/dashboard-grid/dashboard-grid.js';
+import './components/data/data-grid/data-grid.js';
+import './components/viewers/dataset-viewer/dataset-viewer.js';
+import './components/forms/date-picker/date-input.js';
+import './components/forms/date-picker/date-picker.js';
+import './components/layout/details/details.js';
+import './components/overlays/dialog/dialog.js';
+import './components/utility/diff-view/diff-view.js';
+import './components/utility/divider/divider.js';
+import './components/layout/dock-panel/dock-panel.js';
 import './components/viewers/document-compare/document-compare.js';
 import './components/data/document-library/document-library.js';
+import './components/viewers/document-preview/document-preview.js';
+import './components/viewers/document-viewer/document-viewer.js';
+import './components/viewers/docx-viewer/docx-viewer.js';
+import './components/overlays/drawer/drawer.js';
 import './components/layout/drilldown-panel/drilldown-panel.js';
+import './components/overlays/overlay/dropdown.js';
+import './components/layout/menu/dropdown-item.js';
+import './components/viewers/ebook-viewer/ebook-viewer.js';
+import './components/viewers/email-viewer/email-viewer.js';
+import './components/retrieval/embedding-explorer/embedding-explorer.js';
+import './components/forms/emoji-picker/emoji-picker.js';
+import './components/overlays/empty/empty.js';
+import './components/retrieval/entity-card/entity-card.js';
+import './components/retrieval/entity-chip/entity-chip.js';
 import './components/retrieval/entity-dossier/entity-dossier.js';
+import './components/data/env-list/env-list.js';
 import './components/agent-tools/eval-dataset/eval-dataset.js';
 import './components/agent-tools/eval-result/eval-result.js';
 import './components/agent-tools/evaluation-run/evaluation-run.js';
+import './components/utility/export-button/export-button.js';
+import './components/media/file-icon/file-icon.js';
+import './components/media/file-input/file-input.js';
+import './components/data/file-tree/file-tree.js';
 import './components/layout/filter-bar/filter-bar.js';
+import './components/media/flag/flag.js';
+import './components/data/flow-canvas/flow-canvas.js';
+import './components/data/flow-controls/flow-controls.js';
+import './components/data/flow-minimap/flow-minimap.js';
+import './components/data/flow-node/flow-node.js';
+import './components/data/flow-run-overlay/flow-run-overlay.js';
+import './components/utility/format/format-bytes.js';
+import './components/utility/format/format-date.js';
+import './components/utility/format/format-number.js';
+import './components/data/gauge/gauge.js';
+import './components/conversation/generation-status/generation-status.js';
+import './components/retrieval/graph-legend/graph-legend.js';
 import './components/data/graph-query-builder/graph-query-builder.js';
 import './components/retrieval/grounding-summary/grounding-summary.js';
-import './components/retrieval/claim-evidence/claim-evidence.js';
+import './components/conversation/handoff-divider/handoff-divider.js';
+import './components/data/heatmap/heatmap.js';
+import './components/viewers/highlight-layer/highlight-layer.js';
+import './components/viewers/html-viewer/html-viewer.js';
+import './components/utility/icon/icon.js';
+import './components/forms/icon-button/icon-button.js';
+import './components/media/image-comparer/image-comparer.js';
+import './components/media/image-viewer/image-viewer.js';
+import './components/viewers/include/include.js';
 import './components/retrieval/ingestion-queue/ingestion-queue.js';
+import './components/forms/input/input.js';
+import './components/utility/intersection-observer/intersection-observer.js';
+import './components/utility/json-viewer/json-viewer.js';
+import './components/overlays/kbd/kbd.js';
 import './components/retrieval/knowledge-base/knowledge-base.js';
 import './components/retrieval/knowledge-base-admin/knowledge-base-admin.js';
-import './components/retrieval/rag-answer/rag-answer.js';
-import './components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js';
-import './components/retrieval/embedding-explorer/embedding-explorer.js';
+import './components/utility/known-date/known-date.js';
+import './components/media/lightbox/lightbox.js';
+import './components/charts/chart/lite-chart.js';
+import './components/utility/live-region/live-region.js';
+import './components/forms/locale-picker/locale-picker.js';
+import './components/conversation/markdown/markdown.js';
+import './components/conversation/markdown/markdown-core.js';
+import './components/agent-tools/mcp-app/mcp-app.js';
+import './components/media/media-card/media-card.js';
 import './components/retrieval/memory-panel/memory-panel.js';
-import './components/agent-tools/policy-summary/policy-summary.js';
-import './components/data/query-builder/query-builder.js';
-import './components/retrieval/retrieval-results/retrieval-results.js';
-import './components/retrieval/retrieval-compare/retrieval-compare.js';
-import './components/retrieval/retrieval-search/retrieval-search.js';
-import './components/retrieval/retrieval-trace/retrieval-trace.js';
-import './components/agent-tools/tool-timeline/tool-timeline.js';
+import './components/utility/mention-popover/mention-popover.js';
+import './components/layout/menu/menu.js';
+import './components/layout/menu/menu-item.js';
+import './components/layout/menu/menu-label.js';
+import './components/conversation/message-actions/message-actions.js';
+import './components/conversation/message-feedback/message-feedback.js';
 import './components/conversation/message-parts/message-parts.js';
+import './components/retrieval/mind-map/mind-map.js';
+import './components/conversation/model-select/model-select.js';
+import './components/conversation/model-settings-panel/model-settings-panel.js';
+import './components/utility/mutation-observer/mutation-observer.js';
+import './components/forms/input/native-time-input.js';
+import './components/retrieval/neighbor-list/neighbor-list.js';
+import './components/retrieval/node-palette/node-palette.js';
+import './components/viewers/notebook-viewer/notebook-viewer.js';
+import './components/forms/input/number-input.js';
+import './components/forms/combobox/option.js';
+import './components/forms/otp-input/otp-input.js';
+import './components/layout/page/page.js';
+import './components/viewers/page-rail/page-rail.js';
+import './components/data/pagination/pagination.js';
+import './components/media/pan-zoom/pan-zoom.js';
+import './components/retrieval/path-strip/path-strip.js';
+import './components/viewers/pdf-viewer/pdf-viewer.js';
+import './components/forms/phone-input/phone-input.js';
+import './components/media/playback/playback.js';
+import './components/agent-tools/policy-summary/policy-summary.js';
+import './components/utility/poll-status/poll-status.js';
+import './components/overlays/overlay/popover.js';
+import './components/overlays/popup/popup.js';
+import './components/viewers/pptx-viewer/pptx-viewer.js';
+import './components/overlays/progress/progress-bar.js';
+import './components/overlays/progress/progress-ring.js';
 import './components/conversation/prompt-input/prompt-input.js';
 import './components/conversation/prompt-queue/prompt-queue.js';
-import './components/conversation/realtime-session/realtime-session.js';
-import './components/conversation/selection-toolbar/selection-toolbar.js';
-import './components/agent-tools/mcp-app/mcp-app.js';
 import './components/agent-tools/prompt-studio/prompt-studio.js';
-import './components/agent-tools/schema-viewer/schema-viewer.js';
-import './components/agent-tools/subagent-panel/subagent-panel.js';
-import './components/retrieval/claim-evidence/claim-evidence.js';
+import './components/retrieval/provenance-panel/provenance-panel.js';
+import './components/conversation/push-to-talk/push-to-talk.js';
+import './components/media/qr-code/qr-code.js';
+import './components/data/query-builder/query-builder.js';
+import './components/forms/radio/radio.js';
+import './components/forms/radio/radio-button.js';
+import './components/forms/radio/radio-group.js';
+import './components/retrieval/rag-answer/rag-answer.js';
 import './components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js';
+import './components/utility/random-content/random-content.js';
+import './components/overlays/rating/rating.js';
+import './components/conversation/realtime-session/realtime-session.js';
+import './components/utility/format/relative-time.js';
+import './components/layout/reorder-list/reorder-item.js';
+import './components/layout/reorder-list/reorder-list.js';
+import './components/utility/resize-observer/resize-observer.js';
+import './components/layout/responsive-panel/responsive-panel.js';
+import './components/agent-tools/result-card/result-card.js';
+import './components/agent-tools/result-card/result-field.js';
 import './components/retrieval/retrieval-compare/retrieval-compare.js';
-
+import './components/retrieval/retrieval-results/retrieval-results.js';
+import './components/retrieval/retrieval-search/retrieval-search.js';
+import './components/retrieval/retrieval-trace/retrieval-trace.js';
+import './components/forms/rubric-form/rubric-form.js';
+import './components/agent-tools/schema-viewer/schema-viewer.js';
+import './components/layout/scroller/scroller.js';
+import './components/layout/segmented/segmented.js';
+import './components/forms/select/select.js';
+import './components/conversation/selection-toolbar/selection-toolbar.js';
+import './components/data/sequence-strip/sequence-strip.js';
+import './components/overlays/skeleton/skeleton.js';
+import './components/forms/slider/slider.js';
+import './components/retrieval/source-card/source-card.js';
+import './components/retrieval/source-list/source-list.js';
+import './components/retrieval/source-picker/source-picker.js';
+import './components/agent-tools/span-waterfall/span-waterfall.js';
+import './components/data/sparkline/sparkline.js';
+import './components/overlays/spinner/spinner.js';
+import './components/layout/split/split.js';
+import './components/layout/split-panel/split-panel.js';
+import './components/viewers/spreadsheet-viewer/spreadsheet-viewer.js';
+import './components/agent-tools/stack-trace/stack-trace.js';
+import './components/data/stat/stat.js';
+import './components/layout/stepper/stepper.js';
+import './components/conversation/stream-status/stream-status.js';
+import './components/conversation/streaming-text/streaming-text.js';
+import './components/agent-tools/subagent-panel/subagent-panel.js';
+import './components/conversation/suggestion-chips/suggestion-chips.js';
+import './components/viewers/svg-viewer/svg-viewer.js';
+import './components/forms/swatch-picker/swatch-picker.js';
+import './components/forms/switch/switch.js';
+import './components/layout/tab-group/tab.js';
+import './components/layout/tab-group/tab-group.js';
+import './components/layout/tab-group/tab-panel.js';
+import './components/data/table/table.js';
+import './components/overlays/badge/tag.js';
+import './components/agent-tools/task-list/task-list.js';
+import './components/agent-tools/terminal/terminal.js';
+import './components/agent-tools/test-results/test-results.js';
+import './components/forms/textarea/textarea.js';
+import './components/agent-tools/thinking-panel/thinking-panel.js';
+import './components/conversation/thread-list/thread-list.js';
+import './components/forms/input/time-input.js';
+import './components/forms/time-range/time-range.js';
+import './components/data/timeline/timeline.js';
+import './components/data/timeline/timeline-item.js';
+import './components/overlays/toast/toast.js';
+import './components/overlays/toast/toast-item.js';
+import './components/forms/token-input/token-input.js';
+import './components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';
+import './components/agent-tools/tool-call-chip/tool-call-chip.js';
+import './components/agent-tools/tool-param-form/tool-param-form.js';
+import './components/agent-tools/tool-result-dialog/tool-result-dialog.js';
+import './components/agent-tools/tool-result-view/tool-result-view.js';
+import './components/agent-tools/tool-select-dialog/tool-select-dialog.js';
+import './components/agent-tools/tool-timeline/tool-timeline.js';
+import './components/overlays/overlay/tooltip.js';
+import './components/utility/tour/tour.js';
+import './components/agent-tools/trace-tree/trace-tree.js';
+import './components/conversation/transcript-feed/transcript-feed.js';
+import './components/data/tree/tree.js';
+import './components/data/tree/tree-item.js';
+import './components/conversation/typing-indicator/typing-indicator.js';
+import './components/conversation/usage-badge/usage-badge.js';
+import './components/media/video/video.js';
+import './components/media/video-playlist/video-playlist.js';
+import './components/layout/virtual-list/virtual-list.js';
+import './components/utility/visually-hidden/visually-hidden.js';
+import './components/conversation/voice-picker/voice-picker.js';
+import './components/layout/widget/widget.js';
+import './components/conversation/widget-renderer/widget-renderer.js';
+import './components/data/word-cloud/word-cloud.js';
+import './components/viewers/xml-viewer/xml-viewer.js';
+import './components/media/zoomable-frame/zoomable-frame.js';
+// </generated:root-component-registrations>
+// Curated companion registrations have no custom-element inventory row.
+import './components/viewers/archive-viewer/archive-viewer-register.js';
+import './components/viewers/ebook-viewer/ebook-viewer-register.js';
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraEnvList } from './components/data/env-list/env-list.js';
 export type { EnvEntry, LyraEnvListEventMap } from './components/data/env-list/env-list.js';
@@ -283,38 +287,73 @@ export type {
   LyraActivityFeedEventMap,
 } from './components/agent-tools/activity-feed/activity-feed.js';
 export { LyraMessageActions } from './components/conversation/message-actions/message-actions.js';
-export type { MessageActionControl, LyraMessageActionsEventMap } from './components/conversation/message-actions/message-actions.js';
+export type {
+  MessageActionControl,
+  LyraMessageActionsEventMap,
+} from './components/conversation/message-actions/message-actions.js';
 export { LyraTranscriptFeed } from './components/conversation/transcript-feed/transcript-feed.js';
-export type { LyraTranscriptEntry, LyraTranscriptFeedEventMap } from './components/conversation/transcript-feed/transcript-feed.js';
+export type {
+  LyraTranscriptEntry,
+  LyraTranscriptFeedEventMap,
+} from './components/conversation/transcript-feed/transcript-feed.js';
 export { LyraAudioVisualizer } from './components/conversation/audio-visualizer/audio-visualizer.js';
-export type { AudioVisualizerVariant, AudioVisualizerState } from './components/conversation/audio-visualizer/audio-visualizer.js';
+export type {
+  AudioVisualizerVariant,
+  AudioVisualizerState,
+} from './components/conversation/audio-visualizer/audio-visualizer.js';
 export { LyraBranchPicker } from './components/conversation/branch-picker/branch-picker.js';
 export type { LyraBranchPickerEventMap } from './components/conversation/branch-picker/branch-picker.js';
 export { LyraComparePanel } from './components/agent-tools/compare-panel/compare-panel.js';
 export type { CompareVote, LyraComparePanelEventMap } from './components/agent-tools/compare-panel/compare-panel.js';
 export { LyraHighlightLayer } from './components/viewers/highlight-layer/highlight-layer.js';
-export type { HighlightLayerItem, LyraHighlightLayerEventMap } from './components/viewers/highlight-layer/highlight-layer.js';
+export type {
+  HighlightLayerItem,
+  LyraHighlightLayerEventMap,
+} from './components/viewers/highlight-layer/highlight-layer.js';
 export { LyraMessageFeedback } from './components/conversation/message-feedback/message-feedback.js';
-export type { MessageFeedbackReason, LyraMessageFeedbackEventMap } from './components/conversation/message-feedback/message-feedback.js';
+export type {
+  MessageFeedbackReason,
+  LyraMessageFeedbackEventMap,
+} from './components/conversation/message-feedback/message-feedback.js';
 export * from './components/conversation/message-parts/message-parts.js';
 export { LyraPageRail } from './components/viewers/page-rail/page-rail.js';
 export type { PageThumbnailSource, LyraPageRailEventMap } from './components/viewers/page-rail/page-rail.js';
 export { LyraPushToTalk } from './components/conversation/push-to-talk/push-to-talk.js';
-export type { PushToTalkMode, PushToTalkState, LyraPushToTalkEventMap } from './components/conversation/push-to-talk/push-to-talk.js';
+export type {
+  PushToTalkMode,
+  PushToTalkState,
+  LyraPushToTalkEventMap,
+} from './components/conversation/push-to-talk/push-to-talk.js';
 export * from './components/conversation/prompt-input/prompt-input.js';
 export * from './components/conversation/prompt-queue/prompt-queue.js';
 export * from './components/conversation/selection-toolbar/selection-toolbar.js';
 export { LyraRubricForm } from './components/forms/rubric-form/rubric-form.js';
-export type { RubricKeyOption, RubricKey, RubricValue, LyraRubricFormEventMap } from './components/forms/rubric-form/rubric-form.js';
+export type {
+  RubricKeyOption,
+  RubricKey,
+  RubricValue,
+  LyraRubricFormEventMap,
+} from './components/forms/rubric-form/rubric-form.js';
 export { LyraSpanWaterfall } from './components/agent-tools/span-waterfall/span-waterfall.js';
 export type { LyraSpan, LyraSpanWaterfallEventMap } from './components/agent-tools/span-waterfall/span-waterfall.js';
 export { LyraTaskList } from './components/agent-tools/task-list/task-list.js';
-export type { TaskStatus, TaskItem, TaskListToggleDetail, LyraTaskListEventMap } from './components/agent-tools/task-list/task-list.js';
+export type {
+  TaskStatus,
+  TaskItem,
+  TaskListToggleDetail,
+  LyraTaskListEventMap,
+} from './components/agent-tools/task-list/task-list.js';
 export { LyraTerminal } from './components/agent-tools/terminal/terminal.js';
 export type { TerminalCell, TerminalLine, LyraTerminalEventMap } from './components/agent-tools/terminal/terminal.js';
 export { LyraTraceTree } from './components/agent-tools/trace-tree/trace-tree.js';
 export type { LyraTraceTreeEventMap } from './components/agent-tools/trace-tree/trace-tree.js';
 export { LyraSparkline } from './components/data/sparkline/sparkline.js';
+export type {
+  LyraSparklineAppearance,
+  LyraSparklineCurve,
+  LyraSparklineTrend,
+  LyraSparklineType,
+} from './components/data/sparkline/sparkline.js';
 export { LyraSequenceStrip } from './components/data/sequence-strip/sequence-strip.js';
 export type { SequenceStripItem, SequenceStripCategory } from './components/data/sequence-strip/sequence-strip.js';
 export { LyraEmojiPicker } from './components/forms/emoji-picker/emoji-picker.js';
@@ -346,8 +385,25 @@ export { LyraOption } from './components/forms/combobox/option.js';
 export { LyraSelect } from './components/forms/select/select.js';
 export type { LyraSelectAppearance, LyraSelectSize, LyraSelectTagRenderer } from './components/forms/select/select.js';
 export { LyraDatePicker } from './components/forms/date-picker/date-picker.js';
-export type { DateRange } from './components/forms/date-picker/date-picker.js';
+export type {
+  DateRange,
+  LyraDatePickerDayContent,
+  LyraDatePickerDisabledDates,
+  LyraDatePickerPageBy,
+  LyraDatePickerSize,
+  LyraDatePickerView,
+} from './components/forms/date-picker/date-picker.js';
 export { LyraDateInput } from './components/forms/date-picker/date-input.js';
+export type {
+  LyraDateInputAppearance,
+  LyraDateInputFirstDayOfWeek,
+  LyraDateInputObjectValidator,
+  LyraDateInputObjectValidatorResult,
+  LyraDateInputPlacement,
+  LyraDateInputSelectionDirection,
+  LyraDateInputValidator,
+  LyraDateInputValidatorResult,
+} from './components/forms/date-picker/date-input.js';
 export { LyraAnimatedImage } from './components/media/animated-image/animated-image.js';
 export type { LyraAnimatedImageEventMap } from './components/media/animated-image/animated-image.js';
 export { LyraAnimation } from './components/media/animation/animation.js';
@@ -356,19 +412,43 @@ export type {
   LyraAnimationTimingPreset,
   LyraAnimationEventMap,
 } from './components/media/animation/animation.js';
+export { getAnimation, setAnimation, setDefaultAnimation } from './utilities/animation-registry.js';
+export type {
+  AnimationCleanup,
+  ElementAnimation,
+  GetAnimationOptions,
+  LyraElementAnimation,
+  ResolvedElementAnimation,
+} from './utilities/animation-registry.js';
+export { invalidateLyraTheme } from './utilities/theme.js';
+export type { LyraThemeRoot } from './utilities/theme.js';
 export { LyraAvatarGroup } from './components/media/avatar-group/avatar-group.js';
-export type { AvatarGroupOverflowClickDetail, LyraAvatarGroupEventMap } from './components/media/avatar-group/avatar-group.js';
+export type {
+  AvatarGroupOverflowClickDetail,
+  LyraAvatarGroupEventMap,
+} from './components/media/avatar-group/avatar-group.js';
 export { LyraInclude } from './components/viewers/include/include.js';
-export type { LyraIncludeMode, LyraIncludeErrorReason, LyraIncludeEventMap } from './components/viewers/include/include.js';
+export type {
+  LyraIncludeMode,
+  LyraIncludeErrorReason,
+  LyraIncludeEventMap,
+} from './components/viewers/include/include.js';
 export { LyraKnownDate } from './components/utility/known-date/known-date.js';
 export type {
+  DateParts,
+  LyraKnownDateAppearance,
   LyraKnownDateSize,
   LyraKnownDateField,
   LyraKnownDateEventDetail,
   LyraKnownDateEventMap,
+  LyraKnownDateParts,
 } from './components/utility/known-date/known-date.js';
 export { LyraLightbox } from './components/media/lightbox/lightbox.js';
-export type { LyraLightboxImage, LyraLightboxCloseReason, LyraLightboxEventMap } from './components/media/lightbox/lightbox.js';
+export type {
+  LyraLightboxImage,
+  LyraLightboxCloseReason,
+  LyraLightboxEventMap,
+} from './components/media/lightbox/lightbox.js';
 export { LyraQrCode } from './components/media/qr-code/qr-code.js';
 export type { LyraQrCodeErrorCorrection } from './components/media/qr-code/qr-code.js';
 export { LyraRandomContent } from './components/utility/random-content/random-content.js';
@@ -399,6 +479,42 @@ export type {
 } from './components/data/stat/stat.js';
 export { LyraTable } from './components/data/table/table.js';
 export type { TableColumn, TableLoadingAppearance } from './components/data/table/table.js';
+export { LyraDataGrid } from './components/data/data-grid/data-grid.js';
+export type {
+  DataGridAggregation,
+  DataGridAppearance,
+  DataGridCellContextMenuDetail,
+  DataGridCellDetail,
+  DataGridColumn,
+  DataGridColumnMoveDetail,
+  DataGridColumnPinDetail,
+  DataGridColumnResizeDetail,
+  DataGridColumnState,
+  DataGridColumnVisibilityDetail,
+  DataGridCopyOptions,
+  DataGridCsvOptions,
+  DataGridDataErrorDetail,
+  DataGridExportOptions,
+  DataGridFacets,
+  DataGridFilter,
+  DataGridFilterType,
+  DataGridKey,
+  DataGridPageDetail,
+  DataGridPinSide,
+  DataGridRequest,
+  DataGridResponse,
+  DataGridRowDetail,
+  DataGridScrollOptions,
+  DataGridSelectable,
+  DataGridSelectionDetail,
+  DataGridSize,
+  DataGridSort,
+  DataGridSortAlgorithm,
+  DataGridSortingState,
+  DataGridState,
+  LyraDataGridEventMap,
+  SortingState,
+} from './components/data/data-grid/data-grid.js';
 export { LyraGauge } from './components/data/gauge/gauge.js';
 export type { GaugeType } from './components/data/gauge/gauge.js';
 export { LyraExportButton } from './components/utility/export-button/export-button.js';
@@ -421,6 +537,19 @@ export type {
   SplitCollapseChangeDetail,
   SplitResizeDetail,
 } from './components/layout/split/split.js';
+export { LyraSplitPanel } from './components/layout/split-panel/split-panel.js';
+export type {
+  LyraSplitPanelEventMap,
+  SnapFunction,
+  SnapFunctionParams,
+  SplitPanelOrientation,
+  SplitPanelPrimary,
+  SplitPanelSnapFunction,
+  SplitPanelSnapFunctionOptions,
+  SplitPanelSnapFunctionParams,
+} from './components/layout/split-panel/split-panel.js';
+export { LyraPage } from './components/layout/page/page.js';
+export type { PageNavigationPlacement, PageView } from './components/layout/page/page.js';
 export { LyraTimeRange } from './components/forms/time-range/time-range.js';
 export type {
   TimeRangeHandle,
@@ -429,7 +558,11 @@ export type {
 } from './components/forms/time-range/time-range.js';
 export { LyraPlayback } from './components/media/playback/playback.js';
 export { LyraPagination } from './components/data/pagination/pagination.js';
-export type { LyraPaginationSize, LyraPaginationFormat, LyraPaginationAppearance } from './components/data/pagination/pagination.js';
+export type {
+  LyraPaginationSize,
+  LyraPaginationFormat,
+  LyraPaginationAppearance,
+} from './components/data/pagination/pagination.js';
 export { LyraHeatmap } from './components/data/heatmap/heatmap.js';
 export type {
   MatrixCellPos,
@@ -447,14 +580,16 @@ export type { FileTreeNode, GitStatus, LyraFileTreeEventMap } from './components
 export { LyraCommitCard } from './components/agent-tools/commit-card/commit-card.js';
 export type { CommitFileChange, LyraCommitCardEventMap } from './components/agent-tools/commit-card/commit-card.js';
 export { LyraStackTrace } from './components/agent-tools/stack-trace/stack-trace.js';
-export type {
-  LyraStackTraceEventMap,
-  StackTraceAppearance,
-} from './components/agent-tools/stack-trace/stack-trace.js';
+export type { LyraStackTraceEventMap, StackTraceAppearance } from './components/agent-tools/stack-trace/stack-trace.js';
 export { parseStackTrace, DEFAULT_INTERNAL_PATTERNS } from './components/agent-tools/stack-trace/stack-trace-parse.js';
 export type { StackFrame, StackGroup } from './components/agent-tools/stack-trace/stack-trace-parse.js';
 export { LyraTestResults } from './components/agent-tools/test-results/test-results.js';
-export type { TestStatus, TestCaseResult, TestSuiteResult, LyraTestResultsEventMap } from './components/agent-tools/test-results/test-results.js';
+export type {
+  TestStatus,
+  TestCaseResult,
+  TestSuiteResult,
+  LyraTestResultsEventMap,
+} from './components/agent-tools/test-results/test-results.js';
 export { LyraTreeItem } from './components/data/tree/tree-item.js';
 export { LyraLiteChart } from './components/charts/chart/lite-chart.js';
 export type {
@@ -472,6 +607,10 @@ export type {
   ChartPoint,
   Series,
   LyraChartType,
+  LyraChartGrid,
+  LyraChartIndexAxis,
+  LyraChartLayoutPosition,
+  LyraChartLegendPosition,
   LyraChartExportFormat,
 } from './components/charts/chart/chart.js';
 export type { BoxPlotSeries, BoxPlotPoint } from './components/charts/chart/box-plot.js';
@@ -493,21 +632,24 @@ export { LyraWidget } from './components/layout/widget/widget.js';
 export type { WidgetView } from './components/layout/widget/widget.js';
 export { LyraWordCloud } from './components/data/word-cloud/word-cloud.js';
 export type { WordCloudWord } from './components/data/word-cloud/word-cloud.js';
-export type {
-  ComboboxFilterDetail,
-  ComboboxSource,
-  ComboboxSourceRow,
-} from './components/forms/combobox/combobox.js';
+export type { ComboboxFilterDetail, ComboboxSource, ComboboxSourceRow } from './components/forms/combobox/combobox.js';
 export type { CalendarDay } from './components/data/heatmap/calendar-grid.js';
 export { LyraDialog } from './components/overlays/dialog/dialog.js';
 export { LyraDrawer } from './components/overlays/drawer/drawer.js';
 export type { LyraDrawerPlacement } from './components/overlays/drawer/drawer.js';
-export type { DialogCloseReason } from './components/overlays/dialog/dialog.js';
+export type {
+  DialogCloseReason,
+  LyraDialogHideDetail,
+  LyraDialogModalController,
+  LyraDialogRequestCloseDetail,
+  LyraDialogRequestCloseSource,
+} from './components/overlays/dialog/dialog.js';
 export { confirm } from './components/overlays/dialog/confirm.js';
 export type { ConfirmOptions } from './components/overlays/dialog/confirm.js';
 export { LyraTabGroup } from './components/layout/tab-group/tab-group.js';
 export type { TabGroupPlacement, TabGroupActivation } from './components/layout/tab-group/tab-group.js';
 export { LyraTab } from './components/layout/tab-group/tab.js';
+export type { LyraTabEventMap } from './components/layout/tab-group/tab.js';
 export { LyraTabPanel } from './components/layout/tab-group/tab-panel.js';
 export { LyraCheckbox } from './components/forms/checkbox/checkbox.js';
 export { LyraSwitch } from './components/forms/switch/switch.js';
@@ -584,10 +726,7 @@ export type { VirtualListRange, VirtualListGroup } from './components/layout/vir
 export { LyraConversationItem } from './components/conversation/conversation-item/conversation-item.js';
 export type { ConversationItemRenameDetail } from './components/conversation/conversation-item/conversation-item.js';
 export { LyraModelSelect } from './components/conversation/model-select/model-select.js';
-export type {
-  LyraModelCatalogEntry,
-  LyraModelCatalog,
-} from './components/conversation/model-select/model-select.js';
+export type { LyraModelCatalogEntry, LyraModelCatalog } from './components/conversation/model-select/model-select.js';
 export { LyraSlider } from './components/forms/slider/slider.js';
 export { LyraToolSelectDialog } from './components/agent-tools/tool-select-dialog/tool-select-dialog.js';
 export type {
@@ -667,14 +806,20 @@ export { LyraMenuItem } from './components/layout/menu/menu-item.js';
 export { LyraMenuLabel } from './components/layout/menu/menu-label.js';
 export type { MenuItemType, MenuItemChangeDetail } from './components/layout/menu/menu-item.js';
 export { LyraDropdownItem } from './components/layout/menu/dropdown-item.js';
+export type { LyraDropdownItemEventMap } from './components/layout/menu/dropdown-item.js';
 export { LyraPopover } from './components/overlays/overlay/popover.js';
 export { LyraPopup } from './components/overlays/popup/popup.js';
-export type { LyraPopupEventMap } from './components/overlays/popup/popup.js';
+export type {
+  LyraPopupAnchor,
+  LyraPopupBoundary,
+  LyraPopupEventMap,
+  LyraPopupFlipFallbackStrategy,
+} from './components/overlays/popup/popup.js';
 export type { LyraPopoverEventMap } from './components/overlays/overlay/popover.js';
 export type { LyraTooltipEventMap, LyraTooltipTrigger } from './components/overlays/overlay/tooltip.js';
 export type { LyraArrowPlacement } from './components/overlays/overlay/popover.js';
 export { LyraTooltip } from './components/overlays/overlay/tooltip.js';
-export { LyraDropdown } from './components/overlays/overlay/dropdown.js';
+export { LyraDropdown, type LyraDropdownEventMap } from './components/overlays/overlay/dropdown.js';
 export { LyraChip } from './components/overlays/chip/chip.js';
 export type { ChipTone, ChipRemoveDetail, ChipSelectDetail } from './components/overlays/chip/chip.js';
 export { LyraChipGroup } from './components/overlays/chip/chip-group.js';
@@ -716,11 +861,7 @@ export { LyraEbookViewer } from './components/viewers/ebook-viewer/ebook-viewer.
 export type { LyraEbookViewerEventMap } from './components/viewers/ebook-viewer/ebook-viewer.js';
 export { LyraPptxViewer } from './components/viewers/pptx-viewer/pptx-viewer.js';
 export type { LyraPptxViewerEventMap } from './components/viewers/pptx-viewer/pptx-viewer.js';
-export {
-  LyraFileIcon,
-  getFileTypeMetadata,
-  registerFileTypeMetadata,
-} from './components/media/file-icon/file-icon.js';
+export { LyraFileIcon, getFileTypeMetadata, registerFileTypeMetadata } from './components/media/file-icon/file-icon.js';
 export type {
   LyraFileTypeIcon,
   LyraFileTypeCategory,
@@ -732,7 +873,12 @@ export { LyraHtmlViewer } from './components/viewers/html-viewer/html-viewer.js'
 export { LyraDatasetViewer } from './components/viewers/dataset-viewer/dataset-viewer.js';
 export type { DatasetTable } from './components/viewers/dataset-viewer/dataset-viewer.js';
 export { LyraContactViewer } from './components/viewers/contact-viewer/contact-viewer.js';
-export type { VCardAddress, VCardContact, VCardName, VCardTypedValue } from './components/viewers/contact-viewer/contact-viewer.js';
+export type {
+  VCardAddress,
+  VCardContact,
+  VCardName,
+  VCardTypedValue,
+} from './components/viewers/contact-viewer/contact-viewer.js';
 export { LyraMediaCard, safeMediaSrc, safeLinkHref } from './components/media/media-card/media-card.js';
 export type { MediaCardKind, MediaCardOpenDetail } from './components/media/media-card/media-card.js';
 export { LyraAttachmentTrigger } from './components/media/attachment-trigger/attachment-trigger.js';
@@ -746,13 +892,15 @@ export type { KbdKeyLabel, KbdLocalize } from './components/overlays/kbd/kbd.js'
 export { LyraResultCard } from './components/agent-tools/result-card/result-card.js';
 export { LyraResultField } from './components/agent-tools/result-card/result-field.js';
 export { groupByRecency } from './internal/group-by-recency.js';
-export type {
-  RecencyLabels,
-  GroupByRecencyOptions,
-  RecencyBucket,
-} from './internal/group-by-recency.js';
+export type { RecencyLabels, GroupByRecencyOptions, RecencyBucket } from './internal/group-by-recency.js';
 export { LyraAvatar } from './components/media/avatar/avatar.js';
-export type { AvatarSize, AvatarShape, AvatarVariant, AvatarLoading, LyraAvatarEventMap } from './components/media/avatar/avatar.js';
+export type {
+  AvatarSize,
+  AvatarShape,
+  AvatarVariant,
+  AvatarLoading,
+  LyraAvatarEventMap,
+} from './components/media/avatar/avatar.js';
 export { LyraCard } from './components/layout/card/card.js';
 export { LyraCarousel } from './components/layout/carousel/carousel.js';
 export type { LyraCarouselEventMap } from './components/layout/carousel/carousel.js';
@@ -764,12 +912,20 @@ export type {
   LyraImageComparerEventMap,
   LyraImageComparerOrientation,
 } from './components/media/image-comparer/image-comparer.js';
+export { LyraPanZoom } from './components/media/pan-zoom/pan-zoom.js';
+export type { LyraPanZoomEventMap } from './components/media/pan-zoom/pan-zoom.js';
 export { LyraZoomableFrame } from './components/media/zoomable-frame/zoomable-frame.js';
-export type { LyraZoomableFrameEventMap } from './components/media/zoomable-frame/zoomable-frame.js';
+export type {
+  LyraZoomableFrameEventMap,
+  ZoomableFrameLoading,
+} from './components/media/zoomable-frame/zoomable-frame.js';
 export { LyraScroller } from './components/layout/scroller/scroller.js';
 export type { ScrollerOrientation, LyraScrollerEventMap } from './components/layout/scroller/scroller.js';
 export { LyraResizeObserver } from './components/utility/resize-observer/resize-observer.js';
-export type { ResizeObserverBox, LyraResizeObserverEventMap } from './components/utility/resize-observer/resize-observer.js';
+export type {
+  ResizeObserverBox,
+  LyraResizeObserverEventMap,
+} from './components/utility/resize-observer/resize-observer.js';
 export { LyraIntersectionObserver } from './components/utility/intersection-observer/intersection-observer.js';
 export type { LyraIntersectionObserverEventMap } from './components/utility/intersection-observer/intersection-observer.js';
 export { LyraMutationObserver } from './components/utility/mutation-observer/mutation-observer.js';
@@ -803,16 +959,30 @@ export type {
 } from './components/forms/textarea/textarea.js';
 
 export { LyraButton } from './components/forms/button/button.js';
-export type { ButtonVariant, ButtonAppearance, ButtonSize, ButtonType, ButtonFormEnctype, ButtonFormMethod, LyraButtonEventMap } from './components/forms/button/button.js';
+export type {
+  ButtonVariant,
+  ButtonAppearance,
+  ButtonSize,
+  ButtonType,
+  ButtonFormEnctype,
+  ButtonFormMethod,
+  LyraButtonEventMap,
+} from './components/forms/button/button.js';
 
 export { LyraInput } from './components/forms/input/input.js';
 export type { LyraInputType, LyraInputSize, LyraInputAppearance } from './components/forms/input/input.js';
+export { LyraNativeTimeInput } from './components/forms/input/native-time-input.js';
 export { LyraNumberInput } from './components/forms/input/number-input.js';
 export { LyraTimeInput } from './components/forms/input/time-input.js';
+export type {
+  LyraTimeInputHourFormat,
+  LyraTimeInputPlacement,
+  LyraTimeInputStep,
+} from './components/forms/input/time-input.js';
 export { LyraRadio } from './components/forms/radio/radio.js';
 export { LyraRadioButton } from './components/forms/radio/radio-button.js';
 export { LyraOtpInput } from './components/forms/otp-input/otp-input.js';
-export type { OtpInputType, OtpInputCase } from './components/forms/otp-input/otp-input.js';
+export type { OtpInputType, OtpInputCase, OtpInputAppearance } from './components/forms/otp-input/otp-input.js';
 export type { LyraOtpInputEventMap } from './components/forms/otp-input/otp-input.js';
 export { LyraRadioGroup } from './components/forms/radio/radio-group.js';
 export { LyraSpinner } from './components/overlays/spinner/spinner.js';
@@ -824,6 +994,8 @@ export { LyraBadge } from './components/overlays/badge/badge.js';
 export type { BadgeVariant, BadgeSize, BadgeAppearance, BadgeAttention } from './components/overlays/badge/badge.js';
 export { LyraTag } from './components/overlays/badge/tag.js';
 export type { LyraTagEventMap } from './components/overlays/badge/tag.js';
+export { LyraAlert } from './components/overlays/alert/alert.js';
+export type { AlertCountdown, AlertVariant, LyraAlertEventMap } from './components/overlays/alert/alert.js';
 export { LyraCallout } from './components/overlays/callout/callout.js';
 export type { CalloutVariant, LyraCalloutEventMap } from './components/overlays/callout/callout.js';
 export { LyraDetails } from './components/layout/details/details.js';
@@ -842,17 +1014,39 @@ export { LyraFormatBytes } from './components/utility/format/format-bytes.js';
 export { LyraRelativeTime } from './components/utility/format/relative-time.js';
 export type { RelativeTimeUnit } from './components/utility/format/relative-time.js';
 export { LyraRating } from './components/overlays/rating/rating.js';
-export type { LyraRatingEventMap, LyraRatingHoverPhase, LyraRatingSize, LyraRatingSymbolRenderer } from './components/overlays/rating/rating.js';
+export type {
+  LyraRatingEventMap,
+  LyraRatingHoverPhase,
+  LyraRatingSize,
+  LyraRatingSymbolRenderer,
+} from './components/overlays/rating/rating.js';
 export { LyraColorPicker } from './components/forms/color-picker/color-picker.js';
-export type { LyraColorPickerEventMap, LyraColorPickerSize, LyraColorPickerSwatch, LyraColorPickerFormat, LyraColorPickerOutputFormat, LyraColorHsva } from './components/forms/color-picker/color-picker.js';
+export type {
+  LyraColorPickerEventMap,
+  LyraColorPickerSize,
+  LyraColorPickerSwatch,
+  LyraColorPickerFormat,
+  LyraColorPickerOutputFormat,
+  LyraColorHsva,
+} from './components/forms/color-picker/color-picker.js';
 export { LyraCheckboxGroup } from './components/forms/checkbox-group/checkbox-group.js';
 export type { LyraCheckboxGroupEventMap } from './components/forms/checkbox-group/checkbox-group.js';
 export { LyraTokenInput } from './components/forms/token-input/token-input.js';
 export type { LyraTokenInputEventMap } from './components/forms/token-input/token-input.js';
 export { LyraIcon } from './components/utility/icon/icon.js';
 export { registerIconLibrary, unregisterIconLibrary, getIconLibrary } from './components/utility/icon/icon.js';
-export type { LyraIconFlip, LyraIconEventMap } from './components/utility/icon/icon.js';
-export type { LyraIconLibrary, LyraIconLibraryOptions, LyraIconLibraryResolver, LyraIconLibraryMutator } from './components/utility/icon/icon.js';
+export type {
+  LyraIconAnimation,
+  LyraIconCanvas,
+  LyraIconFlip,
+  LyraIconEventMap,
+} from './components/utility/icon/icon.js';
+export type {
+  LyraIconLibrary,
+  LyraIconLibraryOptions,
+  LyraIconLibraryResolver,
+  LyraIconLibraryMutator,
+} from './components/utility/icon/icon.js';
 export { LyraIconButton } from './components/forms/icon-button/icon-button.js';
 export type { LyraIconButtonEventMap } from './components/forms/icon-button/icon-button.js';
 export { LyraCommandPalette } from './components/layout/command-palette/command-palette.js';
@@ -892,6 +1086,23 @@ export type { LyraContactViewerEventMap } from './components/viewers/contact-vie
 export * from './components/viewers/pdf-viewer/pdf-viewer.js';
 export * from './components/media/image-viewer/image-viewer.js';
 export * from './components/media/av-player/av-player.js';
+export { LyraVideo } from './components/media/video/video.js';
+export type {
+  LyraVideoControls,
+  LyraVideoEventMap,
+  LyraVideoPreload,
+  LyraVideoState,
+  VideoState,
+} from './components/media/video/video.js';
+export { LyraVideoPlaylist } from './components/media/video-playlist/video-playlist.js';
+export type {
+  LyraVideoPlaylistChangeDetail,
+  LyraVideoPlaylistEventMap,
+  LyraVideoPlaylistRepeat,
+  LyraVideoPlaylistSource,
+  LyraVideoPlaylistTrack,
+  LyraVideoPlaylistVideo,
+} from './components/media/video-playlist/video-playlist.js';
 export * from './components/agent-tools/artifact-panel/artifact-panel.js';
 export * from './components/agent-tools/browser-frame/browser-frame.js';
 export * from './components/conversation/chat-viewport/chat-viewport.js';
@@ -978,6 +1189,8 @@ export type { LyraGenerationStatusEventMap } from './components/conversation/gen
 export type { LyraGraphEventMap } from './components/retrieval/graph/graph.js';
 export type { LyraHeatmapEventMap } from './components/data/heatmap/heatmap.js';
 export type { LyraInputEventMap } from './components/forms/input/input.js';
+export type { LyraNumberInputEventMap } from './components/forms/input/number-input.js';
+export type { LyraTimeInputEventMap } from './components/forms/input/time-input.js';
 export type { LyraRadioEventMap } from './components/forms/radio/radio.js';
 export type { LyraRadioGroupEventMap } from './components/forms/radio/radio-group.js';
 export type { LyraJsonViewerEventMap } from './components/utility/json-viewer/json-viewer.js';
@@ -1002,7 +1215,14 @@ export type { LyraResponsivePanelEventMap } from './components/layout/responsive
 export type { LyraSegmentedEventMap } from './components/layout/segmented/segmented.js';
 export type { LyraSwatchPickerEventMap } from './components/forms/swatch-picker/swatch-picker.js';
 export type { LyraSelectEventMap } from './components/forms/select/select.js';
-export type { LyraSliderChangeDetail, LyraSliderEventMap, SliderHandle, SliderOrientation, SliderValueFormatter } from './components/forms/slider/slider.js';
+export type {
+  LyraSliderChangeDetail,
+  LyraSliderEventMap,
+  SliderHandle,
+  SliderOrientation,
+  SliderTooltipPlacement,
+  SliderValueFormatter,
+} from './components/forms/slider/slider.js';
 export type { LyraSourceCardEventMap } from './components/retrieval/source-card/source-card.js';
 export type { LyraSourceListEventMap } from './components/retrieval/source-list/source-list.js';
 export type { LyraSplitEventMap } from './components/layout/split/split.js';

@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A standalone icon-only copy-to-clipboard affordance for a plain text `value`, with no positioning opinion of its own -- the consumer places it (e.g. absolutely positioned in the corner of a textarea or read-only output field). Swaps its icon to a checkmark for ~1.5s once the clipboard write resolves, or to a failure glyph (plus `lr-copy-error`) when the write is refused.',
+          'A standalone copy-to-clipboard affordance for a plain text `value` or an element named by `from`, with no positioning opinion of its own. The built-in icon button supports localized feedback labels, three tooltip modes, icon slots, and success/error theme hooks; a default-slot trigger can replace it. A resolved write emits `lr-copy`; source and clipboard failures emit `lr-error` plus the retained detailed `lr-copy-error` alias.',
       },
     },
   },
@@ -29,6 +29,40 @@ export const CustomAccessibleLabel: Story = {
       value="npm install @aceshooting/lyra-ui"
       feedback-duration="3000"
     ></lr-copy-button>
+  `,
+};
+
+export const FromSourceAndTooltip: Story = {
+  name: 'From source, labels, and tooltip',
+  render: () => html`
+    <div style="display: inline-flex; align-items: center; gap: var(--lr-space-xs);">
+      <code id="copy-button-source">npm install @aceshooting/lyra-ui</code>
+      <lr-copy-button
+        from="copy-button-source"
+        copy-label="Copy install command"
+        success-label="Install command copied"
+        error-label="Could not copy install command"
+        tooltip-placement="right"
+        hoist
+        style="--success-color: var(--lr-color-success); --error-color: var(--lr-color-danger);"
+      >
+        <span slot="copy-icon">⧉</span>
+        <span slot="success-icon">✓</span>
+        <span slot="error-icon">!</span>
+      </lr-copy-button>
+    </div>
+  `,
+};
+
+export const CustomTrigger: Story = {
+  render: () => html`
+    <lr-copy-button
+      value="Text copied by a custom trigger"
+      tooltip="copy"
+      success-label="Custom value copied"
+    >
+      <button type="button">Copy with custom trigger</button>
+    </lr-copy-button>
   `,
 };
 
@@ -58,6 +92,10 @@ export const Interactive: Story = {
         const out = document.getElementById('copy-button-log');
         if (out) out.textContent = `lr-copy: ${e.detail.text}`;
       }}
+      @lr-error=${() => {
+        const out = document.getElementById('copy-button-log');
+        if (out) out.textContent = 'lr-error';
+      }}
       @lr-copy-error=${(e: CustomEvent<{ text: string; reason: string }>) => {
         const out = document.getElementById('copy-button-log');
         if (out) out.textContent = `lr-copy-error: ${e.detail.reason}`;
@@ -73,7 +111,7 @@ export const CopyFailure: Story = {
     docs: {
       description: {
         story:
-          'A clipboard write can be refused — an insecure origin with no Clipboard API at all (`reason: "unsupported"`), a denied permission or an unfocused document (`reason: "denied"`), or any other platform failure (`reason: "failed"`). The button then shows its failure glyph instead of the checkmark, announces the outcome through a visually hidden `role="status"` region, and emits `lr-copy-error`. This story swaps in a clipboard that always rejects so the state is reachable in the docs.',
+          'A clipboard write can be refused — an insecure origin with no Clipboard API at all (`reason: "unsupported"`), a denied permission or an unfocused document (`reason: "denied"`), or any other platform failure (`reason: "failed"`). The button then shows its failure glyph instead of the checkmark, announces the outcome through a visually hidden `role="status"` region, and emits `lr-error` plus the detailed `lr-copy-error` alias. This story swaps in a clipboard that always rejects so the state is reachable in the docs.',
       },
     },
   },

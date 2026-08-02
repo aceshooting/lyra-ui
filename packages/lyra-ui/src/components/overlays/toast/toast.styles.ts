@@ -5,8 +5,8 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-layer-toast);
     display: block;
-    --lr-toast-gap: var(--lr-space-s);
-    --lr-toast-width: var(--lr-size-28rem);
+    --lr-toast-gap: var(--gap, var(--lr-space-s));
+    --lr-toast-width: var(--width, var(--lr-size-28rem));
     pointer-events: none;
   }
   [part='stack'] {

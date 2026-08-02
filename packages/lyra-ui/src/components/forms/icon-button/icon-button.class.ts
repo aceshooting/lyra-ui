@@ -7,6 +7,13 @@ import {
 } from '../../../internal/aria-controls.js';
 import { styles } from './icon-button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import {
+  attachInternalsSafely,
+  getFormOwner,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../../internal/form-associated.js';
+import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 
 export interface LyraIconButtonEventMap {
   focus: FocusEvent;
@@ -71,9 +78,13 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *
  * Form-associated (mirroring `<lr-button>`'s identical shape): discoverable through
  * `form.elements`, and `type="submit"`/`type="reset"` are handled by this component itself via
- * the host's own `closest('form')` — a shadow-internal native `<button type="submit">` does not
+ * the host's associated form — a shadow-internal native `<button type="submit">` does not
  * participate in an ancestor light-DOM form's submission on its own, since form-submitter
  * semantics don't cross the shadow boundary.
+ *
+ * A safe `href` switches the interactive root to a native anchor. `target` derives
+ * `rel="noopener noreferrer"`; `download` narrows URL validation to downloadable schemes. A
+ * disabled link keeps the anchor anatomy but removes `href`, so it cannot navigate.
  *
  * @customElement lr-icon-button
  * @event focus - Native focus relayed once from the internal button.
@@ -81,7 +92,9 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @slot - Optional custom icon content, rendered beside (not inside) the `icon` glyph.
- * @csspart button - Native button.
+ * @csspart base - Shoelace compatibility name for the interactive native control; use `button`.
+ * @csspart button - Native button, or the native anchor in safe link mode. The same node also
+ *   carries `base`.
  * @csspart fallback - The internal SVG-namespaced clone target for slotted bare geometry. Carries
  *   the same `fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
  *   stroke-linejoin="round"` defaults `<lr-icon>`'s own wrapper svg does, so bare stroke-style
@@ -113,6 +126,8 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *   shorthand on hover.
  * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))] -
  *   Complete border shorthand while pressed; falls through to the hover border when only that is set.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -127,6 +142,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   private _disabled = false;
   private _fieldsetDisabled = false;
   private hasSyncedDescribedByElements = false;
+  private internals: ElementInternals;
 
   get disabled(): boolean {
     return this._disabled;
@@ -148,17 +164,33 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     return this._disabled || this._fieldsetDisabled;
   }
 
+  /** Canonical Lyra glyph name. Shoelace's `name` alias delegates to the same state. */
   @property() icon = '';
+  /** Shoelace alias for `icon`. Reads and writes remain synchronized in both directions; an
+   * upstream `undefined` write clears both to the canonical empty-string read value. */
+  @property()
+  get name(): string { return this.icon; }
+  set name(next: string | undefined) { this.icon = next ?? ''; }
+  /** Icon-library name forwarded to the nested `<lr-icon>`. */
+  @property() library?: string;
+  /** Remote SVG URL forwarded to the nested `<lr-icon>` and handled by its guarded loader. */
+  @property() src?: string;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @property({ attribute: 'aria-haspopup' }) private triggerHasPopup: string | null = null;
   @property({ attribute: 'aria-expanded' }) private triggerExpanded: string | null = null;
   @property({ attribute: 'aria-controls' }) private triggerControls: string | null = null;
   @property({ attribute: 'aria-describedby' }) private triggerDescribedBy: string | null = null;
   @property() label = '';
+  /** Safe link URL. When valid, the native root is an anchor rather than a button. */
+  @property() href?: string;
+  /** Native anchor target. A non-empty target always derives a safe `rel`. */
+  @property() target?: string;
+  /** Native anchor download filename; also selects the stricter download URL allowlist. */
+  @property() download?: string;
   /** Forwarded to this component's own submit/reset handling (`onClick` below) — see the class
    *  doc comment for why this component (not the shadow-internal `<button>`) owns that behavior. */
   @property() type: 'button' | 'submit' | 'reset' = 'button';
-  @query('button') private buttonEl?: HTMLButtonElement;
+  @query('[part~="button"]') private baseEl?: HTMLButtonElement | HTMLAnchorElement;
   @query('slot') private slotEl?: HTMLSlotElement;
   @query('[part="fallback"]') private fallbackSvgEl?: SVGSVGElement;
   /** Only ever true when `icon` is unset and at least one top-level slotted element is bare SVG
@@ -168,32 +200,31 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
 
   constructor() {
     super();
-    if (typeof this.attachInternals === 'function') {
-      try {
-        this.attachInternals();
-      } catch {
-        // Partial DOM implementations can expose but not implement ElementInternals.
-      }
-    }
+    this.internals = attachInternalsSafely(this);
   }
+
+  get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
+  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  get labels(): NodeList { return this.internals.labels; }
 
   /** Activates the internal native button, including submit/reset behavior. */
   override click(): void {
     if (this.effectiveDisabled) return;
-    this.buttonEl?.click();
+    this.baseEl?.click();
   }
 
   override focus(options?: FocusOptions): void {
-    if (!this.effectiveDisabled) this.buttonEl?.focus(options);
+    if (!this.effectiveDisabled) this.baseEl?.focus(options);
   }
-  override blur(): void { this.buttonEl?.blur(); }
+  override blur(): void { this.baseEl?.blur(); }
 
   private onClick = (): void => {
     if (this.effectiveDisabled) return;
     if (this.type === 'submit') {
-      this.closest('form')?.requestSubmit();
+      this.getForm()?.requestSubmit();
     } else if (this.type === 'reset') {
-      this.closest('form')?.reset();
+      this.getForm()?.reset();
     }
   };
 
@@ -221,7 +252,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     this.syncFallbackGeometry();
-    syncAriaControlsElements(this, this.buttonEl, this.triggerControls);
+    syncAriaControlsElements(this, this.baseEl, this.triggerControls);
     this.syncDescribedByElements();
   }
 
@@ -229,7 +260,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     if (!this.triggerDescribedBy && !this.hasSyncedDescribedByElements) return;
     this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
       this,
-      this.buttonEl,
+      this.baseEl,
       this.triggerDescribedBy,
     );
   }
@@ -250,8 +281,39 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
 
   override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('iconButtonLabel');
+    const content = html`${this.icon || this.src
+      ? html`<lr-icon
+          name=${this.icon || nothing}
+          library=${this.library || nothing}
+          src=${this.src || nothing}
+        ></lr-icon>`
+      : nothing}${this.hasBareGeometry
+      ? html`<svg part="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"></svg>`
+      : nothing}<slot @slotchange=${this.onSlotChange}></slot>`;
+    const href = this.download ? safeDownloadHref(this.href) : safeLinkHref(this.href);
+
+    if (href) {
+      const disabled = this.effectiveDisabled;
+      return html`<a
+        part="base button"
+        href=${disabled ? nothing : href}
+        target=${this.target || nothing}
+        rel=${this.target ? 'noopener noreferrer' : nothing}
+        download=${this.download || nothing}
+        aria-label=${label}
+        aria-haspopup=${this.triggerHasPopup ?? nothing}
+        aria-expanded=${this.triggerExpanded ?? nothing}
+        aria-controls=${this.triggerControls || nothing}
+        aria-describedby=${this.triggerDescribedBy || nothing}
+        aria-disabled=${disabled ? 'true' : nothing}
+        tabindex=${disabled ? '-1' : nothing}
+        @focus=${this.onFocus}
+        @blur=${this.onBlur}
+      >${content}</a>`;
+    }
+
     return html`<button
-      part="button"
+      part="base button"
       type="button"
       ?disabled=${this.effectiveDisabled}
       aria-label=${label}
@@ -262,7 +324,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
       @click=${this.onClick}
       @focus=${this.onFocus}
       @blur=${this.onBlur}
-    >${this.icon ? html`<lr-icon name=${this.icon}></lr-icon>` : nothing}${this.hasBareGeometry ? html`<svg part="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"></svg>` : nothing}<slot @slotchange=${this.onSlotChange}></slot></button>`;
+    >${content}</button>`;
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-icon-button': LyraIconButton; } }

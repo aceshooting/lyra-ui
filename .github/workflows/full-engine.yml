@@ -1,0 +1,40 @@
+name: Full browser-engine suite
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-engine:
+    name: ${{ matrix.browser }} / shard ${{ matrix.shard }}/4
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps ${{ matrix.browser }}
+      # package-entrypoints.test.ts imports dist package targets, so every
+      # shard needs the same build-first contract as the primary CI suite.
+      - run: pnpm build
+      - name: Run complete non-coverage test shard
+        env:
+          WTR_BROWSER: ${{ matrix.browser }}
+          WTR_STRICT_CONSOLE: '1'
+          WTR_COVERAGE: '0'
+          WTR_SHARD_INDEX: ${{ matrix.shard }}
+          WTR_SHARD_TOTAL: '4'
+        run: pnpm --filter @aceshooting/lyra-ui test:full-engine-shard

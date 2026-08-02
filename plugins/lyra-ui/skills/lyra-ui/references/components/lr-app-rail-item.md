@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.js';` (registers the tag; side-effect import)
 - **Class** `LyraAppRailItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail` (same section below)

@@ -5,8 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/overlays/drawer/drawer.js';` (registers the tag; side-effect import)
 - **Class** `LyraDrawer`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/drawer/drawer.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,7 +19,8 @@ A modal panel anchored to one logical edge of the viewport. `LyraDrawer` extends
 inherits the entire dialog contract unchanged: focus trapping, Escape and opt-in backdrop dismissal,
 document scroll locking, browser **top-layer** promotion, overlay stacking, accessible naming, the
 `show()`/`hide()`/`close()` methods and the whole
-`lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide`/`lr-dialog-close` lifecycle. Only `placement` and
+`lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide`/`lr-dialog-close` lifecycle. `contained` switches
+to an absolute, nonmodal panel inside the nearest containing block; only that mode, `placement`, and
 the slide animation are its own.
 
 **Properties:**
@@ -26,28 +29,47 @@ the slide animation are its own.
 - `placement: 'start'|'end'|'top'|'bottom' = 'end'` (attribute `placement`, reflected). **Changed in
   8.0.0:** the default used to be `start`. `end` is what `wa-drawer` does, so a mechanical
   `wa-drawer` → `lr-drawer` rename no longer silently slides the panel in from the other edge.
-- `heading?: string`, `label: string`, `closable: boolean = false`,
-  `withoutHeader: boolean = false` (attribute `without-header`, reflected) and
+- `contained: boolean = false` (attribute `contained`, reflected) — position within the nearest
+  containing block without a backdrop, page inerting, focus trap, scroll lock, top-layer
+  promotion, or global Escape ownership
+- `heading?: string`, `label: string`, `accessibleLabel: string = ''` (attribute
+  `accessible-label`), `closable: boolean = true`, `noHeader: boolean = false` (attribute
+  `no-header`, reflected), `withoutHeader: boolean = false` (legacy attribute `without-header`,
+  reflected), `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR hint), and
   `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming, chrome and
   dismissal options. A plain `aria-label` attribute on the host is honored too, with the same
   wins-over-everything semantics documented under `lr-dialog` below.
 
-**Methods:** `show()`, `hide()`, `close(reason?: DialogCloseReason)` — inherited unchanged from
-`lr-dialog`.
+**Methods:** `show(): Promise<void>`, `hide(): Promise<void>`,
+`close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each
+promise settles after the matching `lr-after-*` event.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
+`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and
 `lr-dialog-close` (`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
-`lr-dialog`; see that section for the emission order and the veto rules. `lr-after-show` /
+`lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
 animation compared with the state flip.
+
+**Animation registry:** the panel uses placement-specific names:
+`drawer.showStart`/`drawer.hideStart`, `drawer.showEnd`/`drawer.hideEnd`,
+`drawer.showTop`/`drawer.hideTop`, and `drawer.showBottom`/`drawer.hideBottom`. The backdrop uses
+`drawer.overlay.show`/`drawer.overlay.hide`. Per-element overrides are RTL-aware through
+`rtlKeyframes`; passing `null` disables interpolation while retaining the inherited event/promise
+lifecycle.
 
 **Slots:** default (drawer body), `label` (rich header content), `header-actions` (extra header
 controls, rendered before the built-in close button), `footer` — all inherited from `lr-dialog`.
 
-**CSS parts:** `backdrop`, `panel`, `header`, `heading`, `header-actions`, `close-button`, `label`,
-`body`, `footer`.
+**CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
+`header-actions`; `close-button close-button__base`; `body`; `footer`. Names grouped together are
+aliases on the same functional node.
 
-**Themeable custom properties:** `--lr-drawer-width` (default `--lr-size-24rem`; used by
+**Themeable custom properties:** mapped `--size` controls the active axis. Inherited `--width`
+remains visible in the shared dialog surface, but drawer sizing deliberately shadows it with
+`--size`. The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
+`--footer-spacing`, `--show-duration`, and `--hide-duration`. Lyra compatibility tokens remain:
+`--lr-drawer-width` (default `--lr-size-24rem`; used by
 `placement="start"|"end"`, capped at `100%`), `--lr-drawer-height` (default `--lr-size-24rem`;
 used by `placement="top"|"bottom"`), `--lr-drawer-enter-x` / `--lr-drawer-enter-y` (the panel's
 slide translate offset, used for both the enter and the exit keyframes — `-x` for start/end, `-y`

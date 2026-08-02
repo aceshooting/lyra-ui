@@ -1,10 +1,12 @@
 import { css } from 'lit';
 
-// Every design value chains through a --lr-theme-* custom property with a hardcoded
-// fallback, so a consumer can retheme the whole library by overriding one property per
-// token at any ancestor, while every component still renders sensibly with zero configuration.
+// Component styles consume centralized --lr-* tokens. Themeable base tokens read supported
+// --lr-theme-* inputs with built-in fallbacks; aliases, computed tokens, colour ramps,
+// environment-backed values, and fixed contract constants may instead resolve within the
+// internal layer. Consumers retheme through the catalogued --lr-theme-* inputs at any ancestor,
+// while every component still renders sensibly with zero configuration.
 //
-// MASK_OPAQUE -- why --lr-mask-opaque exists and is the one token with no --lr-theme-* hook.
+// MASK_OPAQUE -- why --lr-mask-opaque is deliberately fixed instead of themeable.
 // Every mask in the library used to borrow --lr-color-shadow for its fully-opaque stop. A mask
 // reads alpha only, so an entirely reasonable translucent shadow theme
 // (--lr-theme-color-shadow: rgb(0 0 0 / 0.25)) silently dropped mask alpha across the WHOLE
@@ -288,6 +290,8 @@ export const tokens = css`
     --lr-duration-fast: var(--lr-theme-duration-fast, 120ms);
     --lr-duration-base: var(--lr-theme-duration-normal, 180ms);
     --lr-duration-ambient: var(--lr-theme-duration-slow, 1.8s);
+    --lr-duration-icon: var(--lr-theme-duration-icon, 1s);
+    --lr-otp-input-segment-size: var(--lr-theme-otp-input-segment-size, 2.5em);
     --lr-easing-standard: var(--lr-theme-easing-standard, ease-out);
     --lr-easing-emphasized: var(--lr-theme-easing-emphasized, ease-in-out);
     --lr-easing-linear: var(--lr-theme-easing-linear, linear);
@@ -453,6 +457,7 @@ export const tokens = css`
       --lr-duration-fast: 0.001ms;
       --lr-duration-base: 0.001ms;
       --lr-duration-ambient: 0.001ms;
+      --lr-duration-icon: 0.001ms;
       --lr-easing-standard: linear;
       --lr-easing-emphasized: linear;
       /* Overridden too, so a theme that sets the legacy compound inputs directly is still

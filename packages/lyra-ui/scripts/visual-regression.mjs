@@ -84,6 +84,7 @@ const VIEWPORT = { width: 1280, height: 800 };
 // Per-story viewport overrides, matching scripts/check-storybook.mjs's own use of a narrow
 // viewport for the mobile bottom-sheet story.
 const VIEWPORT_OVERRIDES = {
+  'layout-page--mobile-drawer': { width: 390, height: 800 },
   'responsivepanel--forced-overlay-bottom-sheet': { width: 390, height: 800 },
 };
 
@@ -93,31 +94,41 @@ const AXES = [
   { name: 'rtl', theme: 'light', direction: 'rtl' },
 ];
 
-// Representative sample across component families -- not the full catalog (251 story titles).
+// Representative sample across component families -- not the full catalog.
 // Selection is risk-weighted, not proportional: beyond the original cross-section of families,
 // it deliberately over-samples the two areas where a screenshot catches what a unit test
 // structurally cannot -- canvas painters (pixels are the whole contract) and <lr-virtual-list>
-// `renderItem` consumers (styles must pierce a shadow boundary to reach data rows). Extend this
-// list incrementally; every id here must exist in storybook-static/index.json (verified below)
-// or the run fails loudly.
+// `renderItem` consumers (styles must pierce a shadow boundary to reach data rows). Newly stable
+// tags contribute one meaningful visible state, with a second state only where
+// a component has materially different allocation or rendering modes (Page, Pagination, and Color
+// Picker). Extend this list incrementally; every id here must exist in storybook-static/index.json
+// (verified below) or the run fails loudly.
 const STORIES = [
   // Form controls
   'checkbox--default',
   'input--default',
+  'input-native-time-input--default',
   'select--default',
   'input-radio-group--default',
+  'forms-radio-button--default',
   'switch--default',
   'textarea--default',
   'slider--default',
   'combobox--default',
+  'forms-otp-input--appearances-and-sizes',
+  'form-color-picker--open',
+  'form-color-picker--inline-compatibility',
   'forms-phoneinput--default',
   'form-rating--default',
   // Overlays / dialogs
   'dialog--open-initially',
   'drawer--end',
+  'feedback-alert--variants',
+  'feedback-callout--appearances',
   'overlay-dropdown--default',
   'overlay-popover--default',
   'overlay-tooltip--default',
+  'overlays-popup--with-arrow',
   'toast--triggers',
   'toolapprovaldialog--open-initially',
   'menu--gear-menu',
@@ -127,7 +138,7 @@ const STORIES = [
   'charts-line--default',
   'gauge--radial',
   'heatmap--default',
-  'sparkline--line',
+  'data-sparkline--line',
   'graph--default',
   'map--default',
   'wordcloud--default',
@@ -173,14 +184,31 @@ const STORIES = [
   'activityfeed--live-expanded', // 11
   'documentviewer-datasetviewer--default', // 7
   'archiveviewer--default', // 5
+  // New and materially-expanded v8 surfaces. These are grouped by rendered risk rather than by
+  // source family: pagination/tree exercise wrapping and hierarchy; media covers custom controls
+  // and nested playlists; layout covers allocation, divider, and explicit-element tab models.
+  'pagination--appearance',
+  'pagination--narrow-allocation',
+  'navigation-tree-node--declarative',
+  'media-pan-zoom--slotted-content',
+  'media-video--full-controls',
+  'media-video-playlist--full-controls',
   // Layout primitives
   'apprail--forced-icon-only',
+  'layout-menu-label--default',
+  'layout-page--desktop',
+  'layout-page--mobile-drawer',
+  'layout-split-panel--default',
   'responsivepanel--forced-overlay-bottom-sheet',
   'split--default',
   'tabs--default',
+  'tabs--element-model',
   'card--outlined',
   'table--default',
   'disclosure-accordion--default',
+  'styles-native-and-utilities--layout-and-prose',
+  // This story is focused before capture below, proving the skip-link state becomes visible.
+  'utility-visually-hidden--skip-link',
 ];
 
 const mimeTypes = {
@@ -251,6 +279,43 @@ async function captureStory(page, baseUrl, id, theme, direction) {
   // loading must not be fatal to the run.
   await page.evaluate(() => document.fonts.ready).catch(() => {});
   await page.waitForTimeout(250);
+  if (id === 'layout-page--mobile-drawer') {
+    // The story's resting state proves the 320px allocation but leaves its defining surface
+    // closed. Open it through the public method so the baseline includes the modal drawer,
+    // backdrop, logical edge, focus treatment, and scroll-lock layout on every theme/RTL axis.
+    await page.evaluate(async () => {
+      const host = document.querySelector('lr-page');
+      if (!(host instanceof HTMLElement) || typeof host.showNavigation !== 'function') {
+        throw new Error('Mobile Page visual fixture did not render its public drawer API.');
+      }
+      host.showNavigation();
+      await host.updateComplete;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    await page.waitForFunction(() => {
+      const host = document.querySelector('lr-page');
+      const drawer = host?.shadowRoot?.querySelector('[part~="drawer"]');
+      return host?.navOpen === true && drawer?.getAttribute('role') === 'dialog';
+    });
+  }
+  if (id === 'utility-visually-hidden--skip-link') {
+    // A resting visually-hidden screenshot is indistinguishable from the component being absent.
+    // Focus its real light-DOM link so this baseline covers the component's visible contract.
+    await page.evaluate(async () => {
+      const host = document.querySelector('lr-visually-hidden');
+      const link = host?.querySelector('a');
+      if (!(host instanceof HTMLElement) || !(link instanceof HTMLAnchorElement)) {
+        throw new Error('Visually Hidden visual fixture did not render its skip link.');
+      }
+      link.focus();
+      await host.updateComplete;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    await page.waitForFunction(() => {
+      const host = document.querySelector('lr-visually-hidden');
+      return host?.contains(document.activeElement) === true && getComputedStyle(host).clipPath === 'none';
+    });
+  }
   if (id === 'threadlist--default') {
     // This story nests Lit updates three levels deep: thread-list -> virtual-list ->
     // conversation-item. The outer rows can already have stable geometry while a conversation

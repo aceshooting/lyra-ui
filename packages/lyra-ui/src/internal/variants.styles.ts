@@ -35,7 +35,8 @@ export const variants = css`
     --lr-color-on-normal: var(--lr-color-neutral-on-normal);
     --lr-color-on-loud: var(--lr-color-neutral-on-loud);
   }
-  :host([variant='brand']) {
+  :host([variant='brand']),
+  :host([variant='primary']) {
     --lr-color-fill-quiet: var(--lr-color-brand-fill-quiet);
     --lr-color-fill-normal: var(--lr-color-brand-fill-normal);
     --lr-color-fill-loud: var(--lr-color-brand-fill-loud);

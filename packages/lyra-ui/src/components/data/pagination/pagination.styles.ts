@@ -5,13 +5,11 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     container-type: inline-size;
-    /* Both knobs read the shared control ladder (internal/sizes.styles.ts), which owns every tier
-       and matches both the s/m/l and the small/medium/large spelling of each in one selector list.
-       Keeping the public --lr-pagination-* names in front of it means a consumer still retunes
-       this component alone with a one-line override, while the VALUES come from one place.
-       The literal fallbacks are the ladder's own "m" tier, so this sheet still resolves to the
-       resting control footprint on its own -- which is what lets scripts/check-hit-area.mjs prove
-       the 40px floor from stylesheet text without the shared sheet in hand. */
+    /* Both knobs read the shared control ladder, which owns every tier and matches both the s/m/l
+       and small/medium/large spellings in one selector list. Keeping the public
+       --lr-pagination-* names in front lets a consumer retune this component alone, while the
+       values still come from one place. The literal fallbacks are the ladder's own "m" tier, so
+       this sheet resolves to the resting control footprint on its own. */
     --lr-pagination-control-size: var(--lr-form-control-height, var(--lr-size-2-5rem));
     --lr-pagination-font-size: var(--lr-form-control-font-size, var(--lr-font-size-m));
     --lr-pagination-control-radius: var(--lr-radius);
@@ -45,7 +43,7 @@ export const styles = css`
     --lr-pagination-control-bg: var(--lr-color-brand-quiet);
     --lr-pagination-control-border-color: var(--lr-color-brand);
   }
-  [part='base'] {
+  [part~='base'] {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -78,10 +76,11 @@ export const styles = css`
   [part='pages'] > li {
     display: flex;
   }
-  [part='first-button'],
-  [part='previous-button'],
-  [part='next-button'],
-  [part='last-button'],
+  [part~='first-button'],
+  [part~='previous-button'],
+  [part~='next-button'],
+  [part~='last-button'],
+  [part~='ellipsis'],
   [part~='page'] {
     display: inline-flex;
     align-items: center;
@@ -114,72 +113,70 @@ export const styles = css`
     color: var(--lr-color-on-brand);
     font-weight: var(--lr-font-weight-bold);
   }
-  [part='ellipsis'] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-inline-size: var(--lr-pagination-control-size);
-    block-size: max(var(--lr-pagination-control-size), var(--lr-icon-button-size));
+  [part~='ellipsis'] {
     color: var(--lr-color-text-quiet);
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     so a consumer's ::part(previous-button):hover / ::part(next-button):hover override
-     ((0,1,1)) wins without needing !important. */
-  :where([part='first-button']):hover:where(:not(:disabled)),
-  :where([part='previous-button']):hover:where(:not(:disabled)),
-  :where([part='next-button']):hover:where(:not(:disabled)),
-  :where([part='last-button']):hover:where(:not(:disabled)),
-  :where([part~='page']):hover:where(:not(:disabled)):where(:not([part~='page-current'])),
-  :where([part='page-input']):hover:where(:not(:disabled)) {
+  /* :where() zeroes every state qualifier's specificity contribution, so a consumer's
+     ::part(previous-button):hover / ::part(next-button):hover override wins without !important. */
+  [part~='first-button']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])),
+  [part~='previous-button']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])),
+  [part~='next-button']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])),
+  [part~='last-button']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])),
+  [part~='ellipsis']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])),
+  [part~='page']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])):where(:not([part~='page-current'])),
+  [part='page-input']:where(:hover):where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
     border-color: var(--lr-color-brand);
   }
   /* Same selectors, same zeroed specificity, one step further toward --lr-color-mix-partner (which
      follows the text colour) -- so the pressed fill is unmistakably deeper than the hovered one in
      either theme, and a consumer's ::part(next-button):active still wins. */
-  :where([part='first-button']):active:where(:not(:disabled)),
-  :where([part='previous-button']):active:where(:not(:disabled)),
-  :where([part='next-button']):active:where(:not(:disabled)),
-  :where([part='last-button']):active:where(:not(:disabled)),
-  :where([part~='page']):active:where(:not(:disabled)):where(:not([part~='page-current'])),
-  :where([part='page-input']):active:where(:not(:disabled)) {
+  [part~='first-button']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])),
+  [part~='previous-button']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])),
+  [part~='next-button']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])),
+  [part~='last-button']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])),
+  [part~='ellipsis']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])),
+  [part~='page']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])):where(:not([part~='page-current'])),
+  [part='page-input']:where(:active):where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     border-color: var(--lr-color-brand);
   }
   /* The current page is already a brand chip; without its own :hover arm it would fall back to the
      rule above and visibly lighten under the pointer, reading as "not selected". */
-  :where([part~='page-current']):hover {
+  [part~='page-current']:where(:hover) {
     background: var(--lr-color-brand);
     border-color: transparent;
   }
   /* Pressing the page you are already on is a no-op, but it still has to acknowledge the click --
      the chip deepens rather than lightening, so it never momentarily reads as deselected. MUST stay
      after the generic :active rule above: both are (0,1,0) after :where(), so source order decides. */
-  :where([part~='page-current']):active {
+  [part~='page-current']:where(:active) {
     background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     border-color: transparent;
   }
-  [part='first-button']:focus-visible,
-  [part='previous-button']:focus-visible,
-  [part='next-button']:focus-visible,
-  [part='last-button']:focus-visible,
-  [part~='page']:focus-visible,
-  [part='page-input']:focus-visible {
+  [part~='first-button']:where(:focus-visible),
+  [part~='previous-button']:where(:focus-visible),
+  [part~='next-button']:where(:focus-visible),
+  [part~='last-button']:where(:focus-visible),
+  [part~='ellipsis']:where(:focus-visible),
+  [part~='page']:where(:focus-visible),
+  [part='page-input']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='first-button']:disabled,
-  [part='previous-button']:disabled,
-  [part='next-button']:disabled,
-  [part='last-button']:disabled,
-  [part~='page']:disabled,
-  [part='page-input']:disabled {
+  [part~='first-button']:where(:disabled),
+  [part~='previous-button']:where(:disabled),
+  [part~='next-button']:where(:disabled),
+  [part~='last-button']:where(:disabled),
+  [part~='ellipsis']:where(:disabled),
+  [part~='page']:where(:disabled),
+  [part='page-input']:where(:disabled) {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
   /* Link mode has no :disabled to hang off -- the anchors carry aria-disabled and lose their href
      instead, so the resting look has to follow that attribute. */
-  [part~='page'][aria-disabled='true'] {
+  [part~='button']:where([aria-disabled='true']) {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
@@ -194,8 +191,8 @@ export const styles = css`
   }
   /* The two chevrons of an edge control overlap slightly so they read as one doubled glyph rather
      than two separate arrows. */
-  [part='first-icon'] > svg + svg,
-  [part='last-icon'] > svg + svg {
+  [part='first-icon'] slot > svg + svg,
+  [part='last-icon'] slot > svg + svg {
     margin-inline-start: var(--lr-size-neg-4px);
   }
   [part='first-icon'],
@@ -214,7 +211,7 @@ export const styles = css`
   :host(:dir(rtl)) [part='last-icon'] {
     transform: rotate(180deg);
   }
-  [part='page-field'] {
+  [part~='page-field'] {
     display: inline-flex;
     align-items: center;
     color: var(--lr-color-text-quiet);
@@ -222,9 +219,10 @@ export const styles = css`
   }
   [part='page-input'] {
     box-sizing: border-box;
-    inline-size: var(--lr-pagination-control-size);
-    min-inline-size: var(--lr-pagination-control-size);
-    block-size: var(--lr-pagination-control-size);
+    inline-size: max(var(--lr-pagination-control-size), var(--lr-icon-button-size));
+    min-inline-size: max(var(--lr-pagination-control-size), var(--lr-icon-button-size));
+    block-size: max(var(--lr-pagination-control-size), var(--lr-icon-button-size));
+    min-block-size: max(var(--lr-pagination-control-size), var(--lr-icon-button-size));
     padding: var(--lr-pagination-control-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-pagination-control-radius);
@@ -264,7 +262,7 @@ export const styles = css`
      documented 320px narrow-allocation baseline expressed in root-relative
      units so it still follows the page's type scale. */
   @container (max-inline-size: 20rem) {
-    [part='base'] {
+    [part~='base'] {
       flex-direction: column;
       align-items: stretch;
     }

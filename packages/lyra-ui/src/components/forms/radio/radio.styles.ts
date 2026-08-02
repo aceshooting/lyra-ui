@@ -61,7 +61,7 @@ export const styles = css`
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
-  [part='circle'] {
+  [part~='circle'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -80,28 +80,29 @@ export const styles = css`
     background: var(--lr-color-surface);
     transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
-  :host(:not(:disabled)) [part='base']:hover [part='circle'] {
+  :host(:not(:disabled)) [part='base']:hover [part~='circle'] {
     border-color: var(--lr-color-brand);
   }
   /* Pressed. A ring rather than a fill, for the same reason <lr-checkbox>'s [part='box'] takes one:
      the circle's fill IS the state readout (surface unchecked, the dot inside it once checked), so
      tinting it under the thumb would read as a half-selected radio. Visibly more than the hover's
      border-colour step, and the same soft-ring vocabulary <lr-slider>'s thumb uses. */
-  :host(:not(:disabled)) [part='base']:active [part='circle'] {
+  :host(:not(:disabled)) [part='base']:active [part~='circle'] {
     border-color: var(--lr-color-brand);
     box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-color-brand-quiet);
   }
-  :host([checked]) [part='circle'] {
+  [part~='circle'][part~='checked'] {
     /* Component-scoped indirection (mirrors lr-checkbox's identical --lr-checkbox-checked-bg/
        -border pair) so a consumer can retint just this control's checked ring without hijacking
        the shared --lr-color-brand token used across the rest of the library. */
     border-color: var(--lr-radio-checked-border-color, var(--lr-color-brand));
   }
-  [part='dot'] {
+  [part~='dot'] {
     inline-size: var(--lr-radio-dot-size);
     block-size: var(--lr-radio-dot-size);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-radio-checked-dot-color, var(--lr-color-brand));
+    background: var(--checked-icon-color, var(--lr-radio-checked-dot-color, var(--lr-color-brand)));
+    transform: scale(var(--checked-icon-scale, 1));
   }
   [part='label'][hidden] {
     display: none;
@@ -111,6 +112,6 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='circle'] { transition: none !important; }
+    [part~='circle'] { transition: none !important; }
   }
 `;

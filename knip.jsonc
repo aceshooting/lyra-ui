@@ -51,7 +51,9 @@
         // work under @web/test-runner; kept only as a documented non-solution.
         "@sinonjs/fake-timers",
         "@types/sinonjs__fake-timers"
-      ]
+      ],
+      // Injected by Web Test Runner's browser harness; it is not a filesystem module.
+      "ignoreUnresolved": ["/__web-dev-server__web-socket.js"]
     },
     "packages/lyra-flags": {
       "entry": ["scripts/*.mjs"],

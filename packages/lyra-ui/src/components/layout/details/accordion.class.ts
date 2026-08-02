@@ -43,6 +43,8 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  * @event lr-collapse - Emitted before a direct item collapses. `detail: { item }`. Cancelable.
  * @event lr-after-collapse - Emitted after a direct item finishes collapsing. `detail: { item }`.
  * @csspart base - The accordion wrapper.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   static override styles = [LyraElement.styles, styles];

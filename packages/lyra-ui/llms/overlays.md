@@ -24,53 +24,59 @@ Both pre-events fire **before** the state changes, so `el.open` read inside an `
 handler is still the *old* value, and `preventDefault()` cancels the transition rather than undoing
 it: a vetoed `lr-show` leaves the overlay closed for the trigger interaction, `show()` and
 `open = true` alike; a vetoed `lr-hide` leaves it open for Escape, light dismiss, the close button,
-`hide()` and `open = false` alike. None of the four carries a detail, the two `lr-after-*` events are
-never cancelable, and none of them fires for markup that renders open from the start. That is the
+`hide()` and `open = false` alike. The two `lr-after-*` events are never cancelable, and none of the
+four fires for markup that renders open from the start. The generic popover/dropdown/tooltip events
+carry no detail; dialog/drawer `lr-hide` carries `{ source: Element }`. That is the
 timing `wa-show`/`wa-hide` always had, so a mechanical `wa-*` → `lr-*` rename now maps all four names
 with matching timing *and* matching cancelability — which also means Lyra 7.x code that read
 `el.open` inside an `lr-show`/`lr-hide` handler, or treated the pair as purely informational, was
 relying on the opposite polarity and has to be re-read.
 
-`lr-dialog` and `lr-drawer` add a fifth event, `lr-dialog-close` — also cancelable — which fires
-**after** `lr-hide` and before `lr-after-hide`. It carries the one thing `lr-hide` does not: which
-affordance asked to close. Vetoing `lr-hide` stops it from firing at all.
+`lr-dialog` and `lr-drawer` also expose cancelable `lr-initial-focus` and `lr-request-close` veto
+points, documented in their sections. Their cancelable `lr-dialog-close` fires **after** `lr-hide`
+and before `lr-after-hide`; it carries the close reason. Vetoing `lr-hide` stops it from firing at
+all.
 
-**The top layer.** An open `lr-dialog` or `lr-drawer` is promoted into the browser **top layer**
+**The top layer.** An open `lr-dialog` or modal `lr-drawer` is promoted into the browser **top layer**
 (through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every ancestor
 stacking context and every ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate`
 wrapper or a `z-index: 2147483647` sticky header can no longer paint over it or crop it, which no
 `z-index` value alone can guarantee. If you raised `--lr-layer-modal` to win one of those fights,
-that override no longer decides anything for these two components and can be dropped — the token
+that override no longer decides anything for their modal instances and can be dropped — the token
 still resolves the `z-index` in their stylesheet, but only as the fallback for a user agent without
-popover support. It keeps doing real work everywhere else it is used: `lr-popover`, `lr-dropdown` and
-`lr-tooltip` are *not* promoted, and go on stacking at `--lr-overlay-stack-index`, falling back to
-`--lr-layer-popover`.
+popover support. A `contained` drawer is deliberately nonmodal and is not promoted. The token keeps
+doing real work everywhere else it is used: `lr-popover`, `lr-dropdown` and `lr-tooltip` are *not*
+promoted, and go on stacking at `--lr-overlay-stack-index`, falling back to `--lr-layer-popover`.
 
 **Initial focus.** An `[autofocus]` element anywhere in the slotted content takes focus when the
 overlay opens — including one inside a slotted custom element's own open shadow root, so
 `<lr-input autofocus>` behaves like `<input autofocus>`. With nothing marked, a modal (`lr-dialog`,
-`lr-drawer`) falls back to the first focusable element in the panel, while a non-modal `lr-popover`
-or `lr-dropdown` deliberately leaves focus on the trigger.
+modal `lr-drawer`) prefers the first focusable body control and otherwise focuses the panel itself,
+so the default close button never wins merely because it appears first in shadow DOM. A non-modal
+`lr-popover` or `lr-dropdown` deliberately leaves focus on the trigger.
 
 **Arrows and external anchors.** `lr-popover`, `lr-dropdown`, `lr-tooltip` and the low-level
 `lr-popup` share one anchoring vocabulary, all of it new in 8.0.0 (`lr-popup` itself is new in
 8.0.0).
 
-- `arrow` (boolean, reflected, default `false`) renders an arrow pointing at the anchor, exposed as
-  the `arrow` CSS part. That part's attribute also carries the **resolved side** as a second token —
-  `arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right` — so `::part(arrow arrow-top)` styles one
-  side. `::part(arrow)[data-side]` and `::part(arrow) .inner` are invalid selectors that silently
-  never match; the state is in the part name.
+- `arrow` (boolean, reflected) renders an arrow pointing at the anchor, exposed as the `arrow` CSS
+  part. It defaults to `true` on popover/tooltip and `false` on dropdown/popup; `without-arrow`
+  suppresses the true-default surfaces. The part's attribute also carries the **resolved side** as
+  a second token — `arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right` — so
+  `::part(arrow arrow-top)` styles one side. `::part(arrow)[data-side]` and
+  `::part(arrow) .inner` are invalid selectors that silently never match; the state is in the part
+  name.
 - `arrow-placement` (`anchor` | `start` | `end` | `center`, default `anchor`) — `anchor` tracks the
   anchor's centre, `center` pins the arrow to the middle of the popup's edge wherever the anchor is,
   and `start`/`end` pin it `arrow-padding` from one *logical* end of that edge. On a top/bottom
   placement those two ends are the inline ones, so they swap under RTL; on a left/right placement
   they are the block ends, which do not.
-- `arrow-padding` (number of px, default `0`) keeps the arrow that far from the popup's corners.
-- The arrow's size is one custom property per component, and its value is **half** the square's
-  width — the rendered arrow is twice it in both axes: `--lr-overlay-arrow-size` on
-  `lr-popover`/`lr-dropdown`, `--lr-tooltip-arrow-size` on `lr-tooltip`, `--lr-popup-arrow-size` on
-  `lr-popup`. All three default to `var(--lr-size-0-375rem)`.
+- `arrow-padding` (number of px) keeps the arrow that far from the popup's corners. It defaults to
+  `10` on the low-level popup and `0` on the three policy overlays.
+- `--arrow-size` is the mapped size custom property and its value is **half** the square's width —
+  the rendered arrow is twice it in both axes. Retained fallbacks are `--lr-overlay-arrow-size` on
+  `lr-popover`/`lr-dropdown`, `--lr-tooltip-arrow-size` on `lr-tooltip`, and
+  `--lr-popup-arrow-size` on `lr-popup`; they default to `var(--lr-size-0-375rem)`.
 - `skidding` (number of px, default `0`) offsets the popup *along* the anchor's edge — the
   cross-axis counterpart to `distance`.
 - `for` (string, reflected) anchors the popup to an element it does not contain, by id. The id is
@@ -93,7 +99,9 @@ One per page recommended — the region.
   'bottom-start'|'bottom-center'|'bottom-end'`
 
 **Methods:** `async create(message: string, options?: ToastCreateOptions): Promise<LyraToastItem>` —
-`ToastCreateOptions = { variant?, duration?, size?, withIcon? }`
+`ToastCreateOptions = { variant?, duration?, size?, withIcon? }`. Its `size` accepts the canonical
+`2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; the created item's getter
+normalizes the long aliases to `s`/`m`/`l`.
 
 **Events:** none.
 
@@ -101,8 +109,12 @@ One per page recommended — the region.
 
 **CSS parts:** `stack`
 
+**CSS custom states:** `visible` while at least one `lr-toast-item` is present in the region.
+
 **Themeable custom properties:** `--lr-toast-gap` (default `var(--lr-space-s)`),
 `--lr-toast-width` (default `var(--lr-size-28rem)`) — set directly on the `<lr-toast>` element.
+The mapped `--gap` and `--width` names are compatibility aliases for those two Lyra-prefixed
+properties; an explicitly set Lyra-prefixed property continues to take precedence.
 Every `<lr-toast-item>` property below is also documented on the region, because custom properties
 inherit into the items slotted inside it: one declaration on `<lr-toast>` retunes the whole stack.
 
@@ -115,7 +127,8 @@ A single notification.
 **Properties:**
 - `duration: number = 5000` (ms; `Infinity` or `<= 0` disables auto-dismiss)
 - `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — drives both `--lr-toast-padding` and the
-  toast's own font-size via `:host([size=...])`, from a compact `2xs` up to a roomier `xl`)
+  toast's own font-size via `:host([size=...])`, from a compact `2xs` up to a roomier `xl`;
+  setters also accept `small`/`medium`/`large` and normalize reads to `s`/`m`/`l`)
 - `variant: 'brand'|'success'|'warning'|'danger'|'neutral' = 'neutral'` (reflected)
 - `withIcon: boolean = false` (attribute `with-icon`)
 
@@ -126,7 +139,11 @@ DOM.
 
 **Slots:** default (message), `icon`
 
-**CSS parts:** `toast-item`, `accent`, `icon`, `content`, `close-button`
+**CSS parts:** `toast-item`, `accent`, `icon`, `content`, `close-button`, `close-icon`,
+`close-icon__svg`, `progress-ring`, `progress-ring__base`, `progress-ring__indicator`,
+`progress-ring__label`, `progress-ring__track`. The progress-ring tree is rendered for a finite,
+positive auto-dismiss duration and surrounds the close glyph; its indicator pauses alongside the
+auto-dismiss timer on hover or focus.
 
 **Themeable custom properties:** `--lr-toast-accent-width` (default `var(--lr-size-4px)`),
 `--lr-toast-show-duration`/`--lr-toast-hide-duration`
@@ -135,6 +152,8 @@ transition duration and uses it for its completion fallback), `--lr-toast-paddin
 (`var(--lr-space-m)`), `--lr-toast-font-size` (`var(--lr-font-size-m)`) — both are auto-swapped per
 `size`, from a compact `2xs` up to a roomier `xl` — `--lr-toast-accent-color` (default
 `var(--lr-color-border)`, auto-swapped per `variant` to that variant's loud fill).
+The mapped names `--accent-width`, `--show-duration`, `--hide-duration`, and `--padding` alias their
+respective Lyra-prefixed properties. Setting the Lyra-prefixed form explicitly wins over its alias.
 
 **Optional peer deps:** none.
 
@@ -162,7 +181,9 @@ toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick:
 
 `toast(input: ToastOptions | string): ToastHandle` where
 `ToastOptions = ToastCreateOptions & { message: string; placement?: ToastPlacement; action?: { label: string; onClick: (item: LyraToastItem) => void } }`,
-and `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. Lazily mounts (and
+and `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. Because it extends
+`ToastCreateOptions`, the helper accepts the same long `small`/`medium`/`large` size aliases and
+normalizes the created item identically. It lazily mounts (and
 re-mounts if removed) **one singleton `<lr-toast>` region per distinct `placement`** on
 `document.body` — a `toast()` call targeting one placement never relocates toasts already showing
 at another, since `placement` is a per-call option rather than a single global region's setting.
@@ -249,11 +270,12 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 
 ## `lr-skeleton`
 
-Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
+Loading placeholder (`text`/`circle`/`rect` shapes, opt-in `pulse`/`sheen` effects).
 
 **Properties:**
 - `variant: 'text'|'circle'|'rect' = 'text'` (reflected)
-- `effect: 'pulse'|'sheen' = 'pulse'` (reflected)
+- `effect: 'pulse'|'sheen'|'none' = 'none'` (reflected) — animation is opt-in. **Changed in
+  8.0.0:** the Lyra default was `pulse`; set `effect="pulse"` to preserve that motion explicitly.
 - `width?: string`
 - `height?: string`
 - `label: string = 'Loading…'` — accessible name for this instance's own `role="status"` (rendered as
@@ -267,17 +289,21 @@ Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
 
 **Slots:** none.
 
-**CSS parts:** `base`
+**CSS parts:** `base` and `indicator` are aliases on the same placeholder/animation surface.
 
 **Themeable custom properties:** `--lr-skeleton-w`, `--lr-skeleton-h` (set/cleared by the
-`width`/`height` properties; defaults `100%` / `var(--lr-size-1em)`) and the shared
-`--lr-transition-ambient` (default `1.8s ease-in-out`) for the pulse/sheen timing.
+`width`/`height` properties; defaults `100%` / `var(--lr-size-1em)`),
+`--lr-skeleton-color` (default `var(--lr-color-border)`), `--lr-skeleton-sheen-color` (default
+`var(--lr-color-surface)`), `--lr-skeleton-border-radius` (default `var(--lr-radius)` for text and
+rectangle shapes); upstream `--color`, `--sheen-color`, and `--border-radius` feed those same
+values. The shared `--lr-transition-ambient` (default `1.8s ease-in-out`) controls the pulse/sheen
+timing.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-skeleton variant="circle" width="3rem" height="3rem"></lr-skeleton>
-<lr-skeleton variant="text" label="Loading name"></lr-skeleton>
+<lr-skeleton variant="circle" effect="pulse" width="3rem" height="3rem"></lr-skeleton>
+<lr-skeleton variant="text" effect="sheen" label="Loading name"></lr-skeleton>
 ```
 
 **Known gotchas:**
@@ -295,7 +321,8 @@ A modal panel anchored to one logical edge of the viewport. `LyraDrawer` extends
 inherits the entire dialog contract unchanged: focus trapping, Escape and opt-in backdrop dismissal,
 document scroll locking, browser **top-layer** promotion, overlay stacking, accessible naming, the
 `show()`/`hide()`/`close()` methods and the whole
-`lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide`/`lr-dialog-close` lifecycle. Only `placement` and
+`lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide`/`lr-dialog-close` lifecycle. `contained` switches
+to an absolute, nonmodal panel inside the nearest containing block; only that mode, `placement`, and
 the slide animation are its own.
 
 **Properties:**
@@ -304,28 +331,47 @@ the slide animation are its own.
 - `placement: 'start'|'end'|'top'|'bottom' = 'end'` (attribute `placement`, reflected). **Changed in
   8.0.0:** the default used to be `start`. `end` is what `wa-drawer` does, so a mechanical
   `wa-drawer` → `lr-drawer` rename no longer silently slides the panel in from the other edge.
-- `heading?: string`, `label: string`, `closable: boolean = false`,
-  `withoutHeader: boolean = false` (attribute `without-header`, reflected) and
+- `contained: boolean = false` (attribute `contained`, reflected) — position within the nearest
+  containing block without a backdrop, page inerting, focus trap, scroll lock, top-layer
+  promotion, or global Escape ownership
+- `heading?: string`, `label: string`, `accessibleLabel: string = ''` (attribute
+  `accessible-label`), `closable: boolean = true`, `noHeader: boolean = false` (attribute
+  `no-header`, reflected), `withoutHeader: boolean = false` (legacy attribute `without-header`,
+  reflected), `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR hint), and
   `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming, chrome and
   dismissal options. A plain `aria-label` attribute on the host is honored too, with the same
   wins-over-everything semantics documented under `lr-dialog` below.
 
-**Methods:** `show()`, `hide()`, `close(reason?: DialogCloseReason)` — inherited unchanged from
-`lr-dialog`.
+**Methods:** `show(): Promise<void>`, `hide(): Promise<void>`,
+`close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each
+promise settles after the matching `lr-after-*` event.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
+`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and
 `lr-dialog-close` (`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
-`lr-dialog`; see that section for the emission order and the veto rules. `lr-after-show` /
+`lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
 animation compared with the state flip.
+
+**Animation registry:** the panel uses placement-specific names:
+`drawer.showStart`/`drawer.hideStart`, `drawer.showEnd`/`drawer.hideEnd`,
+`drawer.showTop`/`drawer.hideTop`, and `drawer.showBottom`/`drawer.hideBottom`. The backdrop uses
+`drawer.overlay.show`/`drawer.overlay.hide`. Per-element overrides are RTL-aware through
+`rtlKeyframes`; passing `null` disables interpolation while retaining the inherited event/promise
+lifecycle.
 
 **Slots:** default (drawer body), `label` (rich header content), `header-actions` (extra header
 controls, rendered before the built-in close button), `footer` — all inherited from `lr-dialog`.
 
-**CSS parts:** `backdrop`, `panel`, `header`, `heading`, `header-actions`, `close-button`, `label`,
-`body`, `footer`.
+**CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
+`header-actions`; `close-button close-button__base`; `body`; `footer`. Names grouped together are
+aliases on the same functional node.
 
-**Themeable custom properties:** `--lr-drawer-width` (default `--lr-size-24rem`; used by
+**Themeable custom properties:** mapped `--size` controls the active axis. Inherited `--width`
+remains visible in the shared dialog surface, but drawer sizing deliberately shadows it with
+`--size`. The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
+`--footer-spacing`, `--show-duration`, and `--hide-duration`. Lyra compatibility tokens remain:
+`--lr-drawer-width` (default `--lr-size-24rem`; used by
 `placement="start"|"end"`, capped at `100%`), `--lr-drawer-height` (default `--lr-size-24rem`;
 used by `placement="top"|"bottom"`), `--lr-drawer-enter-x` / `--lr-drawer-enter-y` (the panel's
 slide translate offset, used for both the enter and the exit keyframes — `-x` for start/end, `-y`
@@ -355,11 +401,9 @@ General-purpose modal/overlay plus a promise-based confirmation helper built on 
 ### `lr-dialog`
 
 A modal/overlay: `role="dialog"`, focus-trapped while open, dismissible via Escape or (opt-in) a
-backdrop click, and scroll-locks the document for as long as it's open. Chrome stays minimal by
-default — no built-in title bar or close button; a consumer supplies a heading and any close
-affordance itself via the default/`footer` slots. `heading`, the `label` slot, `header-actions` and
-`closable` are opt-in conveniences for the common case where hand-building that chrome isn't worth
-it.
+backdrop click, and scroll-locks the document for as long as it's open. Mapped chrome is present by
+default: `label` renders as a visible title and `closable` renders a localized close button.
+`closable="false"`, `no-header`, or the legacy `without-header` alias support custom chrome.
 
 **Properties:**
 - `open: boolean = false` (reflected) — **changed in 8.0.0:** `lr-dialog` now also has a
@@ -367,39 +411,38 @@ it.
   the property, the reflected attribute and the two methods can never disagree. `el.open = false`
   therefore emits the full close lifecycle and can be vetoed, where it used to be a silent state
   flip. Markup that renders open from the start (`<lr-dialog open>`) emits nothing.
-- `label: string = ''` — screen-reader-only accessible name, used only when no heading is slotted
-  and neither `heading` nor the `label` *slot* is set (see the priority order below). The `label`
-  property and the `label` slot are separate knobs: the slot is rich visible header content, the
-  property is an invisible name.
-- `heading?: string` — visible header text (rendered in `[part="header"]`/`[part="heading"]`), used
-  only when no light-DOM heading is slotted into the default slot; has no effect (renders nothing)
-  when a heading element *is* slotted, and the richer `label` slot wins over it when both are set
-- `closable: boolean = false` (attribute `closable`) — renders a built-in close (X) button in the
-  header row (creating one, with no heading text, if `heading` and the `label` slot are unset),
-  wired to the same `close()` path Escape/backdrop-dismiss already use, with reason `'close-button'`
+- `label: string = ''` — mapped visible title. The richer `label` slot wins over it.
+- `accessibleLabel: string = ''` (attribute `accessible-label`) — explicit accessible-only name;
+  unlike `label`, it never renders visible text
+- `heading?: string` — legacy visible-title fallback, after the `label` slot and `label` property;
+  it has no effect when a direct light-DOM heading already supplies custom chrome
+- `closable: boolean = true` (attribute `closable`, reflected) — renders the localized close (X)
+  button. This true-default boolean parses `closable="false"`; removing the attribute also restores
+  the default.
+- `noHeader: boolean = false` (attribute `no-header`, reflected) — Shoelace spelling that suppresses
+  the entire header row
 - `withoutHeader: boolean = false` (attribute `without-header`, reflected) — **new in 8.0.0.**
-  Suppresses the header row entirely, whatever `heading`, `closable`, the `label` slot or the
-  `header-actions` slot would otherwise render — for a dialog that owns its own chrome. Because it
-  defaults to `false`, `without-header="false"` is not a way to turn it back off; remove the
-  attribute, or assign `.withoutHeader = false`.
+  Web Awesome/legacy spelling for the same header suppression
+- `withFooter: boolean = false` (attribute `with-footer`, reflected) — keeps the footer wrapper
+  rendered as an SSR/hydration presence hint even before assigned slot content is observable
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click closing
   the dialog; Escape and explicit `close()`/`hide()` calls remain available. **Changed in 8.0.0:**
   this was previously spelled `no-light-dismiss`, an opt-*out* whose default left backdrop dismissal
   on. The polarity now matches `wa-dialog` exactly, so a mechanical rename no longer flips what the
   markup does.
+- `modal: LyraDialogModalController` (writable, property only) — `activateExternal()` temporarily
+  yields focus/Escape ownership to a third-party modal; balanced `deactivateExternal()` resumes it
+  without changing `open`
 
-Also settable as a plain `aria-label` attribute (not a public JS property): overrides the panel's
-computed accessible name outright, winning over every other source below (a slotted heading, the
-`label` slot, `heading`, the `label` property) — matching `<lr-date-input>`'s `accessibleLabel`
-pattern. It changes naming only: a `heading` property or `label` slot still renders its visible
-header chrome. Left unset, the fallback order below is unchanged.
+A plain host `aria-label` is the strongest naming override. It changes naming only: mapped title
+chrome remains visible. The fallback order appears below.
 
 **Methods:**
-- `show(): void` — opens the dialog, running the full lifecycle below. No-op when already open.
-- `hide(): void` — identical to `close('api')`; it exists so every Lyra overlay exposes the same
-  `show()`/`hide()`/`open` surface. No-op when already closed.
-- `close(reason: DialogCloseReason = 'api'): void` — closes the dialog and returns focus to whatever
-  had it right before the dialog opened.
+- `show(): Promise<void>` — opens the dialog and resolves after `lr-after-show`; no-op/veto returns
+  an already-resolved promise
+- `hide(): Promise<void>` — identical to `close('api')`, resolving after `lr-after-hide`
+- `close(reason: DialogCloseReason = 'api'): Promise<void>` — closes the dialog, returns focus to
+  whatever had it right before opening, and resolves after `lr-after-hide`.
   `DialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | 'unmount' | string` —
   `'escape'`/`'backdrop'` are emitted by the dialog's own built-in dismiss triggers;
   `'close-button'` by the built-in header close button (rendered when `closable` is set); `'api'`
@@ -409,18 +452,26 @@ header chrome. Left unset, the fallback order below is unchanged.
   is whatever a caller passes (e.g. a footer Cancel button calling `dlg.close('cancel')`, or
   `confirm()`'s own `'confirm'`/`'cancel'`).
 
-**Events:** `lr-show` (cancelable — `preventDefault()` leaves the dialog closed and re-syncs the
-reflected `open` attribute to the unchanged property, so an `open`/`?open=` binding that triggered
-the vetoed transition doesn't leave a stale attribute behind), `lr-after-show` (the enter animation
-has finished), `lr-hide` (cancelable,
-fired for every dismissal path — `preventDefault()` keeps the dialog open *and* stops
-`lr-dialog-close` from firing at all), `lr-dialog-close` (`detail: DialogCloseReason`, cancelable —
-fires after `lr-hide` and carries the one thing `lr-hide` does not: which affordance asked to
-close), `lr-after-hide` (the exit animation has finished). None carries a detail except
-`lr-dialog-close`; the two `lr-after-*` events are never cancelable.
+**Events:**
 
-The open sequence is `lr-show` → `lr-after-show`; the close sequence is `lr-hide` →
-`lr-dialog-close` → `lr-after-hide`. **Both pre-events fire *before* the state changes**, so reading
+- `lr-show` — cancelable pre-open veto
+- `lr-after-show` — opening animation finished
+- `lr-hide` — cancelable pre-close veto; detail is `{ source: Element }`, the host or built-in
+  affordance that requested the transition
+- `lr-after-hide` — closing animation finished
+- `lr-initial-focus` — cancelable immediately before the first automatic focus movement. A
+  CSS-hidden dialog defers it until rendered; reconnecting the same open activation does not repeat
+  it.
+- `lr-request-close` — cancelable request from a built-in affordance; detail source is
+  `'close-button' | 'keyboard' | 'overlay'`. Veto stops the close lifecycle. Direct `close()` and
+  `hide()` calls do not emit this request event.
+- `lr-dialog-close` — cancelable, with `detail: DialogCloseReason`; emitted after `lr-hide`
+
+The two `lr-after-*` events are never cancelable.
+
+The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
+direct close sequence is `lr-hide` → `lr-dialog-close` → `lr-after-hide`. A built-in dismissal
+prepends `lr-request-close`. **Both state pre-events fire *before* the state changes**, so reading
 `el.open` inside an `lr-show`/`lr-hide` handler returns the *old* value — this is the polarity
 `wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
 `lr-popover`/`lr-dropdown`. The `wa-*` → `lr-*` migration table treats the rename as mechanical, and
@@ -429,12 +480,15 @@ as of 8.0.0 that is finally true for these four names: `wa-show`/`wa-after-show`
 matching cancelability. Code written against Lyra 7.x that read `el.open` in a handler, or assumed
 the events were informational rather than vetoable, has to be re-read.
 
-`lr-after-show`/`lr-after-hide` resolve by awaiting the panel's and backdrop's
-`Element.getAnimations()`, so they still fire under `prefers-reduced-motion: reduce` — the duration
-tokens flatten to an imperceptible value there rather than the animation being skipped. Because
-dialogs now animate on close too, `lr-after-hide` is deferred by roughly one animation. A removal
-while open emits `lr-hide`, `lr-dialog-close` (reason `'unmount'`) and `lr-after-hide` in that
-order, none of them cancelable, since the element is already gone.
+`lr-after-show`/`lr-after-hide` settle after the public registry animations `dialog.show` /
+`dialog.hide` (panel) and `dialog.overlay.show` / `dialog.overlay.hide` (backdrop). Per-element
+registrations win over page defaults; keyframes-only overrides retain the token-derived duration
+and easing. Under `prefers-reduced-motion: reduce`, registry timing flattens to zero while the end
+frame and lifecycle remain intact. Passing `null` skips native interpolation but still emits the
+matching after-event before the method promise resolves. Because dialogs now animate on close too,
+`lr-after-hide` is normally deferred by roughly one animation. A removal while open emits
+`lr-hide`, `lr-dialog-close` (reason `'unmount'`) and `lr-after-hide` in that order, none of them
+cancelable, since the element is already gone.
 
 **Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
 `popover="manual"`), new in 8.0.0. That means it escapes every ancestor stacking context and every
@@ -452,22 +506,21 @@ the top one closes.
 
 **Slots:** default (the dialog body), `label` (rich header content — an element, markup, anything;
 rendered inside `[part="heading"]` and used as the panel's accessible name, winning over the
-plain-string `heading`), `header-actions` (extra header controls, rendered in the header row *before*
+plain-string `label` and legacy `heading` properties), `header-actions` (extra header controls,
+rendered in the header row *before*
 the built-in close button), `footer` (action buttons, rendered in a bottom row, hidden entirely when
 empty). The `label` and `header-actions` slots are new in 8.0.0.
 
-**CSS parts:** `backdrop` (the full-viewport scrim), `panel` (the dialog panel, `role="dialog"`
-while open; its max-inline-size is controlled by `--lr-dialog-max-width`), `header` (the header row,
-rendered when the `label` slot is filled, `heading` is set — and no heading is slotted into the
-default slot — `header-actions` is filled, and/or `closable` is `true`; never when `withoutHeader`
-is set), `heading` (the visible heading element inside `header`, wrapping the `label` slot and
-falling back to the `heading` text), `header-actions` (the wrapper around the `header-actions` slot),
-`close-button` (the built-in close button inside `header`, rendered only when `closable` is `true`),
-`label` (the invisible `label`-property element used for `aria-labelledby` when no heading is
-slotted and neither `heading` nor the `label` slot is set), `body` (wrapper around the default
-slot), `footer` (wrapper around the `footer` slot)
+**CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
+`header-actions`; `close-button close-button__base`; `body`; `footer`. Names grouped together are
+additive aliases on the same functional node, so a mapped `::part(title)` rule styles the same
+visible title as Lyra's `::part(heading)`.
 
-**Themeable custom properties:** `--lr-dialog-overlay-color` (default `var(--lr-color-overlay)` —
+**Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--width`, `--spacing`,
+`--header-spacing`, `--body-spacing`, `--footer-spacing`, `--show-duration`, and
+`--hide-duration`. The individual region properties override `--spacing`; mapped properties in
+turn fall back to the retained Lyra tokens: `--lr-dialog-overlay-color` (default
+`var(--lr-color-overlay)` —
 the backdrop scrim color), `--lr-dialog-backdrop-filter` (default `none` — a `backdrop-filter` on
 the scrim, e.g. `blur(3px)`, for a frosted-glass treatment over the page behind it),
 `--lr-dialog-width` (default `auto` — the panel shrink-wraps to content; set it for an assertive
@@ -482,9 +535,8 @@ the padding inside `[part="body"]` and the *inline* padding of the header and fo
 footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default
 `var(--lr-duration-base)` — the panel's enter/exit animation duration) and
 `--lr-dialog-backdrop-duration` (default `var(--lr-duration-fast)` — the backdrop's fade duration).
-The last four plus the backdrop filter are new in 8.0.0. Otherwise shared tokens
-`--lr-space-l/-m/-s`, `--lr-color-surface/-border`, `--lr-radius`, `--lr-shadow`,
-`--lr-easing-standard`.
+Otherwise shared tokens include `--lr-space-l/-m/-s`, `--lr-color-surface/-border`, `--lr-radius`,
+`--lr-shadow`, and `--lr-easing-standard`.
 
 **Optional peer deps:** none.
 
@@ -508,7 +560,7 @@ The last four plus the backdrop filter are new in 8.0.0. Otherwise shared tokens
   dlg.addEventListener('lr-dialog-close', (e) => console.log('closed:', e.detail));
   dlg.addEventListener('lr-after-hide', () => console.log('exit animation done'));
   document.getElementById('cancel').addEventListener('click', () => dlg.close('cancel'));
-  dlg.show(); // identical to dlg.open = true
+  await dlg.show(); // identical state change to dlg.open = true; settles after lr-after-show
 </script>
 ```
 
@@ -517,7 +569,7 @@ A dialog with no chrome of Lyra's own, animating faster and blurring the page be
 ```html
 <lr-dialog
   without-header
-  label="Preview"
+  accessible-label="Preview"
   light-dismiss
   style="--lr-dialog-backdrop-filter: blur(4px); --lr-dialog-panel-duration: 120ms;
          --lr-dialog-backdrop-duration: 80ms; --lr-dialog-spacing: 0"
@@ -526,31 +578,14 @@ A dialog with no chrome of Lyra's own, animating faster and blurring the page be
 </lr-dialog>
 ```
 
-Accessible name / visible header, in priority order: (0) if the host element itself has an
-`aria-label` attribute set, its value becomes `aria-label` on the panel outright, overriding every
-source below (including a slotted heading) while leaving visible header chrome intact — the
-standard ARIA convention for a consumer that wants full control over the announced name regardless
-of whatever `heading`/`label` props are also set; (1) otherwise, if a heading element (`h1`–`h6` or
-`[role="heading"]`) is an *unslotted direct child* (one carrying any `slot` attribute — `footer`,
-`label`, `header-actions` — is skipped), its text content becomes `aria-label` on the panel — takes
-priority over `heading` below so an existing consumer that already slots its own heading keeps
-rendering it exactly as before; (2) otherwise, when the `label` slot is filled or `heading` is set, a
-visible header row (`[part="header"]`) renders containing that content (`[part="heading"]`), which
-becomes the `aria-labelledby` target — the slot wins over the plain-string `heading` when both are
-supplied, since it is the richer of the two; (3) otherwise, when the `label` *property* is set, an
-invisible (`.sr-only`, exposed as the `label` part) element carrying that text is rendered inside the
-panel and `aria-labelledby` points at it instead. Only one of cases 2/3 supplies `aria-labelledby` at
-a time; case 0 can coexist with case 2's visible heading, but its explicit `aria-label` remains the
-name. Setting `withoutHeader` suppresses the header row in case 2 outright, which also removes that
-naming source — pair it with `label` or a host `aria-label`. The `label` property itself never
-renders visible chrome on its own — `::part(label)` can be restyled to make the sr-only text
-visible, or `heading`/the `label` slot can be used instead, for visible chrome without slotting a
-real heading element.
-The slotted-heading case (1) deliberately uses `aria-label` (a copied string) rather than
-`aria-labelledby` pointing at the heading's `id`, because the heading is light-DOM content while
-`[part="panel"]` lives in shadow DOM and an ID-reference attribute can't resolve across that
-boundary; cases 2/3 use `aria-labelledby` safely since their target renders inside the same shadow
-root it labels.
+Accessible naming and visible title are separate. Naming precedence is: (1) host `aria-label`, (2)
+`accessible-label`, (3) the copied text of an unslotted direct light-DOM heading, then (4) the
+shadow-owned visible title wrapper. Visible-title precedence is the rich `label` slot, then the
+mapped `label` property, then legacy `heading`. The direct-heading case copies text because an IDREF
+cannot cross from the panel's shadow tree to a light-DOM heading; the mapped title wrapper can use
+`aria-labelledby` because it lives in the same shadow root. `no-header`/`without-header` removes the
+mapped title, so custom-chrome dialogs should provide a direct heading, `accessible-label`, or host
+`aria-label`.
 
 **Known gotchas:**
 - `role="dialog"`/`aria-modal="true"` are only present on `[part="panel"]` while `open` is `true` —
@@ -559,6 +594,9 @@ root it labels.
   focusable element, including one inside a slotted custom element's own open shadow root — so
   `<lr-input autofocus>` behaves like `<input autofocus>`. With nothing marked, the first focusable
   element still wins, unchanged.
+- `lr-initial-focus` is the veto point for Lyra's automatic focus move. It fires once per logical
+  open, only when the rendered panel is ready to receive focus; canceling it does not disable the
+  trap or later focus return.
 - The host gains a `popover="manual"` attribute the first time it opens and keeps it from then on —
   only top-layer membership (`:popover-open`) tracks `open`, not the attribute — and carries
   `data-closing` for exactly as long as the exit animation runs (pointer events are dead for that
@@ -899,41 +937,37 @@ its own. Reach for `lr-popup` when you need a floating surface the library does 
 anchored inline editor, a custom autocomplete list); if you find yourself adding light dismiss and
 focus return on top of it, use `lr-popover` instead.
 
-**Anchoring**, in precedence order: the `virtualAnchor` property (an arbitrary rect — a canvas hit, a
-chart datum, a selection range), then `for` (an element id resolved in *this element's own root*, so
-it works inside a shadow tree where a plain idref could not cross the boundary), then the first
-element assigned to the `anchor` slot.
+**Anchoring**, in precedence order: legacy `virtualAnchor` (an arbitrary rect — a canvas hit, chart
+datum, or selection range), mapped `anchor` (an `Element`, same-root id string, or Floating UI
+virtual element), `for` (a same-root id), then the first element assigned to the `anchor` slot.
 
 **Properties:**
 - `active: boolean = false` (reflected) — whether the popup renders and positions. Nothing else
   changes when it flips.
-- `for: string = ''` (reflected) and `virtualAnchor` (property only, no attribute) — the two
-  non-slot anchors, in the precedence order above
-- `placement: Placement = 'bottom-start'` (reflected) — the full Floating UI vocabulary, mirrored
+- `anchor: Element | string | VirtualAnchor | null = null`, `for: string = ''` (reflected), and
+  `virtualAnchor` (property only) — the non-slot anchors, in the precedence order above
+- `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
   under RTL
-- `strategy: 'absolute' | 'fixed' = 'fixed'` (reflected) — the CSS positioning scheme. `fixed`
+- `strategy: 'absolute' | 'fixed' = 'absolute'` (reflected) — the CSS positioning scheme. `fixed`
   escapes every ancestor transform/filter/containment context; `absolute` positions against the
-  nearest positioned ancestor, so the popup scrolls away with the content it belongs to. **This
-  default deliberately diverges from the upstream primitive's `absolute`**, so that a bare
-  `<lr-popup>` lands where the shared positioner already puts every other anchored surface in this
-  library; set `strategy="absolute"` for the upstream default exactly.
-- `distance: number = 4` — offset from the anchor along the placement axis, in px
+  nearest positioned ancestor, so the popup scrolls with its containing content
+- `distance: number = 0` — offset from the anchor along the placement axis, in px
 - `skidding: number = 0` — offset along the anchor's edge, in px
-- `flip: boolean = true` (reflected, `true`-defaulting converter — use `.flip = false`, not
-  `?flip=`), with `flipFallbackPlacements: string = ''` (attribute `flip-fallback-placements` — a
+- `flip: boolean = false` (reflected), with `flipFallbackPlacements: string = ''` (attribute
+  `flip-fallback-placements` — a
   space-delimited placement list `flip` tries in order instead of just the opposite side;
   unrecognized entries are dropped rather than forwarded), `flipFallbackStrategy: 'best-fit' |
-  'initial-placement' = 'best-fit'` (attribute `flip-fallback-strategy` — what `flip` settles on
+  'initial' | 'initial-placement' = 'best-fit'` (attribute `flip-fallback-strategy` — what `flip` settles on
   when no candidate fits: the least-overflowing one, or `placement` as written),
   `flipBoundary: PlaceBoundary | null = null` (property only — element(s) to measure overflow
   against instead of the popup's clipping ancestors) and `flipPadding: number = 0` (attribute
   `flip-padding`)
-- `shift: boolean = true` (same `true`-defaulting converter), with
+- `boundary: 'viewport' | 'scroll' = 'viewport'` (reflected) — shared overflow boundary for flip,
+  shift, and auto-size; each middleware-specific boundary below overrides it independently
+- `shift: boolean = false` (reflected), with
   `shiftBoundary: PlaceBoundary | null = null` (property only) and
-  `shiftPadding: number | null = null` (attribute `shift-padding`). Left `null`, `shiftPadding`
-  **inherits `padding`** rather than falling to `0` — the second deliberate divergence from
-  upstream, for the same reason; set `shift-padding="0"` for the upstream default exactly.
-- `padding: number = 8` — viewport padding kept clear by `shift` and by the available-size
+  `shiftPadding: number = 0` (attribute `shift-padding`)
+- `padding: number = 0` — boundary padding kept clear by `shift` and by the available-size
   measurement
 - `autoSize: 'horizontal' | 'vertical' | 'both' | null = null` (attribute `auto-size`), with
   `autoSizeBoundary: PlaceBoundary | null = null` (property only) and
@@ -949,8 +983,17 @@ element assigned to the `anchor` slot.
   once. Purely geometric: this element owns no hover policy of its own, the component built on top
   reads the hover.
 - `arrow: boolean = false` (reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
-  (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
+  (attribute `arrow-placement`) and `arrowPadding: number = 10` (attribute `arrow-padding`) — the
   shared arrow trio described at the top of this family
+
+The aligned v8 defaults above are source-contract exact. To preserve the previous Lyra-shaped
+geometry explicitly, use `placement="bottom-start" strategy="fixed" distance="4" flip shift`;
+origin-aware migration rewrites emit those tokens instead of relying on changed defaults.
+
+`popup: HTMLElement` is the positioned, shadow-owned popup node. Its setter exists for the writable
+WA/SL public TypeScript contract, but assignments are intentionally ignored: replacing that node
+would disconnect positioning, animation, and the documented CSS parts. Read it to animate or style
+the live internal node.
 
 **Methods:** `reposition()` — recompute now. Rarely needed, since the popup already tracks scroll,
 resize and layout change; useful after moving a virtual anchor imperatively.
@@ -965,12 +1008,13 @@ while `hover-bridge` is set). `popup` carries the **resolved side** as a second 
 `::part(popup)[data-side]` would silently never match. `arrow` carries its own resolved side the
 same way (`arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right`).
 
-**Themeable custom properties:** `--lr-popup-arrow-size` (half-width of the arrow square, default
-`var(--lr-size-0-375rem)`); otherwise shared tokens — `--lr-overlay-stack-index` /
-`--lr-layer-popover` (stacking), `--lr-color-surface-raised`, `--lr-color-border`.
+**Themeable custom properties:** mapped `--arrow-size`, `--arrow-color`, `--popup-border-width`,
+`--show-duration`, and `--hide-duration`; retained `--lr-popup-arrow-size` is the arrow-size
+fallback. Read-only `--auto-size-available-width` / `--auto-size-available-height` mirror the
+positioner's available dimensions. Shared tokens cover stacking, raised surface, and border.
 
 The popup also receives `--lr-positioner-available-inline-size` / `--lr-positioner-available-block-size`
-from the shared positioner and caps itself to them, so it never overflows the viewport.
+from the shared positioner and caps its dimensions to the measured available space.
 
 ```html
 <lr-popup active arrow placement="top" distance="8">
@@ -988,9 +1032,9 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
 **Properties:**
 - `open: boolean = false` (reflected) — assigning it runs the same `lr-show`/`lr-hide` lifecycle as
   `show()`/`hide()`, so the property, the reflected attribute and the two methods can never disagree
-- `placement: Placement = 'bottom-start'` (reflected) — the full Floating UI vocabulary, mirrored
+- `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
   under RTL
-- `distance: number = 4` — anchor-offset distance in px (Floating UI's main-axis `offset()`). May
+- `distance: number = 8` — anchor-offset distance in px (Floating UI's main-axis `offset()`). May
   legitimately be negative to overlap the trigger; a non-finite value falls back to the default.
 - `skidding: number = 0` — offset *along* the anchor's edge, in px (Floating UI's cross-axis
   offset). New in 8.0.0.
@@ -998,7 +1042,14 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   trigger, resolved in this element's own root so it works inside a shadow tree where a plain idref
   could not cross the boundary. The trigger keeps owning the click and the ARIA relationship, so a
   popover can be anchored to an element it does not contain. A `showAt()` virtual anchor still wins.
-- `arrow: boolean = false` (reflected) — render an arrow pointing at the anchor. New in 8.0.0.
+  Assigning `null` is the mapped setter-only clearing spelling: it removes the attribute and the
+  getter continues to return `''`
+- `anchor: Element | null = null` (property only) — direct anchor, taking priority over `for` and
+  the slotted trigger; a `showAt()` virtual anchor still wins
+- `arrow: boolean = true` (reflected) — render an arrow pointing at the anchor; the true-default
+  converter accepts `arrow="false"`
+- `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — positive mapped spelling
+  for suppressing the default arrow
 - `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) —
   `anchor` tracks the anchor's centre; `start`/`end` pin the arrow `arrow-padding` from one logical
   end of the edge (the two ends are the inline ones on a top/bottom placement, so they swap under
@@ -1010,6 +1061,9 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   localized "Popover" (or "Menu" when `popupRole` is `menu`)
 - `popupRole: 'dialog'|'menu' = 'dialog'` (attribute `popup-role`)
 
+To preserve the previous Lyra-shaped defaults explicitly, use
+`placement="bottom-start" distance="4" without-arrow`; origin-aware migration emits those tokens.
+
 The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`.
 `aria-controls` targets the public `lr-popover` host (which receives a stable generated `id` when
 the consumer did not supply one), rather than the shadow-private popup, so the relationship
@@ -1017,8 +1071,9 @@ resolves from a native light-DOM trigger. `lr-button` and `lr-icon-button` addit
 that host onto their focused shadow-internal controls through `ariaControlsElements`; supporting
 browsers intentionally serialize the internal control's `aria-controls` content attribute as an
 empty string after that assignment.
-**Methods:** `show(): void` opens the popover programmatically — identical to `el.open = true`,
-including the veto point. No-op when already open.
+**Methods:** `show(): Promise<void>` opens the popover programmatically — identical to
+`el.open = true`, including the veto point — and resolves after `lr-after-show`. A no-op or vetoed
+transition returns an already-resolved promise.
 `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?:
 HTMLElement })` opens the popover anchored to an arbitrary rectangle instead of the slotted
 `trigger` — for a graph node, a canvas pixel, a chart datum, or any other non-DOM location
@@ -1031,7 +1086,8 @@ the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt(
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
 `showAt()` behaves exactly as before. Non-finite coordinates or dimensions are a no-op and leave
 the current open/anchor state unchanged.
-`hide(options?: { focusTrigger?: boolean })` programmatically closes the popover; pass
+`hide(options?: { focusTrigger?: boolean }): Promise<void>` programmatically closes the popover and
+resolves after `lr-after-hide`; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
 dismiss, and a bare `el.open = false` all return focus to the slotted trigger, or to a virtual
 anchor's explicit `returnFocusTo`; a virtual anchor with no return target closes without moving
@@ -1049,23 +1105,25 @@ value; in 7.x these events fired after the fact and were purely informational. T
 timing `wa-show`/`wa-hide` always had, so the `wa-*` → `lr-*` migration table's "mechanical rename"
 promise now holds for these names too — which also means 7.x Lyra code that read `el.open` in the
 handler was relying on the *opposite* polarity and must be re-read. `lr-after-show`/`lr-after-hide`
-are new in 8.0.0 and resolve by awaiting the popup's `Element.getAnimations()`. Under
-`prefers-reduced-motion: reduce` the popup's transition is dropped outright (`transition: none`), so
-there is nothing left to await and both events fire immediately — they are never skipped.
+are new in 8.0.0 and settle after the public `popover.show` / `popover.hide` registry animation.
+Per-element overrides win over page defaults; keyframes-only overrides retain the popup's
+`--show-duration` / `--hide-duration` and shared easing. Reduced motion flattens timing to zero, and
+a `null` registration skips interpolation, but neither path skips the after-event or its
+method-promise settlement.
 
 **Slots:** `trigger` (the interactive element that toggles the popover), default (popover content).
 
-**CSS parts:** `trigger`, `popup`, `content`, and `arrow` (rendered only when `arrow` is set). The
-arrow's part attribute also carries the **resolved side** as a second token — `arrow-top`,
+**CSS parts:** `trigger`; `popup dialog popup__popup`; `content body`; and
+`arrow popup__arrow` (rendered unless suppressed). Names grouped together are aliases on the same
+node. The arrow's part attribute also carries the **resolved side** as a second token — `arrow-top`,
 `arrow-bottom`, `arrow-left`, `arrow-right` — so `::part(arrow arrow-top)` styles one side.
 `::part(arrow)[data-side]` and `::part(arrow) .inner` are invalid selectors that silently never
 match; the state is in the part name.
 
-**Themeable custom properties:** `--lr-overlay-max-inline-size` (default `--lr-size-20rem` —
-maximum inline size of the popup) and `--lr-overlay-arrow-size` (default `--lr-size-0-375rem` —
-*half* the arrow square's width; the rendered arrow is twice this in both axes). Setting `arrow`
-also switches `[part="popup"]` to `overflow: visible` so the arrow isn't clipped, moving the scroll
-container onto `[part="content"]`.
+**Themeable custom properties:** mapped `--max-width`, `--arrow-size`, `--show-duration`, and
+`--hide-duration`, with retained `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size`
+fallbacks. Arrow size is half the square's width. Rendering the arrow switches `[part~="popup"]` to
+`overflow: visible` so it is not clipped, moving the scroll container onto `[part~="content"]`.
 
 ```html
 <lr-popover arrow arrow-placement="center" placement="bottom" distance="8" skidding="12">
@@ -1109,22 +1167,33 @@ interactions open it is configurable as of 8.0.0; by default it is still hover a
   `0` (immediate) and an oversized one to the largest delay `setTimeout` can represent, so neither
   can hang the tooltip open.
 - `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored under RTL
-- `distance: number = 6` — anchor-offset distance in px; identical semantics to
+- `distance: number = 8` — anchor-offset distance in px; identical semantics to
   `<lr-popover>.distance` (both wrap the same `place()`/`offset()` middleware)
 - `skidding: number = 0` — offset along the anchor's edge, in px. New in 8.0.0.
 - `for: string = ''` (reflected) — id of an element in this tooltip's own root to position against
   instead of the slotted trigger; the trigger keeps owning the interaction listeners and
-  `aria-describedby`. New in 8.0.0.
-- `arrow: boolean = false` (reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
+  `aria-describedby`. New in 8.0.0. Assigning `null` clears the attribute to the canonical `''`
+  read value; the getter itself remains non-nullable
+- `anchor: Element | null = null` (property only) — direct anchor, taking priority over `for` and
+  the active trigger
+- `disabled: boolean = false` (reflected) — prevents both interaction and programmatic opening;
+  setting it while open closes the tooltip
+- `hoist: boolean = false` (reflected) — switches the mapped absolute positioning default to fixed
+- `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
+  reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
   same arrow trio `<lr-popover>` documents above, new in 8.0.0
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted
 - `accessibleLabel: string = ''` (attribute **`aria-label`**)
 
+To preserve the previous Lyra-shaped visual defaults explicitly, use `distance="6" without-arrow`;
+origin-aware migration emits those tokens.
+
 **Methods:**
-- `show(): void` — open immediately, bypassing `show-delay` and whatever `trigger` allows. New in
-  8.0.0.
-- `hide(): void` — close immediately, bypassing `hide-delay`. New in 8.0.0.
+- `show(): Promise<void>` — open immediately, bypassing `show-delay` and interaction policy, then
+  resolve after `lr-after-show`
+- `hide(): Promise<void>` — close immediately, bypassing `hide-delay`, then resolve after
+  `lr-after-hide`
 - `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?: HTMLElement })`
   — same virtual-anchor contract as `lr-popover.showAt()` above (anchors to an arbitrary rectangle
   instead of the slotted `trigger`, `width`/`height` default to `0`, `contextElement` gives
@@ -1139,25 +1208,34 @@ same four-event contract, timing and veto semantics `<lr-popover>` documents abo
 new to this component in 8.0.0. A vetoed `lr-show` leaves the tooltip closed whether the delay
 elapsed, `show()` was called, or `open` was assigned.
 
-**Slots:** `trigger` (the element that receives the configured interaction listeners), default
-(tooltip content, overriding the `content` property).
+Tooltip motion resolves `tooltip.show` / `tooltip.hide` through the public animation registry.
+The same per-element/global precedence, RTL keyframe selection, token-timing fallback,
+reduced-motion flattening, and null-disable lifecycle rules documented for `lr-popover` apply.
 
-**CSS parts:** `trigger`, `popup`, and `arrow` (rendered only when `arrow` is set; its part
-attribute also carries the resolved side — `arrow-top`, `arrow-bottom`, `arrow-left`,
-`arrow-right`).
+**Slots:** both mapped shapes are supported. Web Awesome uses named `trigger` plus default tooltip
+content. Shoelace uses the default slot for the trigger and `slot="content"` (or the `content`
+property) for tooltip content. A named trigger always selects the first shape; without one, an
+explicit content source makes the default slot unambiguously the trigger.
 
-**Themeable custom properties:** `--lr-tooltip-max-inline-size` (default `--lr-size-20rem`),
-`--lr-tooltip-background` (default `--lr-color-neutral`), `--lr-tooltip-color` (default
-`--lr-color-on-neutral`), and `--lr-tooltip-arrow-size` (default `--lr-size-0-375rem` — *half* the
-arrow square's width; the arrow also picks up `--lr-tooltip-background`, so retinting the tooltip
-retints its arrow). A tooltip popup has no inner scroll wrapper to move overflow onto, so setting
-`arrow` switches the popup to `overflow: visible` and trades internal scrolling for a visible arrow
-— reach for `<lr-popover>` when a floating surface needs both.
+**CSS parts:** `popup base tooltip base__popup` are aliases on the same wrapper; `trigger`; `body`;
+and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the resolved side —
+`arrow-top`, `arrow-bottom`, `arrow-left`, or `arrow-right`.
+
+**Themeable custom properties:** mapped `--max-width`, `--show-delay`, `--hide-delay`, and
+`--arrow-size`; retained `--lr-tooltip-max-inline-size`, `--lr-tooltip-background`,
+`--lr-tooltip-color`, and `--lr-tooltip-arrow-size` remain fallbacks. A tooltip popup has no inner
+scroll wrapper to move overflow onto, so its default arrow trades internal scrolling for a visible
+arrow — use `<lr-popover>` when a floating surface needs both.
 
 ```html
 <lr-tooltip trigger="hover focus click" show-delay="0" hide-delay="400" arrow placement="right">
   Copied to clipboard
   <button slot="trigger" type="button">Copy</button>
+</lr-tooltip>
+
+<!-- Shoelace-compatible shape: default trigger, named content. -->
+<lr-tooltip content="Save your changes">
+  <button type="button">Save</button>
 </lr-tooltip>
 ```
 
@@ -1200,28 +1278,86 @@ graph.addEventListener('click', (event) => {
 
 ## `lr-dropdown`
 
-A menu-role popover for consumer-supplied action content. Compose `lr-menu` when full roving
-menu-item behavior is needed.
+The complete mapped action-menu component. The public element remains a Popover-style trigger plus
+positioned popup; inside that popup it owns the same contained interaction engine as `lr-menu`, so
+direct `lr-dropdown-item`/`lr-menu-item` children get roving focus, disabled skipping, type-ahead,
+nested submenu keyboard/pointer intent, and focus return without a second public popup. A
+consumer-supplied `lr-menu` in the default slot becomes that contained engine instead of being
+wrapped in another menu. This supports both Web Awesome's direct-item shape and Shoelace's
+consumer-menu shape.
 
-**Properties:** `open`, `placement` (default `bottom-start`), `distance` (default `4`), `skidding`
-(default `0`), `for`, `arrow` (default `false`), `arrow-placement` (default `anchor`),
-`arrow-padding` (default `0`), `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
-`popupRole` is seeded to `'menu'` in the constructor — that is the only difference from `lr-popover`,
-whose whole surface (including `show()`, `hide()`, `showAt()` and the arrow/skidding/`for` knobs
-added in 8.0.0) is inherited unchanged. Its trigger therefore uses the same public-host
-`aria-controls` target and Lyra-button element-reference forwarding described above, and its popup's
-accessible name falls back to the localized "Menu" rather than "Popover".
+**Direct mapped items.** `<lr-dropdown-item>` is the Web Awesome-compatible name for the same row
+implementation as `<lr-menu-item>`. Direct mapped items receive this dropdown's `size` and use its
+contained roving-focus, type-ahead, disabled-skipping, selection, and submenu controller; a
+consumer-supplied `<lr-menu>` uses that controller directly. This preserves both Web Awesome's
+direct-item composition and Shoelace's consumer-menu composition. The canonical item properties,
+methods, events, slots, parts, and theme variables are documented in the layout-family
+`lr-menu` / `lr-menu-item` section.
 
-**Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` —
-inherited from `lr-popover` with identical timing and veto rules; none fires for the initial render.
-The two `lr-after-*` events are new in 8.0.0, and the two pre-events became cancelable and
-before-the-fact in 8.0.0 — see `lr-popover` above.
+**Properties:**
+- `open: boolean = false` (reflected), `placement: Placement = 'bottom-start'`,
+  `distance: number = 0`, `skidding: number = 0`, and `for: string = ''` — the same positioning
+  vocabulary as `lr-popover`, except the mapped dropdown sits flush against its trigger by default.
+  An explicit distance still wins, and generic `lr-popover` keeps its own default of `8`.
+- `size: LyraSize = 'm'` (reflected) — propagated to directly owned mapped items. Accepts the
+  six-step Lyra ladder and `small`/`medium`/`large` aliases.
+- `disabled: boolean = false` (reflected) — prevents pointer/keyboard/programmatic opening and
+  dismisses an already-open dropdown when enabled.
+- `stayOpenOnSelect: boolean = false` (attribute `stay-open-on-select`, reflected) — suppresses the
+  default selection close for direct and nested selections.
+- `hoist: boolean = false` (reflected) — uses viewport-fixed positioning; otherwise the popup uses
+  the containing-block (`absolute`) strategy.
+- `sync?: 'width'|'height'|'both'` (reflected) — copies the trigger dimension(s) onto the popup.
+- `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
+  light-dismiss handling.
+- `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, `accessibleLabel`
+  (`aria-label`) and `popupRole` are retained from `lr-popover` for existing Lyra consumers; the
+  popup role defaults to `menu` and its accessible-name fallback is the localized "Menu".
 
-**Slots:** `trigger`, default menu content. **CSS parts:** `trigger`, `popup`, `content`, and
-`arrow` (rendered only when `arrow` is set, carrying the resolved side as a second part token).
-**Themeable custom properties:** `--lr-overlay-max-inline-size` (default `--lr-size-20rem` —
-maximum inline size of the popup) and `--lr-overlay-arrow-size` (default `--lr-size-0-375rem` —
-half the arrow square's width).
+**Methods:** `show(): Promise<void>` and
+`hide(options?: { focusTrigger?: boolean }): Promise<void>` use the same cancelable before-events,
+after-events, focus return, and settlement rules as `lr-popover`. `reposition(): void` immediately
+recomputes placement after an imperative anchor/layout change. `showAt()` remains available for
+Lyra's virtual-anchor compatibility surface.
+
+**Events:** `lr-select` is the single mapped selection path: cancelable, bubbling/composed, with
+`detail: { item }` carrying the activated element. Preventing it keeps the complete submenu chain
+open; `stay-open-on-select` applies the same default suppression declaratively. Nested selection is
+not translated or re-emitted at each level, so a listener on `lr-dropdown` receives exactly one
+event. `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), and `lr-after-hide` retain
+the Popover lifecycle; none fires for initial open markup.
+
+Dropdown motion resolves `dropdown.show` / `dropdown.hide` through the public animation registry;
+it retains the dropdown's `--show-duration` / `--hide-duration` defaults when an override supplies
+only keyframes. Passing `null` disables motion without skipping the after-event or promise.
+
+**Slots:** `trigger`; default (`lr-dropdown-item`/`lr-menu-item` rows, or one consumer-supplied
+`lr-menu`). **CSS parts:** `trigger`; `popup dialog popup__popup base base__popup panel` (all six
+tokens on the positioned popup, preserving the popover, Web Awesome and Shoelace wrapper names on
+the same node); `menu` (the contained controller); `content body`; and the retained optional
+`arrow popup__arrow` token set.
+
+**Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
+`var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
+`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks.
+
+```html
+<lr-dropdown aria-label="File actions" size="small">
+  <button slot="trigger">Actions</button>
+  <lr-dropdown-item value="rename"><span slot="details">⌘R</span>Rename</lr-dropdown-item>
+  <lr-dropdown-item>
+    Share
+    <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+    <lr-dropdown-item slot="submenu" value="link">Copy link</lr-dropdown-item>
+  </lr-dropdown-item>
+  <lr-dropdown-item value="delete" variant="danger">Delete</lr-dropdown-item>
+</lr-dropdown>
+<script type="module">
+  document.querySelector('lr-dropdown').addEventListener('lr-select', (event) => {
+    console.log(event.detail.item.value);
+  });
+</script>
+```
 
 ## `lr-spinner`
 
@@ -1238,28 +1374,38 @@ indicator and its text becomes the status name unless `aria-label` overrides it.
 default) applies the native `hidden` state to the label wrapper, removing it from both rendering and
 the accessibility tree; the status then uses `aria-label` or the localized "Loading…" fallback.
 
-**CSS parts:** `base` (the `role="status"` wrapper), `spinner` (the animated ring; `aria-hidden`),
-`label` (the default-slot wrapper).
+**CSS parts:** `base` and `spinner` are aliases on the same `role="status"` outer wrapper;
+`spinner-indicator` is the animated `aria-hidden` ring, and `label` is the default-slot wrapper.
 
 **Themeable custom properties:** `--lr-spinner-size` (default `var(--lr-size-1-25rem)` — both
 dimensions), `--lr-spinner-track-width` (default `var(--lr-border-width-medium)` — ring thickness),
 `--lr-spinner-duration` (default `var(--lr-transition-ambient)` — the duration *and* easing of one
 full rotation; the animation is dropped entirely under `prefers-reduced-motion: reduce`). The ring
-colors come from `--lr-color-brand`/`-brand-quiet`.
+colors come from `--lr-color-brand`/`-brand-quiet`. Upstream aliases are `--track-width`,
+`--track-color`, `--indicator-color`, and `--speed`.
 
 ## `lr-progress-bar`
 
-A determinate or indeterminate progress bar.
+A determinate or indeterminate progress bar with an independently visible label and optional
+formatted percentage.
 
-**Properties:** `value`, `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
-`accessibleLabel` (`accessible-label`).
+**Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
+`label` (mapped accessible-name property), plus the Lyra compatibility alias `accessibleLabel`
+(`accessible-label`). Host `aria-label` has highest precedence.
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
-determinate. When `show-value` exposes label-slot text, that visible text names the progressbar
-unless host `aria-label`/`accessible-label` overrides it; live label mutations stay synchronized.
+determinate. Slotted label content is always visible and names the progressbar unless an explicit
+label overrides it; `show-value` controls only whether the locale-formatted percentage is appended.
+Live label mutations stay synchronized.
 
-**Slots:** `label`. **CSS parts:** `base`, `track`, `indicator`, `label`.
-**Themeable custom properties:** `--lr-progress-height` (default `var(--lr-size-0-5rem)`) — the
-block size of the progress track.
+**Slots:** default — label content; `label` — compatibility alias for the default slot.
+**CSS parts:** `base` and `progress-bar` are aliases on the same progressbar; `track`, `indicator`,
+`label`.
+**Themeable custom properties:** `--lr-progress-track-height` (default
+`var(--lr-progress-height, var(--lr-size-1rem))`; `--lr-progress-height` is the legacy fallback),
+`--lr-progress-track-color` (default `var(--lr-color-brand-quiet)`),
+`--lr-progress-indicator-color` (default `var(--lr-color-brand)`), and
+`--lr-progress-label-color` (default `var(--lr-color-text)`). Upstream aliases are `--height` and
+`--track-height`, plus `--track-color`, `--indicator-color`, and `--label-color`.
 
 **Additional API surface:**
 
@@ -1269,19 +1415,29 @@ block size of the progress track.
 
 A circular progress indicator with the same value contract as `lr-progress-bar`.
 
-**Properties:** `value: number = 0`, `max: number = 100`, `indeterminate: boolean = false`
-(reflected), and `accessibleLabel: string = ''` (attribute `accessible-label`; unset falls back to
-the visible default-slot text when supplied, then the localized "Progress"). Non-finite/out-of-range
+**Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
+(reflected), `label: string = ''` (the mapped accessible-name property), and
+`accessibleLabel: string = ''` (attribute `accessible-label`; Lyra compatibility alias). Host
+`aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
+visible default-slot text when supplied, then the localized "Progress". Non-finite/out-of-range
 `value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
 percentage (and nothing at all while `indeterminate`).
-**CSS parts:** `base`, `track`, `indicator`, `label`.
+**CSS parts:** `base` and `progress-ring` are aliases on the same progressbar; `track`, `indicator`,
+`label`.
 **Themeable custom properties:** `--lr-progress-ring-size` (default `var(--lr-size-2-5rem)` — the
-ring's inline and block size) and `--lr-progress-duration` (default
+ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--lr-size-4px)`),
+`--lr-progress-ring-track-color` (default `var(--lr-color-brand-quiet)`),
+`--lr-progress-ring-indicator-width` (defaulting to the track width),
+`--lr-progress-ring-indicator-color` (default `var(--lr-color-brand)`),
+`--lr-progress-ring-indicator-transition-duration` (default `var(--lr-transition-base)`), and
+`--lr-progress-duration` (default
 `var(--lr-transition-ambient)` — the indeterminate spin period, the same token and the same default
 as `lr-progress-bar`'s sweep, so it flattens under `prefers-reduced-motion: reduce` with the rest of
 the ambient motion).
+Upstream aliases are `--size`, `--track-width`, `--track-color`, `--indicator-width`,
+`--indicator-color`, and `--indicator-transition-duration`.
 
 ## `lr-badge` and `lr-tag`
 
@@ -1294,13 +1450,16 @@ rectangle) and the pill treatment moved behind the new opt-in `pill` boolean. Ex
 its corner radius only if you add `pill`, or set `--lr-badge-radius: var(--lr-radius-pill)` once at
 the app level.
 
-**Properties** (all of them declared by `lr-badge` and inherited unchanged by `lr-tag`, except
-`withRemove`):
+**Properties** (all are declared by `lr-badge` and inherited by `lr-tag`; `lr-tag` adds the
+`variant="text"` write alias plus `withRemove` / `removable`):
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) — the
-  semantic palette
+  semantic palette. Both components accept the upstream `primary` setter/attribute alias and
+  normalize it to the canonical `brand` read value. `lr-tag` additionally accepts `text`, renders
+  the neutral plain treatment, and reads back the canonical `neutral` variant.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — the same visual-density scale
   `<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
-  dimensions
+  dimensions. The setters also accept `small` / `medium` / `large` and normalize reads to
+  `s` / `m` / `l`.
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
   (reflected) — **new in 8.0.0.** The second visual axis: `variant` picks the palette, `appearance`
   decides how much of it lands on the fill, the border and the text. `filled-outlined` (the default)
@@ -1315,14 +1474,19 @@ the app level.
   infinitely-looping attention animation for a badge that has to be noticed: `pulse` draws an
   expanding ring, `bounce` hops the surface vertically (block-direction, so it needs no RTL
   mirroring). Both stop outright — not merely shorten — under `prefers-reduced-motion: reduce`.
+- `pulse: boolean = false` (reflected) — upstream-compatible shorthand for the pulse attention
+  treatment. Lyra's intentional `variant="neutral"` and `appearance="filled-outlined"` defaults
+  remain unchanged because the two pinned upstreams disagree on both defaults.
 - `withRemove: boolean = false` (attribute `with-remove`, reflected) — **`lr-tag` only, new in
   8.0.0.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
   present on the markup.
+- `removable: boolean = false` (attribute `removable`) — **`lr-tag` only.** Shoelace-compatible
+  alias for `withRemove`; reading or assigning either property reaches the same state.
 
 **Events:** `lr-remove` — cancelable, no detail, bubbles and composes. Emitted by `lr-tag` only (a
 badge emits nothing at all) when the remove button is activated by click or by Enter/Space while
 focused; it is a real native `<button>`, so both come for free. Only rendered, and therefore only
-fired, while `withRemove` is set, and the event's `target` is the tag itself.
+fired, while `withRemove` / `removable` is set, and the event's `target` is the tag itself.
 
 Unlike `<lr-chip>` — a deliberately controlled component that only ever *announces* a remove request
 — a removable `lr-tag` removes **itself** from the DOM on activation. `lr-remove` is the veto point
@@ -1334,11 +1498,12 @@ stray gap) while its slot is empty, and is seeded from the light-DOM children be
 render so declarative content never flashes hidden for a frame. Mark purely decorative slotted
 content `aria-hidden`.
 
-**CSS parts:** `base` (the badge/tag surface), `start` and `end` (the slot wrappers, hidden entirely
+**CSS parts:** `base` and `badge` are aliases on the same badge/tag surface; `start` and `end` (the slot wrappers, hidden entirely
 while empty), `content` (the wrapper around the default slot — this is the part that truncates with
 an ellipsis, deliberately not `base`, so the tag's oversized remove hit target can overhang the
 compact surface without being clipped), and `remove-button` (`lr-tag` only, rendered only while
-`withRemove`).
+`withRemove` / `removable`). The button also carries Shoelace's `remove-button__base` alias, so
+either part name styles the same native button.
 
 **Themeable custom properties.** Three layers, so a consumer can retune one without restating the
 others. All of them are declared by `lr-badge` and reach `lr-tag` unchanged.
@@ -1378,7 +1543,8 @@ same `--lr-button-radius` pattern.
 `var(--lr-duration-ambient)` — one cycle of the animation), `--lr-badge-attention-easing` (default
 `var(--lr-easing-emphasized)` — kept a separate token from the duration so the `animation` shorthand
 expands to exactly one timing function), `--lr-badge-pulse-color` (default
-`color-mix(in srgb, currentColor 40%, transparent)` — the expanding ring's color),
+`color-mix(in srgb, currentColor 40%, transparent)` — the expanding ring's color; upstream alias
+`--pulse-color`),
 `--lr-badge-pulse-spread` (default `var(--lr-size-0-25rem)` — how far the ring expands) and
 `--lr-badge-bounce-distance` (default `var(--lr-size-0-1875rem)` — the hop's peak travel).
 
@@ -1415,19 +1581,82 @@ the remove button's `:hover` fill).
 </script>
 ```
 
+## `lr-alert`
+
+A closed-by-default alert that exactly carries the pinned Shoelace alert surface under the `lr-`
+prefix. Use `lr-callout` for Lyra/Web Awesome's always-open inline callout contract; use `lr-alert`
+when migrated markup relies on `open`, timed dismissal, countdown, or identity-preserving
+`toast()` behavior.
+
+**Properties:**
+
+- `open: boolean = false` (reflected) — controls visibility. Initial `open` markup establishes
+  state silently; later property or attribute changes run the full lifecycle below.
+- `closable: boolean = false` (reflected) — renders a localized close action.
+- `variant: 'primary' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
+  `primary` resolves through Lyra's shared brand semantic tokens.
+- `duration: number = Infinity` — milliseconds before automatic dismissal. `Infinity` stays open;
+  hover or focus pauses the timer, and leaving interaction restarts the full duration.
+- `countdown: 'rtl' | 'ltr' | undefined` (reflected, unset by default) — adds a decorative visual
+  bar that empties in the requested physical direction. Its motion is removed under
+  `prefers-reduced-motion: reduce`.
+
+**Methods:** `show(): Promise<void>` and `hide(): Promise<void>` resolve after their respective
+after-event. `toast(): Promise<void>` moves the same alert instance into Lyra's singleton logical
+top-end toast region, shows it, and resolves after it hides and is removed. Keep the reference to
+reuse the same identity with another `toast()` call.
+
+**Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide` all bubble, compose, carry no
+detail, and are noncancelable. A transition interrupted by the opposite state does not emit the
+stale after-event.
+
+**Slots:** default message content; `icon` for the optional leading icon.
+
+**CSS parts:** `base`, `icon`, `message`, and `close-button` / `close-button__base` on the same
+native close button. The pinned surface exposes no component CSS custom properties, custom states,
+form association, native-event relays, or delegated native methods.
+
+The rendered message surface has `role="alert"`. The close action's accessible name uses Lyra's
+localized `close` string. Layout uses logical properties, wraps unbroken content at 320px, and the
+toast path reuses the existing Lyra toast layer instead of creating a second placement system.
+
+```html
+<lr-alert id="session-alert" closable duration="10000" countdown="rtl" variant="warning">
+  <svg slot="icon" aria-hidden="true"><!-- warning icon --></svg>
+  Your session will expire soon.
+</lr-alert>
+<button type="button" onclick="document.querySelector('#session-alert').show()">Show alert</button>
+
+<script type="module">
+  import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
+
+  const alert = document.querySelector('#session-alert');
+  alert.addEventListener('lr-after-hide', () => console.log('Alert is hidden'));
+</script>
+```
+
 ## `lr-callout`
 
 An inline status, warning, or error surface. Set `inline` for lightweight reactive form or mutation
 errors without panel chrome.
 
-**Properties:** `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'neutral'` (reflected —
-also picks `[part="base"]`'s role: `alert` for `danger`, `status` otherwise),
-`size: LyraSize = 'm'` (reflected — **new in 8.0.0**; visual density on the library's shared ladder,
-accepting both spellings of every tier (`s`/`small`, `m`/`medium`, `l`/`large`) so markup migrated
-from `wa-callout`/`sl-alert` needs no attribute rewrite. `m` reproduces the panel this component had
-before `size` existed), `heading: string = ''`,
+**Properties:** `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'brand'` (reflected when
+explicit — an unset nested callout inherits its ancestor's semantic colour context without
+materializing a `variant` attribute. Explicitly writing even the same-default `brand` materializes
+the attribute and pins the local brand palette; removing the attribute restores contextual
+inheritance. The property value still picks `[part="base"]`'s role: `alert` for `danger`, `status`
+otherwise),
+`appearance: 'accent'|'filled'|'outlined'|'plain'|'filled-outlined'` (reflected, with no explicit
+default — when set, controls how much of the active variant palette is spent on fill, border, and
+text; leaving it unset preserves the established quiet-fill/loud-edge treatment),
+`size: LyraSize = 'm'` (reflected when explicit — **new in 8.0.0**; visual density on the library's shared ladder,
+accepting both spellings of the aliased tiers (`s`/`small`, `m`/`medium`, `l`/`large`) so markup migrated
+from `wa-callout` needs no attribute rewrite. An unset nested callout inherits its ancestor's size
+context; standalone fallback is `m`. Explicitly writing even the same-default `m` pins the local
+medium mapping, and removing the attribute restores contextual inheritance), `heading: string = ''`,
 `closable: boolean = false` (reflected), `inline: boolean = false` (reflected), `open: boolean = true`
-(reflected — `false` renders nothing at all), and `accessibleLabel: string = ''`
+(reflected as a presence attribute — `open="false"` is accepted in plain markup; `false` removes the
+semantic content and hides the host surface), and `accessibleLabel: string = ''`
 (`accessible-label`; falls back to a plain host `aria-label` attribute when unset).
 
 **Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
@@ -1435,26 +1664,32 @@ unless a listener calls `preventDefault()`.
 
 **Slots:** default message, `heading` (rendered alongside the `heading` property), `icon`.
 
-**CSS parts:** `base`, `icon` (hidden while the `icon` slot is empty), `content`, `heading`,
+**CSS parts:** `base` (the transparent semantic grid wrapper inside the host-owned surface), `icon`
+(hidden while the `icon` slot is empty), `content`, `heading`,
 `message` (wrapper around the default slot), `close-button` (the close control's hit target, always
 at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-icon` (the
 visible "×" glyph inside it — this is what shrinks under `inline`, so the hit target never does).
 
-**Themeable custom properties:** `--lr-callout-background`, `--lr-callout-color`,
-`--lr-callout-border` — the trio one `:host([variant]:not([variant='neutral']))` rule rewrites to
-`var(--lr-color-fill-quiet)` / `var(--lr-color-fill-loud)` / `var(--lr-color-fill-loud)`, the
-generic slots the shared variants sheet has already re-pointed at the active variant's row of the
-semantic grid; the same quiet-fill/loud-text/loud-border scheme `lr-badge` uses. `inline` drops the
-border, background, and panel padding regardless of what these are set to. `--lr-callout-close-hover-bg`
+The surface chrome lives on the custom-element host, not inside `base`. Ordinary host
+`background`, `border`, `border-radius`, `color`, `padding`, and `margin` declarations therefore
+work directly and take normal author precedence. `inline` removes the host's border, background,
+and padding.
+
+**Themeable custom properties:** `--lr-callout-background`, `--lr-callout-color`, and
+`--lr-callout-border` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
+as their standalone fallback. An explicit `variant` maps all generic slots locally; leaving it
+unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
+same brand fallback when there is no surrounding context. `--lr-callout-close-hover-bg`
 (default `var(--lr-color-brand-quiet)`) — the close button's `:hover` background, deliberately
-decoupled from `--lr-callout-background` (which every non-neutral `variant` also retargets for the
-panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
+decoupled from `--lr-callout-background` (which every explicit `variant`, including `neutral`,
+retargets for the panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
 `variant="brand"` panel, which shares the same default token — without a collateral effect on the
 panel background, and vice versa.
 
 Three more, all new in 8.0.0: `--lr-callout-font-size` (default
-`var(--lr-form-control-font-size)` — the callout's text size; each `size` tier sets it from the
-shared ladder), `--lr-callout-padding` (default `var(--lr-form-control-padding-inline)` — the
+`var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit
+`size` tier maps it from the shared ladder), `--lr-callout-padding` (default
+`var(--lr-form-control-padding-inline, var(--lr-space-m))` — the
 panel's padding on *both* axes; each `size` tier sets it from the ladder's inline-padding knob,
 because a panel's block rhythm is generous like a control's inline padding rather than tight like
 its block padding, which only exists to fit text inside a fixed control height; `inline` removes it
@@ -1462,6 +1697,10 @@ entirely) and `--lr-callout-gap` (default `var(--lr-space-s)` — the space betw
 content and the close action. It deliberately does *not* vary by `size`: it separates three adjacent
 boxes rather than setting the panel's density, and shrinking it at the small tiers only crowds
 them).
+
+Initial content and initially distributed slots render while `aria-live="off"`. After that first
+render/slot distribution settles, the region arms as `polite` (`assertive` for `danger`) before
+later heading or message updates. Reconnection repeats the same initial-content staging.
 
 ## `lr-rating`
 
@@ -1476,17 +1715,25 @@ string — routing through it would force every consumer into string round-tripp
 natively a numeric score. The submitted entry is the clamped value stringified (`"0"` while
 unrated), and `required` reports `valueMissing` until a rating above zero is set. As on a native
 `<input>`, the `value` *content attribute* is the reset default that `form.reset()` restores, while
-the `value` IDL property is the live score and is deliberately not reflected.
+the `value` IDL property is the live score and is deliberately not reflected. The mapped
+`default-value` attribute is accepted as a compatibility spelling for that same reset default.
 
-**Properties:** `value: number = 0`, `max: number = 5`, `precision: number = 1`,
+**Properties:** live, non-reflecting `value: number = 0`; reflected
+`defaultValue: number = 0` (attribute `value`, the current reset default; `default-value` is an
+accepted compatibility alias); `customError: string |
+null` (attribute `custom-error`); `max: number = 5`; `precision: number = 1`;
 `readonly: boolean = false` (reflected), `disabled`, `required`, `name`,
 `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — rewrites `--lr-rating-size` from a type ramp
 rather than the shared control ladder, since a rating has no control frame to size; the `m` default
-reproduces the treatment this component had before `size` existed), plus two separate naming knobs:
+reproduces the treatment this component had before `size` existed; setters also accept
+`small`/`medium`/`large` and normalize reads to `s`/`m`/`l`), plus two separate naming knobs:
 `accessibleLabel: string = ''` (attribute **`aria-label`**) and `label: string = ''` (attribute
 `label`). `label` is an accessible-name fallback used when the host carries no `aria-label` — it is
 *not* visible label text, since a rating is a bare row of symbols with no field frame of its own;
 wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+
+Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
+clears to the canonical `''` read value rather than creating a nullable state.
 
 `getSymbol?: (value: number, selected: boolean) => unknown` (property only, no attribute) — **new in
 8.0.0.** Renders a consumer-supplied symbol per position instead of the built-in star. It is called
@@ -1496,8 +1743,13 @@ clipped to that position's filled fraction (`selected` true), which is what keep
 text, never as markup. Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
+- `change` — a native `Event` (bubbling, composed, non-cancelable, and carrying no `detail`) emitted
+  when a user commits a genuinely new value. It fires immediately before `lr-change`; read the
+  numeric score from `event.target.value`. Programmatic `value`/`defaultValue` writes, reset/state
+  restore, and gestures that clamp to the current value are silent.
 - `lr-change` — `detail: { value }`. The rating was committed to a new value. Not emitted when the
-  clamped value is unchanged, nor on a programmatic `value` write.
+  clamped value is unchanged, nor on a programmatic `value` write. It fires immediately after the
+  native `change` event for the same user commit.
 - `lr-hover` — **new in 8.0.0.** `detail: { phase: 'start' | 'move' | 'end', value }`, where `value`
   is the rating that committing the current pointer position *would* produce — enough to render a
   live description of what is being hovered without waiting for a click. Fires only while the rating
@@ -1510,9 +1762,11 @@ text, never as markup. Left unset, the built-in star outline/solid pair is uncha
   events, because the native ones do not cross the shadow boundary.
 - `lr-focus` / `lr-blur` — prefixed compatibility aliases (no detail), each fired immediately after
   its unprefixed counterpart.
+- `lr-invalid` — no detail; fired when a validity check finds the rating invalid.
 
 **Methods:** `focus()`, `blur()` and `click()` forward to the internal rating control.
-`checkValidity()` and `reportValidity()` behave as on a native form control — `reportValidity()`
+`getForm()` returns the browser-resolved owning form. `checkValidity()` and `reportValidity()`
+behave as on a native form control — `reportValidity()`
 additionally shows the browser's validation UI, and counts as interaction, so a failed submit is
 what starts `user-invalid` matching. `setCustomValidity(message: string)` sets a consumer-supplied
 rejection no client-side constraint can express ("you have already rated this item"): a non-empty
@@ -1522,9 +1776,11 @@ so it is used verbatim and never localized. `setCustomValidity('')` clears it an
 control's *computed* validity rather than forcing it valid — a `required` control that is still
 unrated stays `valueMissing`. Like a native control, the custom error survives every intrinsic
 recomputation in between (each `value`/`max`/`required` change re-runs validation) and a
-`form.reset()`; only another `setCustomValidity('')` clears it.
+`form.reset()`; `setCustomValidity('')` or `resetValidity()` clears it.
 
-**Reset and state restore.** `form.reset()` restores the `value` *content attribute*, drops any
+**Reset and state restore.** A live `value` write marks the rating dirty, so later
+`defaultValue`/`value`-attribute/`default-value`-attribute mutations update the reset target without
+overwriting the live score. `form.reset()` restores that current default, drops any
 in-flight hover preview, and returns the control to pristine, so the `user-valid`/`user-invalid`
 states stop matching even though a required-and-unrated control is still `invalid`. Browser session
 restore (`formStateRestoreCallback`) reinstates the previously submitted numeric value; a
@@ -1534,14 +1790,19 @@ non-string restored state falls back to `0` rather than producing NaN geometry.
 `lr-rating:state(user-invalid)` is the one to paint red. Plain `invalid` matches a pristine
 `required` rating that has never been set.
 
-**CSS parts:** `base` (the `role="slider"` control), `star` (each rendered symbol), `star-fill` (the
+**CSS parts:** `base` (compatibility name for the slider-like control; use `rating`),
+`rating` (the `role="slider"` control; it is the same node as `base`), `star` (each rendered symbol), `star-fill` (the
 filled overlay inside each symbol, clipped to that symbol's filled fraction — 0%, a partial
 percentage under a fractional `precision`, or 100%).
 
 **Themeable custom properties:** `--lr-rating-fill` (default `--lr-color-warning` — filled-symbol
 color), `--lr-rating-empty-color` (default `--lr-color-border` — unfilled-symbol color, also
 retained during hover preview), and `--lr-rating-size` (default `--lr-font-size-xl` — symbol size;
-each `size` step rewrites it).
+each `size` step rewrites it). The mapped compatibility hooks are `--symbol-color` (inactive
+symbols), `--symbol-color-active` (filled symbols), `--symbol-size` (symbol size), and
+`--symbol-spacing` (the gap around symbols). The Lyra-prefixed color and size names win if both a
+Lyra property and its compatibility alias are set. `--symbol-size` otherwise feeds the active
+`size` step, while `--symbol-spacing` defaults to `--lr-space-xs`.
 
 Pointer selection resolves the position within the clicked star and snaps upward to `precision`
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
@@ -1549,7 +1810,15 @@ input as well as keyboard/value updates. The semantic slider's base keeps a 40×
 activation area even for the degenerate `max=0`/`max=1` cases; larger ratings naturally grow wider.
 
 ```html
-<lr-rating name="score" label="Overall rating" max="5" precision="0.5" size="l"></lr-rating>
+<lr-rating
+  name="score"
+  label="Overall rating"
+  default-value="2"
+  max="5"
+  precision="0.5"
+  size="l"
+  style="--symbol-color-active: var(--lr-color-success); --symbol-size: var(--lr-font-size-2xl); --symbol-spacing: var(--lr-space-s)"
+></lr-rating>
 <p id="preview"></p>
 <script type="module">
   import '@aceshooting/lyra-ui/components/overlays/rating/rating.js';
@@ -1561,6 +1830,7 @@ activation area even for the degenerate `max=0`/`max=1` cases; larger ratings na
     const { phase, value } = event.detail;
     preview.textContent = phase === 'end' ? '' : `Rate ${value}`;
   });
+  rating.addEventListener('change', (event) => console.log('native commit', event.target.value));
   rating.addEventListener('lr-change', (event) => console.log('committed', event.detail.value));
 </script>
 ```

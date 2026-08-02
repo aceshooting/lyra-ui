@@ -52,6 +52,8 @@ export type LiveRegionMode = 'polite' | 'assertive';
  *
  * @customElement lr-live-region
  * @csspart region - The visually-hidden element carrying `role`/`aria-live`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraLiveRegion extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];

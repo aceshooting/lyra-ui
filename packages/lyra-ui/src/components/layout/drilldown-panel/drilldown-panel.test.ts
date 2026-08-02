@@ -70,13 +70,15 @@ it('renders one lr-breadcrumb-item per path node, marking only the last as curre
 it('renders a clickable button for every non-current step and plain text (no button) for the current step', async () => {
   const el = await populated();
   const items = el.shadowRoot!.querySelectorAll('lr-breadcrumb-item');
-  expect(items[0].querySelector('button[part="breadcrumb-button"]')).to.exist;
-  expect(items[1].querySelector('button[part="breadcrumb-button"]')).to.not.exist;
+  expect(items[0].shadowRoot!.querySelector('button[part~="base"]')).to.exist;
+  expect(items[0].getAttribute('exportparts')).to.equal('base: breadcrumb-button');
+  expect(items[1].shadowRoot!.querySelector('button[part~="base"]')).to.not.exist;
 });
 
 it('fires lr-drilldown-navigate with the step\'s id/index when a non-current breadcrumb button is activated', async () => {
   const el = await populated();
-  const button = el.shadowRoot!.querySelector('lr-breadcrumb-item button[part="breadcrumb-button"]') as HTMLButtonElement;
+  const first = el.shadowRoot!.querySelector('lr-breadcrumb-item')!;
+  const button = first.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
   const listener = oneEvent(el, 'lr-drilldown-navigate');
   button.click();
   const event = await listener;

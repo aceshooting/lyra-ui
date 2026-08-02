@@ -1,3 +1,4 @@
+export * from './alert/alert.js';
 export * from './badge/badge.js';
 export * from './badge/tag.js';
 export * from './callout/callout.js';

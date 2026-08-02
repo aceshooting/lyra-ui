@@ -50,6 +50,8 @@ export type ResultCardAppearance = LyraFrame;
  *   while `compact`.
  * @cssprop [--lr-result-card-compact-body-gap=var(--lr-space-2xs)] - Gap between `[part="body"]`'s
  *   children while `compact`.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) {
   static override styles = [LyraElement.styles, styles];

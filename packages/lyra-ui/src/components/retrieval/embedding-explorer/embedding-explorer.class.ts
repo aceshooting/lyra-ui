@@ -53,6 +53,8 @@ export interface LyraEmbeddingExplorerEventMap {
  *   a `block-size` is dropped, leaving the `viewBox`-derived aspect-ratio size. A consumer's own
  *   `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation
  *   `min-block-size` floor still raises it.
+ * @status stable
+ * @since 6.2.0
  */
 export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEventMap> {
   static override styles = [LyraElement.styles, styles];

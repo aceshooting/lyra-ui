@@ -178,6 +178,8 @@ export interface LyraSplitEventMap {
  *   anyone can see. Declared on `:host`, so an override must target the element itself (not an
  *   ancestor). Setting it by hand is rarely right -- retheme `--lr-size-3px`/`--lr-icon-button-size`
  *   instead and the slop recomputes.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   static override styles = [LyraElement.styles, styles];

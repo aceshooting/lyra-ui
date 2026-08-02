@@ -19,13 +19,15 @@ class Helper {}
  * @customElement lr-fixture
  * @event {CustomEvent<{ ready: boolean }>} lr-ready - The fixture became ready.
  * @event focus - The inner control received focus.
+ * @event load - The native resource loaded.
+ * @event request - The data consumer received a request.
  */
 export class LyraFixture {}
 `;
 
 assert.deepEqual(
   sorted(eventNamesFromComponentJsDoc(source, 'lr-fixture')),
-  ['focus', 'lr-ready'],
+  ['focus', 'load', 'lr-ready', 'request'],
   'only @event tags from the matching component JSDoc are events',
 );
 
@@ -47,6 +49,15 @@ assert.deepEqual(
   sorted(eventNamesFromAuthoredSection(authored)),
   ['focus', 'lr-ready'],
   'the authored parser is limited to the Events contract block',
+);
+
+assert.deepEqual(
+  sorted(eventNamesFromAuthoredSection(`
+    ## \`lr-native-relay\`
+    **Events:** \`load\`, \`error\`, \`play\`, \`request\`, and \`timeupdate\`.
+  `)),
+  ['error', 'load', 'play', 'request', 'timeupdate'],
+  'explicit native relay names and the reviewed data request event are valid authored events',
 );
 
 assert.deepEqual(

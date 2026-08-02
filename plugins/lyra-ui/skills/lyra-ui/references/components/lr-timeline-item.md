@@ -5,6 +5,8 @@
 - **Import** `import '@aceshooting/lyra-ui/components/data/timeline/timeline-item.js';` (registers the tag; side-effect import)
 - **Class** `LyraTimelineItem`, also available unregistered from `@aceshooting/lyra-ui/components/data/timeline/timeline-item.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-timeline` (same section below)

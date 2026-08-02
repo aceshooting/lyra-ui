@@ -90,6 +90,8 @@ export interface DocumentCompareVersion extends DocumentRef {
  * @csspart pane-header - A pane's visible label.
  * @csspart pane-empty - The placeholder shown in a pane whose version is unset.
  * @cssprop [--lr-document-compare-pane-max-height=var(--lr-size-24rem)] - Maximum block size of a side-by-side pane before it scrolls internally.
+ * @status stable
+ * @since 4.1.0
  */
 export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap> {
   static override styles = [LyraElement.styles, styles];

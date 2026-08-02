@@ -61,6 +61,27 @@ export const ImagePreview: Story = {
   `,
 };
 
+export const ZoomableImage: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The opt-in `zoomable` property wraps only image previews in `<lr-pan-zoom>` and forwards its controls through the `frame-*` parts.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-document-preview
+      style="max-width: 20rem;"
+      src="https://picsum.photos/id/1015/900/600"
+      mime-type="image/jpeg"
+      filename="river-valley.jpg"
+      alt="A river running through a mountain valley"
+      zoomable
+    ></lr-document-preview>
+  `,
+};
+
 export const DecorativeImagePreview: Story = {
   name: 'image/* — decorative image',
   render: () => html`

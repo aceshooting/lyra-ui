@@ -252,7 +252,7 @@ export const CustomControls: Story = {
           adapter: checkboxAdapter,
           render: (context) => html`
             <lr-checkbox
-              ?checked=${context.value === true}
+              .checked=${context.value === true}
               ?disabled=${context.disabled}
               ?required=${context.required}
               .errorText=${context.errorText}

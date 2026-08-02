@@ -57,6 +57,8 @@ export type LyraDiffViewLayout = 'unified' | 'split';
  * @cssprop [--lr-diff-view-remove-color=var(--lr-color-danger)] - Removed-line text color.
  * @cssprop [--lr-diff-view-fold-background=var(--lr-color-surface-raised)] - Fold-marker background.
  * @cssprop [--lr-diff-view-fold-color=var(--lr-color-text-quiet)] - Fold-marker text color.
+ * @status stable
+ * @since 4.0.0
  */
 export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   static override styles = [LyraElement.styles, styles];

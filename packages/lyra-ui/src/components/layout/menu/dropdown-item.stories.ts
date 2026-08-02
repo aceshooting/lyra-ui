@@ -7,7 +7,68 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lr-dropdown-item value="archive">Archive</lr-dropdown-item>`,
+  render: () => html`
+    <div role="menu" aria-label="Actions">
+      <lr-dropdown-item value="archive">Archive</lr-dropdown-item>
+    </div>
+  `,
+};
+
+export const CompatibilitySurface: Story = {
+  render: () => html`
+    <div role="menu" aria-label="Compatibility states" style="inline-size: 18rem;">
+      <lr-dropdown-item value="rename">
+        <span slot="prefix">✏️</span>
+        Rename
+        <span slot="details">⌘R</span>
+      </lr-dropdown-item>
+      <lr-dropdown-item type="checkbox" checked value="wrap">Wrap text</lr-dropdown-item>
+      <lr-dropdown-item loading value="saving">Saving</lr-dropdown-item>
+      <lr-dropdown-item variant="danger" value="delete">Delete</lr-dropdown-item>
+    </div>
+  `,
+};
+
+export const SubmenuControl: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The mapped `openSubmenu()` / `closeSubmenu()` methods settle after `submenuOpen` and its `submenu-open` reflection agree. Native focus and blur remain on the focusable item host.',
+      },
+    },
+  },
+  render: () => html`
+    <div data-submenu-story style="display: grid; gap: var(--lr-space-s); inline-size: 18rem;">
+      <div style="display: flex; gap: var(--lr-space-xs);">
+        <button
+          type="button"
+          @click=${(event: Event) => {
+            const item = (event.currentTarget as HTMLElement)
+              .closest('[data-submenu-story]')!
+              .querySelector('lr-dropdown-item')!;
+            void item.openSubmenu('none');
+          }}
+        >Open submenu</button>
+        <button
+          type="button"
+          @click=${(event: Event) => {
+            const item = (event.currentTarget as HTMLElement)
+              .closest('[data-submenu-story]')!
+              .querySelector('lr-dropdown-item')!;
+            void item.closeSubmenu();
+          }}
+        >Close submenu</button>
+      </div>
+      <div role="menu" aria-label="Share actions">
+        <lr-dropdown-item>
+          Share
+          <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+          <lr-dropdown-item slot="submenu" value="link">Copy link</lr-dropdown-item>
+        </lr-dropdown-item>
+      </div>
+    </div>
+  `,
 };
 
 export const Sizes: Story = {
