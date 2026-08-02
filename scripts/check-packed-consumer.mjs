@@ -182,9 +182,25 @@ const bundleEntries = {
   // Zero optional peers, so the delta is LyraElement's token/locale/interaction layer plus button's
   // own class and styles. 44_000 keeps headroom over the current 42.1 KiB build -- still far below
   // the gzip footprint of the smallest optional peer this canary exists to catch.
+  //
+  // Raised from 44_000 later in 8.0.0, for the same reason as every bump above and verified the
+  // same way: the canary's question is whether something heavy reached the eager graph, and the
+  // answer is still no -- an isolated `<lr-button>` builds to ONE file with no dynamic-import
+  // chunk and no optional peer. Measured 44.6 KiB gzip (171.0 KiB raw). The delta over the last
+  // bump is shared base-layer work that button pays for by construction: the external-label bridge
+  // (`internal/form-control-labels.ts`, installed from LyraElement's constructor for
+  // form-associated hosts), the barred-validation predicate, and the shared required-marker sheet.
+  // 48_000 leaves ~2.3 KiB, in line with the headroom each earlier re-baseline kept.
+  //
+  // Worth knowing before the next bump: button's weight is not really button. Measured attribution
+  // is 33.7% the built-in English catalog (DEFAULT_STRINGS, 1232 keys, pinned into every component
+  // because resolveLyraString indexes it with a runtime key), 23.4% the token sheets, 14.6% Lit
+  // itself, and only ~15% LyraElement plus button's own class and styles. Stubbing the catalog
+  // alone puts this entry at 28.3 KiB. Until a per-component message slice exists, every bump here
+  // is really the catalog being counted again.
   button: {
     fixture: 'core',
-    maxGzipBytes: 44_000,
+    maxGzipBytes: 48_000,
   },
   // Retention canaries rather than size budgets: these entries are imported only for side effects,
   // so the assertions in runBundle prove a production tree-shaker kept the shipped CSS asset and
