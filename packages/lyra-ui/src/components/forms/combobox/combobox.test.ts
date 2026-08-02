@@ -3729,8 +3729,14 @@ it('mirrors the lowercase IDL aliases of the native input hints', async () => {
   expect(el.enterKeyHint).to.equal('search');
   expect(el.inputmode).to.equal('numeric');
   expect(el.enterkeyhint).to.equal('search');
-  expect(el.input?.inputMode).to.equal('numeric');
-  expect(el.input?.enterKeyHint).to.equal('search');
+  // Assert what the component actually renders -- `inputmode=`/`enterkeyhint=` ATTRIBUTES on the
+  // inner input (combobox.class.ts). The matching IDL properties are engine-dependent: Chromium
+  // reflects both, WebKit implements the attributes but leaves `input.enterKeyHint` undefined, so
+  // reading the IDL here would assert a browser feature rather than this component's contract.
+  expect(el.input?.getAttribute('inputmode')).to.equal('numeric');
+  expect(el.input?.getAttribute('enterkeyhint')).to.equal('search');
+  if (el.input && 'inputMode' in el.input) expect(el.input.inputMode).to.equal('numeric');
+  if (el.input && 'enterKeyHint' in el.input) expect(el.input.enterKeyHint).to.equal('search');
 
   el.inputmode = null as unknown as string;
   el.enterkeyhint = null as unknown as string;
