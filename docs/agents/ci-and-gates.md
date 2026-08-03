@@ -175,6 +175,34 @@ artifact fails the run instead of silently falling back to a clone-generated man
 - `--keep-going` aggregates only generated-artifact freshness failures. Real lint, build, test,
   docs, visual, packed-consumer, and platform failures remain fail-fast.
 
+## Full local test sweep: `scripts/test.sh`
+
+`./scripts/test.sh` runs the complete `src/**/*.test.ts` suite (453 files, not the curated
+`test:platform` subset) on Chromium, Firefox, and WebKit, plus SSR/hydration, visual regression,
+and the other workspace package(s)' own tests -- everything `full-engine.yml` covers weekly in CI,
+on demand and locally. It deliberately excludes `scripts/ci.sh`'s lint/build-artifact-freshness/
+docs-freshness/packed-consumer gates; the two scripts are complementary, not overlapping: `ci.sh`
+is the per-commit-equivalent gate, `test.sh` is the pre-publish cross-browser sweep.
+
+Five lanes (`chromium`, `firefox`, `webkit`, `visual`, `workspace`) run as separate background
+processes by default, since each drives its own browser/process and the machine's spare cores would
+otherwise sit idle running them one at a time. `./scripts/test.sh --serial` runs them one at a time
+instead, for lower-core machines. Each lane's own steps still run in order within that lane (for
+example the `chromium` lane is `check:component-quality:built` -> `test:ssr` -> `test:hydration` ->
+`test:coverage` -> `check:coverage-floors`, matching `build-and-coverage`'s order); a shared
+`pnpm build` runs once up front since every lane needs `dist/` for `package-entrypoints.test.ts`.
+Each lane's output is captured to its own log file (path printed at start) so concurrent runs don't
+interleave on the terminal; a failing lane's log is printed in full at the end.
+
+The `firefox`/`webkit` lanes run `test:full-engine-shard` with `WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1`
+-- the shard math in `scripts/full-engine-shard.mjs` assigns every discovered file to shard 1 of 1,
+so this is the complete suite in one process, not an actual shard. `test:platform`'s 26-file subset
+is a strict subset of this run, so it is not run separately here.
+
+Because it's heavy (three full browser-engine sweeps), it is meant to run before publishing a
+release, not on every commit -- see [AGENTS.md](../../AGENTS.md)'s "Dev commands and gates" section
+and `.claude/commands/publish.md` step 2.
+
 ## Release integrity
 
 `scripts/publish.sh` is self-contained in this repository. It does not read or run a sibling

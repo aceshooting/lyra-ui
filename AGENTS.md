@@ -84,6 +84,8 @@ pnpm manifest    # --filter @aceshooting/lyra-ui: cem analyze -> custom-elements
 pnpm registrations # regenerate all.ts imports, tag aliases, registration allowlist, and sideEffects
 pnpm docs        # Storybook (.storybook/), demos every component live at localhost:6006
 pnpm create:component --family utility --name status-panel # validated new-component scaffold
+./scripts/test.sh # full Chromium+Firefox+WebKit test sweep (parallel lanes) + SSR/hydration/
+                 #     visual/workspace tests -- run before publishing, NOT on every commit
 ```
 
 The scaffold accepts an unprefixed name, enrolls every authored inventory/docs surface, and runs
@@ -102,6 +104,11 @@ its baseline in all three engines; see
   deterministic shards per browser on a weekly schedule and by manual dispatch; releases require
   the push CI and all eight dispatched shards to succeed for the exact main commit before any
   release tag is created.
+- `./scripts/test.sh` runs the COMPLETE test suite (not `test:platform`'s curated subset) on
+  Chromium, Firefox, and WebKit, plus SSR/hydration/visual/workspace tests, in parallel lanes —
+  the same coverage `full-engine.yml` gives weekly in CI, on demand and locally. It's heavy (three
+  full browser-engine sweeps); run it before publishing a release, not on every commit. Full
+  detail: [docs/agents/ci-and-gates.md](docs/agents/ci-and-gates.md).
 - `prepack` (run by npm, not CI) begins by stamping package-version metadata, then determines
   tarball contents and regenerates the editor data
   (`vscode-html-data.json`/`vscode-css-data.json`/`web-types.json`); CI now regenerates and
