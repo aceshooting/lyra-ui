@@ -139,7 +139,18 @@ async function inspectDoc(context, doc) {
     while (idlePolls < QUIET_POLLS && Date.now() < deadline && clicked < MAX_CLICKS) {
       let expanded = false;
       while ((await tolerateNavigation(page, () => showCode().count())) > 0 && clicked < MAX_CLICKS) {
-        await tolerateNavigation(page, () => showCode().first().click({ timeout: CLICK_TIMEOUT }));
+        // Every "static" demo story on an autodocs page mounts and opens together (see e.g.
+        // MentionPopover's stories), so a floating overlay left open by an earlier story can end up
+        // sitting over a later toggle purely from where the page has grown to by now -- that's an
+        // incidental visual overlap from unrelated demo content, not a real reason this toggle isn't
+        // clickable. Scroll it into view as a normal click would, then dispatch a native click
+        // directly on the element: immune to the coordinate-based hit-test a simulated mouse click
+        // (even with `force`, which also skips the auto-scroll a real click gets) would fail on.
+        await tolerateNavigation(page, async () => {
+          const control = showCode().first();
+          await control.scrollIntoViewIfNeeded({ timeout: CLICK_TIMEOUT });
+          await control.evaluate((element) => element.click());
+        });
         clicked += 1;
         expanded = true;
         await page.waitForTimeout(CLICK_SETTLE_MS);
