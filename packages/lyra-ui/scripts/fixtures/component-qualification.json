@@ -14077,7 +14077,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/docx-viewer/docx-viewer.test.ts",
-              "line": 1348,
+              "line": 1352,
               "test": "is accessible with an active search match",
               "target": "el",
               "state": "populated"
@@ -29218,7 +29218,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.class.ts",
-              "line": 418,
+              "line": 422,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

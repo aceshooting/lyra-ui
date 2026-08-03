@@ -132,6 +132,11 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // Checked here (pre-render), not in updated(): invalidateThumbnails() writes the reactive
+    // `thumbnailStates`, and updated() is a post-render hook, so doing it there scheduled a whole
+    // extra Lit update cycle after this one already committed. Invalidating before render also
+    // means this same pass already reflects the new width instead of needing a second one.
+    if (changed.has('thumbWidth') && changed.get('thumbWidth') !== undefined) this.invalidateThumbnails();
     if (changed.has('pageCount') || changed.has('resolvedPageCount')) {
       const list = this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list');
       const focused = activeElementIn(list?.shadowRoot);
@@ -297,7 +302,6 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('thumbWidth') && changed.get('thumbWidth') !== undefined) this.invalidateThumbnails();
     const pendingFocusPage = this.pendingFocusPage;
     this.pendingFocusPage = null;
     if (pendingFocusPage !== null) {

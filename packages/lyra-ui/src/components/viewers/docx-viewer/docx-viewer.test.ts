@@ -1297,7 +1297,11 @@ describe('search', () => {
     } finally { restore(); }
   });
 
-  it('caps match objects and painted marks for adversarial repetitive content', async () => {
+  it('caps match objects and painted marks for adversarial repetitive content', async function () {
+    // Painting 1000 capped match marks is inherently more expensive than the framework's default
+    // budget assumes, especially under CI/full-suite contention -- give this one test a margined
+    // threshold (see document-library.test.ts's equivalent 1000-row case).
+    this.timeout(20_000);
     const { el, restore } = await loadWithMarkup(`<p>${'x '.repeat(1500)}</p>`);
     try {
       expect(await el.search('x')).to.equal(1000);
