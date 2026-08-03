@@ -643,7 +643,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 47.2 KiB (48349 bytes; bundle SHA-256 `21349d0559a82842a0300c46ef455bb6780b17bd563371f41ab64bc5f57c8392`)
+- Standalone gzip: 47.2 KiB (48347 bytes; bundle SHA-256 `246fb5e5e746e01cc00609fdc172b4ceb3666c11b428d9d18f49686cdda70eb7`)
 
 </details>
 
@@ -727,7 +727,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 31.1 KiB (31821 bytes; bundle SHA-256 `011e200d3fd934955a4d2d717c8718c0e7a679d018f0d56a088c1a7757aaf87e`)
+- Standalone gzip: 31.1 KiB (31857 bytes; bundle SHA-256 `134d3c1b33a6b3afb1099b3f13eda35b25bd4e473698288ba6e08dd02544a165`)
 
 </details>
 
@@ -823,7 +823,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 39.3 KiB (40260 bytes; bundle SHA-256 `3048a42504b947a2c8f84135a3f383da2756bcc76e74ad5c8458dbedc64337ff`)
+- Standalone gzip: 39.3 KiB (40263 bytes; bundle SHA-256 `e8fd94b072b7da4b42f403adb3b6e04a44e811909d5803adb87a0a47e09f1bcc`)
 
 </details>
 
@@ -1387,7 +1387,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `maplibre-gl`
 - Direct Lyra dependencies: `lr-json-viewer`, `lr-map`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 44.1 KiB (45183 bytes; bundle SHA-256 `e5a419779a6ea021574fc9ffa68c206eafa0dcfe5719834856945eef84ab2d12`)
+- Standalone gzip: 44.2 KiB (45228 bytes; bundle SHA-256 `70f1df74a108a711a75c3c8f872a121f0daeecadc71bbaf54446ecb4663ebd1f`)
 
 </details>
 
@@ -1735,7 +1735,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `maplibre-gl`
 - Direct Lyra dependencies: `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 28.1 KiB (28802 bytes; bundle SHA-256 `887ed9e8c3d777a6b88f5844f518b7770b8370957987142724c884a9faa83330`)
+- Standalone gzip: 28.2 KiB (28846 bytes; bundle SHA-256 `701c6488637bed64d710abe458069f4b399856d1a08609b7b463e4fcedfbe8a4`)
 
 </details>
 
