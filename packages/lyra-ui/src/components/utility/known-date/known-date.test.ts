@@ -3,7 +3,7 @@ import type { PropertyValues } from 'lit';
 import './known-date.js';
 import '../../forms/input/input.js';
 import '../../forms/button/button.js';
-import type { LyraKnownDate } from './known-date.js';
+import type { LyraKnownDate, DateParts } from './known-date.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -1618,4 +1618,230 @@ describe('lr-known-date barred from constraint validation', () => {
     await el.updateComplete;
     expect(el.validity.valueMissing, 'valueMissing while readonly').to.be.false;
   });
+});
+
+// The remaining tests close narrow, hard-to-reach branches in known-date.class.ts: defensive
+// fallbacks for a caller-supplied `parts`/`value` that skips normal per-keystroke digit
+// normalization, forced Intl-formatter failures, and a stripped-down adopted realm missing
+// several platform globals. Five structurally-present branches are NOT covered here because
+// call-site tracing (and, in two cases, the DOM spec itself) shows they are unreachable through
+// this class's own call graph:
+//   - parseISO()'s own `isNaN(date.getTime())` check: never true given its regex-gated inputs are
+//     always finite digit-only numbers, and `new Date(y, m, d)` never returns Invalid Date for any
+//     finite numeric arguments (it rolls over out-of-range values instead).
+//   - the `locale || undefined` fallback in `localeDateOrder()` and in `normalizeFieldDigits()`:
+//     both are only ever called with `this.effectiveLocale`, which (via `resolveIntlLocale()`)
+//     always resolves to a non-empty tag, so the falsy side of `||` can never be taken.
+//   - `observeErrorNode()`'s own `!this.errorObserver` guard: redundant with its sole caller
+//     (`bindErrorObserverTargets()`)'s identical guard one frame up, which already returns first.
+//   - `observeErrorNode()`'s final `node.nodeType !== 1` guard: per the DOM spec, only Element and
+//     Text nodes are ever "slottables" (declarative slot="x", fallback content, or the imperative
+//     `slot.assign()` API all enforce this) and `this` is always an Element, so every real caller
+//     hands this function only Element or Text nodes -- by the time the earlier `nodeType === 3`
+//     check has already returned for Text, the remaining node is guaranteed to be an Element.
+
+it("tolerates a non-digit parts assignment that survives computeCanonicalValue's blank guard but fails the stricter ISO regex", async () => {
+  // parseISO()'s own `!match` branch (it is never exported, so this is the only way to reach it):
+  // every internal caller already pre-validates with an equivalent regex before calling it, EXCEPT
+  // the public `parts` setter, which stores whatever strings a caller supplies verbatim.
+  const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
+  await el.updateComplete;
+  el.parts = { day: 'xx', month: '03', year: '2007' };
+  await el.updateComplete;
+  expect(el.value, 'a non-numeric day never resolves to a composite value').to.equal('');
+});
+
+it('tolerates a null or partial parts assignment, defaulting missing fields to empty strings', async () => {
+  const el = (await fixture(html`<lr-known-date value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;
+  await el.updateComplete;
+
+  el.parts = null as unknown as DateParts;
+  await el.updateComplete;
+  expect(el.parts).to.deep.equal({ day: '', month: '', year: '' });
+  expect(el.value).to.equal('');
+
+  el.parts = { day: '27' } as unknown as DateParts;
+  await el.updateComplete;
+  expect(el.parts, 'month/year missing from the assignment default to empty').to.deep.equal({
+    day: '27',
+    month: '',
+    year: '',
+  });
+  expect(el.value, 'an incomplete parts assignment never produces a composite value').to.equal('');
+});
+
+it('treats a null or undefined value assignment as an empty composite value', async () => {
+  const el = (await fixture(html`<lr-known-date value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;
+  await el.updateComplete;
+  el.value = null as unknown as string;
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+  expect(el.parts).to.deep.equal({ day: '', month: '', year: '' });
+});
+
+it('falls back to month/day/year field order when Intl reports fewer than three date fields', async () => {
+  const original = Intl.DateTimeFormat.prototype.formatToParts;
+  Intl.DateTimeFormat.prototype.formatToParts = function (...args: Parameters<typeof original>) {
+    return original.apply(this, args).filter((p) => p.type !== 'year');
+  };
+  try {
+    const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    expect(fieldOrder(el)).to.deep.equal(['month', 'day', 'year']);
+  } finally {
+    Intl.DateTimeFormat.prototype.formatToParts = original;
+  }
+});
+
+it('falls back to the hardcoded month/day/year order when Intl.DateTimeFormat.formatToParts throws', async () => {
+  const original = Intl.DateTimeFormat.prototype.formatToParts;
+  Intl.DateTimeFormat.prototype.formatToParts = function () {
+    throw new RangeError('forced failure for coverage');
+  };
+  try {
+    const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    expect(fieldOrder(el)).to.deep.equal(['month', 'day', 'year']);
+  } finally {
+    Intl.DateTimeFormat.prototype.formatToParts = original;
+  }
+});
+
+it('still normalizes Arabic-Indic and Persian digits when Intl.NumberFormat construction throws', async () => {
+  // A fresh, never-before-used locale in this file guarantees a cache miss in getNumberFormat()'s
+  // shared memo, so the forced-throwing constructor actually runs instead of returning a formatter
+  // some earlier test already cached.
+  const original = Intl.NumberFormat;
+  Intl.NumberFormat = function () {
+    throw new RangeError('forced failure for coverage');
+  } as unknown as typeof Intl.NumberFormat;
+  try {
+    const el = (await fixture(html`<lr-known-date locale="de-DE"></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    typeInto(fieldFor(el, 'day'), '٠٩');
+    expect(
+      fieldFor(el, 'day').value,
+      'the two static Unicode digit ranges remain available without the locale-native formatter',
+    ).to.equal('09');
+  } finally {
+    Intl.NumberFormat = original;
+  }
+});
+
+it('ignores a bubbling slotchange event whose target is not a forwarding slot element', async () => {
+  // The child carries no slot attribute, so it is not assigned into any of this component's own
+  // named shadow slots (label/hint/error) -- it only needs to bubble a 'slotchange' up to the host
+  // itself, where onForwardedSlotChange listens for a forwarding wrapper's own slot changes.
+  const el = (await fixture(html`<lr-known-date><div>plain child</div></lr-known-date>`)) as LyraKnownDate;
+  await el.updateComplete;
+  const plainChild = el.querySelector('div')!;
+  expect(() => plainChild.dispatchEvent(new Event('slotchange', { bubbles: true }))).to.not.throw();
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+});
+
+it('observes a bare text fallback node reached through a forwarding slot', async () => {
+  const host = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const shadow = host.attachShadow({ mode: 'open' });
+  const el = document.createElement('lr-known-date') as LyraKnownDate;
+  const errorSlot = document.createElement('slot');
+  errorSlot.name = 'error';
+  errorSlot.slot = 'error';
+  // Not overridden by an outer consumer, so assignedNodes({flatten:true}) falls back to this
+  // literal child -- a bare text node, covering observeErrorNode()'s characterData branch. (A
+  // sibling comment node was tried here too, but per the DOM spec only Element/Text nodes are ever
+  // "slottables" -- a Comment is silently excluded by assignedNodes() itself before this class's
+  // own code ever sees it, so observeErrorNode()'s final `nodeType !== 1` guard is unreachable
+  // through any real caller and is not covered here.)
+  errorSlot.append(document.createTextNode('fallback text'));
+  el.append(errorSlot);
+  shadow.append(el);
+  await el.updateComplete;
+  expect(el.isConnected, 'renders without throwing on a text-node slot fallback').to.be.true;
+});
+
+it('excludes a comment node while computing the announced slotted error text', async () => {
+  const el = (await fixture(html`
+    <lr-known-date>
+      <span slot="error">Initial</span>
+    </lr-known-date>
+  `)) as LyraKnownDate;
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await el.updateComplete;
+
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
+  const span = el.querySelector('span[slot="error"]')!;
+  span.append(document.createComment(' ignored comment '), document.createTextNode(' more'));
+  await Promise.resolve();
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal(['Initial more']);
+});
+
+it("prefers a nested element's own non-empty aria-label over its visible text when announcing", async () => {
+  const el = (await fixture(html`
+    <lr-known-date>
+      <span slot="error">Initial</span>
+    </lr-known-date>
+  `)) as LyraKnownDate;
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await el.updateComplete;
+
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
+  const outer = el.querySelector('span[slot="error"]')!;
+  outer.innerHTML = '<span aria-label="Read this instead">Visually different text</span>';
+  await Promise.resolve();
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal(['Read this instead']);
+});
+
+it('focus() falls back to the first field in locale order once every field is already filled', async () => {
+  const el = (await fixture(
+    html`<lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>`,
+  )) as LyraKnownDate;
+  await el.updateComplete;
+  el.focus();
+  const focused = el.shadowRoot!.activeElement as HTMLInputElement | null;
+  expect(focused?.dataset.field).to.equal('day');
+});
+
+it('falls back to ambient globals in a window missing MutationObserver, requestAnimationFrame, Event, and InputEvent', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow!;
+  const frameDocument = frame.contentDocument!;
+  const removable = ['MutationObserver', 'requestAnimationFrame', 'Event', 'InputEvent'] as const;
+  const descriptors = new Map(
+    removable.map((name) => [name, Object.getOwnPropertyDescriptor(frameWindow, name)] as const),
+  );
+  for (const name of removable) delete (frameWindow as unknown as Record<string, unknown>)[name];
+
+  const el = (await fixture(html`<lr-known-date value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;
+  el.remove();
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(
+      (el as unknown as { errorObserver?: MutationObserver }).errorObserver,
+      'no MutationObserver constructor available in the adopted realm',
+    ).to.equal(undefined);
+
+    // Lets connectedCallback's own promise chain settle without requestAnimationFrame -- it falls
+    // back to a bare Promise.resolve() when the adopted window has none.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+
+    typeInto(fieldFor(el, 'day'), '5');
+    fieldFor(el, 'day').dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
+    expect(
+      el.value,
+      'still commits through the module-level Event/InputEvent fallback',
+    ).to.equal('2007-03-05');
+  } finally {
+    el.remove();
+    for (const name of removable) {
+      const descriptor = descriptors.get(name);
+      if (descriptor) Object.defineProperty(frameWindow, name, descriptor);
+    }
+    frame.remove();
+  }
 });

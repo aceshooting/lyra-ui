@@ -146,6 +146,27 @@ describe('lr-memory-panel', () => {
     expect(receivedEntities[0]!.id).to.equal('e1');
   });
 
+  it('toggling the expand-toggle a second time collapses it back and emits expanded: false', async () => {
+    const el = await populated();
+    const toggle = el.shadowRoot!.querySelector(
+      '[part="item"][data-id="l1"] [part="expand-toggle"]',
+    ) as HTMLButtonElement;
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+
+    const listener = oneEvent(el, 'lr-expand');
+    toggle.click();
+    const event = await listener;
+    expect(event.detail).to.deep.equal({ id: 'l1', expanded: false });
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-expanded')).to.equal('false');
+    const body = el.shadowRoot!.querySelector(
+      '[part="item"][data-id="l1"] [part="item-body"]',
+    ) as HTMLElement;
+    expect(body.hasAttribute('hidden')).to.equal(true);
+  });
+
   it('forwards types and thresholds through to the nested lr-provenance-panel', async () => {
     const el = await populated();
     el.types = [{ id: 'person', label: 'Person' }];
@@ -272,6 +293,45 @@ describe('lr-memory-panel', () => {
     expect(event.detail).to.be.null;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="forget-all-button"]')).to.exist;
+  });
+
+  it('Forget all: clicking Deny cancels silently and restores the "Forget all" control', async () => {
+    const el = await populated();
+    (el.shadowRoot!.querySelector('[part="forget-all-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!;
+    const confirmBar = await readyConfirmBar(section);
+    let forgot = false;
+    el.addEventListener('lr-forget', () => (forgot = true));
+    (confirmBar.shadowRoot!.querySelector('[part="deny-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(forgot).to.be.false;
+    expect(section.querySelector('lr-confirm-bar')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="forget-all-button"]')).to.exist;
+  });
+
+  it('falls back to a surviving item elsewhere when approving Forget all leaves no long-term section', async () => {
+    const el = await populated();
+    el.addEventListener(
+      'lr-forget',
+      () => {
+        el.longTerm = [];
+      },
+      { once: true },
+    );
+    (el.shadowRoot!.querySelector('[part="forget-all-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!;
+    const confirmBar = await readyConfirmBar(section);
+    (confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(el.shadowRoot!.querySelector('[part="forget-all-button"]')).to.not.exist;
+    expect(
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.closest('[part="item"]')?.getAttribute(
+        'data-scope',
+      ),
+    ).to.equal('short-term');
   });
 
   it('cancels a pending forget-all decision when controlled longTerm data changes', async () => {
@@ -447,6 +507,41 @@ describe('lr-memory-panel', () => {
       expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(0);
       expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('forget-all-button');
     });
+
+    it('ignores a non-Escape key on the pending confirmation: no cancellation, no propagation stop', async () => {
+      const el = await populated();
+      const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]') as HTMLElement;
+      const remove = row.querySelector('[part="remove-button"]') as HTMLButtonElement;
+      remove.focus();
+      remove.click();
+      await el.updateComplete;
+      await readyConfirmBar(row);
+      await settleFocus(el);
+
+      let removed = false;
+      el.addEventListener('lr-remove', () => (removed = true));
+      (deepActiveElement(document) as HTMLElement).dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }),
+      );
+      await settleFocus(el);
+
+      expect(removed).to.be.false;
+      expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(1);
+    });
+
+    it('does not attempt to focus when a synchronous controlled change removes the item before its confirm bar ever mounts', async () => {
+      const el = await populated();
+      const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]') as HTMLElement;
+      const remove = row.querySelector('[part="remove-button"]') as HTMLButtonElement;
+      remove.click();
+      // Same tick, no await: the controlled replacement removes the item before Lit ever commits
+      // the render that would have shown its lr-confirm-bar.
+      el.shortTerm = el.shortTerm.filter((item) => item.id !== 's1');
+      await el.updateComplete;
+      await settleFocus(el);
+      expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(0);
+      expect(el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')).to.not.exist;
+    });
   });
 
   it('uses instance-safe disclosure ids for hostile and duplicate caller ids', async () => {
@@ -564,6 +659,56 @@ describe('lr-memory-panel', () => {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('data-id')).to.equal(
       's2',
+    );
+  });
+
+  it('falls back to any surviving item in a different scope when approval empties the whole originating scope', async () => {
+    const el = await populated();
+    el.shortTerm = [shortTermItems[0]!]; // only s1 left, so removing it empties short-term entirely
+    await el.updateComplete;
+    const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
+    (row.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const confirmBar = await readyConfirmBar(row);
+    el.addEventListener(
+      'lr-remove',
+      () => {
+        el.shortTerm = [];
+      },
+      { once: true },
+    );
+    (confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')).to.not.exist;
+    expect(
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.closest('[part="item"]')?.getAttribute(
+        'data-scope',
+      ),
+    ).to.equal('long-term');
+  });
+
+  it('falls back to the stable base wrapper when the last memory anywhere is approved away', async () => {
+    const el = (await fixture(html`<lr-memory-panel></lr-memory-panel>`)) as LyraMemoryPanel;
+    el.shortTerm = [shortTermItems[0]!];
+    await el.updateComplete;
+    const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
+    (row.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const confirmBar = await readyConfirmBar(row);
+    el.addEventListener(
+      'lr-remove',
+      () => {
+        el.shortTerm = [];
+      },
+      { once: true },
+    );
+    (confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(el.shadowRoot!.querySelector('[part="item"]')).to.not.exist;
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal(
+      'base',
     );
   });
 
@@ -739,6 +884,36 @@ it('keeps focus when a controlled longTerm replacement closes an open forget-all
   ).to.equal('forget-all-button');
 });
 
+it('moves focus to the stable base wrapper when a controlled longTerm clear empties the list while the forget-all confirmation holds focus', async () => {
+  const el = await populated();
+  const forgetAll = el.shadowRoot!.querySelector('[part="forget-all-button"]') as HTMLButtonElement;
+  forgetAll.focus();
+  forgetAll.click();
+  await el.updateComplete;
+  const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!;
+  await readyConfirmBar(section);
+  await settleFocus(el);
+
+  // Unlike the "still has memories" case above, this controlled replacement empties longTerm
+  // entirely -- the section itself loses its "Forget all" control, so focus has nowhere stable to
+  // land but the root.
+  el.longTerm = [];
+  await settleFocus(el);
+
+  expect(el.shadowRoot!.querySelector('[part="forget-all-button"]')).to.not.exist;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
+it('moves focus to the stable base wrapper when a controlled longTerm clear empties the list while the focused "Forget all" button itself disappears', async () => {
+  const el = await populated();
+  const forgetAll = el.shadowRoot!.querySelector('[part="forget-all-button"]') as HTMLButtonElement;
+  forgetAll.focus();
+  el.longTerm = [];
+  await settleFocus(el);
+  expect(el.shadowRoot!.querySelector('[part="forget-all-button"]')).to.not.exist;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
 describe('lr-memory-panel controlled-list focus restoration', () => {
   const shortTerm: LyraMemoryItem[] = [
     { id: 's1', text: 'First short-term memory.' },
@@ -769,6 +944,16 @@ describe('lr-memory-panel controlled-list focus restoration', () => {
     await settleFocus(el);
     const focused = el.shadowRoot!.activeElement!;
     expect(focused.closest('[part="item"]')?.getAttribute('data-id')).to.equal('s3');
+  });
+
+  it('follows a surviving row to its new position when an earlier sibling is removed', async () => {
+    const el = await controlled();
+    focusRowAction(el, 's3');
+    el.shortTerm = [shortTerm[1]!, shortTerm[2]!]; // drop s1; s3 survives, shifting index 2 -> 1
+    await settleFocus(el);
+    expect(
+      el.shadowRoot!.activeElement!.closest('[part="item"]')?.getAttribute('data-id'),
+    ).to.equal('s3');
   });
 
   it('clamps to the last surviving row when the tail is removed', async () => {

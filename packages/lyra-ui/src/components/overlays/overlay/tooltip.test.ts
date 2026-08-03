@@ -282,3 +282,186 @@ it('cancels a delayed transition in its scheduling window and uses the adopted o
     frame.remove();
   }
 });
+
+it('closes a tooltip that starts both open and disabled before its very first update runs', async () => {
+  const el = (await fixture(html`<lr-tooltip open disabled manual></lr-tooltip>`)) as LyraTooltip;
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+});
+
+it('closes an already-rendered open tooltip immediately when disabled is set afterward', async () => {
+  const el = (await fixture(html`<lr-tooltip manual></lr-tooltip>`)) as LyraTooltip;
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('deactivates the overlay when open interactive content stops being actionable without closing', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip manual>
+      <button type="button" slot="trigger">Help</button>
+      <button type="button" id="action">Do the thing</button>
+    </lr-tooltip>
+  `)) as LyraTooltip;
+  await waitUntil(() => popup(el).getAttribute('role') === 'dialog');
+  el.open = true;
+  await el.updateComplete;
+  expect(popup(el).getAttribute('role')).to.equal('dialog');
+
+  const action = el.querySelector('#action') as HTMLButtonElement;
+  action.setAttribute('aria-hidden', 'true');
+  await waitUntil(() => popup(el).getAttribute('role') === 'tooltip');
+  expect(el.open).to.be.true;
+
+  // The overlay manager entry was torn down along with the promotion, so a document-level
+  // Escape (as opposed to one dispatched on a focused trigger) no longer owns dismissal here.
+  const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  document.dispatchEvent(escape);
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+});
+
+it('keeps the tooltip open when lr-hide is prevented', async () => {
+  const el = (await fixture(html`<lr-tooltip manual></lr-tooltip>`)) as LyraTooltip;
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  el.addEventListener('lr-hide', (event) => event.preventDefault());
+  await el.hide();
+  expect(el.open).to.be.true;
+  expect(el.hasAttribute('open')).to.be.true;
+});
+
+it('resolves show-delay from the --show-delay custom property when no attribute or property override applies', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip style="--show-delay: 30ms">
+      Custom delay help
+      <button type="button" slot="trigger">Help</button>
+    </lr-tooltip>
+  `)) as LyraTooltip;
+  expect(el.hasAttribute('show-delay')).to.be.false;
+  expect(el.showDelay).to.equal(150);
+
+  const trigger = el.querySelector('button')!;
+  trigger.dispatchEvent(new FocusEvent('focus'));
+  await waitUntil(() => el.open, 'should open well before the 150ms default show-delay', {
+    interval: 5,
+    timeout: 120,
+  });
+});
+
+it('uses a nested element aria-label instead of its own text when computing the tooltip description', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip manual>
+      <button type="button" slot="trigger">Help</button>
+      <div aria-label="Custom accessible label">Nested text that should not appear</div>
+    </lr-tooltip>
+  `)) as LyraTooltip;
+  await waitUntil(() => descriptionProxy(el).textContent === 'Custom accessible label');
+  expect(descriptionProxy(el).textContent).to.equal('Custom accessible label');
+});
+
+it('reuses the active overlay handle when re-anchoring an already-open virtual-anchor tooltip', async () => {
+  const el = (await fixture(html`<lr-tooltip manual></lr-tooltip>`)) as LyraTooltip;
+  el.showAt({ x: 10, y: 10, width: 0, height: 0 });
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const returnTarget = document.createElement('button');
+  returnTarget.type = 'button';
+  returnTarget.textContent = 'Return target';
+  document.body.append(returnTarget);
+
+  try {
+    el.showAt({ x: 50, y: 50, width: 0, height: 0 }, { returnFocusTo: returnTarget });
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    document.dispatchEvent(escape);
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(returnTarget.ownerDocument.activeElement === returnTarget).to.be.true;
+  } finally {
+    returnTarget.remove();
+  }
+});
+
+it('reactivates a fresh overlay on reconnect once the suspended one already deactivated itself', async () => {
+  const el = (await fixture(html`<lr-tooltip manual></lr-tooltip>`)) as LyraTooltip;
+  el.showAt({ x: 5, y: 5, width: 0, height: 0 });
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const parent = el.parentElement!;
+  el.remove();
+  // Let the overlay manager's own disconnect-cleanup microtask run before reconnecting, so the
+  // suspended entry has already fully deactivated itself by the time connectedCallback re-checks it.
+  await Promise.resolve();
+  await Promise.resolve();
+
+  parent.append(el);
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  document.dispatchEvent(escape);
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('resumes the still-active suspended overlay on an immediate, same-tick reconnect', async () => {
+  const el = (await fixture(html`<lr-tooltip manual></lr-tooltip>`)) as LyraTooltip;
+  el.showAt({ x: 5, y: 5, width: 0, height: 0 });
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const parent = el.parentElement!;
+  // No microtask gap here, unlike the sibling reconnect test above -- the overlay manager's own
+  // disconnect-cleanup microtask has not run yet, so the suspended handle is still active and
+  // connectedCallback should resume it in place rather than creating a fresh one.
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  document.dispatchEvent(escape);
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('degrades open-content scheduling and observation gracefully after adoption into a windowless document', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip hide-delay="50">
+      Help text
+      <button type="button" slot="trigger">Help</button>
+      <test-tooltip-unregistered-widget>Nested</test-tooltip-unregistered-widget>
+    </lr-tooltip>
+  `)) as LyraTooltip;
+  const trigger = el.querySelector('button')!;
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const detachedDocument = document.implementation.createHTMLDocument('');
+  expect(detachedDocument.defaultView).to.be.null;
+
+  detachedDocument.body.append(el);
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  // A hide-delay timer has nothing to schedule against without an owner window, so the leave
+  // interaction is dropped rather than throwing or eventually closing the tooltip.
+  trigger.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  expect(el.open).to.be.true;
+
+  el.remove();
+});

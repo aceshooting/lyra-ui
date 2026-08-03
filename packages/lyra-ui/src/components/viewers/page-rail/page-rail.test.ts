@@ -278,6 +278,45 @@ describe('lr-page-rail', () => {
     expect(el.page).to.equal(2);
   });
 
+  it('resets the digit buffer once the real digit-buffer timeout elapses', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="20"></lr-page-rail>`);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.page).to.equal(1);
+
+    // DIGIT_BUFFER_MS is 500 -- give the real timer a comfortable margin before typing again, so a
+    // buffer that failed to reset would combine into '12' (out of range) rather than plain '2'.
+    await aTimeout(650);
+
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.page, 'the earlier digit should not still be buffered after the real timeout fired').to.equal(2);
+  });
+
+  it('resets the digit buffer immediately (no timer) when the owner document has no window', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="20"></lr-page-rail>`);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    Object.defineProperty(el, 'ownerDocument', {
+      configurable: true,
+      get: () => ({ defaultView: null }),
+    });
+    try {
+      base.dispatchEvent(new KeyboardEvent('keydown', { key: '5', bubbles: true, composed: true }));
+    } finally {
+      delete (el as unknown as { ownerDocument?: unknown }).ownerDocument;
+    }
+    await el.updateComplete;
+    expect(el.page).to.equal(5);
+
+    // A follow-up digit proves the buffer was actually cleared (not just left to time out): if it
+    // had survived, this would combine into '52' (out of range for 20 pages) and page would stay 5.
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.page, 'the digit buffer should already be empty, not still holding "5"').to.equal(2);
+  });
+
   it('constructs observers and schedules and clears digit timing in the adopted owner realm', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail></lr-page-rail>`);
     el.remove();
@@ -552,6 +591,199 @@ describe('lr-page-rail', () => {
     expect((list.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('aria-label')).to.equal('Page 40');
   });
 
+  it('clears a pending focus repair outright (not just reschedules it) when the count drops to zero before it resolves', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="100"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    await waitUntil(() => list.renderedRows.length > 0);
+    list.scrollToIndex(90, { align: 'start', behavior: 'auto' });
+    list.scrollContainer!.dispatchEvent(new Event('scroll'));
+    await waitUntil(
+      () => Number(list.renderedRows[0]?.dataset.rowIndex) > 50,
+      'virtual list never materialized a high page window',
+    );
+    list.renderedRows.at(-1)!.querySelector<HTMLButtonElement>('[part~="page"]')!.focus();
+
+    // Gate the virtual list's own updateComplete so the async focusVirtualPage() dispatched by the
+    // first shrink is still suspended (mid-repair) when the second, count-collapses-to-zero
+    // property change below reaches willUpdate().
+    const repairGate = deferred<void>();
+    Object.defineProperty(list, 'updateComplete', {
+      configurable: true,
+      get: () => repairGate.promise,
+    });
+
+    const internals = el as unknown as {
+      pendingFocusPage: number | null;
+      focusRepairPending: boolean;
+      focusRepairGeneration: number;
+    };
+
+    el.pageCount = 50; // schedules a repair: the focused row's index is now >= the new count
+    await el.updateComplete;
+    expect(internals.focusRepairPending, 'a repair should be pending after the first shrink').to.be.true;
+    const generationBeforeClear = internals.focusRepairGeneration;
+
+    el.pageCount = 0; // effectivePageCount() <= 0 -- the guard must clear the repair, not reschedule it
+    await el.updateComplete;
+
+    expect(internals.pendingFocusPage).to.equal(null);
+    expect(internals.focusRepairPending).to.equal(false);
+    expect(internals.focusRepairGeneration).to.be.greaterThan(generationBeforeClear);
+
+    repairGate.resolve(undefined);
+  });
+
+  it('finishes the focus repair immediately when the virtual list has not rendered yet', async () => {
+    // A freshly constructed, never-connected/never-updated element has an empty shadow root --
+    // <lr-virtual-list> only exists there after the first render commits.
+    const el = document.createElement('lr-page-rail') as LyraPageRail;
+    const internals = el as unknown as {
+      focusVirtualPage(page: number, generation: number): Promise<void>;
+      focusRepairPending: boolean;
+      focusRepairGeneration: number;
+    };
+    internals.focusRepairPending = true;
+    await internals.focusVirtualPage(1, internals.focusRepairGeneration);
+    expect(internals.focusRepairPending, 'the repair should finish rather than hang with no <lr-virtual-list>').to.equal(false);
+  });
+
+  it('finishes the focus repair when the repaired-to page count collapses to zero between scheduling and materialization', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="0"></lr-page-rail>`);
+    await el.updateComplete;
+    const internals = el as unknown as {
+      focusVirtualPage(page: number, generation: number): Promise<void>;
+      focusRepairPending: boolean;
+      focusRepairGeneration: number;
+    };
+    internals.focusRepairPending = true;
+    await internals.focusVirtualPage(3, internals.focusRepairGeneration);
+    expect(internals.focusRepairPending, 'a null repair index should still finish the repair').to.equal(false);
+  });
+
+  it('escalates to scrollToIndex() and real animation-frame retries when the repaired-to row is not yet rendered', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="50"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    await waitUntil(() => list.renderedRows.length > 0);
+
+    // The immediate lookup (before scrollToIndex) and the loop's first retry both report the row as
+    // not-yet-rendered, so focusVirtualPage() must fall through into the scrollToIndex() + real
+    // requestAnimationFrame retry loop rather than finding the button on its first check.
+    let renderedRowsReads = 0;
+    Object.defineProperty(list, 'renderedRows', {
+      configurable: true,
+      get(this: LyraVirtualList) {
+        renderedRowsReads++;
+        return renderedRowsReads <= 2 ? [] : [...this.renderRoot.querySelectorAll<HTMLElement>('[part="row"]')];
+      },
+    });
+    const originalScrollToIndex = list.scrollToIndex.bind(list);
+    const scrolledTo: number[] = [];
+    list.scrollToIndex = (index: number, options?: { align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' }) => {
+      scrolledTo.push(index);
+      originalScrollToIndex(index, options);
+    };
+
+    try {
+      const internals = el as unknown as {
+        focusVirtualPage(page: number, generation: number): Promise<void>;
+        focusRepairGeneration: number;
+      };
+      await internals.focusVirtualPage(50, internals.focusRepairGeneration);
+
+      expect(scrolledTo).to.deep.equal([49]);
+      const focused = list.shadowRoot!.activeElement as HTMLElement | null;
+      expect(focused?.getAttribute('aria-label')).to.equal('Page 50');
+    } finally {
+      delete (list as unknown as { renderedRows?: unknown }).renderedRows;
+      list.scrollToIndex = originalScrollToIndex;
+    }
+  });
+
+  it('exhausts its animation-frame retries and still finishes the repair when the row never renders', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="50"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    await waitUntil(() => list.renderedRows.length > 0);
+
+    Object.defineProperty(list, 'renderedRows', {
+      configurable: true,
+      get: () => [],
+    });
+    const originalScrollToIndex = list.scrollToIndex.bind(list);
+    let scrollCalls = 0;
+    list.scrollToIndex = (index: number, options?: { align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' }) => {
+      scrollCalls++;
+      originalScrollToIndex(index, options);
+    };
+
+    try {
+      const internals = el as unknown as {
+        focusVirtualPage(page: number, generation: number): Promise<void>;
+        focusRepairPending: boolean;
+        focusRepairGeneration: number;
+      };
+      internals.focusRepairPending = true;
+      await internals.focusVirtualPage(50, internals.focusRepairGeneration);
+      expect(scrollCalls).to.equal(1);
+      expect(internals.focusRepairPending, 'giving up should still finish the repair rather than hang forever').to.equal(false);
+    } finally {
+      delete (list as unknown as { renderedRows?: unknown }).renderedRows;
+      list.scrollToIndex = originalScrollToIndex;
+    }
+  });
+
+  it('finishes the repair when the page count collapses to zero between two retry-loop iterations', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="50"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    await waitUntil(() => list.renderedRows.length > 0);
+
+    // Never report the row as rendered, so focusVirtualPage() stays in its retry loop.
+    Object.defineProperty(list, 'renderedRows', { configurable: true, get: () => [] });
+    const originalScrollToIndex = list.scrollToIndex.bind(list);
+    list.scrollToIndex = (index: number, options?: { align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' }) =>
+      originalScrollToIndex(index, options);
+
+    // Direct invocation (see the sibling tests above) never sets focusRepairPending, so this
+    // pageCount change -- unlike a real willUpdate()-scheduled repair -- does not bump
+    // focusRepairGeneration; the loop's in-flight generation stays valid while effectivePageCount()
+    // drops to 0 out from under it, on the loop's *own* recheck rather than before it even starts.
+    let updateCompleteOwner: object | null = Object.getPrototypeOf(list) as object | null;
+    let realUpdateComplete: PropertyDescriptor | undefined;
+    while (updateCompleteOwner && !realUpdateComplete) {
+      realUpdateComplete = Object.getOwnPropertyDescriptor(updateCompleteOwner, 'updateComplete');
+      updateCompleteOwner = Object.getPrototypeOf(updateCompleteOwner) as object | null;
+    }
+    if (!realUpdateComplete?.get) throw new Error('updateComplete getter was not found on the prototype chain');
+    let updateCompleteReads = 0;
+    Object.defineProperty(list, 'updateComplete', {
+      configurable: true,
+      get(this: LyraVirtualList) {
+        updateCompleteReads++;
+        if (updateCompleteReads === 2) el.pageCount = 0;
+        return (realUpdateComplete.get as (this: LyraVirtualList) => Promise<unknown>).call(this);
+      },
+    });
+
+    try {
+      const internals = el as unknown as {
+        focusVirtualPage(page: number, generation: number): Promise<void>;
+        focusRepairPending: boolean;
+        focusRepairGeneration: number;
+      };
+      // focusRepairPending is deliberately left false (its default): setting it true beforehand
+      // would make el.pageCount's own willUpdate() guard bump focusRepairGeneration itself
+      // (case-1's clear/reschedule logic), invalidating this in-flight call *before* it ever
+      // reaches its own recheck -- which would test the willUpdate() guard again, not this loop.
+      const generationBefore = internals.focusRepairGeneration;
+      await internals.focusVirtualPage(50, generationBefore);
+      expect(internals.focusRepairGeneration, 'willUpdate() should not have intervened').to.equal(generationBefore);
+      expect(internals.focusRepairPending, 'a null index mid-loop should still finish the repair').to.equal(false);
+    } finally {
+      delete (list as unknown as { renderedRows?: unknown }).renderedRows;
+      delete (list as unknown as { updateComplete?: unknown }).updateComplete;
+      list.scrollToIndex = originalScrollToIndex;
+    }
+  });
+
   it('registers lr-virtual-list, lr-skeleton, and lr-file-icon as a side effect of importing page-rail.js (regression)', async () => {
     // Importing a composed sub-component's *.class.js module alone never calls defineElement --
     // only its real barrel (*.js) does. Rendering an un-registered dependency silently produces a
@@ -663,6 +895,54 @@ describe('lr-page-rail', () => {
     await waitUntil(() => viewer.renderCalls.some((call) => (call.width ?? Infinity) <= 120));
     expect(viewer.renderCalls.at(-1)!.width).to.be.at.most(120);
     expect(el.shadowRoot!.querySelector('[part="base"]') !== null).to.be.true;
+  });
+
+  it('falls back to the default allocation width when a ResizeObserver delivery has no entries, and no-ops when that matches the current width', async () => {
+    class FakeResizeObserver {
+      static instances: FakeResizeObserver[] = [];
+      observedTargets: Element[] = [];
+      constructor(public callback: ResizeObserverCallback) {
+        FakeResizeObserver.instances.push(this);
+      }
+      observe(target: Element): void {
+        this.observedTargets.push(target);
+      }
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    const original = window.ResizeObserver;
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+      FakeResizeObserver as unknown as typeof ResizeObserver;
+    try {
+      const viewer = new StubViewer();
+      const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+      viewer.emitLoad(1);
+      await waitUntil(() => viewer.renderCalls.length > 0, 'the initial thumbnail render never happened');
+      expect(viewer.renderCalls[0]!.width).to.equal(96);
+
+      const pageRailObserver = FakeResizeObserver.instances.find((instance) => instance.observedTargets.includes(el));
+      expect(pageRailObserver, 'page-rail should have registered its own ResizeObserver').to.exist;
+      pageRailObserver!.callback([], pageRailObserver as unknown as ResizeObserver);
+      await el.updateComplete;
+
+      // An empty entry list falls back to the default allocation width (320px). That's unchanged
+      // from the already-default allocationWidth, so no new thumbnail render should be triggered.
+      expect(viewer.renderCalls.length).to.equal(1);
+    } finally {
+      window.ResizeObserver = original;
+    }
+  });
+
+  it('invalidates and reloads thumbnails when thumbWidth changes after the first render', async () => {
+    const viewer = new StubViewer();
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+    viewer.emitLoad(1);
+    await waitUntil(() => viewer.renderCalls.length > 0);
+    expect(viewer.renderCalls[0]!.width).to.equal(96);
+
+    el.thumbWidth = 64;
+    await el.updateComplete;
+    await waitUntil(() => viewer.renderCalls.some((call) => call.width === 64), 'thumbWidth change never re-triggered a thumbnail render');
   });
 
   it('sanitizes a negative or NaN thumb-width before it reaches renderPageThumbnail', async () => {

@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html } from '@open-wc/testing';
 import './format-number.js';
 import './format-date.js';
 import './format-bytes.js';
@@ -331,6 +331,207 @@ it('schedules and clears relative-time refreshes through the adopted owner windo
     if (el.ownerDocument !== document) document.adoptNode(el);
     el.remove();
     iframe.remove();
+  }
+});
+
+it('does not schedule a sync relative-time refresh when the owner document has no associated window', async () => {
+  const el = (await fixture(html`
+    <lr-relative-time sync .date=${new Date(Date.now() + 60_000)} locale="en-US"></lr-relative-time>
+  `)) as LyraRelativeTime;
+  await el.updateComplete;
+  expect((el as unknown as { timer?: number }).timer, 'a normal window schedules a wake timer').to.not.equal(
+    undefined,
+  );
+
+  // `defaultView` is null for a document with no browsing context; shadow it directly on the
+  // shared `document` instance (own-property override, restored below) rather than reaching for
+  // an actual windowless document, since custom elements never upgrade in one.
+  Object.defineProperty(document, 'defaultView', { configurable: true, get: () => null });
+  try {
+    el.date = new Date(Date.now() + 120_000); // re-triggers updated() -> schedule()
+    await el.updateComplete;
+    expect((el as unknown as { timer?: number }).timer, 'no window means nothing to schedule against').to.equal(
+      undefined,
+    );
+  } finally {
+    delete (document as unknown as Record<string, unknown>).defaultView;
+  }
+});
+
+it('safely no-ops for a non-finite date: skips scheduling, reports no relative state, and renders nothing', async () => {
+  const el = (await fixture(html`
+    <lr-relative-time date="not-a-real-date" sync locale="en-US"></lr-relative-time>
+  `)) as LyraRelativeTime;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('');
+  expect(el.shadowRoot?.querySelector('time')).to.equal(null);
+  expect((el as unknown as { timer?: number }).timer, 'an unparseable date must not schedule a wake timer').to.equal(
+    undefined,
+  );
+});
+
+it('falls back to now when date is explicitly cleared to null (nullish-coalescing default)', async () => {
+  const el = (await fixture(html`<lr-relative-time locale="en-US"></lr-relative-time>`)) as LyraRelativeTime;
+  const before = Date.now();
+  el.date = null as unknown as LyraRelativeTime['date'];
+  await el.updateComplete;
+  const after = Date.now();
+  const time = el.shadowRoot!.querySelector('time')!;
+  const instant = new Date(time.getAttribute('datetime')!).getTime();
+  expect(instant).to.be.within(before, after);
+});
+
+it('schedules an additional previous-unit wake boundary for a past date once auto-selection resolves below the top unit', async () => {
+  const originalSetTimeout = window.setTimeout;
+  const originalClearTimeout = window.clearTimeout;
+  const delays: number[] = [];
+  let timer = 0;
+  window.setTimeout = ((_handler: TimerHandler, delay?: number) => {
+    delays.push(Number(delay));
+    timer += 1;
+    return timer;
+  }) as typeof window.setTimeout;
+  window.clearTimeout = (() => {}) as typeof window.clearTimeout;
+  try {
+    // 2 days ago -> auto-selection resolves to 'day', whose index in the unit list is > 0, which
+    // is what makes the past-date branch compute a second (previous-unit) wake candidate.
+    const target = new Date(Date.now() - 2 * 86_400_000);
+    const el = (await fixture(html`
+      <lr-relative-time .date=${target} numeric="always" sync locale="en-US"></lr-relative-time>
+    `)) as LyraRelativeTime;
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent).to.contain('day');
+    const scheduled = delays.at(-1)!;
+    expect(scheduled).to.be.greaterThan(0);
+    expect(Number.isFinite(scheduled)).to.equal(true);
+  } finally {
+    window.setTimeout = originalSetTimeout;
+    window.clearTimeout = originalClearTimeout;
+  }
+});
+
+it('executes the scheduled boundary refresh through a real timer and reschedules the next wake', async () => {
+  const el = (await fixture(html`
+    <lr-relative-time .date=${new Date(Date.now() + 100_000)} unit="minute" numeric="always" locale="en-US"></lr-relative-time>
+  `)) as LyraRelativeTime; // sync starts false -> connectedCallback's schedule() is a no-op, no timer yet
+  expect((el as unknown as { timer?: number }).timer).to.equal(undefined);
+
+  const originalSetTimeout = window.setTimeout;
+  let scheduleCalls = 0;
+  let callbackInvocations = 0;
+  window.setTimeout = ((handler: TimerHandler, delay?: number): number => {
+    scheduleCalls += 1;
+    const wrapped = (): void => {
+      callbackInvocations += 1;
+      (handler as VoidFunction)();
+    };
+    // Fire through a REAL timer almost immediately (never a fake clock) so the guarded callback
+    // body actually runs within the test's lifetime; capped at 2 accelerated rounds so the
+    // legitimate reschedule that follows keeps its real (long) delay and never fires.
+    return originalSetTimeout(wrapped, scheduleCalls <= 2 ? 0 : delay) as unknown as number;
+  }) as typeof window.setTimeout;
+  try {
+    el.sync = true;
+    await el.updateComplete; // the single schedule() call triggered by `sync` changing
+    await aTimeout(100);
+
+    expect(callbackInvocations, 'the scheduled boundary callback actually ran').to.be.greaterThan(0);
+    expect(
+      (el as unknown as { timer?: number }).timer,
+      'a fresh timer handle replaced the one that just fired',
+    ).to.not.equal(undefined);
+  } finally {
+    window.setTimeout = originalSetTimeout;
+  }
+});
+
+it('ignores a stale scheduled callback whose timer/generation no longer match the live schedule (race-safety guard)', async () => {
+  const originalSetTimeout = window.setTimeout;
+  const originalClearTimeout = window.clearTimeout;
+  const handlers: VoidFunction[] = [];
+  let handleCounter = 0;
+  window.setTimeout = ((handler: TimerHandler): number => {
+    handleCounter += 1;
+    handlers.push(handler as VoidFunction);
+    return handleCounter; // never actually fires through a real timer -- invoked manually below
+  }) as typeof window.setTimeout;
+  // A clearTimeout that never actually cancels models the exact scenario the guard protects
+  // against: a previously scheduled callback keeps existing (and could still fire) even after
+  // the component has moved on to a new timer/generation.
+  window.clearTimeout = (() => {}) as typeof window.clearTimeout;
+  try {
+    const el = (await fixture(html`
+      <lr-relative-time .date=${new Date(Date.now() + 100_000)} unit="minute" numeric="always" sync locale="en-US"></lr-relative-time>
+    `)) as LyraRelativeTime;
+    await el.updateComplete;
+    expect(handlers.length, 'the initial connect scheduled at least one callback').to.be.greaterThan(0);
+    const staleHandler = handlers.at(-1)!;
+    const timerBeforeReschedule = (el as unknown as { timer?: number }).timer;
+
+    // Force a fresh reschedule -- bumps timerGeneration and assigns a new timer handle.
+    // `staleHandler` above closed over the now-superseded handle/generation.
+    el.date = new Date(Date.now() + 90_000);
+    await el.updateComplete;
+    const timerAfterReschedule = (el as unknown as { timer?: number }).timer;
+    expect(timerAfterReschedule, 'the reschedule produced a new, distinct timer handle').to.not.equal(
+      timerBeforeReschedule,
+    );
+
+    // Firing the stale callback directly must be a safe no-op: it must not touch the live timer
+    // bookkeeping (or trigger a further render/reschedule) despite the never-cancelled timer.
+    expect(() => staleHandler()).to.not.throw();
+    expect(
+      (el as unknown as { timer?: number }).timer,
+      'the stale callback left the live timer bookkeeping untouched',
+    ).to.equal(timerAfterReschedule);
+  } finally {
+    window.setTimeout = originalSetTimeout;
+    window.clearTimeout = originalClearTimeout;
+  }
+});
+
+it('passes undefined (not an empty string) to Intl.RelativeTimeFormat when effectiveLocale resolves empty', async () => {
+  const el = (await fixture(html`
+    <lr-relative-time date="2030-01-01T00:00:00Z"></lr-relative-time>
+  `)) as LyraRelativeTime;
+  // effectiveLocale never actually resolves to '' via the public API -- resolveIntlLocale()
+  // always falls back to 'en' at worst -- so shadow the protected getter directly on this
+  // instance (same technique lr-heatmap's tests use) to exercise the defensive `|| undefined`
+  // fallback that keeps an empty string from ever reaching the Intl constructor.
+  Object.defineProperty(el, 'effectiveLocale', { configurable: true, get: () => '' });
+  try {
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+  } finally {
+    delete (el as unknown as Record<string, unknown>).effectiveLocale;
+  }
+});
+
+it('falls back to the runtime-default relative-time formatter when Intl.RelativeTimeFormat throws for the requested options', async () => {
+  const el = (await fixture(html`
+    <lr-relative-time date="2030-01-01T00:00:00Z" locale="en-US"></lr-relative-time>
+  `)) as LyraRelativeTime;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+
+  const original = Intl.RelativeTimeFormat.prototype.format;
+  let calls = 0;
+  Intl.RelativeTimeFormat.prototype.format = function (
+    this: Intl.RelativeTimeFormat,
+    ...args: Parameters<typeof original>
+  ) {
+    calls += 1;
+    if (calls === 1) throw new Error('forced Intl.RelativeTimeFormat failure');
+    return original.apply(this, args);
+  };
+  try {
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+    expect(calls, 'both the primary and the runtime-default formatter were invoked').to.be.greaterThan(1);
+  } finally {
+    Intl.RelativeTimeFormat.prototype.format = original;
   }
 });
 

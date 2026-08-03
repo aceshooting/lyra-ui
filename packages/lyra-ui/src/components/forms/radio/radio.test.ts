@@ -1962,3 +1962,508 @@ it('bars a standalone radio from constraint validation while disabled', async ()
   await el.updateComplete;
   expect(el.validity.valueMissing, 'the violation returns once it is enforceable again').to.be.true;
 });
+
+describe('lr-radio-group branch-coverage edge cases', () => {
+  it('normalizes a null defaultValue write to empty, clearing the reflected value attribute', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group value="a">
+        <lr-radio value="a">A</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    expect(group.hasAttribute('value')).to.be.true;
+
+    // The public type is `string`, but the setter is written defensively against a raw `null`
+    // write (e.g. from untyped JS or a lenient framework binding) -- exercise that directly.
+    (group as unknown as { defaultValue: string }).defaultValue = null as unknown as string;
+    expect(group.defaultValue, 'a null write normalizes to empty, matching the public string contract')
+      .to.equal('');
+    expect(
+      group.hasAttribute('value'),
+      'an empty default removes the reflected attribute rather than leaving it blank',
+    ).to.be.false;
+  });
+
+  it('ignores an invalid event from a light-DOM descendant it does not own', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group required label="Choice">
+        <lr-radio value="a">A</lr-radio>
+        <div slot="hint"><lr-radio value="helper">Helper</lr-radio></div>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    const helper = group.querySelector('[slot="hint"] lr-radio') as LyraRadio;
+    // `helper` is a standalone form participant (not group-owned) and installs its own native ->
+    // `lr-invalid` alias, which legitimately bubbles up through the group -- that is unrelated to
+    // the group's own aggregate alias, so only a `target === group` event would prove the group
+    // mistakenly claimed ownership of an event it does not own.
+    const groupOwnedAliases: CustomEvent[] = [];
+    group.addEventListener('lr-invalid', (event) => {
+      if (event.target === group) groupOwnedAliases.push(event as CustomEvent);
+    });
+
+    const invalid = new Event('invalid', { cancelable: true });
+    helper.dispatchEvent(invalid);
+
+    expect(
+      groupOwnedAliases,
+      'a support-slot radio is not group-owned, so the group never claims its invalid event as its own aggregate alias',
+    ).to.have.lengthOf(0);
+    expect(invalid.defaultPrevented, 'the group must not veto an invalid event it does not own').to.be.false;
+  });
+
+  it('ignores an invalid event with no element target at all (defensive)', async () => {
+    const group = (await fixture(html`<lr-radio-group></lr-radio-group>`)) as LyraRadioGroup;
+    await group.updateComplete;
+    const internals = group as unknown as { onInvalid(event: Event): void };
+    const fakeEvent = { target: null, preventDefault() {} } as unknown as Event;
+    let aliasCount = 0;
+    group.addEventListener('lr-invalid', () => { aliasCount += 1; });
+
+    expect(() => internals.onInvalid(fakeEvent)).to.not.throw();
+    expect(aliasCount).to.equal(0);
+  });
+
+  it('no-ops arming the membership observer while disconnected', () => {
+    const group = document.createElement('lr-radio-group') as LyraRadioGroup;
+    const internals = group as unknown as {
+      armMembershipObserver(): void;
+      membershipObserver?: MutationObserver;
+    };
+    expect(() => internals.armMembershipObserver()).to.not.throw();
+    expect(internals.membershipObserver, 'a disconnected host never gets an observer').to.equal(undefined);
+  });
+
+  it('skips re-arming an already-current membership observer for the same owner document', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group><lr-radio value="a">A</lr-radio></lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    const internals = group as unknown as {
+      armMembershipObserver(): void;
+      membershipObserver?: MutationObserver;
+    };
+    const first = internals.membershipObserver;
+    expect(first, 'connecting already armed one observer').to.exist;
+    internals.armMembershipObserver();
+    expect(internals.membershipObserver, 'a redundant arm call in the same document is a no-op')
+      .to.equal(first);
+  });
+
+  it('drops the membership observer follow-up microtask once the group has since disconnected', async () => {
+    const NativeMutationObserver = window.MutationObserver;
+    let groupCallback: MutationCallback | undefined;
+    let group!: LyraRadioGroup;
+    // A fully fake (non-extending) stand-in, matching the pattern already used above for the
+    // adopted-realm test -- `armMembershipObserver()` only needs a constructible `MutationObserver`
+    // shape, and the outer callback is invoked directly below rather than through a real mutation.
+    class TrackingMutationObserver implements MutationObserver {
+      private readonly callback: MutationCallback;
+      constructor(callback: MutationCallback) { this.callback = callback; }
+      observe(target: Node, options?: MutationObserverInit): void {
+        // Identified by its distinctive attributeFilter shape rather than `target === group`: the
+        // outer `group` binding is only assigned once the `fixture()` promise resolves, which is
+        // *after* the synchronous connect (and this synchronous `observe()` call) already ran.
+        const filter = options?.attributeFilter;
+        if (
+          (target as Element)?.localName === 'lr-radio-group' &&
+          filter?.includes('checked') &&
+          filter?.includes('slot')
+        ) {
+          groupCallback = this.callback;
+        }
+      }
+      takeRecords(): MutationRecord[] { return []; }
+      disconnect(): void {}
+    }
+    (window as unknown as { MutationObserver: unknown }).MutationObserver = TrackingMutationObserver;
+    try {
+      group = (await fixture(html`<lr-radio-group></lr-radio-group>`)) as LyraRadioGroup;
+      await group.updateComplete;
+      expect(groupCallback, 'connecting arms the membership observer').to.be.a('function');
+    } finally {
+      window.MutationObserver = NativeMutationObserver;
+    }
+
+    const originalQueueMicrotask = window.queueMicrotask;
+    let followUp: (() => void) | undefined;
+    (window as unknown as { queueMicrotask: typeof window.queueMicrotask }).queueMicrotask = ((
+      fn: () => void,
+    ) => {
+      followUp = fn;
+    }) as typeof window.queueMicrotask;
+    const internals = group as unknown as { syncRadios(): void };
+    const originalSyncRadios = internals.syncRadios.bind(group);
+    const staleCalls: boolean[] = [];
+    internals.syncRadios = () => {
+      staleCalls.push(true);
+      originalSyncRadios();
+    };
+    try {
+      groupCallback!([], {} as MutationObserver);
+      expect(followUp, 'a passing outer guard queues its own follow-up microtask').to.be.a('function');
+
+      group.remove();
+      followUp!();
+
+      expect(staleCalls, 'the stale follow-up must bail before resyncing a disconnected group')
+        .to.deep.equal([]);
+    } finally {
+      window.queueMicrotask = originalQueueMicrotask;
+      internals.syncRadios = originalSyncRadios;
+    }
+  });
+
+  it('skips arming a membership observer and bails from onRadioSlotChange when the owner document reports no defaultView', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group><lr-radio value="a">A</lr-radio></lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    const internals = group as unknown as {
+      armMembershipObserver(): void;
+      resetMembershipObserver(): void;
+      onRadioSlotChange(): void;
+      membershipObserver?: MutationObserver;
+    };
+    internals.resetMembershipObserver();
+    expect(internals.membershipObserver).to.equal(undefined);
+
+    // Same technique as elsewhere in this codebase (see theme-watcher.test.ts) for simulating a
+    // defaultView-less owner document without actually adopting into one -- this component's real
+    // shadow root uses adopted constructed stylesheets, which cannot themselves be adopted into a
+    // document created via `DOMImplementation.createHTMLDocument()`, so faking just the getter
+    // exercises the same guard without that unrelated stylesheet limitation.
+    Object.defineProperty(group, 'ownerDocument', { configurable: true, value: { defaultView: null } });
+    try {
+      expect(() => internals.armMembershipObserver()).to.not.throw();
+      expect(internals.membershipObserver, 'no window means no MutationObserver to construct')
+        .to.equal(undefined);
+      expect(() => internals.onRadioSlotChange()).to.not.throw();
+    } finally {
+      delete (group as unknown as { ownerDocument?: unknown }).ownerDocument;
+    }
+  });
+
+  it('treats a disconnected, never-owned radio as unowned across ownsRadio/reconcileRadio/releaseRadio', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group><lr-radio value="a">A</lr-radio></lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    const bare = document.createElement('lr-radio') as LyraRadio;
+    bare.value = 'b';
+
+    expect(group.ownsRadio(bare), 'an element with no ancestor radio-group at all is never owned')
+      .to.be.false;
+    expect(
+      group.reconcileRadio(bare),
+      'reconciling an unowned radio is a no-op that reports failure',
+    ).to.be.false;
+    expect(() => group.releaseRadio(bare)).to.not.throw();
+  });
+
+  it('refuses to select through a disabled group, a disabled radio, or an unowned radio', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group disabled>
+        <lr-radio value="a">A</lr-radio>
+        <lr-radio value="b" disabled>B</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    const [a, b] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+    const bare = document.createElement('lr-radio') as LyraRadio;
+    bare.value = 'c';
+
+    expect(group.selectRadio(a), 'a disabled group refuses every selection').to.be.false;
+
+    group.disabled = false;
+    await group.updateComplete;
+    expect(group.selectRadio(b), 'a disabled radio refuses selection even in an enabled group').to.be.false;
+    expect(group.selectRadio(bare), 'an unowned radio is never selectable').to.be.false;
+    expect(group.selectRadio(a), 'the enabled owned radio still selects normally').to.be.true;
+  });
+
+  it('normalizes a null value write on the private selectValue helper the same as an empty string', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group>
+        <lr-radio value="a" checked>A</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    const internals = group as unknown as { selectValue(next: string | null): void };
+
+    internals.selectValue(null);
+
+    expect(group.value).to.equal('');
+    expect((group.querySelector('lr-radio') as LyraRadio).checked).to.be.false;
+  });
+
+  it('clears the checked radio when a pending restored/reset selection matches nothing', async () => {
+    const group = document.createElement('lr-radio-group') as LyraRadioGroup;
+    group.formStateRestoreCallback('missing', 'restore');
+    group.innerHTML = `
+      <lr-radio value="a">A</lr-radio>
+      <lr-radio value="b">B</lr-radio>
+    `;
+    document.body.append(group);
+    try {
+      await group.updateComplete;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await group.updateComplete;
+      const radios = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+      expect(group.value).to.equal('');
+      expect(radios.every((radio) => !radio.checked)).to.be.true;
+    } finally {
+      group.remove();
+    }
+  });
+
+  it('reflects the customError property through the custom-error attribute', async () => {
+    const group = (await fixture(html`<lr-radio-group></lr-radio-group>`)) as LyraRadioGroup;
+    await group.updateComplete;
+
+    group.customError = 'Nope';
+    expect(group.getAttribute('custom-error')).to.equal('Nope');
+    expect(group.customError).to.equal('Nope');
+    expect(group.validity.customError).to.be.true;
+
+    group.customError = null;
+    expect(group.hasAttribute('custom-error'), 'a null customError removes the reflected attribute')
+      .to.be.false;
+    expect(group.validity.customError).to.be.false;
+  });
+
+  it('normalizes a null name/value property write to empty, matching the string contract', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group name="choice" value="a">
+        <lr-radio value="a">A</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+
+    group.name = null;
+    expect(group.name).to.equal('');
+    expect(group.hasAttribute('name')).to.be.false;
+
+    group.value = null;
+    expect(group.value).to.equal('');
+    expect((group.querySelector('lr-radio') as LyraRadio).checked).to.be.false;
+  });
+
+  it('navigates horizontally in plain LTR (no dir="rtl"), unlike the already-covered RTL case', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group orientation="horizontal" label="Choice">
+        <lr-radio value="a" checked>A</lr-radio>
+        <lr-radio value="b">B</lr-radio>
+        <lr-radio value="c">C</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    const [a, b, c] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+    await group.updateComplete;
+    const aBase = a.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+
+    let changed = oneEvent(group, 'change');
+    aBase.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'ArrowRight', bubbles: true, composed: true, cancelable: true,
+    }));
+    await changed;
+    expect(b.checked, 'ArrowRight moves forward under plain LTR').to.be.true;
+
+    const bBase = b.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    changed = oneEvent(group, 'change');
+    bBase.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'ArrowLeft', bubbles: true, composed: true, cancelable: true,
+    }));
+    await changed;
+    expect(a.checked, 'ArrowLeft moves backward under plain LTR').to.be.true;
+    expect(c.checked).to.be.false;
+  });
+
+  it('moves selection to the first enabled option on Home and the last on End', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group label="Choice">
+        <lr-radio value="a">A</lr-radio>
+        <lr-radio value="b" checked>B</lr-radio>
+        <lr-radio value="c">C</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    const [a, b, c] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+    await group.updateComplete;
+    const bBase = b.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+
+    let changed = oneEvent(group, 'change');
+    bBase.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Home', bubbles: true, composed: true, cancelable: true,
+    }));
+    await changed;
+    expect(a.checked, 'Home selects the first enabled option').to.be.true;
+
+    const aBase = a.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    changed = oneEvent(group, 'change');
+    aBase.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'End', bubbles: true, composed: true, cancelable: true,
+    }));
+    await changed;
+    expect(c.checked, 'End selects the last enabled option').to.be.true;
+  });
+
+  it('ignores a keydown whose own dispatching radio is individually disabled', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group label="Choice">
+        <lr-radio value="a" checked>A</lr-radio>
+        <lr-radio value="b" disabled>B</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    const [a, b] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+    await group.updateComplete;
+
+    // A disabled radio is never a real keyboard focus target, but a synthetic event dispatched
+    // straight from it must still be rejected by the group's own defensive re-check.
+    b.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    expect(a.checked).to.be.true;
+    expect(b.checked).to.be.false;
+  });
+
+  it('ignores a composed keydown retargeted to a nested inner group that owns no radios itself', async () => {
+    const outer = (await fixture(html`
+      <lr-radio-group label="Outer">
+        <lr-radio value="p" checked>P</lr-radio>
+        <lr-radio-group label="Inner">
+          <lr-radio value="x" checked>X</lr-radio>
+        </lr-radio-group>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await outer.updateComplete;
+    const [p] = [...outer.querySelectorAll(':scope > lr-radio')] as LyraRadio[];
+    // `:scope > lr-radio-group lr-radio` (not the ambiguous `lr-radio-group lr-radio`, which would
+    // also match `p` itself as a descendant of the outer group) unambiguously reaches the inner
+    // group's own radio.
+    const innerGroup = outer.querySelector(':scope > lr-radio-group') as LyraRadioGroup;
+    const innerRadio = innerGroup.querySelector('lr-radio') as LyraRadio;
+    await innerRadio.updateComplete;
+    const innerBase = innerRadio.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+
+    innerBase.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'ArrowDown', bubbles: true, composed: true, cancelable: true,
+    }));
+
+    expect(p.checked, 'the outer group must not navigate based on an inner-group-owned keydown')
+      .to.be.true;
+  });
+
+  it('tracks label and error slot presence through live slotchange, showing each hidden part', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group><lr-radio value="a">A</lr-radio></lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    const labelPart = group.shadowRoot!.querySelector('[part~="label"]') as HTMLElement;
+    const errorPart = group.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(labelPart.hidden).to.be.true;
+    expect(errorPart.hidden).to.be.true;
+
+    const labelSlot = group.shadowRoot!.querySelector('slot[name="label"]') as HTMLSlotElement;
+    const errorSlot = group.shadowRoot!.querySelector('slot[name="error"]') as HTMLSlotElement;
+
+    const labelChanged = oneEvent(labelSlot, 'slotchange');
+    const labelEl = document.createElement('span');
+    labelEl.slot = 'label';
+    labelEl.textContent = 'Choice';
+    group.append(labelEl);
+    await labelChanged;
+    await group.updateComplete;
+    expect(labelPart.hidden, 'a slotted label element shows the label part').to.be.false;
+
+    const errorChanged = oneEvent(errorSlot, 'slotchange');
+    const errorEl = document.createElement('span');
+    errorEl.slot = 'error';
+    errorEl.textContent = 'Required';
+    group.append(errorEl);
+    await errorChanged;
+    await group.updateComplete;
+    expect(errorPart.hidden, 'a slotted error element shows the error part').to.be.false;
+  });
+
+  it('no-ops syncFormState/updateValidity when called before internals/validityController exist', async () => {
+    const group = (await fixture(html`<lr-radio-group></lr-radio-group>`)) as LyraRadioGroup;
+    await group.updateComplete;
+    const internals = group as unknown as {
+      internals?: ElementInternals;
+      validityController?: unknown;
+      syncFormState(): void;
+      updateValidity(): void;
+    };
+    const savedInternals = internals.internals;
+    const savedValidityController = internals.validityController;
+    try {
+      internals.internals = undefined;
+      expect(() => internals.syncFormState()).to.not.throw();
+      internals.validityController = undefined;
+      expect(() => internals.updateValidity()).to.not.throw();
+    } finally {
+      internals.internals = savedInternals;
+      internals.validityController = savedValidityController;
+    }
+  });
+
+  it('treats an explicit null message the same as empty when clearing custom validity', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group required>
+        <lr-radio value="a">A</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    group.setCustomValidity('Nope');
+    expect(group.validity.customError).to.be.true;
+
+    (group.setCustomValidity as (message?: string | null) => void)(null);
+    expect(group.validity.customError, 'a null message clears custom validity like an empty string')
+      .to.be.false;
+  });
+
+  it('restores the reflected default value on its own reset pass when no radio has a competing native default', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group name="choice" value="a">
+        <lr-radio value="a">A</lr-radio>
+        <lr-radio value="b">B</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    const [a, b] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+    await group.updateComplete;
+    expect(a.checked).to.be.true;
+
+    b.click();
+    expect(b.checked).to.be.true;
+    expect(group.value).to.equal('b');
+
+    // Calls the group's own reset entry point directly -- exactly what a native `form.reset()`
+    // invokes on it -- to isolate its own restoration logic from each *individually*
+    // form-associated owned radio's own separate `formResetCallback()`. See the KNOWN GAP noted in
+    // this task's report: under a real `form.reset()`, each owned radio's own native reset fires
+    // too and (since neither radio here carries a matching `checked` attribute of its own) clobbers
+    // this restored selection back to empty immediately afterward -- a pre-existing radio.class.ts
+    // gap (`formResetCallback()` there is missing the `if (this.currentGroup()) return;` guard that
+    // `formStateRestoreCallback()` already has), left unfixed per this task's scope.
+    group.formResetCallback();
+    expect(
+      group.value,
+      'the group-level defaultValue wins its own reset pass when no radio has a competing default',
+    ).to.equal('a');
+    expect(a.checked).to.be.true;
+    expect(b.checked).to.be.false;
+  });
+
+  it('formStateRestoreCallback clears the selection for a non-string restored state', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group>
+        <lr-radio value="a" checked>A</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    await group.updateComplete;
+    expect(group.value).to.equal('a');
+
+    group.formStateRestoreCallback(null, 'restore');
+    await group.updateComplete;
+    expect(group.value, 'a non-string restored state clears the selection like an empty string')
+      .to.equal('');
+    expect((group.querySelector('lr-radio') as LyraRadio).checked).to.be.false;
+  });
+});

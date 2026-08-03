@@ -551,6 +551,310 @@ describe('lr-query-builder', () => {
     expect(getComputedStyle(row).flexDirection).to.equal('column');
   });
 
+  it('selectValue() narrows an event.target.value that widens to string[] (defensive fast-path guard)', async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'c1', field: 'name', operator: 'contains', value: 'a' }],
+    };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const fieldSelect = conditionRow(el, 0).querySelector('[part="field-select"]') as LyraSelect;
+    // The field-select this component renders is always single-select; force `multiple` here purely
+    // to exercise selectValue()'s defensive Array.isArray narrowing of a widened event.target.value.
+    fieldSelect.multiple = true;
+    let promise = oneEvent(el, 'lr-input');
+    setAndDispatch(fieldSelect, 'value', ['age'], 'change');
+    let ev = await promise;
+    expect(ev.detail.value.conditions[0].field).to.equal('age');
+
+    promise = oneEvent(el, 'lr-input');
+    setAndDispatch(fieldSelect, 'value', [], 'change');
+    ev = await promise;
+    expect(ev.detail.value.conditions[0].field).to.equal('');
+  });
+
+  it('assigning null to fields/value falls back to the empty defaults instead of throwing', async () => {
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+
+    (el as unknown as { fields: QueryBuilderField[] | null }).fields = null;
+    await el.updateComplete;
+    expect(el.fields).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No fields available.');
+
+    (el as unknown as { value: QueryBuilderValue | null }).value = null;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ combinator: 'and', conditions: [] });
+  });
+
+  it("defaultValueFor() resets to a type-appropriate default when the operator changes to a non-unary, non-multi one", async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: 'c-name', field: 'name', operator: 'isEmpty' },
+        { id: 'c-age', field: 'age', operator: 'isEmpty' },
+        { id: 'c-active', field: 'active', operator: 'eq', value: true },
+        { id: 'c-date', field: 'createdAt', operator: 'isEmpty' },
+      ],
+    };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+
+    // string field -> ''
+    let opSelect = conditionRow(el, 0).querySelector('[part="operator-select"]') as LyraSelect;
+    let promise = oneEvent(el, 'lr-input');
+    setAndDispatch(opSelect, 'value', 'eq', 'change');
+    let ev = await promise;
+    expect(ev.detail.value.conditions[0].value).to.equal('');
+    await el.updateComplete;
+
+    // number field -> undefined
+    opSelect = conditionRow(el, 1).querySelector('[part="operator-select"]') as LyraSelect;
+    promise = oneEvent(el, 'lr-input');
+    setAndDispatch(opSelect, 'value', 'gt', 'change');
+    ev = await promise;
+    expect(ev.detail.value.conditions[1].value).to.be.undefined;
+    await el.updateComplete;
+
+    // boolean field -> undefined
+    opSelect = conditionRow(el, 2).querySelector('[part="operator-select"]') as LyraSelect;
+    promise = oneEvent(el, 'lr-input');
+    setAndDispatch(opSelect, 'value', 'neq', 'change');
+    ev = await promise;
+    expect(ev.detail.value.conditions[2].value).to.be.undefined;
+    await el.updateComplete;
+
+    // date field -> '' (same fallback as string; neither number nor boolean)
+    opSelect = conditionRow(el, 3).querySelector('[part="operator-select"]') as LyraSelect;
+    promise = oneEvent(el, 'lr-input');
+    setAndDispatch(opSelect, 'value', 'gte', 'change');
+    ev = await promise;
+    expect(ev.detail.value.conditions[3].value).to.equal('');
+  });
+
+  it('every mutating action no-ops while disabled (addCondition, removeCondition, and each per-condition setter)', async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: 'c1', field: 'name', operator: 'contains', value: 'a' },
+        { id: 'c2', field: 'age', operator: 'eq', value: 1 },
+      ],
+    };
+    const el = (await fixture(
+      html`<lr-query-builder disabled .fields=${FIELDS} .value=${value}></lr-query-builder>`,
+    )) as LyraQueryBuilder;
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-input', () => {
+      fired = true;
+    });
+    el.addEventListener('lr-add-condition', () => {
+      fired = true;
+    });
+    el.addEventListener('lr-remove-condition', () => {
+      fired = true;
+    });
+
+    el.addCondition();
+    expect(el.value.conditions.length).to.equal(2);
+
+    el.removeCondition('c1');
+    expect(el.value.conditions.length).to.equal(2);
+
+    const fieldSelect = conditionRow(el, 0).querySelector('[part="field-select"]') as LyraSelect;
+    setAndDispatch(fieldSelect, 'value', 'age', 'change');
+    expect(el.value.conditions[0].field).to.equal('name');
+
+    const opSelect = conditionRow(el, 0).querySelector('[part="operator-select"]') as LyraSelect;
+    setAndDispatch(opSelect, 'value', 'isEmpty', 'change');
+    expect(el.value.conditions[0].operator).to.equal('contains');
+
+    const valueInput = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
+    setAndDispatch(valueInput, 'value', 'zzz', 'lr-input');
+    expect(el.value.conditions[0].value).to.equal('a');
+
+    const combinator = el.shadowRoot!.querySelector('[part="combinator"]') as LyraSelect;
+    setAndDispatch(combinator, 'value', 'or', 'change');
+    expect(el.value.combinator).to.equal('and');
+
+    await el.updateComplete;
+    expect(fired).to.be.false;
+  });
+
+  it('removeCondition() no-ops for an id that is not present', async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'c1', field: 'name', operator: 'contains', value: 'a' }],
+    };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-remove-condition', () => {
+      fired = true;
+    });
+    el.addEventListener('lr-input', () => {
+      fired = true;
+    });
+    el.removeCondition('does-not-exist');
+    expect(el.value.conditions.length).to.equal(1);
+    expect(fired).to.be.false;
+  });
+
+  it('setting the combinator to its current value no-ops (no commit, no lr-input)', async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: 'c1', field: 'name', operator: 'contains', value: 'a' },
+        { id: 'c2', field: 'age', operator: 'eq', value: 1 },
+      ],
+    };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const combinator = el.shadowRoot!.querySelector('[part="combinator"]') as LyraSelect;
+    let fired = false;
+    el.addEventListener('lr-input', () => {
+      fired = true;
+    });
+    setAndDispatch(combinator, 'value', 'and', 'change');
+    expect(el.value.combinator).to.equal('and');
+    expect(fired).to.be.false;
+  });
+
+  it('conditionElement() falls back to null when shadowRoot is unavailable (defensive guard)', async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'c1', field: 'name', operator: 'contains', value: 'a' }],
+    };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(el, 'shadowRoot');
+    Object.defineProperty(el, 'shadowRoot', { configurable: true, get: () => null });
+    try {
+      const removePromise = oneEvent(el, 'lr-remove-condition');
+      el.removeCondition('c1');
+      await removePromise;
+      expect(el.value.conditions.length).to.equal(0);
+    } finally {
+      if (originalDescriptor) Object.defineProperty(el, 'shadowRoot', originalDescriptor);
+      else Reflect.deleteProperty(el, 'shadowRoot');
+    }
+  });
+
+  it('removeCondition() tolerates a condition whose DOM row is already gone', async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'c1', field: 'name', operator: 'contains', value: 'a' }],
+    };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    conditionRow(el, 0).remove();
+    const removePromise = oneEvent(el, 'lr-remove-condition');
+    el.removeCondition('c1');
+    await removePromise;
+    expect(el.value.conditions.length).to.equal(0);
+  });
+
+  it('renders an empty multi-select when a stored value is not an array (defensive fallback)', async () => {
+    const value: QueryBuilderValue = { combinator: 'and', conditions: [{ id: 'c1', field: 'status', operator: 'in' }] };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const combobox = conditionRow(el, 0).querySelector('[part="value"]') as LyraCombobox;
+    expect(combobox.tagName.toLowerCase()).to.equal('lr-combobox');
+    expect(combobox.value).to.deep.equal([]);
+  });
+
+  it('changing the multi-select (in/notIn) value control commits the new array and emits lr-input', async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'c1', field: 'status', operator: 'in', value: ['open'] }],
+    };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const combobox = conditionRow(el, 0).querySelector('[part="value"]') as LyraCombobox;
+    const promise = oneEvent(el, 'lr-input');
+    setAndDispatch(combobox, 'value', ['open', 'closed'], 'change');
+    const ev = await promise;
+    expect(ev.detail.value.conditions[0].value).to.deep.equal(['open', 'closed']);
+  });
+
+  it('renders no options (rather than throwing) for an enum field with no options list, in both single- and multi-select value controls', async () => {
+    const fields: QueryBuilderField[] = [{ name: 'tag', label: 'Tag', type: 'enum' }];
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: 'c-eq', field: 'tag', operator: 'eq' },
+        { id: 'c-in', field: 'tag', operator: 'in' },
+      ],
+    };
+    const el = (await fixture(html`<lr-query-builder .fields=${fields} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const eqControl = conditionRow(el, 0).querySelector('[part="value"]') as LyraSelect;
+    const inControl = conditionRow(el, 1).querySelector('[part="value"]') as LyraCombobox;
+    expect(eqControl.querySelectorAll('lr-option').length).to.equal(0);
+    expect(inControl.querySelectorAll('lr-option').length).to.equal(0);
+  });
+
+  it("falls back to an option's value as its label when the field omits one, in both single- and multi-select value controls", async () => {
+    const fields: QueryBuilderField[] = [
+      {
+        name: 'priority',
+        label: 'Priority',
+        type: 'enum',
+        options: [{ value: 'low' }, { value: 'high', label: 'High' }],
+      },
+    ];
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: 'c-eq', field: 'priority', operator: 'eq' },
+        { id: 'c-in', field: 'priority', operator: 'in' },
+      ],
+    };
+    const el = (await fixture(html`<lr-query-builder .fields=${fields} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const eqControl = conditionRow(el, 0).querySelector('[part="value"]') as LyraSelect;
+    const inControl = conditionRow(el, 1).querySelector('[part="value"]') as LyraCombobox;
+    const eqOptionLabels = [...eqControl.querySelectorAll('lr-option')].map((o) => o.textContent?.trim());
+    const inOptionLabels = [...inControl.querySelectorAll('lr-option')].map((o) => o.textContent?.trim());
+    expect(eqOptionLabels).to.deep.equal(['low', 'High']);
+    expect(inOptionLabels).to.deep.equal(['low', 'High']);
+  });
+
+  it('a date condition with no value yet renders an empty date-input, and changing it commits and emits lr-input', async () => {
+    const value: QueryBuilderValue = { combinator: 'and', conditions: [{ id: 'c1', field: 'createdAt', operator: 'gte' }] };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const dateInput = conditionRow(el, 0).querySelector('[part="value"]') as LyraDateInput;
+    expect(dateInput.value).to.equal('');
+    const promise = oneEvent(el, 'lr-input');
+    setAndDispatch(dateInput, 'value', '2026-03-03', 'change');
+    const ev = await promise;
+    expect(ev.detail.value.conditions[0].value).to.equal('2026-03-03');
+  });
+
+  it('an enum condition with no value yet renders an empty select, and changing it commits and emits lr-input', async () => {
+    const value: QueryBuilderValue = { combinator: 'and', conditions: [{ id: 'c1', field: 'status', operator: 'eq' }] };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const select = conditionRow(el, 0).querySelector('[part="value"]') as LyraSelect;
+    expect(select.value).to.equal('');
+    const promise = oneEvent(el, 'lr-input');
+    setAndDispatch(select, 'value', 'closed', 'change');
+    const ev = await promise;
+    expect(ev.detail.value.conditions[0].value).to.equal('closed');
+  });
+
+  it('a non-numeric number-field value commits undefined rather than NaN', async () => {
+    const value: QueryBuilderValue = { combinator: 'and', conditions: [{ id: 'c1', field: 'age', operator: 'eq', value: 5 }] };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const input = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
+    const promise = oneEvent(el, 'lr-input');
+    setAndDispatch(input, 'value', 'not-a-number', 'lr-input');
+    const ev = await promise;
+    expect(ev.detail.value.conditions[0].value).to.be.undefined;
+  });
+
   it('is accessible (empty state)', async () => {
     const el = (await fixture(html`<lr-query-builder .fields=${FIELDS}></lr-query-builder>`)) as LyraQueryBuilder;
     await el.updateComplete;

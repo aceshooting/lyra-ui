@@ -6,6 +6,7 @@ import {
   canRequestFullscreen,
   canRequestPictureInPicture,
   cloneSafeMediaNodes,
+  safeNativeMediaSource,
 } from './media-controller.js';
 
 function stubMethod<T extends object, K extends keyof T>(
@@ -232,6 +233,320 @@ describe('NativeMediaController', () => {
       restorePause();
     }
   });
+
+  it('validates a native media source URL the same way the shared media-source guard does', () => {
+    expect(safeNativeMediaSource('https://example.test/video.mp4')).to.equal(
+      'https://example.test/video.mp4',
+    );
+    expect(safeNativeMediaSource('javascript:alert(1)')).to.equal(null);
+  });
+
+  it('exposes the attached native element through the element getter', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    const controller = new NativeMediaController(target);
+    expect(controller.element).to.equal(undefined);
+    controller.attach(media);
+    expect(controller.element === media).to.be.true;
+  });
+
+  it('falls back to a pending seek when assigning native currentTime throws', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    const controller = new NativeMediaController(target);
+    controller.attach(media);
+    Object.defineProperty(media, 'currentTime', {
+      configurable: true,
+      get: () => 0,
+      set: () => {
+        throw new DOMException('Seek failed', 'InvalidStateError');
+      },
+    });
+
+    controller.currentTime = 42;
+
+    expect(controller.currentTime).to.equal(42);
+  });
+
+  it('resolves currentTime from a pending value or the default before any media is attached', () => {
+    const target = document.createElement('div');
+    const controller = new NativeMediaController(target);
+    expect(controller.currentTime).to.equal(0);
+    controller.currentTime = 42;
+    expect(controller.currentTime).to.equal(42);
+  });
+
+  it('resolves muted from native state, then user preference, then the default', () => {
+    const target = document.createElement('div');
+    const controller = new NativeMediaController(target);
+    expect(controller.muted).to.be.false;
+    controller.muted = true;
+    expect(controller.muted).to.be.true;
+
+    const media = document.createElement('video');
+    controller.attach(media);
+    expect(media.muted).to.be.true;
+    expect(controller.muted).to.be.true;
+
+    controller.muted = false;
+    expect(media.muted).to.be.false;
+    expect(controller.muted).to.be.false;
+  });
+
+  it('resolves volume and playbackRate from native state, then preference, then the default', () => {
+    const target = document.createElement('div');
+    const controller = new NativeMediaController(target);
+    expect(controller.volume).to.equal(1);
+    expect(controller.playbackRate).to.equal(1);
+
+    const media = document.createElement('video');
+    controller.attach(media);
+    controller.volume = 0.4;
+    controller.playbackRate = 2;
+    expect(controller.volume).to.equal(0.4);
+    expect(controller.playbackRate).to.equal(2);
+
+    Object.defineProperty(media, 'volume', { configurable: true, value: Number.NaN });
+    Object.defineProperty(media, 'playbackRate', { configurable: true, value: Number.NaN });
+    expect(controller.volume).to.equal(0.4);
+    expect(controller.playbackRate).to.equal(2);
+  });
+
+  it('forwards pause() directly to the native element', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    let pauses = 0;
+    const restorePause = stubMethod(media, 'pause', (() => { pauses += 1; }) as HTMLMediaElement['pause']);
+    const controller = new NativeMediaController(target);
+    try {
+      controller.attach(media);
+      controller.pause();
+      expect(pauses).to.equal(1);
+    } finally {
+      restorePause();
+    }
+  });
+
+  it('resolves play() immediately when no native element is attached', async () => {
+    const target = document.createElement('div');
+    const controller = new NativeMediaController(target);
+    const result = await controller.play();
+    expect(result).to.equal(undefined);
+  });
+
+  it('detaches the native element and clears pending state when attach(null) is called', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    let pauses = 0;
+    const restorePause = stubMethod(media, 'pause', (() => { pauses += 1; }) as HTMLMediaElement['pause']);
+    const controller = new NativeMediaController(target);
+    try {
+      controller.attach(media);
+      controller.attach(null);
+      expect(controller.element).to.equal(undefined);
+      expect(pauses).to.equal(1);
+      expect(controller.currentTime).to.equal(0);
+    } finally {
+      restorePause();
+    }
+  });
+
+  it('rebinds a still-active element that lost its listeners when attach() repeats with no configured events', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    const controller = new NativeMediaController(target, { events: [], relayEvents: [] });
+    controller.attach(media);
+    controller.attach(media);
+    expect(controller.element === media).to.be.true;
+  });
+
+  it('disconnects and reconnects safely when no native element was ever attached', () => {
+    const target = document.createElement('div');
+    const controller = new NativeMediaController(target);
+    controller.disconnect();
+    controller.reconnect();
+    expect(controller.element).to.equal(undefined);
+  });
+
+  it('no-ops a second disconnect() call', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    let pauses = 0;
+    const restorePause = stubMethod(media, 'pause', (() => { pauses += 1; }) as HTMLMediaElement['pause']);
+    const controller = new NativeMediaController(target);
+    try {
+      controller.attach(media);
+      controller.disconnect();
+      expect(pauses).to.equal(1);
+      controller.disconnect();
+      expect(pauses).to.equal(1);
+    } finally {
+      restorePause();
+    }
+  });
+
+  it('no-ops reconnect() when already active', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    const controller = new NativeMediaController(target);
+    controller.attach(media);
+    const generationBefore = controller.generation;
+    controller.reconnect();
+    expect(controller.generation).to.equal(generationBefore);
+  });
+
+  it('no-ops load, unload, setSources, captureUserPreferences, and applyUserPreferences without an attached element', () => {
+    const target = document.createElement('div');
+    const controller = new NativeMediaController(target);
+    controller.load();
+    controller.unload();
+    expect(controller.setSources({ src: 'https://example.test/video.mp4' })).to.be.false;
+    expect(controller.captureUserPreferences()).to.deep.equal({});
+    controller.applyUserPreferences({ volume: 0.5 });
+    expect(controller.volume).to.equal(1);
+  });
+
+  it('ignores applyUserPreferences payloads that are null, non-object, omit textTrack, or carry a non-object textTrack', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    const controller = new NativeMediaController(target);
+    controller.attach(media);
+    media.volume = 0.6;
+
+    controller.applyUserPreferences(null as never);
+    controller.applyUserPreferences('nope' as never);
+    expect(media.volume).to.equal(0.6);
+
+    controller.applyUserPreferences({ volume: 0.2 });
+    expect(media.volume).to.equal(0.2);
+
+    controller.applyUserPreferences({ textTrack: 'not-an-object' } as never);
+    expect(media.volume).to.equal(0.2);
+  });
+
+  it('disables all user-selectable tracks when applyUserPreferences receives an explicit null textTrack', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    const english = media.addTextTrack('captions', 'English', 'en');
+    const chapters = media.addTextTrack('chapters', 'Chapters');
+    english.mode = 'showing';
+    chapters.mode = 'showing';
+    const controller = new NativeMediaController(target);
+    controller.attach(media);
+
+    controller.applyUserPreferences({ textTrack: null });
+
+    expect(english.mode).to.equal('disabled');
+    expect(chapters.mode).to.equal('showing');
+  });
+
+  it('falls back to matching by index and kind when no exact caption match exists, and no-ops when nothing matches', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    const english = media.addTextTrack('captions', 'English', 'en');
+    const french = media.addTextTrack('captions', 'French', 'fr');
+    const controller = new NativeMediaController(target);
+    controller.attach(media);
+
+    controller.applyUserPreferences({
+      textTrack: { index: 0, kind: 'captions', label: 'Renamed', language: 'xx' },
+    });
+    expect(english.mode).to.equal('showing');
+    expect(french.mode).to.equal('disabled');
+
+    controller.applyUserPreferences({
+      textTrack: { index: 5, kind: 'subtitles', label: 'Missing', language: 'zz' },
+    });
+    expect(english.mode).to.equal('showing');
+    expect(french.mode).to.equal('disabled');
+  });
+
+  it('replaces existing source/track children and applies a fresh direct src across repeated setSources calls, then unloads stale content when a later direct URL is rejected', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    let loads = 0;
+    const restoreLoad = stubMethod(media, 'load', (() => { loads += 1; }) as HTMLMediaElement['load']);
+    const source = document.createElement('source');
+    source.src = 'https://example.test/a.mp4';
+    const controller = new NativeMediaController(target);
+
+    try {
+      controller.attach(media);
+
+      expect(controller.setSources({ nodes: [source] })).to.be.true;
+      expect(media.querySelectorAll('source, track').length).to.equal(1);
+
+      expect(controller.setSources({ src: 'https://example.test/video2.mp4' })).to.be.true;
+      expect(media.getAttribute('src')).to.equal('https://example.test/video2.mp4');
+      expect(media.querySelectorAll('source, track').length).to.equal(0);
+
+      expect(controller.setSources({ src: 'javascript:alert(1)' })).to.be.false;
+      expect(media.hasAttribute('src')).to.be.false;
+      expect(loads).to.be.greaterThan(2);
+    } finally {
+      restoreLoad();
+    }
+  });
+
+  it('skips non-element nodes and tracks missing a kind attribute while cloning', () => {
+    const consumer = document.createElement('div');
+    const comment = document.createComment('not an element');
+    const text = document.createTextNode('not an element either');
+    const track = document.createElement('track');
+    track.src = 'https://example.test/no-kind.vtt';
+    const source = document.createElement('source');
+    source.src = 'https://example.test/ok.mp4';
+    consumer.append(comment, text, track, source);
+
+    const clones = cloneSafeMediaNodes(consumer.childNodes, document);
+
+    expect(clones.length).to.equal(1);
+    expect(clones[0]?.tagName).to.equal('SOURCE');
+  });
+
+  it('invokes an onEvent callback registered through the constructor for every observed native event', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    const seen: string[] = [];
+    const controller = new NativeMediaController(target, {
+      onEvent: (event, ctrl) => {
+        seen.push(event.type);
+        expect(ctrl === controller).to.be.true;
+      },
+    });
+    controller.attach(media);
+    media.dispatchEvent(new Event('play'));
+    expect(seen).to.deep.equal(['play']);
+  });
+
+  it('clamps currentTime against a positive known duration on timeupdate and seeked', () => {
+    const target = document.createElement('div');
+    const media = document.createElement('video');
+    const controller = new NativeMediaController(target);
+    controller.attach(media);
+    Object.defineProperty(media, 'duration', { configurable: true, value: 50 });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    expect(controller.duration).to.equal(50);
+
+    Object.defineProperty(media, 'currentTime', { configurable: true, value: 200 });
+    media.dispatchEvent(new Event('timeupdate'));
+    expect(controller.currentTime).to.equal(50);
+
+    media.dispatchEvent(new Event('seeked'));
+    expect(controller.currentTime).to.equal(50);
+  });
+
+  it('falls back to the global Event constructor when the native element has no owner window', () => {
+    const target = document.createElement('div');
+    const detachedDocument = document.implementation.createHTMLDocument('detached');
+    const media = detachedDocument.createElement('video');
+    const controller = new NativeMediaController(target);
+    let received = 0;
+    target.addEventListener('play', () => { received += 1; });
+    controller.attach(media);
+    media.dispatchEvent(new Event('play'));
+    expect(received).to.equal(1);
+  });
 });
 
 describe('native media capability predicates', () => {
@@ -268,5 +583,12 @@ describe('native media capability predicates', () => {
       if (pipDescriptor) Object.defineProperty(document, 'pictureInPictureEnabled', pipDescriptor);
       else delete (document as Document & { pictureInPictureEnabled?: boolean }).pictureInPictureEnabled;
     }
+  });
+
+  it('returns false for capability checks given no element', () => {
+    expect(canRequestFullscreen(null)).to.be.false;
+    expect(canRequestFullscreen(undefined)).to.be.false;
+    expect(canRequestPictureInPicture(null)).to.be.false;
+    expect(canRequestPictureInPicture(undefined)).to.be.false;
   });
 });

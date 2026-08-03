@@ -144,6 +144,48 @@ it('drops a stale lr-after-show when closing interrupts the opening transition',
   expect(events).to.deep.equal(['lr-show', 'lr-hide', 'lr-after-hide']);
 });
 
+it('drops a settleTransition() call that is already stale before its first await settles', async () => {
+  const el = (await fixture(html`
+    <lr-select><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  let afterShows = 0;
+  el.addEventListener('lr-after-show', () => { afterShows += 1; });
+
+  const settleTransition = (
+    el as unknown as { settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> }
+  ).settleTransition.bind(el);
+  const pending = settleTransition('lr-after-show');
+  // Bump the token synchronously, before settleTransition's own internal
+  // `await this.updateComplete` has a chance to resolve -- guaranteeing it finds itself stale the
+  // instant that first await settles, rather than racing a real transition to land the same
+  // outcome.
+  (el as unknown as { transitionToken: number }).transitionToken++;
+  await pending;
+
+  expect(afterShows, 'a call invalidated before its first await never reaches the emit').to.equal(0);
+});
+
+it('tolerates a listbox that reports no animations at all (defensive fallback)', async () => {
+  const el = (await fixture(html`
+    <lr-select><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  const events: string[] = [];
+  el.addEventListener('lr-after-show', () => events.push('after-show'));
+  const listbox = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+  const original = listbox.getAnimations;
+  listbox.getAnimations = (() => undefined) as unknown as typeof listbox.getAnimations;
+  try {
+    await el.show();
+  } finally {
+    listbox.getAnimations = original;
+  }
+  expect(events, 'a getAnimations() call that returns nothing falls back to no animations to await').to.deep.equal([
+    'after-show',
+  ]);
+});
+
 function trigger(el: LyraSelect): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
 }
@@ -415,6 +457,24 @@ it('resets the type-ahead buffer after ~500ms of inactivity', async () => {
   expect(el.value).to.equal('c');
 });
 
+it('leaves the type-ahead buffer alone when its reset timer fires after being superseded', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  const btn = trigger(el);
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect((el as unknown as { typeAheadBuffer: string }).typeAheadBuffer).to.equal('a');
+  // Bump the generation counter directly, without going through `clearTypeAheadTimer()` (which
+  // would also cancel the real, already-scheduled timeout) -- so that timeout still fires in
+  // ~500ms, but now finds itself superseded and takes its own early-return guard instead of
+  // clearing the buffer.
+  (el as unknown as { typeAheadTimerGeneration: number }).typeAheadTimerGeneration++;
+  await aTimeout(600);
+  expect(
+    (el as unknown as { typeAheadBuffer: string }).typeAheadBuffer,
+    'a superseded timer must not clear a buffer it no longer owns',
+  ).to.equal('a');
+});
+
 it('participates in a form: value reflects in FormData on submit', async () => {
   const form = (await fixture(html`
     <form>
@@ -652,6 +712,116 @@ it('retains a defaultSelected refresh when the parent detaches during option not
   expect(el.value).to.equal('a');
 });
 
+it('adopts a property-only dirty .selected write in single mode too, not just multiple', async () => {
+  const el = (await fixture(html`
+    <lr-select>
+      <lr-option value="a" .selected=${true}>Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  expect(el.value).to.equal('a');
+});
+
+it('leaves nothing selected when the only dirty option was written back to unselected before mount', async () => {
+  const option = document.createElement('lr-option') as LyraOption;
+  option.value = 'a';
+  option.textContent = 'Apple';
+  option.selected = true;
+  option.selected = false;
+  const el = document.createElement('lr-select') as LyraSelect;
+  el.append(option);
+  document.body.append(el);
+  await el.updateComplete;
+  try {
+    expect(el.value, 'the dirty write is honoured even though it now says unselected').to.equal('');
+  } finally {
+    el.remove();
+  }
+});
+
+it('commits a default-value with no matching option, mirroring a lazily-populated list', async () => {
+  const el = (await fixture(html`
+    <lr-select default-value="ghost">
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  expect(el.value, 'the not-yet-existent default is still committed verbatim').to.equal('ghost');
+});
+
+it('does not let a late-arriving selected option override a value restored from form state', async () => {
+  const el = (await fixture(html`<lr-select><lr-option value="a">Apple</lr-option></lr-select>`)) as LyraSelect;
+  await el.updateComplete;
+  el.formStateRestoreCallback('a', 'restore');
+  await el.updateComplete;
+  expect(el.value).to.equal('a');
+
+  const banana = document.createElement('lr-option') as LyraOption;
+  banana.value = 'b';
+  banana.textContent = 'Banana';
+  banana.selected = true;
+  el.append(banana);
+  await el.updateComplete;
+  expect(el.value, 'a restored value outranks a newly-slotted selected option').to.equal('a');
+});
+
+it('merges a late-arriving live-selected option into an existing multi-select selection', async () => {
+  const el = (await fixture(html`
+    <lr-select multiple>
+      <lr-option value="a" selected>Apple</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  expect(el.value).to.deep.equal(['a']);
+
+  const banana = document.createElement('lr-option') as LyraOption;
+  banana.value = 'b';
+  banana.textContent = 'Banana';
+  banana.selected = true;
+  el.append(banana);
+  await el.updateComplete;
+  expect(el.value).to.deep.equal(['a', 'b']);
+});
+
+it('adopts a late-arriving declaratively-defaulted option into a pristine single selection', async () => {
+  const el = (await fixture(html`<lr-select><lr-option value="a">Apple</lr-option></lr-select>`)) as LyraSelect;
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+
+  const banana = document.createElement('lr-option') as LyraOption;
+  banana.value = 'b';
+  banana.textContent = 'Banana';
+  banana.defaultSelected = true;
+  el.append(banana);
+  await el.updateComplete;
+  expect(el.value).to.equal('b');
+});
+
+describe('adoptedCallback', () => {
+  it('tears down positioning cleanup and pending listeners when adopted into another document', async () => {
+    const el = (await fixture(
+      html`<lr-select open><lr-option value="a">Apple</lr-option></lr-select>`,
+    )) as LyraSelect;
+    await el.updateComplete;
+    // Opening while connected sets a live positioning `cleanup` callback (see `updated()`).
+    expect(
+      (el as unknown as { cleanup?: () => void }).cleanup,
+      'a live popup has a cleanup callback',
+    ).to.not.equal(undefined);
+    (el as unknown as { adoptedCallback(): void }).adoptedCallback();
+    expect(
+      (el as unknown as { cleanup?: () => void }).cleanup,
+      'adoption tears the cleanup down',
+    ).to.equal(undefined);
+  });
+
+  it('no-ops when adopted with no positioning cleanup pending', () => {
+    const el = document.createElement('lr-select') as LyraSelect;
+    expect(() => (el as unknown as { adoptedCallback(): void }).adoptedCallback()).to.not.throw();
+  });
+});
+
 it('resets to empty via form.reset() when no option was declared selected', async () => {
   const form = (await fixture(html`
     <form>
@@ -744,6 +914,82 @@ it('re-binds positioning after a disconnect+reconnect while open, ending up clos
   expect(el.open).to.be.false;
 });
 
+describe('reconnectOpenPopup (connectedCallback re-arming)', () => {
+  // `disconnectedCallback()` always resets `open` back to `false` (see the test above), so
+  // `connectedCallback()`'s `hasUpdated && open` gate for `reconnectOpenPopup()` can only ever be
+  // satisfied by flipping `open` back on again *while still detached*, before reconnecting --
+  // mirroring a drag-drop reparent that wants the popup to reappear already open.
+
+  it('re-arms positioning when open is restored before reconnecting', async () => {
+    const el = (await fixture(
+      html`<lr-select open hoist><lr-option value="x">X</lr-option></lr-select>`,
+    )) as LyraSelect;
+    await el.updateComplete;
+    const parent = el.parentElement!;
+    el.remove();
+    await el.updateComplete;
+    expect(el.open, 'disconnecting closed it').to.be.false;
+
+    el.open = true;
+    await el.updateComplete;
+    parent.appendChild(el);
+    await el.updateComplete;
+    await aTimeout(20);
+
+    expect(el.open).to.be.true;
+    expect(
+      (el as unknown as { cleanup?: () => void }).cleanup,
+      'reconnectOpenPopup() re-armed the positioning cleanup',
+    ).to.not.equal(undefined);
+    el.remove();
+  });
+
+  it('tears down and replaces an already-live cleanup when called again while still open', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    await el.show();
+    const before = (el as unknown as { cleanup?: () => void }).cleanup;
+    expect(before, 'show() already set a live cleanup').to.not.equal(undefined);
+    (el as unknown as { reconnectOpenPopup(): void }).reconnectOpenPopup();
+    const after = (el as unknown as { cleanup?: () => void }).cleanup;
+    expect(after, 'reconnectOpenPopup() replaced the live cleanup with a fresh one').to.not.equal(undefined);
+  });
+
+  it('no-ops if the element is disconnected again before its queued microtask runs', async () => {
+    const el = (await fixture(html`<lr-select open><lr-option value="x">X</lr-option></lr-select>`)) as LyraSelect;
+    await el.updateComplete;
+    const parent = el.parentElement!;
+    el.remove();
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+
+    parent.appendChild(el);
+    el.remove(); // synchronously, before the microtask connectedCallback() just queued can run
+    await el.updateComplete;
+    await aTimeout(20);
+
+    expect(el.isConnected).to.be.false;
+  });
+
+  it('no-ops if open is toggled off again before its queued microtask runs', async () => {
+    const el = (await fixture(html`<lr-select open><lr-option value="x">X</lr-option></lr-select>`)) as LyraSelect;
+    await el.updateComplete;
+    const parent = el.parentElement!;
+    el.remove();
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+
+    parent.appendChild(el);
+    el.open = false; // synchronously, before the microtask connectedCallback() just queued can run
+    await el.updateComplete;
+    await aTimeout(20);
+
+    expect(el.open).to.be.false;
+    el.remove();
+  });
+});
+
 it('does not override an explicit `label` slot with the fallback aria-label', async () => {
   const el = (await fixture(html`<lr-select><span slot="label">Region</span></lr-select>`)) as LyraSelect;
   await el.updateComplete;
@@ -783,6 +1029,27 @@ it('closes the listbox on a pointerdown outside the element', async () => {
   document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(el.open).to.be.false;
+});
+
+describe('bindDocumentPointer (internal, defensive guards)', () => {
+  it('no-ops when called while disconnected', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    await el.updateComplete;
+    el.remove();
+    expect(() =>
+      (el as unknown as { bindDocumentPointer(): void }).bindDocumentPointer(),
+    ).to.not.throw();
+  });
+
+  it('is idempotent for an already-bound owner document', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    await el.show();
+    const before = (el as unknown as { pointerListener?: unknown }).pointerListener;
+    expect(before, 'show() already bound a listener').to.not.equal(undefined);
+    (el as unknown as { bindDocumentPointer(): void }).bindDocumentPointer();
+    const after = (el as unknown as { pointerListener?: unknown }).pointerListener;
+    expect(after, 'rebinding for the same document is a no-op, not a fresh listener').to.equal(before);
+  });
 });
 
 it('fires lr-show/lr-hide when `open` is set directly, bypassing click/keyboard', async () => {
@@ -2015,6 +2282,38 @@ describe('ElementInternals fallback (lr-select)', () => {
       },
     );
   });
+
+  it('takes the direct no-op path when nothing in the prototype chain implements attachInternals', async () => {
+    // `LyraElement` itself declares an `override attachInternals()` (to capture form internals for
+    // shared infrastructure), which always shadows `HTMLElement.prototype.attachInternals` -- so
+    // deleting only the native one (as the sibling "is missing" test above does) never reaches
+    // `createInternalsSafely`'s own `typeof host.attachInternals !== 'function'` guard: the lookup
+    // still finds LyraElement's own method (a real function), which then *calls* the missing
+    // native one and throws, exercising the catch branch instead (same as "throws" above). Removing
+    // LyraElement's override too is the only way to actually hit the guard's early-return branch.
+    const htmlProto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const lyraProto = LyraElement.prototype as unknown as { attachInternals?: unknown };
+    const originalHtml = htmlProto.attachInternals;
+    const hadOwnLyra = Object.prototype.hasOwnProperty.call(lyraProto, 'attachInternals');
+    const originalLyra = lyraProto.attachInternals;
+    delete htmlProto.attachInternals;
+    delete lyraProto.attachInternals;
+    try {
+      const el = (await fixture(
+        html`<lr-select label="Meter"><lr-option value="a">A</lr-option></lr-select>`,
+      )) as LyraSelect;
+      await el.updateComplete;
+      const internals = (el as unknown as { internals: ElementInternals }).internals;
+      expect(internals.willValidate).to.be.false;
+      expect(internals.checkValidity()).to.be.true;
+      expect(internals.reportValidity()).to.be.true;
+      expect(() => internals.setFormValue('x')).to.not.throw();
+    } finally {
+      htmlProto.attachInternals = originalHtml;
+      if (hadOwnLyra) lyraProto.attachInternals = originalLyra;
+      else delete lyraProto.attachInternals;
+    }
+  });
 });
 
 
@@ -2144,6 +2443,28 @@ describe('multiple', () => {
     expect(single.value).to.equal('b');
   });
 
+  it('restores an empty selection from genuinely malformed (unparsable) persisted state', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a', 'b'];
+    expect(el.value).to.deep.equal(['a', 'b']);
+    // Unlike `{"not":"an array"}` above (valid JSON that simply isn't an array), this string fails
+    // `JSON.parse()` itself, exercising the catch clause rather than the array-shape check.
+    expect(() => el.formStateRestoreCallback('not valid json{', 'restore')).to.not.throw();
+    expect(el.value).to.deep.equal([]);
+  });
+
+  it('collapses to the first selected value when `multiple` is turned off with several selected', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a', 'b', 'c'];
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a', 'b', 'c']);
+
+    el.multiple = false;
+    await el.updateComplete;
+    expect(el.value, 'only the first selection survives leaving multiple mode').to.equal('a');
+    expect(el.selectedOptions.map((option) => option.value)).to.deep.equal(['a']);
+  });
+
   it('stays invalid while required and empty, and validates once anything is selected', async () => {
     const el = (await fixture(html`
       <lr-select multiple required>
@@ -2184,6 +2505,38 @@ describe('multiple', () => {
     await el.updateComplete;
     expect(el.value).to.deep.equal(['a']);
     expect(changes).to.equal(1);
+  });
+
+  it('ignores removing a value that is not selected, or while disabled', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+    const removeValue = (value: string): void =>
+      (el as unknown as { removeValue(v: string): void }).removeValue(value);
+
+    el.disabled = true;
+    removeValue('a');
+    expect(el.value, 'disabled blocks removal even of a selected value').to.deep.equal(['a', 'b']);
+
+    el.disabled = false;
+    removeValue('not-selected');
+    expect(el.value, 'removing an unselected value is a no-op').to.deep.equal(['a', 'b']);
+
+    removeValue('a');
+    expect(el.value).to.deep.equal(['b']);
+  });
+
+  it('focuses the trigger when removing the last remaining tag leaves no remove buttons behind', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a'];
+    await el.updateComplete;
+    const removeButton = el.shadowRoot!.querySelector(
+      '[part~="tag__remove-button"]',
+    ) as HTMLButtonElement;
+    removeButton.click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal([]);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.contain('trigger');
   });
 
   it('never removes an already-selected option through closed-state type-ahead', async () => {
@@ -2278,6 +2631,29 @@ describe('with-clear', () => {
     el.value = 'b';
     await el.updateComplete;
     expect(clearButton(el)).to.equal(null);
+  });
+
+  it('clear() no-ops while disabled, or with nothing selected', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    await el.updateComplete;
+    const clear = (): void => (el as unknown as { clear(): void }).clear();
+    let clears = 0;
+    el.addEventListener('lr-clear', () => clears++);
+
+    clear();
+    expect(clears, 'nothing selected to begin with').to.equal(0);
+
+    el.value = 'a';
+    el.disabled = true;
+    clear();
+    expect(clears, 'disabled blocks clearing even with something selected').to.equal(0);
+    expect(el.value).to.equal('a');
+
+    el.disabled = false;
+    clear();
+    expect(clears).to.equal(1);
+    expect(el.value).to.equal('');
   });
 
   it('clears the selection and announces it once', async () => {
@@ -2757,6 +3133,14 @@ describe('lr-select setCustomValidity()', () => {
     expect(el.matches(':state(user-valid)')).to.be.true;
     expect(el.matches(':state(user-invalid)')).to.be.false;
   });
+
+  it('treats a nullish message the same as the empty string, for non-TS callers', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    await el.updateComplete;
+    (el as unknown as { setCustomValidity(message?: string | null): void }).setCustomValidity(undefined);
+    expect(el.validity.customError).to.be.false;
+    expect(el.validationMessage).to.equal('');
+  });
 });
 
 describe('lr-select hover and press feedback', () => {
@@ -2809,6 +3193,59 @@ describe('lr-select mapped Select parity surface', () => {
     el.value = 'a';
     el.formResetCallback();
     expect(el.value).to.equal('b');
+  });
+
+  it('accepts a direct defaultValue property write in both single and multiple shapes', async () => {
+    const el = (await fixture(html`
+      <lr-select>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect & { defaultValue: string | string[] };
+    await el.updateComplete;
+    expect(el.defaultValue).to.equal('');
+
+    // Array input in single mode keeps only the first entry.
+    el.defaultValue = ['a', 'b'];
+    await el.updateComplete;
+    expect(el.defaultValue).to.equal('a');
+    expect(el.value).to.equal('a');
+
+    // Falsy input clears it back to the empty string.
+    el.defaultValue = '';
+    await el.updateComplete;
+    expect(el.defaultValue).to.equal('');
+    expect(el.value).to.equal('');
+
+    el.multiple = true;
+    await el.updateComplete;
+    // A plain string in multiple mode becomes a one-element array.
+    el.defaultValue = 'b';
+    await el.updateComplete;
+    expect(el.defaultValue).to.deep.equal(['b']);
+    expect(el.value).to.deep.equal(['b']);
+  });
+
+  it('treats a non-array selectedOptions write as an empty selection', async () => {
+    const el = (await fixture(html`<lr-select><lr-option value="a">Apple</lr-option></lr-select>`)) as LyraSelect;
+    await el.updateComplete;
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.value).to.equal('a');
+
+    (el as unknown as { selectedOptions: unknown }).selectedOptions = null;
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(el.selectedOptions).to.deep.equal([]);
+  });
+
+  it('falls back to the raw value when a programmatic value has no matching option', async () => {
+    const el = (await fixture(html`<lr-select><lr-option value="a">Apple</lr-option></lr-select>`)) as LyraSelect;
+    await el.updateComplete;
+    el.value = 'ghost';
+    await el.updateComplete;
+    const display = el.shadowRoot!.querySelector('[part="display-input"]') as HTMLElement;
+    expect(display.textContent!.trim()).to.equal('ghost');
   });
 
   it('commits live selectedOptions occurrences silently and keeps returned arrays detached', async () => {

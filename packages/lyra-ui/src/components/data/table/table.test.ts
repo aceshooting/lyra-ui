@@ -267,6 +267,29 @@ it('rolls back an uncommitted resize preview when another drag replaces it or th
   expect((el.shadowRoot!.querySelector('col') as HTMLElement).style.inlineSize).to.equal('120px');
 });
 
+it('does not throw when releasePointerCapture rejects the release while canceling a resize gesture on disconnect', async () => {
+  const wrapper = (await fixture(html`<div><lr-table></lr-table></div>`)) as HTMLElement;
+  const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (row) => row.name },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {
+    throw new DOMException('already released', 'InvalidStateError');
+  };
+
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 80, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 80, clientX: 150 }));
+  // Disconnecting mid-drag cancels the in-flight gesture, which tries to release native pointer
+  // capture as a courtesy -- a browser that has already invalidated it (or never granted it to a
+  // synthetic PointerEvent) must not crash the disconnect.
+  expect(() => el.remove()).to.not.throw();
+  expect((el as unknown as { resizeState: unknown }).resizeState).to.be.undefined;
+});
+
 it('fires exactly one cancelable lr-column-resize, at drag-end, for the committed width -- not per pixel', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
@@ -373,6 +396,95 @@ it('rolls back the live column-width preview without a terminal commit when poin
     expect(terminalEvents, endType).to.equal(0);
     expect(col().style.inlineSize, endType).to.equal(originalWidth);
   }
+});
+
+it('does not throw when releasePointerCapture rejects the release at drag-end (pointerup)', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {
+    throw new DOMException('already released', 'InvalidStateError');
+  };
+
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 70, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 70, clientX: 150 }));
+  expect(() =>
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 70, clientX: 150 })),
+  ).to.not.throw();
+  await el.updateComplete;
+  // The drag still completes normally (state cleared) despite the native release failing.
+  expect((el as unknown as { resizeState: unknown }).resizeState).to.be.undefined;
+});
+
+it("rolls back a second drag's preview to the first drag's committed width (not the declared one) on pointercancel", async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+  const col = (): HTMLElement => el.shadowRoot!.querySelector('col') as HTMLElement;
+
+  // First drag commits normally (pointerup, no veto), establishing a resizedColumnWidths entry
+  // distinct from the declared 120px -- the value a later cancel below must roll back to.
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 60, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 60, clientX: 150 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 60, clientX: 150 }));
+  await el.updateComplete;
+  const committedWidth = col().style.inlineSize;
+  expect(committedWidth).to.not.equal('120px');
+
+  // Second drag previews a different width, then is interrupted by pointercancel -- it must roll
+  // back to the first drag's committed width, not delete the entry back to the declared 120px.
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 61, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 61, clientX: 250 }));
+  await el.updateComplete;
+  expect(col().style.inlineSize).to.not.equal(committedWidth);
+  window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 61 }));
+  await el.updateComplete;
+  expect(col().style.inlineSize).to.equal(committedWidth);
+});
+
+it("reverts to the first drag's committed width (not the declared one) when a second drag's pointerup commit is vetoed", async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+  const col = (): HTMLElement => el.shadowRoot!.querySelector('col') as HTMLElement;
+
+  // First drag commits normally (pointerup, no listener yet).
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 62, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 62, clientX: 150 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 62, clientX: 150 }));
+  await el.updateComplete;
+  const committedWidth = col().style.inlineSize;
+  expect(committedWidth).to.not.equal('120px');
+
+  // Second drag's drag-end commit is vetoed.
+  el.addEventListener('lr-column-resize', (event) => {
+    const custom = event as CustomEvent<{ key: string; width: number }>;
+    if (custom.cancelable) custom.preventDefault();
+  });
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 63, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 63, clientX: 250 }));
+  await el.updateComplete;
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 63, clientX: 250 }));
+  await el.updateComplete;
+  expect(col().style.inlineSize).to.equal(committedWidth);
 });
 
 it('uses the themed minimum width when a resizable column has no explicit minimum', async () => {
@@ -498,6 +610,28 @@ it('honors preventDefault() on a keyboard resize commit, reverting to the pre-pr
   expect(handle.getAttribute('aria-valuenow')).to.equal('120');
 });
 
+it('reverts to a previously-committed width (not the originally-declared one) when a later keyboard resize is vetoed', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', maxWidth: '200px', resizable: true, cell: (row) => row.name },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  // First resize succeeds (no listener yet), establishing a committed width distinct from the
+  // originally-declared 120px -- the value a later veto below must roll back to.
+  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(handle.getAttribute('aria-valuenow')).to.equal('130');
+
+  el.addEventListener('lr-column-resize', (event) => (event as CustomEvent).preventDefault());
+  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  // Reverts to the first resize's 130px, not the originally-declared 120px.
+  expect(handle.getAttribute('aria-valuenow')).to.equal('130');
+});
+
 it('mirrors resize ArrowLeft/ArrowRight under RTL and passes axe populated', async () => {
   const el = (await fixture(html`<lr-table dir="rtl"></lr-table>`)) as LyraTable<Row>;
   el.columns = [
@@ -544,6 +678,34 @@ it('starts a keyboard resize from the live rendered width when a column has no p
 
   // 192 (the live rendered width, not the 12rem CSS length nor minimumResizeWidth's fallback) + the 10px step.
   expect(handle.getAttribute('aria-valuenow')).to.equal('202');
+});
+
+it('skips a resize handle whose data-col-key was removed, without breaking sibling handles', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', resizable: true, cell: (row) => row.name },
+    { key: 'score', label: 'Score', resizable: true, cell: (row) => row.score },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const handles = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="resize-handle"]')];
+  expect(handles.length).to.equal(2);
+  const beforeValue = handles[0]!.getAttribute('aria-valuenow');
+  // A dangling reference: the handle's own data-col-key is gone by the time the sync pass reads
+  // it (e.g. a consumer-owned DOM mutation), so it must be skipped rather than throwing.
+  handles[0]!.removeAttribute('data-col-key');
+
+  const secondHeader = el.shadowRoot!.querySelector('th[data-col-key="score"]') as HTMLElement;
+  secondHeader.getBoundingClientRect = () => ({ width: 222 }) as DOMRect;
+  // Any property change re-runs syncResizeHandleValues() from updated() -- force one.
+  el.requestUpdate();
+  await el.updateComplete;
+
+  expect(handles[1]!.getAttribute('aria-valuenow'), 'the sibling handle still updates').to.equal('222');
+  expect(handles[0]!.getAttribute('aria-valuenow'), 'the handle with no key is left untouched').to.equal(
+    beforeValue,
+  );
 });
 
 it('reflects spellcheck=false when assigned as a property', async () => {
@@ -685,6 +847,33 @@ it('does not restore a transient editor after its row disappears and later retur
   expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(0);
 });
 
+it('clears editingCell (without emitting) instead of throwing when the transient edit target vanishes from rowsByKey before commit', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = editableColumns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const cell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+  cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
+  expect(input).to.exist;
+
+  // Simulate the row vanishing from the lookup map out of band -- with no reactive update in
+  // between (so willUpdate() hasn't already cleared editingCell itself) -- the way it would if a
+  // consumer mutated its own state without going through `rows`. commitEdit must still
+  // gracefully no-op instead of emitting a stale lr-cell-edit for a row it can no longer resolve.
+  (el as unknown as { rowsByKey: Map<string, unknown> }).rowsByKey.delete('string:a');
+  let emitted = false;
+  el.addEventListener('lr-cell-edit', () => (emitted = true));
+  input.value = 'Changed';
+  input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+
+  expect(emitted, 'no stale lr-cell-edit for an unresolvable row').to.be.false;
+  expect((el as unknown as { editingCell: unknown }).editingCell).to.be.null;
+});
+
 it('renders grouped row sections without making group headers focus stops', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
@@ -730,6 +919,25 @@ it('computes custom group rows in linear work', async () => {
 
   expect(groupByCalls).to.be.lessThan(500);
   expect(el.shadowRoot!.querySelectorAll('[part="group-row"]')).to.have.lengthOf(120);
+});
+
+it('excludes a row from grouping (no crash, no bogus bucket) when groupBy returns undefined for it', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows; // Alpha (score 3), Beta (score 1)
+  el.rowKey = (r) => r.id;
+  // A loosely-typed/misbehaving groupBy can return undefined for some rows at runtime even
+  // though its declared return type forbids it -- this must not crash, and must not silently
+  // fold those rows into whichever group happens to read the map next.
+  el.groupBy = (r) => (r.name === 'Alpha' ? 'A' : (undefined as unknown as string));
+  el.groupLabel = (key, groupedRows) => `${key}:${groupedRows.length}`;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
+  const groupRows = [...el.shadowRoot!.querySelectorAll('[part="group-row"]')];
+  expect(groupRows.length).to.equal(2);
+  // Alpha's own group has exactly 1 member -- Beta's undefined key was never folded into it.
+  expect(groupRows[0]!.textContent).to.contain('A:1');
 });
 
 it('filters rows through the built-in filter field and emits the requested text', async () => {
@@ -855,6 +1063,20 @@ it('does not throw when the default filter encounters a row with a throwing toJS
   input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="row"]')).to.have.length(0);
+});
+
+it('folds a JSON.stringify undefined result (e.g. an undefined row) to the empty string in the default filter', async () => {
+  const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  // `JSON.stringify(undefined, replacer)` itself returns `undefined`, not a string -- the
+  // default filter's `?? ''` fallback must fold that to the empty string instead of matching
+  // everything (or throwing) when the row itself is `undefined`.
+  el.rows = [...rows, undefined as unknown as Row];
+  el.filterText = 'alpha';
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Alpha');
 });
 
 it('paginates client-side rows and emits controlled page requests', async () => {
@@ -2751,6 +2973,20 @@ describe('rowTotal / grandTotal', () => {
     expect(footerCells[footerCells.length - 1].textContent!.trim()).to.equal('4'); // 3 + 1
   });
 
+  it('renders an empty grand-total cell (not "undefined") when rowTotal/footer are set but grandTotal is not', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = totalsColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.rowTotal = (r) => r.score;
+    // grandTotal deliberately left unset.
+    await el.updateComplete;
+    const foot = el.shadowRoot!.querySelector('[part="foot"]');
+    expect(foot).to.exist;
+    const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')];
+    expect(footerCells[footerCells.length - 1]!.textContent!.trim()).to.equal('');
+  });
+
   it('aligns the grand-total footer cell with the end-aligned row-total column', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = totalsColumns;
@@ -3042,6 +3278,16 @@ describe('empty-state addressability', () => {
     expect(el.emptyCompact).to.be.false;
     // This branch's own default is compact -- an attribute reading "false" must beat it.
     expect(el.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.false;
+  });
+
+  it('parses a removed empty-compact attribute back to undefined, not false', async () => {
+    const el = (await fixture(
+      html`<lr-table empty-compact="false"></lr-table>`,
+    )) as LyraTable<Row>;
+    expect(el.emptyCompact).to.be.false;
+    el.removeAttribute('empty-compact');
+    await el.updateComplete;
+    expect(el.emptyCompact).to.be.undefined;
   });
 
   it('is accessible with a slotted empty state', async () => {
@@ -3922,6 +4168,43 @@ describe('lifecycle super calls', () => {
   });
 });
 
+describe('announcement sink lifecycle', () => {
+  it('releases (does not acquire) the announcement sink when synced while disconnected', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    expect((el as unknown as { announcementSink?: unknown }).announcementSink).to.exist;
+
+    el.remove();
+    expect((el as unknown as { announcementSink?: unknown }).announcementSink, 'disconnect already released it').to
+      .be.undefined;
+    // syncAnnouncementSink is only ever invoked from connectedCallback in normal operation; calling
+    // it directly here exercises its own "not connected" guard without re-entering the full public
+    // lifecycle (which would also re-subscribe locale/ResizeObserver machinery with no matching
+    // teardown, since the element is never reconnected).
+    (el as unknown as { syncAnnouncementSink(): void }).syncAnnouncementSink();
+    expect((el as unknown as { announcementSink?: unknown }).announcementSink).to.be.undefined;
+  });
+
+  it('does not release/reacquire the announcement sink when synced again while still connected to the same document', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    const before = (el as unknown as { announcementSink?: unknown }).announcementSink;
+    expect(before).to.exist;
+
+    // Same rationale as above: calling the private sync method directly (instead of re-entering
+    // connectedCallback) exercises its own "already have a sink for this document" shortcut in
+    // isolation.
+    (el as unknown as { syncAnnouncementSink(): void }).syncAnnouncementSink();
+    // Compared as a boolean, not passed to chai directly: the sink object carries a DOM element
+    // reference, and a failing node/object identity assertion can hang chai's diff output.
+    expect((el as unknown as { announcementSink?: unknown }).announcementSink === before).to.be.true;
+  });
+});
+
 describe('ResizeObserver callback batching (perf)', () => {
   it('coalesces several synchronous ResizeObserver callback ticks into a single rAF-scheduled layout pass', async () => {
     const originalResizeObserver = window.ResizeObserver;
@@ -3964,6 +4247,46 @@ describe('ResizeObserver callback batching (perf)', () => {
     } finally {
       window.ResizeObserver = originalResizeObserver;
       window.requestAnimationFrame = originalRaf;
+    }
+  });
+
+  it('ignores a stale ResizeObserver callback left over from a disconnect/reconnect cycle', async () => {
+    const originalResizeObserver = window.ResizeObserver;
+    const callbacks: ResizeObserverCallback[] = [];
+    class RecordingResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        callbacks.push(cb);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    (window as unknown as { ResizeObserver: unknown }).ResizeObserver = RecordingResizeObserver;
+    try {
+      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+      el.columns = columns;
+      el.rows = rows;
+      el.rowKey = (r) => r.id;
+      await el.updateComplete;
+      const staleCallback = callbacks[0]!;
+
+      const parent = el.parentElement!;
+      el.remove();
+      parent.appendChild(el);
+      await el.updateComplete;
+      expect(callbacks.length, 'reconnect constructs a fresh observer').to.equal(2);
+      const freshCallback = callbacks[1]!;
+
+      let scheduleCalls = 0;
+      (el as unknown as { scheduleLayoutSync: () => void }).scheduleLayoutSync = () => (scheduleCalls += 1);
+
+      freshCallback([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      expect(scheduleCalls, 'the current observer still schedules a layout sync').to.equal(1);
+
+      staleCallback([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      expect(scheduleCalls, 'a callback from the replaced observer is ignored').to.equal(1);
+    } finally {
+      window.ResizeObserver = originalResizeObserver;
     }
   });
 });
@@ -4481,6 +4804,60 @@ describe('grid keyboard navigation edges', () => {
     const r = await key(el, detachedRow, 'ArrowDown');
     expect(h.defaultPrevented, 'a detached header is inert').to.be.false;
     expect(r.defaultPrevented, 'a detached row is inert').to.be.false;
+  });
+
+  it('does not move focus (no crash) on ArrowDown from a header when there are no real body rows yet (skeleton loading)', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <lr-table
+          accessible-label="Scores"
+          loading
+          loading-appearance="skeleton"
+          .columns=${columns}
+          .rows=${[]}
+        ></lr-table>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+    await el.updateComplete;
+    const th = headers(el);
+    expect(
+      el.shadowRoot!.querySelectorAll('[data-row-key]').length,
+      'skeleton placeholders carry no data-row-key',
+    ).to.equal(0);
+
+    th[0]!.focus();
+    const down = await key(el, th[0]!, 'ArrowDown');
+    expect(down.defaultPrevented).to.be.true;
+    // No real row exists to move focus to -- the header keeps it. Compared as a boolean, not
+    // passed to chai directly, since a failing DOM-node identity assertion can hang chai's diff.
+    expect(el.shadowRoot!.activeElement === th[0]).to.be.true;
+  });
+
+  it('does not move focus (no crash) on ArrowUp from the first row when every column is priority-hidden', async () => {
+    const el = (await fixture(
+      html`<lr-table accessible-label="Scores" style="display:block;width:300px;"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = [
+      { key: 'name', label: 'Name', priority: 'low', cell: (r: Row) => r.name },
+      { key: 'score', label: 'Score', priority: 'medium', cell: (r: Row) => r.score },
+    ];
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    await waitUntil(() =>
+      [...el.shadowRoot!.querySelectorAll<HTMLElement>('th[data-col-key]')].every(
+        (h) => h.offsetParent === null,
+      ),
+    );
+
+    const row = bodyRows(el)[0]!;
+    row.focus();
+    const up = await key(el, row, 'ArrowUp');
+    expect(up.defaultPrevented).to.be.true;
+    // No visible header to move focus to -- the row keeps it. Compared as a boolean, not passed
+    // to chai directly, since a failing DOM-node identity assertion can hang chai's diff.
+    expect(el.shadowRoot!.activeElement === row).to.be.true;
   });
 });
 

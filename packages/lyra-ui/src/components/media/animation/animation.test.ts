@@ -180,6 +180,44 @@ it('rebinds animation, motion, styles, and visibility to the adopted realm and i
   }
 });
 
+// adoptedCallback()'s own comment explains this is a defensive boundary: real DOM adoption
+// (document.adoptNode(), exercised by the sibling test above) always disconnects an element
+// before adoptedCallback fires, so `this.isConnected` is false and only the early-return path
+// (lines up to the guard) ever runs there. adoptedCallback() is not TS-private, so this test calls
+// it directly while the element remains connected throughout, simulating the "unusual adoption
+// path" the guard defends against, to exercise the rebind-and-rebuild path past the guard.
+it('adoptedCallback() rebinds motion preference and rebuilds the animation when invoked directly while still connected', async () => {
+  const motion = stubReducedMotion(false);
+  try {
+    const el = (await fixture(html`
+      <lr-animation name="fade-in" iterations="1">
+        <p>content</p>
+      </lr-animation>
+    `)) as LyraAnimation;
+    await el.updateComplete;
+    const target = el.querySelector('p')!;
+    expect(target.getAnimations().length).to.equal(1);
+    expect(motion.listenerCount()).to.equal(1);
+
+    el.adoptedCallback();
+
+    // Still connected throughout -- unlike real DOM adoption, no disconnectedCallback ran first.
+    expect(el.isConnected).to.be.true;
+    // Unbound then immediately rebound synchronously inside adoptedCallback: net listener count
+    // is unchanged, which would not hold if the rebind (past the `!this.isConnected` guard) had
+    // been skipped.
+    expect(motion.listenerCount()).to.equal(1);
+
+    await el.updateComplete;
+    await aTimeout(0);
+    // The animation was torn down by destroyAnimation() at the top of adoptedCallback and rebuilt
+    // by the scheduleAfterUpdate() callback queued past the guard.
+    expect(target.getAnimations().length).to.equal(1);
+  } finally {
+    motion.restore();
+  }
+});
+
 it('is accessible with a slotted animation target', async () => {
   const el = await fixture(html`
       <lr-animation name="none" play iterations="1">
@@ -320,6 +358,28 @@ it('rejects malformed timing-token numbers instead of passing NaN into WAAPI', a
   expect(timing.easing).to.equal('linear');
 });
 
+// Distinct from the sibling case above: here the token's number+unit+whitespace shape parses
+// successfully (so the regex match succeeds and a finite duration is produced), but the trailing
+// easing text is not a real CSS easing keyword/function -- exercising resolveTimingToken()'s
+// post-match CSS.supports() validation rather than its regex-match guard.
+it('falls back to the constructed default duration/easing when a well-formed token carries an easing keyword CSS does not support', async () => {
+  const el = (await fixture(html`
+    <lr-animation
+      name="fade-in"
+      timing-preset="fast"
+      style="--lr-transition-fast: 200ms not-a-real-easing-keyword"
+      iterations="1"
+    >
+      <p>content</p>
+    </lr-animation>
+  `)) as LyraAnimation;
+  await el.updateComplete;
+
+  const timing = el.querySelector('p')!.getAnimations()[0].effect!.getComputedTiming();
+  expect(timing.duration).to.equal(1000);
+  expect(timing.easing).to.equal('linear');
+});
+
 it('normalizes invalid WAAPI direction, fill, and easing values without rejecting the update', async () => {
   const el = document.createElement('lr-animation') as LyraAnimation;
   el.name = 'fade-in';
@@ -374,6 +434,105 @@ it('falls back to safe IntersectionObserver options when rootMargin or threshold
       expect(attempts % 2).to.equal(0);
       expect(io.instances.at(-1)?.options?.rootMargin).to.equal('0px');
       expect(io.instances.at(-1)?.options?.threshold).to.equal(0);
+    } finally {
+      el.remove();
+    }
+  } finally {
+    io.restore();
+  }
+});
+
+it('fails open and plays immediately when the environment provides no IntersectionObserver support', async () => {
+  const original = window.IntersectionObserver;
+  (window as unknown as { IntersectionObserver: unknown }).IntersectionObserver = undefined;
+  try {
+    const el = (await fixture(html`
+      <lr-animation name="fade-in" play-on-visible iterations="1">
+        <p>content</p>
+      </lr-animation>
+    `)) as LyraAnimation;
+    await el.updateComplete;
+
+    expect(el.play).to.be.true;
+    expect((el as unknown as { visibilityObserver?: IntersectionObserver }).visibilityObserver).to.be.undefined;
+  } finally {
+    (window as unknown as { IntersectionObserver: unknown }).IntersectionObserver = original;
+  }
+});
+
+it('fails open and plays immediately when even the safe-defaults fallback IntersectionObserver construction throws', async () => {
+  const original = window.IntersectionObserver;
+  class AlwaysThrowingObserver {
+    constructor() {
+      throw new Error('constructor always fails, including with safe-default options');
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+  (window as unknown as { IntersectionObserver: unknown }).IntersectionObserver = AlwaysThrowingObserver;
+  try {
+    const el = (await fixture(html`
+      <lr-animation name="fade-in" play-on-visible iterations="1">
+        <p>content</p>
+      </lr-animation>
+    `)) as LyraAnimation;
+    await el.updateComplete;
+
+    expect(el.play).to.be.true;
+    expect((el as unknown as { visibilityObserver?: IntersectionObserver }).visibilityObserver).to.be.undefined;
+  } finally {
+    (window as unknown as { IntersectionObserver: unknown }).IntersectionObserver = original;
+  }
+});
+
+it('fails open and plays immediately when the constructed IntersectionObserver throws from observe()', async () => {
+  const original = window.IntersectionObserver;
+  class ThrowsOnObserve {
+    observe(): never {
+      throw new Error('observe() rejects this target');
+    }
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+  (window as unknown as { IntersectionObserver: unknown }).IntersectionObserver = ThrowsOnObserve;
+  try {
+    const el = (await fixture(html`
+      <lr-animation name="fade-in" play-on-visible iterations="1">
+        <p>content</p>
+      </lr-animation>
+    `)) as LyraAnimation;
+    await el.updateComplete;
+
+    expect(el.play).to.be.true;
+    expect((el as unknown as { visibilityObserver?: IntersectionObserver }).visibilityObserver).to.be.undefined;
+  } finally {
+    (window as unknown as { IntersectionObserver: unknown }).IntersectionObserver = original;
+  }
+});
+
+it('ignores a malformed `root` value instead of throwing (falls back to the default null root)', async () => {
+  const io = stubIntersectionObserver();
+  try {
+    const el = document.createElement('lr-animation') as LyraAnimation;
+    el.name = 'fade-in';
+    el.playOnVisible = true;
+    // Not a real Element owned by this document -- isElementOwnedBy() must reject it defensively
+    // rather than pass it through to `new IntersectionObserver(callback, { root, ... })`.
+    el.root = {} as unknown as Element;
+    const target = document.createElement('p');
+    target.textContent = 'content';
+    el.append(target);
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      expect(io.instances.at(-1)?.options?.root).to.equal(null);
     } finally {
       el.remove();
     }
@@ -500,6 +659,28 @@ it('reacts live to an OS-level reduced-motion preference change while already co
   }
 });
 
+// bindMotionPreference()'s `if (!owner || !query) return;` guard covers an environment with no
+// `matchMedia` support: `owner?.matchMedia?.(...)` then evaluates to `undefined`, and the method
+// must no-op rather than throw -- the animation itself still has to build normally since motion
+// preference binding is a best-effort enhancement, not a precondition for playback.
+it('bindMotionPreference() no-ops without throwing when matchMedia is unavailable in the environment', async () => {
+  const original = window.matchMedia;
+  (window as unknown as { matchMedia: unknown }).matchMedia = undefined;
+  try {
+    const el = (await fixture(html`
+      <lr-animation name="fade-in" iterations="1">
+        <p>content</p>
+      </lr-animation>
+    `)) as LyraAnimation;
+    await el.updateComplete;
+
+    const target = el.querySelector('p')!;
+    expect(target.getAnimations().length).to.equal(1);
+  } finally {
+    window.matchMedia = original;
+  }
+});
+
 it('start()/pause() toggle `play` after the initial render, driving the existing Animation directly (not a rebuild) and emitting lr-start', async () => {
   const el = (await fixture(html`
     <lr-animation name="fade-in" iterations="1">
@@ -517,6 +698,29 @@ it('start()/pause() toggle `play` after the initial render, driving the existing
   el.pause();
   await el.updateComplete;
   expect(el.play).to.be.false;
+});
+
+// Lit still runs a pending update cycle for a property changed after disconnection (updates are
+// not gated on document connection) -- so updated()'s direct, non-scheduled createAnimation() call
+// for a rebuild-triggering property can run while `this.isConnected` is already false. Its own
+// `if (!this.isConnected) return;` guard must no-op instead of recreating an Animation on a
+// target the component has already torn down.
+it('createAnimation() no-ops when a rebuild-triggering property changes after the element has been disconnected', async () => {
+  const el = (await fixture(html`
+    <lr-animation name="fade-in" iterations="1">
+      <p>content</p>
+    </lr-animation>
+  `)) as LyraAnimation;
+  await el.updateComplete;
+  const target = el.querySelector('p')!;
+  expect(target.getAnimations().length).to.equal(1);
+
+  el.remove(); // disconnectedCallback destroys the animation synchronously
+  expect(target.getAnimations().length).to.equal(0);
+
+  el.name = 'zoom-in'; // a rebuild key -- updated() still runs even while disconnected
+  await el.updateComplete;
+  expect(target.getAnimations().length).to.equal(0);
 });
 
 it('cancel() forwards to the underlying Animation, whose native cancel event surfaces as lr-cancel and resets `play`', async () => {
@@ -714,6 +918,36 @@ it('does not let registry timing reintroduce motion under reduced motion', async
     cleanup();
     el.remove();
     motion.restore();
+  }
+});
+
+// The registry's `options` pass through to `target.animate()` unvalidated (see
+// animation-registry.ts's getAnimation()); a malformed override (an invalid WAAPI `direction`
+// here) makes the Web Animations API throw synchronously from createAnimation()'s first
+// `target.animate(keyframes, options)` call. The catch must retry with the component's own
+// already-sanitized `baseOptions` instead of letting a bad public registration crash the element.
+it('falls back to the sanitized baseline timing options when a registry override makes target.animate() throw', async () => {
+  const cleanup = setDefaultAnimation('animation.fade-in', {
+    keyframes: [{ opacity: 0 }, { opacity: 1 }],
+    options: { direction: 'not-a-real-direction' as PlaybackDirection },
+  });
+  try {
+    const el = (await fixture(html`
+      <lr-animation name="fade-in" direction="reverse" iterations="1">
+        <p>content</p>
+      </lr-animation>
+    `)) as LyraAnimation;
+    await el.updateComplete;
+
+    const target = el.querySelector('p')!;
+    const animations = target.getAnimations();
+    expect(animations.length).to.equal(1);
+    const timing = animations[0].effect!.getComputedTiming();
+    // baseOptions carries the component's own safeDirection ('reverse'), not the malformed
+    // override's value -- proof the catch path's retry, not the first (throwing) attempt, won.
+    expect(timing.direction).to.equal('reverse');
+  } finally {
+    cleanup();
   }
 });
 

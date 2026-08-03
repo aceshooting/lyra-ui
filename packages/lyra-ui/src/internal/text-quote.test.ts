@@ -178,6 +178,21 @@ describe('scopeFromElement + resolveTextQuote', () => {
       root.remove();
     }
   });
+
+  it('disambiguates using only a suffix when no prefix is supplied', () => {
+    const root = makeContent('<p>Revenue grew. Revenue shrank.</p>');
+    try {
+      const scope = scopeFromElement(root);
+      const range = resolveTextQuote(scope, { quote: 'Revenue', suffix: 'shrank' });
+      expect(range).to.exist;
+      expect(range!.toString()).to.equal('Revenue');
+      // Must be the SECOND occurrence -- the one immediately followed by "shrank".
+      const secondIndex = root.textContent!.lastIndexOf('Revenue');
+      expect(range!.startOffset).to.equal(secondIndex);
+    } finally {
+      root.remove();
+    }
+  });
 });
 
 describe('locale-aware search ranges', () => {
@@ -318,6 +333,22 @@ describe('resolveTextQuote defensive edge cases against hand-built scopes', () =
   it('returns null when the scope text matches but has no segments to map the match to', () => {
     const scope: TextQuoteScope = { text: 'hello world', segments: [] };
     expect(resolveTextQuote(scope, { quote: 'hello' })).to.be.null;
+  });
+
+  it('resolves an offset landing on a segment with no mapped raw offsets at all', () => {
+    // A segment can only end up with an empty `rawOffsets` array via a hand-built scope --
+    // `scopeFromElement`/`scopeFromItems` always skip a segment whose normalized text (and thus
+    // its `rawOffsets`) would be empty. This exercises `locate`'s defensive `?? 0` fallback for
+    // when there is no last raw offset to step past.
+    const node = document.createTextNode('X');
+    const scope: TextQuoteScope = {
+      text: 'Y',
+      segments: [{ node, normalizedStart: 0, rawOffsets: [] }],
+    };
+    const range = resolveTextQuote(scope, { quote: 'Y' });
+    expect(range).to.exist;
+    expect(range!.startContainer === node).to.be.true;
+    expect(range!.collapsed).to.be.true;
   });
 });
 
@@ -512,6 +543,108 @@ describe('buildQuoteAnchor boundary resolution edge cases', () => {
       expect(anchor.quote).to.equal('');
     } finally {
       root.remove();
+    }
+  });
+});
+
+describe('segmenter and case-fold defensive fallbacks', () => {
+  it('falls back to the default-locale segmenter when Intl.Segmenter throws a RangeError for the requested locale', () => {
+    const OriginalSegmenter = Intl.Segmenter;
+    class ThrowingSegmenter extends OriginalSegmenter {
+      constructor(...args: ConstructorParameters<typeof OriginalSegmenter>) {
+        if (args[0] === 'xx') throw new RangeError('synthetic: locale unsupported by this fake segmenter');
+        super(...args);
+      }
+    }
+    Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: ThrowingSegmenter });
+    const root = document.createElement('div');
+    root.textContent = 'İ Foo';
+    document.body.appendChild(root);
+    try {
+      const ranges = findTextQuoteRanges(scopeFromElement(root), 'foo', 'xx');
+      expect(ranges).to.have.length(1);
+      expect(ranges[0]!.toString()).to.equal('Foo');
+    } finally {
+      root.remove();
+      Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: OriginalSegmenter });
+    }
+  });
+
+  it('propagates a non-RangeError thrown while constructing a segmenter', () => {
+    const OriginalSegmenter = Intl.Segmenter;
+    class ThrowingSegmenter extends OriginalSegmenter {
+      constructor(...args: ConstructorParameters<typeof OriginalSegmenter>) {
+        if (args[0] === 'yy') throw new TypeError('synthetic: unexpected segmenter failure');
+        super(...args);
+      }
+    }
+    Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: ThrowingSegmenter });
+    const root = document.createElement('div');
+    root.textContent = 'İ Foo';
+    document.body.appendChild(root);
+    try {
+      expect(() => findTextQuoteRanges(scopeFromElement(root), 'foo', 'yy')).to.throw(TypeError);
+    } finally {
+      root.remove();
+      Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: OriginalSegmenter });
+    }
+  });
+
+  it('falls back to per-character iteration when Intl.Segmenter is unavailable', () => {
+    const OriginalSegmenter = Intl.Segmenter;
+    Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: undefined });
+    const root = document.createElement('div');
+    root.textContent = 'İ Foo';
+    document.body.appendChild(root);
+    try {
+      const ranges = findTextQuoteRanges(scopeFromElement(root), 'foo', 'en');
+      expect(ranges).to.have.length(1);
+      expect(ranges[0]!.toString()).to.equal('Foo');
+    } finally {
+      root.remove();
+      Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: OriginalSegmenter });
+    }
+  });
+
+  it('uses whole-string contextual folding when per-segment folding would not reproduce it', () => {
+    // Every real length-changing contextual case-fold rule (e.g. Lithuanian's dot-above
+    // insertion) triggers on a combining mark that Unicode's own grapheme-cluster rules always
+    // keep attached to its base character -- so isolated per-grapheme folding already agrees
+    // with whole-string folding in practice (see the locale tests above). To exercise the
+    // `isolatedTotal !== text.length` fallback in `foldText` -- and the raw<->folded offset
+    // converters it feeds -- simulate a synthetic locale ('zz') whose lowering of 'A' depends on
+    // the FOLLOWING character, something no real Intl implementation does across separate
+    // base-character graphemes, but which the code must still handle correctly.
+    const original = String.prototype.toLocaleLowerCase;
+    String.prototype.toLocaleLowerCase = function (
+      this: string,
+      ...args: Parameters<typeof original>
+    ): string {
+      if (args[0] !== 'zz') return original.apply(this, args);
+      const s = this.toString();
+      let out = '';
+      for (let i = 0; i < s.length; i++) {
+        out += s[i] === 'A' && s[i + 1] === 'B' ? 'aX' : s[i]!.toLowerCase();
+      }
+      return out;
+    };
+    const root = document.createElement('div');
+    root.textContent = 'ABC';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      // No prefix (exercises the "no supplied prefix" ternary arm alongside the fallback fold).
+      const a = resolveTextQuote(scope, { quote: 'A', suffix: 'BC' }, 'zz');
+      // Offset lands inside the single recorded expansion.
+      const b = resolveTextQuote(scope, { quote: 'B', prefix: 'A' }, 'zz');
+      // Offset lands past the single recorded expansion (adjustment accumulation).
+      const c = resolveTextQuote(scope, { quote: 'C', prefix: 'AB' }, 'zz');
+      expect(a?.toString()).to.equal('A');
+      expect(b?.toString()).to.equal('B');
+      expect(c?.toString()).to.equal('C');
+    } finally {
+      root.remove();
+      String.prototype.toLocaleLowerCase = original;
     }
   });
 });

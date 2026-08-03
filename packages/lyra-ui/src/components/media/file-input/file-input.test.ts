@@ -1536,3 +1536,400 @@ it('emits a cancelable lr-invalid alias whose cancellation cancels the native in
     'preventDefault() on lr-invalid suppresses the native validation bubble',
   ).to.deep.equal([false, true]);
 });
+
+// --- Branch-coverage gap-fill below: defensive guards and edge paths that the behavioral
+// tests above never happened to exercise (see docs/agents coverage sweep). ---
+
+it('treats a file-shaped value as invalid when a property getter throws mid-check', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const poison = new File(['x'], 'poison.txt', { type: 'text/plain' });
+  Object.defineProperty(poison, 'slice', {
+    configurable: true,
+    get(): unknown {
+      throw new Error('boom');
+    },
+  });
+  expect(() => {
+    el.files = [poison];
+  }).not.to.throw();
+  expect(el.files).to.deep.equal([]);
+});
+
+it('treats a FormData-shaped value as invalid when a property getter throws mid-check', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const poison = new FormData();
+  Object.defineProperty(poison, 'values', {
+    configurable: true,
+    get(): unknown {
+      throw new Error('boom');
+    },
+  });
+  expect(() => el.formStateRestoreCallback(poison, 'restore')).not.to.throw();
+  expect(el.files).to.deep.equal([]);
+});
+
+it('clears the name attribute when name is set back to null or empty string', async () => {
+  const el = (await fixture(html`<lr-file-input name="a"></lr-file-input>`)) as LyraFileInput;
+  expect(el.getAttribute('name')).to.equal('a');
+
+  el.name = '';
+  expect(el.name).to.equal(null);
+  expect(el.hasAttribute('name')).to.be.false;
+
+  el.name = 'b';
+  expect(el.hasAttribute('name')).to.be.true;
+
+  el.name = null;
+  expect(el.hasAttribute('name')).to.be.false;
+});
+
+it('discards a non-array write to files instead of throwing', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  el.files = 'not-an-array' as unknown as File[];
+  expect(el.files).to.deep.equal([]);
+});
+
+it('treats setting dragging to its current value as a no-op', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  expect(el.dragging).to.be.false;
+  expect(() => {
+    el.dragging = false;
+  }).not.to.throw();
+  expect(el.dragging).to.be.false;
+});
+
+it('trims files to a single entry when multiple flips off while several are selected', async () => {
+  const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+  el.files = [makeFile('a.csv', 'text/csv'), makeFile('b.csv', 'text/csv')];
+  await el.updateComplete;
+  expect(el.files.length).to.equal(2);
+
+  el.multiple = false;
+  await el.updateComplete;
+
+  expect(el.files.length).to.equal(1);
+  expect(el.files[0].name).to.equal('a.csv');
+});
+
+it('falls back to a null multiple form value when FormData cannot be constructed', async () => {
+  const el = (await fixture(
+    html`<lr-file-input multiple name="attachment"></lr-file-input>`,
+  )) as LyraFileInput;
+  const globals = globalThis as typeof globalThis & { FormData: typeof FormData };
+  const NativeFormData = globals.FormData;
+  try {
+    globals.FormData = undefined as unknown as typeof FormData;
+    expect(() => {
+      el.files = [makeFile('a.txt', 'text/plain')];
+    }).not.to.throw();
+    expect(el.files.length).to.equal(1);
+  } finally {
+    globals.FormData = NativeFormData;
+  }
+});
+
+it('tolerates setCustomValidity() called with a nullish message', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  expect(() => el.setCustomValidity(undefined as unknown as string)).not.to.throw();
+  expect(el.validationMessage).to.equal('');
+});
+
+it('falls back to globalThis.URL when its owner document has no defaultView', async () => {
+  // `document.implementation.createHTMLDocument()` is a genuine, spec-real Document -- unlike an
+  // `Object.create(document, ...)` shim, it passes the browser's internal brand checks (a fake
+  // shim throws "Illegal invocation" the moment any native Document method runs against it, e.g.
+  // from the locale-resolution walk) -- and is never associated with a browsing context, so its
+  // `defaultView` is reliably `null`.
+  const detachedDocument = document.implementation.createHTMLDocument('detached');
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  detachedDocument.body.append(detachedDocument.adoptNode(el));
+  try {
+    expect(el.ownerDocument.defaultView).to.equal(null);
+    el.files = [makeFile('a.png', 'image/png')];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('img[part="file-image"]')).to.exist;
+  } finally {
+    el.remove();
+  }
+});
+
+it('tolerates a URL implementation without revokeObjectURL (no-op revoke)', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = await fixture<LyraFileInput>(html`<lr-file-input></lr-file-input>`);
+  const originalURL = frameWindow.URL;
+
+  try {
+    frameWindow.URL = { createObjectURL: () => 'blob:no-revoke', revokeObjectURL: undefined } as unknown as typeof URL;
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+
+    el.files = [new frameWindow.File(['x'], 'a.png', { type: 'image/png' })];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('img[part="file-image"]')!.getAttribute('src')).to.equal(
+      'blob:no-revoke',
+    );
+    expect(() => {
+      el.files = [];
+    }).not.to.throw();
+  } finally {
+    el.remove();
+    frameWindow.URL = originalURL;
+    frame.remove();
+  }
+});
+
+it('uses a custom acceptedMessage/rejectedMessage override with {count} interpolation', async () => {
+  const el = (await fixture(
+    html`<lr-file-input multiple .allowedMimeTypes=${['text/csv']}></lr-file-input>`,
+  )) as LyraFileInput;
+  el.acceptedMessage = '{count} custom accepted!';
+  el.rejectedMessage = '{count} custom rejected!';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+
+  const ev = oneEvent(el, 'lr-files');
+  dropWith(base, [makeFile('ok.csv', 'text/csv'), makeFile('bad.png', 'image/png')]);
+  await ev;
+  await el.updateComplete;
+
+  expect(status.textContent).to.equal('1 custom accepted! 1 custom rejected!');
+});
+
+it('ignores dragenter while disabled', async () => {
+  const el = (await fixture(html`<lr-file-input disabled></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('default');
+  expect(el.dragging).to.be.false;
+});
+
+it('tolerates a dragenter event with no dataTransfer, defaulting drag state to "default"', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(() =>
+    base.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true })),
+  ).not.to.throw();
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('default');
+});
+
+it('ignores dragleave while disabled, leaving the browser default action intact', async () => {
+  const el = (await fixture(html`<lr-file-input disabled></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const ev = new DragEvent('dragleave', { bubbles: true, cancelable: true });
+  base.dispatchEvent(ev);
+  expect(ev.defaultPrevented).to.be.false;
+});
+
+it('skips a dropped-folder child entry that is neither a file nor a directory', async () => {
+  const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+  const dropzone = el.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
+  const nested = makeFile('nested.csv', 'text/csv');
+  let read = false;
+  const directory = {
+    isDirectory: true,
+    isFile: false,
+    name: 'folder',
+    createReader: () => ({
+      readEntries: (success: (entries: unknown[]) => void) => {
+        if (read) {
+          success([]);
+          return;
+        }
+        read = true;
+        success([
+          {
+            isDirectory: false,
+            isFile: true,
+            name: nested.name,
+            file: (successFile: (file: File) => void) => successFile(nested),
+          },
+          { isDirectory: false, isFile: false, name: 'weird-entry' },
+        ]);
+      },
+    }),
+  };
+  const transfer = {
+    files: [] as unknown as FileList,
+    items: [{ kind: 'file', webkitGetAsEntry: () => directory }],
+  };
+  const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: transfer });
+  const result = oneEvent(el, 'lr-files');
+  dropzone.dispatchEvent(event);
+  await result;
+
+  expect(el.files.map((file) => file.name)).to.deep.equal(['nested.csv']);
+});
+
+it('tolerates a drop event with no dataTransfer at all', async () => {
+  const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+  const dropzone = el.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
+  let fired = false;
+  el.addEventListener('lr-files', () => (fired = true));
+  expect(() =>
+    dropzone.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true })),
+  ).not.to.throw();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(fired).to.be.false;
+});
+
+it('discards a dropped-folder resolution that arrives after the host became disabled mid-read', async () => {
+  const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+  const dropzone = el.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
+  const nested = makeFile('nested.csv', 'text/csv');
+  let read = false;
+  const directory = {
+    isDirectory: true,
+    isFile: false,
+    name: 'folder',
+    createReader: () => ({
+      readEntries: (success: (entries: unknown[]) => void) => {
+        // Resolve asynchronously so there is a window to disable the host mid-read, and signal
+        // "no more entries" on the second call so the recursive reader batch actually terminates.
+        if (read) {
+          setTimeout(() => success([]));
+          return;
+        }
+        read = true;
+        setTimeout(() => success([
+          {
+            isDirectory: false,
+            isFile: true,
+            name: nested.name,
+            file: (successFile: (file: File) => void) => successFile(nested),
+          },
+        ]));
+      },
+    }),
+  };
+  const transfer = {
+    files: [] as unknown as FileList,
+    items: [{ kind: 'file', webkitGetAsEntry: () => directory }],
+  };
+  const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: transfer });
+  let fired = false;
+  el.addEventListener('lr-files', () => (fired = true));
+  dropzone.dispatchEvent(event);
+  el.disabled = true;
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(fired).to.be.false;
+  expect(el.files).to.deep.equal([]);
+});
+
+it('falls back to globalThis.File for a folder-rejection placeholder when its owner realm has no File constructor', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = await fixture<LyraFileInput>(html`<lr-file-input></lr-file-input>`);
+  const originalFile = frameWindow.File;
+
+  try {
+    frameWindow.File = undefined as unknown as typeof File;
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    const result = oneEvent(el, 'lr-files');
+    const dataTransfer = {
+      files: [] as unknown as FileList,
+      items: [{ kind: 'file', webkitGetAsEntry: () => ({ isDirectory: true, name: 'photos' }) }],
+    };
+    const drop = new frameWindow.DragEvent('drop', { bubbles: true, cancelable: true });
+    Object.defineProperty(drop, 'dataTransfer', { value: dataTransfer });
+    base.dispatchEvent(drop);
+    const event = await result;
+    expect(event.detail.rejected.length).to.equal(1);
+    expect(event.detail.rejected[0].file instanceof File).to.be.true;
+  } finally {
+    el.remove();
+    frameWindow.File = originalFile;
+    frame.remove();
+  }
+});
+
+it('tolerates a paste event with no clipboardData', async () => {
+  const el = (await fixture(html`<lr-file-input paste></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  let fired = false;
+  el.addEventListener('lr-files', () => (fired = true));
+  expect(() =>
+    base.dispatchEvent(new Event('paste', { bubbles: true, cancelable: true })),
+  ).not.to.throw();
+  expect(fired).to.be.false;
+});
+
+it('tolerates a native file input change event whose files is unexpectedly nullish', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  Object.defineProperty(input, 'files', { configurable: true, value: undefined });
+  let fired = false;
+  el.addEventListener('lr-files', () => (fired = true));
+  expect(() => input.dispatchEvent(new Event('change', { bubbles: true }))).not.to.throw();
+  expect(fired).to.be.false;
+});
+
+it('emits lr-files from a native file-picker selection change event while enabled', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  const transfer = new DataTransfer();
+  transfer.items.add(makeFile('picked.csv', 'text/csv'));
+  input.files = transfer.files;
+  const result = oneEvent(el, 'lr-files');
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  const ev = await result;
+  expect(ev.detail.files[0].name).to.equal('picked.csv');
+  expect(input.value).to.equal('');
+});
+
+it('ignores a native file-picker change event with no files selected (e.g. cancelled)', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  let fired = false;
+  el.addEventListener('lr-files', () => (fired = true));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(fired).to.be.false;
+});
+
+it('opens the picker on the legacy "Spacebar" key name for older browsers', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  let clicks = 0;
+  input.addEventListener('click', () => clicks++);
+  base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Spacebar', bubbles: true, cancelable: true }));
+  expect(clicks).to.equal(1);
+});
+
+it('opens the picker when clicking the dropzone background, not the base button or slotted content', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const dropzoneContent = el.shadowRoot!.querySelector('.dropzone-content') as HTMLElement;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  let clicks = 0;
+  input.addEventListener('click', () => clicks++);
+  dropzoneContent.click();
+  expect(clicks).to.equal(1);
+});
+
+it('removeFile() guards against a stale/out-of-range index and against disabled state', async () => {
+  const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+  el.files = [makeFile('a.csv', 'text/csv')];
+  await el.updateComplete;
+  const privateEl = el as unknown as { removeFile(index: number): void };
+
+  expect(() => privateEl.removeFile(-1)).not.to.throw();
+  expect(() => privateEl.removeFile(5)).not.to.throw();
+  expect(el.files.length).to.equal(1);
+
+  el.disabled = true;
+  await el.updateComplete;
+  privateEl.removeFile(0);
+  expect(el.files.length, 'disabled must block removeFile even when called directly').to.equal(1);
+});

@@ -150,6 +150,51 @@ describe('lr-archive-viewer', () => {
       restore();
     }
   });
+  it('navigates to the previous search match, wrapping from the first to the last', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const restore = stubFetch(await buildZip({
+      'a/file-1.txt': '1',
+      'a/file-2.txt': '2',
+      'a/file-3.txt': '3',
+    }));
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      expect(await el.search('file')).to.equal(3);
+      const eventPromise = oneEvent(el, 'lr-search-change');
+      expect(await el.searchPrevious()).to.be.true;
+      expect((await eventPromise).detail.activeIndex).to.equal(2);
+    } finally {
+      restore();
+    }
+  });
+  it('clears search matches when searching an empty query', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const restore = stubFetch(await buildZip({ 'README.txt': 'hello world' }));
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      expect(await el.search('README')).to.equal(1);
+      expect(await el.search('')).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+  it('no-ops scrolling to the active match when searching before the archive has loaded', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    expect(await el.search('anything')).to.equal(0);
+  });
+  it('no-ops scrolling to the active match when the search query has no matches', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const restore = stubFetch(await buildZip({ 'README.txt': 'hello world' }));
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      expect(await el.search('does-not-exist-xyz')).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
   it('does not expose the internal virtual-list range event', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     const restore = stubFetch(await buildZip({ 'README.txt': 'hello world' }));
@@ -303,6 +348,157 @@ describe('lr-archive-viewer', () => {
       expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
       expect(errors).to.equal(1);
       expect(eagerAllocations).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('fails closed when an entry with no declared size also has no measurable stream', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const fakeLibrary = {
+      loadAsync: () => Promise.resolve({
+        forEach(cb: (path: string, file: { name: string; dir: boolean; async: () => Promise<Uint8Array> }) => void) {
+          cb('mystery.bin', {
+            name: 'mystery.bin',
+            dir: false,
+            async: () => Promise.reject(new Error('the missing-metadata path must not eagerly decompress')),
+            // deliberately no `internalStream`: the size cannot be measured at all.
+          } as never);
+        },
+      }),
+    };
+    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    try {
+      let errors = 0;
+      el.addEventListener('lr-render-error', () => errors++);
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
+      expect(errors).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('aborts a fallback size measurement when the element disconnects before the stream’s first "data" event', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const handlers = new Map<string, (...args: unknown[]) => void>();
+    const fakeLibrary = {
+      loadAsync: () => Promise.resolve({
+        forEach(cb: (path: string, file: { name: string; dir: boolean; async: () => Promise<Uint8Array> }) => void) {
+          cb('big.bin', {
+            name: 'big.bin',
+            dir: false,
+            async: () => Promise.reject(new Error('must use the bounded stream path')),
+            internalStream: () => ({
+              on(type: string, handler: (...args: unknown[]) => void) {
+                handlers.set(type, handler);
+                return this;
+              },
+              resume() {
+                el.remove();
+                handlers.get('data')?.(new Uint8Array(5));
+                handlers.get('end')?.();
+              },
+            }),
+          } as never);
+        },
+      }),
+    };
+    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    let errors = 0;
+    el.addEventListener('lr-render-error', () => errors++);
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await aTimeout(30);
+      expect((el as unknown as { fetchState: { kind: string } }).fetchState.kind).to.equal('loading');
+      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+      expect(errors).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('aborts a fallback size measurement when the element disconnects between "data" and "end"', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const handlers = new Map<string, (...args: unknown[]) => void>();
+    const fakeLibrary = {
+      loadAsync: () => Promise.resolve({
+        forEach(cb: (path: string, file: { name: string; dir: boolean; async: () => Promise<Uint8Array> }) => void) {
+          cb('big.bin', {
+            name: 'big.bin',
+            dir: false,
+            async: () => Promise.reject(new Error('must use the bounded stream path')),
+            internalStream: () => ({
+              on(type: string, handler: (...args: unknown[]) => void) {
+                handlers.set(type, handler);
+                return this;
+              },
+              resume() {
+                handlers.get('data')?.(new Uint8Array(5));
+                el.remove();
+                handlers.get('end')?.();
+              },
+            }),
+          } as never);
+        },
+      }),
+    };
+    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    let errors = 0;
+    el.addEventListener('lr-render-error', () => errors++);
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await aTimeout(30);
+      expect((el as unknown as { fetchState: { kind: string } }).fetchState.kind).to.equal('loading');
+      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+      expect(errors).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('ignores a redundant stream error once the size ceiling has already failed the measurement', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const oversizedLength = 101 * 1024 * 1024;
+    let pauseCalls = 0;
+    const fakeLibrary = {
+      loadAsync: () => Promise.resolve({
+        forEach(cb: (path: string, file: { name: string; dir: boolean; async: () => Promise<Uint8Array> }) => void) {
+          const handlers = new Map<string, (...args: unknown[]) => void>();
+          cb('one.bin', {
+            name: 'one.bin',
+            dir: false,
+            async: () => Promise.reject(new Error('must not decompress eagerly')),
+            internalStream: () => ({
+              on(type: string, handler: (...args: unknown[]) => void) {
+                handlers.set(type, handler);
+                return this;
+              },
+              pause() { pauseCalls++; },
+              resume() {
+                handlers.get('data')?.({ length: oversizedLength } as Uint8Array);
+                handlers.get('error')?.(new Error('a redundant stream error'));
+                handlers.get('end')?.();
+              },
+            }),
+          } as never);
+        },
+      }),
+    };
+    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    try {
+      let errors = 0;
+      el.addEventListener('lr-render-error', () => errors++);
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
+      expect(errors).to.equal(1);
+      expect(pauseCalls).to.equal(1);
     } finally {
       restore();
     }
@@ -541,6 +737,31 @@ describe('lr-archive-viewer anchor contract across virtualization', () => {
       restore();
     }
   });
+
+  it('gives up scrolling to an anchored row once it is not immediately found and there is no browsing context to retry against', async () => {
+    const { el, list, restore } = await listingWithEntries(names);
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    try {
+      list.rowHeight = '40';
+      await list.updateComplete;
+      expect(list.shadowRoot!.textContent).to.not.include(names[targetIndex]);
+      // Simulates an element adopted into a document with no browsing context (e.g.
+      // `document.implementation.createHTMLDocument()`): `waitForArchiveRow()` cannot fall back to
+      // `requestAnimationFrame` and must give up instead of retrying forever.
+      Object.defineProperty(el, 'ownerDocument', {
+        configurable: true,
+        get: () => ({ defaultView: null }),
+      });
+      try {
+        expect(await el.scrollToAnchor({ kind: 'fragment', id: names[targetIndex]! })).to.be.false;
+      } finally {
+        delete (el as unknown as { ownerDocument?: unknown }).ownerDocument;
+      }
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe('lr-archive-viewer part reachability through the embedded virtual list', () => {
@@ -688,6 +909,189 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
       });
     } finally {
       selection.removeAllRanges();
+      restore();
+    }
+  });
+
+  it('does not emit lr-text-select when there is no active selection', async () => {
+    const { el, vlistRoot, restore } = await listing();
+    const selection = (
+      vlistRoot as unknown as { getSelection?: () => Selection | null }
+    ).getSelection?.() ?? window.getSelection()!;
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-text-select', (event) => events.push(event as CustomEvent));
+    try {
+      selection.removeAllRanges();
+      const row = vlistRoot.querySelector('[part~="entry"]') as HTMLElement;
+      row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      await aTimeout(30);
+      expect(events).to.have.lengthOf(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('does not emit lr-text-select for a selection with no renderable text (the decorative icon)', async () => {
+    // A real drag-selection over pure SVG glyph content (no text) gets auto-collapsed by the
+    // engine before it can ever reach `addRange()` -- verified empirically in this environment, not
+    // something this component controls. Stubbing `getComposedRanges()` to report a *valid*,
+    // non-collapsed composed range over just the icon span (one sibling index to the next, no text
+    // node in between) reaches the same `emitSelection()` code path deterministically instead.
+    const { el, vlistRoot, restore } = await listing();
+    const row = vlistRoot.querySelector('[part~="entry"]') as HTMLElement;
+    const globalSelectionObj = window.getSelection() as (Selection & { getComposedRanges?: unknown }) | null;
+    const hadOwn = globalSelectionObj
+      ? Object.prototype.hasOwnProperty.call(globalSelectionObj, 'getComposedRanges')
+      : false;
+    const ownDescriptor = globalSelectionObj && hadOwn
+      ? Object.getOwnPropertyDescriptor(globalSelectionObj, 'getComposedRanges')
+      : undefined;
+    if (globalSelectionObj) {
+      Object.defineProperty(globalSelectionObj, 'getComposedRanges', {
+        configurable: true,
+        // Spans row's first child (the icon span) as a whole sibling range -- non-collapsed
+        // (offset 0 to 1) but containing no text node at all.
+        value: () => [{ startContainer: row, startOffset: 0, endContainer: row, endOffset: 1 }],
+      });
+    }
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-text-select', (event) => events.push(event as CustomEvent));
+    try {
+      row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      await aTimeout(30);
+      expect(events).to.have.lengthOf(0);
+    } finally {
+      if (globalSelectionObj) {
+        if (hadOwn && ownDescriptor) {
+          Object.defineProperty(globalSelectionObj, 'getComposedRanges', ownDescriptor);
+        } else {
+          delete (globalSelectionObj as unknown as { getComposedRanges?: unknown }).getComposedRanges;
+        }
+      }
+      restore();
+    }
+  });
+
+  it('resolves a selection through the document-level selection fallback when composed-range lookup and the nested shadow selection are both unavailable', async function () {
+    const { el, vlistRoot, restore } = await listing();
+    const name = Array.from(vlistRoot.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
+      .find((node) => node.textContent === 'README.txt')!;
+    const textNode = Array.from(name.childNodes)
+      .find((node): node is Text => node.nodeType === Node.TEXT_NODE && node.textContent === 'README.txt')!;
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, 'README'.length);
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-text-select', (event) => events.push(event as CustomEvent));
+    // Forces the full fallback chain this test targets: without a supported `getComposedRanges`
+    // *and* without the nested shadow root's own `getSelection()`, the component must fall all the
+    // way back to the document-level `getSelection()` -- both stubs are restored afterward, since
+    // these are shared built-ins (a prototype method and the shadow root instance itself).
+    const globalSelectionObj = window.getSelection() as (Selection & { getComposedRanges?: unknown }) | null;
+    const hadOwnComposed = globalSelectionObj
+      ? Object.prototype.hasOwnProperty.call(globalSelectionObj, 'getComposedRanges')
+      : false;
+    const composedDescriptor = globalSelectionObj && hadOwnComposed
+      ? Object.getOwnPropertyDescriptor(globalSelectionObj, 'getComposedRanges')
+      : undefined;
+    if (globalSelectionObj) {
+      Object.defineProperty(globalSelectionObj, 'getComposedRanges', { configurable: true, value: undefined });
+    }
+    const hadOwnNestedSelection = Object.prototype.hasOwnProperty.call(vlistRoot, 'getSelection');
+    const nestedSelectionDescriptor = hadOwnNestedSelection
+      ? Object.getOwnPropertyDescriptor(vlistRoot, 'getSelection')
+      : undefined;
+    Object.defineProperty(vlistRoot, 'getSelection', { configurable: true, value: undefined });
+    try {
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      // Same WebKit programmatic-selection gap noted above -- skip rather than fail.
+      if (selection.rangeCount === 0) this.skip();
+      name.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      await aTimeout(30);
+      expect(events).to.have.lengthOf(1);
+      expect(events[0]!.detail.text).to.equal('README');
+      selection.removeAllRanges();
+    } finally {
+      if (globalSelectionObj) {
+        if (hadOwnComposed && composedDescriptor) {
+          Object.defineProperty(globalSelectionObj, 'getComposedRanges', composedDescriptor);
+        } else {
+          delete (globalSelectionObj as unknown as { getComposedRanges?: unknown }).getComposedRanges;
+        }
+      }
+      if (hadOwnNestedSelection && nestedSelectionDescriptor) {
+        Object.defineProperty(vlistRoot, 'getSelection', nestedSelectionDescriptor);
+      } else {
+        delete (vlistRoot as unknown as { getSelection?: unknown }).getSelection;
+      }
+      restore();
+    }
+  });
+
+  it('does not emit lr-text-select when there is no browsing context to read any selection from at all', async () => {
+    // The absolute-last resort of `nestedSelection ?? globalSelection ?? null`: reachable only when
+    // the element's own `ownerDocument.defaultView` is null (e.g. adopted into a windowless
+    // document -- see the analogous `scrollToAnchor` test above) *and* the nested shadow root
+    // exposes no `getSelection()`, so neither fallback ever produces a Selection to read.
+    const { el, vlistRoot, restore } = await listing();
+    const hadOwnNestedSelection = Object.prototype.hasOwnProperty.call(vlistRoot, 'getSelection');
+    const nestedSelectionDescriptor = hadOwnNestedSelection
+      ? Object.getOwnPropertyDescriptor(vlistRoot, 'getSelection')
+      : undefined;
+    Object.defineProperty(vlistRoot, 'getSelection', { configurable: true, value: undefined });
+    Object.defineProperty(el, 'ownerDocument', {
+      configurable: true,
+      get: () => ({ defaultView: null }),
+    });
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-text-select', (event) => events.push(event as CustomEvent));
+    try {
+      const row = vlistRoot.querySelector('[part~="entry"]') as HTMLElement;
+      row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      await aTimeout(30);
+      expect(events).to.have.lengthOf(0);
+    } finally {
+      delete (el as unknown as { ownerDocument?: unknown }).ownerDocument;
+      if (hadOwnNestedSelection && nestedSelectionDescriptor) {
+        Object.defineProperty(vlistRoot, 'getSelection', nestedSelectionDescriptor);
+      } else {
+        delete (vlistRoot as unknown as { getSelection?: unknown }).getSelection;
+      }
+      restore();
+    }
+  });
+
+  it('runs the previous entry-selection cleanup when the archive reloads to an empty listing', async () => {
+    const { el, restore } = await listing();
+    const originalCleanup = (
+      el as unknown as { archiveSelectionCleanup?: () => void }
+    ).archiveSelectionCleanup;
+    expect(originalCleanup).to.be.a('function');
+    let cleanupCalls = 0;
+    (el as unknown as { archiveSelectionCleanup?: () => void }).archiveSelectionCleanup = () => {
+      cleanupCalls++;
+      originalCleanup!();
+    };
+    useLibrary(el, { loadAsync: () => Promise.resolve({ forEach: () => {} }) } as unknown as ArchiveLibraryApi);
+    try {
+      el.src = 'https://example.test/empty.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('.empty-note') !== null);
+      expect(cleanupCalls).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('does not append a second highlight stylesheet when one is already present in the virtual-list shadow root', async () => {
+    const { el, vlistRoot, restore } = await listing();
+    try {
+      expect(vlistRoot.querySelectorAll('style[data-lr-archive-highlight-styles]')).to.have.lengthOf(1);
+      (el as unknown as { styledVirtualListRoot: ShadowRoot | null }).styledVirtualListRoot = null;
+      (el as unknown as { syncArchiveNestedRoot(): void }).syncArchiveNestedRoot();
+      expect(vlistRoot.querySelectorAll('style[data-lr-archive-highlight-styles]')).to.have.lengthOf(1);
+    } finally {
       restore();
     }
   });

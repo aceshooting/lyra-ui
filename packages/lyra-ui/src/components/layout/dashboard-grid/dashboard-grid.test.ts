@@ -2070,3 +2070,269 @@ it("does not start a cell drag from a pointerdown on an interactive control insi
 
   expect(moved, "grabbing a button inside a cell must not drag the cell").to.equal(0);
 });
+
+describe("defensive edge cases", () => {
+  it("cancels an active drag through willUpdate when locked flips true without a following pointer event", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    let releasedPointerId: number | undefined;
+    wrapper.releasePointerCapture = (pointerId) => {
+      releasedPointerId = pointerId;
+    };
+    wrapper.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 42,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      })
+    );
+    expect(wrapper.hasAttribute("data-dragging")).to.be.true;
+
+    // No pointermove/pointerup ever follows -- only the property change and the resulting
+    // update cycle. If willUpdate() didn't proactively cancel the gesture here, the drag state
+    // (and its window-level listeners) would leak indefinitely.
+    el.locked = true;
+    await el.updateComplete;
+
+    expect(
+      wrapper.hasAttribute("data-dragging"),
+      "canceled before any further pointer event"
+    ).to.be.false;
+    expect(releasedPointerId).to.equal(42);
+  });
+
+  it("cancels an active resize through willUpdate when locked flips true without a following pointer event", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 2, h: 2 }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    const handle = el.shadowRoot!.querySelector(
+      '[part="resize-handle"]'
+    ) as HTMLElement;
+    handle.setPointerCapture = () => {};
+    let releasedPointerId: number | undefined;
+    handle.releasePointerCapture = (pointerId) => {
+      releasedPointerId = pointerId;
+    };
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 43,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      })
+    );
+    expect(wrapper.hasAttribute("data-resizing")).to.be.true;
+
+    el.locked = true;
+    await el.updateComplete;
+
+    expect(
+      wrapper.hasAttribute("data-resizing"),
+      "canceled before any further pointer event"
+    ).to.be.false;
+    expect(releasedPointerId).to.equal(43);
+  });
+
+  it("swallows a stale-pointer NotFoundError when releasing capture during a canceled drag", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    // A browser can report the capture as already gone (e.g. an implicit native release) by the
+    // time cancellation runs; that must not surface as an uncaught error.
+    wrapper.releasePointerCapture = () => {
+      throw new DOMException("already released", "NotFoundError");
+    };
+    wrapper.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 7,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      })
+    );
+    expect(wrapper.hasAttribute("data-dragging")).to.be.true;
+
+    expect(() =>
+      window.dispatchEvent(new PointerEvent("pointercancel", { pointerId: 7 }))
+    ).to.not.throw();
+    expect(wrapper.hasAttribute("data-dragging")).to.be.false;
+  });
+
+  it("ignores a light-DOM child with no cell-id attribute while syncing default cells", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid
+        ><p>Just some decorative content</p></lr-dashboard-grid
+      >`
+    )) as LyraDashboardGrid;
+    const plain = el.querySelector("p") as HTMLElement;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+
+    expect(plain.hasAttribute("slot")).to.be.false;
+    expect(plain.hasAttribute("cell-id")).to.be.false;
+    expect(el.querySelector('[cell-id="a"]') !== null).to.be.true;
+  });
+
+  it("safely no-ops focusing a cell that disappears before its scheduled focus microtask runs", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = twoCells();
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelector(
+      '[data-cell-id="a"]'
+    ) as HTMLElement;
+
+    // Roving-nav focus onto "b" schedules `this.cellElement("b")?.focus()` for after the next
+    // update completes. Remove "b" from the public layout before that microtask runs.
+    first.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    el.layout = [twoCells()[0]!];
+    await el.updateComplete;
+    await Promise.resolve();
+
+    expect(el.shadowRoot!.querySelector('[data-cell-id="b"]')).to.equal(null);
+    expect(
+      el.shadowRoot!.activeElement,
+      "cellElement(\"b\") found nothing, so the scheduled focus() was skipped"
+    ).to.equal(null);
+  });
+
+  it("ignores a key that is neither an arrow, Home/End, nor part of a modified-arrow shortcut", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = twoCells();
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelector(
+      '[data-cell-id="a"]'
+    ) as HTMLElement;
+    expect(first.getAttribute("tabindex")).to.equal("0");
+
+    first.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+
+    expect(first.getAttribute("tabindex")).to.equal("0");
+    expect(el.shadowRoot!.activeElement).to.equal(null);
+  });
+
+  it("moves the focused cell for the remaining Ctrl+Arrow directions (left/down/up)", async () => {
+    const cases: Array<{ key: string; expected: { x: number; y: number } }> = [
+      { key: "ArrowLeft", expected: { x: 1, y: 2 } },
+      { key: "ArrowDown", expected: { x: 2, y: 3 } },
+      { key: "ArrowUp", expected: { x: 2, y: 1 } },
+    ];
+    for (const { key, expected } of cases) {
+      const el = (await fixture(
+        html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
+      )) as LyraDashboardGrid;
+      el.layout = [{ id: "a", x: 2, y: 2, w: 1, h: 1 }];
+      await el.updateComplete;
+      const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+      let detail: { position: { x: number; y: number } } | undefined;
+      el.addEventListener(
+        "lr-cell-move",
+        (e) => (detail = (e as CustomEvent).detail)
+      );
+      cellEl.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key,
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+      expect(detail?.position, key).to.deep.equal(expected);
+    }
+  });
+
+  it("shrinks height via Ctrl+Shift+ArrowUp", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 2, h: 2 }];
+    await el.updateComplete;
+    const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    let detail: { size: { w: number; h: number } } | undefined;
+    el.addEventListener(
+      "lr-cell-resize",
+      (e) => (detail = (e as CustomEvent).detail)
+    );
+    cellEl.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowUp",
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(detail).to.deep.equal({
+      id: "a",
+      size: { w: 2, h: 1 },
+      previous: { w: 2, h: 2 },
+    });
+  });
+
+  it("falls back to a clamped active index when an in-place layout mutation leaves activeCellId stale", async () => {
+    // The component's own contract never mutates `layout` in place -- but a consumer holding the
+    // same array reference and mutating it directly (instead of assigning a new array) leaves
+    // Lit's default reference-equality `hasChanged` blind to the edit: `layout` never appears in
+    // willUpdate()'s `changed` map, so the active-cell recompute at the top of willUpdate() never
+    // runs. render() carries its own defensive fallback for exactly this staleness.
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = twoCells();
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelector(
+      '[data-cell-id="a"]'
+    ) as HTMLElement;
+    first.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelector('[tabindex="0"]')!.getAttribute("data-cell-id")
+    ).to.equal("b");
+
+    // Remove "b" via the SAME array reference, then force a re-render through an unrelated
+    // property so Lit never sees `layout` itself change.
+    el.layout.splice(1, 1);
+    el.columns = 6;
+    await el.updateComplete;
+
+    const cells = el.shadowRoot!.querySelectorAll('[part="cell"]');
+    expect(cells.length).to.equal(1);
+    expect(cells[0]!.getAttribute("data-cell-id")).to.equal("a");
+    expect(cells[0]!.getAttribute("tabindex")).to.equal("0");
+  });
+});

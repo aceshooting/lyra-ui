@@ -563,3 +563,334 @@ it('re-synchronizes its split when the window resizes', async () => {
   expect(divider(el)).to.exist;
   expect(el.position).to.be.a('number');
 });
+
+it('clearing positionInPixels on an unmeasured panel does not preserve a stale pixel size', () => {
+  const element = document.createElement('lr-split-panel') as LyraSplitPanel;
+  element.positionInPixels = null;
+  expect((element as unknown as { preservedPrimaryPixels?: number }).preservedPrimaryPixels).to.equal(
+    undefined,
+  );
+});
+
+it('clearing positionInPixels preserves the current pixel size as the primary-pane fixed point', async () => {
+  const observer = installResizeObserverStub();
+  try {
+    const element = (await fixture(html`
+      <lr-split-panel primary="start" style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+    `)) as LyraSplitPanel;
+    element.positionInPixels = 300;
+    await elementUpdated(element);
+
+    element.positionInPixels = undefined;
+    await elementUpdated(element);
+    expect(element.positionInPixels).to.be.closeTo(300, 1);
+
+    element.positionInPixels = null;
+    await elementUpdated(element);
+    expect(element.positionInPixels).to.be.closeTo(300, 1);
+
+    element.style.inlineSize = '800px';
+    for (const callback of observer.callbacks) callback([], {} as ResizeObserver);
+    await elementUpdated(element);
+    expect(element.positionInPixels).to.be.closeTo(300, 1);
+  } finally {
+    observer.restore();
+  }
+});
+
+it('defers a pixel resize request through applyPrimaryPixels when invoked before any layout has been measured', () => {
+  const element = document.createElement('lr-split-panel') as LyraSplitPanel;
+  const changed = (element as unknown as { applyPrimaryPixels(p: number, s: boolean): boolean }).applyPrimaryPixels(
+    120,
+    false,
+  );
+  expect(changed).to.equal(false);
+  expect((element as unknown as { pendingPositionInPixels?: number }).pendingPositionInPixels).to.equal(120);
+  expect((element as unknown as { preservedPrimaryPixels?: number }).preservedPrimaryPixels).to.equal(120);
+});
+
+it('falls back to a default pixel origin when applyPrimaryPixels runs without a captured pixel position', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  element.positionInPixels = 300;
+  await elementUpdated(element);
+
+  (
+    element as unknown as {
+      applyPrimaryPixels(p: number, s: boolean, oldPosition: number, oldPixels: number | null): boolean;
+    }
+  ).applyPrimaryPixels(Number.NaN, false, element.position, null);
+  await elementUpdated(element);
+  expect(element.positionInPixels).to.be.closeTo(200, 1);
+});
+
+it('falls back to a window resize listener when ResizeObserver is unavailable, and cleans it up on disconnect', async () => {
+  const OriginalResizeObserver = window.ResizeObserver;
+  // @ts-expect-error -- simulating a platform without ResizeObserver support
+  delete window.ResizeObserver;
+  try {
+    const element = (await fixture(html`
+      <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+    `)) as LyraSplitPanel;
+    await elementUpdated(element);
+    expect(element.positionInPixels).to.be.closeTo(200, 1);
+
+    element.style.inlineSize = '600px';
+    window.dispatchEvent(new Event('resize'));
+    await elementUpdated(element);
+    expect(element.positionInPixels).to.be.closeTo(300, 1);
+
+    element.remove();
+  } finally {
+    window.ResizeObserver = OriginalResizeObserver;
+  }
+});
+
+it('is a no-op when observeSize runs while a ResizeObserver is already attached', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  const withPrivates = element as unknown as { resizeObserver?: unknown; observeSize(): void };
+  const existing = withPrivates.resizeObserver;
+  expect(existing).to.exist;
+  withPrivates.observeSize();
+  expect(withPrivates.resizeObserver).to.equal(existing);
+});
+
+it('ignores a queued reconnect re-measurement if the element disconnects again first', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  await elementUpdated(element);
+
+  element.remove();
+  document.body.append(element); // queues a re-measurement microtask
+  element.remove(); // disconnected again before that microtask runs
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+
+  expect(element.isConnected).to.equal(false);
+});
+
+it('falls back to the full axis size when the min/max probes are not yet rendered', () => {
+  const element = document.createElement('lr-split-panel') as LyraSplitPanel;
+  const withPrivates = element as unknown as {
+    availableSize: number;
+    constraintBounds(): { min: number; max: number };
+  };
+  withPrivates.availableSize = 250;
+  const bounds = withPrivates.constraintBounds();
+  expect(bounds.min).to.equal(0);
+  expect(bounds.max).to.equal(250);
+});
+
+it('drags along the block axis using clientY in vertical orientation', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel
+      orientation="vertical"
+      style="inline-size: 300px; block-size: 200px"
+    ></lr-split-panel>
+  `)) as LyraSplitPanel;
+
+  pointer(divider(element), 'pointerdown', 40, 0, 100);
+  pointer(window, 'pointermove', 40, 0, 140);
+  await elementUpdated(element);
+  expect(element.position).to.be.greaterThan(50);
+  pointer(window, 'pointerup', 40, 0, 140);
+});
+
+it('defers measurement until the host reports a nonzero size along its resize axis', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="display: block; inline-size: 0; block-size: 0"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  await elementUpdated(element);
+  expect(element.positionInPixels).to.equal(0);
+  expect(element.position).to.equal(50);
+});
+
+it('recovers the pre-snap position when a custom snap function throws', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  element.snap = () => {
+    throw new Error('boom');
+  };
+  await elementUpdated(element);
+
+  pointer(divider(element), 'pointerdown', 41, 200);
+  pointer(window, 'pointermove', 41, 260);
+  await elementUpdated(element);
+  expect(element.positionInPixels).to.be.closeTo(260, 1);
+  pointer(window, 'pointerup', 41, 260);
+});
+
+it('returns undefined for a snap length that does not match the px/percent grammar', () => {
+  const element = document.createElement('lr-split-panel') as LyraSplitPanel;
+  const withPrivates = element as unknown as {
+    resolveSnapLength(value: string, size: number): number | undefined;
+  };
+  expect(withPrivates.resolveSnapLength('bogus', 400)).to.equal(undefined);
+});
+
+it('clamps a snap token whose numeric value overflows to Infinity down to a zero-length point', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  element.snap = `${'9'.repeat(400)}px 50%`;
+  element.snapThreshold = 400;
+  await elementUpdated(element);
+
+  // The oversized token's parsed length overflows to Infinity, which `finiteNumber` clamps to 0
+  // rather than treating as invalid -- so it competes as a (far) candidate and the closer, valid
+  // 50% token still wins.
+  pointer(divider(element), 'pointerdown', 42, 200);
+  pointer(window, 'pointermove', 42, 210);
+  await elementUpdated(element);
+  expect(element.positionInPixels).to.be.closeTo(200, 1);
+  pointer(window, 'pointerup', 42, 210);
+});
+
+it('discards repeat() snap candidates that land outside the resizable range', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel
+      snap="repeat(150px)"
+      snap-threshold="200"
+      style="inline-size: 400px; block-size: 100px"
+    ></lr-split-panel>
+  `)) as LyraSplitPanel;
+
+  pointer(divider(element), 'pointerdown', 43, 200);
+  pointer(window, 'pointermove', 43, 380);
+  await elementUpdated(element);
+  expect(element.positionInPixels).to.be.closeTo(300, 1);
+  pointer(window, 'pointerup', 43, 380);
+});
+
+it('normalizes primary assignments: no-ops on repeats, invalid values reset to unset', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  await elementUpdated(element);
+  expect(element.primary).to.equal(undefined);
+
+  element.primary = 'start'; // first assignment away from unset, while already measured
+  await elementUpdated(element);
+  expect(element.primary).to.equal('start');
+  const afterFirst = element.positionInPixels;
+
+  element.primary = 'start'; // redundant re-assignment: no-op
+  await elementUpdated(element);
+  expect(element.positionInPixels).to.equal(afterFirst);
+
+  (element as unknown as { primary: string }).primary = 'middle'; // invalid runtime value resets to unset
+  await elementUpdated(element);
+  expect(element.primary).to.equal(undefined);
+});
+
+it('flips orientation back to horizontal when the vertical alias is cleared', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel vertical style="inline-size: 400px; block-size: 200px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  expect(element.orientation).to.equal('vertical');
+
+  element.vertical = false;
+  await elementUpdated(element);
+  expect(element.orientation).to.equal('horizontal');
+  expect(element.vertical).to.be.false;
+});
+
+it('reverts to the empty default when the snap attribute is removed', async () => {
+  const element = await fixture<LyraSplitPanel>(
+    html`<lr-split-panel snap="25% 200px"></lr-split-panel>`,
+  );
+  expect(element.snap).to.equal('25% 200px');
+
+  element.removeAttribute('snap');
+  await elementUpdated(element);
+  expect(element.snap).to.equal('');
+});
+
+it('ignores pointer events from an unrelated pointer while a drag is active', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+
+  pointer(divider(element), 'pointerdown', 50, 200);
+  pointer(window, 'pointermove', 51, 260); // unrelated pointerId, ignored
+  await elementUpdated(element);
+  expect(element.position).to.equal(50);
+
+  pointer(window, 'pointerup', 51, 260); // unrelated pointerId, ignored
+  await elementUpdated(element);
+  expect(element.position).to.equal(50);
+
+  pointer(window, 'pointermove', 50, 260); // the real pointer still drags
+  await elementUpdated(element);
+  expect(element.position).to.be.greaterThan(50);
+  pointer(window, 'pointerup', 50, 260);
+});
+
+it('inverts pointer-drag direction when primary is end', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel primary="end" style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+
+  pointer(divider(element), 'pointerdown', 52, 200);
+  pointer(window, 'pointermove', 52, 260);
+  await elementUpdated(element);
+  expect(element.position).to.be.lessThan(50);
+  pointer(window, 'pointerup', 52, 260);
+});
+
+it('resizes smaller on ArrowLeft in LTR', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  keydown(element, 'ArrowLeft');
+  await elementUpdated(element);
+  expect(element.position).to.be.lessThan(50);
+});
+
+it('inverts keyboard-arrow direction when primary is end', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel primary="end" style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  keydown(element, 'ArrowRight');
+  await elementUpdated(element);
+  expect(element.position).to.be.lessThan(50);
+});
+
+it('ignores keys that map to no resize action', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  keydown(element, 'ArrowUp'); // vertical-only key on a horizontal panel
+  await elementUpdated(element);
+  expect(element.position).to.equal(50);
+});
+
+it('tolerates releasePointerCapture rejecting an already-released capture', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  const handle = divider(element);
+  const rect = handle.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  const originalRelease = handle.releasePointerCapture.bind(handle);
+  handle.releasePointerCapture = () => {
+    throw new DOMException('Already released', 'InvalidStateError');
+  };
+  try {
+    await sendMouse({ type: 'move', position });
+    await sendMouse({ type: 'down' });
+    await sendMouse({ type: 'up' });
+    await elementUpdated(element);
+    expect(handle.hasAttribute('data-dragging')).to.equal(false);
+  } finally {
+    handle.releasePointerCapture = originalRelease;
+    await resetMouse();
+  }
+});

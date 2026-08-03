@@ -266,6 +266,56 @@ describe('lr-video-playlist public contract', () => {
     expect(media(second!).querySelectorAll('source').length).to.equal(1);
   });
 
+  it('pauses and unloads a non-active video that reports a native play event', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="A"></lr-video><lr-video title="B"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const [a, b] = childVideos(el);
+    const bPlayback = stubPlayback(b!, true);
+    const before = bPlayback.pauseCalls;
+    b!.dispatchEvent(new Event('play'));
+    expect(bPlayback.pauseCalls).to.be.greaterThan(before);
+    expect(b!.hidden).to.be.true;
+
+    const aPlayback = stubPlayback(a!, false);
+    const activePauseCalls = aPlayback.pauseCalls;
+    a!.dispatchEvent(new Event('play'));
+    expect(aPlayback.pauseCalls).to.equal(activePauseCalls);
+  });
+
+  it('retries a deferred activation once the incoming video element becomes available', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="A"></lr-video><lr-video title="B"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const [a, b] = childVideos(el);
+    stubPlayback(a!, false);
+    const bPlayback = stubPlayback(b!);
+    const realGetVideoElement = b!.getVideoElement.bind(b!);
+    let getCalls = 0;
+    // The very first activation attempt finds the incoming video's native element not yet
+    // rendered (as can happen right after a fast structural change); every later read returns
+    // the real element, matching how the browser eventually finishes the child's own update.
+    b!.getVideoElement = () => {
+      getCalls += 1;
+      return getCalls === 1 ? undefined : realGetVideoElement();
+    };
+
+    // An attribute change (not a childList change) so only the mutation observer's own
+    // reconcile pass runs -- a slotchange from removing the node instead would fire a second,
+    // independent reconcile that races the deferred retry this test targets.
+    a!.setAttribute('disabled', '');
+    await settle(el);
+
+    expect(bPlayback.playCalls).to.equal(1);
+    expect(b!.hidden).to.be.false;
+  });
+
   it('auto-advances ended and error only for the current activation generation', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
@@ -325,6 +375,25 @@ describe('lr-video-playlist public contract', () => {
     expect(aPlayback.playCalls).to.equal(2);
   });
 
+  it('swallows a rejected repeat-one replay instead of leaking the rejection', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist repeat="one"><lr-video title="Only"></lr-video></lr-video-playlist>
+    `);
+    await settle(el);
+    const video = childVideos(el)[0]!;
+    const native = media(video);
+    Object.defineProperties(native, {
+      paused: { configurable: true, get: () => false },
+      ended: { configurable: true, get: () => false },
+      play: { configurable: true, value: () => Promise.reject(new DOMException('nope', 'AbortError')) },
+      pause: { configurable: true, value: () => undefined },
+      load: { configurable: true, value: () => undefined },
+    });
+    expect(() => video.dispatchEvent(new Event('ended'))).to.not.throw();
+    await aTimeout(0);
+    expect(video.hidden).to.be.false;
+  });
+
   it('restarts a one-item repeat-all playlist without emitting a false index change', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist repeat="all"><lr-video title="Only"></lr-video></lr-video-playlist>
@@ -340,6 +409,25 @@ describe('lr-video-playlist public contract', () => {
     expect(media(only).currentTime).to.equal(0);
     expect(playback.playCalls).to.equal(1);
     expect(changes).to.equal(0);
+  });
+
+  it('swallows a rejected repeat-all restart on a single-item playlist', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist repeat="all"><lr-video title="Only"></lr-video></lr-video-playlist>
+    `);
+    await settle(el);
+    const only = childVideos(el)[0]!;
+    const native = media(only);
+    Object.defineProperties(native, {
+      paused: { configurable: true, get: () => false },
+      ended: { configurable: true, get: () => false },
+      play: { configurable: true, value: () => Promise.reject(new DOMException('nope', 'AbortError')) },
+      pause: { configurable: true, value: () => undefined },
+      load: { configurable: true, value: () => undefined },
+    });
+    expect(() => only.dispatchEvent(new Event('ended'))).to.not.throw();
+    await aTimeout(0);
+    expect(only.hidden).to.be.false;
   });
 
   it('preserves valid volume, mute, rate, and caption preferences across activation', async () => {
@@ -373,6 +461,28 @@ describe('lr-video-playlist public contract', () => {
     expect(media(b!).playbackRate).to.equal(1.5);
     expect(incomingEnglish.mode).to.equal('showing');
     expect(incomingFrench.mode).to.equal('disabled');
+  });
+
+  it('recognizes description tracks as selectable, alongside subtitles and captions', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>
+    `);
+    await settle(el);
+    const [a, b] = childVideos(el);
+    const outgoingDescriptions = { kind: 'descriptions', label: 'Descriptions', language: 'en', mode: 'showing' } as TextTrack;
+    const incomingDescriptions = { kind: 'descriptions', label: 'Descriptions', language: 'en', mode: 'disabled' } as TextTrack;
+    Object.defineProperties(media(a!), {
+      paused: { configurable: true, get: () => true },
+      textTracks: { configurable: true, value: { 0: outgoingDescriptions, length: 1 } },
+    });
+    Object.defineProperties(media(b!), {
+      paused: { configurable: true, get: () => true },
+      textTracks: { configurable: true, value: { 0: incomingDescriptions, length: 1 } },
+      pause: { configurable: true, value: () => undefined },
+      load: { configurable: true, value: () => undefined },
+    });
+    el.goTo(1);
+    expect(incomingDescriptions.mode).to.equal('showing');
   });
 
   it('guards rejected play promises from superseded activations', async () => {
@@ -429,6 +539,163 @@ describe('lr-video-playlist public contract', () => {
     el.next();
     el.previous();
     el.goTo(0);
+  });
+
+  it('falls back to an earlier enabled video when the one nearest the end is disabled', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="A"></lr-video><lr-video title="B"></lr-video><lr-video title="C"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    el.goTo(2);
+    await settle(el);
+    childVideos(el)[2]!.setAttribute('disabled', '');
+    await settle(el);
+    expect(childVideos(el)[1]!.hidden).to.be.false;
+    expect(childVideos(el)[2]!.hidden).to.be.true;
+  });
+
+  it('clears the active video when every remaining item becomes disabled at once', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>
+    `);
+    await settle(el);
+    el.goTo(1);
+    await settle(el);
+    childVideos(el)[0]!.setAttribute('disabled', '');
+    childVideos(el)[1]!.setAttribute('disabled', '');
+    await settle(el);
+    expect(items(el).every((button) => button.getAttribute('aria-current') === 'false')).to.be.true;
+    expect(childVideos(el)[0]!.hidden).to.be.true;
+    expect(childVideos(el)[1]!.hidden).to.be.true;
+  });
+
+  it('does not wrap roving focus past either end of the list', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist><lr-video title="One"></lr-video><lr-video title="Two"></lr-video></lr-video-playlist>
+    `);
+    await settle(el);
+    const buttons = items(el);
+    buttons[0]!.focus();
+    press(buttons[0]!, 'ArrowUp');
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === buttons[0]).to.be.true;
+
+    buttons[1]!.focus();
+    press(buttons[1]!, 'ArrowDown');
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === buttons[1]).to.be.true;
+  });
+
+  it('ignores a roving move started from a row that just went stale', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="One"></lr-video><lr-video title="Two"></lr-video><lr-video title="Three"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const buttons = items(el);
+    buttons[0]!.focus();
+    childVideos(el)[0]!.setAttribute('disabled', '');
+    // The rendered row has not caught up with the just-set attribute yet -- but `moveRoving`
+    // looks the pressed row up against the *live* enabled set, finds it already missing, and
+    // returns before ever calling `focusItem`, so focus stays exactly where it was.
+    expect(buttons[0]!.disabled, 'the row has not re-rendered yet').to.be.false;
+    press(buttons[0]!, 'ArrowDown');
+    expect(el.shadowRoot!.activeElement === buttons[0], 'focus was not moved by the stale request').to.be.true;
+    await settle(el);
+  });
+
+  it('supersedes an in-flight focus move when a second one starts first', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="One"></lr-video><lr-video title="Two"></lr-video><lr-video title="Three"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const buttons = items(el);
+    buttons[0]!.focus();
+    press(buttons[0]!, 'ArrowDown');
+    press(buttons[1]!, 'ArrowDown');
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(el.shadowRoot!.activeElement === items(el)[2]).to.be.true;
+  });
+
+  it('ignores a keydown dispatched directly on a disabled playlist row', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="One"></lr-video><lr-video title="Two" disabled></lr-video><lr-video title="Three"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const disabledButton = items(el)[1]!;
+    expect(disabledButton.disabled).to.be.true;
+    const event = press(disabledButton, 'Enter');
+    expect(event.defaultPrevented).to.be.false;
+    expect(childVideos(el)[1]!.hidden).to.be.true;
+  });
+
+  it('activates a playlist item via a real click on its button', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>
+    `);
+    await settle(el);
+    items(el)[1]!.click();
+    await settle(el);
+    expect(childVideos(el)[1]!.hidden).to.be.false;
+    expect(items(el)[1]!.getAttribute('aria-current')).to.equal('true');
+    expect(items(el)[1]!.tabIndex).to.equal(0);
+  });
+
+  it('previous() finds the nearest earlier enabled video, skipping a disabled one', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="A"></lr-video><lr-video title="B" disabled></lr-video><lr-video title="C"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    el.goTo(2);
+    await settle(el);
+    el.previous();
+    await settle(el);
+    expect(childVideos(el)[0]!.hidden).to.be.false;
+    expect(childVideos(el)[2]!.hidden).to.be.true;
+
+    el.previous();
+    await settle(el);
+    expect(childVideos(el)[0]!.hidden).to.be.false;
+  });
+
+  it('still renders and reconciles children without a MutationObserver global', async () => {
+    const original = window.MutationObserver;
+    // @ts-expect-error -- deliberately removing the global to exercise the defensive fallback
+    delete window.MutationObserver;
+    try {
+      const el = await fixture<LyraVideoPlaylist>(html`
+        <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>
+      `);
+      await settle(el);
+      expect(childVideos(el)[0]!.hidden).to.be.false;
+      expect(items(el).length).to.equal(2);
+    } finally {
+      window.MutationObserver = original;
+    }
+  });
+
+  it('ignores a slotchange notification that arrives after disconnection', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist></div>
+    `);
+    const el = wrapper.querySelector('lr-video-playlist') as LyraVideoPlaylist;
+    await settle(el);
+    const slot = el.shadowRoot!.querySelector('slot')!;
+    el.remove();
+    expect(() => slot.dispatchEvent(new Event('slotchange'))).to.not.throw();
+    wrapper.append(el);
+    await settle(el);
+    expect(childVideos(el).length).to.equal(2);
   });
 
   it('disconnects media/listeners and reconnects with one current generation', async () => {
@@ -586,6 +853,12 @@ describe('lr-video-playlist public contract', () => {
     await settle(el);
     expect(el.shadowRoot!.querySelector('[part="playlist-title"]')!.textContent!.trim()).to.equal('Renamed');
     expect(el.shadowRoot!.querySelector('[part="playlist-duration"]')!.textContent!.trim()).to.equal('1:05');
+
+    // An hour or more switches the duration format to include an hours segment.
+    video.duration = 3725;
+    video.dispatchEvent(new Event('loadedmetadata'));
+    await settle(el);
+    expect(el.shadowRoot!.querySelector('[part="playlist-duration"]')!.textContent!.trim()).to.equal('1:02:05');
   });
 
   it('gives host aria-label precedence, handles 320px long titles, RTL, and populated axe', async () => {

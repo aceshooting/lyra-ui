@@ -88,6 +88,176 @@ it('keyboard: ArrowDown descends into children, auto-expanding a collapsed paren
   expect(event.detail).to.deep.equal({ id: 'rag', expanded: true });
 });
 
+it('ignores a non-navigation key', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  const focusedId = () => (el as unknown as { focusedId: string | null }).focusedId;
+  expect(focusedId()).to.equal(null);
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(focusedId()).to.equal(null);
+});
+
+it('ignores a navigation key once every topic has been removed (defensive, via a retained svg reference)', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  el.topics = [];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="svg"]'), 'the empty state replaced the svg').to.equal(null);
+  expect(() =>
+    svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })),
+  ).to.not.throw();
+});
+
+it('ignores a navigation key when the focused id does not match any placed node (defensive)', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  (el as unknown as { focusedId: string | null }).focusedId = 'not-a-real-topic-id';
+  expect(() =>
+    svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })),
+  ).to.not.throw();
+  expect((el as unknown as { focusedId: string | null }).focusedId).to.equal('not-a-real-topic-id');
+});
+
+it('ArrowDown on a leaf node is a no-op -- there are no children to descend into', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  const focusedId = () => (el as unknown as { focusedId: string | null }).focusedId;
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // focus root
+  await el.updateComplete;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // descend to kg, a leaf
+  await el.updateComplete;
+  expect(focusedId()).to.equal('kg');
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // no children -- no-op
+  await el.updateComplete;
+  expect(focusedId()).to.equal('kg');
+});
+
+it('adoptedCallback is a no-op when no announcement sink was ever acquired', () => {
+  const el = document.createElement('lr-mind-map') as LyraMindMap;
+  expect(() => el.adoptedCallback()).to.not.throw();
+});
+
+it('keyboard: ArrowUp moves focus to the parent, and is a no-op at the root', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  const focusedId = () => (el as unknown as { focusedId: string | null }).focusedId;
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // focus root
+  await el.updateComplete;
+  expect(focusedId()).to.equal('root');
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })); // root has no parent -- no-op
+  await el.updateComplete;
+  expect(focusedId()).to.equal('root');
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // descend to kg
+  await el.updateComplete;
+  expect(focusedId()).to.equal('kg');
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })); // back up to its parent
+  await el.updateComplete;
+  expect(focusedId()).to.equal('root');
+});
+
+it('keyboard: ArrowLeft moves to the previous sibling, Home/End jump to the first/last sibling', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  const focusedId = () => (el as unknown as { focusedId: string | null }).focusedId;
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // focus root
+  await el.updateComplete;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // descend to kg (first child)
+  await el.updateComplete;
+  expect(focusedId()).to.equal('kg');
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(focusedId()).to.equal('rag');
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(focusedId()).to.equal('kg');
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(focusedId()).to.equal('kg');
+});
+
+it('keyboard: Enter/Space activates the focused node -- select on a leaf, toggle (incl. collapse) on a parent', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // focus root
+  await el.updateComplete;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // descend to kg, a leaf
+  await el.updateComplete;
+
+  const selectListener = oneEvent(el, 'lr-topic-select');
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  const selectEvent = await selectListener;
+  expect(selectEvent.detail).to.deep.equal({ id: 'kg' });
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })); // back to root, a parent
+  await el.updateComplete;
+  const toggleListener = oneEvent(el, 'lr-topic-toggle');
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+  const toggleEvent = await toggleListener;
+  // root starts expanded (depth 0 < the default expandDepth 1) -- Space collapses it.
+  expect(toggleEvent.detail).to.deep.equal({ id: 'root', expanded: false });
+});
+
+it('mirrors sibling navigation under dir="rtl", where ArrowLeft becomes "forward"', async () => {
+  const el = (await fixture(html`<lr-mind-map dir="rtl"></lr-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  const focusedId = () => (el as unknown as { focusedId: string | null }).focusedId;
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // focus root
+  await el.updateComplete;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // descend to kg
+  await el.updateComplete;
+  expect(focusedId()).to.equal('kg');
+
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true })); // RTL "forward"
+  await el.updateComplete;
+  expect(focusedId()).to.equal('rag');
+
+  // link connectors render fine, exercising the mirrored connector control point under RTL.
+  expect(el.shadowRoot!.querySelectorAll('[part="link"]').length).to.be.greaterThan(0);
+});
+
+it('does not re-invalidate layout when dir is reassigned the same value', async () => {
+  const el = (await fixture(html`<lr-mind-map dir="rtl"></lr-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  const internals = el as unknown as { relayout(): void };
+  const original = internals.relayout.bind(el);
+  let calls = 0;
+  internals.relayout = () => {
+    calls++;
+    original();
+  };
+  el.setAttribute('dir', 'rtl'); // identical value -- attributeChangedCallback's oldValue !== value guard must no-op
+  await el.updateComplete;
+  expect(calls, 'reassigning the same dir value must not trigger a relayout').to.equal(0);
+});
+
 it('has a single [part="svg"] tab stop, not per-node tabbing', async () => {
   const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;
@@ -276,6 +446,149 @@ it('resolves token units through the adopted owner realm', async () => {
   }
 });
 
+it('leaves the resize observer unarmed when connectedCallback runs while not part of a document', () => {
+  const el = document.createElement('lr-mind-map') as LyraMindMap;
+  const OriginalResizeObserver = window.ResizeObserver;
+  let constructions = 0;
+  class CountingResizeObserver {
+    constructor() {
+      constructions += 1;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    CountingResizeObserver as unknown as typeof ResizeObserver;
+  try {
+    expect(() => el.connectedCallback()).to.not.throw();
+    expect(constructions, 'a disconnected element must not construct a resize observer').to.equal(0);
+  } finally {
+    el.disconnectedCallback(); // release the announcement sink acquired above
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalResizeObserver;
+  }
+});
+
+it('renders without a resize observer when ResizeObserver is unavailable in the realm', async () => {
+  const OriginalResizeObserver = window.ResizeObserver;
+  (window as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver = undefined;
+  try {
+    const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+    el.topics = topics;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(3);
+  } finally {
+    window.ResizeObserver = OriginalResizeObserver;
+  }
+});
+
+it('does not construct a second resize observer when connectedCallback re-runs for the same realm', async () => {
+  const OriginalResizeObserver = window.ResizeObserver;
+  let constructions = 0;
+  class CountingResizeObserver {
+    constructor() {
+      constructions += 1;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    CountingResizeObserver as unknown as typeof ResizeObserver;
+  try {
+    const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+    expect(constructions).to.equal(1);
+    el.connectedCallback(); // re-entrant call while already connected to the same document
+    expect(constructions, 'the same document must not re-arm a second observer').to.equal(1);
+  } finally {
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalResizeObserver;
+  }
+});
+
+it('ignores a stale ResizeObserver notification received after disconnect', async () => {
+  const OriginalResizeObserver = window.ResizeObserver;
+  const originalRaf = window.requestAnimationFrame;
+  let notify: ResizeObserverCallback | undefined;
+  class StubResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      notify = callback;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    StubResizeObserver as unknown as typeof ResizeObserver;
+  let rafCalls = 0;
+  window.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+    rafCalls += 1;
+    return originalRaf(callback);
+  }) as typeof window.requestAnimationFrame;
+  try {
+    const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+    expect(notify, 'a resize observer was armed').to.be.a('function');
+    el.remove(); // disconnect bumps the realm generation and flips isConnected
+    notify!(
+      [{ contentRect: { width: 10, height: 10 } } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    expect(rafCalls, 'a stale post-disconnect notification must not schedule a relayout frame').to.equal(0);
+  } finally {
+    window.requestAnimationFrame = originalRaf;
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalResizeObserver;
+  }
+});
+
+it('coalesces rapid resize notifications and skips a no-op repeat with an unchanged content rect', async () => {
+  const OriginalResizeObserver = window.ResizeObserver;
+  const originalRaf = window.requestAnimationFrame;
+  const originalCaf = window.cancelAnimationFrame;
+  let notify: ResizeObserverCallback | undefined;
+  class StubResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      notify = callback;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  let rafCalls = 0;
+  let nextHandle = 100;
+  const cancelled: number[] = [];
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    StubResizeObserver as unknown as typeof ResizeObserver;
+  window.requestAnimationFrame = (() => {
+    rafCalls += 1;
+    return nextHandle++;
+  }) as typeof window.requestAnimationFrame;
+  window.cancelAnimationFrame = ((handle: number): void => {
+    cancelled.push(handle);
+  }) as typeof window.cancelAnimationFrame;
+  try {
+    const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+    expect(notify, 'a resize observer was armed').to.be.a('function');
+
+    notify!([], {} as ResizeObserver); // no entry -- the optional-chained contentRect falls back to ''
+    expect(rafCalls).to.equal(1);
+
+    notify!([{ contentRect: { width: 50, height: 20 } } as unknown as ResizeObserverEntry], {} as ResizeObserver);
+    expect(rafCalls).to.equal(2);
+    expect(cancelled.length, 'the still-pending frame from the previous notification is cancelled').to.equal(1);
+
+    notify!([{ contentRect: { width: 50, height: 20 } } as unknown as ResizeObserverEntry], {} as ResizeObserver);
+    expect(rafCalls, 'an unchanged content rect is a no-op, scheduling no new frame').to.equal(2);
+    expect(cancelled.length).to.equal(1);
+
+    notify!([{ contentRect: { width: 90, height: 40 } } as unknown as ResizeObserverEntry], {} as ResizeObserver);
+    expect(rafCalls).to.equal(3);
+    expect(cancelled.length).to.equal(2);
+  } finally {
+    window.requestAnimationFrame = originalRaf;
+    window.cancelAnimationFrame = originalCaf;
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalResizeObserver;
+  }
+});
+
 it('reconciles keyboard focus when the focused topic disappears', async () => {
   const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
   const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
@@ -286,6 +599,17 @@ it('reconciles keyboard focus when the focused topic disappears', async () => {
   el.topics = [{ ...topics[0]!, children: topics[0]!.children!.filter((topic) => topic.id !== 'kg') }];
   await el.updateComplete;
   expect((el as unknown as { focusedId: string | null }).focusedId).to.equal('root');
+});
+
+it('clears the focused id when every topic is removed while a node is focused', async () => {
+  const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect((el as unknown as { focusedId: string | null }).focusedId).to.equal('root');
+  el.topics = [];
+  await el.updateComplete;
+  expect((el as unknown as { focusedId: string | null }).focusedId).to.equal(null);
 });
 
 it('does not recompute the O(n) radial layout for focus-only keyboard updates', async () => {
@@ -371,6 +695,91 @@ it('reads a live root font-size for a rem-unit --lr-mind-map-ring-gap, matching 
     expect(distance).to.be.closeTo(192, 0.5);
   } finally {
     document.documentElement.style.fontSize = originalFontSize;
+  }
+});
+
+it('falls back to the default ring gap for a non-numeric --lr-mind-map-ring-gap', async () => {
+  const el = (await fixture(
+    html`<lr-mind-map style="--lr-mind-map-ring-gap: not-a-number" .topics=${topics}></lr-mind-map>`,
+  )) as LyraMindMap;
+  await el.updateComplete;
+  const root = nodePosition(el, 'Knowledge Graph RAG');
+  const child = nodePosition(el, 'Knowledge graphs');
+  const distance = Math.hypot(child.x - root.x, child.y - root.y);
+  expect(distance).to.be.closeTo(96, 0.5); // parseFloat(...) is NaN -> DEFAULT_RING_GAP_PX
+});
+
+it('uses a plain px --lr-mind-map-ring-gap value directly, without unit conversion', async () => {
+  const el = (await fixture(
+    html`<lr-mind-map style="--lr-mind-map-ring-gap: 40px" .topics=${topics}></lr-mind-map>`,
+  )) as LyraMindMap;
+  await el.updateComplete;
+  const root = nodePosition(el, 'Knowledge Graph RAG');
+  const child = nodePosition(el, 'Knowledge graphs');
+  const distance = Math.hypot(child.x - root.x, child.y - root.y);
+  expect(distance).to.be.closeTo(40, 0.5);
+});
+
+it('resolves an em-unit --lr-mind-map-ring-gap against the live host font-size', async () => {
+  const el = (await fixture(
+    html`<lr-mind-map style="--lr-mind-map-ring-gap: 3em" .topics=${topics}></lr-mind-map>`,
+  )) as LyraMindMap;
+  await el.updateComplete;
+  const root = nodePosition(el, 'Knowledge Graph RAG');
+  const child = nodePosition(el, 'Knowledge graphs');
+  const distance = Math.hypot(child.x - root.x, child.y - root.y);
+  expect(distance).to.be.closeTo(48, 0.5); // 3 * the default 16px host font-size
+});
+
+it('falls back to the default ring gap when an em-unit host font-size cannot be parsed', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  const originalGetComputedStyle = window.getComputedStyle;
+  window.getComputedStyle = ((element: Element) => {
+    if (element === el) {
+      return {
+        fontSize: '',
+        getPropertyValue: (name: string) => (name === '--lr-mind-map-ring-gap' ? '2em' : ''),
+      } as CSSStyleDeclaration;
+    }
+    return originalGetComputedStyle(element);
+  }) as typeof window.getComputedStyle;
+  try {
+    const internals = el as unknown as { ringGapPx(): number };
+    expect(internals.ringGapPx()).to.equal(96); // '' -> NaN host font-size -> DEFAULT_RING_GAP_PX
+  } finally {
+    window.getComputedStyle = originalGetComputedStyle;
+  }
+});
+
+it('resolves ringGapPx via inline style, not computed style, when the realm has no window', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  const detached = document.implementation.createHTMLDocument('detached');
+  try {
+    detached.adoptNode(el);
+    expect(detached.defaultView, 'a document.implementation document has no browsing context').to.equal(null);
+    const internals = el as unknown as { ringGapPx(): number };
+    // this.style has no --lr-mind-map-ring-gap set (only the component's own stylesheet does, and
+    // computed-style resolution is skipped entirely without a window) -> raw is empty -> the
+    // DEFAULT_RING_GAP_PX fallback.
+    expect(internals.ringGapPx()).to.equal(96);
+  } finally {
+    document.adoptNode(el);
+  }
+});
+
+it('falls back to the default ring gap when a rem-unit gap cannot resolve a root font-size in a windowless realm', async () => {
+  const el = (await fixture(html`<lr-mind-map style="--lr-mind-map-ring-gap: 3rem"></lr-mind-map>`)) as LyraMindMap;
+  const detached = document.implementation.createHTMLDocument('detached');
+  try {
+    detached.adoptNode(el);
+    const internals = el as unknown as { ringGapPx(): number };
+    // ownerWindow is null, so the root-style lookup falls back to the detached document's own
+    // <html> element's inline style, whose font-size is unset -> NaN -> DEFAULT_RING_GAP_PX.
+    expect(internals.ringGapPx()).to.equal(96);
+  } finally {
+    document.adoptNode(el);
   }
 });
 

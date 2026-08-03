@@ -762,6 +762,33 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
   }
 });
 
+it('armResizeObserver() is a no-op when called again for the same already-armed document/target (e.g. a duplicate connectedCallback)', async () => {
+  const el = await mount(html`<lr-lite-chart .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lr-lite-chart>`);
+  const priv = el as unknown as { resizeObserver?: ResizeObserver };
+  const before = priv.resizeObserver;
+  expect(before).to.exist;
+  // Still connected, same document, same <svg> target -- connectedCallback() (which calls
+  // armResizeObserver()) firing again must recognize the existing observer instead of tearing it
+  // down and recreating it.
+  el.connectedCallback();
+  expect(priv.resizeObserver).to.equal(before);
+});
+
+it('tolerates a realm with no ResizeObserver constructor instead of throwing', async () => {
+  const OriginalRO = window.ResizeObserver;
+  (window as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver = undefined;
+  try {
+    const el = (await fixture(
+      html`<lr-lite-chart .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lr-lite-chart>`,
+    )) as LyraLiteChart;
+    await el.updateComplete;
+    expect((el as unknown as { resizeObserver?: ResizeObserver }).resizeObserver).to.be.undefined;
+    expect(el.shadowRoot!.querySelector('svg')).to.exist;
+  } finally {
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
+  }
+});
+
 it('constructs its resize observer in the adopted owner realm and ignores its stale callback', async () => {
   const el = (await fixture(
     html`<lr-lite-chart .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lr-lite-chart>`,
@@ -1038,6 +1065,20 @@ it('does not crash and still keeps the first/last label for a negative maxLabels
   expect(axisLabels).to.include('L0');
   expect(axisLabels).to.include('L19');
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
+});
+
+it('keeps the single label of a one-category chart when maxLabels caps it below 2 slots', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    max-labels="0"
+    .labels=${['solo']}
+    .datasets=${[{ label: 's', data: [1] }]}
+  ></lr-lite-chart>`);
+  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].map(
+    (n) => n.textContent,
+  );
+  expect(axisLabels).to.deep.equal(['solo']);
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(1);
 });
 
 // --- barX coordinate override -------------------------------------------------
@@ -1800,6 +1841,21 @@ describe('selectedIndex', () => {
     const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')];
     expect(bars.some((b) => b.hasAttribute('data-selected'))).to.be.false;
   });
+
+  it('marks aria-pressed="true" on a selected bar even when roundedBars renders it as a <path> instead of a <rect>', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="bar"
+        rounded-bars
+        .labels=${['a', 'b']}
+        .datasets=${[{ label: 's', data: [1, 2] }]}
+        .selectedIndex=${[1]}
+      ></lr-lite-chart>
+    `);
+    const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')];
+    expect(bars.map((bar) => bar.tagName.toLowerCase())).to.deep.equal(['path', 'path']);
+    expect(bars.map((bar) => bar.getAttribute('aria-pressed'))).to.deep.equal(['false', 'true']);
+  });
 });
 
 // --- ResizeObserver entry without contentBoxSize (falls back to getBoundingClientRect) --------
@@ -1888,6 +1944,47 @@ it('focusMark is a no-op for an out-of-range mark index (defensive guard)', asyn
   (el as unknown as { focusMark: (i: number) => void }).focusMark(99);
   await el.updateComplete;
   expect((el as unknown as { activeMarkIndex: number }).activeMarkIndex).to.equal(before);
+});
+
+it('focusMark tolerates the addressed mark disappearing before its scheduled re-focus resolves (defensive guard)', async () => {
+  const el = await mount(html`<lr-lite-chart type="bar" .labels=${['a', 'b']} .datasets=${[{ label: 's', data: [1, 2] }]}></lr-lite-chart>`);
+  const priv = el as unknown as { focusMark: (i: number) => void };
+  priv.focusMark(1); // valid index -- schedules a re-focus once the pending update resolves
+  el.datasets = [{ label: 's', data: [1] }]; // synchronously shrinks marks to 1 before that resolves
+  await el.updateComplete;
+  await aTimeout(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]')).to.have.length(1);
+});
+
+it('re-announces via onMarkFocus() instead of a redundant .focus() when the addressed mark is already the active element', async () => {
+  const el = await mount(html`
+    <lr-lite-chart
+      .labels=${['A', 'B']}
+      .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+    ></lr-lite-chart>
+  `);
+  const marks = () => [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGGraphicsElement[];
+  marks()[0]!.focus(); // real focus (unlike the synthetic-dispatch tests elsewhere in this file)
+  expect(el.shadowRoot!.activeElement).to.equal(marks()[0]);
+
+  const liveRegion = el.shadowRoot!.querySelector('lr-live-region') as any;
+  const original = liveRegion.announce.bind(liveRegion);
+  let announcements = 0;
+  liveRegion.announce = (...args: unknown[]) => {
+    announcements++;
+    return original(...args);
+  };
+
+  // ArrowLeft at the first mark clamps back to the same index -- focusMark() still runs, but since
+  // the target is already the real active element, calling .focus() on it again would be a no-op
+  // that fires no native 'focus' event (and thus no announcement); the code must instead call
+  // onMarkFocus() directly to keep the roving-focus announcement working at the boundary.
+  marks()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(announcements).to.equal(1);
+  expect(el.shadowRoot!.activeElement).to.equal(marks()[0]);
 });
 
 // --- barValueToY() scale="sqrt" domainMax fallback for a non-positive hi ------------------------
@@ -2145,6 +2242,35 @@ describe('review remediation regressions', () => {
     expect(marks().filter((mark) => mark.getAttribute('tabindex') === '0')).to.have.length(1);
   });
 
+  it('keeps the same focused mark by (dataset, index) identity -- not just its array position -- when marks shift around it', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="bar"
+        skip-zero
+        .labels=${['A', 'B', 'C']}
+        .datasets=${[{ label: 'Revenue', data: [1, 0, 3] }]}
+      ></lr-lite-chart>
+    `);
+    const marks = () => [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGGraphicsElement[];
+    // "B" (index 1) is skipped (value 0, skipZero), so only 2 marks render: "A" (index 0) at array
+    // position 0, and "C" (index 2) at array position 1.
+    expect(marks()).to.have.length(2);
+    marks()[1]!.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-index')).to.equal('2');
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-mark-index')).to.equal('1');
+
+    // Un-skip "B" by giving it a nonzero value: all 3 marks now render, so "C" moves from array
+    // position 1 to array position 2 -- a plain clamp of the old array position (1) would instead
+    // land back on "B". The (dataset, index) identity match must follow "C" to its new position.
+    el.datasets = [{ label: 'Revenue', data: [1, 5, 3] }];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-index')).to.equal('2');
+    expect(marks()).to.have.length(3);
+    expect(marks().filter((mark) => mark.getAttribute('tabindex') === '0')).to.have.length(1);
+    expect(marks()[2]!.getAttribute('tabindex')).to.equal('0');
+  });
+
   it('transfers focus to the chart group when the last focused mark disappears', async () => {
     const el = await mount(html`
       <lr-lite-chart
@@ -2295,6 +2421,128 @@ describe('review remediation regressions', () => {
         .datasets=${[{ label: 'Range', data: [-Number.MAX_VALUE, Number.MAX_VALUE] }]}
       ></lr-lite-chart>
     `);
+    const geometry = [...el.shadowRoot!.querySelectorAll('[d], [cx], [cy], [x1], [x2], [y1], [y2]')]
+      .flatMap((node) =>
+        ['d', 'cx', 'cy', 'x1', 'x2', 'y1', 'y2']
+          .map((name) => node.getAttribute(name))
+          .filter((value): value is string => value != null),
+      )
+      .join(' ');
+    expect(geometry).to.not.match(/(?:NaN|Infinity)/);
+  });
+
+  it('caps a stacked category total at +/-Number.MAX_VALUE instead of overflowing to Infinity when segments sum past it', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="bar"
+        stacked
+        .labels=${['x']}
+        .datasets=${[
+          { label: 'p1', data: [Number.MAX_VALUE] },
+          { label: 'p2', data: [Number.MAX_VALUE] },
+          { label: 'n1', data: [-Number.MAX_VALUE] },
+          { label: 'n2', data: [-Number.MAX_VALUE] },
+        ]}
+      ></lr-lite-chart>
+    `);
+    const geometry = [...el.shadowRoot!.querySelectorAll('[x], [y], [width], [height], [d]')]
+      .flatMap((node) =>
+        ['x', 'y', 'width', 'height', 'd']
+          .map((name) => node.getAttribute(name))
+          .filter((value): value is string => value != null),
+      )
+      .join(' ');
+    expect(geometry).to.not.match(/(?:NaN|Infinity)/);
+  });
+
+  it('widens a single-point domain near +Number.MAX_VALUE by halving toward zero instead of overflowing on the usual +/-1 widening', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .beginAtZero=${false}
+        .labels=${['only']}
+        .datasets=${[{ label: 's', data: [Number.MAX_VALUE] }]}
+      ></lr-lite-chart>
+    `);
+    const geometry = [...el.shadowRoot!.querySelectorAll('[d], [cx], [cy], [x1], [x2], [y1], [y2]')]
+      .flatMap((node) =>
+        ['d', 'cx', 'cy', 'x1', 'x2', 'y1', 'y2']
+          .map((name) => node.getAttribute(name))
+          .filter((value): value is string => value != null),
+      )
+      .join(' ');
+    expect(geometry).to.not.match(/(?:NaN|Infinity)/);
+  });
+
+  it('widens a single-point domain near -Number.MAX_VALUE the same way, on the negative side', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .beginAtZero=${false}
+        .labels=${['only']}
+        .datasets=${[{ label: 's', data: [-Number.MAX_VALUE] }]}
+      ></lr-lite-chart>
+    `);
+    const geometry = [...el.shadowRoot!.querySelectorAll('[d], [cx], [cy], [x1], [x2], [y1], [y2]')]
+      .flatMap((node) =>
+        ['d', 'cx', 'cy', 'x1', 'x2', 'y1', 'y2']
+          .map((name) => node.getAttribute(name))
+          .filter((value): value is string => value != null),
+      )
+      .join(' ');
+    expect(geometry).to.not.match(/(?:NaN|Infinity)/);
+  });
+
+  it('degrades gracefully when the data span underflows to a zero nice-step (denormalized values near Number.MIN_VALUE)', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['Low', 'High']}
+        .datasets=${[{ label: 's', data: [0, Number.MIN_VALUE] }]}
+      ></lr-lite-chart>
+    `);
+    const geometry = [...el.shadowRoot!.querySelectorAll('[d], [cx], [cy], [x1], [x2], [y1], [y2]')]
+      .flatMap((node) =>
+        ['d', 'cx', 'cy', 'x1', 'x2', 'y1', 'y2']
+          .map((name) => node.getAttribute(name))
+          .filter((value): value is string => value != null),
+      )
+      .join(' ');
+    expect(geometry).to.not.match(/(?:NaN|Infinity)/);
+  });
+
+  it('falls back to unrounded nice-domain ticks when a huge asymmetric span rounds to more than 100 slots', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['Low', 'High']}
+        .datasets=${[{ label: 's', data: [-1, Number.MAX_VALUE] }]}
+      ></lr-lite-chart>
+    `);
+    const geometry = [...el.shadowRoot!.querySelectorAll('[d], [cx], [cy], [x1], [x2], [y1], [y2]')]
+      .flatMap((node) =>
+        ['d', 'cx', 'cy', 'x1', 'x2', 'y1', 'y2']
+          .map((name) => node.getAttribute(name))
+          .filter((value): value is string => value != null),
+      )
+      .join(' ');
+    expect(geometry).to.not.match(/(?:NaN|Infinity)/);
+  });
+
+  it('appends the exact domain ceiling as a final tick when the last rounded step falls short of it', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['Low', 'High']}
+        .datasets=${[{ label: 's', data: [0, Number.MAX_VALUE] }]}
+      ></lr-lite-chart>
+    `);
+    const ticks = [...el.shadowRoot!.querySelectorAll('[part="axis-label"]')].map((node) =>
+      node.textContent?.trim(),
+    );
+    // The domain's own upper bound must appear as a tick even though the regular step-multiple
+    // sequence (lo, lo+step, lo+2*step, ...) lands short of it -- niceDomain() pushes it explicitly.
+    expect(ticks.length).to.be.greaterThan(0);
     const geometry = [...el.shadowRoot!.querySelectorAll('[d], [cx], [cy], [x1], [x2], [y1], [y2]')]
       .flatMap((node) =>
         ['d', 'cx', 'cy', 'x1', 'x2', 'y1', 'y2']
@@ -2475,6 +2723,73 @@ describe('remediated lite-chart semantics and geometry', () => {
     });
   });
 
+  it('emitNearestLinePoint falls back to the addressed dataset/index when the current target is not an SVGElement (defensive guard)', async () => {
+    const el = await mount(html`<lr-lite-chart type="line" .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lr-lite-chart>`);
+    const priv = el as unknown as {
+      emitNearestLinePoint: (
+        event: MouseEvent,
+        points: { datasetIndex: number; index: number; x: number; y: number }[],
+        fallbackDatasetIndex: number,
+        fallbackIndex: number,
+      ) => void;
+    };
+    const detailPromise = new Promise<CustomEvent>((resolve) =>
+      el.addEventListener('lr-point-click', (e) => resolve(e as CustomEvent), { once: true }),
+    );
+    // A synthetic event whose currentTarget isn't part of any SVG at all -- e.g. a hand-rolled
+    // event object, as opposed to a real click dispatched on one of the rendered <circle>s.
+    const fakeEvent = { currentTarget: document.createElement('div'), detail: 0, clientX: 0, clientY: 0 } as unknown as MouseEvent;
+    priv.emitNearestLinePoint(fakeEvent, [], 3, 7);
+    const detail = (await detailPromise).detail as { datasetIndex: number; index: number };
+    expect(detail.datasetIndex).to.equal(3);
+    expect(detail.index).to.equal(7);
+  });
+
+  it('arbitrates to the nearest supplied hit point even when the initially-addressed dataset/index matches none of them (defensive guard)', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['A', 'B']}
+        .datasets=${[{ label: 's', data: [1, 2] }]}
+      ></lr-lite-chart>
+    `);
+    const circles = [...el.shadowRoot!.querySelectorAll<SVGCircleElement>('[part="point"]')];
+    expect(circles).to.have.length(2);
+    const target = circles[0]!;
+    const points = circles.map((circle, index) => ({
+      datasetIndex: 0,
+      index,
+      x: Number(circle.getAttribute('cx')),
+      y: Number(circle.getAttribute('cy')),
+    }));
+    const rect = target.getBoundingClientRect();
+    const priv = el as unknown as {
+      emitNearestLinePoint: (
+        event: MouseEvent,
+        points: typeof points,
+        fallbackDatasetIndex: number,
+        fallbackIndex: number,
+      ) => void;
+    };
+    const detailPromise = new Promise<CustomEvent>((resolve) =>
+      el.addEventListener('lr-point-click', (e) => resolve(e as CustomEvent), { once: true }),
+    );
+    // A real click (detail > 0) on the real first point's circle, but addressed at a
+    // dataset/index pair (99, 99) absent from `points` entirely -- the initial exact-identity
+    // lookup can't find it, so distance-based arbitration must still land on the closest real
+    // point rather than leaving `selected` undefined.
+    const fakeEvent = {
+      currentTarget: target,
+      detail: 1,
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2,
+    } as unknown as MouseEvent;
+    priv.emitNearestLinePoint(fakeEvent, points, 99, 99);
+    const detail = (await detailPromise).detail as { datasetIndex: number; index: number };
+    expect(detail.datasetIndex).to.equal(0);
+    expect(detail.index).to.equal(0);
+  });
+
   it('ellipsizes long narrow-axis labels, preserves their full title, and contains SVG paint', async () => {
     const labels = [
       'A deliberately long translated first category label',
@@ -2593,6 +2908,18 @@ describe('exportData', () => {
     const svg = el.exportData('svg');
     expect(svg.startsWith('<svg')).to.be.true;
     expect(svg).to.include('viewBox');
+  });
+
+  it('returns an empty string for the svg format when the owner realm has no XMLSerializer constructor', async () => {
+    const el = await chart();
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'XMLSerializer');
+    try {
+      Object.defineProperty(window, 'XMLSerializer', { configurable: true, value: undefined });
+      expect(el.exportData('svg')).to.equal('');
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'XMLSerializer', descriptor);
+      else delete (window as Window & { XMLSerializer?: typeof XMLSerializer }).XMLSerializer;
+    }
   });
 
   it('serializes SVG with the current owner-document realm after adoption', async () => {

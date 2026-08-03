@@ -2,6 +2,7 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import './include.js';
 import type { LyraInclude } from './include.js';
 import { __setHtmlSanitizerForTesting } from '../html-viewer/dompurify-loader.js';
+import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
 import {
   __clearIncludeResourceCacheForTesting,
   MAX_INCLUDE_BYTES,
@@ -726,6 +727,228 @@ describe('lr-include', () => {
     } finally {
       window.fetch = original;
     }
+  });
+
+  it('falls back to the literal fragment text when it is not valid percent-encoding', async () => {
+    // decodeURIComponent('%') throws a URIError (a lone '%' is not a full escape sequence);
+    // decodedFragment() must recover by treating the text as a literal id rather than throwing.
+    const el = await fixture<LyraInclude>(html`<lr-include>Fallback</lr-include>`);
+    const errorPromise = oneEvent(el, 'lr-include-error');
+    el.src = '#%';
+    const event = await errorPromise;
+    expect(event.detail.reason).to.equal('missing-fragment');
+    expect(el.textContent).to.equal('Fallback');
+  });
+
+  it('normalizes an invalid/typo\'d mode attribute back to same-origin for the actual fetch', async () => {
+    const original = window.fetch;
+    const calls: (RequestInit | undefined)[] = [];
+    window.fetch = ((_url: string, init?: RequestInit) => { calls.push(init); return Promise.resolve(response('<p>ok</p>')); }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraInclude>(
+        html`<lr-include src="https://example.test/invalid-mode.html" mode="bogus"></lr-include>`,
+      );
+      await waitUntil(() => calls.length > 0);
+      expect(calls[0]?.mode, 'effectiveMode falls back for an unrecognized value').to.equal('same-origin');
+    } finally { window.fetch = original; }
+  });
+
+  it('reload() is a silent no-op when src is empty', async () => {
+    const original = window.fetch;
+    let called = false;
+    window.fetch = (() => { called = true; return Promise.reject(new Error('fetch should not be called')); }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      await el.reload();
+      expect(called).to.equal(false);
+    } finally { window.fetch = original; }
+  });
+
+  it('reload() is a silent no-op while the element is disconnected', async () => {
+    // reload() calls load() directly rather than through scheduleAfterUpdate, which is the one
+    // path that reaches load()'s own isConnected guard with a non-empty src still set.
+    const original = window.fetch;
+    let called = false;
+    window.fetch = (() => { called = true; return Promise.reject(new Error('fetch should not be called')); }) as typeof window.fetch;
+    try {
+      const el = document.createElement('lr-include') as LyraInclude;
+      el.src = '#reload-while-disconnected';
+      await el.reload();
+      expect(called, 'a same-page reload must not fetch while disconnected').to.equal(false);
+      expect(el.childElementCount, 'nothing should be cloned while disconnected').to.equal(0);
+    } finally { window.fetch = original; }
+  });
+
+  it('recovers when resolveSource\'s own URL re-parse throws (defensive catch)', async () => {
+    // resolveOwnerFetchTarget() already validates and resolves the URL; resolveSource() re-parses
+    // the resolved href a final time to split off any #fragment. That reparse of an
+    // already-valid absolute href should never throw in practice, but the catch exists in case a
+    // patched/foreign URL implementation misbehaves -- verify it fails closed as blocked-url
+    // instead of throwing out of load().
+    const targetHref = 'https://example.test/defensive-url-catch.html';
+    const original = window.fetch;
+    let fetchCalled = false;
+    window.fetch = (() => { fetchCalled = true; return Promise.reject(new Error('fetch should not be called')); }) as typeof window.fetch;
+    const OriginalURL = window.URL;
+    class ThrowingURL extends OriginalURL {
+      constructor(url: string | URL, base?: string | URL) {
+        if (base === undefined && String(url) === targetHref) {
+          throw new Error('simulated URL re-parse failure');
+        }
+        super(url, base);
+      }
+    }
+    window.URL = ThrowingURL as unknown as typeof URL;
+    try {
+      const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      const errorPromise = oneEvent(el, 'lr-include-error');
+      el.src = targetHref;
+      const event = await errorPromise;
+      expect(event.detail.reason).to.equal('blocked-url');
+      expect(fetchCalled).to.equal(false);
+    } finally {
+      window.URL = OriginalURL;
+      window.fetch = original;
+    }
+  });
+
+  it('reports resource-too-large for an oversized same-page source', async () => {
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <div id="huge-same-page-source"></div>
+        <lr-include>Fallback</lr-include>
+      </div>
+    `);
+    const source = fixtureRoot.querySelector('#huge-same-page-source')!;
+    source.textContent = 'x'.repeat(MAX_INCLUDE_BYTES + 16);
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const errorPromise = oneEvent(el, 'lr-include-error');
+    el.src = '#huge-same-page-source';
+    const event = await errorPromise;
+    expect(event.detail.reason).to.equal('resource-too-large');
+    expect(el.textContent).to.equal('Fallback');
+  });
+
+  it('reports missing-sanitizer for a same-page source when dompurify is unavailable', async () => {
+    __setHtmlSanitizerForTesting(null);
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <p id="same-page-missing-sanitizer-source">Safe</p>
+        <lr-include>Fallback</lr-include>
+      </div>
+    `);
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const errorPromise = oneEvent(el, 'lr-include-error');
+    el.src = '#same-page-missing-sanitizer-source';
+    const event = await errorPromise;
+    expect(event.detail.reason).to.equal('missing-sanitizer');
+    expect(el.textContent).to.equal('Fallback');
+  });
+
+  it('discards a same-page sanitize result once the generation is stale', async () => {
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <div id="stale-generation-source"><p>Stale</p></div>
+        <lr-include></lr-include>
+      </div>
+    `);
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const source = fixtureRoot.querySelector('#stale-generation-source')!;
+    const access = el as unknown as {
+      sanitizeSamePage(source: Element, generation: number): Promise<string | null>;
+    };
+    // The element's own generation counter only ever increments from 0, so -1 can never match --
+    // exercising the post-await staleness guard without racing a real timing window.
+    const result = await access.sanitizeSamePage(source, -1);
+    expect(result).to.equal(null);
+  });
+
+  it('emits reason network -- not IncludeResourceError -- when the same-page sanitizer throws unexpectedly', async () => {
+    const throwingSanitizer: HtmlSanitizer = {
+      sanitize: () => {
+        throw new Error('sanitizer exploded');
+      },
+    };
+    __setHtmlSanitizerForTesting(throwingSanitizer);
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <p id="sanitizer-throws-source">Safe</p>
+        <lr-include>Fallback</lr-include>
+      </div>
+    `);
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const errorPromise = oneEvent(el, 'lr-include-error');
+    el.src = '#sanitizer-throws-source';
+    const event = await errorPromise;
+    expect(event.detail.reason).to.equal('network');
+    expect(event.detail.error).to.be.instanceOf(Error);
+    expect(el.textContent).to.equal('Fallback');
+  });
+
+  it('leaves a dangling internal hash href unchanged after rebasing ids', async () => {
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <div id="href-dangling-source"><a href="#not-in-fragment">Link</a></div>
+        <lr-include></lr-include>
+      </div>
+    `);
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const loaded = oneEvent(el, 'lr-load');
+    el.src = '#href-dangling-source';
+    await loaded;
+    expect(el.querySelector('a')!.getAttribute('href')).to.equal('#not-in-fragment');
+  });
+
+  it('rewrites an internal hash href that resolves to a rebased id', async () => {
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <div id="href-rewrite-source">
+          <a href="#link-target">Link</a>
+          <span id="link-target">Target</span>
+        </div>
+        <lr-include></lr-include>
+      </div>
+    `);
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const loaded = oneEvent(el, 'lr-load');
+    el.src = '#href-rewrite-source';
+    await loaded;
+    const target = el.querySelector('span[id]')!;
+    expect(target.id).to.not.equal('link-target');
+    expect(el.querySelector('a')!.getAttribute('href')).to.equal(`#${target.id}`);
+  });
+
+  it('rewrites a url(#id) reference attribute to the rebased id', async () => {
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <div id="url-rewrite-source">
+          <div id="grad-target"></div>
+          <div data-fill="url(#grad-target)"></div>
+        </div>
+        <lr-include></lr-include>
+      </div>
+    `);
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const loaded = oneEvent(el, 'lr-load');
+    el.src = '#url-rewrite-source';
+    await loaded;
+    const gradDiv = el.querySelector('div[id]')!;
+    expect(gradDiv.id).to.not.equal('grad-target');
+    expect(el.querySelector('[data-fill]')!.getAttribute('data-fill')).to.equal(`url(#${gradDiv.id})`);
+  });
+
+  it('leaves a dangling url(#id) reference attribute unchanged', async () => {
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <div id="url-dangling-source"><div data-fill="url(#not-a-real-id)"></div></div>
+        <lr-include></lr-include>
+      </div>
+    `);
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const loaded = oneEvent(el, 'lr-load');
+    el.src = '#url-dangling-source';
+    await loaded;
+    expect(el.querySelector('[data-fill]')!.getAttribute('data-fill')).to.equal('url(#not-a-real-id)');
   });
 
   // No .strings override test: this component renders no built-in visible

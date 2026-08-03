@@ -480,6 +480,27 @@ describe('lr-pdf-viewer', () => {
     } finally { restore(); }
   });
 
+  it('rebinds text selection and resumes loading its src when reconnected after the first update', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]'); // hasUpdated is now true, and src is already set
+      el.remove(); // disconnectedCallback clears textSelectionCleanup and resets loadState to idle
+      expect((el as unknown as { textSelectionCleanup?: () => void }).textSelectionCleanup).to.be.undefined;
+      document.body.appendChild(el); // reconnect while hasUpdated -- must rebind selection and re-load
+      // The disconnect's own idle re-render and the reconnect-triggered reload both land asynchronously
+      // (and the shadow root isn't cleared by disconnection), so poll for the settled end state rather
+      // than a single generic toolbar-presence check, which can catch a transient in-between render.
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="page-indicator"]')?.textContent === 'Page 1 of 1');
+      expect((el as unknown as { textSelectionCleanup?: () => void }).textSelectionCleanup).to.exist;
+    } finally {
+      if (document.body.contains(el)) el.remove();
+      restore();
+    }
+  });
+
   it('onPageClick activates a highlight whose painted rect contains the click point', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));
@@ -781,6 +802,67 @@ describe('anchor-target adoption', () => {
       expect(ok).to.be.false;
     } finally {
       restore();
+    }
+  });
+
+  it('a src change while awaiting the fetch itself supersedes the earlier load (stale generation)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const originalFetch = window.fetch;
+    const firstFetch = deferred<Response>();
+    let fetchCalls = 0;
+    window.fetch = (() => {
+      fetchCalls += 1;
+      return fetchCalls === 1 ? firstFetch.promise : Promise.resolve(response());
+    }) as typeof window.fetch;
+    installFakeLoader(el, fakeDocument(2));
+    try {
+      el.src = 'https://example.test/first.pdf';
+      await aTimeout(20); // let load() reach `await fetchTarget.view.fetch(...)` and suspend there
+      const loadPromise = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/second.pdf'; // bumps generation, superseding the first load
+      expect((await loadPromise).detail).to.deep.equal({ pageCount: 2 });
+      let extraLoadFired = false;
+      el.addEventListener('lr-load', () => { extraLoadFired = true; });
+      // The stale first load's own fetch now resolves late; it must bail silently instead of
+      // clobbering the second (current) document.
+      firstFetch.resolve(response());
+      await aTimeout(20);
+      expect(extraLoadFired).to.be.false;
+      expect(el.shadowRoot!.querySelector('[part="page-indicator"]')!.textContent).to.equal('Page 1 of 2');
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it('a src change while awaiting the response body read supersedes the earlier load (stale generation)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const originalFetch = window.fetch;
+    const firstBody = deferred<ArrayBuffer>();
+    let fetchCalls = 0;
+    window.fetch = (() => {
+      fetchCalls += 1;
+      if (fetchCalls === 1) {
+        return Promise.resolve({ ok: true, status: 200, statusText: 'OK', arrayBuffer: () => firstBody.promise } as Response);
+      }
+      return Promise.resolve(response());
+    }) as typeof window.fetch;
+    installFakeLoader(el, fakeDocument(2));
+    try {
+      el.src = 'https://example.test/first.pdf';
+      await aTimeout(20); // let load() reach `await readResponseArrayBuffer(response)` and suspend there
+      const loadPromise = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/second.pdf'; // bumps generation, superseding the first load
+      expect((await loadPromise).detail).to.deep.equal({ pageCount: 2 });
+      let extraLoadFired = false;
+      el.addEventListener('lr-load', () => { extraLoadFired = true; });
+      // The stale first load's response body now finishes reading late; it must bail silently
+      // instead of clobbering the second (current) document.
+      firstBody.resolve(new ArrayBuffer(8));
+      await aTimeout(20);
+      expect(extraLoadFired).to.be.false;
+      expect(el.shadowRoot!.querySelector('[part="page-indicator"]')!.textContent).to.equal('Page 1 of 2');
+    } finally {
+      window.fetch = originalFetch;
     }
   });
 
@@ -1261,6 +1343,59 @@ describe('anchor-target adoption', () => {
       window.getSelection = originalGetSelection;
       restore();
     }
+  });
+
+  it('emits lr-text-select from a real selectionchange event once the debounced animation frame fires', async () => {
+    // Every other selection test above dispatches `pointerup`/`keyup` directly, which call
+    // `onSelectionEnd()` synchronously -- none of them let a real `selectionchange` event ride
+    // through the rAF-debounced path all the way to its callback body. The "adopted document" test
+    // further down deliberately stubs `requestAnimationFrame` to never invoke its callback (it's
+    // testing frame *cancellation* on adopt, not the debounced callback itself), so this is the only
+    // test that lets the browser's own rAF actually fire.
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    const originalGetSelection = window.getSelection;
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, 'lr-virtual-list');
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
+      await waitUntil(() => list.shadowRoot!.querySelector('[part="text-layer"] span') !== null);
+      const span = list.shadowRoot!.querySelector('[part="text-layer"] span') as HTMLElement;
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      window.getSelection = (() => ({
+        getComposedRanges: () => [{
+          startContainer: range.startContainer,
+          startOffset: range.startOffset,
+          endContainer: range.endContainer,
+          endOffset: range.endOffset,
+        }],
+        getRangeAt: () => range,
+        isCollapsed: false,
+        rangeCount: 1,
+      })) as typeof window.getSelection;
+      const eventPromise = oneEvent(el, 'lr-text-select');
+      document.dispatchEvent(new Event('selectionchange'));
+      const detail = (await eventPromise).detail;
+      expect(detail.text).to.equal(span.textContent);
+    } finally {
+      window.getSelection = originalGetSelection;
+      restore();
+    }
+  });
+
+  it('bindTextSelection tears down any prior binding and no-ops for a content root whose owner document has no browsing context (defaultView null)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const internals = el as unknown as {
+      bindTextSelection(root: Element): void;
+      textSelectionCleanup?: () => void;
+    };
+    // firstUpdated() already bound a real selection listener against this element's own document.
+    expect(internals.textSelectionCleanup).to.exist;
+    const detachedRoot = { ownerDocument: { defaultView: null } } as unknown as Element;
+    internals.bindTextSelection(detachedRoot);
+    expect(internals.textSelectionCleanup).to.be.undefined;
   });
 
   it('resolveSelectionRange falls back to shadow-root/global Selection when getComposedRanges is unavailable', async () => {
@@ -1883,6 +2018,108 @@ describe('search', () => {
     }
   });
 
+  it('falls back to the default-locale segmenter when Intl.Segmenter throws RangeError for the query locale (defensive)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer locale="zz"></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    const OriginalSegmenter = Intl.Segmenter;
+    class ThrowingSegmenter extends OriginalSegmenter {
+      constructor(locales?: string | string[], options?: Intl.SegmenterOptions) {
+        const list = Array.isArray(locales) ? locales : [locales];
+        if (list.includes('zz')) throw new RangeError('unsupported locale (test double)');
+        super(locales, options);
+      }
+    }
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: ThrowingSegmenter });
+      // 'İ' (U+0130) unconditionally case-folds to two UTF-16 units regardless of locale, forcing
+      // normalizeForSearch() into its grapheme-segment path -- getSegmenter('zz', ...) throws (the
+      // stub above), and searchCaseSegments() must retry with the default-locale segmenter instead
+      // of letting the RangeError escape search().
+      const count = await el.search('İ');
+      expect(count).to.equal(0); // no literal 'İ' in this document -- the point is search() resolves
+    } finally {
+      Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: OriginalSegmenter });
+      restore();
+    }
+  });
+
+  it('falls back to code-point segmentation when Intl.Segmenter is unavailable (defensive/older engines)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    const OriginalSegmenter = Intl.Segmenter;
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: undefined });
+      // Same locale-agnostic 'İ' expansion as above, but with no Segmenter constructor at all --
+      // normalizeForSearch() must fall back to plain code-point iteration instead of throwing.
+      const count = await el.search('İ');
+      expect(count).to.equal(0);
+    } finally {
+      Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: OriginalSegmenter });
+      restore();
+    }
+  });
+
+  it('falls back to a whole-string refold when a segmenter cannot reconstruct the folded length from its own segments (defensive)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer locale="lt"></lr-pdf-viewer>`)) as LyraPdfViewer;
+    class SplitTextLayer {
+      constructor(private options: { container: HTMLElement }) {}
+      render(): Promise<void> {
+        const span = document.createElement('span');
+        span.textContent = 'Íz';
+        this.options.container.appendChild(span);
+        return Promise.resolve();
+      }
+      cancel(): void {}
+    }
+    const page = {
+      ...fakePage(1),
+      getTextContent: () => Promise.resolve({ items: [{ str: 'Íz', hasEOL: false }] }),
+    };
+    const doc = { numPages: 1, getPage: () => Promise.resolve(page) };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: Promise.resolve(doc) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: SplitTextLayer,
+    });
+    const restore = stubFetch();
+    const OriginalSegmenter = Intl.Segmenter;
+    // A real grapheme segmenter keeps "I" and its combining acute accent as one segment, so
+    // per-segment folding already reconstructs the whole-string Lithuanian-locale fold length
+    // exactly (see "maps locale-fold expansions..." above) -- taking normalizeForSearch()'s cheap
+    // running-offset path. This stub deliberately breaks that invariant, splitting every code point
+    // into its own segment, to reach the whole-prefix-refold fallback (isolatedLength !== folded
+    // .length), simulating a segmenter/case-folding boundary mismatch rather than any real input.
+    class CodePointSegmenter {
+      constructor(_locales?: string | string[], _options?: Intl.SegmenterOptions) {}
+      segment(input: string): Intl.Segments {
+        const results: { segment: string; index: number }[] = [];
+        let index = 0;
+        for (const codePoint of input) {
+          results.push({ segment: codePoint, index });
+          index += codePoint.length;
+        }
+        return results as unknown as Intl.Segments;
+      }
+    }
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: CodePointSegmenter });
+      expect(await el.search('z')).to.equal(1);
+      const mark = listShadowRoot(el).querySelector('mark[part~="search-match"]');
+      expect(mark?.textContent).to.equal('z');
+    } finally {
+      Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: OriginalSegmenter });
+      restore();
+    }
+  });
+
   it('skips a page whose getPageText rejects and keeps scanning the rest', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(3));
@@ -2045,6 +2282,42 @@ describe('search', () => {
       const marks = listShadowRoot(el).querySelectorAll('mark[part~="search-match"]');
       expect(marks.length).to.equal(2);
       expect(Array.from(marks).map((mark) => mark.textContent)).to.deep.equal(['aab', 'aab']);
+    } finally {
+      restore();
+    }
+  });
+
+  it('skips an injected overlapping match instead of throwing out of the rest of a page\'s paint pass (defensive)', async () => {
+    // search() itself only ever produces non-overlapping same-page matches (each scan resumes past
+    // the previous match's end), so this state is unreachable through the public API -- it's reached
+    // here the same way the "adopted document" test above reaches internal state directly, to prove
+    // paintSearchMatches()'s own setStart()/setEnd() try/catch (not just the "repeats within a single
+    // node" regression above, where every match's offset still lands in range) survives a match whose
+    // offset is stale/out-of-range against the node a *previous* match's surroundContents() already
+    // split, instead of throwing an uncaught IndexSizeError out of the whole page's paint pass.
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, 'lr-virtual-list');
+      await waitUntil(() => listShadowRoot(el).querySelector('[part="text-layer"] span') !== null);
+      const internals = el as unknown as {
+        searchMatches: unknown;
+        searchActiveIndex: number;
+        paintSearchMatches(page: number): void;
+      };
+      // The first rendered word is "Overall" (7 raw chars). [0,5) and [2,7) overlap within it.
+      Object.defineProperty(internals, 'searchMatches', {
+        configurable: true,
+        writable: true,
+        value: [{ page: 1, start: 0, length: 5 }, { page: 1, start: 2, length: 5 }],
+      });
+      Object.defineProperty(internals, 'searchActiveIndex', { configurable: true, writable: true, value: 0 });
+      expect(() => internals.paintSearchMatches(1)).not.to.throw();
+      const marks = listShadowRoot(el).querySelectorAll('mark[part~="search-match"]');
+      expect(marks.length).to.equal(1); // only the first, valid match painted; the overlapping one was skipped
+      expect(marks[0]?.textContent).to.equal('Overa');
     } finally {
       restore();
     }
