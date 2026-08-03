@@ -176,7 +176,12 @@ it('showComposer=false suppresses only the built-in fallback and keeps a custom 
   expect(el.querySelector('#custom-composer')).to.exist;
 });
 
-it('renders a bounded latest-message window for very large fallback transcripts', async () => {
+it('renders a bounded latest-message window for very large fallback transcripts', async function () {
+  // Rendering 500 lr-chat-message children is inherently more expensive than the framework's
+  // default budget assumes, especially on non-Chromium engines and under CI/full-suite
+  // contention -- give this one test a margined threshold (see document-library.test.ts's
+  // equivalent 1000-row case and web-test-runner.config.js's shared 6000ms default).
+  this.timeout(20_000);
   const manyMessages: ChatMessage[] = Array.from({ length: 510 }, (_, index) => ({
     id: `message-${index}`,
     role: 'assistant',

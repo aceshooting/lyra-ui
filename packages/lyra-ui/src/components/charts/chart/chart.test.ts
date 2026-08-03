@@ -3247,4 +3247,753 @@ describe('appendData with an explicit config.data', () => {
     const summary = el.shadowRoot!.textContent ?? '';
     expect(summary.includes('Q1') || summary.length >= 0).to.be.true;
   });
+
+  it('treats a non-plain-object explicit config.data as empty when computing what to append', () => {
+    // Deliberately never connected/rendered: a non-object `config.data` would also break
+    // Chart.js's own render pipeline (a wildly invalid `config` passthrough), which is not what
+    // this test is about -- it targets appendData()'s own `isPlainObject(effectiveConfig?.data)`
+    // fallback in isolation, at the data-model level.
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['Jan'];
+    el.datasets = [{ label: 'Generated', data: [1] }];
+    // `config` has an own `data` key (hasExplicitConfigData() is true) but that key is not a plain
+    // object -- appendData() must treat it as absent instead of throwing on property access.
+    el.config = { data: 'not-an-object' as never };
+    el.appendData('Feb', [2]);
+    expect(el.labels).to.deep.equal(['Jan', 'Feb']);
+    expect(el.datasets[0]!.data).to.deep.equal([1, 2]);
+    expect(el.config!['data']).to.equal('not-an-object');
+  });
+
+  it('updates only the explicit member when config supplies datasets but not labels', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.labels = ['Generated-Jan'];
+    el.config = { data: { datasets: [{ label: 'R', data: [1] }] } };
+    await ready(el);
+    el.appendData('Feb', [2]);
+    await el.updateComplete;
+    expect(el.labels, 'generated labels still receive the append').to.deep.equal([
+      'Generated-Jan',
+      'Feb',
+    ]);
+    const data = el.config!['data'] as { datasets: { data: unknown[] }[] };
+    expect(data.datasets[0]!.data).to.deep.equal([1, 2]);
+  });
+
+  it('leaves a point-based generated series untouched when only config labels are explicit', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    const points = [{ x: 1, y: 2 }];
+    el.datasets = [{ label: 'Points', points }];
+    el.config = { data: { labels: ['Jan'] } };
+    await ready(el);
+    el.appendData('Feb', [99]);
+    await el.updateComplete;
+    expect(el.datasets[0]!.points).to.equal(points);
+  });
+});
+
+describe('coverage: dataset label/value fallbacks and CSV export edge branches', () => {
+  it('falls back to a numbered "Point N" label for a dataset with no label at all', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ data: [1] }] as unknown as Series[];
+    const csv = el.exportData('csv');
+    expect(csv.split('\r\n')[0]).to.equal('label,Point 1');
+  });
+
+  it('treats a non-array dataset.data as no data instead of throwing (malformed config.data dataset)', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.config = { data: { labels: ['Jan'], datasets: [{ label: 'Weird', data: 'oops' as never }] } };
+    const csv = el.exportData('csv');
+    const rows = csv.split('\r\n');
+    expect(rows[0]).to.equal('label,Weird');
+    expect(rows[1]).to.equal('Jan,');
+  });
+
+  it('effectiveData() falls back to empty arrays for non-array config.data members and filters non-plain-object dataset entries', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    el.config = { data: { labels: 'nope' as never, datasets: 'nope' as never } };
+    let effective = (el as any).effectiveData();
+    expect(effective.labels).to.deep.equal([]);
+    expect(effective.datasets).to.deep.equal([]);
+
+    el.config = { data: { datasets: ['not-an-object', { label: 'ok', data: [1] }] as never } };
+    effective = (el as any).effectiveData();
+    expect(effective.datasets).to.deep.equal([{ label: 'ok', data: [1] }]);
+  });
+
+  it('exports blank point cells for a missing row and falls back to a first-point label when the category label is absent', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['Q1'];
+    el.datasets = [
+      {
+        label: 'Points',
+        points: [
+          { x: 0, y: 1, r: 5, label: 'First' },
+          { x: 1, y: 2, label: 'Second' },
+        ],
+      },
+      { label: 'Plain', data: [10, 20, 30] },
+    ];
+    const csv = el.exportData('csv');
+    const rows = csv.split('\r\n');
+    expect(rows[0]).to.equal('label,Points x,Points y,Points r,Points label,Plain');
+    expect(rows[1]).to.equal('Q1,0,1,5,First,10');
+    expect(rows[2]).to.equal('Second,1,2,,Second,20');
+    expect(rows[3]).to.equal(',,,,,30');
+  });
+});
+
+describe('coverage: config-slot JSON passthrough (onConfigSlotChange)', () => {
+  it('reads a Chart.js config from a slotted <script type="application/json"> child, skipping non-matching slotted content', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    const decoy = document.createElement('div');
+    const wrongType = document.createElement('script');
+    wrongType.type = 'text/plain';
+    wrongType.textContent = JSON.stringify({ type: 'wrong' });
+    const script = document.createElement('script');
+    script.type = 'application/json';
+    script.textContent = JSON.stringify({ type: 'radar' });
+    el.append(decoy, wrongType, script);
+    await el.updateComplete;
+
+    const slot = el.shadowRoot!.querySelector('slot.config-slot') as HTMLSlotElement;
+    (el as any).onConfigSlotChange({ currentTarget: slot });
+    expect((el as any).slottedConfig).to.deep.equal({ type: 'radar' });
+    expect((el as any).effectiveConfig()).to.deep.equal({ type: 'radar' });
+  });
+
+  it('ignores a slotted JSON script with invalid JSON instead of throwing', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    const script = document.createElement('script');
+    script.type = 'application/json';
+    script.textContent = '{ not valid json';
+    el.appendChild(script);
+    await el.updateComplete;
+
+    const slot = el.shadowRoot!.querySelector('slot.config-slot') as HTMLSlotElement;
+    expect(() => (el as any).onConfigSlotChange({ currentTarget: slot })).to.not.throw();
+    expect((el as any).slottedConfig).to.equal(undefined);
+  });
+
+  it('ignores a slotted JSON script whose parsed value is not a plain object', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    const script = document.createElement('script');
+    script.type = 'application/json';
+    script.textContent = '[1, 2, 3]';
+    el.appendChild(script);
+    await el.updateComplete;
+
+    const slot = el.shadowRoot!.querySelector('slot.config-slot') as HTMLSlotElement;
+    (el as any).onConfigSlotChange({ currentTarget: slot });
+    expect((el as any).slottedConfig).to.equal(undefined);
+  });
+});
+
+describe('coverage: resize/animation-frame and lifecycle defensive branches', () => {
+  it('resolves resize width defensively (no entries) and gates its animation-frame draw on owner-window/connection state', async () => {
+    const OriginalResizeObserver = window.ResizeObserver;
+    const originalRAF = window.requestAnimationFrame;
+    // Chart.js itself also constructs a `ResizeObserver` (for its own canvas auto-resize) once
+    // the chart instance is built -- keep only the FIRST callback registered, which is this
+    // element's own `connectedCallback()` observer (registered synchronously on connect, before
+    // the chart.js peer even finishes loading), so a later Chart.js registration cannot
+    // overwrite the reference under test.
+    let captured: ResizeObserverCallback | undefined;
+    const rafCallbacks: FrameRequestCallback[] = [];
+    class CapturingResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        if (captured === undefined) captured = cb;
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+      CapturingResizeObserver as unknown as typeof ResizeObserver;
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafCallbacks.push(cb);
+      return rafCallbacks.length;
+    }) as typeof requestAnimationFrame;
+    try {
+      const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+      el.labels = ['A'];
+      el.datasets = [{ label: 'x', data: [1] }];
+      await el.updateComplete;
+      expect(captured).to.exist;
+
+      // No entries at all -- entries[0] is undefined, so width must fall back to
+      // getBoundingClientRect().width instead of throwing. The first-ever call always proceeds
+      // past the "no significant change" gate (`lastObservedInlineSize` starts `undefined`), so
+      // this schedules one frame; fire it immediately so `resizeDrawFrame` is clear again before
+      // the next scenario.
+      expect(() => captured!([], {} as ResizeObserver)).to.not.throw();
+      expect(rafCallbacks).to.have.length(1);
+      rafCallbacks[0]!(0);
+
+      // A real width change with no owner window -- the animation-frame branch must bail
+      // before ever scheduling a frame (the callback count stays unchanged).
+      Object.defineProperty(el, 'ownerWindow', { get: () => undefined, configurable: true });
+      captured!([{ contentRect: { width: 999 } } as unknown as ResizeObserverEntry], {} as ResizeObserver);
+      expect(rafCallbacks).to.have.length(1);
+      delete (el as unknown as Record<string, unknown>)['ownerWindow'];
+
+      // A real width change with an owner window schedules a new frame...
+      captured!([{ contentRect: { width: 1234 } } as unknown as ResizeObserverEntry], {} as ResizeObserver);
+      expect(rafCallbacks).to.have.length(2);
+      // ...but if the element disconnects before that frame fires, the callback must no-op
+      // rather than drawing against a now-detached canvas.
+      el.remove();
+      expect(() => rafCallbacks[1]!(0)).to.not.throw();
+    } finally {
+      (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+        OriginalResizeObserver;
+      window.requestAnimationFrame = originalRAF;
+    }
+  });
+
+  it('syncAnnouncementSinks() is a no-op re-entry when both sinks are already held in the current owner document', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    const polite = (el as any).politeAnnouncementSink;
+    const assertive = (el as any).assertiveAnnouncementSink;
+    expect(polite).to.exist;
+    expect(assertive).to.exist;
+    (el as any).syncAnnouncementSinks();
+    expect((el as any).politeAnnouncementSink).to.equal(polite);
+    expect((el as any).assertiveAnnouncementSink).to.equal(assertive);
+  });
+
+  it('skips the queued zoom-plugin redraw if the element disconnects after the load starts but before it resolves', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.type = 'line';
+    el.labels = ['A', 'B'];
+    el.datasets = [{ label: 'x', data: [1, 2] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    el.zoom = true;
+    await el.updateComplete; // updated() observes changed.has('zoom') and starts the on-demand load
+    el.remove(); // disconnect before loadChartJsWithZoom() resolves
+    await aTimeout(200);
+
+    expect((el as any).chart).to.be.undefined;
+  });
+
+  it('does not attach a stale data-labels plugin if the element disconnects after the load starts but before it resolves', async () => {
+    const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    el.labels = ['Jan'];
+    el.datasets = [{ label: 'Revenue', data: [10] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    (el as unknown as { dataLabels: boolean }).dataLabels = true;
+    await el.updateComplete; // updated() starts loadChartJsWithDataLabels().then(...)
+    el.remove();
+    await aTimeout(200);
+
+    expect((el as any).chart).to.be.undefined;
+  });
+
+  it('does not build a chart from a connect-time data-labels load if the element disconnects before it resolves', async () => {
+    // Mirrors "does not construct a Chart.js instance if disconnected before the lazy chart.js
+    // import settles" but with `data-labels` set from the start, so `connectedCallback()`'s own
+    // (distinct from `updated()`'s) data-labels load guard is the one under test.
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.setAttribute('data-labels', '');
+    el.labels = ['Jan'];
+    el.datasets = [{ label: 'Revenue', data: [10] }];
+    document.body.appendChild(el);
+    el.remove();
+    await aTimeout(200);
+    expect((el as any).chart).to.be.undefined;
+  });
+});
+
+describe('coverage: color resolution and forced-colors defensive fallbacks', () => {
+  it('treats a throwing matchMedia as forced-colors inactive instead of throwing', async () => {
+    const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const originalMatchMedia = window.matchMedia;
+    // Only the forced-colors query throws -- an unrelated call site (prefersReducedMotion(), which
+    // has no such guard) must keep working normally so this test isolates forcedColorsActive()'s
+    // own try/catch instead of tripping over a second, unrelated matchMedia consumer.
+    window.matchMedia = ((query: string) => {
+      if (query === '(forced-colors: active)') throw new Error('boom');
+      return {
+        matches: false,
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      };
+    }) as unknown as typeof window.matchMedia;
+    try {
+      expect(() => (el as any).buildConfig()).to.not.throw();
+      const ds = (el as any).buildConfig().data.datasets[0];
+      expect(ds.borderDash).to.equal(undefined);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('applies translucent area fill across every color in an array-valued line series color', async () => {
+    const el = (await fixture(html`<lr-chart type="line" area></lr-chart>`)) as LyraChart;
+    el.labels = ['A', 'B'];
+    el.datasets = [{ label: 'x', data: [1, 2], color: ['rgb(10, 20, 30)', 'rgb(40, 50, 60)'] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    const ds = (el as any).buildConfig().data.datasets[0];
+    expect(ds.backgroundColor).to.be.an('array').with.lengthOf(2);
+    expect(ds.backgroundColor[0]).to.not.equal('rgb(10, 20, 30)');
+    expect(ds.backgroundColor[1]).to.not.equal('rgb(40, 50, 60)');
+  });
+
+  it('applies a forced-colors pattern per array entry and to a single resolved background color', async () => {
+    const el = (await fixture(html`<lr-chart type="line" area></lr-chart>`)) as LyraChart;
+    el.labels = ['A', 'B'];
+    el.datasets = [{ label: 'array', data: [1, 2], color: ['rgb(10, 20, 30)', 'rgb(40, 50, 60)'] }];
+    const bar = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    bar.labels = ['A'];
+    bar.datasets = [{ label: 'single', data: [1] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    await bar.updateComplete;
+    await waitUntil(() => (bar as any).chart != null);
+
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(forced-colors: active)',
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as typeof window.matchMedia;
+    try {
+      const arrayDs = (el as any).buildConfig().data.datasets[0];
+      expect(Array.isArray(arrayDs.backgroundColor)).to.be.true;
+      arrayDs.backgroundColor.forEach((entry: unknown) => expect(typeof entry).to.not.equal('string'));
+
+      const singleDs = (bar as any).buildConfig().data.datasets[0];
+      expect(typeof singleDs.backgroundColor).to.not.equal('string');
+      expect(singleDs.borderDash).to.deep.equal([]);
+      expect(singleDs.pointStyle).to.equal('circle');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('forcedColorPattern() returns the plain background when there is no owner window, no 2d context, or createPattern yields null', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    await el.updateComplete;
+
+    Object.defineProperty(el, 'ownerWindow', { get: () => undefined, configurable: true });
+    expect((el as any).forcedColorPattern(0, 'red')).to.equal('red');
+    delete (el as unknown as Record<string, unknown>)['ownerWindow'];
+
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    (HTMLCanvasElement.prototype as unknown as { getContext: unknown }).getContext = () => null;
+    try {
+      expect((el as any).forcedColorPattern(0, 'blue')).to.equal('blue');
+    } finally {
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+    }
+
+    const fakeContext = {
+      fillRect: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      stroke: () => {},
+      arc: () => {},
+      fill: () => {},
+      createPattern: () => null,
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 0,
+    };
+    (HTMLCanvasElement.prototype as unknown as { getContext: unknown }).getContext = () => fakeContext;
+    try {
+      expect((el as any).forcedColorPattern(0, 'green')).to.equal('green');
+    } finally {
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+    }
+  });
+
+  it('forcedColorPattern() draws every remaining texture encoding without throwing', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    await el.updateComplete;
+    // Index 0 ("solid") and 1 ("horizontal") are already exercised elsewhere; cover the rest of
+    // FORCED_COLOR_ENCODINGS's switch (vertical/diagonal/reverse-diagonal/crosshatch/dots/checker).
+    for (let index = 2; index <= 7; index++) {
+      expect(() => (el as any).forcedColorPattern(index, 'red')).to.not.throw();
+    }
+  });
+
+  it('falls back to inline style (or the host style) when computedStyle has no owner window', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    await el.updateComplete;
+    Object.defineProperty(el, 'ownerWindow', { get: () => undefined, configurable: true });
+    try {
+      const probe = document.createElement('span');
+      expect((el as any).computedStyle(probe)).to.equal(probe.style);
+      expect((el as any).computedStyle({} as unknown as Element)).to.equal(el.style);
+    } finally {
+      delete (el as unknown as Record<string, unknown>)['ownerWindow'];
+    }
+  });
+
+  it('resolves a non-px CSS unit (e.g. rem) for a style-number token via the offscreen probe', async () => {
+    const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    el.style.setProperty('--border-radius', '2rem');
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const resolved = (el as any).styleNumber('--border-radius', '--lr-radius', 6);
+    expect(resolved).to.equal(rootFontSize * 2);
+  });
+
+  it('falls back to the default when a style-number token resolves to a non-finite computed size', async () => {
+    const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    el.style.setProperty('--border-radius', 'not-a-length');
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    const resolved = (el as any).styleNumber('--border-radius', '--lr-radius', 6);
+    expect(resolved).to.equal(6);
+  });
+});
+
+describe('coverage: data-labels formatter/display and stack-total point values', () => {
+  it('formats a data-label value through valueFormatter before falling back to toLocaleString', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1'];
+    el.datasets = [{ label: 'A', data: [10] }];
+    (el as unknown as { dataLabels: boolean }).dataLabels = true;
+    el.valueFormatter = (value) => `$${value}`;
+    const datalabels = (el as any).buildConfig().options.plugins.datalabels;
+    expect(datalabels.formatter(10, { datasetIndex: 0, dataIndex: 0 })).to.equal('$10');
+
+    el.valueFormatter = undefined as unknown as typeof el.valueFormatter;
+    const datalabels2 = (el as any).buildConfig().options.plugins.datalabels;
+    expect(datalabels2.formatter(10, { datasetIndex: 0, dataIndex: 0 })).to.equal((10).toLocaleString());
+  });
+
+  it('returns a blank data-label for a non-numeric point value instead of NaN', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1'];
+    el.datasets = [{ label: 'A', data: [10] }];
+    (el as unknown as { dataLabels: boolean }).dataLabels = true;
+    const datalabels = (el as any).buildConfig().options.plugins.datalabels;
+    expect(datalabels.formatter({}, { datasetIndex: 0, dataIndex: 0 })).to.equal('');
+  });
+
+  it('falls back to the plain dataLabels flag when a stack-totals category total is null', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1', 'Q2'];
+    el.datasets = [
+      { label: 'A', data: [10, null as unknown as number] },
+      { label: 'B', data: [20, null as unknown as number] },
+    ];
+    (el as unknown as { stacked: boolean }).stacked = true;
+    (el as unknown as { stackTotals: boolean }).stackTotals = true;
+    const datalabels = (el as any).buildConfig().options.plugins.datalabels;
+    // dataset index 1 ('B') is the topmost dataset per axis; Q2's total is null (both null).
+    expect(datalabels.display({ datasetIndex: 1, dataIndex: 1 })).to.equal(false);
+
+    (el as unknown as { dataLabels: boolean }).dataLabels = true;
+    const datalabels2 = (el as any).buildConfig().options.plugins.datalabels;
+    expect(datalabels2.display({ datasetIndex: 1, dataIndex: 1 })).to.equal(true);
+  });
+
+  it('defers to the plain dataLabels flag for a non-topmost dataset even when stack totals are active', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'A', data: [10] },
+      { label: 'B', data: [20] },
+    ];
+    (el as unknown as { dataLabels: boolean }).dataLabels = true;
+    (el as unknown as { stacked: boolean }).stacked = true;
+    (el as unknown as { stackTotals: boolean }).stackTotals = true;
+    const datalabels = (el as any).buildConfig().options.plugins.datalabels;
+    // dataset index 0 ('A') is NOT the topmost dataset on its axis -- only the topmost draws a
+    // stack total, so a non-topmost dataset falls straight back to the plain `dataLabels` flag.
+    expect(datalabels.display({ datasetIndex: 0, dataIndex: 0 })).to.equal(true);
+  });
+
+  it('formats the stack total (not the raw point value) in the topmost dataset formatter when stack totals are active', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'A', data: [10] },
+      { label: 'B', data: [20] },
+    ];
+    (el as unknown as { stacked: boolean }).stacked = true;
+    (el as unknown as { stackTotals: boolean }).stackTotals = true;
+    const datalabels = (el as any).buildConfig().options.plugins.datalabels;
+    // dataset index 1 ('B') is topmost; the category total (10 + 20 = 30) is formatted, not the
+    // raw point value (20) the plugin would otherwise pass in.
+    expect(datalabels.formatter(20, { datasetIndex: 1, dataIndex: 0 })).to.equal('30');
+    // A non-topmost dataset's formatter ignores the stack total and formats its own raw value.
+    expect(datalabels.formatter(10, { datasetIndex: 0, dataIndex: 0 })).to.equal('10');
+  });
+
+  it('reads point .y values when computing stack totals for a point-based stacked series', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'line';
+    el.labels = ['Q1', 'Q2'];
+    el.datasets = [{ label: 'A', points: [{ x: 0, y: 10 }, { x: 1, y: 20 }] }];
+    (el as unknown as { stacked: boolean }).stacked = true;
+    (el as unknown as { stackTotals: boolean }).stackTotals = true;
+    const totals = (el as any).computeStackTotals('y');
+    expect(totals).to.deep.equal([10, 20]);
+  });
+
+  it('recovers requiredPlugins into an array when config.plugins overrides the generated array with a non-array value', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['Jan'];
+    el.datasets = [{ label: 'Revenue', data: [10] }];
+    (el as unknown as { dataLabels: boolean }).dataLabels = true;
+    (el as any).dataLabelsPlugin = { id: 'datalabels' };
+    el.config = { plugins: null as unknown as undefined };
+    const config = (el as any).buildConfig();
+    expect(config.plugins).to.deep.equal([{ id: 'datalabels' }]);
+  });
+});
+
+describe('coverage: scale bounds and grid axis visibility', () => {
+  it('applies explicit min/max scale bounds and ignores non-finite values', async () => {
+    const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    el.min = 0;
+    el.max = 100;
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    let config = (el as any).buildConfig();
+    expect(config.options.scales.y.min).to.equal(0);
+    expect(config.options.scales.y.max).to.equal(100);
+
+    el.min = Number.NaN;
+    el.max = null;
+    await el.updateComplete;
+    config = (el as any).buildConfig();
+    expect(config.options.scales.y.min).to.equal(undefined);
+    expect(config.options.scales.y.max).to.equal(undefined);
+  });
+
+  it('shows or hides grid lines per axis via the `grid` property', async () => {
+    const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    el.grid = 'x';
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    let config = (el as any).buildConfig();
+    expect(config.options.scales.x.grid.display).to.equal(true);
+    expect(config.options.scales.y.grid.display).to.equal(false);
+
+    el.grid = 'none';
+    await el.updateComplete;
+    config = (el as any).buildConfig();
+    expect(config.options.scales.x.grid.display).to.equal(false);
+    expect(config.options.scales.y.grid.display).to.equal(false);
+  });
+});
+
+describe('coverage: chartDatums/datumDisplayValue/keyboard-navigation fallbacks', () => {
+  it('chartDatums() falls back to `this.datasets`/`this.labels` before a Chart.js instance exists and skips null/non-finite values', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'Revenue', data: [10, null as unknown as number, Number.POSITIVE_INFINITY, 40] }];
+    const datums = (el as any).chartDatums();
+    expect(datums).to.deep.equal([
+      { datasetIndex: 0, index: 0, label: 'A', value: 10 },
+      { datasetIndex: 0, index: 3, label: undefined, value: 40 },
+    ]);
+  });
+
+  it('datumDisplayValue() reads y/r/x off a non-point object value and falls back to the raw string when non-numeric', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    expect((el as any).datumDisplayValue({ r: 5 })).to.equal('5');
+    expect((el as any).datumDisplayValue({ x: 7 })).to.equal('7');
+    expect((el as any).datumDisplayValue('n/a')).to.equal('n/a');
+  });
+
+  it('navigates keyboard datums with Home/End/ArrowUp/ArrowDown and ignores an unrecognized key', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.type = 'bar';
+    el.labels = ['A', 'B', 'C'];
+    el.datasets = [{ label: 'Revenue', data: [10, 20, 30] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+    expect((el as any).keyboardDatumIndex).to.equal(0);
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    expect((el as any).keyboardDatumIndex).to.equal(2);
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    expect((el as any).keyboardDatumIndex).to.equal(1);
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect((el as any).keyboardDatumIndex).to.equal(2);
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    expect((el as any).keyboardDatumIndex).to.equal(0);
+
+    const announcementBefore = (el as any).keyboardDatumAnnouncement;
+    const unrecognized = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true });
+    canvas.dispatchEvent(unrecognized);
+    expect((el as any).keyboardDatumIndex).to.equal(0);
+    expect((el as any).keyboardDatumAnnouncement).to.equal(announcementBefore);
+    expect(unrecognized.defaultPrevented).to.be.false;
+  });
+
+  it('swaps ArrowLeft/ArrowRight forward/backward semantics under RTL', async () => {
+    const wrapper = await fixture(html`<div dir="rtl"><lr-chart></lr-chart></div>`);
+    const el = wrapper.querySelector('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['A', 'B'];
+    el.datasets = [{ label: 'Revenue', data: [10, 20] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+    expect((el as any).keyboardDatumIndex).to.equal(0);
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect((el as any).keyboardDatumIndex).to.equal(1);
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect((el as any).keyboardDatumIndex).to.equal(0);
+  });
+
+  it('no-ops focus/keydown activation on an empty chart with no datums', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+    expect((el as any).keyboardDatumAnnouncement).to.equal('');
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect((el as any).keyboardDatumAnnouncement).to.equal('');
+  });
+
+  it('falls back to the localized "chartSeriesLabel" and numbered point label when the active dataset/datum have none', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.type = 'bar';
+    el.labels = [];
+    el.datasets = [{ label: '', data: [10] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+    expect((el as any).keyboardDatumAnnouncement).to.equal('Series, Point 1: 10 (1 of 1)');
+  });
+});
+
+describe('coverage: legend/tooltip/table label fallbacks and misc guards', () => {
+  it('legendValue returns undefined when the legend item carries no datasetIndex at all', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const value = (el as any).legendValue({}, { data: { datasets: [{ label: 'A', data: [1] }] } });
+    expect(value).to.equal(undefined);
+  });
+
+  it('falls back to context.raw when parsed is nullish for a non-object tooltip context', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.valueFormatter = (value, context) => `${context}:${value}`;
+    const text = (el as any).tooltipLabel({ parsed: null, raw: 7, dataset: {} });
+    expect(text).to.equal('tooltip:7');
+  });
+
+  it('resolves "start"/"end" legend-position aliases against the effective direction', async () => {
+    const wrapper = await fixture(html`<div><lr-chart legend-position="start"></lr-chart></div>`);
+    const el = wrapper.querySelector('lr-chart') as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    expect((el as any).buildConfig().options.plugins.legend.position).to.equal('left');
+
+    el.legendPosition = 'end';
+    await el.updateComplete;
+    expect((el as any).buildConfig().options.plugins.legend.position).to.equal('right');
+
+    wrapper.setAttribute('dir', 'rtl');
+    await aTimeout(0);
+    await el.updateComplete;
+    expect((el as any).buildConfig().options.plugins.legend.position).to.equal('left');
+
+    el.legendPosition = 'start';
+    await el.updateComplete;
+    expect((el as any).buildConfig().options.plugins.legend.position).to.equal('right');
+  });
+
+  it('tableStackTotalLabel() falls back to localized primary/secondary axis names when no explicit axis label is set', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    expect((el as any).tableStackTotalLabel('y', 2)).to.equal('Primary axis total');
+    expect((el as any).tableStackTotalLabel('y2', 2)).to.equal('Secondary axis total');
+  });
+
+  it('legendTextFor() falls back to the plain label when the dataset has no finite values or the formatted value is unchanged', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.valueFormatter = (value) => value;
+    expect((el as any).legendTextFor({ label: 'Empty', data: [] }, 0)).to.equal('Empty');
+    expect((el as any).legendTextFor({ label: 'Same', data: [10] }, 0)).to.equal('Same');
+  });
+
+  it('legendColor() falls back to transparent when the palette lookup produces no entry', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const color = (el as any).legendColor({ label: 'x' }, Number.NaN);
+    expect(color).to.equal('transparent');
+  });
+
+  it('no-ops toggling a dataset before a Chart.js instance exists', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    expect(() => (el as any).toggleDataset(0)).to.not.throw();
+  });
+
+  it('prioritizes the `description` property over accessibleDescription and the generated summary', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.description = 'Explicit description wins.';
+    el.accessibleDescription = 'Should be ignored.';
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
+    expect(description.textContent).to.equal('Explicit description wins.');
+  });
+
+  it('renders no legend markup when legend is disabled or withoutLegend overrides it', async () => {
+    const el = (await fixture(html`<lr-chart legend></lr-chart>`)) as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    el.legend = false;
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+
+    el.legend = true;
+    el.withoutLegend = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+  });
 });

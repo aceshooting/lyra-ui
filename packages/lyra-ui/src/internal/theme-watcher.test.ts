@@ -47,6 +47,23 @@ async function makeHost(ownerDocument: Document = document): Promise<{
   };
 }
 
+// theme-watcher.ts publishes its per-realm hub under this well-known Symbol.for() key so that
+// separately evaluated copies of the module (see the "separately evaluated ThemeWatcher modules"
+// test) still share one instrumentation pass. That same registry key lets a test reach the hub
+// from outside the module -- the only way to force `installed`/`patches` into states
+// (already-installed, never-installed) that installRealmInstrumentation()/
+// uninstallRealmInstrumentation() guard against but that ThemeWatcher's own call sites never
+// organically produce (every real call site only invokes them while the hub is in the opposite
+// state already).
+const THEME_HUB_KEY = Symbol.for('@aceshooting/lyra-ui.theme-invalidation.v1');
+interface TestableThemeHub {
+  installed: boolean;
+  patches: unknown[];
+}
+function hubForRealm(realm: Window): TestableThemeHub {
+  return (realm as unknown as Record<symbol, unknown>)[THEME_HUB_KEY] as TestableThemeHub;
+}
+
 describe('ThemeWatcher', () => {
   it('invokes onChange (coalesced) when a watched attribute mutates on the host', async () => {
     const { host, connect } = await makeHost();
@@ -449,5 +466,337 @@ describe('ThemeWatcher', () => {
     expect(Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'insertRule')?.value).to.equal(sharedPatch);
     b.disconnect();
     expect(Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'insertRule')?.value).to.equal(original);
+  });
+
+  it('invalidateLyraTheme no-ops for a root whose document has no defaultView', () => {
+    // Documents minted via DOMImplementation (rather than by the browser navigating a browsing
+    // context) are never associated with a window, so realmFor() resolves them to `undefined`.
+    const detachedDocument = document.implementation.createHTMLDocument('detached');
+    const detachedElement = detachedDocument.body.appendChild(detachedDocument.createElement('div'));
+    expect(detachedDocument.defaultView).to.equal(null);
+    expect(() => invalidateLyraTheme(detachedDocument)).to.not.throw();
+    expect(() => invalidateLyraTheme(detachedElement)).to.not.throw();
+  });
+
+  it('does nothing when connecting a host owned by a defaultView-less document', () => {
+    const detachedDocument = document.implementation.createHTMLDocument('detached');
+    const detachedHost = detachedDocument.body.appendChild(detachedDocument.createElement('div'));
+    const controllers: ReactiveController[] = [];
+    const host = Object.assign(detachedHost, {
+      addController(c: ReactiveController) {
+        controllers.push(c);
+      },
+      removeController() {},
+      requestUpdate() {},
+      updateComplete: Promise.resolve(true),
+    }) as unknown as ReactiveControllerHost & Element;
+    new ThemeWatcher(host, () => {});
+    expect(() => controllers.forEach((c) => c.hostConnected?.())).to.not.throw();
+    expect(() => controllers.forEach((c) => c.hostDisconnected?.())).to.not.throw();
+  });
+
+  it('skips media-query refresh when matchMedia is unavailable (defensive branch)', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    const original = window.matchMedia;
+    // @ts-expect-error -- deliberately removing the global to exercise the fallback
+    delete window.matchMedia;
+    try {
+      new ThemeWatcher(host, () => {});
+      expect(() => connect()).to.not.throw();
+    } finally {
+      window.matchMedia = original;
+      disconnect();
+    }
+  });
+
+  it('is a no-op when installRealmInstrumentation runs against an already-installed hub', async () => {
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow as Window;
+    const watched = await makeHost(frameDocument);
+    new ThemeWatcher(watched.host, () => {});
+    watched.connect();
+    const hub = hubForRealm(frameWindow);
+    expect(hub.installed).to.be.true;
+    expect(hub.patches.length).to.be.greaterThan(0);
+    watched.disconnect();
+    expect(hub.installed).to.be.false;
+    expect(hub.patches.length).to.equal(0);
+
+    // Force the hub back into "installed" with no subscribers -- the only way to reach
+    // installRealmInstrumentation's own idempotency guard, since subscribeRealm() only ever calls
+    // it while `installed` is false.
+    hub.installed = true;
+    try {
+      expect(() => watched.connect()).to.not.throw();
+      // The guard returned before touching hub.patches, so nothing got (re)installed.
+      expect(hub.patches.length).to.equal(0);
+    } finally {
+      watched.disconnect();
+    }
+  });
+
+  it('is a no-op when uninstallRealmInstrumentation runs against a hub that was never installed', async () => {
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow as unknown as { CSSStyleSheet: { prototype: object } };
+    const watched = await makeHost(frameDocument);
+    new ThemeWatcher(watched.host, () => {});
+    watched.connect();
+    const hub = hubForRealm(frameWindow as unknown as Window);
+    expect(hub.installed).to.be.true;
+    expect(hub.patches.length).to.be.greaterThan(0);
+    const patchedInsertRule = Object.getOwnPropertyDescriptor(
+      frameWindow.CSSStyleSheet.prototype,
+      'insertRule',
+    )?.value;
+
+    // Force the hub to report "not installed" while a real subscriber is still connected -- the
+    // only way to reach uninstallRealmInstrumentation's own idempotency guard, since the sole
+    // real call site only invokes it while `installed` is true.
+    hub.installed = false;
+    watched.disconnect();
+
+    // The guard returned before reverting anything: the frame's CSSOM prototype is still patched
+    // and the hub's bookkeeping is untouched (both would be reset by a real uninstall).
+    expect(
+      Object.getOwnPropertyDescriptor(frameWindow.CSSStyleSheet.prototype, 'insertRule')?.value,
+    ).to.equal(patchedInsertRule);
+    expect(hub.installed).to.be.false;
+    expect(hub.patches.length).to.be.greaterThan(0);
+  });
+
+  it('is a no-op when the subscribeRealm unsubscribe closure runs twice', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    let calls = 0;
+    const watcher = new ThemeWatcher(host, () => calls++);
+    connect();
+    const unsubscribeRealm = (watcher as unknown as { unsubscribeRealm?: () => void }).unsubscribeRealm;
+    expect(unsubscribeRealm).to.be.a('function');
+    expect(() => {
+      unsubscribeRealm!();
+      unsubscribeRealm!();
+    }).to.not.throw();
+    disconnect();
+    host.setAttribute('data-theme', 'a');
+    await aTimeout(0);
+    expect(calls).to.equal(0);
+  });
+
+  it('skips a root without a documentElement when installing the MutationObserver', async () => {
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow as Window & typeof globalThis;
+    frameDocument.documentElement?.remove();
+    expect(frameDocument.documentElement).to.equal(null);
+
+    const detachedHost = frameDocument.createElement('div');
+    const controllers: ReactiveController[] = [];
+    const host = Object.assign(detachedHost, {
+      addController(c: ReactiveController) {
+        controllers.push(c);
+      },
+      removeController() {},
+      requestUpdate() {},
+      updateComplete: Promise.resolve(true),
+    }) as unknown as ReactiveControllerHost & Element;
+
+    let observeCalls = 0;
+    const originalObserve = frameWindow.MutationObserver.prototype.observe;
+    frameWindow.MutationObserver.prototype.observe = function (
+      this: MutationObserver,
+      target: Node,
+      options?: MutationObserverInit,
+    ): void {
+      observeCalls += 1;
+      originalObserve.call(this, target, options);
+    };
+    new ThemeWatcher(host, () => {});
+    try {
+      expect(() => controllers.forEach((c) => c.hostConnected?.())).to.not.throw();
+      // The only root is the stripped document, whose `documentElement` is null -- installObserver
+      // must `continue` past it rather than calling observe() with a null target.
+      expect(observeCalls).to.equal(0);
+    } finally {
+      controllers.forEach((c) => c.hostDisconnected?.());
+      frameWindow.MutationObserver.prototype.observe = originalObserve;
+    }
+  });
+
+  it('does not throw when Document/ShadowRoot prototypes are absent or lack adoptedStyleSheets', async () => {
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow as unknown as Record<string, unknown>;
+    const originalShadowRoot = frameWindow.ShadowRoot;
+    const originalDocumentCtor = frameWindow.Document;
+    frameWindow.ShadowRoot = undefined; // patchAdoptedStyleSheets: `!prototype` guard
+    frameWindow.Document = { prototype: Object.create(null) }; // patchAdoptedStyleSheets: `!target` guard
+    const watched = await makeHost(frameDocument);
+    new ThemeWatcher(watched.host, () => {});
+    try {
+      expect(() => watched.connect()).to.not.throw();
+    } finally {
+      watched.disconnect();
+      frameWindow.ShadowRoot = originalShadowRoot;
+      frameWindow.Document = originalDocumentCtor;
+    }
+  });
+
+  it('does not throw when a style-related target property exists without a setter', async () => {
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow as unknown as Record<string, unknown>;
+    const originalDocumentCtor = frameWindow.Document;
+    const originalMediaList = frameWindow.MediaList;
+    const fakeDocumentProto: Record<string, unknown> = {};
+    Object.defineProperty(fakeDocumentProto, 'adoptedStyleSheets', {
+      value: [],
+      writable: true,
+      configurable: true,
+    }); // data property, no setter -> patchAdoptedStyleSheets' `!original?.set` guard
+    frameWindow.Document = { prototype: fakeDocumentProto };
+    const fakeMediaListProto: Record<string, unknown> = {};
+    Object.defineProperty(fakeMediaListProto, 'mediaText', {
+      value: '',
+      writable: true,
+      configurable: true,
+    }); // data property, no setter -> patchSetter's `!original?.set` guard
+    frameWindow.MediaList = { prototype: fakeMediaListProto };
+    const watched = await makeHost(frameDocument);
+    new ThemeWatcher(watched.host, () => {});
+    try {
+      expect(() => watched.connect()).to.not.throw();
+    } finally {
+      watched.disconnect();
+      frameWindow.Document = originalDocumentCtor;
+      frameWindow.MediaList = originalMediaList;
+    }
+  });
+
+  it('discovers a stylesheet nested inside a shadow root and registers its media query', async () => {
+    const originalMatchMedia = window.matchMedia;
+    const listeners = new Map<string, Set<(event: MediaQueryListEvent) => void>>();
+    window.matchMedia = ((query: string) => {
+      const callbacks = listeners.get(query) ?? new Set<(event: MediaQueryListEvent) => void>();
+      listeners.set(query, callbacks);
+      return {
+        media: query,
+        matches: false,
+        onchange: null,
+        addEventListener(_type: string, listener: EventListenerOrEventListenerObject) {
+          callbacks.add(listener as (event: MediaQueryListEvent) => void);
+        },
+        removeEventListener(_type: string, listener: EventListenerOrEventListenerObject) {
+          callbacks.delete(listener as (event: MediaQueryListEvent) => void);
+        },
+        addListener() {},
+        removeListener() {},
+        dispatchEvent: () => true,
+      } as MediaQueryList;
+    }) as typeof matchMedia;
+
+    const shadowHost = document.createElement('div');
+    document.body.append(shadowHost);
+    const shadowRoot = shadowHost.attachShadow({ mode: 'open' });
+    const hostEl = shadowRoot.appendChild(document.createElement('span'));
+    const controllers: ReactiveController[] = [];
+    const host = Object.assign(hostEl, {
+      addController(c: ReactiveController) {
+        controllers.push(c);
+      },
+      removeController() {},
+      requestUpdate() {},
+      updateComplete: Promise.resolve(true),
+    }) as unknown as ReactiveControllerHost & Element;
+
+    const style = document.createElement('style');
+    style.media = '(min-width: 400px)';
+    style.textContent = ':root {}';
+    shadowRoot.appendChild(style);
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    shadowRoot.appendChild(link);
+
+    new ThemeWatcher(host, () => {});
+    try {
+      controllers.forEach((c) => c.hostConnected?.());
+      // sheetsForRoot's ShadowRoot branch (querySelectorAll('style, link')) is the only way this
+      // shadow-scoped <style>'s media query could have been discovered: shadow-root stylesheets
+      // never appear in Document.styleSheets.
+      expect(listeners.get('(min-width: 400px)')?.size).to.equal(1);
+    } finally {
+      controllers.forEach((c) => c.hostDisconnected?.());
+      shadowHost.remove();
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('removes a stale media-query listener once a later refreshMediaQueries pass drops it', async () => {
+    const originalMatchMedia = window.matchMedia;
+    const listeners = new Map<string, Set<(event: MediaQueryListEvent) => void>>();
+    window.matchMedia = ((query: string) => {
+      const callbacks = listeners.get(query) ?? new Set<(event: MediaQueryListEvent) => void>();
+      listeners.set(query, callbacks);
+      return {
+        media: query,
+        matches: false,
+        onchange: null,
+        addEventListener(_type: string, listener: EventListenerOrEventListenerObject) {
+          callbacks.add(listener as (event: MediaQueryListEvent) => void);
+        },
+        removeEventListener(_type: string, listener: EventListenerOrEventListenerObject) {
+          callbacks.delete(listener as (event: MediaQueryListEvent) => void);
+        },
+        addListener() {},
+        removeListener() {},
+        dispatchEvent: () => true,
+      } as MediaQueryList;
+    }) as typeof matchMedia;
+
+    const { host, connect, disconnect } = await makeHost();
+    const style = document.createElement('style');
+    style.media = '(min-width: 400px)';
+    style.textContent = ':root {}';
+    document.head.append(style);
+    new ThemeWatcher(host, () => {});
+    try {
+      connect();
+      await aTimeout(0);
+      const staleCallbacks = listeners.get('(min-width: 400px)');
+      expect(staleCallbacks?.size).to.equal(1);
+
+      style.removeAttribute('media');
+      await aTimeout(0);
+      expect(staleCallbacks?.size).to.equal(0);
+    } finally {
+      style.remove();
+      disconnect();
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('reacts to a load event dispatched at a stylesheet <link>', async () => {
+    // A real network/data-URL load races the MutationObserver's own insertion-triggered call (both
+    // fire within the same coalescing window), which would make a bare `calls` counter unable to
+    // attribute the increment specifically to onStylesheetLoad rather than onMutations. Dispatching
+    // a synthetic 'load' event once the insertion-triggered call has already settled isolates the
+    // handler's own guard (`isStyleCarrier(target) && target.localName === 'link'`) deterministically.
+    const { host, connect, disconnect } = await makeHost();
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    document.head.append(link);
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      await aTimeout(0);
+      calls = 0;
+      link.dispatchEvent(new Event('load'));
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+    } finally {
+      link.remove();
+      disconnect();
+    }
   });
 });

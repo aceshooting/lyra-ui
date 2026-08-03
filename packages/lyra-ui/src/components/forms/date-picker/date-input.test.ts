@@ -2366,3 +2366,314 @@ describe('lr-date-input barred from constraint validation', () => {
     expect(el.validity.valueMissing, 'valueMissing while readonly').to.be.false;
   });
 });
+
+// -- Coverage backfill round 2: locale-order construction failure, invalid placement fallback,
+//    validator branches (function/object-validate/checkValidity/observedAttributes), a throwing
+//    isDateDisabled predicate, min/max-range violations, validationTarget override, reading
+//    valueAsRange, stale cross-document listener guards, popup reconnect-while-open, dropped
+//    interaction listeners, adoptedCallback teardown, the Alt+ArrowDown shortcut, and a failed
+//    Enter commit. -----------------------------------------------------------------------------
+
+it('falls back to the hardcoded month/day/year order when Intl.DateTimeFormat.formatToParts throws', async () => {
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const original = Intl.DateTimeFormat.prototype.formatToParts;
+  Intl.DateTimeFormat.prototype.formatToParts = function () {
+    throw new RangeError('forced failure for coverage');
+  };
+  try {
+    input.value = '07/15/2026'; // month/day/year fallback -> July 15, 2026
+    input.dispatchEvent(new Event('change'));
+  } finally {
+    Intl.DateTimeFormat.prototype.formatToParts = original;
+  }
+  expect(el.value).to.equal('2026-07-15');
+});
+
+it('normalizes an invalid placement attribute to bottom-start', async () => {
+  const el = (await fixture(html`<lr-date-input placement="nonsense"></lr-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  expect(el.placement).to.equal('bottom-start');
+  expect(el.getAttribute('placement')).to.equal('bottom-start');
+});
+
+it('setting validationTarget overrides the default input anchor', async () => {
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+  const anchor = document.createElement('span');
+  expect(el.validationTarget).to.equal(el.input);
+  el.validationTarget = anchor;
+  expect(el.validationTarget).to.equal(anchor);
+  el.validationTarget = undefined;
+  expect(el.validationTarget).to.equal(el.input);
+});
+
+it('reads valueAsRange back in range mode and reports nulls outside it', async () => {
+  const el = (await fixture(
+    html`<lr-date-input mode="range" value="2026-07-10/2026-07-15"></lr-date-input>`,
+  )) as LyraDateInput;
+  expect(el.valueAsRange.from?.getDate()).to.equal(10);
+  expect(el.valueAsRange.to?.getDate()).to.equal(15);
+  el.mode = 'single';
+  expect(el.valueAsRange).to.deep.equal({ from: null, to: null });
+});
+
+it('treats a throwing isDateDisabled predicate as not-disabled rather than propagating', async () => {
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  el.isDateDisabled = () => { throw new Error('boom'); };
+  expect(() => el.checkValidity()).to.not.throw();
+  expect(el.checkValidity()).to.be.true;
+});
+
+it('flags rangeUnderflow/rangeOverflow against minRange/maxRange', async () => {
+  const short = (await fixture(html`
+    <lr-date-input mode="range" value="2026-07-10/2026-07-11" min-range="5"></lr-date-input>
+  `)) as LyraDateInput;
+  expect(short.checkValidity()).to.be.false;
+  expect(short.internals.validity.rangeUnderflow).to.be.true;
+
+  const long = (await fixture(html`
+    <lr-date-input mode="range" value="2026-07-01/2026-07-31" max-range="5"></lr-date-input>
+  `)) as LyraDateInput;
+  expect(long.checkValidity()).to.be.false;
+  expect(long.internals.validity.rangeOverflow).to.be.true;
+});
+
+describe('lr-date-input custom validators', () => {
+  it('runs a function/object-validate validator through every result shape', async () => {
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+
+    el.validators = [() => true];
+    expect(el.checkValidity(), 'a true result passes').to.be.true;
+
+    el.validators = [() => 'Explicit message'];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.internals.validity.customError).to.be.true;
+    expect(el.internals.validationMessage).to.equal('Explicit message');
+
+    el.validators = [() => false];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.internals.validity.customError).to.be.true;
+    expect(el.internals.validationMessage.length).to.be.greaterThan(0);
+
+    el.validators = [() => ({ rangeOverflow: true })];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.internals.validity.rangeOverflow).to.be.true;
+
+    el.validators = [() => { throw new Error('boom'); }];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.internals.validity.customError).to.be.true;
+
+    el.validators = [{ validate: () => 'Object-shaped validator message' }];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.internals.validationMessage).to.equal('Object-shaped validator message');
+  });
+
+  it('supports an object checkValidity() validator, mapping invalidKeys and revalidating through observedAttributes', async () => {
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+    let allowed = false;
+    el.validators = [{
+      observedAttributes: ['data-external-flag'],
+      checkValidity: () => allowed
+        ? { isValid: true, invalidKeys: [], message: '' }
+        : {
+            isValid: false,
+            invalidKeys: ['rangeOverflow', 'not-a-real-key'] as unknown as Exclude<keyof ValidityState, 'valid'>[],
+            message: 'External system rejected this date',
+          },
+    }];
+    await el.updateComplete;
+
+    expect(el.checkValidity()).to.be.false;
+    expect(el.internals.validity.rangeOverflow).to.be.true;
+    expect(el.internals.validationMessage).to.equal('External system rejected this date');
+
+    allowed = true;
+    const priv = el as unknown as { validityRevision: number };
+    const revisionBefore = priv.validityRevision;
+    el.setAttribute('data-external-flag', 'go');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(priv.validityRevision, 'the MutationObserver-driven revalidation ran').to.be.greaterThan(revisionBefore);
+    expect(el.internals.validity.rangeOverflow, 'revalidated without an explicit checkValidity() call').to.be.false;
+  });
+
+  it("falls back through checkValidity()'s own message to the validator's static or function message, and synthesizes customError when invalidKeys maps to nothing", async () => {
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+
+    el.validators = [{
+      checkValidity: () => ({ isValid: false, invalidKeys: [], message: '' }),
+      message: 'Static object message',
+    }];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.internals.validity.customError, 'no mapped invalidKeys synthesizes customError').to.be.true;
+    expect(el.internals.validationMessage).to.equal('Static object message');
+
+    el.validators = [{
+      checkValidity: () => ({ isValid: false, invalidKeys: [], message: '' }),
+      message: () => 'Function-derived object message',
+    }];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.internals.validationMessage).to.equal('Function-derived object message');
+  });
+
+  it('falls back to the localized default message when neither checkValidity() nor the validator supplies one', async () => {
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+    el.validators = [{
+      checkValidity: () => ({
+        isValid: false,
+        invalidKeys: ['customError'] as unknown as Exclude<keyof ValidityState, 'valid'>[],
+        message: '',
+      }),
+    }];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.internals.validity.customError).to.be.true;
+    expect(el.internals.validationMessage.length).to.be.greaterThan(0);
+  });
+
+  it('ignores a validator whose observedAttributes getter throws', async () => {
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+    el.validators = [{
+      get observedAttributes(): string[] { throw new Error('boom'); },
+      checkValidity: () => ({ isValid: true, invalidKeys: [], message: '' }),
+    }];
+    await el.updateComplete;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('disconnects the MutationObserver it just created if observe() itself throws', async () => {
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+    const originalObserve = MutationObserver.prototype.observe;
+    const originalDisconnect = MutationObserver.prototype.disconnect;
+    let disconnectCalls = 0;
+    MutationObserver.prototype.observe = function () {
+      throw new Error('forced failure for coverage');
+    };
+    MutationObserver.prototype.disconnect = function (...args: []) {
+      disconnectCalls += 1;
+      return originalDisconnect.apply(this, args);
+    };
+    try {
+      el.validators = [{
+        observedAttributes: ['data-flag'],
+        checkValidity: () => ({ isValid: true, invalidKeys: [], message: '' }),
+      }];
+      await el.updateComplete;
+    } finally {
+      MutationObserver.prototype.observe = originalObserve;
+      MutationObserver.prototype.disconnect = originalDisconnect;
+    }
+    expect(disconnectCalls, 'a failed observe() triggers a disconnect() cleanup').to.be.greaterThan(0);
+  });
+});
+
+describe('lr-date-input cross-document and reconnect listener guards', () => {
+  it('a stale visibilitychange listener whose tracked reference changed underneath it no-ops', async () => {
+    const el = (await fixture(
+      html`<lr-date-input value="2026-07-14" disable-past></lr-date-input>`,
+    )) as LyraDateInput;
+    const priv = el as unknown as { now: () => Date; visibilityListener?: () => void };
+    priv.now = () => new Date(2026, 6, 14, 23, 59);
+    expect(el.checkValidity()).to.be.true;
+    priv.now = () => new Date(2026, 6, 15, 0, 1);
+
+    expect(priv.visibilityListener).to.be.a('function');
+    priv.visibilityListener = () => {};
+    el.ownerDocument.dispatchEvent(new Event('visibilitychange'));
+    await el.updateComplete;
+    expect(el.internals.validity.rangeUnderflow, 'the stale listener does not revalidate').to.be.false;
+  });
+
+  it('a stale pointerdown listener whose tracked reference changed underneath it no-ops', async () => {
+    const el = (await fixture(html`<lr-date-input open></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    const priv = el as unknown as { pointerListener?: (e: PointerEvent) => void };
+    expect(priv.pointerListener).to.be.a('function');
+    priv.pointerListener = () => {};
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    expect(el.open, 'the stale listener no-ops instead of hiding').to.be.true;
+  });
+
+  it('a reconnect that finds the popup already open repositions it and reactivates the overlay', async () => {
+    const el = (await fixture(html`<lr-date-input open></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    el.remove();
+    expect(el.open, 'disconnect resets open').to.be.false;
+    el.open = true; // force a still-open state going into the reconnect
+
+    document.body.appendChild(el);
+    await new Promise((resolve) => queueMicrotask(resolve));
+    await el.updateComplete;
+
+    const priv = el as unknown as { cleanupFn?: () => void; overlayHandle?: unknown };
+    expect(priv.cleanupFn, 'popup repositioned on reconnect').to.be.a('function');
+    expect(priv.overlayHandle, 'overlay reactivated on reconnect').to.exist;
+
+    el.remove();
+  });
+
+  it('adoptedCallback tears down positioning, the overlay, and cross-document listeners', async () => {
+    const el = (await fixture(html`<lr-date-input open></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    const priv = el as unknown as {
+      cleanupFn?: () => void;
+      overlayHandle?: { deactivate: (opts: { restoreFocus: boolean }) => void };
+      visibilityListenerDocument?: Document;
+      pointerListenerDocument?: Document;
+      adoptedCallback(): void;
+    };
+    expect(priv.cleanupFn, 'positioned while open').to.be.a('function');
+    expect(priv.overlayHandle, 'overlay active while open').to.exist;
+    expect(priv.visibilityListenerDocument, 'visibility listener bound').to.exist;
+    expect(priv.pointerListenerDocument, 'pointer listener bound').to.exist;
+
+    let deactivated = false;
+    priv.overlayHandle!.deactivate = () => { deactivated = true; };
+
+    priv.adoptedCallback();
+
+    expect(deactivated, 'the overlay handle was deactivated').to.be.true;
+    expect(priv.cleanupFn, 'positioning cleanup cleared').to.equal(undefined);
+    expect(priv.overlayHandle, 'overlay handle cleared').to.equal(undefined);
+    expect(priv.visibilityListenerDocument, 'visibility listener unbound').to.equal(undefined);
+    expect(priv.pointerListenerDocument, 'pointer listener unbound').to.equal(undefined);
+  });
+});
+
+it('removes a previously-registered interaction listener when assumeInteractionOn drops it', async () => {
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  const priv = el as unknown as { interactionListeners: Map<string, EventListener> };
+  expect(priv.interactionListeners.has('input')).to.be.true;
+  el.assumeInteractionOn = [];
+  await el.updateComplete;
+  expect(priv.interactionListeners.has('input')).to.be.false;
+});
+
+it('Alt+ArrowDown opens the calendar from the keyboard and prevents the default action', async () => {
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const event = new KeyboardEvent('keydown', {
+    key: 'ArrowDown', altKey: true, bubbles: true, composed: true, cancelable: true,
+  });
+  input.dispatchEvent(event);
+  expect(event.defaultPrevented).to.be.true;
+  expect(el.open).to.be.true;
+});
+
+it('does not commit or dispatch a native change when Enter is pressed over unparseable text', async () => {
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const committedDisplay = input.value;
+  input.value = 'not a date';
+  let changes = 0;
+  el.addEventListener('change', () => { changes += 1; });
+  input.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }),
+  );
+  expect(el.value).to.equal('2026-07-15');
+  expect(input.value).to.equal(committedDisplay);
+  expect(changes).to.equal(0);
+  expect(el.internals.validity.badInput).to.be.true;
+});

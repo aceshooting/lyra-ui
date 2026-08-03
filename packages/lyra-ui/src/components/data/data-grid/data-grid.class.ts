@@ -924,7 +924,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     const rows = this.getVisibleRows();
     if (rows.length === 0) return;
     const target = finiteInteger(index, 0, 0, rows.length - 1);
-    const rendered = this.renderRoot.querySelector<HTMLElement>(`[part~="row"][data-visible-index="${target}"]`);
+    const rendered = this.renderRoot?.querySelector<HTMLElement>(`[part~="row"][data-visible-index="${target}"]`);
     if (rendered) {
       rendered.scrollIntoView({ block: options.align ?? 'nearest' });
       return;

@@ -1263,3 +1263,228 @@ describe('reviewed date-picker parity surface', () => {
     await expect(el).shadowDom.to.be.accessible();
   });
 });
+
+describe('date-picker coverage gaps', () => {
+  it('clears the value when valueAsDate is set to null or an invalid Date', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
+    el.valueAsDate = null;
+    expect(el.value).to.equal('');
+
+    el.value = '2026-07-15';
+    el.valueAsDate = new Date(NaN);
+    expect(el.value).to.equal('');
+  });
+
+  it('treats a throwing isDateDisabled predicate as advisory, not fatal', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
+    el.isDateDisabled = () => { throw new Error('boom'); };
+    await el.updateComplete;
+    const day = el.shadowRoot!.querySelector('[data-date="2026-07-20"]') as HTMLButtonElement;
+    expect(day.disabled).to.be.false;
+    setTimeout(() => day.click());
+    await oneEvent(el, 'change');
+    expect(el.value).to.equal('2026-07-20');
+  });
+
+  it('focus() moves DOM focus to the roving day cell', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
+    await el.updateComplete;
+    el.focus();
+    const day = el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement;
+    expect(el.shadowRoot!.activeElement === day).to.be.true;
+  });
+
+  it('focus() moves DOM focus to the first enabled selection-view item when not showing days', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker value="2026-07-15" view="months"></lr-date-picker>`,
+    )) as LyraDatePicker;
+    await el.updateComplete;
+    el.focus();
+    const item = el.shadowRoot!.querySelector('[part~="view-item"]:not(:disabled)') as HTMLButtonElement;
+    expect(el.shadowRoot!.activeElement === item).to.be.true;
+  });
+
+  it('falls back to the current view month instead of throwing when every day is disabled and there is no focus or selection yet', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker disabled-days-of-week="sun,mon,tue,wed,thu,fri,sat"></lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+    expect(() =>
+      grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })),
+    ).to.not.throw();
+    expect(el.focusedDate).to.equal('');
+  });
+
+  it('previews the pending range while hovering a day after picking the first endpoint, in either direction', async () => {
+    const el = (await fixture(html`<lr-date-picker mode="range"></lr-date-picker>`)) as LyraDatePicker;
+    el.goToDate('2026-07-01');
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[data-date="2026-07-10"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    // Hovering after the picked endpoint.
+    (el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement).dispatchEvent(
+      new PointerEvent('pointerenter', { bubbles: true }),
+    );
+    await el.updateComplete;
+    let preview = Array.from(el.shadowRoot!.querySelectorAll('[part~="day-range-preview"]')).map(
+      (node) => (node as HTMLElement).getAttribute('data-date'),
+    );
+    expect(preview).to.deep.equal(['2026-07-11', '2026-07-12', '2026-07-13', '2026-07-14', '2026-07-15']);
+
+    // Hovering before the picked endpoint.
+    (el.shadowRoot!.querySelector('[data-date="2026-07-05"]') as HTMLButtonElement).dispatchEvent(
+      new PointerEvent('pointerenter', { bubbles: true }),
+    );
+    await el.updateComplete;
+    preview = Array.from(el.shadowRoot!.querySelectorAll('[part~="day-range-preview"]')).map(
+      (node) => (node as HTMLElement).getAttribute('data-date'),
+    );
+    expect(preview).to.deep.equal(['2026-07-05', '2026-07-06', '2026-07-07', '2026-07-08', '2026-07-09']);
+  });
+
+  it('falls back to the plain day number when dayContent throws', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
+    el.dayContent = () => { throw new Error('boom'); };
+    await el.updateComplete;
+    const day = el.shadowRoot!.querySelector('[data-date="2026-07-20"]') as HTMLButtonElement;
+    expect(day.textContent!.trim()).to.equal('20');
+  });
+
+  it('disables every selection-view item while the picker itself is disabled', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker value="2026-06-15" view="months" disabled></lr-date-picker>`,
+    )) as LyraDatePicker;
+    await el.updateComplete;
+    const items = Array.from(el.shadowRoot!.querySelectorAll('[part~="view-item"]')) as HTMLButtonElement[];
+    expect(items.length).to.be.greaterThan(0);
+    for (const item of items) {
+      expect(item.disabled).to.be.true;
+      expect(item.getAttribute('part')).to.include('view-item-disabled');
+    }
+  });
+
+  it('disables only the out-of-range months in the month-selection view when min applies', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker value="2026-06-15" min="2026-03-01"></lr-date-picker>`,
+    )) as LyraDatePicker;
+    el.view = 'months';
+    await el.updateComplete;
+    const items = Array.from(el.shadowRoot!.querySelectorAll('[part~="view-item"]')) as HTMLButtonElement[];
+    expect(items[0].disabled, 'January is entirely before the March minimum').to.be.true; // January
+    expect(items[5].disabled, 'June is on/after the March minimum').to.be.false; // June
+  });
+
+  it('drills into the day grid after picking a month from the month-selection view', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-06-15"></lr-date-picker>`)) as LyraDatePicker;
+    el.view = 'months';
+    await el.updateComplete;
+    const items = el.shadowRoot!.querySelectorAll('[part~="view-item"]');
+    (items[8] as HTMLButtonElement).click(); // September
+    await el.updateComplete;
+    expect(el.view).to.equal('days');
+    const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
+    expect(title).to.contain('september');
+  });
+
+  it('drills from decades through years and months down to the day grid', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-06-15"></lr-date-picker>`)) as LyraDatePicker;
+    el.view = 'decades';
+    await el.updateComplete;
+
+    let items = el.shadowRoot!.querySelectorAll('[part~="view-item"]');
+    (items[0] as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.view).to.equal('years');
+
+    items = el.shadowRoot!.querySelectorAll('[part~="view-item"]');
+    (items[0] as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.view).to.equal('months');
+
+    items = el.shadowRoot!.querySelectorAll('[part~="view-item"]');
+    (items[0] as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.view).to.equal('days');
+  });
+
+  it('navigates by year/decade/century with the previous/next buttons in each selection-view granularity', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-06-15"></lr-date-picker>`)) as LyraDatePicker;
+    const title = () => el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim();
+
+    el.view = 'months';
+    await el.updateComplete;
+    expect(title()).to.equal('2026');
+    (el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(title()).to.equal('2027');
+    (el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(title()).to.equal('2026');
+
+    el.view = 'years';
+    await el.updateComplete;
+    const yearsBefore = title();
+    (el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(title()).to.not.equal(yearsBefore);
+    (el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(title()).to.equal(yearsBefore);
+
+    el.view = 'decades';
+    await el.updateComplete;
+    const decadesBefore = title();
+    (el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(title()).to.not.equal(decadesBefore);
+    (el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(title()).to.equal(decadesBefore);
+  });
+
+  it('slides the view to a directly-assigned focusedDate that is not currently visible', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
+    await el.updateComplete;
+    el.focusedDate = '2026-09-10';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-date="2026-09-10"]')).to.exist;
+  });
+
+  it('clear() resets a range-mode value and emits input + change', async () => {
+    const el = (await fixture(html`<lr-date-picker mode="range" value="2026-07-05/2026-07-10"></lr-date-picker>`)) as LyraDatePicker;
+    await el.updateComplete;
+    setTimeout(() => el.clear());
+    await oneEvent(el, 'change');
+    expect(el.value).to.equal('');
+  });
+
+  it('ignores keys other than the roving-navigation set on the calendar grid', async () => {
+    const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+    const before = el.focusedDate;
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    await el.updateComplete;
+    expect(el.focusedDate).to.equal(before);
+  });
+
+  it('applies custom previous/next labels to the nav buttons in the selection views (months/years/decades), not just the day grid', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker
+        value="2026-06-15"
+        view="months"
+        previous-label="Prev year"
+        next-label="Next year"
+      ></lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+    expect(
+      (el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement).getAttribute('aria-label'),
+    ).to.equal('Prev year');
+    expect(
+      (el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement).getAttribute('aria-label'),
+    ).to.equal('Next year');
+  });
+});

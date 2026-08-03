@@ -248,8 +248,21 @@ jobs:
 
       - name: Update npm CLI (trusted publishing needs >=11.5.1)
         run: |
-          npm i -g --ignore-scripts npm@12.0.1
-          test "$(npm --version)" = "12.0.1"
+          set -euo pipefail
+          NPM_VERSION=12.0.1
+          # npm's own registry integrity hash (sha512), not just an exact version pin --
+          # verified against the published tarball before install rather than trusting
+          # registry+TLS alone.
+          NPM_TARBALL_INTEGRITY='sha512-L5T9i/YAQWQWqTS/xZxJkei/9zcu99hCeE4qi41IyBVV7mRQad3qc2JfuOktwmH+qwGI/V2rbCL+/UYxb1+RQA=='
+          curl -fsSL -o npm.tgz "https://registry.npmjs.org/npm/-/npm-${NPM_VERSION}.tgz"
+          actual_integrity="sha512-$(openssl dgst -sha512 -binary npm.tgz | base64 -w0)"
+          if [[ "$actual_integrity" != "$NPM_TARBALL_INTEGRITY" ]]; then
+            echo "::error::npm@${NPM_VERSION} tarball integrity mismatch: expected $NPM_TARBALL_INTEGRITY, got $actual_integrity"
+            exit 1
+          fi
+          npm i -g --ignore-scripts ./npm.tgz
+          rm -f npm.tgz
+          test "$(npm --version)" = "$NPM_VERSION"
 
       - name: Generate release provenance
         id: attest

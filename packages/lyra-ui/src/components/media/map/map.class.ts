@@ -24,6 +24,16 @@ import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_D
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
+/** Probes for a real WebGL2 context without ever touching maplibre-gl's own (unreliable) failure
+ *  path -- see the call site in `tryConstructMap()`. */
+function supportsWebGL2(): boolean {
+  try {
+    return document.createElement('canvas').getContext('webgl2') !== null;
+  } catch {
+    return false;
+  }
+}
+
 export interface LegendEntry {
   color: string;
   label: string;
@@ -441,6 +451,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    */
   private tryConstructMap(): void {
     if (this._map || !this._maplibreModule || !this.containerEl || !this.visible || !this.isConnected) return;
+    if (!supportsWebGL2()) {
+      // maplibre-gl doesn't fail construction cleanly when WebGL2 is unavailable: it fires a
+      // GPUInitializationError internally and still returns a Map instance with no `painter`,
+      // which later crashes disconnectedCallback()'s `this._map.remove()` instead of surfacing as
+      // a normal, catchable error. Probing first avoids ever constructing that broken instance.
+      this.loadFailed = true;
+      this.errorAnnouncementSink?.announce(this.localize('mapMissingLibrary'));
+      return;
+    }
     const mod = this._maplibreModule;
     this._map = new mod.Map({
       container: this.containerEl,

@@ -605,6 +605,9 @@ it('supports single selection and Ctrl+A skips ineligible rows and repairs shrun
   `);
   const checks = [...multiple.shadowRoot!.querySelectorAll<HTMLInputElement>('[part~="row"] input')];
   expect(checks.map((input) => input.disabled)).to.deep.equal([true, false, false]);
+  checks[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await multiple.updateComplete;
+  expect(multiple.selectedKeys, 'a click on a disabled row checkbox is ignored').to.deep.equal([]);
   const selectEvent = oneEvent(multiple, 'lr-row-select');
   dataCells(multiple)[0]!.dispatchEvent(new KeyboardEvent('keydown', {
     key: 'a', ctrlKey: true, bubbles: true, composed: true,
@@ -1813,6 +1816,7 @@ it('stringifies object, array, date, and unserializable cell values', async () =
     { id: 5, value: circular },
     { id: 6, value: { big: 10n } },
     { id: 7, value: undefined },
+    { id: 8, value: { toJSON: () => undefined } },
   ]);
   expect(dataCells(element).map((cell) => cell.textContent!.trim())).to.deep.equal([
     '{"a":1}',
@@ -1821,6 +1825,7 @@ it('stringifies object, array, date, and unserializable cell values', async () =
     '',
     '',
     '{"big":"10"}',
+    '',
     '',
   ]);
 });
@@ -2449,6 +2454,764 @@ it('abandons an in-flight server request when the data source is replaced', asyn
   await element.updateComplete;
   expect(firstSignal?.aborted).to.equal(true);
   expect(element.loading).to.equal(false);
+});
+
+it('parses the selectable attribute converters removed and invalid-value branches', async () => {
+  const element = await dataGrid(html`<lr-data-grid selectable="single" label="People"></lr-data-grid>`);
+  expect(element.selectable).to.equal('single');
+  element.setAttribute('selectable', 'bogus');
+  await element.updateComplete;
+  expect(element.selectable, 'an unrecognized attribute value falls back to none').to.equal('none');
+  element.removeAttribute('selectable');
+  await element.updateComplete;
+  expect(element.selectable, 'a removed attribute is treated as none, not multiple').to.equal('none');
+});
+
+it('treats a bubbled text-node target and a non-element currentTarget as non-interactive', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const internals = element as unknown as { onBodyScroll(event: Event): void; bodyScrollTop: number };
+
+  const nameHeader = header(element, 'name');
+  const headerText = [...nameHeader.querySelector('span')!.childNodes].find(
+    (node) => node.nodeType === Node.TEXT_NODE,
+  )!;
+  const sorted = oneEvent(element, 'lr-sort-change');
+  headerText.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  expect((await sorted).detail.sort).to.deep.equal([{ id: 'name', desc: false }]);
+
+  const cell = dataCells(element)[0]!;
+  const cellText = [...cell.childNodes].find((node) => node.nodeType === Node.TEXT_NODE)!;
+  const clicked = oneEvent(element, 'lr-cell-click');
+  cellText.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  expect((await clicked).detail.value).to.equal('Ada');
+
+  const before = internals.bodyScrollTop;
+  internals.onBodyScroll({ currentTarget: null } as unknown as Event);
+  expect(internals.bodyScrollTop, 'a non-element currentTarget must not update scroll state').to.equal(before);
+});
+
+it('ignores search and filter inputs, or a select-all checkbox, whose native property is not the expected primitive type', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      with-search
+      selectable="multiple"
+      row-key="id"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const search = element.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+  Object.defineProperty(search, 'value', { configurable: true, get: () => 42 as unknown as string });
+  search.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await element.updateComplete;
+  expect(element.searchTerm, 'a non-string .value falls back to the current search term').to.equal('');
+
+  (header(element, 'team').querySelector('[part="filter-button"]') as HTMLButtonElement).click();
+  await element.updateComplete;
+  const filterInput = element.shadowRoot!.querySelector('[part="filter-panel"] input') as HTMLInputElement;
+  Object.defineProperty(filterInput, 'value', { configurable: true, get: () => 7 as unknown as string });
+  filterInput.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await element.updateComplete;
+  expect(element.filters, 'a non-string filter value is ignored rather than applied').to.deep.equal([]);
+
+  const selectAll = element.shadowRoot!.querySelector('[part="select-all-checkbox"]') as HTMLInputElement;
+  Object.defineProperty(selectAll, 'checked', { configurable: true, get: () => 'yes' as unknown as boolean });
+  selectAll.dispatchEvent(new Event('change', { bubbles: true }));
+  await element.updateComplete;
+  expect(element.selectedKeys, 'a non-boolean .checked getter is treated as no control at all').to.deep.equal([]);
+});
+
+it('accepts an array-form groupBy and supports multi-level grouping', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      .groupBy=${['team', 'score']}
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const topGroups = [...element.shadowRoot!.querySelectorAll('[part~="group-row"][aria-level="1"]')];
+  expect(topGroups.length).to.equal(2);
+  element.expandAllRows();
+  await element.updateComplete;
+  const nestedGroups = [...element.shadowRoot!.querySelectorAll('[part~="group-row"][aria-level="2"]')];
+  expect(nestedGroups.length).to.be.greaterThan(0);
+});
+
+it('skips client-side grouping and filtering math entirely in server mode', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Server grouped"
+      server
+      paginate
+      group-by="team"
+      total="30"
+      page-size="5"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  expect(element.pageCount).to.equal(6);
+  expect(element.getColumnFacets('team').uniqueValues.size).to.equal(0);
+});
+
+it('reports zero grouped pages when a paginated groupBy names no column', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" paginate group-by="missing" page-size="2" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  expect(element.pageCount).to.equal(0);
+  expect(element.getVisibleRows()).to.deep.equal([]);
+});
+
+it('treats a non-array assignment to selectedRows as empty rather than throwing', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" row-key="id" selectable="multiple" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.selectedRows = [rows[0]!];
+  await element.updateComplete;
+  expect(element.selectedKeys).to.deep.equal([1]);
+  (element as unknown as { selectedRows: unknown }).selectedRows = 'not-an-array';
+  await element.updateComplete;
+  expect(element.selectedKeys, 'a non-array value resolves to no selection').to.deep.equal([]);
+});
+
+it('leaves reload inert while disconnected or without a server data source', async () => {
+  let calls = 0;
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  await element.reload();
+  expect(calls, 'a client-only grid ignores reload').to.equal(0);
+
+  const parent = element.parentElement!;
+  element.dataSource = async () => { calls += 1; return { rows: [], total: 0 }; };
+  element.remove();
+  await element.reload();
+  expect(calls, 'a disconnected grid ignores reload even with a data source').to.equal(0);
+  parent.append(element);
+});
+
+it('ignores scrollToIndex when there are no rows to scroll to', async () => {
+  const element = await dataGrid(html`<lr-data-grid label="Empty" .columns=${columns}></lr-data-grid>`);
+  expect(() => element.scrollToIndex(0)).to.not.throw();
+});
+
+it('leaves sizeColumnsToFit inert before first render, with no columns, and with no flexible columns', async () => {
+  const unrendered = document.createElement('lr-data-grid') as LyraDataGrid<Person>;
+  expect(() => unrendered.sizeColumnsToFit()).to.not.throw();
+
+  const empty = await dataGrid();
+  expect(() => empty.sizeColumnsToFit()).to.not.throw();
+
+  const fixedColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name', flex: 0 },
+    { field: 'team', label: 'Team', flex: 0 },
+  ];
+  const fixed = await dataGrid(html`
+    <lr-data-grid label="Fixed" .columns=${fixedColumns} .data=${rows}></lr-data-grid>
+  `);
+  const body = fixed.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  Object.defineProperty(body, 'clientWidth', { configurable: true, value: 600 });
+  fixed.sizeColumnsToFit();
+  expect(fixed.getState().widths, 'flex:0 columns are never auto-sized').to.deep.equal({});
+});
+
+it('falls back to the textarea copy path when reading navigator.clipboard throws', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const originalExecCommand = document.execCommand;
+  let copied: string | null = null;
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    get() { throw new Error('denied by permissions policy'); },
+  });
+  document.execCommand = ((command: string): boolean => {
+    if (command === 'copy') {
+      copied = document.body.querySelector<HTMLTextAreaElement>(':scope > textarea')?.value ?? null;
+    }
+    return true;
+  }) as typeof document.execCommand;
+  try {
+    expect(element.copySelectedRows({ includeHeaders: false })).to.equal(3);
+  } finally {
+    document.execCommand = originalExecCommand;
+    if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+  }
+  expect(copied).to.equal('Ada\tCompiler\t7\nLin\tRuntime\t10\nGrace\tCompiler\t9');
+});
+
+it('ignores a resize width write for a column id that no longer exists', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.setColumnWidth('does-not-exist', 250, false);
+  expect(element.getState().widths).to.deep.equal({});
+});
+
+it('omits an abort signal when the owner realm has no AbortController', async () => {
+  const NativeAbortController = window.AbortController;
+  let receivedSignal: AbortSignal | undefined = undefined;
+  let sawRequest = false;
+  const element = await dataGrid(html`<lr-data-grid label="People" .columns=${columns}></lr-data-grid>`);
+  (window as unknown as { AbortController?: typeof AbortController }).AbortController = undefined;
+  try {
+    element.dataSource = async (request) => {
+      sawRequest = true;
+      receivedSignal = request.signal;
+      return { rows: [], total: 0 };
+    };
+    await element.updateComplete;
+    await delay(10);
+    expect(sawRequest).to.equal(true);
+    expect(receivedSignal, 'no AbortController means no signal is attached').to.equal(undefined);
+  } finally {
+    window.AbortController = NativeAbortController;
+  }
+});
+
+it('keeps a non-matching child that has its own matching descendant when filtering from leaf rows', async () => {
+  const treeRows: Person[] = [
+    {
+      id: 1,
+      name: 'Grandparent',
+      team: 'Tree',
+      score: 1,
+      children: [{
+        id: 2,
+        name: 'Parent',
+        team: 'Tree',
+        score: 2,
+        children: [{ id: 3, name: 'Needle', team: 'Tree', score: 3 }],
+      }],
+    },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Deep tree"
+      child-rows="children"
+      row-key="id"
+      filter-from-leaf-rows
+      .columns=${columns}
+      .data=${treeRows}
+      .expandedKeys=${[1, 2]}
+    ></lr-data-grid>
+  `);
+  element.searchTerm = 'Needle';
+  await element.updateComplete;
+  const names = [...element.shadowRoot!.querySelectorAll('[part~="cell"][data-column-id="name"]')].map(
+    (cell) => cell.textContent!.trim(),
+  );
+  expect(names).to.deep.equal(['Grandparent', 'Parent', 'Needle']);
+});
+
+it('resolves descendant selection state when a childRows callback returns a freshly constructed row each call', async () => {
+  const parent: Person = { id: 1, name: 'Parent', team: 'Tree', score: 1 };
+  const childRowsCallback = (row: Person): Person[] =>
+    row.id === 1 ? [{ id: 2, name: 'Child', team: 'Tree', score: 2 }] : [];
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Dangling children"
+      selectable="multiple"
+      row-key="id"
+      .childRows=${childRowsCallback}
+      .columns=${columns}
+      .data=${[parent]}
+      .expandedKeys=${[1]}
+    ></lr-data-grid>
+  `);
+  const checkboxes = [
+    ...element.shadowRoot!.querySelectorAll<HTMLInputElement>('[part~="row"] input[type="checkbox"]'),
+  ];
+  expect(checkboxes).to.have.length(2);
+  const selected = oneEvent(element, 'lr-row-select');
+  checkboxes[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  const { detail } = await selected;
+  expect(detail.selectedKeys, 'the recomputed child key is resolved by value, not by reference').to.have.members([1, 2]);
+
+  const cascade = oneEvent(element, 'lr-row-select');
+  dataCells(element)[0]!.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'a', ctrlKey: true, bubbles: true, composed: true,
+  }));
+  expect((await cascade).detail.selectedKeys).to.include(1);
+});
+
+it('counts a child row shared by two parents only once toward selectable descendants', async () => {
+  const sharedChild: Person = { id: 3, name: 'Shared', team: 'Tree', score: 3 };
+  const parentA: Person = { id: 1, name: 'A', team: 'Tree', score: 1, children: [sharedChild] };
+  const parentB: Person = { id: 2, name: 'B', team: 'Tree', score: 2, children: [sharedChild] };
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Shared child"
+      selectable="multiple"
+      row-key="id"
+      child-rows="children"
+      .columns=${columns}
+      .data=${[parentA, parentB]}
+      .expandedKeys=${[1, 2]}
+    ></lr-data-grid>
+  `);
+  const selected = oneEvent(element, 'lr-row-select');
+  dataCells(element)[0]!.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'a', ctrlKey: true, bubbles: true, composed: true,
+  }));
+  const { detail } = await selected;
+  expect(detail.selectedKeys, 'a child shared by two parents is only counted once').to.have.members([1, 2, 3]);
+  expect(detail.selectedKeys, 'the shared child key appears only a single time').to.have.length(3);
+});
+
+it('drops the authored-width custom property once a column has an explicit resized width', async () => {
+  const sizedColumns: DataGridColumn<Person>[] = [{ field: 'name', label: 'Name', width: 120 }, ...columns.slice(1)];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" resizable .columns=${sizedColumns} .data=${rows}></lr-data-grid>
+  `);
+  const cellBefore = dataCells(element)[0]!;
+  expect(cellBefore.style.getPropertyValue('--column-authored-width')).to.equal('120px');
+  element.setColumnWidth('name', 200, false);
+  await element.updateComplete;
+  const cellAfter = dataCells(element)[0]!;
+  expect(cellAfter.style.getPropertyValue('--column-authored-width')).to.equal('');
+});
+
+it('returns a zero pin offset for a column id that is not currently visible', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" pinnable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  expect(element.pinOffset('does-not-exist', 'left')).to.equal(0);
+});
+
+it('orders unpinned columns by natural index and sorts every left/right pin combination', async () => {
+  const threeColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name' },
+    { field: 'team', label: 'Team' },
+    { field: 'score', label: 'Score' },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" pinnable .columns=${threeColumns} .data=${rows}></lr-data-grid>
+  `);
+  element.columnOrder = ['score'];
+  await element.updateComplete;
+  const naturalOrder = [...element.shadowRoot!.querySelectorAll('[part~="header-cell"]')].map(
+    (cellEl) => (cellEl as HTMLElement).dataset.columnId,
+  );
+  expect(naturalOrder, 'columns absent from a partial columnOrder keep their natural relative order')
+    .to.deep.equal(['score', 'name', 'team']);
+
+  element.pinColumn('name', 'left');
+  element.pinColumn('score', 'right');
+  await element.updateComplete;
+  const pinnedOrder = [...element.shadowRoot!.querySelectorAll('[part~="header-cell"]')].map(
+    (cellEl) => (cellEl as HTMLElement).dataset.columnId,
+  );
+  expect(pinnedOrder).to.deep.equal(['name', 'team', 'score']);
+});
+
+it('applies a caller-supplied row class and falls back to an empty class for a null return', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      .rowClass=${(row: Person) => row.score >= 9 ? 'top' : null}
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const rowEls = [...element.shadowRoot!.querySelectorAll('[part~="row"]')];
+  expect(rowEls.map((rowEl) => rowEl.className)).to.deep.equal(['', 'top', 'top']);
+});
+
+it('renders no page-number buttons and disables navigation when there are zero pages', async () => {
+  const element = await dataGrid(html`<lr-data-grid label="Empty" paginate .columns=${columns}></lr-data-grid>`);
+  expect(element.pageCount).to.equal(0);
+  expect(element.shadowRoot!.querySelectorAll('[part~="page"]')).to.have.length(0);
+  expect((element.shadowRoot!.querySelector('[part~="first-button"]') as HTMLButtonElement).disabled).to.equal(true);
+});
+
+it('reserves an empty footer cell for the selection column', async () => {
+  const footerColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name', footer: 'Total' },
+    { field: 'team', label: 'Team' },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" selectable="multiple" .columns=${footerColumns} .data=${rows}></lr-data-grid>
+  `);
+  const footerRow = element.shadowRoot!.querySelector('[part="footer-row"]')!;
+  expect(footerRow.children.length, 'selection column plus name and team').to.equal(3);
+});
+
+it('reports zero pages rather than dividing by a zero page size', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" paginate page-size="0" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  expect(element.pageCount).to.equal(0);
+});
+
+it('sizes an unflagged column using the default flex share', async () => {
+  const mixedColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name' },
+    { field: 'team', label: 'Team', flex: 1 },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${mixedColumns} .data=${rows}></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  Object.defineProperty(body, 'clientWidth', { configurable: true, value: 400 });
+  element.sizeColumnsToFit();
+  expect(element.getState().widths).to.deep.equal({ name: 200, team: 200 });
+});
+
+it('leaves loadServerData inert when the owner realm no longer matches', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" server .columns=${columns} .dataSource=${async () => ({ rows: [], total: 0 })}></lr-data-grid>
+  `);
+  const before = element.data;
+  const internals = element as unknown as { loadServerData(owner: Window): Promise<void> };
+  const foreignWindow = { document } as unknown as Window;
+  await internals.loadServerData(foreignWindow);
+  expect(element.data, 'a mismatched owner window must not apply a response').to.equal(before);
+});
+
+it('toggles a group row collapsed after it has been expanded', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" group-by="team" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const groupButton = element.shadowRoot!.querySelector('[part="group-row"] [part="expand-button"]') as HTMLButtonElement;
+  groupButton.click();
+  await element.updateComplete;
+  expect(element.expandedKeys.length).to.equal(1);
+  groupButton.click();
+  await element.updateComplete;
+  expect(element.expandedKeys, 'a second click collapses an already-expanded group').to.deep.equal([]);
+});
+
+it('ignores column-move and resize requests for a column id that is no longer known', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" reorderable resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const internals = element as unknown as {
+    moveColumn(id: string, delta: number, emitUserEvent: boolean): void;
+    onResizeStart(event: PointerEvent, id: string): void;
+    onResizeKey(event: KeyboardEvent, id: string): void;
+  };
+  let moves = 0;
+  let resizes = 0;
+  element.addEventListener('lr-column-move', () => { moves += 1; });
+  element.addEventListener('lr-column-resize', () => { resizes += 1; });
+
+  internals.moveColumn('does-not-exist', 1, true);
+  expect(moves, 'an unknown column id is ignored').to.equal(0);
+  expect(element.columnOrder).to.deep.equal([]);
+
+  const noopKey = { altKey: true, key: 'ArrowRight', preventDefault() {} } as unknown as KeyboardEvent;
+  internals.onResizeKey(noopKey, 'does-not-exist');
+  expect(resizes, 'a resize key on an unknown column id does nothing').to.equal(0);
+
+  const notAltKey = { altKey: false, key: 'ArrowRight', preventDefault() {} } as unknown as KeyboardEvent;
+  internals.onResizeKey(notAltKey, 'name');
+  expect(resizes, 'a resize key without Alt does nothing').to.equal(0);
+
+  const startEvent = {
+    clientX: 0,
+    pointerId: 1,
+    currentTarget: { setPointerCapture() {} },
+  } as unknown as PointerEvent;
+  internals.onResizeStart(startEvent, 'does-not-exist');
+  expect(resizes, 'starting a resize on an unknown column id does nothing').to.equal(0);
+});
+
+it('refuses to reorder the first column further left', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" reorderable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  let moves = 0;
+  element.addEventListener('lr-column-move', () => { moves += 1; });
+  header(element, 'name').dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowLeft', shiftKey: true, bubbles: true, composed: true,
+  }));
+  await element.updateComplete;
+  expect(moves, 'the first column cannot move further left').to.equal(0);
+  expect(element.columnOrder).to.deep.equal([]);
+});
+
+it('falls back to the estimated width and ignores stray pointer moves without an active resize session', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" resizable with-column-menu .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.toggleColumn('name', false);
+  await element.updateComplete;
+  const internals = element as unknown as {
+    onResizeStart(event: PointerEvent, id: string): void;
+    onResizeMove(event: PointerEvent): void;
+    onResizeEnd(event: PointerEvent): void;
+    resizeSession?: { columnId: string; startWidth: number; pointerId: number };
+  };
+  const startEvent = {
+    clientX: 0,
+    pointerId: 5,
+    currentTarget: { setPointerCapture() {} },
+    preventDefault() {},
+  } as unknown as PointerEvent;
+  internals.onResizeStart(startEvent, 'name');
+  expect(internals.resizeSession?.startWidth, 'a hidden columns header falls back to an estimated width').to.be.greaterThan(0);
+
+  let resizeEvents = 0;
+  element.addEventListener('lr-column-resize', () => { resizeEvents += 1; });
+  internals.onResizeMove({ pointerId: 999, clientX: 10 } as unknown as PointerEvent);
+  internals.onResizeEnd({ pointerId: 999 } as unknown as PointerEvent);
+  expect(resizeEvents, 'a pointer id that does not match the active session is ignored').to.equal(0);
+
+  internals.resizeSession = undefined;
+  expect(() => internals.onResizeMove({ pointerId: 1, clientX: 10 } as unknown as PointerEvent)).to.not.throw();
+  expect(() => internals.onResizeEnd({ pointerId: 1 } as unknown as PointerEvent)).to.not.throw();
+  expect(resizeEvents, 'a pointer move or end without any active session does nothing').to.equal(0);
+});
+
+it('reports the pointer-down start width when a pointercancel arrives before any pointermove', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const resized = oneEvent(element, 'lr-column-resize');
+  const handle = header(element, 'name').querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.dispatchEvent(new PointerEvent('pointerdown', {
+    pointerId: 3, clientX: 50, bubbles: true, composed: true,
+  }));
+  handle.dispatchEvent(new PointerEvent('pointercancel', {
+    pointerId: 3, clientX: 50, bubbles: true, composed: true,
+  }));
+  const { detail } = await resized;
+  expect(detail.width, 'no width was ever committed, so the starting width is reported').to.be.greaterThan(0);
+});
+
+it('resizes a column in the RTL-appropriate direction by pointer and by keyboard', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid dir="rtl" label="RTL resize" resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const before = element.getState().widths.name;
+  const keyResized = oneEvent(element, 'lr-column-resize');
+  header(element, 'name').dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowRight', altKey: true, bubbles: true, composed: true,
+  }));
+  const keyDetail = (await keyResized).detail;
+  expect(keyDetail.width, 'RTL treats ArrowRight as a logical decrease').to.be.lessThan(before ?? keyDetail.width + 1);
+
+  const handle = header(element, 'name').querySelector('[part="resize-handle"]') as HTMLElement;
+  const pointerResized = oneEvent(element, 'lr-column-resize');
+  handle.dispatchEvent(new PointerEvent('pointerdown', {
+    pointerId: 8, clientX: 100, bubbles: true, composed: true,
+  }));
+  handle.dispatchEvent(new PointerEvent('pointermove', {
+    pointerId: 8, clientX: 140, bubbles: true, composed: true,
+  }));
+  handle.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 8, bubbles: true, composed: true }));
+  const pointerDetail = (await pointerResized).detail;
+  expect(pointerDetail.width, 'dragging right shrinks the column under RTL').to.be.lessThan(keyDetail.width);
+});
+
+it('sorts an unpinned column before a right-pinned one', async () => {
+  const twoColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name' },
+    { field: 'score', label: 'Score' },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" pinnable .columns=${twoColumns} .data=${rows}></lr-data-grid>
+  `);
+  element.pinColumn('score', 'right');
+  await element.updateComplete;
+  const order = [...element.shadowRoot!.querySelectorAll('[part~="header-cell"]')].map(
+    (cellEl) => (cellEl as HTMLElement).dataset.columnId,
+  );
+  expect(order).to.deep.equal(['name', 'score']);
+});
+
+it('falls back to an exact-scan and an empty computed token when CSS.escape or getComputedStyle throw', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  for (const cell of element.shadowRoot!.querySelectorAll('[data-column-id="name"]')) {
+    Object.defineProperty(cell, 'scrollWidth', { configurable: true, value: 190 });
+  }
+  const ambientEscape = window.CSS.escape;
+  window.CSS.escape = () => { throw new Error('escape unsupported'); };
+  try {
+    element.autoSizeColumn('name');
+    expect(element.getState().widths?.name, 'the exact-match scan still finds the column').to.equal(190);
+  } finally {
+    window.CSS.escape = ambientEscape;
+  }
+
+  const ambientGetComputedStyle = window.getComputedStyle;
+  window.getComputedStyle = (() => { throw new Error('style access denied'); }) as typeof window.getComputedStyle;
+  try {
+    element.requestUpdate();
+    await element.updateComplete;
+  } finally {
+    window.getComputedStyle = ambientGetComputedStyle;
+  }
+  expect(element.shadowRoot!.querySelectorAll('[part~="row"]'), 'a throwing getComputedStyle must not crash rendering')
+    .to.have.length.greaterThan(0);
+});
+
+it('ignores a page-size select whose value getter is not a usable primitive', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" paginate .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const sizeSelect = element.shadowRoot!.querySelector('[part="page-size"]') as HTMLSelectElement;
+  Object.defineProperty(sizeSelect, 'value', { configurable: true, get: () => undefined as unknown as string });
+  sizeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  await element.updateComplete;
+  expect(element.pageSize, 'a control the guard rejects leaves pageSize untouched').to.equal(20);
+});
+
+it('moves plain Home and End focus within the current row rather than to the header or grid edges', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const secondCell = element.shadowRoot!.querySelector(
+    '[role="gridcell"][data-row-position="1"][data-column-position="1"]',
+  ) as HTMLElement;
+  secondCell.focus();
+  secondCell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
+  await delay(0);
+  let active = element.shadowRoot!.activeElement as HTMLElement;
+  expect(active.dataset.rowPosition, 'a plain Home stays on the same row').to.equal('1');
+  expect(active.dataset.columnPosition).to.equal('0');
+
+  active.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+  await delay(0);
+  active = element.shadowRoot!.activeElement as HTMLElement;
+  expect(active.dataset.rowPosition, 'a plain End stays on the same row').to.equal('1');
+  expect(active.dataset.columnPosition).to.equal('2');
+});
+
+it('resizes a column left by keyboard without Alt+ArrowRight', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const before = element.getState().widths.name;
+  const resized = oneEvent(element, 'lr-column-resize');
+  header(element, 'name').dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowLeft', altKey: true, bubbles: true, composed: true,
+  }));
+  const { detail } = await resized;
+  expect(detail.width, 'Alt+ArrowLeft narrows the column').to.be.lessThan(before ?? detail.width + 1);
+});
+
+it('returns an empty computed token when the owner window has no getComputedStyle function', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" style="--row-height: 40px" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const ambient = window.getComputedStyle;
+  (window as unknown as { getComputedStyle?: typeof window.getComputedStyle }).getComputedStyle = undefined;
+  try {
+    element.requestUpdate();
+    await element.updateComplete;
+  } finally {
+    window.getComputedStyle = ambient;
+  }
+  expect(element.shadowRoot!.querySelectorAll('[part~="row"]'), 'rendering must still succeed').to.have.length.greaterThan(0);
+});
+
+it('ignores autoSizeColumn once its column id has fallen out of the live column definitions', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const staleId = header(element, 'name').dataset.columnId!;
+  element.columns = [{ field: 'team', label: 'Team' }];
+  expect(() => element.autoSizeColumn(staleId)).to.not.throw();
+  expect(element.getState().widths).to.deep.equal({});
+});
+
+it('downloads a CSV export with the default file name when none is supplied', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const originalCreateObjectUrl = URL.createObjectURL;
+  const originalRevokeObjectUrl = URL.revokeObjectURL;
+  const originalAnchorClick = HTMLAnchorElement.prototype.click;
+  let downloaded = '';
+  URL.createObjectURL = () => 'blob:default-name';
+  URL.revokeObjectURL = () => undefined;
+  HTMLAnchorElement.prototype.click = function click(): void { downloaded = this.download; };
+  try {
+    element.exportDataAsCsv();
+    expect(downloaded).to.equal('data.csv');
+  } finally {
+    URL.createObjectURL = originalCreateObjectUrl;
+    URL.revokeObjectURL = originalRevokeObjectUrl;
+    HTMLAnchorElement.prototype.click = originalAnchorClick;
+  }
+});
+
+it('ignores pinColumn and toggleColumn for a column id that does not exist', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" pinnable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.pinColumn('does-not-exist', 'left');
+  element.toggleColumn('does-not-exist', false);
+  expect(element.getState().pinning).to.deep.equal({});
+  expect(element.getState().visibility).to.deep.equal({});
+});
+
+it('ignores scrollToIndex before the body element has ever been rendered', () => {
+  const element = document.createElement('lr-data-grid') as LyraDataGrid<Person>;
+  element.columns = columns;
+  element.data = rows;
+  expect(() => element.scrollToIndex(0)).to.not.throw();
+});
+
+it('avoids dividing by zero when every flexible column resolves to zero flex', async () => {
+  const invalidFlexColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name', flex: -1 },
+    { field: 'team', label: 'Team', flex: -1 },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${invalidFlexColumns} .data=${rows}></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  Object.defineProperty(body, 'clientWidth', { configurable: true, value: 400 });
+  expect(() => element.sizeColumnsToFit()).to.not.throw();
+  expect(element.getState().widths, 'a zero-flex total falls back to the column count instead of NaN')
+    .to.deep.equal({ name: 0, team: 0 });
+});
+
+it('copies with a fallback textarea even when the owner document has no body', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  frameDocument.body.remove();
+  const clipboardDescriptor = Object.getOwnPropertyDescriptor(frame.contentWindow!.navigator, 'clipboard');
+  Object.defineProperty(frame.contentWindow!.navigator, 'clipboard', { configurable: true, value: undefined });
+  try {
+    const element = document.createElement('lr-data-grid') as LyraDataGrid<Person>;
+    frameDocument.adoptNode(element);
+    element.columns = columns;
+    element.data = rows;
+    expect(() => element.copySelectedRows({ includeHeaders: false })).to.not.throw();
+  } finally {
+    if (clipboardDescriptor) Object.defineProperty(frame.contentWindow!.navigator, 'clipboard', clipboardDescriptor);
+    else Reflect.deleteProperty(frame.contentWindow!.navigator, 'clipboard');
+    frame.remove();
+  }
+});
+
+it('ignores a header drop whose payload names an unknown source column', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" reorderable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  let moves = 0;
+  element.addEventListener('lr-column-move', () => { moves += 1; });
+  const transfer = new DataTransfer();
+  transfer.setData('text/plain', 'unknown-column');
+  header(element, 'team').dispatchEvent(
+    new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }),
+  );
+  await element.updateComplete;
+  expect(moves, 'an unknown source column id is ignored').to.equal(0);
+  expect(element.columnOrder).to.deep.equal([]);
 });
 
 describe('data-grid processing helpers', () => {

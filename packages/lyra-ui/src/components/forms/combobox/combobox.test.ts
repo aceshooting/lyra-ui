@@ -3842,3 +3842,474 @@ it('makes lr-show/lr-hide cancelable and the settled after-events not', async ()
     expect(event.cancelable, `${event.type} is a notification, not a veto point`).to.equal(false);
   }
 });
+
+// -- Coverage sweep: reconnect lifecycle, source edge cases, keyboard/mouse gaps ---------------
+
+it('re-runs source on reconnect while closed with a stale selection and empty async rows', async () => {
+  const el = document.createElement('lr-combobox') as LyraCombobox;
+  const queries: string[] = [];
+  el.source = (q: string) => {
+    queries.push(q);
+    return new Promise(() => {
+      /* never resolves -- keeps asyncRows empty so the reconnect guard stays satisfied */
+    });
+  };
+  document.body.appendChild(el);
+  await el.updateComplete;
+
+  el.value = 'x'; // selects without ever opening -- triggers willUpdate()'s one-shot warm-up
+  await el.updateComplete;
+  await aTimeout(250);
+  expect(queries, 'the initial warm-up fetch fired once').to.deep.equal(['']);
+
+  el.remove();
+  await el.updateComplete;
+  document.body.appendChild(el); // reconnect while still closed
+  await new Promise((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+  await aTimeout(250);
+
+  expect(queries, 'reconnecting while closed refreshes the stale empty async rows again').to.deep.equal(['', '']);
+  el.remove();
+});
+
+it('rebinds positioning and refreshes empty async rows when reconnected while open', async () => {
+  const el = (await fixture(html`<lr-combobox open><lr-option value="x">X</lr-option></lr-combobox>`)) as LyraCombobox;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+
+  el.remove();
+  await el.updateComplete;
+  expect(el.open, 'disconnectedCallback() forces the listbox closed').to.be.false;
+
+  let sourceCalls = 0;
+  el.source = () => {
+    sourceCalls++;
+    return new Promise(() => {});
+  };
+  el.open = true; // simulate a consumer (e.g. a drag-drop reparent) reopening it while detached
+  await el.updateComplete;
+  expect(sourceCalls, 'setting open/source while disconnected must not itself fetch').to.equal(0);
+
+  parent.appendChild(el);
+  await new Promise((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+
+  const listbox = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+  expect(listbox.style.position, 'reconnectOpenPopup() re-positions the listbox').to.not.equal('');
+  await aTimeout(250);
+  expect(sourceCalls, 'reconnecting while open with empty async rows refreshes them').to.equal(1);
+});
+
+it('aborts an in-flight source request when adopted into a new document', async () => {
+  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+  let captured!: AbortSignal;
+  el.source = (_query: string, { signal }: { signal: AbortSignal }) => {
+    captured = signal;
+    return new Promise(() => {});
+  };
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  expect(captured.aborted).to.equal(false);
+
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  if (!frameDocument) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    expect(captured.aborted, 'adoptedCallback() aborts the stale in-flight request').to.equal(true);
+  } finally {
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
+describe('formStateRestoreCallback (autofill/bfcache restore)', () => {
+  it('restores an array-shaped persisted state in multiple mode', async () => {
+    const el = (await fixture(html`
+      <lr-combobox multiple>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    el.formStateRestoreCallback(JSON.stringify(['a', 'b']), 'restore');
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a', 'b']);
+  });
+
+  it('restores only the first value in single-select mode', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.formStateRestoreCallback(JSON.stringify(['a', 'b']), 'autocomplete');
+    await el.updateComplete;
+    expect(el.value).to.equal('a');
+  });
+
+  it('falls back to an empty selection for malformed or non-array persisted state', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    for (const state of ['not json{{', JSON.stringify({ not: 'an array' }), JSON.stringify([1, 2])]) {
+      el.value = 'a';
+      await el.updateComplete;
+      el.formStateRestoreCallback(state, 'restore');
+      await el.updateComplete;
+      expect(el.value, `state: ${state}`).to.equal('');
+    }
+  });
+});
+
+it('merges multiple lazily-appended live-selected options in multiple mode', async () => {
+  const el = (await fixture(html`
+    <lr-combobox multiple>
+      <lr-option value="a" selected>Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  expect(el.value).to.deep.equal(['a']);
+
+  const b = document.createElement('lr-option');
+  b.setAttribute('value', 'b');
+  b.textContent = 'Banana';
+  b.selected = true; // live property write, not the declarative attribute
+  const c = document.createElement('lr-option');
+  c.setAttribute('value', 'c');
+  c.textContent = 'Cherry';
+  c.selected = true;
+  el.appendChild(b);
+  el.appendChild(c);
+  await aTimeout(0);
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal(['a', 'b', 'c']);
+});
+
+it('adopts a lazily-appended declarative <lr-option selected> as the new reset default without marking value dirty', async () => {
+  // The initial option is deliberately unselected -- refreshOptionDefaults() re-derives
+  // `_defaultSelected` from *every* currently-defaultSelected option and (in single-select mode)
+  // keeps only the first one in document order, so seeding two simultaneously-declared defaults
+  // here would make this assert on that unrelated tie-break rule instead of the lazy-arrival path.
+  const el = (await fixture(html`
+    <lr-combobox>
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+
+  const opt = document.createElement('lr-option');
+  opt.setAttribute('value', 'z');
+  opt.textContent = 'Zucchini';
+  opt.toggleAttribute('selected', true); // declarative, not the live `.selected` property
+  el.appendChild(opt);
+  await aTimeout(0);
+  await el.updateComplete;
+
+  expect(el.value).to.equal('z');
+
+  // Because this went through setValue(..., dirty: false), a form reset restores this new
+  // declarative default rather than snapping back to the original "a".
+  const form = document.createElement('form');
+  form.appendChild(el);
+  document.body.appendChild(form);
+  form.reset();
+  await el.updateComplete;
+  expect(el.value, 'the newly-declared default survives a reset').to.equal('z');
+  form.remove();
+});
+
+it('suppresses the create row on an exact case-insensitive match against a local option', async () => {
+  const el = (await fixture(html`
+    <lr-combobox allow-create>
+      <lr-option value="existing">Existing</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  await typeQuery(el, 'EXISTING');
+  expect(el.shadowRoot!.querySelector('[data-create]')).to.equal(null);
+});
+
+it('checks async source rows, not local options, for an exact match when allow-create is combined with source', async () => {
+  const el = (await fixture(html`<lr-combobox allow-create></lr-combobox>`)) as LyraCombobox;
+  el.source = async (q: string) => (q ? [{ value: 'known', label: 'Known Row' }] : []);
+  el.open = true;
+  await el.updateComplete;
+
+  await typeQuery(el, 'known row');
+  await aTimeout(250);
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[data-create]'),
+    'an exact async-row label match suppresses the create row',
+  ).to.equal(null);
+
+  await typeQuery(el, 'brand new');
+  await aTimeout(250);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[data-create]'), 'a nonmatching query still offers to create').to.exist;
+});
+
+it('clears stale async rows when hide() dismisses a non-empty query in source mode', async () => {
+  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+  el.source = async (q: string) => (q ? [{ value: 'x', label: `Result ${q}` }] : []);
+  el.open = true;
+  await el.updateComplete;
+  await typeQuery(el, 'ban');
+  await aTimeout(250);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]')).to.have.length(1);
+
+  el.hide();
+  await el.updateComplete;
+
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+  // Without the fix, the stale row would still be sitting in `asyncRows` and the reopen guard
+  // (`asyncRows.length === 0`) would never even re-run source() to replace it.
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]'), 'the stale row must not linger').to.have.length(0);
+});
+
+it('clamps a stale activeIndex when a fresh source response has fewer navigable rows', async () => {
+  // Multiple mode + a mouse pick (not a keyboard/typing path) is deliberate: both `onInput()` and
+  // `hide()` already reset `activeIndex` themselves, which would mask the clamp this test targets.
+  // Picking a row by mouse leaves `activeIndex` untouched while still re-running source() with the
+  // now-blank query, so a stale, now-out-of-range index is exactly what the next response sees.
+  const el = (await fixture(html`<lr-combobox multiple></lr-combobox>`)) as LyraCombobox;
+  let callCount = 0;
+  el.source = async () => {
+    callCount++;
+    return callCount === 1
+      ? [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }, { value: 'c', label: 'C' }]
+      : [{ value: 'a', label: 'A' }];
+  };
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]')).to.have.length(3);
+
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  const arrowDown = () =>
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  arrowDown();
+  arrowDown();
+  arrowDown();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="option"][data-active]')?.getAttribute('data-value')).to.equal('c');
+
+  (el.shadowRoot!.querySelector('[part="option"]') as HTMLElement).click();
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  const active = el.shadowRoot!.querySelector('[part="option"][data-active]');
+  expect(active?.getAttribute('data-value'), 'the out-of-range index clamps to the last remaining row').to.equal('a');
+});
+
+it('silently drops a source rejection that arrives after disconnect', async () => {
+  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+  let reject!: (err: unknown) => void;
+  el.source = () =>
+    new Promise((_resolve, rej) => {
+      reject = rej;
+    });
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+
+  el.remove();
+  await el.updateComplete;
+  const originalWarn = console.warn;
+  let warned = false;
+  console.warn = () => {
+    warned = true;
+  };
+  try {
+    reject(new Error('boom'));
+    await aTimeout(0);
+    expect(warned, 'a stale rejection after disconnect must not be warned about').to.be.false;
+    expect(el.shadowRoot!.querySelector('.source-error'), 'a stale rejection must not surface the error state').to.equal(
+      null,
+    );
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+it('swallows an AbortError the source rejects with while its request is still current, without warning', async () => {
+  // Deliberately reject the *current* (not superseded) request: aborting via a newer runSource()
+  // call, disconnect, or adoption all also bump the internal request token, so the earlier
+  // "stale response" guard would return first and this AbortError-specific branch would never be
+  // reached. A source can independently reject with an AbortError (e.g. its own unrelated
+  // cancellation) while still being this component's current, non-superseded request.
+  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+  let reject!: (err: unknown) => void;
+  el.source = () =>
+    new Promise((_resolve, rej) => {
+      reject = rej;
+    });
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+
+  const originalWarn = console.warn;
+  let warned = false;
+  console.warn = () => {
+    warned = true;
+  };
+  try {
+    reject(new DOMException('aborted', 'AbortError'));
+    await aTimeout(0);
+    expect(warned, 'an AbortError must not be warned about').to.be.false;
+    expect(el.shadowRoot!.querySelector('.source-error'), 'an AbortError must not surface the failure state').to.equal(
+      null,
+    );
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+it('moves the active option up with ArrowUp while the listbox is already open', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.focus();
+  el.open = true;
+  await el.updateComplete;
+
+  const dispatch = (key: string) =>
+    input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  dispatch('ArrowDown');
+  dispatch('ArrowDown');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="option"][data-active]')?.getAttribute('data-value')).to.equal('b');
+
+  dispatch('ArrowUp');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="option"][data-active]')?.getAttribute('data-value')).to.equal('a');
+});
+
+it('creates a new option via Enter when the create row is showing but not keyboard-highlighted', async () => {
+  const el = (await fixture(html`
+    <lr-combobox allow-create>
+      <lr-option value="existing">Existing</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const input = await typeQuery(el, 'Brand new');
+  input.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }),
+  );
+  await el.updateComplete;
+
+  expect(el.value).to.equal('Brand new');
+  expect(
+    [...el.querySelectorAll('lr-option')].some((option) => option.getAttribute('value') === 'Brand new'),
+  ).to.be.true;
+});
+
+it('focuses the input and opens the listbox on a mousedown inside the trigger row that is not on a button', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  await el.updateComplete;
+  const container = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+  const ev = new MouseEvent('mousedown', { bubbles: true, cancelable: true, composed: true });
+  container.dispatchEvent(ev);
+  await el.updateComplete;
+
+  expect(ev.defaultPrevented).to.be.true;
+  expect(el.open).to.be.true;
+  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="combobox-input"]'));
+});
+
+it('is a no-op the second time the same tag remove button fires before a re-render drops it', async () => {
+  const el = (await fixture(html`
+    <lr-combobox multiple>
+      <lr-option value="a" selected>Apple</lr-option>
+      <lr-option value="b" selected>Banana</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  const removeBtn = el.shadowRoot!.querySelector('[part="tag__remove-button"]') as HTMLButtonElement;
+  let changeCount = 0;
+  el.addEventListener('change', () => changeCount++);
+
+  removeBtn.click();
+  removeBtn.click(); // same closed-over value, fired again before Lit re-renders the tag away
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal(['b']);
+  expect(changeCount, 'the redundant second removal must not re-emit change').to.equal(1);
+});
+
+it('sets an inputValue programmatically while source is configured, triggering a fresh fetch', async () => {
+  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+  const queries: string[] = [];
+  el.source = async (q: string) => {
+    queries.push(q);
+    return [];
+  };
+  // Let the source-changed willUpdate() branch (which clears any in-flight timer) settle first --
+  // otherwise it would run *after* inputValue's own runSource() call in the same microtask batch
+  // and cancel the very timer that call just armed.
+  await el.updateComplete;
+  el.inputValue = 'typed';
+  await el.updateComplete;
+  await aTimeout(250);
+
+  expect(el.inputValue).to.equal('typed');
+  expect(queries).to.deep.equal(['typed']);
+});
+
+it('runs source again after setRangeText() while source is configured', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const queries: string[] = [];
+  el.source = async (q: string) => {
+    queries.push(q);
+    return [];
+  };
+  await el.updateComplete; // let the source-changed willUpdate() branch settle first (see above)
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.value = 'Apple';
+  el.setRangeText('X', 0, 1);
+  await el.updateComplete;
+  await aTimeout(250);
+
+  expect(el.inputValue).to.equal('Xpple');
+  expect(queries).to.deep.equal(['Xpple']);
+});
+
+it('resolves an external form owner, and exposes labels/willValidate/getForm()/validationTarget passthroughs', async () => {
+  const root = await fixture(html`
+    <div>
+      <form id="ext"></form>
+      <label for="target-input">Fruit</label>
+      <lr-combobox id="target-input">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    </div>
+  `);
+  const el = root.querySelector('lr-combobox') as LyraCombobox;
+  const form = root.querySelector('form') as HTMLFormElement;
+  await el.updateComplete;
+
+  el.form = 'ext';
+  await el.updateComplete;
+  expect(el.getAttribute('form')).to.equal('ext');
+  expect(el.form).to.equal(form);
+  expect(el.getForm()).to.equal(form);
+
+  el.form = null;
+  await el.updateComplete;
+  expect(el.hasAttribute('form')).to.be.false;
+
+  expect(el.labels.length, 'the associated <label for> reaches the public labels getter').to.equal(1);
+  expect(el.willValidate).to.be.a('boolean');
+
+  const override = document.createElement('span');
+  el.validationTarget = override;
+  expect(el.validationTarget).to.equal(override);
+  el.validationTarget = undefined;
+  expect(el.validationTarget).to.equal(el.input ?? undefined);
+});

@@ -210,6 +210,23 @@ it('accepts default-value as the Shoelace reset-default spelling', async () => {
   expect(new FormData(form).get('accent')).to.equal('#ff0000');
 });
 
+it('falls back to an empty default value when default-value is cleared programmatically', async () => {
+  const el = (await fixture(html`<lr-color-picker default-value="#00ff00"></lr-color-picker>`)) as LyraColorPicker;
+  await el.updateComplete;
+  expect(el.defaultValue).to.equal('#00ff00');
+  el.defaultValueAlias = null;
+  expect(el.defaultValue).to.equal('');
+});
+
+it('treats a null value assignment as clearing the field rather than throwing', async () => {
+  const el = (await fixture(html`<lr-color-picker value="#ff0000"></lr-color-picker>`)) as LyraColorPicker;
+  await el.updateComplete;
+  expect(el.value).to.equal('#ff0000');
+  el.value = null;
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+});
+
 it('reflects with-label and with-hint as SSR slot-presence hints', async () => {
   const el = (await fixture(html`
     <lr-color-picker with-label with-hint>
@@ -552,6 +569,45 @@ it('gives the opacity slider a real slider role with a full value contract', asy
   expect(part(el, 'opacity-slider-handle').getAttribute('aria-valuenow')).to.equal('99');
 });
 
+it('moves the opacity slider with vertical arrows, Home/End, and the shift multiplier, ignoring unrelated keys', async () => {
+  const el = await opened(html`<lr-color-picker label="A" opacity value="rgba(255, 0, 0, 0.5)"></lr-color-picker>`);
+  expect(part(el, 'opacity-slider-handle').getAttribute('aria-valuenow')).to.equal('50');
+
+  press(part(el, 'opacity-slider-handle'), 'ArrowUp');
+  await el.updateComplete;
+  expect(part(el, 'opacity-slider-handle').getAttribute('aria-valuenow')).to.equal('51');
+
+  press(part(el, 'opacity-slider-handle'), 'ArrowDown', true);
+  await el.updateComplete;
+  expect(part(el, 'opacity-slider-handle').getAttribute('aria-valuenow')).to.equal('41');
+
+  press(part(el, 'opacity-slider-handle'), 'End');
+  await el.updateComplete;
+  expect(part(el, 'opacity-slider-handle').getAttribute('aria-valuenow')).to.equal('100');
+
+  press(part(el, 'opacity-slider-handle'), 'Home');
+  await el.updateComplete;
+  expect(part(el, 'opacity-slider-handle').getAttribute('aria-valuenow')).to.equal('0');
+
+  const before = el.value;
+  press(part(el, 'opacity-slider-handle'), 'a');
+  await el.updateComplete;
+  expect(el.value).to.equal(before);
+});
+
+it('flips the opacity gradient direction under RTL', async () => {
+  const wrapper = (await fixture(html`
+    <div dir="rtl"><lr-color-picker label="A" opacity value="#ff0000"></lr-color-picker></div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-color-picker') as LyraColorPicker;
+  el.open = true;
+  await el.updateComplete;
+  const gradient = getComputedStyle(part(el, 'opacity-slider')).getPropertyValue(
+    '--lr-color-picker-opacity-gradient',
+  );
+  expect(gradient).to.contain('to left');
+});
+
 // ---------------------------------------------------------------------------
 // swatches
 // ---------------------------------------------------------------------------
@@ -592,6 +648,40 @@ it('selects a swatch on click and marks the active one with more than colour alo
   expect(parts(el, 'swatch')[0]!.getAttribute('aria-pressed')).to.equal('false');
 });
 
+it('ignores a click on a swatch whose color cannot be parsed', async () => {
+  const el = await opened(html`<lr-color-picker label="A" swatches="not-a-color"></lr-color-picker>`);
+  expect(count(el, 'swatch')).to.equal(1);
+  let changes = 0;
+  el.addEventListener('lr-change', () => changes++);
+  part(el, 'swatch').click();
+  await el.updateComplete;
+  expect(changes).to.equal(0);
+  expect(el.value).to.equal('');
+});
+
+it('keeps a palette swatch alpha channel when opacity is enabled, and drops it otherwise', async () => {
+  const withAlpha = await opened(
+    html`<lr-color-picker label="A" opacity swatches="rgba(0, 255, 0, 0.5)"></lr-color-picker>`,
+  );
+  part(withAlpha, 'swatch').click();
+  await withAlpha.updateComplete;
+  expect(withAlpha.getFormattedValue('rgba')).to.equal('rgba(0, 255, 0, 0.50)');
+
+  const withoutAlpha = await opened(
+    html`<lr-color-picker label="A" swatches="rgba(0, 255, 0, 0.5)"></lr-color-picker>`,
+  );
+  part(withoutAlpha, 'swatch').click();
+  await withoutAlpha.updateComplete;
+  expect(withoutAlpha.getFormattedValue('rgba')).to.equal('rgba(0, 255, 0, 1.00)');
+});
+
+it('tolerates a non-string swatches value rather than throwing', async () => {
+  const el = await opened();
+  el.swatches = null as unknown as string;
+  await el.updateComplete;
+  expect(count(el, 'swatches')).to.equal(0);
+});
+
 // ---------------------------------------------------------------------------
 // saturation/brightness grid + hue slider
 // ---------------------------------------------------------------------------
@@ -623,6 +713,47 @@ it('moves the grid by one step with an arrow key and ten with shift+arrow', asyn
   expect(el.getFormattedValue('hsv')).to.equal('hsv(0, 89%, 99%)');
 });
 
+it('moves the grid to its saturation extremes with Home/End and ignores unrelated keys', async () => {
+  const el = await opened();
+  const handle = part(el, 'grid-handle');
+  expect(handle.getAttribute('aria-valuenow')).to.equal('0');
+
+  // ArrowUp/ArrowDown move brightness, not the saturation this part reflects, but they must
+  // still take effect: dark black (v=0) can only get brighter from an ArrowUp.
+  const beforeArrowUp = el.value;
+  press(handle, 'ArrowUp');
+  await el.updateComplete;
+  expect(el.value).to.not.equal(beforeArrowUp);
+  expect(part(el, 'grid-handle').getAttribute('aria-valuenow')).to.equal('0');
+
+  press(part(el, 'grid-handle'), 'End');
+  await el.updateComplete;
+  expect(part(el, 'grid-handle').getAttribute('aria-valuenow')).to.equal('100');
+
+  press(part(el, 'grid-handle'), 'Home');
+  await el.updateComplete;
+  expect(part(el, 'grid-handle').getAttribute('aria-valuenow')).to.equal('0');
+
+  const before = el.value;
+  press(part(el, 'grid-handle'), 'a');
+  await el.updateComplete;
+  expect(el.value).to.equal(before);
+});
+
+it('ignores keydown on every slider handle while effectively disabled', async () => {
+  const el = await opened(html`<lr-color-picker label="A" opacity value="#ff0000"></lr-color-picker>`);
+  el.disabled = true;
+  await el.updateComplete;
+  const before = el.value;
+  for (const name of ['grid-handle', 'hue-slider-handle', 'opacity-slider-handle']) {
+    part(el, name).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }),
+    );
+  }
+  await el.updateComplete;
+  expect(el.value).to.equal(before);
+});
+
 it('swaps the horizontal grid arrows under RTL', async () => {
   const wrapper = (await fixture(html`
     <div dir="rtl"><lr-color-picker label="A" value="#ff0000"></lr-color-picker></div>
@@ -650,6 +781,25 @@ it('gives the hue slider a real slider role over the full 0-360 range', async ()
   press(part(el, 'hue-slider-handle'), 'Home');
   await el.updateComplete;
   expect(part(el, 'hue-slider-handle').getAttribute('aria-valuenow')).to.equal('0');
+});
+
+it('moves the hue slider with vertical arrows too, honouring the shift multiplier, and ignores unrelated keys', async () => {
+  const el = await opened(html`<lr-color-picker label="A" value="#00ffff"></lr-color-picker>`);
+  const handle = part(el, 'hue-slider-handle');
+  expect(handle.getAttribute('aria-valuenow')).to.equal('180');
+
+  press(handle, 'ArrowUp');
+  await el.updateComplete;
+  expect(part(el, 'hue-slider-handle').getAttribute('aria-valuenow')).to.equal('181');
+
+  press(part(el, 'hue-slider-handle'), 'ArrowDown', true);
+  await el.updateComplete;
+  expect(part(el, 'hue-slider-handle').getAttribute('aria-valuenow')).to.equal('171');
+
+  const before = el.value;
+  press(part(el, 'hue-slider-handle'), 'a');
+  await el.updateComplete;
+  expect(el.value).to.equal(before);
 });
 
 it('emits input/lr-input per step and change/lr-change once on release', async () => {
@@ -912,6 +1062,156 @@ it('cancels an active drag when disabled before pointerup', async () => {
   expect(changes).to.equal(0);
 });
 
+it('safely handles a zero-size drag rect instead of dividing by zero', async () => {
+  const el = await opened(html`<lr-color-picker label="A" value="#808080"></lr-color-picker>`);
+  const grid = part(el, 'grid');
+  grid.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    }) as DOMRect;
+
+  grid.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, composed: true, pointerId: 71, clientX: 5, clientY: 5 }),
+  );
+  await el.updateComplete;
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 71, clientX: 50, clientY: 50 }));
+  await el.updateComplete;
+  expect(el.value).to.match(/^#[0-9a-f]{6}$/i);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 71 }));
+});
+
+it('inverts a pointer drag on the grid under RTL, matching the keyboard behaviour', async () => {
+  const wrapper = (await fixture(html`
+    <div dir="rtl"><lr-color-picker label="A"></lr-color-picker></div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-color-picker') as LyraColorPicker;
+  el.open = true;
+  await el.updateComplete;
+  const grid = part(el, 'grid');
+  const rect = grid.getBoundingClientRect();
+  expect(part(el, 'grid-handle').getAttribute('aria-valuenow')).to.equal('0');
+
+  grid.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      composed: true,
+      pointerId: 72,
+      clientX: rect.left,
+      clientY: rect.top,
+    }),
+  );
+  await el.updateComplete;
+  // Physical left edge means "towards inline-end" under RTL, i.e. full saturation.
+  expect(part(el, 'grid-handle').getAttribute('aria-valuenow')).to.equal('100');
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 72 }));
+});
+
+it('tracks a pointer drag across the opacity slider', async () => {
+  const el = await opened(html`<lr-color-picker label="A" opacity value="rgba(255, 0, 0, 0)"></lr-color-picker>`);
+  const slider = part(el, 'opacity-slider');
+  const rect = slider.getBoundingClientRect();
+  slider.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      composed: true,
+      pointerId: 73,
+      clientX: rect.left + rect.width,
+      clientY: rect.top,
+    }),
+  );
+  await el.updateComplete;
+  expect(part(el, 'opacity-slider-handle').getAttribute('aria-valuenow')).to.equal('100');
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 73 }));
+});
+
+it('ends a drag from a pointermove that arrives while disabled, before the next render can react', async () => {
+  const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
+  const slider = part(el, 'hue-slider');
+  const rect = slider.getBoundingClientRect();
+  slider.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      composed: true,
+      pointerId: 74,
+      clientX: rect.left,
+      clientY: rect.top,
+    }),
+  );
+  await el.updateComplete;
+  const before = el.value;
+  let inputs = 0;
+  el.addEventListener('input', () => inputs++);
+
+  // Assigning `disabled` schedules a reactive update but does not run it synchronously; the
+  // window pointermove below is dispatched in the same tick, so it must reach onPointerMove's
+  // OWN disabled guard rather than finding the drag already cleared by willUpdate().
+  el.disabled = true;
+  window.dispatchEvent(
+    new PointerEvent('pointermove', { pointerId: 74, clientX: rect.right, clientY: rect.top }),
+  );
+  expect(el.value, 'no move applied once disabled mid-flight').to.equal(before);
+  expect(inputs).to.equal(0);
+
+  await el.updateComplete;
+  let changes = 0;
+  el.addEventListener('change', () => changes++);
+  window.dispatchEvent(
+    new PointerEvent('pointerup', { pointerId: 74, clientX: rect.right, clientY: rect.top }),
+  );
+  await el.updateComplete;
+  expect(changes, 'the drag already ended, so pointerup commits nothing').to.equal(0);
+});
+
+it('ignores a pointerup or pointercancel for an unrelated pointer id, leaving the active drag armed', async () => {
+  const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
+  const slider = part(el, 'hue-slider');
+  const rect = slider.getBoundingClientRect();
+  slider.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      composed: true,
+      pointerId: 75,
+      clientX: rect.left,
+      clientY: rect.top,
+    }),
+  );
+  await el.updateComplete;
+
+  window.dispatchEvent(
+    new PointerEvent('pointermove', {
+      pointerId: 75,
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top,
+    }),
+  );
+  await el.updateComplete;
+
+  let changes = 0;
+  el.addEventListener('change', () => changes++);
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 999, clientX: rect.right, clientY: rect.top }));
+  await el.updateComplete;
+  expect(changes, 'an unrelated pointerup must not commit this drag').to.equal(0);
+
+  window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 998 }));
+  await el.updateComplete;
+  expect(changes, 'an unrelated pointercancel must not end this drag').to.equal(0);
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 75, clientX: rect.right, clientY: rect.top }));
+  await el.updateComplete;
+  expect(changes, 'the drag was still active and now commits normally').to.equal(1);
+});
+
 it('commits a text entry typed into the panel input', async () => {
   const el = await opened(html`<lr-color-picker label="A"></lr-color-picker>`);
   const input = part(el, 'input') as HTMLInputElement;
@@ -986,6 +1286,34 @@ it('closes on an outside pointerdown but not on one inside the panel', async () 
   outside.remove();
 });
 
+it('closes on an outside pointerdown whose composed path starts at a non-element node', async () => {
+  const el = await opened();
+  const text = document.createTextNode('outside');
+  document.body.append(text);
+  text.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+  text.remove();
+});
+
+it('ignores a dispatched click on the trigger while disabled, even bypassing native click() gating', async () => {
+  const el = (await fixture(html`<lr-color-picker label="A" disabled></lr-color-picker>`)) as LyraColorPicker;
+  await el.updateComplete;
+  part(el, 'trigger').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+});
+
+it('clicks the field input when click() is called in inline mode', async () => {
+  const el = (await fixture(html`<lr-color-picker inline label="A"></lr-color-picker>`)) as LyraColorPicker;
+  await el.updateComplete;
+  const input = part(el, 'input') as HTMLInputElement;
+  let clicks = 0;
+  input.addEventListener('click', () => clicks++);
+  el.click();
+  expect(clicks).to.equal(1);
+});
+
 it('keeps every slider pointer target at the WCAG 2.5.8 floor while the ramp stays slim', async () => {
   const el = await opened(html`<lr-color-picker label="A" opacity></lr-color-picker>`);
   for (const name of ['hue-slider', 'opacity-slider']) {
@@ -1032,6 +1360,19 @@ it('reflects placement and defaults to bottom-start', async () => {
   expect(el.getAttribute('placement')).to.equal('top-end');
 });
 
+it('repositions the open panel when placement, size, or hoist changes', async () => {
+  const el = await opened();
+  const panel = part(el, 'panel');
+  expect(panel.style.position).to.equal('absolute');
+
+  // `hoist` flows through the very same "already open, reposition" branch as `placement`/`size`;
+  // its effect on strategy is written synchronously, unlike the async left/top recomputation, so
+  // it is a reliable observable proof that positionPanel() ran again rather than a pixel guess.
+  el.hoist = true;
+  await el.updateComplete;
+  expect(panel.style.position).to.equal('fixed');
+});
+
 it('supports inline rendering and chooses absolute versus hoisted fixed popup positioning', async () => {
   const inline = (await fixture(html`
     <lr-color-picker inline label="Inline colour"></lr-color-picker>
@@ -1069,6 +1410,25 @@ it('activates positioning and light-dismiss when an open inline panel changes to
   await el.updateComplete;
   expect(el.open).to.equal(false);
   outside.remove();
+});
+
+it('tears down positioning and clears inline styling when switching from popup to inline while open', async () => {
+  const el = await opened();
+  expect(part(el, 'panel').style.position).to.equal('absolute');
+  el.inline = true;
+  await el.updateComplete;
+  expect(part(el, 'panel').style.position).to.equal('');
+});
+
+it('does not activate panel positioning when open is set directly while disconnected', async () => {
+  const el = await opened();
+  el.remove();
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  expect(el.isConnected).to.equal(false);
 });
 
 it('emits migrated focus/input and after-show/after-hide aliases exactly once', async () => {
@@ -1248,6 +1608,74 @@ it('omits the eyedropper button when the browser has no EyeDropper API', async (
     delete globals.EyeDropper;
     const el = await opened();
     expect(count(el, 'eyedropper-button')).to.equal(0);
+  } finally {
+    if (saved === undefined) delete globals.EyeDropper;
+    else globals.EyeDropper = saved;
+  }
+});
+
+it('does not open the eyedropper when clicked after disconnection', async () => {
+  const globals = window as unknown as { EyeDropper?: unknown };
+  const saved = globals.EyeDropper;
+  let opens = 0;
+  try {
+    globals.EyeDropper = class {
+      open(): Promise<{ sRGBHex: string }> {
+        opens++;
+        return Promise.resolve({ sRGBHex: '#00ff00' });
+      }
+    };
+    const el = await opened();
+    const button = part(el, 'eyedropper-button') as HTMLButtonElement;
+    el.remove();
+    button.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(opens).to.equal(0);
+  } finally {
+    if (saved === undefined) delete globals.EyeDropper;
+    else globals.EyeDropper = saved;
+  }
+});
+
+it('ignores a dispatched click on the eyedropper button while disabled', async () => {
+  const globals = window as unknown as { EyeDropper?: unknown };
+  const saved = globals.EyeDropper;
+  let opens = 0;
+  try {
+    globals.EyeDropper = class {
+      open(): Promise<{ sRGBHex: string }> {
+        opens++;
+        return Promise.resolve({ sRGBHex: '#00ff00' });
+      }
+    };
+    const el = (await fixture(html`<lr-color-picker label="A" disabled></lr-color-picker>`)) as LyraColorPicker;
+    await el.updateComplete;
+    part(el, 'eyedropper-button').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(opens).to.equal(0);
+  } finally {
+    if (saved === undefined) delete globals.EyeDropper;
+    else globals.EyeDropper = saved;
+  }
+});
+
+it('stays silent when the eyedropper resolves without a usable sRGBHex', async () => {
+  const globals = window as unknown as { EyeDropper?: unknown };
+  const saved = globals.EyeDropper;
+  try {
+    globals.EyeDropper = class {
+      open(): Promise<{ sRGBHex: string }> {
+        return Promise.resolve({}) as Promise<{ sRGBHex: string }>;
+      }
+    };
+    const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
+    let changes = 0;
+    el.addEventListener('lr-change', () => changes++);
+    (part(el, 'eyedropper-button') as HTMLButtonElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    expect(changes).to.equal(0);
+    expect(el.value).to.equal('#ff0000');
   } finally {
     if (saved === undefined) delete globals.EyeDropper;
     else globals.EyeDropper = saved;

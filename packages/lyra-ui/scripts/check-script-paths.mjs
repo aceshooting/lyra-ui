@@ -58,7 +58,7 @@ export function resolvePackageExport(specifier, pkg) {
     if (!key.startsWith(prefix) || !key.endsWith(suffix)) continue;
     const capture = key.slice(prefix.length, key.length - suffix.length);
     const target = runtimeExportTarget(value);
-    return target?.replace('*', capture) ?? null;
+    return target?.replaceAll('*', capture) ?? null;
   }
   return null;
 }

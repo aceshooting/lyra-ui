@@ -520,8 +520,8 @@ function normalizeExports(exportsValue, entries, packageFiles = []) {
         targetPrefix.length,
         packageFile.length - targetSuffix.length || undefined,
       );
-      const publicSpecifier = specifier.replace('*', captured);
-      const publicTarget = target.replace('*', captured);
+      const publicSpecifier = specifier.replaceAll('*', captured);
+      const publicTarget = target.replaceAll('*', captured);
       wildcardExpansions.push({
         publicSpecifier,
         condition,

@@ -2,6 +2,7 @@ import { expect, fixture, html, oneEvent } from "@open-wc/testing";
 import "./carousel.js";
 import "./carousel-item.js";
 import type { LyraCarousel } from "./carousel.js";
+import type { LyraCarouselItem } from "./carousel-item.js";
 import { styles } from "./carousel.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
@@ -1723,6 +1724,90 @@ describe("touch scrolling and scroll-snap", () => {
     expect(slidesOf(el)[1].inert).to.be.true;
     await expect(el).to.be.accessible();
   });
+
+  it("falls back to the real slide when a loop wraparound's target index has no corresponding clone", async () => {
+    const el = await carousel(html`
+      <lr-carousel loop style="inline-size: 300px">
+        <div style="block-size: 60px">One</div>
+        <div style="block-size: 60px">Two</div>
+        <div style="block-size: 60px">Three</div>
+        <div style="block-size: 60px">Four</div>
+        <div style="block-size: 60px">Five</div>
+      </lr-carousel>
+    `);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const slides = slidesOf(el);
+
+    // Only the last slide (index 4) is cloned into the "before" endcap (cloneCount is 1 with the
+    // default slidesPerPage/slidesPerMove). A jump far enough past the start lands on an index
+    // that clone set never covers, so alignment must fall back to the real slide instead of
+    // silently failing to scroll at all.
+    el.goToSlide(-7, "instant");
+    await el.updateComplete;
+    expect(el.currentSlide).to.equal(3);
+    await scrollAtRest(el);
+    expect(
+      Math.abs(inlineDelta(el, slides[3])),
+      "the real slide is flush even though its clone was missing"
+    ).to.be.at.most(2);
+  });
+
+  it("wraps onto an existing loop clone and silently re-homes onto the real slide once it settles", async () => {
+    const el = await carousel(html`
+      <lr-carousel loop style="inline-size: 300px">
+        <div style="block-size: 60px">One</div>
+        <div style="block-size: 60px">Two</div>
+        <div style="block-size: 60px">Three</div>
+      </lr-carousel>
+    `);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const slides = slidesOf(el);
+
+    el.previous("instant");
+    await el.updateComplete;
+    expect(el.currentSlide, "wraps backward from the first slide to the last").to.equal(2);
+    await scrollAtRest(el);
+    expect(
+      Math.abs(inlineDelta(el, slides[2])),
+      "the wrap silently re-homes onto the real last slide"
+    ).to.be.at.most(2);
+  });
+
+  it("adopts a scroll that rests on a loop clone without emitting a redundant slide change", async () => {
+    const el = await carousel(html`
+      <lr-carousel loop style="inline-size: 300px">
+        <div style="block-size: 60px">One</div>
+        <div style="block-size: 60px">Two</div>
+        <div style="block-size: 60px">Three</div>
+      </lr-carousel>
+    `);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const viewport = viewportOf(el);
+    const slides = slidesOf(el);
+
+    el.goToSlide(2, "instant");
+    await el.updateComplete;
+    await scrollAtRest(el);
+
+    let changes = 0;
+    el.addEventListener("lr-slide-change", () => (changes += 1));
+    const beforeClone = el.shadowRoot!.querySelector(
+      '[data-clone-set="before"] [data-carousel-index="2"]'
+    ) as HTMLElement;
+    expect(beforeClone, "precondition: the last slide is mirrored before the real sequence").to
+      .exist;
+    const delta = inlineDelta(el, beforeClone);
+
+    viewport.scrollBy({ left: delta, behavior: "instant" });
+    await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
+
+    expect(el.currentSlide, "the index does not change -- it was already 2").to.equal(2);
+    expect(changes, "resting on a clone of the ALREADY active slide emits no event").to.equal(0);
+    expect(
+      Math.abs(inlineDelta(el, slides[2])),
+      "the viewport is re-homed onto the real slide, not left on the clone"
+    ).to.be.at.most(2);
+  });
 });
 
 describe("carousel drag completion", () => {
@@ -1818,4 +1903,657 @@ describe("carousel drag completion", () => {
     viewport.dispatchEvent(plain);
     expect(plain.defaultPrevented).to.be.false;
   });
+
+  it("ignores a pointerdown that isn't a primed left-button mouse gesture", async () => {
+    const el = await carousel(html`
+      <lr-carousel style="inline-size: 320px">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const viewport = dragViewport(el);
+    viewport.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 100,
+        pointerType: "mouse",
+        button: 0,
+        clientX: 200,
+        bubbles: true,
+      })
+    );
+    expect(viewport.hasAttribute("data-dragging"), "mouseDragging is off by default").to.be.false;
+
+    el.mouseDragging = true;
+    await el.updateComplete;
+    viewport.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 101,
+        pointerType: "touch",
+        button: 0,
+        clientX: 200,
+        bubbles: true,
+      })
+    );
+    expect(viewport.hasAttribute("data-dragging"), "touch keeps native scrolling").to.be.false;
+
+    viewport.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 102,
+        pointerType: "mouse",
+        button: 2,
+        clientX: 200,
+        bubbles: true,
+      })
+    );
+    expect(viewport.hasAttribute("data-dragging"), "only the primary button starts a drag").to.be
+      .false;
+  });
+
+  it("ignores a pointermove for a different pointer and a move under the drag threshold", async () => {
+    const el = await carousel(html`
+      <lr-carousel mouse-dragging style="inline-size: 320px">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const viewport = dragViewport(el);
+    const scrollToCalls: unknown[] = [];
+    viewport.scrollTo = ((options: unknown) => {
+      scrollToCalls.push(options);
+    }) as typeof viewport.scrollTo;
+
+    viewport.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 110,
+        pointerType: "mouse",
+        button: 0,
+        clientX: 200,
+        bubbles: true,
+      })
+    );
+    viewport.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 999,
+        pointerType: "mouse",
+        clientX: 0,
+        bubbles: true,
+      })
+    );
+    expect(scrollToCalls, "a move for a different pointer must not drive this drag").to.have
+      .length(0);
+
+    viewport.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 110,
+        pointerType: "mouse",
+        clientX: 201,
+        bubbles: true,
+      })
+    );
+    expect(scrollToCalls, "a sub-threshold move must not scroll yet").to.have.length(0);
+
+    viewport.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 110,
+        pointerType: "mouse",
+        clientX: 150,
+        bubbles: true,
+      })
+    );
+    expect(scrollToCalls.length, "crossing the threshold engages the drag").to.be.greaterThan(0);
+  });
+
+  it("drags along the block axis when the orientation is vertical", async () => {
+    const el = await carousel(html`
+      <lr-carousel mouse-dragging orientation="vertical" style="block-size: 200px">
+        <div style="block-size: 200px">One</div>
+        <div style="block-size: 200px">Two</div>
+      </lr-carousel>
+    `);
+    const viewport = dragViewport(el);
+    viewport.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 120,
+        pointerType: "mouse",
+        button: 0,
+        clientY: 200,
+        bubbles: true,
+      })
+    );
+    viewport.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 120,
+        pointerType: "mouse",
+        clientY: 120,
+        bubbles: true,
+      })
+    );
+    expect(viewport.hasAttribute("data-dragging")).to.be.true;
+    expect(viewport.scrollTop, "the block axis actually moved").to.not.equal(0);
+    viewport.dispatchEvent(
+      new PointerEvent("pointerup", { pointerId: 120, pointerType: "mouse", bubbles: true })
+    );
+  });
+
+  it("starts a drag even if the browser rejects pointer capture", async () => {
+    const el = await carousel(html`
+      <lr-carousel mouse-dragging style="inline-size: 320px">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const viewport = el.shadowRoot!.querySelector(
+      '[part~="scroll-container"]'
+    ) as HTMLElement;
+    viewport.setPointerCapture = () => {
+      throw new DOMException("no capture", "InvalidStateError");
+    };
+    viewport.releasePointerCapture = () => {};
+    viewport.hasPointerCapture = () => false;
+
+    expect(() =>
+      viewport.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          pointerId: 130,
+          pointerType: "mouse",
+          button: 0,
+          clientX: 200,
+          bubbles: true,
+        })
+      )
+    ).to.not.throw();
+    expect(viewport.hasAttribute("data-dragging")).to.be.true;
+  });
+
+  it("ends a drag even if releasing pointer capture throws", async () => {
+    const el = await carousel(html`
+      <lr-carousel mouse-dragging style="inline-size: 320px">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const viewport = el.shadowRoot!.querySelector(
+      '[part~="scroll-container"]'
+    ) as HTMLElement;
+    viewport.setPointerCapture = () => {};
+    viewport.hasPointerCapture = () => true;
+    viewport.releasePointerCapture = () => {
+      throw new DOMException("capture already lost", "InvalidStateError");
+    };
+    startDrag(viewport, 131);
+
+    expect(() =>
+      viewport.dispatchEvent(
+        new PointerEvent("pointerup", { pointerId: 131, pointerType: "mouse", bubbles: true })
+      )
+    ).to.not.throw();
+    expect(viewport.hasAttribute("data-dragging")).to.be.false;
+  });
+
+  it("cancels a still-pending click-suppression timer when another drag finishes right after", async () => {
+    const el = await carousel(html`
+      <lr-carousel mouse-dragging style="inline-size: 320px">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const viewport = dragViewport(el);
+    const drag = (pointerId: number): void => {
+      viewport.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          pointerId,
+          pointerType: "mouse",
+          button: 0,
+          clientX: 200,
+          bubbles: true,
+        })
+      );
+      viewport.dispatchEvent(
+        new PointerEvent("pointermove", {
+          pointerId,
+          pointerType: "mouse",
+          clientX: 120,
+          bubbles: true,
+        })
+      );
+      viewport.dispatchEvent(
+        new PointerEvent("pointerup", { pointerId, pointerType: "mouse", bubbles: true })
+      );
+    };
+
+    // The suppression window is 0ms, so back-to-back synchronous drags finish before the first
+    // one's timer fires -- the second drag's cleanup must cancel it rather than leak it.
+    drag(140);
+    drag(141);
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    expect((el as unknown as { suppressClick: boolean }).suppressClick).to.be.false;
+  });
+
+  it("finishes an in-progress drag when the carousel disconnects mid-gesture", async () => {
+    const el = await carousel(html`
+      <lr-carousel mouse-dragging style="inline-size: 320px">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const viewport = dragViewport(el);
+    viewport.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 150,
+        pointerType: "mouse",
+        button: 0,
+        clientX: 200,
+        bubbles: true,
+      })
+    );
+    viewport.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 150,
+        pointerType: "mouse",
+        clientX: 120,
+        bubbles: true,
+      })
+    );
+    expect(viewport.hasAttribute("data-dragging")).to.be.true;
+    const parent = el.parentElement!;
+
+    el.remove();
+    expect((el as unknown as { dragPointerId?: number }).dragPointerId).to.be.undefined;
+    parent.append(el);
+  });
+
+  it("ignores pointerleave while a drag is still in progress", async () => {
+    const el = await carousel(html`
+      <lr-carousel autoplay loop mouse-dragging autoplay-interval="1000" style="inline-size: 320px">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+        <lr-carousel-item>Three</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const viewport = dragViewport(el);
+    viewport.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+    expect((el as unknown as { timer?: number }).timer, "hover pauses autoplay").to.be.undefined;
+
+    viewport.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 160,
+        pointerType: "mouse",
+        button: 0,
+        clientX: 200,
+        bubbles: true,
+      })
+    );
+    viewport.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 160,
+        pointerType: "mouse",
+        clientX: 120,
+        bubbles: true,
+      })
+    );
+    viewport.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true }));
+    expect(
+      (el as unknown as { pointerInteracting: boolean }).pointerInteracting,
+      "a leave mid-drag is ignored"
+    ).to.be.true;
+    expect(
+      (el as unknown as { timer?: number }).timer,
+      "autoplay stays paused while the drag is still active"
+    ).to.be.undefined;
+
+    viewport.dispatchEvent(
+      new PointerEvent("pointerup", { pointerId: 160, pointerType: "mouse", bubbles: true })
+    );
+  });
+});
+
+it("treats re-assigning the same slides count as a no-op", async () => {
+  const el = await carousel();
+  const calls: unknown[] = [];
+  const original = el.requestUpdate.bind(el);
+  el.requestUpdate = ((name?: PropertyKey, oldValue?: unknown) => {
+    if (name === "slides") calls.push(oldValue);
+    return original(name as never, oldValue);
+  }) as typeof el.requestUpdate;
+  try {
+    el.slides = el.slides;
+    const afterSameValue = calls.length;
+    el.slides = el.slides + 1;
+    const afterDifferentValue = calls.length;
+    expect(
+      afterDifferentValue - afterSameValue,
+      "a genuinely different value schedules strictly more work than re-asserting the same one"
+    ).to.be.greaterThan(0);
+  } finally {
+    el.requestUpdate = original;
+  }
+});
+
+it("drops a reconnect's pending slide refresh if the carousel disconnects again first", async () => {
+  const el = await carousel();
+  const parent = el.parentElement!;
+  const before = el.slides;
+
+  el.remove();
+  parent.append(el); // schedules a queued microtask to refresh slides on reconnect
+  el.remove(); // disconnects again before that microtask runs
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+
+  expect(el.slides, "the stale reconnect refresh must not run once disconnected again").to.equal(
+    before
+  );
+  parent.append(el);
+});
+
+it("ignores addSlide/removeSlide calls with invalid slide references or out-of-range indices", async () => {
+  const el = await carousel();
+  const before = el.slides;
+
+  el.addSlide(null as unknown as LyraCarouselItem);
+  el.addSlide(document.createTextNode("not an element") as unknown as LyraCarouselItem);
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  el.addSlide(svg as unknown as LyraCarouselItem);
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(el.slides, "invalid slide references are never appended").to.equal(before);
+
+  el.removeSlide(Number.NaN);
+  el.removeSlide(Number.POSITIVE_INFINITY);
+  el.removeSlide(999);
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(el.slides, "non-finite or out-of-range indices remove nothing").to.equal(before);
+});
+
+it("stops autoplay instead of continuing past the last page when looping is off", async () => {
+  const originalSetInterval = window.setInterval;
+  const originalClearInterval = window.clearInterval;
+  let tick: (() => void) | undefined;
+  window.setInterval = ((handler: TimerHandler) => {
+    if (typeof handler === "function") tick = handler;
+    return 71;
+  }) as typeof window.setInterval;
+  window.clearInterval = (() => {}) as typeof window.clearInterval;
+
+  try {
+    const el = await carousel(html`
+      <lr-carousel autoplay autoplay-interval="1000" current-slide="1">
+        <div>One</div>
+        <div>Two</div>
+      </lr-carousel>
+    `);
+    expect(typeof tick).to.equal("function");
+    tick!();
+    await el.updateComplete;
+    expect(el.currentSlide, "already at the last page -- autoplay must not advance").to.equal(1);
+    expect((el as unknown as { timer?: number }).timer, "the timer stops instead of looping").to.be
+      .undefined;
+  } finally {
+    window.setInterval = originalSetInterval;
+    window.clearInterval = originalClearInterval;
+  }
+});
+
+it("pauses autoplay while the viewport holds focus and resumes once it blurs", async () => {
+  const el = await carousel(html`
+    <lr-carousel autoplay loop autoplay-interval="1000">
+      <lr-carousel-item><button>One</button></lr-carousel-item>
+      <lr-carousel-item><button>Two</button></lr-carousel-item>
+    </lr-carousel>
+  `);
+  const viewport = el.shadowRoot!.querySelector(
+    '[part~="scroll-container"]'
+  ) as HTMLElement;
+  expect((el as unknown as { timer?: number }).timer).to.not.be.undefined;
+
+  viewport.focus();
+  expect(
+    (el as unknown as { focusInteracting: boolean }).focusInteracting,
+    "focusin pauses immediately"
+  ).to.be.true;
+  expect((el as unknown as { timer?: number }).timer, "focus pauses autoplay").to.be.undefined;
+
+  viewport.blur();
+  await new Promise<void>((resolve) => setTimeout(resolve, 20));
+  expect((el as unknown as { timer?: number }).timer, "blurring resumes autoplay").to.not.be
+    .undefined;
+});
+
+it("drops a stale focusout resync if the carousel disconnects before its microtask runs", async () => {
+  const el = await carousel(html`
+    <lr-carousel autoplay loop autoplay-interval="1000">
+      <lr-carousel-item><button>One</button></lr-carousel-item>
+      <lr-carousel-item><button>Two</button></lr-carousel-item>
+    </lr-carousel>
+  `);
+  const parent = el.parentElement!;
+  const viewport = el.shadowRoot!.querySelector(
+    '[part~="scroll-container"]'
+  ) as HTMLElement;
+  viewport.focus();
+  viewport.blur();
+  el.remove();
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  parent.append(el);
+});
+
+it("no-ops the announcement and scroll-settle paths when the carousel has no slides", async () => {
+  const el = await carousel(html`<lr-carousel></lr-carousel>`);
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+
+  el.currentSlide = 1;
+  await el.updateComplete;
+  expect(sink.childElementCount, "no slides means nothing to announce").to.equal(0);
+  expect(el.currentSlide).to.equal(0);
+
+  const viewport = el.shadowRoot!.querySelector(
+    '[part~="scroll-container"]'
+  ) as HTMLElement;
+  viewport.dispatchEvent(new Event("scroll"));
+  await new Promise<void>((resolve) => setTimeout(resolve, 200));
+  expect(el.currentSlide, "an empty carousel tolerates a scroll settle without crashing").to.equal(
+    0
+  );
+});
+
+it("announces an authored aria-label verbatim instead of the generated position/content text", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <div>One</div>
+      <div aria-label="Custom Label">Two content</div>
+    </lr-carousel>
+  `);
+  el.strings = { carouselSlidePosition: "Slide {index} of {total}" };
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+
+  el.next("instant");
+  await el.updateComplete;
+  expect(sink.lastElementChild?.textContent).to.equal("Custom Label");
+});
+
+it("falls back to no reduced-motion query and an inline timer-less scheduler in a windowless document", async () => {
+  const el = await carousel(html`
+    <lr-carousel mouse-dragging>
+      <div>One</div>
+      <div>Two</div>
+    </lr-carousel>
+  `);
+  const parent = el.parentElement!;
+  el.remove();
+  const inertDocument = document.implementation.createHTMLDocument("inert carousel realm");
+  expect(inertDocument.defaultView === null, "precondition: no browsing context").to.be.true;
+
+  try {
+    inertDocument.adoptNode(el);
+    inertDocument.body.append(el);
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+
+    expect(
+      (el as unknown as { mediaQuery?: MediaQueryList }).mediaQuery,
+      "no window means no media query to hold"
+    ).to.be.undefined;
+    expect(
+      (el as unknown as { reduceMotion: boolean }).reduceMotion,
+      "falls back to false"
+    ).to.be.false;
+
+    const viewport = el.shadowRoot!.querySelector(
+      '[part~="scroll-container"]'
+    ) as HTMLElement;
+    viewport.dispatchEvent(new Event("scroll"));
+    expect(
+      (el as unknown as { scrollSettleTimer?: number }).scrollSettleTimer,
+      "no window means no timer host to schedule a settle on"
+    ).to.be.undefined;
+
+    // A completed drag also has no window to schedule the click-suppression timeout on, so the
+    // suppression must clear synchronously instead of leaking.
+    viewport.setPointerCapture = () => {};
+    viewport.releasePointerCapture = () => {};
+    viewport.hasPointerCapture = () => true;
+    viewport.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 170,
+        pointerType: "mouse",
+        button: 0,
+        clientX: 200,
+        bubbles: true,
+      })
+    );
+    viewport.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 170,
+        pointerType: "mouse",
+        clientX: 120,
+        bubbles: true,
+      })
+    );
+    viewport.dispatchEvent(
+      new PointerEvent("pointerup", { pointerId: 170, pointerType: "mouse", bubbles: true })
+    );
+    expect(
+      (el as unknown as { suppressClick: boolean }).suppressClick,
+      "with no window to schedule the reset, it must happen inline"
+    ).to.be.false;
+  } finally {
+    el.remove();
+    parent.append(el);
+  }
+});
+
+it("silently skips a visibility-hidden slide with no visible override and no authored label", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <div>One</div>
+      <div style="visibility: hidden">Hidden text only</div>
+    </lr-carousel>
+  `);
+  el.strings = { carouselSlidePosition: "Slide {index} of {total}" };
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+
+  el.next("instant");
+  await el.updateComplete;
+  expect(
+    sink.childElementCount,
+    "no position fallback and no content -- entirely silent"
+  ).to.equal(0);
+});
+
+it("falls back to the owner document when a property change restarts autoplay while disconnected", async () => {
+  const el = await carousel(html`
+    <lr-carousel loop>
+      <div>One</div>
+      <div>Two</div>
+      <div>Three</div>
+    </lr-carousel>
+  `);
+  const parent = el.parentElement!;
+  el.remove();
+  expect((el as unknown as { visibilityDocument?: Document }).visibilityDocument).to.be.undefined;
+
+  el.autoplay = true;
+  await el.updateComplete;
+  expect((el as unknown as { timer?: number }).timer, "still disconnected, so no timer starts").to
+    .be.undefined;
+  parent.append(el);
+});
+
+it("tolerates a removed scroll-hint probe by treating the padding as zero", async () => {
+  const el = await carousel(html`
+    <lr-carousel style="inline-size: 300px">
+      <div style="block-size: 60px">One</div>
+      <div style="block-size: 60px">Two</div>
+    </lr-carousel>
+  `);
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  el.shadowRoot!.querySelector(".scroll-hint-probe")!.remove();
+  expect(() => el.next("instant")).to.not.throw();
+  await el.updateComplete;
+  expect(el.currentSlide).to.equal(1);
+});
+
+it("treats a non-finite scroll-hint measurement as zero padding", async () => {
+  const el = await carousel(html`
+    <lr-carousel style="inline-size: 300px">
+      <div style="block-size: 60px">One</div>
+      <div style="block-size: 60px">Two</div>
+    </lr-carousel>
+  `);
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const probe = el.shadowRoot!.querySelector(".scroll-hint-probe") as HTMLElement;
+  probe.getBoundingClientRect = (() => ({
+    width: Number.NaN,
+    height: Number.NaN,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  })) as typeof probe.getBoundingClientRect;
+
+  expect(() => el.next("instant")).to.not.throw();
+  await el.updateComplete;
+  expect(el.currentSlide).to.equal(1);
+});
+
+it("no-ops loop-clone syncing if the endcap containers are missing from the shadow tree", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <div>One</div>
+      <div>Two</div>
+      <div>Three</div>
+    </lr-carousel>
+  `);
+  el.shadowRoot!.querySelector('[data-clone-set="before"]')!.remove();
+  el.loop = true;
+  await el.updateComplete;
+  expect(el.loop).to.be.true;
+});
+
+it("moves to the very last slide index (not just the last full page) on End when looping", async () => {
+  const el = await carousel(html`
+    <lr-carousel loop slides-per-page="2" navigation>
+      <lr-carousel-item>One</lr-carousel-item>
+      <lr-carousel-item>Two</lr-carousel-item>
+      <lr-carousel-item>Three</lr-carousel-item>
+      <lr-carousel-item>Four</lr-carousel-item>
+      <lr-carousel-item>Five</lr-carousel-item>
+    </lr-carousel>
+  `);
+  const viewport = el.shadowRoot!.querySelector(
+    '[part~="viewport"]'
+  ) as HTMLElement;
+  viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+  await el.updateComplete;
+  expect(el.currentSlide).to.equal(4);
 });

@@ -15,7 +15,7 @@ assert.equal(target, './dist/translations/*');
 for (const name of ['en-XA', 'ar-XB']) {
   const publicSubpath = `./translations/pseudo/${name}.js`;
   const wildcard = publicSubpath.slice('./translations/'.length);
-  assert.equal(target.replace('*', wildcard), `./dist/translations/pseudo/${name}.js`);
+  assert.equal(target.replaceAll('*', wildcard), `./dist/translations/pseudo/${name}.js`);
   assert.equal(pkg.exports[publicSubpath], `./dist/translations/pseudo/${name}.js`);
 }
 

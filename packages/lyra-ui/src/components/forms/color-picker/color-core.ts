@@ -42,8 +42,12 @@ export type LyraColorPickerOutputFormat =
 const CSS_WIDE_KEYWORDS = /^(?:inherit|initial|unset|revert|revert-layer|currentcolor)$/i;
 const HEX_PATTERN = /^#([0-9a-f]+)$/i;
 const FUNCTION_PATTERN = /^([a-z]+)\(([^()]*)\)$/i;
-const NUMBER_PATTERN = /^([-+]?(?:\d+\.?\d*|\.\d+))(%?)$/;
-const ANGLE_PATTERN = /^([-+]?(?:\d+\.?\d*|\.\d+))(deg|grad|rad|turn)?$/i;
+// `\d+(?:\.\d*)?` (not `\d+\.?\d*`) matches the identical set of digit strings but removes the
+// ambiguous overlap between the two digit quantifiers around an optional `.` -- that overlap is
+// polynomial-time on long all-digit input with no matching suffix (e.g. author-supplied CSS color
+// values), since the engine backtracks through every possible split between them before failing.
+const NUMBER_PATTERN = /^([-+]?(?:\d+(?:\.\d*)?|\.\d+))(%?)$/;
+const ANGLE_PATTERN = /^([-+]?(?:\d+(?:\.\d*)?|\.\d+))(deg|grad|rad|turn)?$/i;
 
 const clamp = (value: number, min: number, max: number): number => finiteRange(value, min, min, max);
 

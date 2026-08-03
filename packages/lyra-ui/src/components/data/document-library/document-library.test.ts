@@ -318,7 +318,11 @@ it('normalizes stale and duplicate selectedIds assigned after mount', async () =
   expect(el.shadowRoot!.querySelector('[part="selection-count"]')!.textContent!.trim()).to.equal('1 selected');
 });
 
-it('formats the selected count with the effective locale', async () => {
+it('formats the selected count with the effective locale', async function () {
+  // Rendering 1000 rows is inherently more expensive than the framework's default budget assumes,
+  // especially on non-Chromium engines and under CI/full-suite contention -- give this one test a
+  // margined threshold instead of the shared 6000ms default (see web-test-runner.config.js).
+  this.timeout(20_000);
   const many = Array.from({ length: 1000 }, (_, index) => ({
     id: `d${index}`,
     name: `Document ${index}`,

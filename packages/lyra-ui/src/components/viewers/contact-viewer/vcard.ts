@@ -59,11 +59,25 @@ function parseBlock(block: string): VCardContact {
   return contact;
 }
 
+const BEGIN_MARKER = 'BEGIN:VCARD';
+const END_MARKER = 'END:VCARD';
+
 export function parseVCards(text: string, maxContacts = 10_000): VCardContact[] {
   const contacts: VCardContact[] = [];
-  for (const match of text.matchAll(/BEGIN:VCARD[\s\S]*?END:VCARD/gi)) {
+  // Scans with indexOf rather than a `[\s\S]*?END:VCARD` regex: that lazy wildcard re-scans from
+  // every unmatched BEGIN:VCARD looking for a closing tag, which is polynomial-time on input with
+  // many BEGIN:VCARD repetitions and no (or a distant) END:VCARD -- a real DoS vector on
+  // consumer-supplied contact files. indexOf is linear and searchFrom always advances forward.
+  const upper = text.toUpperCase();
+  let searchFrom = 0;
+  for (;;) {
+    const beginIndex = upper.indexOf(BEGIN_MARKER, searchFrom);
+    if (beginIndex === -1) break;
+    const endIndex = upper.indexOf(END_MARKER, beginIndex + BEGIN_MARKER.length);
+    if (endIndex === -1) break;
     if (contacts.length >= maxContacts) throw new LyraResourceLimitError('The vCard contains too many contacts.');
-    contacts.push(parseBlock(match[0]));
+    contacts.push(parseBlock(text.slice(beginIndex, endIndex + END_MARKER.length)));
+    searchFrom = endIndex + END_MARKER.length;
   }
   return contacts;
 }

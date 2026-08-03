@@ -1068,3 +1068,443 @@ describe('lr-video control surface', () => {
     expect(el.shadowRoot!.querySelector('[part="thumbnail"]')).to.equal(null);
   });
 });
+
+describe('lr-video coverage gap-filling', () => {
+  it('accepts every documented preload policy', async () => {
+    const auto = await fixture<LyraVideo>(html`<lr-video preload="auto"></lr-video>`);
+    expect(nativeVideo(auto).preload).to.equal('auto');
+    const none = await fixture<LyraVideo>(html`<lr-video preload="none"></lr-video>`);
+    expect(nativeVideo(none).preload).to.equal('none');
+  });
+
+  it('parses a valid three-part timestamp cue and skips malformed, reversed, unsafe, and structurally invalid ones', async () => {
+    const originalFetch = window.fetch;
+    const vtt = [
+      'WEBVTT',
+      '',
+      '-->',
+      'phantom.jpg',
+      '',
+      'abc --> 00:10.000',
+      'badstart.jpg',
+      '',
+      '-1:30 --> 00:10.000',
+      'negative.jpg',
+      '',
+      '00:10.000 --> 00:05.000',
+      'reversed.jpg',
+      '',
+      '00:00.000 --> 00:10.000',
+      'javascript:alert(1)',
+      '',
+      '00:00.000 --> 00:10.000',
+      'sprite-invalid.jpg#xywh=0,0,0,0',
+      '',
+      '00:00.000 --> 00:10.000',
+      'http://[',
+      '',
+      '01:00:00.000 --> 01:00:10.000',
+      'hour.jpg',
+      '',
+    ].join('\n');
+    window.fetch = (async () => new Response(vtt)) as typeof fetch;
+    try {
+      const el = await fixture<LyraVideo>(html`
+        <lr-video thumbnails="https://example.test/cues/mixed.vtt"></lr-video>
+      `);
+      await waitUntil(
+        () => (el as unknown as { thumbnailCues: unknown[] }).thumbnailCues.length > 0,
+        'thumbnail cues did not load',
+      );
+      const internal = el as unknown as { thumbnailCues: Array<{ start: number; end: number; src: string }> };
+      expect(internal.thumbnailCues.length, 'only the valid three-part cue should survive').to.equal(1);
+      expect(internal.thumbnailCues[0]?.start).to.equal(3600);
+      expect(internal.thumbnailCues[0]?.end).to.equal(3610);
+      expect(internal.thumbnailCues[0]?.src).to.equal('https://example.test/cues/hour.jpg');
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it('renders an uncropped thumbnail image when the active cue has no sprite crop', async () => {
+    const originalFetch = window.fetch;
+    window.fetch = (async () => new Response(
+      'WEBVTT\n\n00:00.000 --> 00:10.000\nplain.jpg\n',
+    )) as typeof fetch;
+    try {
+      const el = await fixture<LyraVideo>(html`
+        <lr-video thumbnails="https://example.test/cues/plain.vtt"></lr-video>
+      `);
+      await waitUntil(
+        () => (el as unknown as { thumbnailCues: unknown[] }).thumbnailCues.length === 1,
+        'the plain thumbnail cue did not load',
+      );
+      const media = nativeVideo(el);
+      Object.defineProperties(media, {
+        duration: { configurable: true, value: 20 },
+        currentTime: { configurable: true, value: 0, writable: true },
+      });
+      media.dispatchEvent(new Event('loadedmetadata'));
+      await el.updateComplete;
+      const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+      Object.defineProperty(timeline, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ left: 0, width: 200, right: 200, top: 0, bottom: 20, height: 20, x: 0, y: 0, toJSON() {} }),
+      });
+      timeline.dispatchEvent(new PointerEvent('pointermove', { clientX: 25, bubbles: true }));
+      await el.updateComplete;
+      const frame = el.shadowRoot!.querySelector('[part="thumbnail"] > div') as HTMLElement;
+      const image = el.shadowRoot!.querySelector('[part="thumbnail"] img') as HTMLImageElement;
+      expect(image?.src).to.equal('https://example.test/cues/plain.jpg');
+      expect(image.style.transform).to.equal('');
+      expect(frame.style.width).to.equal('');
+      expect(frame.style.height).to.equal('');
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it('discards a thumbnail response whose fetch fails with a non-OK status', async () => {
+    const originalFetch = window.fetch;
+    window.fetch = (async () => new Response('WEBVTT', { status: 404 })) as typeof fetch;
+    try {
+      const el = await fixture<LyraVideo>(html`
+        <lr-video thumbnails="https://example.test/missing.vtt"></lr-video>
+      `);
+      await aTimeout(0);
+      const internal = el as unknown as { thumbnailCues: unknown[] };
+      expect(internal.thumbnailCues.length).to.equal(0);
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it('discards a thumbnail response that finishes reading after a newer generation has started', async () => {
+    const originalFetch = window.fetch;
+    let controller!: ReadableStreamDefaultController<Uint8Array>;
+    const staleBody = new ReadableStream<Uint8Array>({
+      start(streamController) { controller = streamController; },
+    });
+    let calls = 0;
+    window.fetch = (async (input: RequestInfo | URL) => {
+      calls += 1;
+      if (String(input).endsWith('stale.vtt')) {
+        return new Response(staleBody);
+      }
+      return new Response('WEBVTT\n\n00:00.000 --> 00:10.000\nfresh.jpg\n');
+    }) as typeof fetch;
+    try {
+      const el = await fixture<LyraVideo>(html`
+        <lr-video thumbnails="https://example.test/stale.vtt"></lr-video>
+      `);
+      await waitUntil(() => calls === 1, 'the stale fetch did not start');
+
+      el.thumbnails = 'https://example.test/fresh.vtt';
+      await el.updateComplete;
+      const internal = el as unknown as { thumbnailCues: Array<{ src: string }> };
+      await waitUntil(() => internal.thumbnailCues.length === 1, 'the fresh generation did not load');
+      expect(internal.thumbnailCues[0]?.src).to.equal('https://example.test/fresh.jpg');
+
+      controller.enqueue(new TextEncoder().encode('WEBVTT\n\n00:00.000 --> 00:10.000\nstale.jpg\n'));
+      controller.close();
+      await aTimeout(0);
+      expect(internal.thumbnailCues.length, 'a stale response must not overwrite fresher cues').to.equal(1);
+      expect(internal.thumbnailCues[0]?.src).to.equal('https://example.test/fresh.jpg');
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it('clears any active thumbnail preview as soon as a new thumbnails source starts loading', async () => {
+    const originalFetch = window.fetch;
+    window.fetch = (async () => new Response(
+      'WEBVTT\n\n00:00.000 --> 00:10.000\nfirst.jpg\n',
+    )) as typeof fetch;
+    try {
+      const el = await fixture<LyraVideo>(html`
+        <lr-video thumbnails="https://example.test/first.vtt"></lr-video>
+      `);
+      const internal = el as unknown as { thumbnailCues: unknown[]; activeThumbnail?: unknown };
+      await waitUntil(() => internal.thumbnailCues.length === 1, 'first cues did not load');
+      internal.activeThumbnail = { start: 0, end: 10, src: 'https://example.test/first.jpg' };
+      el.thumbnails = 'https://example.test/second.vtt';
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(internal.activeThumbnail).to.equal(undefined);
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it('reloads thumbnails when reconnected after being disconnected with a thumbnails source set', async () => {
+    const originalFetch = window.fetch;
+    let calls = 0;
+    window.fetch = (async () => {
+      calls += 1;
+      return new Response('WEBVTT\n\n00:00.000 --> 00:10.000\nthumb.jpg\n');
+    }) as typeof fetch;
+    try {
+      const el = await fixture<LyraVideo>(html`
+        <lr-video thumbnails="https://example.test/reconnect.vtt"></lr-video>
+      `);
+      await waitUntil(() => calls === 1, 'the initial thumbnail fetch did not start');
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await waitUntil(() => calls === 2, 'reconnecting did not reload thumbnails');
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it('formats hour-scale durations with an hours segment', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video lang="en"></lr-video>`);
+    const media = nativeVideo(el);
+    Object.defineProperties(media, {
+      duration: { configurable: true, value: 3661 },
+      currentTime: { configurable: true, value: 3661, writable: true },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const times = [...el.shadowRoot!.querySelectorAll('[data-time]')].map((node) => node.textContent);
+    expect(times).to.deep.equal(['1:01:01', '1:01:01']);
+  });
+
+  it('leaves currentTime untouched when the current-time attribute is re-set to its existing value', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    el.setAttribute('current-time', '5');
+    await el.updateComplete;
+    expect(el.currentTime).to.equal(5);
+    el.currentTime = 9;
+    await el.updateComplete;
+    el.setAttribute('current-time', '5');
+    await el.updateComplete;
+    expect(el.currentTime, 're-setting the same attribute value must not reassign currentTime').to.equal(9);
+  });
+
+  it('clamps out-of-range volume, currentTime, and duration assigned directly on the IDL property', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    el.volume = 5;
+    await el.updateComplete;
+    expect(el.volume).to.equal(1);
+
+    el.currentTime = -5;
+    await el.updateComplete;
+    expect(el.currentTime).to.equal(0);
+
+    el.duration = -10;
+    await el.updateComplete;
+    expect(el.duration).to.equal(0);
+  });
+
+  it('resets playback state and clears captions when src changes after mount', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video src=${VIDEO_SRC}></lr-video>`);
+    const media = nativeVideo(el);
+    Object.defineProperties(media, {
+      duration: { configurable: true, value: 20 },
+      currentTime: { configurable: true, value: 5, writable: true },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    media.dispatchEvent(new Event('play'));
+    await el.updateComplete;
+    expect(el.playing).to.be.true;
+    expect(el.duration).to.equal(20);
+
+    const track = new EventTarget() as EventTarget & {
+      kind: string; label: string; language: string; mode: TextTrackMode; activeCues: Array<{ text: string }>;
+    };
+    Object.assign(track, {
+      kind: 'captions', label: 'English', language: 'en', mode: 'showing', activeCues: [{ text: 'Hi' }],
+    });
+    Object.defineProperty(media, 'textTracks', { configurable: true, value: { 0: track, length: 1 } });
+    (el as unknown as { bindCaptionTracks: () => void }).bindCaptionTracks();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="caption"]')?.textContent).to.equal('Hi');
+
+    el.src = 'https://example.test/other.mp4';
+    await el.updateComplete;
+    expect(el.playing).to.be.false;
+    expect(el.duration).to.equal(0);
+    expect(el.currentTime).to.equal(0);
+    await aTimeout(0);
+    expect(el.shadowRoot!.querySelector('[part="caption"]')).to.equal(null);
+    expect((el as unknown as { captionTracks: unknown[] }).captionTracks.length).to.equal(0);
+  });
+
+  it('reconfigures the visibility observer when autoplay-on-visible toggles after mount, tolerating empty and detached deliveries', async () => {
+    const originalObserver = window.IntersectionObserver;
+    let callback!: IntersectionObserverCallback;
+    let observerCount = 0;
+    let disconnectCount = 0;
+    class FakeIntersectionObserver {
+      constructor(next: IntersectionObserverCallback) { callback = next; observerCount += 1; }
+      observe() {}
+      unobserve() {}
+      disconnect() { disconnectCount += 1; }
+      takeRecords(): IntersectionObserverEntry[] { return []; }
+      readonly root = null;
+      readonly rootMargin = '';
+      readonly thresholds = [0];
+    }
+    (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+      FakeIntersectionObserver as unknown as typeof IntersectionObserver;
+    try {
+      const el = await fixture<LyraVideo>(html`<lr-video autoplay-on-visible></lr-video>`);
+      expect(observerCount).to.equal(1);
+
+      el.autoplayOnVisible = false;
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(disconnectCount, 'turning the feature off disconnects the existing observer').to.be.greaterThan(0);
+
+      el.autoplayOnVisible = true;
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(observerCount).to.equal(2);
+
+      expect(() => callback([], {} as IntersectionObserver)).to.not.throw();
+
+      (el as unknown as { mediaRef: (element?: Element) => void }).mediaRef(undefined);
+      expect(() => callback(
+        [{ isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      )).to.not.throw();
+    } finally {
+      (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = originalObserver;
+    }
+  });
+
+  it('gracefully no-ops several internal media accessors when the native element is detached', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const internal = el as unknown as {
+      mediaRef: (element?: Element) => void;
+      bindCaptionTracks: () => void;
+      syncSources: (force?: boolean) => void;
+      onNativeMediaEvent: (event: Event) => void;
+      captionTracks: unknown[];
+    };
+    internal.mediaRef(undefined);
+    expect(el.getVideoElement()).to.equal(undefined);
+
+    expect(() => internal.bindCaptionTracks()).to.not.throw();
+    expect(internal.captionTracks.length).to.equal(0);
+
+    expect(() => internal.syncSources()).to.not.throw();
+    expect(() => internal.onNativeMediaEvent(new Event('play'))).to.not.throw();
+    expect(el.playing).to.be.false;
+    expect(() => el.togglePlay()).to.not.throw();
+  });
+
+  it('seeks without an artificial upper bound before any duration is known', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const media = nativeVideo(el);
+    Object.defineProperty(media, 'currentTime', { configurable: true, value: 0, writable: true });
+    expect(el.duration).to.equal(0);
+    el.seek(500);
+    expect(media.currentTime).to.equal(500);
+    expect(el.currentTime).to.equal(500);
+  });
+
+  it('rejects exitFullscreen when the document cannot exit fullscreen', async () => {
+    const exitDescriptor = Object.getOwnPropertyDescriptor(document, 'exitFullscreen');
+    try {
+      Object.defineProperty(document, 'exitFullscreen', { configurable: true, value: undefined });
+      const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+      let rejection: unknown;
+      try {
+        await el.exitFullscreen();
+      } catch (error) {
+        rejection = error;
+      }
+      expect(rejection instanceof DOMException).to.be.true;
+      expect((rejection as DOMException).name).to.equal('NotSupportedError');
+    } finally {
+      restoreOwnProperty(document, 'exitFullscreen', exitDescriptor);
+    }
+  });
+
+  it('drives exitFullscreen once fullscreen is active, updates its aria-label, and clears transient state on disconnect', async () => {
+    const fsEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
+    const fsElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+    const exitFs = Object.getOwnPropertyDescriptor(Document.prototype, 'exitFullscreen');
+    try {
+      Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
+      let exits = 0;
+      Object.defineProperty(Document.prototype, 'exitFullscreen', {
+        configurable: true,
+        value: () => { exits += 1; return Promise.resolve(); },
+      });
+
+      const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
+      const wrapper = el.shadowRoot!.querySelector('[part~="video-wrapper"]');
+      expect(wrapper).to.not.equal(null);
+      expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Enter fullscreen');
+
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: wrapper });
+      document.dispatchEvent(new Event('fullscreenchange'));
+      await el.updateComplete;
+      expect(el.fullscreen).to.be.true;
+      expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Exit fullscreen');
+
+      button(el, 'fullscreen')!.click();
+      await el.updateComplete;
+      expect(exits).to.equal(1);
+
+      (el as unknown as { pictureInPicture: boolean }).pictureInPicture = true;
+      el.remove();
+      await aTimeout(0);
+      expect((el as unknown as { fullscreen: boolean }).fullscreen).to.be.false;
+      expect((el as unknown as { pictureInPicture: boolean }).pictureInPicture).to.be.false;
+    } finally {
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: null });
+      restoreOwnProperty(document, 'fullscreenEnabled', fsEnabled);
+      restoreOwnProperty(Document.prototype, 'exitFullscreen', exitFs);
+    }
+  });
+
+  it('ignores a picture-in-picture toggle when the native element itself disables it', async () => {
+    const pipEnabled = Object.getOwnPropertyDescriptor(document, 'pictureInPictureEnabled');
+    const requestPip = Object.getOwnPropertyDescriptor(HTMLVideoElement.prototype, 'requestPictureInPicture');
+    try {
+      Object.defineProperty(document, 'pictureInPictureEnabled', { configurable: true, value: true });
+      let requests = 0;
+      Object.defineProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', {
+        configurable: true,
+        value: () => { requests += 1; return Promise.resolve({} as PictureInPictureWindow); },
+      });
+      const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
+      const media = nativeVideo(el);
+      media.disablePictureInPicture = true;
+      const pip = button(el, 'picture-in-picture');
+      expect(pip).to.not.equal(null);
+      pip!.click();
+      await el.updateComplete;
+      expect(requests, 'the guard must block the request when PiP is disabled on this element').to.equal(0);
+    } finally {
+      restoreOwnProperty(document, 'pictureInPictureEnabled', pipEnabled);
+      restoreOwnProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', requestPip);
+    }
+  });
+
+  it('falls back from label to language to a localized name for unlabeled caption tracks, and omits lang when unknown', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const media = nativeVideo(el);
+    const languageOnly = new EventTarget() as EventTarget & {
+      kind: string; label: string; language: string; mode: TextTrackMode; activeCues: null;
+    };
+    const blank = new EventTarget() as typeof languageOnly;
+    Object.assign(languageOnly, { kind: 'subtitles', label: '', language: 'fr', mode: 'disabled', activeCues: null });
+    Object.assign(blank, { kind: 'captions', label: '', language: '', mode: 'disabled', activeCues: null });
+    Object.defineProperty(media, 'textTracks', {
+      configurable: true,
+      value: { 0: languageOnly, 1: blank, length: 2 },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[data-control="captions"]')!;
+    expect(select.options[1]?.textContent).to.equal('fr');
+    expect(select.options[1]?.hasAttribute('lang')).to.be.true;
+    expect(select.options[2]?.textContent).to.equal('Captions');
+    expect(select.options[2]?.hasAttribute('lang')).to.be.false;
+  });
+});
