@@ -116,14 +116,14 @@ fi
 
 require_primary_toolchain() {
   local actual_node_major
-  actual_node_major="$(node -p 'process.versions.node.split(\".\")[0]')"
+  actual_node_major="$(node -p 'process.versions.node.split(".")[0]')"
   if [[ "$actual_node_major" != "22" ]]; then
     echo "scripts/test_all_browsers.sh requires Node 22 (active: $(node --version)); activate Node 22 first" >&2
     exit 1
   fi
 
   local expected_pnpm actual_pnpm
-  expected_pnpm="$(node -p 'require(\"./package.json\").packageManager.replace(/^pnpm@/, \"\")')"
+  expected_pnpm="$(node -p 'require("./package.json").packageManager.replace(/^pnpm@/, "")')"
   actual_pnpm="$(pnpm --version)"
   if [[ "$actual_pnpm" != "$expected_pnpm" ]]; then
     echo "scripts/test_all_browsers.sh requires pnpm $expected_pnpm (active: $actual_pnpm)" >&2
