@@ -128,6 +128,7 @@ async function useDeterministicMapStyle(el: LyraGeojsonView): Promise<void> {
     _connectGeneration: number;
     _maplibreModule?: unknown;
     loading: boolean;
+    loadFailed: boolean;
     visible: boolean;
     map?: DeferredStyleMap;
     tryConstructMap(): void;
@@ -136,9 +137,16 @@ async function useDeterministicMapStyle(el: LyraGeojsonView): Promise<void> {
   // Keep this integration test independent of headless-browser WebGL support. Firefox's
   // MapLibre feature probe can pass even though constructing a real map then fails because its
   // headless context lacks WebGL2; the test needs the lr-map lifecycle/semantics, not GPU output.
+  // The real connectedCallback()'s own async load can race this override and lose (its
+  // `_connectGeneration` check runs before this increment is visible to it, since a warm
+  // maplibre-gl module cache can resolve that promise almost immediately) -- if it wins instead,
+  // it sets `loadFailed` from its own real (and here, unavailable) WebGL2 check, which replaces
+  // `[part="container"]` with the error state before tryConstructMap() below ever runs. Resetting
+  // it explicitly makes this override complete regardless of which side won that race.
   map._connectGeneration++;
   map._maplibreModule = { Map: DeferredStyleMap };
   map.loading = false;
+  map.loadFailed = false;
   map.visible = true;
   map.mapStyle = EMPTY_MAP_STYLE;
   await (map as unknown as { updateComplete: Promise<unknown> }).updateComplete;
@@ -155,14 +163,19 @@ async function constructMapBeforeStyleLoad(el: LyraGeojsonView): Promise<{
     _connectGeneration: number;
     _maplibreModule?: unknown;
     loading: boolean;
+    loadFailed: boolean;
     visible: boolean;
     map?: DeferredStyleMap;
     updateComplete: Promise<unknown>;
     tryConstructMap(): void;
   };
+  // See useDeterministicMapStyle()'s comment above: resetting loadFailed makes this override
+  // complete regardless of whether the real connectedCallback()'s own (here, unavailable) WebGL2
+  // check won the race and set it first.
   map._connectGeneration++;
   map._maplibreModule = { Map: DeferredStyleMap };
   map.loading = false;
+  map.loadFailed = false;
   map.visible = true;
   await map.updateComplete;
   map.tryConstructMap();

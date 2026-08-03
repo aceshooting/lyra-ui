@@ -383,7 +383,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // take over instead.
       if (generation !== this._connectGeneration || !this.isConnected) return;
       this.loading = false;
-      if (!mod) {
+      // WebGL2 support doesn't depend on visibility or timing, so it's checked here -- alongside
+      // the "did the library even load" check, in the same synchronous block as `this.loading =
+      // false` -- rather than later inside tryConstructMap(). tryConstructMap() also runs from
+      // updated()'s visibility-triggered path, a post-render hook where setting reactive state
+      // schedules a whole extra update cycle (a real regression: it broke strict-console tests
+      // elsewhere that construct <lr-map> in a WebGL2-less environment). Failing this closed as
+      // early as possible avoids that entirely, and is also just more correct: there's no reason
+      // to wait for visibility to report an environment limitation that visibility can't fix.
+      if (!mod || !supportsWebGL2()) {
         this.loadFailed = true;
         this.errorAnnouncementSink?.announce(this.localize('mapMissingLibrary'));
         return;
@@ -451,15 +459,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    */
   private tryConstructMap(): void {
     if (this._map || !this._maplibreModule || !this.containerEl || !this.visible || !this.isConnected) return;
-    if (!supportsWebGL2()) {
-      // maplibre-gl doesn't fail construction cleanly when WebGL2 is unavailable: it fires a
-      // GPUInitializationError internally and still returns a Map instance with no `painter`,
-      // which later crashes disconnectedCallback()'s `this._map.remove()` instead of surfacing as
-      // a normal, catchable error. Probing first avoids ever constructing that broken instance.
-      this.loadFailed = true;
-      this.errorAnnouncementSink?.announce(this.localize('mapMissingLibrary'));
-      return;
-    }
+    // supportsWebGL2() is already checked before `this._maplibreModule` is ever set (see the
+    // connectedCallback() load path above) -- reaching here with a set _maplibreModule means it
+    // already passed. maplibre-gl doesn't fail construction cleanly when WebGL2 is unavailable
+    // (it fires a GPUInitializationError internally and still returns a Map instance with no
+    // `painter`, which would crash disconnectedCallback()'s `this._map.remove()`), so this must
+    // stay a precondition rather than a try/catch around the constructor below.
     const mod = this._maplibreModule;
     this._map = new mod.Map({
       container: this.containerEl,

@@ -88,6 +88,18 @@ function pixelRgb(ctx: CanvasRenderingContext2D, cssX: number, cssY: number): [n
   return [data[0]!, data[1]!, data[2]!];
 }
 
+/** Like `expect(actual).to.deep.equal(expected)` for an [r, g, b] triple, but tolerant of a
+ *  +/-1-per-channel difference -- needed only for a token declared with alpha (e.g.
+ *  `--lr-heatmap-no-data-fill`'s `rgb(128 128 128 / 25%)`): `resolveTokenRgb()` reads the
+ *  CSS-declared channels directly, ignoring alpha, while `pixelRgb()` reads back whatever the
+ *  canvas engine actually painted, which for a low-alpha fill involves premultiplied-alpha
+ *  rounding that can legitimately differ by one unit between browser engines. */
+function expectCloseRgb(actual: [number, number, number], expected: [number, number, number]): void {
+  for (let channel = 0; channel < 3; channel++) {
+    expect(actual[channel], `channel ${channel}`).to.be.closeTo(expected[channel]!, 1);
+  }
+}
+
 it('names the focusable canvas itself as an application while retaining the host group summary', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
   el.rowLabels = ['Mon', 'Tue'];
@@ -4060,7 +4072,7 @@ describe('coverage: additional edge-path gaps', () => {
     await el.updateComplete;
     const noDataToken = resolveTokenRgb(el, '--lr-heatmap-no-data-fill');
     const [r, g, b] = pixelRgb(ctx, 60 + 11, 20 + 22 + 11);
-    expect([r, g, b]).to.deep.equal(noDataToken);
+    expectCloseRgb([r, g, b], noDataToken);
   });
 
   it('calendar mode: the keyboard focus-ring fast-repaint path re-applies a cellColor() override', async () => {
@@ -4086,7 +4098,7 @@ describe('coverage: additional edge-path gaps', () => {
     await el.updateComplete;
     const noDataToken = resolveTokenRgb(el, '--lr-heatmap-no-data-fill');
     const [r, g, b] = pixelRgb(ctx, 28 + 5, 16 + 5);
-    expect([r, g, b]).to.deep.equal(noDataToken);
+    expectCloseRgb([r, g, b], noDataToken);
   });
 
   it('calendar mode: falls back to the CAL_PAD_LEFT + weekCount*(cellSize+gap) formula for fitToWidth when the host has no measured width (e.g. display: none)', async () => {

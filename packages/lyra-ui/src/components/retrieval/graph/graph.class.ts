@@ -1496,7 +1496,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (hit?.kind === 'node') {
       this.canvasDragNode = hit.node;
       this.canvasPointerId = e.pointerId;
-      this.canvasEl!.setPointerCapture(e.pointerId);
+      try {
+        this.canvasEl!.setPointerCapture(e.pointerId);
+      } catch {
+        // A synthetic/non-driver pointerId (e.g. dispatched by a test) isn't a real active
+        // pointer some engines will capture -- the drag state above still tracks it via
+        // pointermove/pointerup, matching finishCanvasNodeDrag()'s equivalent guard around
+        // releasePointerCapture() below.
+      }
       hit.node.fx = hit.node.x;
       hit.node.fy = hit.node.y;
       this.simulation?.alphaTarget(0.3).restart();
