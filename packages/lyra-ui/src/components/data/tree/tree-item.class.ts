@@ -631,10 +631,20 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     if (this.hasChildren) this.setAttribute('aria-expanded', String(this.expanded));
     else this.removeAttribute('aria-expanded');
     // Only the data model owns `aria-label` (from `item.accessibleLabel`). In the declarative model
-    // the attribute is the author's own, so it is never written *or* removed here.
+    // the attribute is the author's own, so it is never written *or* removed here. Guarded the same
+    // way `assignChildSlots()` guards its own `slot` write: `setAttribute`/`removeAttribute` queue a
+    // MutationObserver record even when the value does not change, and `bindChildObserverTargets()`
+    // has this item observe its own attributes -- an unconditional write here reliably retriggered
+    // its own observer, which calls `requestUpdate()`, which re-ran `willUpdate()` and wrote again,
+    // forever (never resolving `updateComplete`).
     if (this.item) {
-      if (this.item.accessibleLabel) this.setAttribute('aria-label', this.item.accessibleLabel);
-      else this.removeAttribute('aria-label');
+      if (this.item.accessibleLabel) {
+        if (this.getAttribute('aria-label') !== this.item.accessibleLabel) {
+          this.setAttribute('aria-label', this.item.accessibleLabel);
+        }
+      } else if (this.hasAttribute('aria-label')) {
+        this.removeAttribute('aria-label');
+      }
     }
     // A bare data-model item keeps the prior tri-state contract: omitted item.selected means the
     // standalone element does not express selection. An owning tree always manages selection, so
