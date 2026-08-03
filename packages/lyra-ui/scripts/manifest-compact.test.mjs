@@ -18,6 +18,12 @@ assert.equal(
 );
 assert.deepEqual(child.members.map(({ name }) => name), ['value', 'setRangeText']);
 assert.deepEqual(child.attributes.map(({ name }) => name), ['value']);
+// Unlike members/attributes/events/slots/cssProperties, cssParts are never pruned back off a
+// resolvable subclass: `::part()` consumers (docs generators, editor tooling, ::part() lint
+// checks) look a tag's parts up per element and do not walk the JS superclass chain the way a
+// TypeScript consumer naturally does for the JS-facing surfaces. This mirrors how `cssStates` --
+// never listed in `INHERITABLE_ARRAYS` at all -- already survives compaction unpruned.
+assert.deepEqual(child.cssParts.map(({ name }) => name), ['base', 'control']);
 assert.deepEqual(mixed.members.map(({ name }) => name), ['mixedValue']);
 assert.deepEqual(compactManifest(compact), compact, 'compaction must be idempotent');
 

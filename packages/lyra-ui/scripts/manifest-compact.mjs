@@ -7,6 +7,19 @@ const INHERITABLE_ARRAYS = Object.freeze([
   'cssProperties',
 ]);
 
+// `compactManifest` prunes a resolvable inherited entry from every array above *except* cssParts.
+// A JS/TypeScript consumer of `members`/`attributes`/`events`/`slots`/`cssProperties` already
+// walks the class's own `extends` chain to see the full contract, so repeating a base class's
+// entries on every subclass is redundant there (`expandManifestInheritance` reconstructs the
+// union on demand for the few generators that need a flattened view). `::part()` has no such
+// chain for its consumers: docs generators, editor tooling, and any `part=` usage check reads a
+// tag's own `cssParts` list directly, per tag, the same way `cssStates` (never listed in
+// `INHERITABLE_ARRAYS` at all) already always does. Pruning inherited parts made a subclass like
+// `lr-number-input`/`lr-dropdown` under-report parts that are real at runtime and already
+// documented in the component's own generated reference doc (which reads through
+// `expandManifestInheritance` and so never showed the gap).
+const NEVER_PRUNED_ARRAYS = Object.freeze(['cssParts']);
+
 const normalizeModulePath = (path = '') => path.replace(/^\//, '').replace(/\.js$/, '.ts');
 
 function declarationIndex(manifest) {
@@ -47,8 +60,9 @@ function mergeIdentity(key, entry) {
 /**
  * Produces the published Custom Elements Manifest representation. Private/protected implementation
  * members are never public API, and standard-resolvable inherited surfaces belong on their base
- * declaration rather than being repeated in every subclass. Unresolvable mixin-expression bases
- * retain their analyzer-projected inherited surface so compaction cannot hide an API.
+ * declaration rather than being repeated in every subclass -- except cssParts, which are kept in
+ * full on every declaration; see `NEVER_PRUNED_ARRAYS`. Unresolvable mixin-expression bases retain
+ * their analyzer-projected inherited surface so compaction cannot hide an API.
  */
 export function compactManifest(manifest) {
   const output = structuredClone(manifest);
@@ -60,6 +74,7 @@ export function compactManifest(manifest) {
         if (!Array.isArray(declaration[key])) continue;
         declaration[key] = declaration[key].filter((entry) => {
           if (key === 'members' && ['private', 'protected'].includes(entry.privacy)) return false;
+          if (NEVER_PRUNED_ARRAYS.includes(key)) return true;
           if (superclassIsResolvable && entry.inheritedFrom) return false;
           return true;
         });

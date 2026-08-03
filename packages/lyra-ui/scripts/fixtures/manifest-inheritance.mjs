@@ -88,7 +88,21 @@ export function createManifestInheritanceFixture() {
             ],
             events: [{ name: 'lr-change', type: { text: 'CustomEvent<{ value: string }>' } }],
             slots: [{ name: '', description: 'The child content.' }],
-            cssParts: [{ name: 'control', description: 'The child control.' }],
+            // Realistic post-analyzer shape: the CEM built-in inheritance plugin (`apply-inheritance.js`,
+            // which resolves superclasses by name and runs before any project plugin) already copies the
+            // base declaration's own `base` part down onto the child with `inheritedFrom` set, exactly like
+            // it does for `locale` above on `members`/`attributes`.
+            cssParts: [
+              {
+                name: 'base',
+                description: 'The inherited base.',
+                inheritedFrom: {
+                  name: 'LyraFixtureBase',
+                  module: 'src/components/fixture/base/base.class.ts',
+                },
+              },
+              { name: 'control', description: 'The child control.' },
+            ],
             cssProperties: [
               { name: '--lr-fixture-child-color', description: 'The child color.' },
             ],
