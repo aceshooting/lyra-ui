@@ -111,6 +111,8 @@ pnpm build        # builds every package
 pnpm test         # tests every package
 pnpm lint         # contract-policy, source checks, TypeScript, and type-surface tests
 pnpm docs         # Storybook docs site demoing every component
+pnpm run migrate-wa --help  # print migration tool usage
+pnpm run test:migrate-wa     # run migration fixture/tests
 ```
 
 Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS.md).

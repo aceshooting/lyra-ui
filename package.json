@@ -30,7 +30,9 @@
     "check:packed-consumer": "node --test scripts/check-packed-consumer.test.mjs && node scripts/check-packed-consumer.mjs && node scripts/check-packed-framework-types.mjs && pnpm run check:framework-recipes",
     "check:dead-code": "knip",
     "check:secrets": "node scripts/check-secrets.mjs",
+    "migrate-wa": "pnpm --filter @aceshooting/lyra-ui run migrate-wa",
     "provenance:check": "pnpm --filter @aceshooting/lyra-ui provenance-policy",
+    "test:migrate-wa": "pnpm --filter @aceshooting/lyra-ui run test:migrate-wa",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
