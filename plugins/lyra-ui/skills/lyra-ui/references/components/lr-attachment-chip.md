@@ -17,18 +17,18 @@
 
 A compact chip representing one file queued for (or already part of) a chat message — used in a
 composer's pre-send attachment tray or a sent message's attachments display. Two independent ways
-to populate it: set `file` to a real `File` (fresh from a picker/drop), from which `name`/`size`/
-`mime-type` and the image thumbnail are all auto-derived; or set the plain `name`/`size`/
+to populate it: set `file` to a real `File` (fresh from a picker/drop), from which `name`/`bytes`/
+`mime-type` and the image thumbnail are all auto-derived; or set the plain `name`/`bytes`/
 `mime-type`/`thumbnail-src` props instead, for reconstructing a chip from server-persisted
 attachment metadata after a page reload, when no real `File` object exists any more. `file` always
 wins when both are present. When a real `File` or `preview-src` is available, the chip also offers
 a localized preview action that opens `<lr-document-viewer>` using the same effective MIME type.
 
 **Properties:**
-- `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`size`/`mimeType`/the
+- `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`bytes`/`mimeType`/the
   image thumbnail are all derived from it, taking precedence over the independent props below
 - `name: string = ''` — filename, used only while `file` is unset
-- `size: number = 0` — file size in bytes, used only while `file` is unset
+- `bytes: number = 0` — file size in bytes, used only while `file` is unset
 - `mimeType: string = ''` (attribute `mime-type`) — used only while `file` is unset
 - `thumbnailSrc: string = ''` (attribute `thumbnail-src`) — thumbnail image URL, used only while
   `file` is unset; rendered whenever present regardless of `mimeType` (no `file`-derived equivalent
@@ -61,6 +61,12 @@ a localized preview action that opens `<lr-document-viewer>` using the same effe
 - `untitledLabel: string = 'Untitled file'` (attribute `untitled-label`) — fallback filename and
   tooltip when neither `file` nor `name` supplies a name
 
+**Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size` (same rename as
+`lr-file-icon`'s). Everywhere else in this library `size` names a tier on the shared size ladder,
+and a numeric byte count answering to the same property name is a collision a consumer only
+discovers at runtime. A leftover `size="245000"` is an unknown attribute now: `bytes` stays `0` and
+the `size` part renders nothing.
+
 The component identifies *which* attachment a `lr-remove`/`lr-retry` event is about via the
 platform's own `id` attribute/property rather than a second, differently-named prop. Set `id="..."`
 when you have a stable server-side attachment id; when unset and `file` is set, a stable id is
@@ -73,7 +79,9 @@ mimeType, src }`, emitted when the preview action opens the document viewer)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size`, `status-text` (the visible text twin of
+**CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size` (the formatted `bytes` count; the part
+keeps its pre-rename name — it is the rendered size *text*, and renaming a part would break shipped
+`::part()` rules for no gain), `status-text` (the visible text twin of
 the status accent color, so the state is carried in words and not only in color; empty and hidden
 for `pending`/`done`), `progress`, `progress-fill`, `spinner` (decorative/`aria-hidden` while the
 adjacent `status-text` supplies the wording), `retry-button`, `preview-button`,
@@ -116,13 +124,13 @@ decimal place), and a negative or non-finite input (`NaN`, `Infinity`) returns `
 size renders nothing instead of `"NaN B"`.
 
 ```html
-<lr-attachment-chip name="report.pdf" size="245000" mime-type="application/pdf" status="done"></lr-attachment-chip>
+<lr-attachment-chip name="report.pdf" bytes="245000" mime-type="application/pdf" status="done"></lr-attachment-chip>
 <lr-attachment-chip id="att-2" status="uploading" progress="42"></lr-attachment-chip>
 <script type="module">
   import { formatFileSize } from '@aceshooting/lyra-ui/components/media/attachment-chip/file-size.js';
 
   const chip = document.createElement('lr-attachment-chip');
-  chip.file = pickedFile; // name/size/mime-type/thumbnail all derived from the File
+  chip.file = pickedFile; // name/bytes/mime-type/thumbnail all derived from the File
   chip.addEventListener('lr-remove', (e) => removeAttachment(e.detail.id));
   chip.addEventListener('lr-retry', (e) => retryUpload(e.detail.id));
   chip.addEventListener('lr-preview', (e) => console.log(e.detail));
@@ -139,10 +147,10 @@ or to `undefined`, and again on disconnect. Because the same pass that allocates
 previous entry, reassigning `file` several times before the next paint leaks nothing.
 
 **Known gotchas:**
-- `file` always wins over `name`/`size`/`mimeType` when both are set — assigning those props while
+- `file` always wins over `name`/`bytes`/`mimeType` when both are set — assigning those props while
   `file` is also set has no visible effect on the rendered chip.
-- A `0`-byte size and an unset size are indistinguishable (there's no separate flag for "genuinely
-  empty file"); the `size` part is hidden entirely rather than showing a literal `"0 B"`.
+- A `0` `bytes` value and an unset `bytes` value are indistinguishable (there's no separate flag for
+  "genuinely empty file"); the `size` part is hidden entirely rather than showing a literal `"0 B"`.
 - `progress` only renders as a numeric bar when `status="uploading"` **and** `progress` is finite
   and `> 0`; otherwise it's either nothing (non-`uploading` status) or the indeterminate spinner
   (`uploading` with no known progress).
