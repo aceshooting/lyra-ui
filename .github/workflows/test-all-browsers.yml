@@ -1,4 +1,4 @@
-name: All browsers full suite
+name: test-all-browsers
 
 on:
   workflow_dispatch:
